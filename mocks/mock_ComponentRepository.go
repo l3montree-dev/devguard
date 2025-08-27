@@ -544,74 +544,6 @@ func (_c *ComponentRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core
 	return _c
 }
 
-// GetDependencyCountPerScannerID provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	ret := _mock.Called(assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDependencyCountPerScannerID")
-	}
-
-	var r0 map[string]int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]int, error)); ok {
-		return returnFunc(assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) map[string]int); ok {
-		r0 = returnFunc(assetVersionName, assetID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]int)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
-		r1 = returnFunc(assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ComponentRepository_GetDependencyCountPerScannerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyCountPerScannerID'
-type ComponentRepository_GetDependencyCountPerScannerID_Call struct {
-	*mock.Call
-}
-
-// GetDependencyCountPerScannerID is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *ComponentRepository_Expecter) GetDependencyCountPerScannerID(assetVersionName interface{}, assetID interface{}) *ComponentRepository_GetDependencyCountPerScannerID_Call {
-	return &ComponentRepository_GetDependencyCountPerScannerID_Call{Call: _e.mock.On("GetDependencyCountPerScannerID", assetVersionName, assetID)}
-}
-
-func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *ComponentRepository_GetDependencyCountPerScannerID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) Return(stringToInt map[string]int, err error) *ComponentRepository_GetDependencyCountPerScannerID_Call {
-	_c.Call.Return(stringToInt, err)
-	return _c
-}
-
-func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]int, error)) *ComponentRepository_GetDependencyCountPerScannerID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetLicenseDistribution provides a mock function for the type ComponentRepository
 func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
@@ -693,8 +625,8 @@ func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func
 }
 
 // HandleStateDiff provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, oldState, newState, scannerID)
+func (_mock *ComponentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, oldState, newState, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleStateDiff")
@@ -703,15 +635,15 @@ func (_mock *ComponentRepository) HandleStateDiff(tx core.DB, assetVersionName s
 	var r0 bool
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) (bool, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
+		return returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) bool); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
+		r0 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
+		r1 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -729,12 +661,12 @@ type ComponentRepository_HandleStateDiff_Call struct {
 //   - assetID uuid.UUID
 //   - oldState []models.ComponentDependency
 //   - newState []models.ComponentDependency
-//   - scannerID string
-func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersionName interface{}, assetID interface{}, oldState interface{}, newState interface{}, scannerID interface{}) *ComponentRepository_HandleStateDiff_Call {
-	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersionName, assetID, oldState, newState, scannerID)}
+//   - artifactName string
+func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersionName interface{}, assetID interface{}, oldState interface{}, newState interface{}, artifactName interface{}) *ComponentRepository_HandleStateDiff_Call {
+	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersionName, assetID, oldState, newState, artifactName)}
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -777,7 +709,7 @@ func (_c *ComponentRepository_HandleStateDiff_Call) Return(b bool, err error) *C
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1027,8 +959,8 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run f
 }
 
 // LoadPathToComponent provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, pURL, scannerID)
+func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, pURL, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadPathToComponent")
@@ -1037,17 +969,17 @@ func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionNa
 	var r0 []models.ComponentDependency
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, string) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, pURL, scannerID)
+		return returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, string) []models.ComponentDependency); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, pURL, scannerID)
+		r0 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, pURL, scannerID)
+		r1 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1064,12 +996,12 @@ type ComponentRepository_LoadPathToComponent_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - pURL string
-//   - scannerID string
-func (_e *ComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, scannerID interface{}) *ComponentRepository_LoadPathToComponent_Call {
-	return &ComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, scannerID)}
+//   - artifactName string
+func (_e *ComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, artifactName interface{}) *ComponentRepository_LoadPathToComponent_Call {
+	return &ComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, artifactName)}
 }
 
-func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string)) *ComponentRepository_LoadPathToComponent_Call {
+func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1107,7 +1039,7 @@ func (_c *ComponentRepository_LoadPathToComponent_Call) Return(componentDependen
 	return _c
 }
 
-func (_c *ComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadPathToComponent_Call {
+func (_c *ComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }

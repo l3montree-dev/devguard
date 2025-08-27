@@ -93,6 +93,7 @@ type AttestationRepository interface {
 type ArtifactRepository interface {
 	common.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
+	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 }
 
 type ReleaseRepository interface {
@@ -263,12 +264,12 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
-	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
+	GetCVSSBadgeSVG(CVSS models.Distribution) string
 	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
-	SaveArtifact(artifact models.Artifact) error
+	SaveArtifact(artifact *models.Artifact) error
 }
 
 type DependencyVulnService interface {
@@ -394,16 +395,18 @@ type ConfigService interface {
 }
 
 type StatisticsRepository interface {
-	TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
+	AverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
+	AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
-type AssetRiskHistoryRepository interface {
-	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.ArtifactRiskHistory, error)
+type ArtifactRiskHistoryRepository interface {
+	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
+	GetRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
+	GetRiskHistoryByRelease(releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
 	UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error
 }
 
@@ -413,13 +416,13 @@ type ProjectRiskHistoryRepository interface {
 }
 
 type StatisticsService interface {
-	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
-	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
-	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
-	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
+	UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
+	GetAverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
+	GetArtifactRiskHistory(artifactName, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// Release scoped statistics
+	GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
+	GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
 }
 
 type DepsDevService interface {

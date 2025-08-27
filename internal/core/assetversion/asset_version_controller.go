@@ -595,20 +595,24 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 			return result, nil
 		},
 		func() (any, error) {
-			distribution, err := a.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
-			return distribution, err
+			distribution, err := a.statisticsService.GetArtifactRiskHistory(artifact, assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
+			if len(distribution) == 0 {
+				return models.Distribution{}, nil
+			}
+
+			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, "critical")
+			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "critical")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, "high")
+			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "high")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, "medium")
+			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "medium")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, "low")
+			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "low")
 		},
 	)
 
@@ -623,7 +627,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 		vulnsBySeverity[v.Severity] = append(vulnsBySeverity[v.Severity], v)
 	}
 
-	distribution := result.GetValue(1).(models.AssetRiskDistribution)
+	distribution := result.GetValue(1).(models.Distribution)
 	avgCritical := result.GetValue(2).(time.Duration)
 	avgHigh := result.GetValue(3).(time.Duration)
 	avgMedium := result.GetValue(4).(time.Duration)

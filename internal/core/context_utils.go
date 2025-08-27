@@ -224,6 +224,22 @@ func SetAssetSlug(ctx Context, assetSlug string) {
 	ctx.Set("assetSlug", assetSlug)
 }
 
+func SetArtifact(ctx Context, artifact models.Artifact) {
+	ctx.Set("artifact", artifact)
+}
+
+func GetArtifact(ctx Context) models.Artifact {
+	return ctx.Get("artifact").(models.Artifact)
+}
+
+func GetArtifactName(ctx Context) (string, error) {
+	artifactName := GetParam(ctx, "artifactName")
+	if artifactName == "" {
+		return "", fmt.Errorf("could not get artifact name")
+	}
+	return artifactName, nil
+}
+
 func GetAssetSlug(ctx Context) (string, error) {
 	assetSlug := GetParam(ctx, "assetSlug")
 	if assetSlug == "" {

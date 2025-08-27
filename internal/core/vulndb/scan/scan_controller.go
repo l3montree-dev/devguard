@@ -122,7 +122,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}
 
 	// save the artifact to the database
-	if err := s.artifactService.SaveArtifact(artifact); err != nil {
+	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
 		slog.Error("could not save artifact", "err", err)
 		return scanResults, err
 	}
@@ -133,10 +133,10 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, artifactName, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }
 
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, artifactName string, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -146,7 +146,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifactName, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -162,13 +162,13 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	})
 
 	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-	if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+	if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 		slog.Error("could not recalculate risk history", "err", err)
 		return scanResults, err
 	}
 
 	// save the asset
-	if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
+	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
 		slog.Error("could not save asset", "err", err)
 		return scanResults, err
 	}

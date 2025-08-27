@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS release_items (
     artifact_name TEXT,
     asset_id UUID,
     asset_version_name TEXT,
+    CONSTRAINT fk_release
+        FOREIGN KEY (release_id) REFERENCES releases(id) ON DELETE CASCADE,
+    CONSTRAINT fk_child_release
+        FOREIGN KEY (child_release_id) REFERENCES releases(id) ON DELETE CASCADE,
     CONSTRAINT fk_artifact
         FOREIGN KEY (artifact_name, asset_id, asset_version_name)
         REFERENCES artifacts(artifact_name, asset_id, asset_version_name)
@@ -54,3 +58,5 @@ ALTER TABLE release_items
         (child_release_id IS NOT NULL AND artifact_name IS NULL AND asset_id IS NULL AND asset_version_name IS NULL)
         OR (child_release_id IS NULL AND artifact_name IS NOT NULL AND asset_id IS NOT NULL AND asset_version_name IS NOT NULL)
     );
+
+

@@ -38,23 +38,23 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 }
 
 // GetArtifactNamesByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]string, error) {
+func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetArtifactNamesByAssetIDAndAssetVersionName")
 	}
 
-	var r0 []string
+	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.Artifact, error)); ok {
 		return returnFunc(assetID, assetVersionName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []string); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.Artifact); ok {
 		r0 = returnFunc(assetID, assetVersionName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
@@ -95,18 +95,18 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Return(strings []string, err error) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
-	_c.Call.Return(strings, err)
+func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+	_c.Call.Return(artifacts, err)
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]string, error)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SaveArtifact(artifact models.Artifact) error {
+func (_mock *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 	ret := _mock.Called(artifact)
 
 	if len(ret) == 0 {
@@ -114,7 +114,7 @@ func (_mock *ArtifactService) SaveArtifact(artifact models.Artifact) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Artifact) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) error); ok {
 		r0 = returnFunc(artifact)
 	} else {
 		r0 = ret.Error(0)
@@ -128,16 +128,16 @@ type ArtifactService_SaveArtifact_Call struct {
 }
 
 // SaveArtifact is a helper method to define mock.On call
-//   - artifact models.Artifact
+//   - artifact *models.Artifact
 func (_e *ArtifactService_Expecter) SaveArtifact(artifact interface{}) *ArtifactService_SaveArtifact_Call {
 	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", artifact)}
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) Run(run func(artifact models.Artifact)) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) Run(run func(artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Artifact
+		var arg0 *models.Artifact
 		if args[0] != nil {
-			arg0 = args[0].(models.Artifact)
+			arg0 = args[0].(*models.Artifact)
 		}
 		run(
 			arg0,
@@ -151,7 +151,7 @@ func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_
 	return _c
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }

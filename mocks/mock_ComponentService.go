@@ -165,8 +165,8 @@ func (_c *ComponentService_GetLicense_Call) RunAndReturn(run func(component mode
 }
 
 // RefreshAllLicenses provides a mock function for the type ComponentService
-func (_mock *ComponentService) RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
-	ret := _mock.Called(assetVersion, scannerID)
+func (_mock *ComponentService) RefreshAllLicenses(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshAllLicenses")
@@ -175,17 +175,17 @@ func (_mock *ComponentService) RefreshAllLicenses(assetVersion models.AssetVersi
 	var r0 []models.Component
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) ([]models.Component, error)); ok {
-		return returnFunc(assetVersion, scannerID)
+		return returnFunc(assetVersion, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) []models.Component); ok {
-		r0 = returnFunc(assetVersion, scannerID)
+		r0 = returnFunc(assetVersion, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string) error); ok {
-		r1 = returnFunc(assetVersion, scannerID)
+		r1 = returnFunc(assetVersion, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -199,12 +199,12 @@ type ComponentService_RefreshAllLicenses_Call struct {
 
 // RefreshAllLicenses is a helper method to define mock.On call
 //   - assetVersion models.AssetVersion
-//   - scannerID string
-func (_e *ComponentService_Expecter) RefreshAllLicenses(assetVersion interface{}, scannerID interface{}) *ComponentService_RefreshAllLicenses_Call {
-	return &ComponentService_RefreshAllLicenses_Call{Call: _e.mock.On("RefreshAllLicenses", assetVersion, scannerID)}
+//   - artifactName string
+func (_e *ComponentService_Expecter) RefreshAllLicenses(assetVersion interface{}, artifactName interface{}) *ComponentService_RefreshAllLicenses_Call {
+	return &ComponentService_RefreshAllLicenses_Call{Call: _e.mock.On("RefreshAllLicenses", assetVersion, artifactName)}
 }
 
-func (_c *ComponentService_RefreshAllLicenses_Call) Run(run func(assetVersion models.AssetVersion, scannerID string)) *ComponentService_RefreshAllLicenses_Call {
+func (_c *ComponentService_RefreshAllLicenses_Call) Run(run func(assetVersion models.AssetVersion, artifactName string)) *ComponentService_RefreshAllLicenses_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.AssetVersion
 		if args[0] != nil {
@@ -227,7 +227,7 @@ func (_c *ComponentService_RefreshAllLicenses_Call) Return(components []models.C
 	return _c
 }
 
-func (_c *ComponentService_RefreshAllLicenses_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)) *ComponentService_RefreshAllLicenses_Call {
+func (_c *ComponentService_RefreshAllLicenses_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error)) *ComponentService_RefreshAllLicenses_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -15,10 +15,16 @@
 
 package models
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Release struct {
-	Model
+	ID        uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	Name      string    `json:"name" gorm:"not null;type:text;"`
 	ProjectID uuid.UUID `json:"projectId" gorm:"index;type:uuid"`
 	Project   Project   `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
@@ -40,7 +46,7 @@ type ReleaseItem struct {
 	Release   Release   `gorm:"foreignKey:ReleaseID;constraint:OnDelete:CASCADE;"`
 
 	ChildReleaseID *uuid.UUID `gorm:"index;type:uuid"`
-	ChildRelease   *Release   `gorm:"foreignKey:ChildReleaseID;constraint:OnDelete:CASCADE;"`
+	ChildRelease   *Release   `gorm:"foreignKey:ChildReleaseID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	// composite foreign key to artifacts (ArtifactName, AssetVersionName, AssetID)
 	ArtifactName     *string    `gorm:"index;type:text"`

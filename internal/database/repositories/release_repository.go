@@ -32,8 +32,7 @@ func (r *releaseRepository) GetByProjectID(projectID uuid.UUID) ([]models.Releas
 // ReadWithItems reads a release and preloads its direct items and related artifact/child pointers.
 func (r *releaseRepository) ReadWithItems(id uuid.UUID) (models.Release, error) {
 	var rel models.Release
-	// preload Project as well so callers can access r.Project.Avatar without extra queries
-	err := r.db.Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").Preload("Project").First(&rel, "id = ?", id).Error
+	err := r.db.Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel, "id = ?", id).Error
 	return rel, err
 }
 
@@ -66,7 +65,7 @@ func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) 
 
 	// fetch all releases (preload Project so Project.Avatar is available)
 	var releases []models.Release
-	if err := r.db.Preload("Project").Where("id IN ?", ids).Find(&releases).Error; err != nil {
+	if err := r.db.Where("id IN ?", ids).Find(&releases).Error; err != nil {
 		return models.Release{}, err
 	}
 
@@ -135,7 +134,7 @@ func (r *releaseRepository) GetByProjectIDPaged(tx core.DB, projectID uuid.UUID,
 	}
 
 	// preload Project so DTO mapping can read Project.Avatar
-	q := db.Model(&models.Release{}).Where("project_id = ?", projectID)
+	q := db.Model(&models.Release{}).Preload("Items").Preload("Items.ChildRelease").Where("project_id = ?", projectID)
 
 	// apply search
 	if search != "" {

@@ -39,8 +39,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	statisticsRepository := repositories.NewStatisticsRepository(db)
-	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
-	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
+	assetRiskHistoryRepository := repositories.NewArtifactRiskHistoryRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
@@ -66,7 +65,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
 
 	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
@@ -124,7 +123,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], normalizedBOM, artifact.ArtifactName, "system")
+							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, normalizedBOM, "system")
 						}
 
 						if err != nil {

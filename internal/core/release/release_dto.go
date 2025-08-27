@@ -16,6 +16,8 @@
 package release
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
@@ -23,6 +25,7 @@ import (
 type ReleaseItemDTO struct {
 	ID               uuid.UUID  `json:"id,omitempty"`
 	ReleaseID        uuid.UUID  `json:"releaseId,omitempty"`
+	ChildReleaseName *string    `json:"childReleaseName,omitempty"`
 	ChildReleaseID   *uuid.UUID `json:"childReleaseId,omitempty"`
 	ArtifactName     *string    `json:"artifactName,omitempty"`
 	AssetVersionName *string    `json:"assetVersionName,omitempty"`
@@ -30,7 +33,9 @@ type ReleaseItemDTO struct {
 }
 
 type ReleaseDTO struct {
-	models.Model
+	ID        uuid.UUID        `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
 	Name      string           `json:"name"`
 	ProjectID uuid.UUID        `json:"projectId"`
 	Items     []ReleaseItemDTO `json:"items,omitempty"`
@@ -44,6 +49,12 @@ func releaseItemToDTO(i models.ReleaseItem) ReleaseItemDTO {
 		ArtifactName:     i.ArtifactName,
 		AssetVersionName: i.AssetVersionName,
 		AssetID:          i.AssetID,
+		ChildReleaseName: func() *string {
+			if i.ChildRelease != nil {
+				return &i.ChildRelease.Name
+			}
+			return nil
+		}(),
 	}
 }
 
@@ -61,7 +72,9 @@ type CandidatesResponseDTO struct {
 
 func releaseToDTO(r models.Release) ReleaseDTO {
 	dto := ReleaseDTO{
-		Model:     r.Model,
+		ID:        r.ID,
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
 		ProjectID: r.ProjectID,
 		Name:      r.Name,
 	}
