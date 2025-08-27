@@ -36,9 +36,6 @@ const (
 
 	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
-
-	EventTypeAddedArtifactName   VulnEventType = "addedArtifactName"
-	EventTypeRemovedArtifactName VulnEventType = "removedArtifactName"
 )
 
 type MechanicalJustificationType string
@@ -115,10 +112,6 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		v := vuln.(*LicenseRisk)
 		v.SetFinalLicenseDecision(finalLicenseDecision)
 		v.SetState(VulnStateFixed)
-	case EventTypeAddedArtifactName:
-		// do nothing
-	case EventTypeRemovedArtifactName:
-		// do nothing
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
@@ -260,30 +253,6 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType VulnType, userID s
 
 	event.SetArbitraryJSONData(m)
 	return event
-}
-
-func NewAddedArtifactNameEvent(vulnID string, vulnType VulnType, userID string, artifactName string) VulnEvent {
-	ev := VulnEvent{
-		Type:     EventTypeAddedArtifactName,
-		VulnID:   vulnID,
-		VulnType: vulnType,
-		UserID:   userID,
-	}
-
-	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
-	return ev
-}
-
-func NewRemovedArtifactNameEvent(vulnID string, vulnType VulnType, userID string, artifactName string) VulnEvent {
-	ev := VulnEvent{
-		Type:     EventTypeRemovedArtifactName,
-		VulnID:   vulnID,
-		VulnType: vulnType,
-		UserID:   userID,
-	}
-
-	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
-	return ev
 }
 
 func CheckStatusType(statusType string) error {
