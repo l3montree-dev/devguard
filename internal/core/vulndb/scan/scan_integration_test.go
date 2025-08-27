@@ -982,7 +982,7 @@ func TestTicketHandling(t *testing.T) {
 				TicketID:         nil,
 			},
 			Artifacts: []models.Artifact{
-				{ArtifactName: "artifact-4"},
+				{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
 			},
 		}
 		err = db.Clauses(clause.OnConflict{
