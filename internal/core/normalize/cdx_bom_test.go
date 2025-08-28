@@ -231,7 +231,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 2)
@@ -279,7 +279,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 1) // Should deduplicate based on PackageURL
@@ -303,7 +303,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2)
 
 		assert.NotNil(t, result.Dependencies)
 		assert.Len(t, *result.Dependencies, 1) // Should deduplicate based on Ref
@@ -324,7 +324,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, nil, bom1)
+		result := normalize.MergeCdxBoms(nil, bom1, nil, bom1)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 1) // Should handle nil BOMs and deduplicate
@@ -338,7 +338,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 0)
@@ -361,7 +361,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 1)
@@ -373,7 +373,7 @@ func TestMergeCdxBoms(t *testing.T) {
 	})
 
 	t.Run("merge no BOMs", func(t *testing.T) {
-		result := normalize.MergeCdxBoms()
+		result := normalize.MergeCdxBoms(nil)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 0)
@@ -397,11 +397,21 @@ func TestMergeCdxBoms(t *testing.T) {
 
 		bom3 := &cdx.BOM{} // No metadata
 
-		result := normalize.MergeCdxBoms(bom1, bom2, bom3)
+		// Test with explicit metadata parameter
+		explicitMetadata := &cdx.Metadata{
+			Component: &cdx.Component{Name: "explicit-metadata"},
+		}
+		
+		result := normalize.MergeCdxBoms(explicitMetadata, bom1, bom2, bom3)
 
-		// Should use the first non-nil metadata encountered
+		// Should use the explicitly passed metadata
 		assert.NotNil(t, result.Metadata)
-		assert.Equal(t, "first-metadata", result.Metadata.Component.Name)
+		assert.Equal(t, "explicit-metadata", result.Metadata.Component.Name)
+		
+		// Test with nil metadata parameter - should use first BOM's metadata
+		result2 := normalize.MergeCdxBoms(nil, bom1, bom2, bom3)
+		assert.NotNil(t, result2.Metadata)
+		assert.Equal(t, "first-metadata", result2.Metadata.Component.Name)
 	})
 
 	t.Run("complex merge scenario", func(t *testing.T) {
@@ -436,7 +446,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(bom1, bom2, bom3)
+		result := normalize.MergeCdxBoms(nil, bom1, bom2, bom3)
 
 		assert.NotNil(t, result.Components)
 		assert.Len(t, *result.Components, 4) // comp1, comp2, comp3, comp4 (deduplicated)

@@ -77,11 +77,11 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 	return &cdxBom{bom: bom}
 }
 
-func MergeCdxBoms(boms ...*cdx.BOM) *cdx.BOM {
+func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 	merged := &cdx.BOM{
 		Components:   &[]cdx.Component{},
 		Dependencies: &[]cdx.Dependency{},
-		Metadata:     nil,
+		Metadata:     metadata,
 	}
 
 	componentMap := make(map[string]cdx.Component)
