@@ -56,6 +56,7 @@ body:
         - label: Test working with tickets (slash commands, commenting, etc.)
         - label: Test filter in risk tables
         - label: Test sbom and vex download
+        - label: Test Vulnerability-Report download
 
   - type: textarea
     id: notes
