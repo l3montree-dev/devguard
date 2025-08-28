@@ -95,7 +95,7 @@ func (s *service) GetArtifactRiskHistory(artifactName, assetVersionName string, 
 // That behavior was intentionally removed to focus statistics on artifact histories only.
 // If project-level aggregation is required in future, reintroduce with a new storage model.
 
-func (s *service) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past

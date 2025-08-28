@@ -10,6 +10,8 @@ import (
 )
 
 type Artifact struct {
+	CreatedAt time.Time `json:"createdAt"`
+
 	ArtifactName      string       `json:"artifactName" gorm:"primaryKey;not null;"`
 	AssetVersionName  string       `json:"assetVersionName" gorm:"primaryKey;not null;type:text;"`
 	AssetID           uuid.UUID    `json:"vulnAssetId" gorm:"primaryKey;not null;type:uuid;"`

@@ -416,7 +416,7 @@ type ProjectRiskHistoryRepository interface {
 }
 
 type StatisticsService interface {
-	UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
+	UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetAverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetArtifactRiskHistory(artifactName, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
