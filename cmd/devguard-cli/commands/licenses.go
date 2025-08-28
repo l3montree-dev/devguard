@@ -15,7 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/licensecheck"
 	"github.com/spf13/cobra"
+	xz "github.com/ulikunitz/xz"
 )
 
 var (
@@ -41,14 +43,21 @@ func newUpdateLicensesCommand() *cobra.Command {
 			var err error
 			start := time.Now()
 
-			err = updateApprovedLicenses()
-			if err != nil {
-				slog.Error("error when trying to update approved licenses, continuing...\n", "err", err)
-			}
+			// err = updateApprovedLicenses()
+			// if err != nil {
+			// 	slog.Error("error when trying to update approved licenses, continuing...\n", "err", err)
+			// }
 
-			err = updateAlpineLicenses()
-			if err != nil {
-				slog.Error("error when trying to update alpine licenses, continuing...\n", "err", err)
+			// err = updateAlpineLicenses()
+			// if err != nil {
+			// 	slog.Error("error when trying to update alpine licenses, continuing...\n", "err", err)
+			// }
+
+			if len(args) >= 1 && args[0] == "all" {
+				err = updateDebianLicenses()
+				if err != nil {
+					slog.Error("error when trying to update debian licenses, continuing...\n", "err", err)
+				}
 			}
 
 			slog.Info(fmt.Sprintf("finished updating license, done in %f seconds", time.Since(start).Seconds()))
@@ -247,4 +256,109 @@ func retrieveAlpineVersions() error {
 		}
 	}
 	return nil
+}
+
+func updateDebianLicenses() error {
+	start := time.Now()
+	slog.Info("start updating debian licenses")
+
+	fileList, err := getFileListYAML()
+	if err != nil {
+		return err
+	}
+
+	_, err = getLicensesFromFileList(fileList)
+	if err != nil {
+		return err
+	}
+
+	slog.Info(fmt.Sprintf("successfully finished updating debian licenses, done in %f seconds", time.Since(start).Seconds()))
+	return nil
+}
+
+func getFileListYAML() (*bytes.Buffer, error) {
+	url := "https://metadata.ftp-master.debian.org/changelogs/filelist.yaml.xz"
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return &bytes.Buffer{}, err
+	}
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return &bytes.Buffer{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return &bytes.Buffer{}, fmt.Errorf("request was not successful, status code: %d", resp.StatusCode)
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, 1<<20))
+
+	reader, err := xz.NewReader(resp.Body)
+	if err != nil {
+		return buf, err
+	}
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		return buf, err
+	}
+	return buf, nil
+}
+
+func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) {
+	var licenseMap map[string]string //map to hold the license
+	baseURL := "https://metadata.ftp-master.debian.org/changelogs/"
+	urls := make([]string, 0, 200*1000)
+	for field := range strings.SplitSeq(fileList.String(), "_copyright\n") { //only get the urls of the copyright files for each package and version
+		lines := strings.Split(field, "\n")                                     // cut off everything in front of the copyright url by taking only the last line = lines[len(lines)-1]
+		if len(lines) > 1 && strings.Count(lines[len(lines)-1][4:], "_") == 1 { //len(lines) > 1 if we have less its an invalid url, count "_" to exclude irrelevant urls like testing,stable, etc.
+			urls = append(urls, lines[len(lines)-1][4:]+"_copyright") // split removes the substring so we need to add it once again
+		}
+	}
+
+	licenseMap = make(map[string]string, len(urls))
+	buf := bytes.NewBuffer(make([]byte, 0, 20*1000))
+	slog.Info("Scanning urls", "amount", len(urls))
+	start := time.Now()
+	for i := range urls[:1000] {
+		lastField := urls[i][strings.LastIndex(urls[i], "/")+1 : len(urls[i])-9] // we need the package Name and version as keys for our map
+		fields := strings.Split(lastField, "_")
+		packageName := fields[0]
+		packageVersion := fields[1]
+
+		req, err := http.NewRequest(http.MethodGet, baseURL+urls[i], nil)
+		if err != nil {
+			continue //swallow errors
+		}
+		client := http.Client{
+			Timeout: 10 * time.Second,
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			continue //swallow errors
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			resp.Body.Close() //swallow errors
+			continue
+		}
+
+		_, err = io.ReadFull(resp.Body, buf.Bytes())
+		if err != nil {
+			resp.Body.Close() //swallow errors
+			continue
+		}
+
+		cov := licensecheck.Scan(buf.Bytes()) // use google/licensecheck to guess the license and then use the most likely result
+		if len(cov.Match) == 0 {
+			slog.Warn("could not determine license", "package name", packageName, "package version", packageVersion)
+		} else {
+			licenseMap[packageName+packageVersion] = cov.Match[0].ID
+		}
+		resp.Body.Close()
+		buf.Reset()
+	}
+	slog.Info("done fetching urls", "time", time.Since(start))
+	return licenseMap, nil
 }

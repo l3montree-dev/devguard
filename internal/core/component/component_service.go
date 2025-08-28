@@ -102,6 +102,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 
 		cov := licensecheck.Scan(packageInformation.Bytes())
 		if len(cov.Match) == 0 {
+			slog.Warn("could not determine license", "purl", pURL)
 			component.License = utils.Ptr("unknown")
 			return component, nil
 		}
@@ -109,6 +110,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	case "apk":
 		license, err := getAlpineLicense(validatedPURL)
 		if err != nil || license == "" {
+			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
 			return component, nil
 		}
