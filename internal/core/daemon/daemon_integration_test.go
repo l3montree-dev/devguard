@@ -679,7 +679,7 @@ func TestDaemonComponentProperties(t *testing.T) {
 		err = db.Save(&dependencyVuln).Error
 		assert.Nil(t, err)
 
-		err = daemon.UpdateComponentProperties(db)
+		err = daemon.UpdateFixedVersions(db)
 		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln

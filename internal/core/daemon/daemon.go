@@ -150,16 +150,16 @@ func Start(db core.DB, broker pubsub.Broker) {
 		// after we have a fresh vulndb we can update the dependencyVulns.
 		// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk
-		if shouldMirror(configService, "vulndb.componentProperties") {
+		if shouldMirror(configService, "vulndb.fixedVersions") {
 			start = time.Now()
-			if err := UpdateComponentProperties(db); err != nil {
-				slog.Error("could not update component properties", "err", err)
+			if err := UpdateFixedVersions(db); err != nil {
+				slog.Error("could not update fixed versions", "err", err)
 				return nil
 			}
-			if err := markMirrored(configService, "vulndb.componentProperties"); err != nil {
-				slog.Error("could not mark vulndb.componentProperties as mirrored", "err", err)
+			if err := markMirrored(configService, "vulndb.fixedVersions"); err != nil {
+				slog.Error("could not mark vulndb.fixedVersions as mirrored", "err", err)
 			}
-			slog.Info("component properties updated", "duration", time.Since(start))
+			slog.Info("fixedVersions updated", "duration", time.Since(start))
 		}
 
 		if shouldMirror(configService, "vulndb.risk") {
