@@ -76,3 +76,50 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 	bom.Components = &components
 	return &cdxBom{bom: bom}
 }
+
+func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
+	merged := &cdx.BOM{
+		Components:   &[]cdx.Component{},
+		Dependencies: &[]cdx.Dependency{},
+		Metadata:     metadata,
+	}
+
+	componentMap := make(map[string]cdx.Component)
+	dependencyMap := make(map[string]cdx.Dependency)
+
+	for _, bom := range boms {
+		if bom == nil {
+			continue
+		}
+
+		if bom.Components != nil {
+			for _, comp := range *bom.Components {
+				componentMap[comp.PackageURL] = comp
+			}
+		}
+
+		if bom.Dependencies != nil {
+			for _, dep := range *bom.Dependencies {
+				dependencyMap[dep.Ref] = dep
+			}
+		}
+
+		if bom.Metadata != nil && merged.Metadata == nil {
+			merged.Metadata = bom.Metadata
+		}
+	}
+
+	components := []cdx.Component{}
+	for _, comp := range componentMap {
+		components = append(components, comp)
+	}
+	merged.Components = &components
+
+	dependencies := []cdx.Dependency{}
+	for _, dep := range dependencyMap {
+		dependencies = append(dependencies, dep)
+	}
+	merged.Dependencies = &dependencies
+
+	return merged
+}
