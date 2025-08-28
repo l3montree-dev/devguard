@@ -147,7 +147,7 @@ type ComponentRepository interface {
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
-	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error)
+	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
 }
 
 type DependencyVulnRepository interface {

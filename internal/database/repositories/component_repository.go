@@ -160,7 +160,7 @@ ORDER BY depth;
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error) {
 	type License []struct {
 		License string
 		Count   int
@@ -196,7 +196,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 		models.VulnStateFixed, assetVersionName, assetID)
 
 	//We then still need to filter for the right scanner
-	if artifactName != "" {
+	if artifactName != nil {
 		overwrittenLicensesQuery = overwrittenLicensesQuery.Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = cd.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ?", artifactName)
 
 	}

@@ -545,7 +545,7 @@ func (_c *ComponentRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core
 }
 
 // GetLicenseDistribution provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
+func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
@@ -554,17 +554,17 @@ func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersio
 
 	var r0 map[string]int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) (map[string]int, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, *string) (map[string]int, error)); ok {
 		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) map[string]int); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, *string) map[string]int); ok {
 		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, *string) error); ok {
 		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
@@ -581,12 +581,12 @@ type ComponentRepository_GetLicenseDistribution_Call struct {
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - artifactName string
+//   - artifactName *string
 func (_e *ComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_GetLicenseDistribution_Call {
 	return &ComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string)) *ComponentRepository_GetLicenseDistribution_Call {
+func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *ComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -600,9 +600,9 @@ func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
+		var arg3 *string
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(*string)
 		}
 		run(
 			arg0,
@@ -619,7 +619,7 @@ func (_c *ComponentRepository_GetLicenseDistribution_Call) Return(stringToInt ma
 	return _c
 }
 
-func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error)) *ComponentRepository_GetLicenseDistribution_Call {
+func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)) *ComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -764,10 +764,10 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
+	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
 	artifactRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
-	artifactRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	artifactRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
 	artifactRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
 	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
