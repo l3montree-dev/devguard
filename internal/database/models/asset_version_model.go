@@ -36,10 +36,9 @@ type AssetVersion struct {
 	Components      []ComponentDependency `json:"components" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
-	LastHistoryUpdate *time.Time
-	SigningPubKey     *string `json:"signingPubKey" gorm:"type:text;"`
-
-	Metadata database.JSONB `json:"metadata" gorm:"type:jsonb"`
+	SigningPubKey  *string        `json:"signingPubKey" gorm:"type:text;"`
+	Metadata       database.JSONB `json:"metadata" gorm:"type:jsonb"`
+	LastAccessedAt time.Time      `json:"lastAccessedAt,omitempty" gorm:"default:NOW();"`
 }
 
 func (m AssetVersion) TableName() string {

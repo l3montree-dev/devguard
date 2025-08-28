@@ -79,11 +79,12 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		assert.Nil(t, err)
 
 		assetVersion := models.AssetVersion{
-			Name:          "test",
-			AssetID:       asset.ID,
-			DefaultBranch: false,
-			Slug:          "main",
-			Type:          "branch",
+			Name:           "test",
+			AssetID:        asset.ID,
+			DefaultBranch:  false,
+			Slug:           "main",
+			Type:           "branch",
+			LastAccessedAt: time.Now().AddDate(0, 0, -10), // Set last accessed to 10 days ago
 		}
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)
@@ -136,11 +137,12 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 		assetVersion := models.AssetVersion{
-			Name:          "test-dependency",
-			AssetID:       asset.ID,
-			DefaultBranch: false,
-			Slug:          "main",
-			Type:          "branch",
+			Name:           "test-dependency",
+			AssetID:        asset.ID,
+			DefaultBranch:  false,
+			Slug:           "main",
+			Type:           "branch",
+			LastAccessedAt: time.Now().AddDate(0, 0, -10), // Set last accessed to 10 days ago
 		}
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)

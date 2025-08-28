@@ -162,7 +162,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	})
 
 	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-	if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+	if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 		slog.Error("could not recalculate risk history", "err", err)
 		return scanResults, err
 	}
