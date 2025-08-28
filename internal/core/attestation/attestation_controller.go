@@ -13,12 +13,14 @@ import (
 type attestationController struct {
 	attestationRepository  core.AttestationRepository
 	assetVersionRepository core.AssetVersionRepository
+	artifactRepository     core.ArtifactRepository
 }
 
-func NewAttestationController(repository core.AttestationRepository, assetVersionRepository core.AssetVersionRepository) *attestationController {
+func NewAttestationController(repository core.AttestationRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) *attestationController {
 	return &attestationController{
 		attestationRepository:  repository,
 		assetVersionRepository: assetVersionRepository,
+		artifactRepository:     artifactRepository,
 	}
 }
 
@@ -49,8 +51,12 @@ func (a *attestationController) Create(ctx core.Context) error {
 
 	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	if artifactName == "" {
-		slog.Warn("no X-Artifact-Name header found. Using asset version name as artifact name")
 		artifactName = "default"
+	}
+	// check if the artifact exists
+	_, err := a.artifactRepository.ReadArtifact(artifactName, assetVersionName, asset.ID)
+	if err != nil {
+		return echo.NewHTTPError(400, "artifact does not exist").WithInternal(err)
 	}
 
 	attestation := models.Attestation{

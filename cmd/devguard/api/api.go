@@ -549,7 +549,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
-	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
+	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
 

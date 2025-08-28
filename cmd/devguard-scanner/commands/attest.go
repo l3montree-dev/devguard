@@ -118,7 +118,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 	req.Header.Set("X-Predicate-Type", config.RuntimeAttestationConfig.PredicateType)
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)

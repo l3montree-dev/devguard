@@ -31,7 +31,8 @@ func TestList(t *testing.T) {
 		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{
 			{PredicateType: "not ocol name"},
 		}, nil)
-		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository)
+
+		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
 		result := attestationController.List(ctx)
 		if result != nil {
 			t.Fail()
@@ -52,7 +53,7 @@ func TestList(t *testing.T) {
 		assetVersionNameRepository := mocks.NewAssetVersionRepository(t)
 		attestationRepository := mocks.NewAttestationRepository(t)
 		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{}, fmt.Errorf("Something went wrong"))
-		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository)
+		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
 
 		result := attestationController.List(ctx)
 
