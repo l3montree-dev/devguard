@@ -124,7 +124,7 @@ func Start(db core.DB, broker pubsub.Broker) {
 		if shouldMirror(configService, "vulndb.scan") {
 			start = time.Now()
 			// update the scan
-			if err := ScanAssetVersions(db, casbinRBACProvider); err != nil {
+			if err := ScanArtifacts(db, casbinRBACProvider); err != nil {
 				slog.Error("could not update scan", "err", err)
 				return nil
 			}

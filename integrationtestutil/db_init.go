@@ -50,6 +50,11 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 		panic(err)
 	}
 
+	if err := db.AutoMigrate(&models.ArtifactRiskHistory{}); err != nil {
+		log.Printf("failed to auto migrate artifact risk history: %s", err)
+		panic(err)
+	}
+
 	// automigrate ALL models
 	if err := db.AutoMigrate(
 		&models.Org{},

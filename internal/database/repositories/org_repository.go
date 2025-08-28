@@ -17,12 +17,13 @@ package repositories
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+
+	project "github.com/l3montree-dev/devguard/internal/core/project"
 )
 
 type orgRepository struct {
@@ -76,62 +77,16 @@ func (g *orgRepository) Update(tx core.DB, org *models.Org) error {
 	return g.GetDB(tx).Save(org).Error
 }
 
-func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement {
-	contentTreeMap := make(map[uuid.UUID]common.ContentTreeElement)
-	// fetch all asset ids inside those projects
-	var res []struct {
-		AssetID     uuid.UUID `json:"asset_id"`
-		ProjectID   uuid.UUID `json:"project_id"`
-		AssetName   string    `json:"asset_name"`
-		ProjectName string    `json:"project_name"`
-		AssetSlug   string    `json:"asset_slug"`
-		ProjectSlug string    `json:"project_slug"`
+func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []any {
+	var projectModels []models.Project
+
+	g.GetDB(nil).Preload("Assets").Where(`projects.id IN (?) AND projects.organization_id = ?`, projects, orgID).Find(&projectModels)
+
+	result := make([]any, 0, len(projectModels))
+	for _, p := range projectModels {
+		result = append(result, project.FromModel(p))
 	}
-
-	g.GetDB(nil).Raw(`SELECT assets.slug as asset_slug, projects.slug as project_slug, assets.name as asset_name, projects.name as project_name, assets.id as asset_id, project_id FROM assets INNER JOIN projects ON assets.project_id = projects.id WHERE projects.id IN (?) AND projects.organization_id = ?`, projects, orgID).Scan(&res)
-
-	for _, r := range res {
-		if _, ok := contentTreeMap[r.ProjectID]; !ok {
-			contentTreeMap[r.ProjectID] = common.ContentTreeElement{
-				ID:    r.ProjectID.String(),
-				Title: r.ProjectName,
-				Slug:  r.ProjectSlug,
-			}
-		}
-
-		project := contentTreeMap[r.ProjectID]
-
-		project.Assets = append(project.Assets, struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
-			Slug  string `json:"slug"`
-		}{
-			ID:    r.AssetID.String(),
-			Title: r.AssetName,
-			Slug:  r.AssetSlug,
-		})
-
-		contentTreeMap[r.ProjectID] = project
-	}
-
-	// convert map to array
-	var contentTree []common.ContentTreeElement
-	for _, v := range contentTreeMap {
-		contentTree = append(contentTree, v)
-	}
-
-	// do a sort on the id
-	slices.SortFunc(contentTree, func(i, j common.ContentTreeElement) int {
-		if i.ID < j.ID {
-			return -1
-		}
-		if i.ID > j.ID {
-			return 1
-		}
-		return 0
-	})
-
-	return contentTree
+	return result
 }
 
 func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {

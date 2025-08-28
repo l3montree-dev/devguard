@@ -40,8 +40,8 @@ func (_m *AssetRiskHistoryRepository) EXPECT() *AssetRiskHistoryRepository_Expec
 }
 
 // GetRiskHistory provides a mock function for the type AssetRiskHistoryRepository
-func (_mock *AssetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	ret := _mock.Called(assetVersionName, assetID, start, end)
+func (_mock *AssetRiskHistoryRepository) GetRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID, start, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRiskHistory")
@@ -49,18 +49,18 @@ func (_mock *AssetRiskHistoryRepository) GetRiskHistory(assetVersionName string,
 
 	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
-		return returnFunc(assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID, start, end)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
-		r0 = returnFunc(assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID, start, end)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, time.Time, time.Time) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID, start, end)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -77,33 +77,39 @@ type AssetRiskHistoryRepository_GetRiskHistory_Call struct {
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *AssetRiskHistoryRepository_Expecter) GetRiskHistory(assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *AssetRiskHistoryRepository_GetRiskHistory_Call {
-	return &AssetRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", assetVersionName, assetID, start, end)}
+func (_e *AssetRiskHistoryRepository_Expecter) GetRiskHistory(artifactName interface{}, assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+	return &AssetRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", artifactName, assetVersionName, assetID, start, end)}
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Run(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Run(run func(*string, string, uuid.UUID, time.Time, time.Time)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			a0 := args[0].(string)
+			arg0 = &a0
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(string)
 		}
-		var arg2 time.Time
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(time.Time)
+			arg2 = args[2].(uuid.UUID)
 		}
 		var arg3 time.Time
 		if args[3] != nil {
 			arg3 = args[3].(time.Time)
+		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -114,7 +120,7 @@ func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Return(artifactRiskHis
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(*string, string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }

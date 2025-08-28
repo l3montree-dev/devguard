@@ -40,8 +40,8 @@ func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 }
 
 // AverageFixingTime provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+func (_mock *StatisticsRepository) AverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTime")
@@ -49,16 +49,16 @@ func (_mock *StatisticsRepository) AverageFixingTime(assetVersionName string, as
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,37 +71,43 @@ type StatisticsRepository_AverageFixingTime_Call struct {
 }
 
 // AverageFixingTime is a helper method to define mock.On call
+//   - artifactName string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - riskIntervalStart float64
 //   - riskIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTime(assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
-	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTime(artifactName interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
+	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(string)
 		}
-		var arg2 float64
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(float64)
+			arg2 = args[2].(uuid.UUID)
 		}
 		var arg3 float64
 		if args[3] != nil {
 			arg3 = args[3].(float64)
+		}
+		var arg4 float64
+		if args[4] != nil {
+			arg4 = args[4].(float64)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -112,7 +118,79 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) Return(duration time.Dura
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AverageFixingTimeForRelease provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(releaseID, riskIntervalStart, riskIntervalEnd)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AverageFixingTimeForRelease")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_AverageFixingTimeForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTimeForRelease'
+type StatisticsRepository_AverageFixingTimeForRelease_Call struct {
+	*mock.Call
+}
+
+// AverageFixingTimeForRelease is a helper method to define mock.On call
+//   - releaseID uuid.UUID
+//   - riskIntervalStart float64
+//   - riskIntervalEnd float64
+func (_e *StatisticsRepository_Expecter) AverageFixingTimeForRelease(releaseID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+	return &StatisticsRepository_AverageFixingTimeForRelease_Call{Call: _e.mock.On("AverageFixingTimeForRelease", releaseID, riskIntervalStart, riskIntervalEnd)}
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Run(run func(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 float64
+		if args[1] != nil {
+			arg1 = args[1].(float64)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -179,153 +257,9 @@ func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndR
 	return _c
 }
 
-// GetAssetCvssDistribution provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	ret := _mock.Called(assetVersionName, assetID, assetName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAssetCvssDistribution")
-	}
-
-	var r0 models.AssetRiskDistribution
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
-		return returnFunc(assetVersionName, assetID, assetName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) models.AssetRiskDistribution); ok {
-		r0 = returnFunc(assetVersionName, assetID, assetName)
-	} else {
-		r0 = ret.Get(0).(models.AssetRiskDistribution)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, assetName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsRepository_GetAssetCvssDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetCvssDistribution'
-type StatisticsRepository_GetAssetCvssDistribution_Call struct {
-	*mock.Call
-}
-
-// GetAssetCvssDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
-func (_e *StatisticsRepository_Expecter) GetAssetCvssDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsRepository_GetAssetCvssDistribution_Call {
-	return &StatisticsRepository_GetAssetCvssDistribution_Call{Call: _e.mock.On("GetAssetCvssDistribution", assetVersionName, assetID, assetName)}
-}
-
-func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsRepository_GetAssetCvssDistribution_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) Return(assetRiskDistribution models.AssetRiskDistribution, err error) *StatisticsRepository_GetAssetCvssDistribution_Call {
-	_c.Call.Return(assetRiskDistribution, err)
-	return _c
-}
-
-func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)) *StatisticsRepository_GetAssetCvssDistribution_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAssetRiskDistribution provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	ret := _mock.Called(assetVersionName, assetID, assetName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAssetRiskDistribution")
-	}
-
-	var r0 models.AssetRiskDistribution
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
-		return returnFunc(assetVersionName, assetID, assetName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) models.AssetRiskDistribution); ok {
-		r0 = returnFunc(assetVersionName, assetID, assetName)
-	} else {
-		r0 = ret.Get(0).(models.AssetRiskDistribution)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, assetName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsRepository_GetAssetRiskDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetRiskDistribution'
-type StatisticsRepository_GetAssetRiskDistribution_Call struct {
-	*mock.Call
-}
-
-// GetAssetRiskDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
-func (_e *StatisticsRepository_Expecter) GetAssetRiskDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsRepository_GetAssetRiskDistribution_Call {
-	return &StatisticsRepository_GetAssetRiskDistribution_Call{Call: _e.mock.On("GetAssetRiskDistribution", assetVersionName, assetID, assetName)}
-}
-
-func (_c *StatisticsRepository_GetAssetRiskDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsRepository_GetAssetRiskDistribution_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsRepository_GetAssetRiskDistribution_Call) Return(assetRiskDistribution models.AssetRiskDistribution, err error) *StatisticsRepository_GetAssetRiskDistribution_Call {
-	_c.Call.Return(assetRiskDistribution, err)
-	return _c
-}
-
-func (_c *StatisticsRepository_GetAssetRiskDistribution_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)) *StatisticsRepository_GetAssetRiskDistribution_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // TimeTravelDependencyVulnState provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(assetVersionName, assetID, time1)
+func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID, time1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TimeTravelDependencyVulnState")
@@ -333,18 +267,18 @@ func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(assetVersionNam
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID, time1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
-		r0 = returnFunc(assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID, time1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, time.Time) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, time.Time) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID, time1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -357,31 +291,37 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 }
 
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
+//   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - time1 time.Time
-func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
-	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", assetVersionName, assetID, time1)}
+func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", artifactName, assetVersionName, assetID, time1)}
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(assetVersionName string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(*string)
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(string)
 		}
-		var arg2 time.Time
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(time.Time)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -392,7 +332,7 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Return(depend
 	return _c
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -25,6 +25,6 @@ func (s *service) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID
 	return artifacts, nil
 }
 
-func (s *service) SaveArtifact(artifact models.Artifact) error {
-	return s.artifactRepository.Save(nil, &artifact)
+func (s *service) SaveArtifact(artifact *models.Artifact) error {
+	return s.artifactRepository.Save(nil, artifact)
 }

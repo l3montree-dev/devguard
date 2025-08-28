@@ -25,11 +25,11 @@ func CreateStatisticsService(db core.DB) core.StatisticsService {
 	return statistics.NewService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
-		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewArtifactRiskHistoryRepository(db),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewProjectRepository(db),
-		repositories.NewProjectRiskHistoryRepository(db),
+		repositories.NewReleaseRepository(db),
 	)
 }
 
@@ -110,11 +110,11 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		statistics.NewService(
 			repositories.NewStatisticsRepository(db),
 			repositories.NewComponentRepository(db),
-			repositories.NewAssetRiskHistoryRepository(db),
+			repositories.NewArtifactRiskHistoryRepository(db),
 			repositories.NewDependencyVulnRepository(db),
 			repositories.NewAssetVersionRepository(db),
 			repositories.NewProjectRepository(db),
-			repositories.NewProjectRiskHistoryRepository(db),
+			repositories.NewReleaseRepository(db),
 		),
 		CreateArtifactService(db),
 	)

@@ -20,15 +20,24 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
+func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
 	dependencyVulns := []models.DependencyVuln{}
+	var err error
 
-	err := r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
-		return db.Where("created_at <= ?", time).Order("created_at ASC")
-	}).
-		Where("asset_version_name = ?", assetVersionName).Where("asset_id = ?", assetID).Where("created_at <= ?", time).
-		Find(&dependencyVulns).Error
+	if artifactName != nil {
+		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+			return db.Where("created_at <= ?", time).Order("created_at ASC")
+		}).
+			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
+			Where("adv.artifact_asset_version_name = ?", assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
+			Find(&dependencyVulns).Error
 
+	} else {
+		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+			return db.Where("created_at <= ?", time).Order("created_at ASC")
+		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
+			Find(&dependencyVulns).Error
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -47,116 +56,6 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName st
 	return dependencyVulns, nil
 }
 
-func (r *statisticsRepository) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	var results []struct {
-		ScannerID string `gorm:"column:scanner_ids"`
-		Count     int    `gorm:"column:count"`
-	}
-
-	err := r.db.Model(&models.DependencyVuln{}).
-		Select("scanner_ids , COUNT(*) as count").
-		Group("scanner_ids").
-		Where("asset_version_name = ?", assetVersionName).
-		Where("asset_id = ?", assetID).
-		Find(&results).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	// convert to map
-	counts := make(map[string]int)
-	for _, r := range results {
-		counts[r.ScannerID] = r.Count
-	}
-
-	return counts, nil
-}
-
-func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	var results []struct {
-		Severity string `gorm:"column:severity"`
-		Count    int    `gorm:"column:count"`
-	}
-
-	err := r.db.Raw(`
-        SELECT 
-            CASE 
-                WHEN raw_risk_assessment >= 0.0 AND raw_risk_assessment < 4.0 THEN 'LOW'
-                WHEN raw_risk_assessment >= 4.0 AND raw_risk_assessment < 7 THEN 'MEDIUM'
-                WHEN raw_risk_assessment >= 7 AND raw_risk_assessment < 9 THEN 'HIGH'
-				WHEN raw_risk_assessment >= 9 AND raw_risk_assessment <= 10.0 THEN 'CRITICAL'
-				ELSE 'unknown'
-            END AS severity,
-            COUNT(*) as count
-        FROM dependency_vulns
-        WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
-        GROUP BY severity
-    `, assetVersionName, assetID).Scan(&results).Error
-
-	if err != nil {
-		return models.AssetRiskDistribution{}, err
-	}
-
-	// convert to map
-	counts := make(map[string]int)
-	for _, r := range results {
-		counts[r.Severity] = r.Count
-	}
-
-	return models.AssetRiskDistribution{
-		AssetID:          assetID,
-		AssetVersionName: assetVersionName,
-		Label:            assetName,
-		Low:              counts["LOW"],
-		Medium:           counts["MEDIUM"],
-		High:             counts["HIGH"],
-		Critical:         counts["CRITICAL"],
-	}, nil
-}
-
-func (r *statisticsRepository) GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	var results []struct {
-		Severity string `gorm:"column:severity"`
-		Count    int    `gorm:"column:count"`
-	}
-
-	err := r.db.Raw(`
-		 SELECT 
-            CASE 
-                WHEN cvss >= 0.0 AND cvss < 4.0 THEN 'LOW'
-                WHEN cvss >= 4.0 AND cvss < 7 THEN 'MEDIUM'
-                WHEN cvss >= 7 AND cvss < 9 THEN 'HIGH'
-				WHEN cvss >= 9 AND cvss <= 10.0 THEN 'CRITICAL'
-				ELSE 'unknown'
-            END AS severity,
-			COUNT(*) as count
-		FROM dependency_vulns INNER JOIN cves ON cves.cve = dependency_vulns.cve_id
-		WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
-		GROUP BY severity, cvss
-	`, assetVersionName, assetID).Scan(&results).Error
-
-	if err != nil {
-		return models.AssetRiskDistribution{}, err
-	}
-
-	// convert to map
-	counts := make(map[string]int)
-	for _, r := range results {
-		counts[r.Severity] = r.Count
-	}
-
-	return models.AssetRiskDistribution{
-		AssetID:          assetID,
-		AssetVersionName: assetVersionName,
-		Label:            assetName,
-		Low:              counts["LOW"],
-		Medium:           counts["MEDIUM"],
-		High:             counts["HIGH"],
-		Critical:         counts["CRITICAL"],
-	}, nil
-}
-
 var fixedEvents = []models.VulnEventType{
 	models.EventTypeAccepted,
 	models.EventTypeFixed,
@@ -168,7 +67,7 @@ var openEvents = []models.VulnEventType{
 	models.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
@@ -186,8 +85,9 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
+	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
 ),
 intervals AS (
    SELECT
@@ -208,7 +108,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+    intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
 	if err != nil {
 		return 0, err
 	}
@@ -222,6 +122,73 @@ FROM
 		return 0, nil
 	}
 	// parse it to float
+	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
+	if err != nil {
+		return 0, err
+	}
+
+	return fixingTime, nil
+}
+
+func (r *statisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+	var results []struct {
+		AvgFixingTime string `gorm:"column:avg"`
+	}
+
+	// This query mirrors AverageFixingTime but limits dependency_vulns to those matching artifacts
+	// that are part of the release tree (release_items), using a recursive CTE to collect child releases.
+	err := r.db.Raw(`
+WITH RECURSIVE release_tree AS (
+	SELECT id FROM releases WHERE id = ?
+	UNION ALL
+	SELECT ri.child_release_id FROM release_items ri JOIN release_tree rt ON ri.release_id = rt.id WHERE ri.child_release_id IS NOT NULL
+),
+events AS (
+	SELECT
+		dv.id,
+		dv.component_purl,
+		fe.type,
+		fe.created_at,
+		LAG(fe.type) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_type,
+		LAG(fe.created_at) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_created_at,
+		LEAD(fe.type) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS next_type
+	FROM dependency_vulns dv
+	JOIN vuln_events fe ON dv.id = fe.vuln_id
+	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND dv.raw_risk_assessment >= ? AND dv.raw_risk_assessment <= ?
+),
+intervals AS (
+   SELECT
+		id,
+		component_purl,
+		COALESCE(next_type, type) AS type,
+		prev_type,
+		prev_created_at,
+		CASE
+			WHEN next_type IS NULL THEN NOW() - prev_created_at
+			ELSE created_at - prev_created_at
+		END AS fixing_time
+	FROM
+		events
+	WHERE
+		prev_type IN ?
+)
+SELECT
+   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
+FROM
+	intervals`, releaseID, append(fixedEvents, openEvents...), riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if len(results) == 0 {
+		return 0, nil
+	}
+
+	fixingTimeStr := results[0].AvgFixingTime
+	if fixingTimeStr == "" {
+		return 0, nil
+	}
 	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
 	if err != nil {
 		return 0, err

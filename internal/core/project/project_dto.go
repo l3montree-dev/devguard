@@ -134,10 +134,10 @@ type projectDetailsDTO struct {
 	Webhooks []common.WebhookIntegrationDTO `json:"webhooks"`
 }
 
-func fromModel(project models.Project) ProjectDTO {
+func FromModel(project models.Project) ProjectDTO {
 	var parentDTO *ProjectDTO
 	if project.Parent != nil {
-		parentDTO = utils.Ptr(fromModel(*project.Parent))
+		parentDTO = utils.Ptr(FromModel(*project.Parent))
 	}
 
 	return ProjectDTO{

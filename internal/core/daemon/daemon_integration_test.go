@@ -4,7 +4,6 @@
 package daemon_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -234,74 +233,11 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.ComponentDependency{},
-		&models.Component{},
-		&models.CVE{},
-		&models.AffectedComponent{},
-		&models.DependencyVuln{},
-		&models.Exploit{},
-	)
-	assert.Nil(t, err)
-
 	casbinRBACProvider := mocks.NewRBACProvider(t)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-
-	t.Run("should update the last scan time of the asset version", func(t *testing.T) {
-
-		component := models.Component{
-			Purl:                "pkg:npm/react@18.2.0",
-			ComponentType:       models.ComponentTypeLibrary,
-			Version:             "18.2.0",
-			License:             nil,
-			Published:           nil,
-			ComponentProject:    nil,
-			ComponentProjectKey: nil,
-		}
-
-		err = db.Create(&component).Error
-		assert.Nil(t, err)
-
-		artifact := models.Artifact{ArtifactName: "artifact1",
-			AssetVersionName: assetVersion.Name, AssetID: asset.ID}
-		componentDependency := models.ComponentDependency{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			Artifacts:        []models.Artifact{artifact},
-			ComponentPurl:    nil,
-			DependencyPurl:   "pkg:npm/react@18.2.0",
-			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
-		}
-
-		err = db.Create(&componentDependency).Error
-		assert.Nil(t, err)
-
-		err = daemon.ScanAssetVersions(db, casbinRBACProvider)
-		assert.Nil(t, err)
-
-		//get assetversion from db to check if it was updated
-		var updatedAssetVersion models.AssetVersion
-		err = db.First(&updatedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
-		assert.Nil(t, err)
-		assert.NotNil(t, updatedAssetVersion.Metadata)
-		assert.Contains(t, updatedAssetVersion.Metadata, artifact.ArtifactName)
-
-		metadataMap := updatedAssetVersion.Metadata[artifact.ArtifactName]
-		metadataBytes, err := json.Marshal(metadataMap)
-		assert.Nil(t, err)
-		var metadata models.ScannerInformation
-		err = json.Unmarshal(metadataBytes, &metadata)
-		assert.Nil(t, err)
-
-		assert.WithinDuration(t, time.Now(), *metadata.LastScan, time.Minute)
-	})
 
 	t.Run("should find the cve in the component dependency", func(t *testing.T) {
 
@@ -312,7 +248,13 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 			CVE:                []models.CVE{{CVE: "CVE-2025-46569"}},
 		}
 
-		err = db.Create(&affectedComponent).Error
+		// create the component
+		component := models.Component{
+			Purl: "pkg:npm/react@18.2.0",
+		}
+		assert.Nil(t, db.Create(&component).Error)
+
+		err := db.Create(&affectedComponent).Error
 		assert.Nil(t, err)
 
 		cve := models.CVE{
@@ -322,15 +264,34 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 				ID: "1",
 			}},
 		}
+
 		err = db.Save(&cve).Error
 		assert.Nil(t, err)
 
-		err = daemon.ScanAssetVersions(db, casbinRBACProvider)
+		// create the artifact
+		artifact := models.Artifact{ArtifactName: "artifact1",
+			AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		assert.Nil(t, db.Create(&artifact).Error)
+
+		// create a component dependency between the artifact and the affected component
+		componentDependency := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			Artifacts: []models.Artifact{
+				artifact,
+			},
+			ComponentPurl:  nil,
+			DependencyPurl: "pkg:npm/react@18.2.0",
+		}
+		err = db.Create(&componentDependency).Error
+		assert.Nil(t, err)
+
+		err = daemon.ScanArtifacts(db, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		var dependencyVuln []models.DependencyVuln
 
-		err := db.Preload("CVE").Find(&dependencyVuln, "asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, assetVersion.Name, cve.CVE).Error
+		err = db.Preload("CVE").Find(&dependencyVuln, "asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, assetVersion.Name, cve.CVE).Error
 		assert.Nil(t, err)
 		assert.Len(t, dependencyVuln, 1)
 		assert.Equal(t, "CVE-2025-46569", dependencyVuln[0].CVE.CVE)
@@ -341,25 +302,12 @@ func TestDaemonSyncTickets(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.CVE{},
-		&models.Exploit{},
-		&models.VulnEvent{},
-		&models.DependencyVuln{},
-		&models.GitLabIntegration{},
-	)
-	assert.Nil(t, err)
-
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
-	err = db.Save(&org).Error
+	err := db.Save(&org).Error
 	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error

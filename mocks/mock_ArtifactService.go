@@ -106,7 +106,7 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 }
 
 // SaveArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SaveArtifact(artifact models.Artifact) error {
+func (_mock *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 	ret := _mock.Called(artifact)
 
 	if len(ret) == 0 {
@@ -114,7 +114,7 @@ func (_mock *ArtifactService) SaveArtifact(artifact models.Artifact) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Artifact) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) error); ok {
 		r0 = returnFunc(artifact)
 	} else {
 		r0 = ret.Error(0)
@@ -128,16 +128,16 @@ type ArtifactService_SaveArtifact_Call struct {
 }
 
 // SaveArtifact is a helper method to define mock.On call
-//   - artifact models.Artifact
+//   - artifact *models.Artifact
 func (_e *ArtifactService_Expecter) SaveArtifact(artifact interface{}) *ArtifactService_SaveArtifact_Call {
 	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", artifact)}
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) Run(run func(artifact models.Artifact)) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) Run(run func(artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Artifact
+		var arg0 *models.Artifact
 		if args[0] != nil {
-			arg0 = args[0].(models.Artifact)
+			arg0 = args[0].(*models.Artifact)
 		}
 		run(
 			arg0,
@@ -151,7 +151,7 @@ func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_
 	return _c
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }

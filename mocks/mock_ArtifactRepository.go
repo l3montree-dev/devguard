@@ -668,6 +668,78 @@ func (_c *ArtifactRepository_Read_Call) RunAndReturn(run func(id string) (models
 	return _c
 }
 
+// ReadArtifact provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	ret := _mock.Called(name, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadArtifact")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (models.Artifact, error)); ok {
+		return returnFunc(name, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) models.Artifact); ok {
+		r0 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
+type ArtifactRepository_ReadArtifact_Call struct {
+	*mock.Call
+}
+
+// ReadArtifact is a helper method to define mock.On call
+//   - name string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *ArtifactRepository_Expecter) ReadArtifact(name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactRepository_ReadArtifact_Call {
+	return &ArtifactRepository_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", name, assetVersionName, assetID)}
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) Run(run func(name string, assetVersionName string, assetID uuid.UUID)) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) Save(tx core.DB, t *models.Artifact) error {
 	ret := _mock.Called(tx, t)
