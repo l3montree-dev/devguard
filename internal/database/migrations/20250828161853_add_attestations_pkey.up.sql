@@ -18,3 +18,5 @@ DROP CONSTRAINT IF EXISTS attestations_pkey;
 
 ALTER TABLE public.attestations
 ADD CONSTRAINT attestations_pkey PRIMARY KEY (asset_version_name, asset_id, artifact_name, predicate_type);
+
+ALTER TABLE public.artifacts ADD COLUMN created_at timestamp with time zone default now();
