@@ -31,10 +31,8 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 		}
 
 		if c.SemverFixed != nil {
-			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.SemverFixed, "dependencyVulnID", dependencyVuln.ID)
 			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.SemverFixed), nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.VersionFixed, "dependencyVulnID", dependencyVuln.ID)
 			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.VersionFixed), nil
 		}
 	}
@@ -96,7 +94,6 @@ func UpdateComponentProperties(db core.DB) error {
 
 						if err == nil {
 							if fixedVersion != nil && fixedVersion != dependencyVuln.ComponentFixedVersion {
-								slog.Info("got fixed version", "fixedVersion", *fixedVersion)
 								dependencyVuln.ComponentFixedVersion = fixedVersion
 								doUpdate = true
 							}

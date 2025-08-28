@@ -124,7 +124,7 @@ func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *m
 
 func (repository *LicenseRiskRepository) Read(vulnID string) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
-	err := repository.db.Where("id = ?", vulnID).Preload("Events").Preload("Component").First(&licenseRisk).Error
+	err := repository.db.Where("id = ?", vulnID).Preload("Artifacts").Preload("Events").Preload("Component").First(&licenseRisk).Error
 	if err != nil {
 		return licenseRisk, err
 	}

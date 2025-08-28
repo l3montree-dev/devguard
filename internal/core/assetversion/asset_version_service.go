@@ -414,20 +414,19 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 
 	for _, foundVuln := range foundVulnerabilities {
 
-		if _, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
+		if existingVuln, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
 			firstDetected = append(firstDetected, foundVuln)
 		} else {
 			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
-			existing := existingVulnsMappedByID[foundVuln.CalculateHash()]
 			alreadyDetectedOnThisArtifactName := false
-			for _, existingArtifact := range existing.Artifacts {
+			for _, existingArtifact := range existingVuln.Artifacts {
 				if existingArtifact.ArtifactName == currentArtifactName {
 					alreadyDetectedOnThisArtifactName = true
 					break
 				}
 			}
 			if !alreadyDetectedOnThisArtifactName {
-				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, foundVuln)
+				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, existingVuln)
 			}
 		}
 	}
@@ -489,7 +488,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err

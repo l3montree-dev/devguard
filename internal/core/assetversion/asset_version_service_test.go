@@ -370,6 +370,47 @@ func TestCreateProjectTitle(t *testing.T) {
 }
 
 func TestDiffVulnsBetweenBranches(t *testing.T) {
+
+	t.Run("should copy events when vuln exists on other branch", func(t *testing.T) {
+		assetID := uuid.New()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					ID:               "vuln-1",
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+					Events:           []models.VulnEvent{},
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					ID:               "vuln-2",
+					AssetVersionName: "main",
+					AssetID:          assetID,
+					Events: []models.VulnEvent{{Type: models.EventTypeDetected},
+						{Type: models.EventTypeComment}},
+				},
+				Artifacts: []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: "feature-branch", AssetID: assetID},
+					{ArtifactName: "artifact2", AssetVersionName: "feature-branch", AssetID: assetID}},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
+		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
+		assert.Len(t, existingEvents, 1)
+		fmt.Printf("Existing Events: %+v\n", existingEvents)
+		assert.Len(t, existingEvents[0], 2)
+
+	})
+
 	t.Run("should identify new vulnerabilities not on other branch", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{

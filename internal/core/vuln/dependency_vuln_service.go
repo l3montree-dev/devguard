@@ -189,9 +189,6 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 		return nil
 	}
 
-	// create a new VulnEvent for each fixed dependencyVuln
-	events := make([]models.VulnEvent, len(vulnerabilities))
-
 	for i := range vulnerabilities {
 		alreadyAssociated := false
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -211,18 +208,13 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 				return err
 			}
 		}
-		ev := models.NewAddedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
 	}
 
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
-
-	return s.vulnEventRepository.SaveBatch(tx, events)
-
+	return nil
 }
 
 func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
@@ -230,7 +222,6 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 		return nil
 	}
 
-	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
 		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -243,16 +234,12 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 			vulnerabilities[i].CalculateHash(), scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID).Error; err != nil {
 			return err
 		}
-		ev := models.NewRemovedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
 	}
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
-	// save the events
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return nil
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
