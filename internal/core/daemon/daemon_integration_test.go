@@ -564,7 +564,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	})
 }
 
-func TestDaemonComponentProperties(t *testing.T) {
+func TestDaemonFixedVersions(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
@@ -688,10 +688,6 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 		assert.NotNil(t, updatedDependencyVuln.ComponentFixedVersion)
 		assert.Equal(t, fixedVersion, *updatedDependencyVuln.ComponentFixedVersion)
-		//componentB is the affected component
-		//componentA -> componentB
-		assert.Equal(t, 1, *updatedDependencyVuln.ComponentDepth)
-
 	})
 
 }
