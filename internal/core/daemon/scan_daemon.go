@@ -22,7 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
+func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	start := time.Now()
 	defer func() {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())

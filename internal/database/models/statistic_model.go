@@ -11,7 +11,6 @@ type ArtifactRiskHistory struct {
 	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
-	Artifact         Artifact  `json:"artifact" gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;references:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
 }
 
 func (m ArtifactRiskHistory) TableName() string {

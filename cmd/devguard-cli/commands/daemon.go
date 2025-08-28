@@ -114,7 +114,7 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "scan") {
 		start = time.Now()
 		// update scan
-		err := daemon.ScanAssetVersions(db, casbinRBACProvider)
+		err := daemon.ScanArtifacts(db, casbinRBACProvider)
 		if err != nil {
 			slog.Error("could not scan asset versions", "err", err)
 			return nil
