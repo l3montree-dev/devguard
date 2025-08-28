@@ -116,7 +116,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)
 
-		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 12) // Set the updated at time to 6 days ago
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 6) // Set the updated at time to 6 days ago
 
 		assetVersion.UpdatedAt = changeUpdatedTime
 
