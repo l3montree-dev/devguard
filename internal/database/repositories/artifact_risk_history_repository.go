@@ -23,7 +23,7 @@ func NewArtifactRiskHistoryRepository(db core.DB) *artifactRiskHistoryRepository
 
 func (r *artifactRiskHistoryRepository) GetRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	var assetRisk = []models.ArtifactRiskHistory{}
-	db := r.Repository.GetDB(r.db)
+	db := r.GetDB(r.db)
 
 	// base query
 	db = db.Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
