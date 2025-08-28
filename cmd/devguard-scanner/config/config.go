@@ -121,20 +121,6 @@ func ParseBaseConfig(runningCMD string) {
 	if RuntimeBaseConfig.ArtifactName == "" {
 		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
 	}
-
-	slog.Info("running with config",
-		"assetName", RuntimeBaseConfig.AssetName,
-		"apiUrl", RuntimeBaseConfig.APIURL,
-		"path", RuntimeBaseConfig.Path,
-		"ref", RuntimeBaseConfig.Ref,
-		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
-		"isTag", RuntimeBaseConfig.IsTag,
-		"scannerID", RuntimeBaseConfig.ScannerID,
-		"webUI", RuntimeBaseConfig.WebUI,
-		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
-		"failOnCVSS", RuntimeBaseConfig.FailOnCVSS,
-		"registry", RuntimeBaseConfig.Registry,
-	)
 }
 
 func StoreTokenInKeyring(assetName, token string) error {

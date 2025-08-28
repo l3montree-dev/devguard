@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -37,38 +36,29 @@ func (a *attestationController) List(ctx core.Context) error {
 }
 
 func (a *attestationController) Create(ctx core.Context) error {
-	var attestation models.Attestation
+
 	jsonContent := make(map[string]any)
 
 	asset := core.GetAsset(ctx)
 
-	isTag := ctx.Request().Header.Get("X-Tag")
-	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
 
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, isTag == "1", utils.EmptyThenNil(defaultBranch))
-	if err != nil {
-		slog.Error("could not find or create asset version", "err", err)
-		return err
-	}
-
-	attestationName := ctx.Request().Header.Get("X-Artifact-Name")
-	if attestationName == "" {
+	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
+	if artifactName == "" {
 		slog.Warn("no X-Artifact-Name header found. Using asset version name as artifact name")
-		attestationName = "default"
+		artifactName = "default"
 	}
 
-	attestation.Artifact = models.Artifact{
+	attestation := models.Attestation{
 		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		ArtifactName:     attestationName,
+		AssetVersionName: assetVersionName,
+		ArtifactName:     artifactName,
+		PredicateType:    ctx.Request().Header.Get("X-Predicate-Type"),
 	}
-
-	attestation.PredicateType = ctx.Request().Header.Get("X-Predicate-Type")
 
 	content, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
