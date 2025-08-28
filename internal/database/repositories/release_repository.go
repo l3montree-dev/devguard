@@ -216,7 +216,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		SELECT id FROM releases WHERE id = ?
 		UNION ALL
 		SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
-	) SELECT id FROM tree`, releaseID).Rows()
+	) SELECT id FROM tree`, releaseID).Debug().Rows()
 		if err != nil {
 			return artifacts, nil, err
 		}
@@ -241,7 +241,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		}
 	}
 
-	q := r.db.Where("project_id = ?", projectID)
+	q := r.db.Where("project_id IN ?", projectIDs)
 	if len(excludedIDs) > 0 {
 		q = q.Where("id NOT IN ?", excludedIDs)
 	}

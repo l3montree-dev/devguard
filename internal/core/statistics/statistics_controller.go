@@ -71,21 +71,27 @@ func checkSeverity(severity string) error {
 	return nil
 }
 
-func (c *httpController) GetAssetVersionRiskHistory(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
+func (c *httpController) GetArtifactRiskHistory(ctx core.Context) error {
+	artifact := core.GetArtifact(ctx)
 	// get the start and end query params
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
-	results, err := c.getAssetVersionRiskHistory(start, end, assetVersion)
+	results, err := c.getArtifactRiskHistory(start, end, artifact)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, results)
+	// convert to dto
+	var dtoResults []RiskHistoryDTO
+	for _, r := range results {
+		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
+	}
+
+	return ctx.JSON(200, dtoResults)
 }
 
-func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVersion models.AssetVersion) ([]models.ArtifactRiskHistory, error) {
+func (c *httpController) getArtifactRiskHistory(start, end string, artifact models.Artifact) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -102,7 +108,7 @@ func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVers
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetID, beginTime, endTime)
+	return c.statisticsService.GetArtifactRiskHistory(artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, beginTime, endTime)
 }
 
 func (c *httpController) GetCVESWithKnownExploits(ctx core.Context) error {
@@ -156,7 +162,25 @@ func (c *httpController) GetReleaseRiskHistory(ctx core.Context) error {
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, res)
+	// convert to dto
+	var dtoResults []RiskHistoryDTO
+	for _, r := range res {
+		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
+	}
+
+	return ctx.JSON(200, dtoResults)
+}
+
+func (c *httpController) GetComponentRisk(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+	artifact := core.GetArtifact(ctx)
+	results, err := c.statisticsService.GetComponentRisk(artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID)
+
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, results)
 }
 
 // GetAverageReleaseFixingTime returns the average fixing time (seconds) for a release across all included artifacts

@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
@@ -199,19 +198,19 @@ func (_c *OrganizationRepository_Begin_Call) RunAndReturn(run func() core.DB) *O
 }
 
 // ContentTree provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement {
+func (_mock *OrganizationRepository) ContentTree(orgID uuid.UUID, projects []string) []any {
 	ret := _mock.Called(orgID, projects)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ContentTree")
 	}
 
-	var r0 []common.ContentTreeElement
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) []common.ContentTreeElement); ok {
+	var r0 []any
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) []any); ok {
 		r0 = returnFunc(orgID, projects)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]common.ContentTreeElement)
+			r0 = ret.Get(0).([]any)
 		}
 	}
 	return r0
@@ -247,12 +246,12 @@ func (_c *OrganizationRepository_ContentTree_Call) Run(run func(orgID uuid.UUID,
 	return _c
 }
 
-func (_c *OrganizationRepository_ContentTree_Call) Return(contentTreeElements []common.ContentTreeElement) *OrganizationRepository_ContentTree_Call {
-	_c.Call.Return(contentTreeElements)
+func (_c *OrganizationRepository_ContentTree_Call) Return(vs []any) *OrganizationRepository_ContentTree_Call {
+	_c.Call.Return(vs)
 	return _c
 }
 
-func (_c *OrganizationRepository_ContentTree_Call) RunAndReturn(run func(orgID uuid.UUID, projects []string) []common.ContentTreeElement) *OrganizationRepository_ContentTree_Call {
+func (_c *OrganizationRepository_ContentTree_Call) RunAndReturn(run func(orgID uuid.UUID, projects []string) []any) *OrganizationRepository_ContentTree_Call {
 	_c.Call.Return(run)
 	return _c
 }

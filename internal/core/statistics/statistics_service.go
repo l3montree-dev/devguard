@@ -33,6 +33,55 @@ func NewService(statisticsRepository core.StatisticsRepository, componentReposit
 	}
 }
 
+func (s *service) GetComponentRisk(artifactName, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
+	if err != nil {
+		return nil, err
+	}
+
+	distributionPerComponent := make(map[string]models.Distribution)
+
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.ComponentPurl == nil {
+			continue
+		}
+		componentName := *dependencyVuln.ComponentPurl
+		if _, exists := distributionPerComponent[componentName]; !exists {
+			distributionPerComponent[componentName] = models.Distribution{}
+		}
+		distribution := distributionPerComponent[componentName]
+
+		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+		cvss := float64(dependencyVuln.CVE.CVSS)
+
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			distribution.Low++
+		case risk >= 4.0 && risk < 7.0:
+			distribution.Medium++
+		case risk >= 7.0 && risk < 9.0:
+			distribution.High++
+		case risk >= 9.0 && risk <= 10.0:
+			distribution.Critical++
+		}
+
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			distribution.LowCVSS++
+		case cvss >= 4.0 && cvss < 7.0:
+			distribution.MediumCVSS++
+		case cvss >= 7.0 && cvss < 9.0:
+			distribution.HighCVSS++
+		case cvss >= 9.0 && cvss <= 10.0:
+			distribution.CriticalCVSS++
+		}
+
+		distributionPerComponent[componentName] = distribution
+	}
+
+	return distributionPerComponent, nil
+}
+
 func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	return s.artifactRiskHistoryRepository.GetRiskHistory(nil, assetVersionName, assetID, start, end)
 }

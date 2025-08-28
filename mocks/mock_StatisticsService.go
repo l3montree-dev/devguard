@@ -349,6 +349,80 @@ func (_c *StatisticsService_GetAverageFixingTimeForRelease_Call) RunAndReturn(ru
 	return _c
 }
 
+// GetComponentRisk provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetComponentRisk(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetComponentRisk")
+	}
+
+	var r0 map[string]models.Distribution
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (map[string]models.Distribution, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) map[string]models.Distribution); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]models.Distribution)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetComponentRisk_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetComponentRisk'
+type StatisticsService_GetComponentRisk_Call struct {
+	*mock.Call
+}
+
+// GetComponentRisk is a helper method to define mock.On call
+//   - artifactName string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *StatisticsService_Expecter) GetComponentRisk(artifactName interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsService_GetComponentRisk_Call {
+	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", artifactName, assetVersionName, assetID)}
+}
+
+func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetComponentRisk_Call) Return(stringToDistribution map[string]models.Distribution, err error) *StatisticsService_GetComponentRisk_Call {
+	_c.Call.Return(stringToDistribution, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetReleaseRiskHistory provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(releaseID, start, end)

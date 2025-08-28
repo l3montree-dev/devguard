@@ -237,6 +237,12 @@ func GetArtifactName(ctx Context) (string, error) {
 	if artifactName == "" {
 		return "", fmt.Errorf("could not get artifact name")
 	}
+	// urldecode the artifact name
+	artifactName, err := url.PathUnescape(artifactName)
+
+	if err != nil {
+		return "", fmt.Errorf("could not url decode artifact name: %w", err)
+	}
 	return artifactName, nil
 }
 

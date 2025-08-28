@@ -57,15 +57,15 @@ type AssetDTO struct {
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
 }
 
-func toDTOs(assets []models.Asset) []AssetDTO {
+func ToDTOs(assets []models.Asset) []AssetDTO {
 	assetDTOs := make([]AssetDTO, len(assets))
 	for i, asset := range assets {
-		assetDTOs[i] = toDTO(asset)
+		assetDTOs[i] = ToDTO(asset)
 	}
 	return assetDTOs
 }
 
-func toDTO(asset models.Asset) AssetDTO {
+func ToDTO(asset models.Asset) AssetDTO {
 	return AssetDTO{
 		ID:          asset.ID,
 		Name:        asset.Name,
@@ -98,7 +98,7 @@ func toDTO(asset models.Asset) AssetDTO {
 }
 
 func toDTOWithSecrets(asset models.Asset) AssetDTO {
-	assetDTO := toDTO(asset)
+	assetDTO := ToDTO(asset)
 	assetDTO.BadgeSecret = asset.BadgeSecret
 	assetDTO.WebhookSecret = asset.WebhookSecret
 

@@ -51,7 +51,7 @@ func UpdateStatistics(db core.DB) error {
 			continue
 		}
 		for _, artifact := range artifacts {
-			if err := statisticsService.UpdateArtifactRiskAggregation(&artifact, a.AssetID, utils.OrDefault(version.LastHistoryUpdate, version.CreatedAt), t, true); err != nil {
+			if err := statisticsService.UpdateArtifactRiskAggregation(&artifact, a.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, version.CreatedAt), t, true); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 				continue
 			}

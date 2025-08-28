@@ -224,7 +224,7 @@ type OrganizationRepository interface {
 	common.Repository[uuid.UUID, models.Org, DB]
 	ReadBySlug(slug string) (models.Org, error)
 	Update(tx DB, organization *models.Org) error
-	ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement
+	ContentTree(orgID uuid.UUID, projects []string) []any // returns project dtos as values - including fetched assets
 	GetOrgByID(id uuid.UUID) (models.Org, error)
 }
 
@@ -423,6 +423,7 @@ type StatisticsService interface {
 	// Release scoped statistics
 	GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
+	GetComponentRisk(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 
 type DepsDevService interface {

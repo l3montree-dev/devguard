@@ -29,13 +29,13 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-			Where("adv.asset_version_name = ?", assetVersionName).Where("adv.asset_id = ?", assetID).Where("adv.artifact_name = ?", artifactName).Where("created_at <= ?", time).
+			Where("adv.artifact_asset_version_name = ?", assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 
 	} else {
 		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).Where("adv.asset_id = ?", assetID).Where("adv.artifact_name = ?", artifactName).Where("created_at <= ?", time).
+		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	}
 	if err != nil {
@@ -87,7 +87,7 @@ WITH events AS (
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND adv.artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
 ),
 intervals AS (
    SELECT

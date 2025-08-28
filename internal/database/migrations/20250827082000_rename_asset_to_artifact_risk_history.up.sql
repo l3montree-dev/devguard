@@ -32,3 +32,5 @@ CREATE TABLE IF NOT EXISTS artifact_risk_history (
         REFERENCES artifacts(artifact_name, asset_version_name, asset_id)
         ON DELETE CASCADE
 );
+
+ALTER TABLE public.artifacts ADD COLUMN IF NOT EXISTS last_history_update timestamp with time zone;

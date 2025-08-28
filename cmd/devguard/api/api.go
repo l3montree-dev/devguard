@@ -120,6 +120,7 @@ func artifactMiddleware(repository core.ArtifactRepository) func(next echo.Handl
 
 			artifactName, err := core.GetArtifactName(ctx)
 			if err != nil {
+				slog.Error("invalid artifact name", "err", err)
 				return echo.NewHTTPError(400, "invalid artifact name")
 			}
 
@@ -680,6 +681,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 
+	projectRouter.GET("/policies/", policyController.GetProjectPolicies, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 	projectRouter.PUT("/policies/:policyID/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 
@@ -753,8 +755,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 
-	artifactRouter := assetVersionRouter.Group("/artifacts/:artifact", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
+	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
 	artifactRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	artifactRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	artifactRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
 	artifactRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
 	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
@@ -774,7 +777,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	artifactRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
 	// needs migration to artifact router
-	artifactRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
+	artifactRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
+	artifactRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
@@ -795,7 +799,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
-	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)

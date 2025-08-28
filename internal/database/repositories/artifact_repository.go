@@ -34,6 +34,6 @@ func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, 
 
 func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	var artifact models.Artifact
-	err := r.db.Where("name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
+	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
 	return artifact, err
 }

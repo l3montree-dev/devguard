@@ -78,7 +78,7 @@ func (a *httpController) List(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, toDTOs(apps))
+	return ctx.JSON(200, ToDTOs(apps))
 }
 
 func (a *httpController) AttachSigningKey(ctx core.Context) error {
@@ -148,13 +148,13 @@ func (a *httpController) Create(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, toDTO(*asset))
+	return ctx.JSON(200, ToDTO(*asset))
 }
 
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 
-	return ctx.JSON(200, toDTO(app))
+	return ctx.JSON(200, ToDTO(app))
 }
 
 func (a *httpController) Update(ctx core.Context) error {

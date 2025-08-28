@@ -254,7 +254,7 @@ func (projectController *controller) Read(c core.Context) error {
 	}
 
 	resp := projectDetailsDTO{
-		ProjectDTO: fromModel(project),
+		ProjectDTO: FromModel(project),
 		Members:    members,
 		Webhooks:   webhooks,
 	}
@@ -333,7 +333,7 @@ func (projectController *controller) Update(c core.Context) error {
 	project.Assets = assets
 
 	resp := projectDetailsDTO{
-		ProjectDTO: fromModel(project),
+		ProjectDTO: FromModel(project),
 		Members:    members,
 	}
 	return c.JSON(200, resp)

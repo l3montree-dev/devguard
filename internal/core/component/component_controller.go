@@ -28,6 +28,7 @@ type licenseResponse struct {
 func (httpController httpController) LicenseDistribution(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	artifact := core.GetArtifact(ctx)
 	if err != nil {
 		// we need to get the default asset version
 		assetVersion, err = httpController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
@@ -36,15 +37,10 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 		}
 	}
 
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
-	if err != nil {
-		return err
-	}
-
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		artifactName,
+		artifact.ArtifactName,
 	)
 
 	var res = make([]licenseResponse, 0, len(licenses))
