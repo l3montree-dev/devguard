@@ -498,16 +498,16 @@ func (_c *StatisticsService_GetReleaseRiskHistory_Call) RunAndReturn(run func(re
 }
 
 // UpdateArtifactRiskAggregation provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
-	ret := _mock.Called(artifact, assetID, begin, end, propagateToProject)
+func (_mock *StatisticsService) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
+	ret := _mock.Called(artifact, assetID, begin, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateArtifactRiskAggregation")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, uuid.UUID, time.Time, time.Time, bool) error); ok {
-		r0 = returnFunc(artifact, assetID, begin, end, propagateToProject)
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
+		r0 = returnFunc(artifact, assetID, begin, end)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -524,12 +524,11 @@ type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
-//   - propagateToProject bool
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(artifact interface{}, assetID interface{}, begin interface{}, end interface{}, propagateToProject interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
-	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", artifact, assetID, begin, end, propagateToProject)}
+func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", artifact, assetID, begin, end)}
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Artifact
 		if args[0] != nil {
@@ -547,16 +546,11 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(art
 		if args[3] != nil {
 			arg3 = args[3].(time.Time)
 		}
-		var arg4 bool
-		if args[4] != nil {
-			arg4 = args[4].(bool)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -567,7 +561,7 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Return(err error
 	return _c
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }
