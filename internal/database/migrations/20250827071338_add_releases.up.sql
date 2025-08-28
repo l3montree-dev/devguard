@@ -15,21 +15,21 @@
 
 
 -- releases
-CREATE TABLE IF NOT EXISTS releases (
+CREATE TABLE IF NOT EXISTS public.releases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     deleted_at timestamp with time zone,
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE
+    project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE
 );
 
 
 -- release_items
-CREATE TABLE IF NOT EXISTS release_items (
+CREATE TABLE IF NOT EXISTS public.release_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    release_id UUID NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
-    child_release_id UUID REFERENCES releases(id) ON DELETE CASCADE,
+    release_id UUID NOT NULL REFERENCES public.releases(id) ON DELETE CASCADE,
+    child_release_id UUID REFERENCES public.releases(id) ON DELETE CASCADE,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     deleted_at timestamp with time zone,
@@ -38,21 +38,21 @@ CREATE TABLE IF NOT EXISTS release_items (
     asset_id UUID,
     asset_version_name TEXT,
     CONSTRAINT fk_release
-        FOREIGN KEY (release_id) REFERENCES releases(id) ON DELETE CASCADE,
+        FOREIGN KEY (release_id) REFERENCES public.releases(id) ON DELETE CASCADE,
     CONSTRAINT fk_child_release
-        FOREIGN KEY (child_release_id) REFERENCES releases(id) ON DELETE CASCADE,
+        FOREIGN KEY (child_release_id) REFERENCES public.releases(id) ON DELETE CASCADE,
     CONSTRAINT fk_artifact
         FOREIGN KEY (artifact_name, asset_id, asset_version_name)
-        REFERENCES artifacts(artifact_name, asset_id, asset_version_name)
+        REFERENCES public.artifacts(artifact_name, asset_id, asset_version_name)
         ON DELETE CASCADE
 );
 
 -- drop old constraint if it exists
-ALTER TABLE release_items
+ALTER TABLE public.release_items
     DROP CONSTRAINT IF EXISTS chk_one_not_null;
 
 -- add check constraint (only one of artifact_id or child_release_id must be set)
-ALTER TABLE release_items
+ALTER TABLE public.release_items
     ADD CONSTRAINT chk_one_not_null
     CHECK (
         (child_release_id IS NOT NULL AND artifact_name IS NULL AND asset_id IS NULL AND asset_version_name IS NULL)

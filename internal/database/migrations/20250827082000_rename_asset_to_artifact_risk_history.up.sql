@@ -1,5 +1,5 @@
 -- artifact_risk_history
-CREATE TABLE IF NOT EXISTS artifact_risk_history (
+CREATE TABLE IF NOT EXISTS public.artifact_risk_history (
     artifact_name TEXT NOT NULL,
     asset_version_name TEXT NOT NULL,
     asset_id UUID NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS artifact_risk_history (
 
     CONSTRAINT fk_artifact
         FOREIGN KEY (artifact_name, asset_version_name, asset_id)
-        REFERENCES artifacts(artifact_name, asset_version_name, asset_id)
+        REFERENCES public.artifacts(artifact_name, asset_version_name, asset_id)
         ON DELETE CASCADE
 );
 

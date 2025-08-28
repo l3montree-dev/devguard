@@ -63,7 +63,7 @@ ALTER TABLE ONLY public.artifact_dependency_vulns
 ALTER TABLE ONLY public.artifact_license_risks
     ADD CONSTRAINT artifact_license_risks_pkey PRIMARY KEY (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, license_risk_id);
 
-ALTER TABLE license_risks ADD CONSTRAINT license_risks_pkey PRIMARY KEY (id);
+ALTER TABLE public.license_risks ADD CONSTRAINT license_risks_pkey PRIMARY KEY (id);
 
 
 ALTER TABLE ONLY public.artifact_component_dependencies
@@ -115,19 +115,19 @@ ALTER TABLE ONLY public.artifacts
 
 
 --- Read all scanner_ids of the component_dependencies and create corresponding artifacts ---
-INSERT INTO artifacts (asset_id, asset_version_name, artifact_name)
+INSERT INTO public.artifacts (asset_id, asset_version_name, artifact_name)
 SELECT DISTINCT
     t.asset_id,
     t.asset_version_name,
     trim(sid) AS artifact_name
-FROM component_dependencies t,
+FROM public.component_dependencies t,
 LATERAL regexp_split_to_table(t.scanner_ids, '\s+') sid
 WHERE t.asset_version_name IS NOT NULL
 ON CONFLICT (asset_id, asset_version_name, artifact_name) DO NOTHING;
 
 --- Recreate the relationship ---
 
-INSERT INTO artifact_component_dependencies (
+INSERT INTO public.artifact_component_dependencies (
     artifact_artifact_name,
     artifact_asset_version_name,
     artifact_asset_id,
@@ -138,50 +138,50 @@ SELECT DISTINCT
     a.asset_version_name,
     a.asset_id,
     cd.id
-FROM component_dependencies cd
+FROM public.component_dependencies cd
 JOIN LATERAL regexp_split_to_table(cd.scanner_ids, '\s+') sid ON true
-JOIN artifacts a
+JOIN public.artifacts a
   ON a.asset_id = cd.asset_id
  AND a.asset_version_name = cd.asset_version_name
  AND a.artifact_name = trim(sid)
 ON CONFLICT (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, component_dependency_id) DO NOTHING;
 
 
-INSERT INTO artifact_dependency_vulns (
+INSERT INTO public.artifact_dependency_vulns (
     artifact_artifact_name,
     artifact_asset_version_name,
     artifact_asset_id,
     dependency_vuln_id
 )
 SELECT DISTINCT
-    a.artifact_name AS artifact_artifact_name,
-    a.asset_version_name,
-    a.asset_id,
-    dv.id AS dependency_vuln_id
-FROM dependency_vulns dv
+        a.artifact_name AS artifact_artifact_name,
+        a.asset_version_name,
+        a.asset_id,
+        dv.id AS dependency_vuln_id
+FROM public.dependency_vulns dv
 JOIN LATERAL regexp_split_to_table(dv.scanner_ids, '\s+') sid ON true
-JOIN artifacts a
-  ON a.asset_id = dv.asset_id
+JOIN public.artifacts a
+    ON a.asset_id = dv.asset_id
  AND a.asset_version_name = dv.asset_version_name
  AND a.artifact_name = trim(sid)
 ON CONFLICT (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) DO NOTHING;
 
 
-INSERT INTO artifact_license_risks (
+INSERT INTO public.artifact_license_risks (
     artifact_artifact_name,
     artifact_asset_version_name,
     artifact_asset_id,
     license_risk_id
 )
 SELECT DISTINCT
-    a.artifact_name AS artifact_artifact_name,
-    a.asset_version_name,
-    a.asset_id,
-    lr.id AS license_risk_id
-FROM license_risks lr
+        a.artifact_name AS artifact_artifact_name,
+        a.asset_version_name,
+        a.asset_id,
+        lr.id AS license_risk_id
+FROM public.license_risks lr
 JOIN LATERAL regexp_split_to_table(lr.scanner_ids, '\s+') sid ON true
-JOIN artifacts a
-  ON a.asset_id = lr.asset_id
+JOIN public.artifacts a
+    ON a.asset_id = lr.asset_id
  AND a.asset_version_name = lr.asset_version_name
  AND a.artifact_name = trim(sid)
 ON CONFLICT (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, license_risk_id) DO NOTHING;
@@ -192,6 +192,6 @@ ALTER TABLE ONLY public.attestations
     REFERENCES public.artifacts (artifact_name, asset_version_name, asset_id)
     ON DELETE CASCADE;
 
-ALTER TABLE dependency_vulns DROP COLUMN IF EXISTS scanner_ids;
-ALTER TABLE component_dependencies DROP COLUMN IF EXISTS scanner_ids;
-ALTER TABLE license_risks DROP COLUMN IF EXISTS scanner_ids;
+ALTER TABLE public.dependency_vulns DROP COLUMN IF EXISTS scanner_ids;
+ALTER TABLE public.component_dependencies DROP COLUMN IF EXISTS scanner_ids;
+ALTER TABLE public.license_risks DROP COLUMN IF EXISTS scanner_ids;
