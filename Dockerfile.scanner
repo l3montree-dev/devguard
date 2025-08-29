@@ -54,7 +54,7 @@ RUN CGO_ENABLED=0 make devguard-scanner
 # create final image with node:alpine
 FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
 
-RUN apk add --no-cache git python3 dbus dbux-x11
+RUN apk update && apk add --no-cache git python3 dbus dbus-x11
 # Create virtualenvs
 ENV VENV_DIR=/opt/tools
 RUN python -m venv ${VENV_DIR}/semgrep && \
