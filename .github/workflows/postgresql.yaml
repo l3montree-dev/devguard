@@ -18,6 +18,7 @@ jobs:
       artifact-name: "postgresql"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
+      image-suffix: "postgresql"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
       build-args: "--context=. --dockerfile=Dockerfile.postgresql"
@@ -32,6 +33,7 @@ jobs:
       api-url: https://api.main.devguard.org
       artifact-name: "postgresql"
       web-ui: https://main.devguard.org
+      image-suffix: "postgresql"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
@@ -44,6 +46,7 @@ jobs:
       artifact-name: "postgresql"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
+      image-suffix: "postgresql"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
@@ -57,6 +60,7 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
       artifact-name: "postgresql"
+      image-suffix: "postgresql"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
