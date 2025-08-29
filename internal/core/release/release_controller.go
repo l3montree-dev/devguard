@@ -18,10 +18,12 @@ type releaseController struct {
 	assetVersionRepository core.AssetVersionRepository
 	componentRepository    core.ComponentRepository
 	licenseRiskRepository  core.LicenseRiskRepository
+	dependencyVulnRepo     core.DependencyVulnRepository
+	assetRepository        core.AssetRepository
 }
 
-func NewReleaseController(s *service, avService core.AssetVersionService, avRepo core.AssetVersionRepository, compRepo core.ComponentRepository, licRepo core.LicenseRiskRepository) *releaseController {
-	return &releaseController{service: s, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo}
+func NewReleaseController(s *service, avService core.AssetVersionService, avRepo core.AssetVersionRepository, compRepo core.ComponentRepository, licRepo core.LicenseRiskRepository, dvRepo core.DependencyVulnRepository, assetRepository core.AssetRepository) *releaseController {
+	return &releaseController{service: s, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
 }
 
 func (h *releaseController) List(c core.Context) error {
@@ -95,13 +97,50 @@ func (h *releaseController) SBOMXML(c core.Context) error {
 
 // VEXJSON currently returns the merged CycloneDX BOM as JSON for compatibility.
 func (h *releaseController) VEXJSON(c core.Context) error {
-	// For now return the merged SBOM as the VEX payload. Later we can convert to OpenVEX if needed.
-	return h.SBOMJSON(c)
+	idParam := core.GetParam(c, "releaseId")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid release id")
+	}
+
+	rel, err := h.service.ReadRecursive(id)
+	if err != nil {
+		return echo.NewHTTPError(404, "release not found").WithInternal(err)
+	}
+
+	org := core.GetOrg(c)
+
+	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
+	}
+
+	c.Response().Header().Set(echo.HeaderContentType, "application/json")
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(bom)
 }
 
 // VEXXML currently returns the merged CycloneDX BOM as XML for compatibility.
 func (h *releaseController) VEXXML(c core.Context) error {
-	return h.SBOMXML(c)
+	idParam := core.GetParam(c, "releaseId")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid release id")
+	}
+
+	rel, err := h.service.ReadRecursive(id)
+	if err != nil {
+		return echo.NewHTTPError(404, "release not found").WithInternal(err)
+	}
+
+	org := core.GetOrg(c)
+
+	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
+	}
+
+	c.Response().Header().Set(echo.HeaderContentType, "application/xml")
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatXML).Encode(bom)
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
@@ -136,6 +175,54 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 
 	if len(boms) == 0 {
 		// Use the same merge helper so Components/Dependencies are initialized correctly
+		return normalize.MergeCdxBoms(&cdx.Metadata{
+			Component: &cdx.Component{
+				Type: cdx.ComponentTypeApplication,
+				Name: release.Name,
+			},
+		}), nil
+	}
+
+	merged := normalize.MergeCdxBoms(&cdx.Metadata{
+		Component: &cdx.Component{
+			Type: cdx.ComponentTypeApplication,
+			Name: release.Name,
+		},
+	}, boms...)
+
+	return merged, nil
+}
+
+// buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
+func (h *releaseController) buildMergedVEX(c core.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+	var boms []*cdx.BOM
+
+	for _, item := range release.Items {
+		// gather dependency vulns for this artifact (empty artifactName for release-level vulns)
+		var artifactName string
+
+		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, artifactName)
+		if err != nil {
+			return nil, err
+		}
+
+		// fetch the asset version - preload the Asset relation
+		av, err := h.assetVersionRepository.Read(*item.AssetVersionName, *item.AssetID)
+		if err != nil {
+			return nil, err
+		}
+		asset, err := h.assetRepository.Read(av.AssetID)
+		if err != nil {
+			return nil, err
+		}
+
+		bom := h.assetVersionService.BuildVeX(asset, av, orgName, depVulns)
+		if bom != nil {
+			boms = append(boms, bom)
+		}
+	}
+
+	if len(boms) == 0 {
 		return normalize.MergeCdxBoms(&cdx.Metadata{
 			Component: &cdx.Component{
 				Type: cdx.ComponentTypeApplication,

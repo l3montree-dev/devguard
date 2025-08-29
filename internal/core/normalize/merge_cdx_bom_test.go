@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMergeCdxBomsSimple(t *testing.T) {
@@ -18,6 +19,9 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 			Name:       "comp-b",
 			PackageURL: "pkg:maven/org.example/comp-b@2.0.0",
 		}},
+		Vulnerabilities: &[]cdx.Vulnerability{{
+			ID: "CVE-XYZ",
+		}},
 	}
 
 	merged := MergeCdxBoms(nil, b1, b2)
@@ -27,4 +31,6 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 	if len(*merged.Components) != 2 {
 		t.Fatalf("expected 2 components in merged BOM, got %d", len(*merged.Components))
 	}
+
+	assert.Len(t, *merged.Vulnerabilities, 1)
 }

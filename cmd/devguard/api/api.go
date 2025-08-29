@@ -722,7 +722,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	// release routes inside project scope
 	releaseRepository = repositories.NewReleaseRepository(db)
 	releaseService := release.NewService(releaseRepository)
-	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository)
+
+	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository, dependencyVulnRepository, assetRepository)
 
 	projectRouter.GET("/releases/", releaseController.List, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 	projectRouter.POST("/releases/", releaseController.Create, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))

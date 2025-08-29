@@ -45,7 +45,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 	compRepo := repositories.NewComponentRepository(db)
 	releaseRepo := repositories.NewReleaseRepository(db)
 	licenseRiskRepo := repositories.NewLicenseRiskRepository(db)
-
+	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
+	assetRepository := repositories.NewAssetRepository(db)
 	// services using inithelper to follow repository patterns
 	avService := inithelper.CreateAssetVersionService(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	relService := releasepkg.NewService(releaseRepo)
@@ -103,7 +104,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 	t.Run("sbom returns merged components", func(t *testing.T) {
 		// build controller using repo/service patterns
-		releaseController := releasepkg.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo)
+		releaseController := releasepkg.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
 
 		// prepare context with echo request/recorder
 		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)
