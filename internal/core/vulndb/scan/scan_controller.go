@@ -127,11 +127,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// update the sbom in the database in parallel
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
-	if err != nil {
-		slog.Error("could not update sbom", "err", err)
-		return scanResults, err
-	}
+	go func() {
+		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
+		if err != nil {
+			slog.Error("could not update sbom", "err", err)
+		}
+	}()
 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }
@@ -161,17 +162,18 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 		}
 	})
 
-	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-	if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-		slog.Error("could not recalculate risk history", "err", err)
-		return scanResults, err
-	}
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
 
-	// save the asset
-	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
-		slog.Error("could not save asset", "err", err)
-		return scanResults, err
-	}
+		}
+
+		// save the asset
+		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
+		}
+	})
 
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
