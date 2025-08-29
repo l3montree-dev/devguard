@@ -43,7 +43,6 @@ jobs:
     - container-scanning
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
-      artifact-name: "postgresql"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
       image-suffix: "postgresql"
