@@ -54,15 +54,15 @@ type AttestationPredicate struct {
 	// https://github.com/in-toto/attestation/blob/main/spec/predicates/release.md#schema
 	Purl string `json:"purl"`
 }
-type AttestationFile struct {
+type AttestationPayload struct {
 	Type          string               `json:"_type"`
 	PredicateType string               `json:"predicateType"`
 	Predicate     AttestationPredicate `json:"predicate"`
 }
 
-type JSONLineFile struct {
+type AttestationFileLine struct {
 	PayloadType string `json:"payloadType"`
-	Payload     string `json:"payload"`
+	Payload     string `json:"payload"` // base64 encoded AttestationPayload
 }
 
 // extract filename from path or return directory if path points to a directory
@@ -364,13 +364,13 @@ func getReleaseAttestationBOMs() ([]cdx.BOM, error) {
 	return attestationBoms, nil
 }
 
-func getReleaseAttestations(image string) ([]AttestationFile, error) {
+func getReleaseAttestations(image string) ([]AttestationPayload, error) {
 	attestations, err := getAttestations(image)
 	if err != nil {
 		return nil, err
 	}
 
-	releaseAttestations := slices.Collect(func(yield func(AttestationFile) bool) {
+	releaseAttestations := slices.Collect(func(yield func(AttestationPayload) bool) {
 		for _, attestation := range attestations {
 			if attestation.PredicateType == "https://in-toto.io/attestation/release/v0.1" || attestation.PredicateType == "https://cyclonedx.org/vex/v1.4" {
 				if !yield(attestation) {
@@ -384,7 +384,7 @@ func getReleaseAttestations(image string) ([]AttestationFile, error) {
 
 }
 
-func getAttestations(image string) ([]AttestationFile, error) {
+func getAttestations(image string) ([]AttestationPayload, error) {
 	// cosign download attestation image
 	cosignCmd := exec.Command("cosign", "download", "attestation", image)
 
@@ -401,29 +401,29 @@ func getAttestations(image string) ([]AttestationFile, error) {
 	}
 
 	stdoutStr := stdoutBuf.String()
-	jsonFiles := strings.Split(stdoutStr, "\n")
-	if len(jsonFiles) > 0 {
+	jsonLines := strings.Split(stdoutStr, "\n")
+	if len(jsonLines) > 0 {
 		// remove last element (empty line)
-		jsonFiles = jsonFiles[:len(jsonFiles)-1]
+		jsonLines = jsonLines[:len(jsonLines)-1]
 	}
 
-	attestations := []AttestationFile{}
+	attestations := []AttestationPayload{}
 	// go through each line (attestation) of the .jsonlines file
-	for _, jsonFile := range jsonFiles {
-		var jsonLineFile JSONLineFile
-		err = json.Unmarshal([]byte(jsonFile), &jsonLineFile)
+	for _, jsonLine := range jsonLines {
+		var line AttestationFileLine
+		err = json.Unmarshal([]byte(jsonLine), &line)
 		if err != nil {
 			return nil, err
 		}
 
-		// Extract Base64 encoded payload
-		data, err := base64.StdEncoding.DecodeString(jsonLineFile.Payload)
+		// Extract base64 encoded payload
+		data, err := base64.StdEncoding.DecodeString(line.Payload)
 		if err != nil {
 			log.Fatal("error:", err)
 		}
 
 		// Parse payload as attestation
-		var attestation AttestationFile
+		var attestation AttestationPayload
 		err = json.Unmarshal([]byte(data), &attestation)
 		if err != nil {
 			return nil, err
