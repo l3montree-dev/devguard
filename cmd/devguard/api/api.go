@@ -722,7 +722,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	// release routes inside project scope
 	releaseRepository = repositories.NewReleaseRepository(db)
 	releaseService := release.NewService(releaseRepository)
-	releaseController := release.NewReleaseController(releaseService)
+	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository)
 
 	projectRouter.GET("/releases/", releaseController.List, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 	projectRouter.POST("/releases/", releaseController.Create, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
@@ -738,6 +738,11 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	// add/remove items (artifact or child release) to/from a release
 	projectRouter.POST("/releases/:releaseID/items/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.AddItem))
 	projectRouter.DELETE("/releases/:releaseID/items/:itemID/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.RemoveItem))
+	// release SBOM / VEX endpoints
+	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.VEXJSON, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/vex.xml/", releaseController.VEXXML, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)

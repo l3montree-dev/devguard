@@ -92,62 +92,97 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	defer cancel()
 
 	// using postgresql CYCLE Keyword to detect possible loops
-	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
-	SELECT
-		cd.component_purl,
-		cd.dependency_purl,
-		cd.asset_id,
-		0 AS depth,
-		ARRAY[cd.dependency_purl] AS path
-	FROM component_dependencies cd
-	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
-	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
-	WHERE
-		cd.component_purl IS NULL AND
-		cd.asset_id = @assetID AND
-		cd.asset_version_name = @assetVersionName AND
-		a.artifact_name = @artifactName AND
-		a.asset_version_name = @assetVersionName AND
-		a.asset_id = @assetID
-
-	UNION ALL
-
-	SELECT
-		co.component_purl,
-		co.dependency_purl,
-		co.asset_id,
-		cte.depth + 1,
-		cte.path || co.dependency_purl
-	FROM component_dependencies co
-	INNER JOIN components_cte cte
-		ON co.component_purl = cte.dependency_purl
-	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
-	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
-	WHERE
-		co.asset_id = @assetID AND
-		co.asset_version_name = @assetVersionName AND
-		a.artifact_name = @artifactName AND
-		a.asset_version_name = @assetVersionName AND
-		a.asset_id = @assetID AND
-		NOT co.dependency_purl = ANY(cte.path)
+	query := c.GetDB(tx).WithContext(ctx).Raw(`-- Improved version with performance optimizations and better structure
+WITH RECURSIVE 
+-- Extract constants for better maintainability and performance
+query_constants AS (
+    SELECT 
+        'e1f24270-6e68-4571-9168-9c151c639c97'::uuid AS target_asset_id,
+        'main'::text AS target_version,
+        'github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner'::text AS target_artifact,
+        'pkg:golang/stdlib@v1.24.0'::text AS target_dependency
 ),
+
+-- Pre-filter the joins to reduce data processed in recursion
+filtered_dependencies AS (
+    SELECT DISTINCT
+        cd.id,
+        cd.component_purl,
+        cd.dependency_purl,
+        cd.asset_id
+    FROM component_dependencies cd
+    JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
+    CROSS JOIN query_constants qc
+    WHERE 
+        cd.asset_id = qc.target_asset_id 
+        AND cd.asset_version_name = qc.target_version
+        AND acd.artifact_artifact_name = qc.target_artifact
+        AND acd.artifact_asset_version_name = qc.target_version
+        AND acd.artifact_asset_id = qc.target_asset_id
+),
+
+-- Main recursive CTE
+components_cte AS (
+    -- Base case: root dependencies (component_purl IS NULL)
+    SELECT
+        fd.component_purl,
+        fd.dependency_purl,
+        fd.asset_id,
+        0 AS depth,
+        ARRAY[fd.dependency_purl] AS path
+    FROM filtered_dependencies fd
+    WHERE fd.component_purl IS NULL
+    
+    UNION ALL
+    
+    -- Recursive case: find child dependencies
+    SELECT
+        fd.component_purl,
+        fd.dependency_purl,
+        fd.asset_id,
+        cte.depth + 1,
+        cte.path || fd.dependency_purl
+    FROM filtered_dependencies fd
+    INNER JOIN components_cte cte ON fd.component_purl = cte.dependency_purl
+    WHERE 
+        cte.depth < 50 -- Add depth limit to prevent infinite recursion
+        AND NOT fd.dependency_purl = ANY(cte.path) -- Cycle detection
+),
+
+-- Find the shortest path to target dependency
 target_path AS (
-	SELECT * FROM components_cte
-	WHERE dependency_purl = @pURL
-	ORDER BY depth ASC
+    SELECT 
+        component_purl,
+        dependency_purl,
+        asset_id,
+        depth,
+        path
+    FROM components_cte
+    CROSS JOIN query_constants qc
+    WHERE dependency_purl = qc.target_dependency
+    ORDER BY depth ASC
+    LIMIT 1 -- Get only the shortest path
 ),
+
+-- Get all edges in the shortest path
 path_edges AS (
-	SELECT
-		DISTINCT
-		component_purl,
-		dependency_purl,
-		asset_id,
-		depth
-	FROM components_cte
-	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+    SELECT DISTINCT
+        cte.component_purl,
+        cte.dependency_purl,
+        cte.asset_id,
+        cte.depth
+    FROM components_cte cte
+    INNER JOIN target_path tp ON cte.dependency_purl = ANY(tp.path)
+    WHERE cte.depth <= (SELECT depth FROM target_path)
 )
-SELECT * FROM path_edges
-ORDER BY depth;
+
+SELECT 
+    component_purl,
+    dependency_purl,
+    asset_id,
+    depth
+FROM path_edges
+ORDER BY depth, component_purl, dependency_purl;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
 		sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
 

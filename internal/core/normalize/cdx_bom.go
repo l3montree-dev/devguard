@@ -79,6 +79,10 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 
 func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 	merged := &cdx.BOM{
+		SpecVersion:  cdx.SpecVersion1_6,
+		BOMFormat:    "CycloneDX",
+		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
+		Version:      1,
 		Components:   &[]cdx.Component{},
 		Dependencies: &[]cdx.Dependency{},
 		Metadata:     metadata,
