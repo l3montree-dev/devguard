@@ -476,10 +476,9 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		// read the sbom file and post it to the scan endpoint
 		// get the dependencyVulns and print them to the console
 		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
-
-	}
-	if err != nil {
-		return errors.Wrap(err, "could not open file")
+		if err != nil {
+			return errors.Wrap(err, "could not open file")
+		}
 	}
 	defer os.Remove(file.Name())
 
