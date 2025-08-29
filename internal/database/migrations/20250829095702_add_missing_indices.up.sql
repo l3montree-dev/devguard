@@ -47,3 +47,6 @@ ON public.dependency_vulns (asset_id, asset_version_name);
 -- Index for license_risks lookups
 CREATE INDEX IF NOT EXISTS idx_license_risks_asset_lookup 
 ON public.license_risks (asset_id, asset_version_name);
+
+
+CREATE INDEX IF NOT EXISTS idx_component_dependencies_null_roots ON public.component_dependencies (asset_id, asset_version_name) WHERE component_purl IS NULL;
