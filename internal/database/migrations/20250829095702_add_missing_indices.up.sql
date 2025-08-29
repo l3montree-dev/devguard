@@ -50,3 +50,10 @@ ON public.license_risks (asset_id, asset_version_name);
 
 
 CREATE INDEX IF NOT EXISTS idx_component_dependencies_null_roots ON public.component_dependencies (asset_id, asset_version_name) WHERE component_purl IS NULL;
+
+
+ALTER TABLE ONLY public.component_dependencies
+    DROP CONSTRAINT IF EXISTS fk_asset_versions_components;
+
+ALTER TABLE ONLY public.component_dependencies
+    ADD CONSTRAINT fk_asset_versions_components FOREIGN KEY (asset_version_name, asset_id) REFERENCES public.asset_versions(name, asset_id) ON DELETE CASCADE;
