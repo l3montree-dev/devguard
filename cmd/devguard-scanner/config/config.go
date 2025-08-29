@@ -32,6 +32,7 @@ import (
 )
 
 type baseConfig struct {
+	CI        bool   `json:"ci" mapstructure:"ci"`
 	Token     string `json:"token" mapstructure:"token"`
 	AssetName string `json:"assetName" mapstructure:"assetName"`
 	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
@@ -65,6 +66,8 @@ type InTotoConfig struct {
 
 	Key       toto.Key
 	LayoutKey toto.Key
+
+	Disabled bool
 }
 
 type AttestationConfig struct {
@@ -183,8 +186,14 @@ func ParseInTotoConfig() {
 	if err != nil {
 		panic(err)
 	}
+	if RuntimeBaseConfig.Token == "" && utils.RunsInCI() {
+		// we cannot use in toto
+		RuntimeInTotoConfig.Disabled = true
+		slog.Info("no token provided, disabling in-toto functionality")
+		return
+	}
 
-	if RuntimeBaseConfig.Token == "" {
+	if RuntimeBaseConfig.Token == "" && RuntimeBaseConfig.CI {
 		RuntimeBaseConfig.Token, err = getTokenFromKeyring(RuntimeBaseConfig.AssetName)
 		if err != nil {
 			panic(err)

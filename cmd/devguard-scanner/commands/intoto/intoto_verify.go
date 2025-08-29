@@ -33,6 +33,9 @@ import (
 )
 
 func verify(cmd *cobra.Command, args []string) error {
+	if config.RuntimeInTotoConfig.Disabled {
+		return nil
+	}
 	imageName := args[0]
 
 	// image name regex

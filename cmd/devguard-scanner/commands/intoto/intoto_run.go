@@ -103,6 +103,9 @@ func NewInTotoRunCommand() *cobra.Command {
 		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if config.RuntimeInTotoConfig.Disabled {
+				return nil
+			}
 			s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
 			s.Suffix = " Devguard: Recording file hashes for supply chain security"
 			s.Start()
