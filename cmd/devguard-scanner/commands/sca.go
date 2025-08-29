@@ -100,6 +100,9 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.Fi
 	// check if we are scanning a dir or a single file
 	maybeFilename, isDir := maybeGetFileName(pathOrImage)
 
+	// if we are supposed to load an image just use the current workdir
+	// because where else would we switch to. For all other cases look at
+	// the Path variables that's passed in via the config
 	var workDir string
 	if isImage {
 		workDir = "./"
