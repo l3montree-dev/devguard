@@ -55,26 +55,11 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 		panic(err)
 	}
 
-	// automigrate ALL models
-	if err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.Asset{},
-		&models.AssetVersion{},
-		&models.Artifact{},
-		&models.CVE{},
-		&models.DependencyVuln{},
-		&models.FirstPartyVuln{},
-		&models.VulnEvent{},
-		&models.Exploit{},
-		&models.ComponentDependency{},
-		&models.LicenseRisk{},
-		&models.ArtifactRiskHistory{},
-		&models.ProjectRiskHistory{},
-		&models.Weakness{},
-		&models.GitLabIntegration{},
-	); err != nil {
-		log.Printf("failed to auto migrate models: %s", err)
+	// Run embedded migrations to ensure the DB schema matches the project's
+	// migration files. This creates the tables and constraints consistently
+	// for integration tests.
+	if err := database.RunMigrationsWithDB(db); err != nil {
+		log.Printf("failed to run migrations: %s", err)
 		panic(err)
 	}
 

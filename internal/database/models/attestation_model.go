@@ -19,7 +19,8 @@ type Attestation struct {
 	AssetID          uuid.UUID      `json:"assetId" gorm:"primaryKey;type:uuid"`
 	ArtifactName     string         `json:"artifactName" gorm:"primaryKey"`
 
-	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetID,AssetVersionName;constraint:OnDelete:CASCADE;"`
+	// Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID
+	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
 
 	Content database.JSONB `json:"content" gorm:"type:jsonb"`
 }
