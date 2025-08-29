@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/distribution/reference"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
@@ -27,17 +28,31 @@ func NewContainerScanningCommand() *cobra.Command {
 	containerScanningCommand := &cobra.Command{
 		Use:   "container-scanning",
 		Short: "Software composition analysis of a container image",
-		Long:  `Scan a container image for vulnerabilities. The image must be a tar file.`,
+		Long:  `Scan a container image for vulnerabilities. The image must either be a tar file (--path) or available for download via a container registry (--image).`,
 		// Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar") {
-				return fmt.Errorf("path must be a tar file")
+			if config.RuntimeBaseConfig.Image != "" {
+				// we want to scan a docker image (remote image)
+				isValidDockerImageName := isValidImage(config.RuntimeBaseConfig.Image)
+				if !isValidDockerImageName {
+					return fmt.Errorf("invalid image name")
+				}
+				return scaCommand(cmd, args)
+			} else {
+				hasTarSuffix := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar")
+				if !hasTarSuffix {
+					return fmt.Errorf("path must be a tar file")
+				}
+				return scaCommand(cmd, args)
 			}
-
-			return scaCommand(cmd, args)
 		},
 	}
 
 	addScanFlags(containerScanningCommand)
 	return containerScanningCommand
+}
+
+func isValidImage(image string) bool {
+	_, err := reference.ParseNormalizedNamed(image)
+	return err == nil
 }

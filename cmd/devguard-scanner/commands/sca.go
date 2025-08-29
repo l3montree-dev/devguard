@@ -18,9 +18,11 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -38,10 +40,33 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
+type AttestationPredicate struct {
+	Data      string `json:"Data"`
+	Timestamp string `json:"Timestamp"`
+
+	// https://github.com/in-toto/attestation/blob/main/spec/predicates/release.md#schema
+	Purl string `json:"purl"`
+}
+type AttestationFile struct {
+	Type          string               `json:"_type"`
+	PredicateType string               `json:"predicateType"`
+	Predicate     AttestationPredicate `json:"predicate"`
+}
+
+type JSONLineFile struct {
+	PayloadType string `json:"payloadType"`
+	Payload     string `json:"payload"`
+}
+
+// extract filename from path or return directory if path points to a directory
+// second return argument is true if it's a directory and false is it's a file
 func maybeGetFileName(path string) (string, bool) {
 	l, err := os.Stat(path)
 	if err != nil {
@@ -57,9 +82,9 @@ func maybeGetFileName(path string) (string, bool) {
 // we need to run go mod tidy before running trivy
 // this is because trivy needs dependencies before it can scan a go project
 // https://trivy.dev/latest/docs/coverage/language/golang/
-func prepareTrivyCommand(path string) {
+func prepareTrivyCommand(workdir string) {
 	trivyCmd := exec.Command("go", "mod", "tidy")
-	trivyCmd.Dir = getDirFromPath(path)
+	trivyCmd.Dir = workdir
 	stderr := &bytes.Buffer{}
 	trivyCmd.Stderr = stderr
 	err := trivyCmd.Run()
@@ -68,41 +93,50 @@ func prepareTrivyCommand(path string) {
 	}
 }
 
-func generateSBOM(path string) (*os.File, error) {
+func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.File, error) {
 	// generate random name
 	filename := uuid.New().String() + ".json"
 
 	// check if we are scanning a dir or a single file
-	maybeFilename, isDir := maybeGetFileName(path)
-	// var cdxgenCmd *exec.Cmd
+	maybeFilename, isDir := maybeGetFileName(pathOrImage)
+
+	var workDir string
+	if isImage {
+		workDir = "./"
+	} else {
+		workDir = getDirFromPath(pathOrImage)
+	}
+	sbomFile := filepath.Join(workDir, filename)
+
 	var trivyCmd *exec.Cmd
-	if isDir {
-		slog.Info("scanning directory", "dir", path)
+	if isImage {
+		image := pathOrImage
+		// login in to docker registry first before we try to run trivy
+		err := dockerLogin(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		slog.Info("scanning docker image", "image", image)
+		trivyCmd = exec.Command("trivy", "image", image, "--format", "cyclonedx", "--output", sbomFile)
+	} else if isDir {
+		slog.Info("scanning directory", "dir", workDir)
+		prepareTrivyCommand(workDir)
 		// scanning a dir
-		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
-
-		prepareTrivyCommand(path)
-
-		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", filename)
+		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", sbomFile)
+		// set working directory because the trivy command scans the local directory
+		trivyCmd.Dir = workDir
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(path), "--format", "cyclonedx", "--output", filename) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(pathOrImage), "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
+	// TODO @tim.. setting the directory is really only necessary for the file system scan, right?
 
 	stderr := &bytes.Buffer{}
 	// get the output
 	trivyCmd.Stderr = stderr
-
-	// cdxgenCmd.Dir = getDirFromPath(path)
-	trivyCmd.Dir = getDirFromPath(path)
-
-	// run the commands
-	/*err := cdxgenCmd.Run()
-	if err != nil {
-		return nil, err
-	}*/
 
 	err := trivyCmd.Run()
 	if err != nil {
@@ -110,7 +144,7 @@ func generateSBOM(path string) (*os.File, error) {
 	}
 
 	// open the file and return the path
-	return os.Open(filepath.Join(getDirFromPath(path), filename))
+	return os.Open(sbomFile)
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
@@ -290,6 +324,7 @@ func addScanFlags(cmd *cobra.Command) {
 	}
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
+	cmd.Flags().String("image", "", "The docker image to scan.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
@@ -311,10 +346,135 @@ func getDirFromPath(path string) string {
 	return path
 }
 
+func getReleaseAttestationBOMs() ([]cdx.BOM, error) {
+	attestations, err := getReleaseAttestations(config.RuntimeBaseConfig.Image)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attestations")
+	}
+
+	attestationBoms := []cdx.BOM{}
+	for _, attestation := range attestations {
+		bom, err := bomFromString([]byte(attestation.Predicate.Data))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not parse BOM from attestation")
+		}
+		attestationBoms = append(attestationBoms, *bom)
+	}
+
+	return attestationBoms, nil
+}
+
+func getReleaseAttestations(image string) ([]AttestationFile, error) {
+	attestations, err := getAttestations(image)
+	if err != nil {
+		return nil, err
+	}
+
+	releaseAttestations := slices.Collect(func(yield func(AttestationFile) bool) {
+		for _, attestation := range attestations {
+			if attestation.PredicateType == "https://in-toto.io/attestation/release/v0.1" || attestation.PredicateType == "https://cyclonedx.org/vex/v1.4" {
+				if !yield(attestation) {
+					return
+				}
+			}
+		}
+	})
+
+	return releaseAttestations, nil
+
+}
+
+func getAttestations(image string) ([]AttestationFile, error) {
+	// cosign download attestation image
+	cosignCmd := exec.Command("cosign", "download", "attestation", image)
+
+	stderrBuf := &bytes.Buffer{}
+	stdoutBuf := &bytes.Buffer{}
+
+	// get the output
+	cosignCmd.Stderr = stderrBuf
+	cosignCmd.Stdout = stdoutBuf
+
+	err := cosignCmd.Run()
+	if err != nil {
+		return nil, errors.Wrap(err, stderrBuf.String())
+	}
+
+	stdoutStr := stdoutBuf.String()
+	jsonFiles := strings.Split(stdoutStr, "\n")
+	if len(jsonFiles) > 0 {
+		// remove last element (empty line)
+		jsonFiles = jsonFiles[:len(jsonFiles)-1]
+	}
+
+	attestations := []AttestationFile{}
+	// go through each line (attestation) of the .jsonlines file
+	for _, jsonFile := range jsonFiles {
+		var jsonLineFile JSONLineFile
+		err = json.Unmarshal([]byte(jsonFile), &jsonLineFile)
+		if err != nil {
+			return nil, err
+		}
+
+		// Extract Base64 encoded payload
+		data, err := base64.StdEncoding.DecodeString(jsonLineFile.Payload)
+		if err != nil {
+			log.Fatal("error:", err)
+		}
+
+		// Parse payload as attestation
+		var attestation AttestationFile
+		err = json.Unmarshal([]byte(data), &attestation)
+		if err != nil {
+			return nil, err
+		}
+
+		attestations = append(attestations, attestation)
+	}
+
+	return attestations, nil
+}
+
 func scaCommand(cmd *cobra.Command, args []string) error {
-	// read the sbom file and post it to the scan endpoint
-	// get the dependencyVulns and print them to the console
-	file, err := generateSBOM(config.RuntimeBaseConfig.Path)
+	var file *os.File
+	var err error
+
+	ctx := cmd.Context()
+
+	// in case it's a docker image we need to scan the image and try to download attestations
+	if config.RuntimeBaseConfig.Image != "" {
+		// download and extract release attestation BOMs first
+		releaseAttestationBOMs, err := getReleaseAttestationBOMs()
+		if err != nil {
+			return err
+		}
+
+		// generate SBOM using Trivy
+		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Image, true)
+		if err != nil {
+			return err
+		}
+
+		// load sbom that was generated in the line above
+		bom, err := bomFromFile(file)
+		if err != nil {
+			return err
+		}
+
+		print(releaseAttestationBOMs)
+		// TODO!!.. add purl to sbom (figure out where to add it exactly..)
+
+		// override BOM file with new/modified sbom
+		err = bomToFile(bom, file)
+		if err != nil {
+			return err
+		}
+	} else {
+		// read the sbom file and post it to the scan endpoint
+		// get the dependencyVulns and print them to the console
+		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
+
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not open file")
 	}
