@@ -33,10 +33,11 @@ func NewContainerScanningCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if config.RuntimeBaseConfig.Image != "" {
 				// we want to scan a docker image (remote image)
-				isValidDockerImageName := isValidImage(config.RuntimeBaseConfig.Image)
-				if !isValidDockerImageName {
-					return fmt.Errorf("invalid image name")
+				img, err := reference.ParseNormalizedNamed(config.RuntimeBaseConfig.Image)
+				if err != nil {
+					return err
 				}
+				config.RuntimeBaseConfig.Image = img.Name()
 				return scaCommand(cmd, args)
 			} else {
 				hasTarSuffix := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar")
@@ -50,9 +51,4 @@ func NewContainerScanningCommand() *cobra.Command {
 
 	addScanFlags(containerScanningCommand)
 	return containerScanningCommand
-}
-
-func isValidImage(image string) bool {
-	_, err := reference.ParseNormalizedNamed(image)
-	return err == nil
 }
