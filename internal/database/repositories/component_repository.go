@@ -101,14 +101,13 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 		ARRAY[cd.dependency_purl] AS path
 	FROM component_dependencies cd
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
-	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
 	WHERE
 		cd.component_purl IS NULL AND
 		cd.asset_id = @assetID AND
 		cd.asset_version_name = @assetVersionName AND
-		a.artifact_name = @artifactName AND
-		a.asset_version_name = @assetVersionName AND
-		a.asset_id = @assetID
+		acd.artifact_artifact_name = @artifactName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID
 
 	UNION ALL
 
@@ -122,13 +121,12 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	INNER JOIN components_cte cte
 		ON co.component_purl = cte.dependency_purl
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
-	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
-		a.artifact_name = @artifactName AND
-		a.asset_version_name = @assetVersionName AND
-		a.asset_id = @assetID AND
+		acd.artifact_artifact_name = @artifactName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID AND
 		NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
