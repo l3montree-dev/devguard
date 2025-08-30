@@ -31,15 +31,9 @@ import (
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
-		// login to the registry
-		err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
-		if err != nil {
-			slog.Error("login failed", "err", err)
-			return err
-		}
-
-		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+	err := dockerLogin(cmd.Context())
+	if err != nil {
+		return err
 	}
 
 	// transform the hex private key to an ecdsa private key
