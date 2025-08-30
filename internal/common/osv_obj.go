@@ -18,6 +18,7 @@ type SemverEvent struct {
 
 type Rng struct {
 	Type   string        `json:"type"`
+	Repo   string        `json:"repo"`
 	Events []SemverEvent `json:"events"`
 }
 

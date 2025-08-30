@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFromOSV(t *testing.T) {
@@ -270,6 +271,23 @@ func TestFromOSV(t *testing.T) {
 		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
+		}
+	})
+
+	t.Run("try CVE-2024-52523", func(t *testing.T) {
+		// read the file
+		f, _ := os.Open("testdata/CVE-2024-52523.json")
+		defer f.Close()
+		bytes, _ := io.ReadAll(f)
+		osv := common.OSV{}
+		err := json.Unmarshal(bytes, &osv)
+		if err != nil {
+			t.Errorf("Could not unmarshal osv, got %s", err)
+		}
+
+		affectedComponents := AffectedComponentFromOSV(osv)
+		for _, ac := range affectedComponents {
+			assert.Equal(t, ac.PurlWithoutVersion, "pkg:github.com/nextcloud/server")
 		}
 	})
 }

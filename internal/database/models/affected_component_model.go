@@ -235,14 +235,13 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 				affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
 			}
 		} else {
-
 			for _, r := range affected.Ranges {
 				if r.Type != "GIT" {
 					continue
 				}
 
 				// repo: https://github.com/nextcloud/server
-				repo := strings.TrimPrefix(r.Type, "https://")
+				repo := strings.TrimPrefix(r.Repo, "https://")
 
 				name := strings.TrimPrefix(repo, "github.com/")
 				name = strings.Trim(name, "/")
