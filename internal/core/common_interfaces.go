@@ -132,6 +132,7 @@ type ExploitRepository interface {
 }
 
 type AffectedComponentRepository interface {
+	common.Repository[string, models.AffectedComponent, DB]
 	GetAllAffectedComponentsID() ([]string, error)
 	Save(tx DB, affectedComponent *models.AffectedComponent) error
 	SaveBatch(tx DB, affectedPkgs []models.AffectedComponent) error
