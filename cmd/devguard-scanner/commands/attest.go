@@ -76,7 +76,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		// use the cosign cli to sign the file
-		attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
+		attestCmd := exec.Command("cosign", "attest", "--type", config.RuntimeAttestationConfig.PredicateType, "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
 		attestCmd.Stdout = &out
 		attestCmd.Stderr = &errOut
 		attestCmd.Env = []string{
