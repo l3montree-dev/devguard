@@ -39,6 +39,9 @@ var baseURL = url.URL{
 	Path:   "/rest/json/cves/2.0",
 }
 
+// this is the first cve starting from 2016
+const nvdStartIndex = 74684
+
 type NVDService struct {
 	httpClient    *http.Client
 	cveRepository core.CveRepository
@@ -181,7 +184,7 @@ func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 func (nvdService NVDService) InitialPopulation() error {
 	slog.Info("starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
 
-	return nvdService.fetchAndSaveAllPages(baseURL, 0)
+	return nvdService.fetchAndSaveAllPages(baseURL, nvdStartIndex)
 }
 
 func minTime(a, b time.Time) time.Time {

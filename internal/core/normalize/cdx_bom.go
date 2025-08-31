@@ -79,6 +79,10 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 
 func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 	merged := &cdx.BOM{
+		SpecVersion:  cdx.SpecVersion1_6,
+		BOMFormat:    "CycloneDX",
+		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
+		Version:      1,
 		Components:   &[]cdx.Component{},
 		Dependencies: &[]cdx.Dependency{},
 		Metadata:     metadata,
@@ -86,6 +90,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 
 	componentMap := make(map[string]cdx.Component)
 	dependencyMap := make(map[string]cdx.Dependency)
+	vulnMap := make(map[string]cdx.Vulnerability)
 
 	for _, bom := range boms {
 		if bom == nil {
@@ -101,6 +106,12 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 		if bom.Dependencies != nil {
 			for _, dep := range *bom.Dependencies {
 				dependencyMap[dep.Ref] = dep
+			}
+		}
+
+		if bom.Vulnerabilities != nil {
+			for _, v := range *bom.Vulnerabilities {
+				vulnMap[v.ID] = v
 			}
 		}
 
@@ -120,6 +131,12 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 		dependencies = append(dependencies, dep)
 	}
 	merged.Dependencies = &dependencies
+
+	vulns := []cdx.Vulnerability{}
+	for _, v := range vulnMap {
+		vulns = append(vulns, v)
+	}
+	merged.Vulnerabilities = &vulns
 
 	return merged
 }

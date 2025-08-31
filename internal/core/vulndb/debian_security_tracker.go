@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"golang.org/x/mod/semver"
+	"gorm.io/gorm"
 	"pault.ag/go/debian/version"
 )
 
@@ -202,7 +203,16 @@ func (s debianSecurityTracker) Mirror() error {
 		}
 	}
 
-	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
+	err = s.affectedCmpRepository.GetDB(nil).Transaction(func(tx *gorm.DB) error {
+		// remove all dsa affected components first
+		err = tx.Where("source = ?", "debian-security-tracker").Delete(&models.AffectedComponent{}).Error
+		if err != nil {
+			return err
+		}
+
+		return s.affectedCmpRepository.SaveBatch(tx, affectedComponents)
+	})
+
 	if err != nil {
 		return err
 	}

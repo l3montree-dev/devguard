@@ -54,7 +54,9 @@ func parseGitIgnore(path string) ([]string, error) {
 }
 
 func stopInTotoRecording(cmd *cobra.Command, args []string) error {
-
+	if config.RuntimeInTotoConfig.Disabled {
+		return nil
+	}
 	// read the unfinished link
 	metadata, err := toto.LoadMetadata(fmt.Sprintf("%s.%s.link.unfinished", config.RuntimeInTotoConfig.Step, config.RuntimeInTotoConfig.Key.KeyID[:8]))
 
@@ -122,6 +124,9 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 }
 
 func startInTotoRecording(cmd *cobra.Command, args []string) error {
+	if config.RuntimeInTotoConfig.Disabled {
+		return nil
+	}
 	metdata, err := toto.InTotoRecordStart(config.RuntimeInTotoConfig.Step, config.RuntimeInTotoConfig.Materials, config.RuntimeInTotoConfig.Key, []string{"sha256"}, config.RuntimeInTotoConfig.Ignore, []string{}, true, true, true)
 
 	if err != nil {
