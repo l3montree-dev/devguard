@@ -1,17 +1,13 @@
 package component
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"sync"
 
-	"github.com/google/licensecheck"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -28,12 +24,24 @@ type service struct {
 }
 
 func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService) service {
+	err := loadLicensesIntoMemory()
+	if err != nil {
+		panic(fmt.Sprintf("error when trying to load licenses into memory, error: %s", err.Error()))
+	}
 	return service{
 		componentRepository:        componentRepository,
 		componentProjectRepository: componentProjectRepository,
 		depsDevService:             depsDevService,
 		licenseRiskService:         licenseRiskService,
 	}
+}
+
+func loadLicensesIntoMemory() error {
+	err := json.Unmarshal(alpineLicenses, &alpineLicenseMap)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(debianLicenses, &debianLicenseMap)
 }
 
 func combineNamespaceAndName(namespace, name string) string {
@@ -89,27 +97,19 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		return component, nil
 	}
 
-	// check whether its a debian package. If it is we get our information from the debian package master
+	// check the pURL type, if its a debian or alpine package we get the license from memory
 	switch validatedPURL.Type {
 	case "deb":
-		packageInformation, err := getDebianPackageInformation(validatedPURL)
-		if err != nil {
-			// swallow error but display a warning
+		license := getDebianLicense(validatedPURL)
+		if license == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
 			return component, nil
 		}
-
-		cov := licensecheck.Scan(packageInformation.Bytes())
-		if len(cov.Match) == 0 {
-			slog.Warn("could not determine license", "purl", pURL)
-			component.License = utils.Ptr("unknown")
-			return component, nil
-		}
-		component.License = &cov.Match[0].ID
+		component.License = &license
 	case "apk":
-		license, err := getAlpineLicense(validatedPURL)
-		if err != nil || license == "" {
+		license := getAlpineLicense(validatedPURL)
+		if license == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
 			return component, nil
@@ -290,49 +290,50 @@ func (s *service) RefreshAllLicenses(assetVersion models.AssetVersion, scannerID
 	return updatedComponents, nil
 }
 
-func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, error) {
-	buff := bytes.Buffer{}
+//go:embed debian-licenses.json
+var debianLicenses []byte
+var debianLicenseMap map[string]string = make(map[string]string, 100*1000)
+var debianMutex sync.Mutex
 
-	requestURL := fmt.Sprintf("https://metadata.ftp-master.debian.org/changelogs/main/%c/%s/%s_%s_copyright", pURL.Name[0], pURL.Name, pURL.Name, pURL.Version)
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
-	if err != nil {
-		return nil, err
+func getDebianLicense(pURL packageurl.PackageURL) string {
+	var err error
+	var license string
+	debianMutex.Lock()
+	if len(debianLicenseMap) == 0 {
+		err = json.Unmarshal(debianLicenses, &debianLicenseMap)
+		if err != nil {
+			debianMutex.Unlock()
+			return license
+		}
 	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+	debianMutex.Unlock()
+	license, exists := debianLicenseMap[pURL.Name+pURL.Version]
+	if exists {
+		return license
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("could not get debian package information: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	_, err = io.Copy(&buff, resp.Body)
-	return &buff, err
+	return ""
 }
 
 //go:embed alpine-licenses.json
 var alpineLicenses []byte
 var alpineLicenseMap map[string]string = make(map[string]string, 100*1000)
-var mutex sync.Mutex
+var alpineMutex sync.Mutex
 
-func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
+func getAlpineLicense(pURL packageurl.PackageURL) string {
 	var err error
 	var license string
-	mutex.Lock()
+	alpineMutex.Lock()
 	if len(alpineLicenseMap) == 0 {
 		err = json.Unmarshal(alpineLicenses, &alpineLicenseMap)
 		if err != nil {
-			mutex.Unlock()
-			return license, err
+			alpineMutex.Unlock()
+			return license
 		}
 	}
-	mutex.Unlock()
+	alpineMutex.Unlock()
 	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
 	if exists {
-		return license, nil
+		return license
 	}
-	return "", nil
+	return ""
 }

@@ -13,12 +13,16 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/licensecheck"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	xz "github.com/ulikunitz/xz"
 )
+
+const baseFolder string = "internal/core/component/"
 
 var (
 	alpineReleaseVersions []string
@@ -43,15 +47,15 @@ func newUpdateLicensesCommand() *cobra.Command {
 			var err error
 			start := time.Now()
 
-			// err = updateApprovedLicenses()
-			// if err != nil {
-			// 	slog.Error("error when trying to update approved licenses, continuing...\n", "err", err)
-			// }
+			err = updateApprovedLicenses()
+			if err != nil {
+				slog.Error("error when trying to update approved licenses, continuing...\n", "err", err)
+			}
 
-			// err = updateAlpineLicenses()
-			// if err != nil {
-			// 	slog.Error("error when trying to update alpine licenses, continuing...\n", "err", err)
-			// }
+			err = updateAlpineLicenses()
+			if err != nil {
+				slog.Error("error when trying to update alpine licenses, continuing...\n", "err", err)
+			}
 
 			if len(args) >= 1 && args[0] == "all" {
 				err = updateDebianLicenses()
@@ -119,7 +123,8 @@ func updateAlpineLicenses() error {
 		}
 		extractLicensesFromAPKINDEX(*apkIndex)
 	}
-	err = writeLicenseMapToFile()
+	path := baseFolder + "alpine-licenses.json"
+	err = writeLicenseMapToFile(&alpineLicenseMap, path)
 	if err != nil {
 		return err
 	}
@@ -127,16 +132,39 @@ func updateAlpineLicenses() error {
 	return nil
 }
 
-func writeLicenseMapToFile() error {
-	path := "internal/core/component/" + "alpine-licenses.json"
+func updateDebianLicenses() error {
+	start := time.Now()
+	slog.Info("start updating debian licenses")
+
+	fileList, err := getFileListYAML()
+	if err != nil {
+		return err
+	}
+
+	debianLicenseMap, err := getLicensesFromFileList(fileList)
+	if err != nil {
+		return err
+	}
+
+	path := baseFolder + "debian-licenses.json"
+	err = writeLicenseMapToFile(&debianLicenseMap, path)
+	if err != nil {
+		return err
+	}
+
+	slog.Info(fmt.Sprintf("successfully finished updating debian licenses, done in %f seconds", time.Since(start).Seconds()))
+	return nil
+}
+
+func writeLicenseMapToFile(licenses *map[string]string, path string) error {
 	fileDescriptor, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer fileDescriptor.Close()
-	buf := bufio.NewWriterSize(fileDescriptor, 1<<24)
+	buf := bufio.NewWriterSize(fileDescriptor, len(*licenses))
 	encoder := json.NewEncoder(buf)
-	err = encoder.Encode(alpineLicenseMap)
+	err = encoder.Encode(*licenses)
 	if err != nil {
 		return err
 	}
@@ -258,24 +286,6 @@ func retrieveAlpineVersions() error {
 	return nil
 }
 
-func updateDebianLicenses() error {
-	start := time.Now()
-	slog.Info("start updating debian licenses")
-
-	fileList, err := getFileListYAML()
-	if err != nil {
-		return err
-	}
-
-	_, err = getLicensesFromFileList(fileList)
-	if err != nil {
-		return err
-	}
-
-	slog.Info(fmt.Sprintf("successfully finished updating debian licenses, done in %f seconds", time.Since(start).Seconds()))
-	return nil
-}
-
 func getFileListYAML() (*bytes.Buffer, error) {
 	url := "https://metadata.ftp-master.debian.org/changelogs/filelist.yaml.xz"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -316,49 +326,96 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 			urls = append(urls, lines[len(lines)-1][4:]+"_copyright") // split removes the substring so we need to add it once again
 		}
 	}
+	type licenseTask struct { // contains all information a go routine needs to get a license and write it to the map
+		url            string
+		packageName    string
+		packageVersion string
+	}
+
+	wg := sync.WaitGroup{} //sync main thread and go routines and make the access to the map threadsafe
+	mapMutex := sync.Mutex{}
+	channel := make(chan licenseTask)
+
+	mumberOfGoRoutines := 15
+	wg.Add(mumberOfGoRoutines)
 
 	licenseMap = make(map[string]string, len(urls))
-	buf := bytes.NewBuffer(make([]byte, 0, 20*1000))
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
 	slog.Info("Scanning urls", "amount", len(urls))
-	start := time.Now()
-	for i := range urls[:1000] {
+	errorURLs := make([]string, 0, len(urls)/10)
+
+	for range mumberOfGoRoutines {
+		go func() {
+			buf := bytes.NewBuffer(make([]byte, 0, 20*1000))
+			defer wg.Done()
+			for {
+				buf.Reset()
+				task, ok := <-channel
+				if !ok {
+					return
+				}
+
+				req, err := http.NewRequest(http.MethodGet, baseURL+task.url, nil)
+				if err != nil {
+					slog.Error("error when building request", "error", err, "url", baseURL+task.url)
+					errorURLs = append(errorURLs, baseURL+task.url)
+					continue //swallow errors
+				}
+
+				resp, err := client.Do(req)
+				if err != nil {
+					slog.Error("error when sending request", "error", err, "url", baseURL+task.url)
+					errorURLs = append(errorURLs, baseURL+task.url)
+					continue //swallow errors
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != 200 {
+					slog.Error("invalid status code in response", "code", resp.StatusCode, "url", baseURL+task.url)
+					errorURLs = append(errorURLs, baseURL+task.url)
+					resp.Body.Close() //swallow errors
+					continue
+				}
+
+				_, err = io.Copy(buf, resp.Body)
+				if err != nil {
+					slog.Error("error when trying to copy response", "error", err, "url", baseURL+task.url)
+					errorURLs = append(errorURLs, baseURL+task.url)
+					resp.Body.Close() //swallow errors
+					continue
+				}
+
+				cov := licensecheck.Scan(buf.Bytes()) // use google/licensecheck to guess the license and then use the most likely result
+				if len(cov.Match) == 0 {
+					//slog.Warn("could not determine license", "len buf", len(buf.Bytes()), "package name", task.packageName, "package version", task.packageVersion)
+				} else {
+					mapMutex.Lock()
+					licenseMap[task.packageName+task.packageVersion] = cov.Match[0].ID
+					mapMutex.Unlock()
+				}
+				resp.Body.Close()
+			}
+
+		}()
+	}
+
+	bar := progressbar.Default(int64(len(urls))) // progress bar for the user to estimate time
+	for i := range urls {
 		lastField := urls[i][strings.LastIndex(urls[i], "/")+1 : len(urls[i])-9] // we need the package Name and version as keys for our map
 		fields := strings.Split(lastField, "_")
 		packageName := fields[0]
 		packageVersion := fields[1]
-
-		req, err := http.NewRequest(http.MethodGet, baseURL+urls[i], nil)
-		if err != nil {
-			continue //swallow errors
+		channel <- licenseTask{ //pass the next task through a channel for a waiting go routine to catch
+			url:            urls[i],
+			packageName:    packageName,
+			packageVersion: packageVersion,
 		}
-		client := http.Client{
-			Timeout: 10 * time.Second,
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			continue //swallow errors
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != 200 {
-			resp.Body.Close() //swallow errors
-			continue
-		}
-
-		_, err = io.ReadFull(resp.Body, buf.Bytes())
-		if err != nil {
-			resp.Body.Close() //swallow errors
-			continue
-		}
-
-		cov := licensecheck.Scan(buf.Bytes()) // use google/licensecheck to guess the license and then use the most likely result
-		if len(cov.Match) == 0 {
-			slog.Warn("could not determine license", "package name", packageName, "package version", packageVersion)
-		} else {
-			licenseMap[packageName+packageVersion] = cov.Match[0].ID
-		}
-		resp.Body.Close()
-		buf.Reset()
+		bar.Add(1)
 	}
-	slog.Info("done fetching urls", "time", time.Since(start))
+	close(channel)
+	wg.Wait()
+	slog.Info(fmt.Sprintf("Got %d / %d licenses: %f error rate", len(licenseMap), len(urls), (float32(len(licenseMap)) / float32(len(urls)))))
 	return licenseMap, nil
 }
