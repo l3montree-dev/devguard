@@ -45,7 +45,7 @@ func UpdateStatistics(db core.DB) error {
 				return nil, nil
 			}
 
-			err := assetVersionRepository.GetDB(nil).Save(&artifact)
+			err := assetVersionRepository.GetDB(nil).Save(&artifact).Error
 			if err != nil {
 				slog.Error("could not save asset", "err", err)
 				// continue with the next asset - just log the error

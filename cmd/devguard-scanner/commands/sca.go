@@ -115,7 +115,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.Fi
 	if isImage {
 		image := pathOrImage
 		// login in to docker registry first before we try to run trivy
-		err := dockerLogin(ctx)
+		err := maybeLoginIntoOciRegistry(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -375,7 +375,7 @@ func getReleaseAttestations(image string) ([]AttestationPayload, error) {
 
 	releaseAttestations := slices.Collect(func(yield func(AttestationPayload) bool) {
 		for _, attestation := range attestations {
-			if attestation.PredicateType == "https://in-toto.io/attestation/release/v0.1" || attestation.PredicateType == "https://cyclonedx.org/vex/v1.4" {
+			if attestation.PredicateType == "https://in-toto.io/attestation/release/v0.1" || attestation.PredicateType == "https://cyclonedx.org/vex/v1.6" {
 				if !yield(attestation) {
 					return
 				}

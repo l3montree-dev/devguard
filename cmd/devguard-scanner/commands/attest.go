@@ -31,7 +31,7 @@ import (
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-	err := dockerLogin(cmd.Context())
+	err := maybeLoginIntoOciRegistry(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	predicate := args[0]
 	// check if an image name is provided
 	if len(args) == 2 {
-		slog.Info("attesting image", "predicate", predicate, "image", args[1])
+		slog.Info("attesting image", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType, "image", args[1])
 		imageName := args[1]
 		if _, err := os.Stat(predicate); os.IsNotExist(err) {
 			// print an error message if the file does not exist

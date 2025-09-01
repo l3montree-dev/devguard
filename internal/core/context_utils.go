@@ -193,7 +193,7 @@ func GetParam(ctx Context, param string) string {
 
 func GetURLDecodedParam(ctx Context, param string) (string, error) {
 	v := GetParam(ctx, param)
-	decoded, err := url.PathUnescape(v)
+	decoded, err := url.QueryUnescape(v)
 	if err != nil {
 		return "", fmt.Errorf("could not url decode param %s: %w", param, err)
 	}

@@ -28,7 +28,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
-func dockerLogin(ctx context.Context) error {
+func maybeLoginIntoOciRegistry(ctx context.Context) error {
 	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
 		// login to the registry
 		err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
