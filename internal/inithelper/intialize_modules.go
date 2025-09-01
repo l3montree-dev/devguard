@@ -120,7 +120,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 	)
 }
 
-func CreateHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HTTPController {
+func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HTTPController {
 	return scan.NewHTTPController(
 		db,
 		repositories.NewCVERepository(db),
@@ -135,5 +135,6 @@ func CreateHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2C
 			githubint.NewGithubIntegration(db),
 		)),
 		CreateArtifactService(db),
+		repositories.NewDependencyVulnRepository(db),
 	)
 }

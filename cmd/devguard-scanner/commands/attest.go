@@ -31,15 +31,9 @@ import (
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
-		// login to the registry
-		err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
-		if err != nil {
-			slog.Error("login failed", "err", err)
-			return err
-		}
-
-		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+	err := maybeLoginIntoOciRegistry(cmd.Context())
+	if err != nil {
+		return err
 	}
 
 	// transform the hex private key to an ecdsa private key
@@ -67,7 +61,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	predicate := args[0]
 	// check if an image name is provided
 	if len(args) == 2 {
-		slog.Info("attesting image", "predicate", predicate, "image", args[1])
+		slog.Info("attesting image", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType, "image", args[1])
 		imageName := args[1]
 		if _, err := os.Stat(predicate); os.IsNotExist(err) {
 			// print an error message if the file does not exist

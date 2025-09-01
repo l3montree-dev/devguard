@@ -21,10 +21,25 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-                "secret-scanning",
-                "--assetName=wetteronline/projects/devguard/assets/sbom4",
+                // Secret Scanning
+                // "secret-scanning",
+
+                // Image scanning (file system of path)
+                // "sca",
+                // "--path=.",
+
+                // Image scanning (image as tar archive)
+                // "sca",
+                // "--path=alpine.tar",
+
+                // Image scanning (image published in registry - including attestations)
+                "sca",
+                // "--image=alpine:3.22.1",
+                "--image=registry.opencode.de/l3montree/vexing-opendesk/redis:7.4.3-debian-12-r0",
+
+                "--assetName=david/projects/test-group/assets/secret-scanning",
                 "--apiUrl=http://localhost:8080",
-                "--token=c5077f7d008d9980814d0345fdfaddcd02774d4577ed87c5b7e8cc3108447a1b"
+                "--token=c85b50cbab88340490e1c6a303b4abaadba653c4ea46abd26bf9c4b081d50811"
             ],
         },
         {
