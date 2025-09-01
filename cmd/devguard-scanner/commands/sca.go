@@ -421,7 +421,7 @@ func scanExternalImage() error {
 
 	// check if there is any release attestation - if so, add the purl to the sbom
 	for _, attestation := range attestations {
-		if attestation["predicateType"] == "https://cyclonedx.org/vex" {
+		if strings.HasPrefix(attestation["predicateType"].(string), "https://cyclonedx.org/vex") {
 			predicate, ok := attestation["predicate"].(map[string]any)
 			if !ok {
 				panic("could not parse predicate")
