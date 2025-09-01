@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -47,11 +46,6 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 
 	if err != nil {
 		log.Printf("failed to connect to database: %s", err)
-		panic(err)
-	}
-
-	if err := db.AutoMigrate(&models.ArtifactRiskHistory{}); err != nil {
-		log.Printf("failed to auto migrate artifact risk history: %s", err)
 		panic(err)
 	}
 

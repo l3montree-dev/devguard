@@ -21,9 +21,10 @@ type service struct {
 	depsDevService             core.DepsDevService
 	componentProjectRepository core.ComponentProjectRepository
 	licenseRiskService         core.LicenseRiskService
+	artifactRepository         core.ArtifactRepository
 }
 
-func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService) service {
+func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService, artifactRepository core.ArtifactRepository) service {
 	err := loadLicensesIntoMemory()
 	if err != nil {
 		panic(fmt.Sprintf("error when trying to load licenses into memory, error: %s", err.Error()))
@@ -33,6 +34,7 @@ func NewComponentService(depsDevService core.DepsDevService, componentProjectRep
 		componentProjectRepository: componentProjectRepository,
 		depsDevService:             depsDevService,
 		licenseRiskService:         licenseRiskService,
+		artifactRepository:         artifactRepository,
 	}
 }
 
@@ -100,7 +102,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	// check the pURL type, if its a debian or alpine package we get the license from memory
 	switch validatedPURL.Type {
 	case "deb":
-		license := getDebianLicense(validatedPURL)
+		license := getDebianLicense(validatedPURL, component.Version)
 		if license == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -108,7 +110,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &license
 	case "apk":
-		license := getAlpineLicense(validatedPURL)
+		license := getAlpineLicense(validatedPURL, component.Version)
 		if license == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -187,17 +189,28 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
-	if err != nil {
-		return nil, err
-	}
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	var componentDependencies []models.ComponentDependency
+	var err error
+	if artifactName == nil {
+		// get all components for all artifacts
+		componentDependencies, err = s.componentRepository.LoadComponentsForAllArtifacts(nil, assetVersion.Name, assetVersion.AssetID)
+		if err != nil {
+			return nil, err
+		}
 
+	} else {
+		componentDependencies, err = s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, *artifactName)
+		if err != nil {
+			return nil, err
+		}
+
+	}
 	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)
 	seen := make(map[string]bool)
 	for _, componentDependency := range componentDependencies {
-		if _, ok := seen[componentDependency.DependencyPurl]; !ok && componentDependency.Dependency.License == nil {
+		if _, ok := seen[componentDependency.DependencyPurl]; !ok && (forceRefresh || componentDependency.Dependency.License == nil) {
 			seen[componentDependency.DependencyPurl] = true
 			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
 		}
@@ -214,7 +227,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 
 	// wait for all components to be processed
 	components, err := errGroup.WaitAndCollect()
-	slog.Info("Finished collecting no deadlock here")
+
 	if err != nil {
 		return nil, err
 	}
@@ -233,61 +246,30 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		}
 	}
 
-	// find potential license risks
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifactName)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		// find potential license risks
+		if artifactName == nil {
+			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts
+			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+			if err != nil {
+				slog.Error("could not fetch artifacts for asset version", "err", err, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+				return
+			}
+			for _, artifact := range artifacts {
+				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
+				if err != nil {
+					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
+				}
+			}
+		} else {
+			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
+			if err != nil {
+				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
+			}
+		}
+	}()
 
 	return allComponents, nil
-}
-
-// RefreshAllLicenses forces re-fetching license information for all components of an asset version
-func (s *service) RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
-	if err != nil {
-		return nil, err
-	}
-
-	// collect unique components
-	componentsMap := make(map[string]models.Component)
-	for _, cd := range componentDependencies {
-		componentsMap[cd.DependencyPurl] = cd.Dependency
-	}
-
-	components := make([]models.Component, 0, len(componentsMap))
-	for _, c := range componentsMap {
-		// clear existing license so GetLicense will re-fetch
-		c.License = nil
-		components = append(components, c)
-	}
-
-	slog.Info("refreshing license information for components", "amount", len(components))
-
-	errGroup := utils.ErrGroup[models.Component](10)
-	for _, component := range components {
-		comp := component
-		errGroup.Go(func() (models.Component, error) {
-			return s.GetLicense(comp)
-		})
-	}
-
-	updatedComponents, err := errGroup.WaitAndCollect()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.componentRepository.SaveBatch(nil, updatedComponents); err != nil {
-		return nil, err
-	}
-
-	// find potential license risks for all components
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedComponents, nil
 }
 
 //go:embed debian-licenses.json
@@ -295,7 +277,10 @@ var debianLicenses []byte
 var debianLicenseMap map[string]string = make(map[string]string, 100*1000)
 var debianMutex sync.Mutex
 
-func getDebianLicense(pURL packageurl.PackageURL) string {
+// some components have a already modified purl to improve cve -> purl matching (see cdx bom normalization)
+// we basically need to revert that for license matching - thus the second parameter
+// see pkg:deb/debian/gdbm@1.23 as an example. Fallback version is 1.23-3
+func getDebianLicense(pURL packageurl.PackageURL, fallbackVersion string) string {
 	var err error
 	var license string
 	debianMutex.Lock()
@@ -311,6 +296,10 @@ func getDebianLicense(pURL packageurl.PackageURL) string {
 	if exists {
 		return license
 	}
+	license, exists = debianLicenseMap[pURL.Name+fallbackVersion]
+	if exists {
+		return license
+	}
 	return ""
 }
 
@@ -319,7 +308,10 @@ var alpineLicenses []byte
 var alpineLicenseMap map[string]string = make(map[string]string, 100*1000)
 var alpineMutex sync.Mutex
 
-func getAlpineLicense(pURL packageurl.PackageURL) string {
+// some components have a already modified purl to improve cve -> purl matching (see cdx bom normalization)
+// we basically need to revert that for license matching - thus the second parameter
+// see pkg:deb/debian/gdbm@1.23 as an example. Fallback version is 1.23-3
+func getAlpineLicense(pURL packageurl.PackageURL, fallbackVersion string) string {
 	var err error
 	var license string
 	alpineMutex.Lock()
@@ -332,6 +324,10 @@ func getAlpineLicense(pURL packageurl.PackageURL) string {
 	}
 	alpineMutex.Unlock()
 	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
+	if exists {
+		return license
+	}
+	license, exists = alpineLicenseMap[pURL.Name+fallbackVersion]
 	if exists {
 		return license
 	}

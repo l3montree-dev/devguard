@@ -51,6 +51,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 				componentProjectRepository,
 				componentRepository,
 				licenseRiskService,
+				repositories.NewArtifactRepository(database),
 			)
 
 			bar := progressbar.Default(int64(len(components)))

@@ -20,7 +20,7 @@ func UpdateDepsDevInformation(db core.DB) error {
 	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
 	depsDevService := vulndb.NewDepsDevService()
 	licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db))
 
 	if err != nil {
 		return err

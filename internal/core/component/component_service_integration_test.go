@@ -44,21 +44,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
-		// Auto-migrate required models
-		err := db.AutoMigrate(
-			&models.Org{},
-			&models.Project{},
-			&models.Asset{},
-			&models.AssetVersion{},
-			&models.Component{},
-			&models.ComponentDependency{},
-			&models.ComponentProject{},
-			&models.LicenseRisk{},
-			&models.VulnEvent{},
-			&models.Artifact{},
-		)
-		assert.NoError(t, err)
-
 		// Create test data using the utility function
 		_, _, _, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
@@ -82,7 +67,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		}
 
 		// Save components to database
-		err = db.Create(&componentWithInvalidLicense).Error
+		err := db.Create(&componentWithInvalidLicense).Error
 		assert.NoError(t, err)
 		err = db.Create(&componentWithValidLicense).Error
 		assert.NoError(t, err)
@@ -154,10 +139,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentProjectRepository,
 			componentRepository,
 			licenseRiskService,
+			repositories.NewArtifactRepository(db),
 		)
 
 		// Call the function under test
-		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, artifact.ArtifactName)
+		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, resultComponents)
 
@@ -217,20 +203,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
-		// Auto-migrate required models
-		err := db.AutoMigrate(
-			&models.Org{},
-			&models.Project{},
-			&models.Asset{},
-			&models.AssetVersion{},
-			&models.Component{},
-			&models.ComponentDependency{},
-			&models.ComponentProject{},
-			&models.LicenseRisk{},
-			&models.VulnEvent{},
-		)
-		assert.NoError(t, err)
-
 		// Create test data
 		_, _, _, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
@@ -240,7 +212,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			Version: "1.0.0",
 			License: utils.Ptr("PROPRIETARY"),
 		}
-		err = db.Create(&componentWithInvalidLicense).Error
+		err := db.Create(&componentWithInvalidLicense).Error
 		assert.NoError(t, err)
 
 		artifact := models.Artifact{
@@ -296,10 +268,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentProjectRepository,
 			componentRepository,
 			licenseRiskService,
+			repositories.NewArtifactRepository(db),
 		)
 
 		// Call the function under test
-		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, artifact.ArtifactName)
+		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
 		assert.NoError(t, err)
 
 		// Verify that no duplicate license risk was created

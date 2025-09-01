@@ -118,7 +118,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -133,7 +133,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, scannerID string, depe
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, scannerID)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, artifactName)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -184,7 +184,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *service) UserDetectedDependencyVulnInAnotherArtifact(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
@@ -217,7 +217,7 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 	return nil
 }
 
-func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *service) UserDidNotDetectDependencyVulnInArtifactAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}

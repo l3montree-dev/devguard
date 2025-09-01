@@ -153,11 +153,8 @@ func TestBuildVEX(t *testing.T) {
 }
 
 func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) (models.DependencyVuln, models.DependencyVuln) {
-	//first add cves
+
 	var err error
-	if err = db.AutoMigrate(&models.Exploit{}); err != nil {
-		panic(err)
-	}
 
 	cve := models.CVE{
 		CVE:         "CVE-2024-51479",

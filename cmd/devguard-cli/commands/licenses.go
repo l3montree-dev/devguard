@@ -93,7 +93,7 @@ func updateApprovedLicenses() error {
 		return fmt.Errorf("http request to %s was unsuccessful (code: %d)", apiURL, resp.StatusCode)
 	}
 
-	path := "internal/core/component/" + "approved-licenses.json"
+	path := "internal/core/component/approved-licenses.json"
 	fileDescriptor, err := os.Create(path)
 	if err != nil {
 		return err

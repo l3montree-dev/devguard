@@ -516,13 +516,13 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err // this will cancel the transaction
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstDetectedOnThisArtifactName, artifactName)
+		err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(tx, firstDetectedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
 
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, fixedOnThisArtifactName, artifactName)
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(tx, fixedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err
@@ -617,7 +617,6 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			)
 			existingDependencies[componentPackageURL] = struct{}{}
 			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
-
 				components[componentPackageURL] = models.Component{
 					Purl:          componentPackageURL,
 					ComponentType: models.ComponentType(component.Type),
@@ -684,7 +683,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the license information in the background
 	go func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, artifactName)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

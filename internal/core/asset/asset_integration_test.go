@@ -10,7 +10,6 @@ import (
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -28,9 +27,6 @@ func TestHandleLookup(t *testing.T) {
 	assetService := mocks.NewAssetService(t)
 	depVulnService := mocks.NewDependencyVulnService(t)
 	statsService := mocks.NewStatisticsService(t)
-	assert.Nil(t, db.AutoMigrate(
-		&models.Org{},
-		&models.Project{}))
 
 	controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService)
 
@@ -95,11 +91,6 @@ func TestAssetUpdate(t *testing.T) {
 		vulnService := inithelper.CreateDependencyVulnService(db, nil, nil, nil)
 
 		controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, vulnService, nil)
-
-		assert.Nil(t, db.AutoMigrate(
-			&models.Org{},
-			&models.Project{},
-			&models.Asset{}))
 
 		// create an organization, project, and asset1 for testing
 		org, project, asset1, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)

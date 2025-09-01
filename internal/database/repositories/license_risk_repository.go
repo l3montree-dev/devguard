@@ -26,7 +26,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	var licenseRisks = []models.LicenseRisk{}
 
 	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
-		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
+		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID).Distinct()
 
 	// apply filters
 	for _, f := range filter {
@@ -37,7 +37,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? ", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Count(&count).Error
+	err := q.Session(&gorm.Session{}).Distinct("license_risks.id").Count(&count).Error
 	if err != nil {
 		return core.Paged[models.LicenseRisk]{}, err
 	}

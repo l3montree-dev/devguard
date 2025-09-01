@@ -39,6 +39,7 @@ func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
+		repositories.NewArtifactRepository(db),
 	)
 	return &componentService
 }
@@ -97,6 +98,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
+		repositories.NewArtifactRepository(db),
 	)
 	return assetversion.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),

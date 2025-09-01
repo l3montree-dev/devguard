@@ -25,25 +25,8 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.ComponentDependency{},
-		&models.Component{},
-		&models.CVE{},
-		&models.AffectedComponent{},
-		&models.DependencyVuln{},
-		&models.Exploit{},
-		&models.VulnEvent{},
-		&models.FirstPartyVuln{},
-		&models.Artifact{},
-	)
-	assert.Nil(t, err)
-
 	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-
+	var err error
 	t.Run("should not delete the asset version if it is the default branch", func(t *testing.T) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 		assetVersion.DefaultBranch = true
@@ -460,27 +443,12 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.ComponentDependency{},
-		&models.Component{},
-		&models.CVE{},
-		&models.Exploit{},
-		&models.VulnEvent{},
-		&models.AffectedComponent{},
-		&models.DependencyVuln{},
-	)
-	assert.Nil(t, err)
-
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
-	err = db.Save(&org).Error
+	err := db.Save(&org).Error
 	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
@@ -568,27 +536,12 @@ func TestDaemonFixedVersions(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.ComponentDependency{},
-		&models.Component{},
-		&models.CVE{},
-		&models.AffectedComponent{},
-		&models.DependencyVuln{},
-		&models.Exploit{},
-		&models.Artifact{},
-	)
-	assert.Nil(t, err)
-
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
-	err = db.Save(&org).Error
+	err := db.Save(&org).Error
 	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
