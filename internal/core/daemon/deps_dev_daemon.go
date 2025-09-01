@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func UpdateDepsDevInformation(db core.DB) error {
@@ -20,7 +21,7 @@ func UpdateDepsDevInformation(db core.DB) error {
 	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
 	depsDevService := vulndb.NewDepsDevService()
 	licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db))
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
 
 	if err != nil {
 		return err

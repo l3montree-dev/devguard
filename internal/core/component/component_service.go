@@ -22,9 +22,10 @@ type service struct {
 	componentProjectRepository core.ComponentProjectRepository
 	licenseRiskService         core.LicenseRiskService
 	artifactRepository         core.ArtifactRepository
+	synchronizer               core.FireAndForgetSynchronizer
 }
 
-func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService, artifactRepository core.ArtifactRepository) service {
+func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService, artifactRepository core.ArtifactRepository, synchronizer core.FireAndForgetSynchronizer) service {
 	err := loadLicensesIntoMemory()
 	if err != nil {
 		panic(fmt.Sprintf("error when trying to load licenses into memory, error: %s", err.Error()))
@@ -35,6 +36,7 @@ func NewComponentService(depsDevService core.DepsDevService, componentProjectRep
 		depsDevService:             depsDevService,
 		licenseRiskService:         licenseRiskService,
 		artifactRepository:         artifactRepository,
+		synchronizer:               synchronizer,
 	}
 }
 
@@ -246,7 +248,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		}
 	}
 
-	go func() {
+	s.synchronizer.FireAndForget(func() {
 		// find potential license risks
 		if artifactName == nil {
 			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts
@@ -267,7 +269,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}
 		}
-	}()
+	})
 
 	return allComponents, nil
 }

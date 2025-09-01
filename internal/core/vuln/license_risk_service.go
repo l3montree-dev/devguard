@@ -145,6 +145,12 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 			}
 		}
 
+		if len(validLicenseFixed) > 0 {
+			if err := s.UserFixedLicenseRisksByAutomaticRefresh(db, "system", validLicenseFixed, artifactName); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 }

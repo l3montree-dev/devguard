@@ -337,7 +337,6 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					orgID := org.GetID()
 
 					go func() {
-						return
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
 						if err != nil {
 							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID)
@@ -524,7 +523,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	depsDevService := vulndb.NewDepsDevService()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	artifactService := artifact.NewService(artifactRepository)
 

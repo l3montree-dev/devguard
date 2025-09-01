@@ -140,6 +140,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentRepository,
 			licenseRiskService,
 			repositories.NewArtifactRepository(db),
+			utils.NewSyncFireAndForgetSynchronizer(),
 		)
 
 		// Call the function under test
@@ -269,6 +270,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentRepository,
 			licenseRiskService,
 			repositories.NewArtifactRepository(db),
+			utils.NewSyncFireAndForgetSynchronizer(),
 		)
 
 		// Call the function under test

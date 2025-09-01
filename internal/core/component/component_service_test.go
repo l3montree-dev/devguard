@@ -24,7 +24,7 @@ func TestHandleComponent(t *testing.T) {
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -46,7 +46,7 @@ func TestHandleComponent(t *testing.T) {
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
 			Purl:    "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
@@ -67,7 +67,7 @@ func TestHandleComponent(t *testing.T) {
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 		component := models.Component{
 			Purl:    "pkg:deb/debian/gdbm@1.23", // that is how the component looks - the version inside the purl is not the full version
 			Version: "1.23-3",
@@ -94,7 +94,7 @@ func TestHandleComponent(t *testing.T) {
 		}
 
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, assert.AnError)
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		actual, err := service.GetLicense(c)
 
@@ -140,7 +140,7 @@ func TestHandleComponent(t *testing.T) {
 		}
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		actual, err := service.GetLicense(c)
 
@@ -200,7 +200,7 @@ func TestHandleProject(t *testing.T) {
 
 		mockComponentProjectRepository.On("Save", mock.Anything, &expectedProject).Return(nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil, mockLicenseRiskService, mockArtifactRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 		service.RefreshComponentProjectInformation(project)
 	})
 }
