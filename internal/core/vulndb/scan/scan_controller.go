@@ -16,7 +16,9 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -27,28 +29,28 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type HTTPController struct {
-	db                     core.DB
-	sbomScanner            core.SBOMScanner
-	cveRepository          core.CveRepository
-	componentRepository    core.ComponentRepository
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	assetVersionService    core.AssetVersionService
-	statisticsService      core.StatisticsService
-
-	artifactService core.ArtifactService
-
-	dependencyVulnService core.DependencyVulnService
-	firstPartyVulnService core.FirstPartyVulnService
+	db                       core.DB
+	sbomScanner              core.SBOMScanner
+	cveRepository            core.CveRepository
+	componentRepository      core.ComponentRepository
+	assetRepository          core.AssetRepository
+	assetVersionRepository   core.AssetVersionRepository
+	assetVersionService      core.AssetVersionService
+	statisticsService        core.StatisticsService
+	dependencyVulnRepository core.DependencyVulnRepository
+	artifactService          core.ArtifactService
+	dependencyVulnService    core.DependencyVulnService
+	firstPartyVulnService    core.FirstPartyVulnService
 
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -66,6 +68,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 		artifactService:           artifactService,
+		dependencyVulnRepository:  dependencyVulnRepository,
 	}
 }
 
@@ -79,6 +82,111 @@ type FirstPartyScanResponse struct {
 	AmountOpened    int                      `json:"amountOpened"`
 	AmountClosed    int                      `json:"amountClosed"`
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+}
+
+// UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
+// It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
+func (s HTTPController) UploadVEX(ctx core.Context) error {
+
+	var bom cdx.BOM
+	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
+	if err := dec.Decode(&bom); err != nil {
+		slog.Error("could not decode cyclonedx vex bom", "err", err)
+		return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
+	}
+
+	ctx.Request().Body.Close()
+
+	asset := core.GetAsset(ctx)
+	userID := core.GetSession(ctx).GetUserID()
+	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
+
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+	}
+
+	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, asset.ID)
+	if err != nil {
+		slog.Error("could not find asset version", "err", err, "assetVersion", assetVersionName, "assetID", asset.ID)
+		return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
+	}
+	// load existing dependency vulns for this asset version
+	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
+	if err != nil {
+		slog.Error("could not load dependency vulns", "err", err)
+		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+	}
+
+	// index by CVE id
+	vulnsByCVE := make(map[string][]models.DependencyVuln)
+	for _, v := range existing {
+		if v.CVE != nil && v.CVE.CVE != "" {
+			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
+		} else if v.CVEID != nil && *v.CVEID != "" {
+			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
+		}
+	}
+
+	updated := 0
+	notFound := 0
+
+	// helper to extract cve id from CycloneDX vulnerability id or source url
+	extractCVE := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		s = strings.TrimSpace(s)
+		if strings.HasPrefix(s, "http") {
+			parts := strings.Split(s, "/")
+			return parts[len(parts)-1]
+		}
+		return s
+	}
+
+	// iterate vulnerabilities in the CycloneDX BOM
+	if bom.Vulnerabilities != nil {
+		for _, vuln := range *bom.Vulnerabilities {
+			cveID := extractCVE(vuln.ID)
+			if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
+				cveID = extractCVE(vuln.Source.URL)
+			}
+			if cveID == "" {
+				notFound++
+				continue
+			}
+
+			cveID = strings.ToUpper(strings.TrimSpace(cveID))
+
+			vlist, ok := vulnsByCVE[cveID]
+			if !ok || len(vlist) == 0 {
+				notFound++
+				continue
+			}
+
+			statusType := normalize.MapCDXToStatus(vuln.Analysis)
+			if statusType == "" {
+				// skip unknown/unspecified statuses
+				continue
+			}
+
+			justification := "[VEX-Upload]"
+			if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
+				justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
+			}
+
+			for i := range vlist {
+				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vlist[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name) // mechanical justification is not part of cyclonedx spec.
+				if err != nil {
+					slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
+					continue
+				}
+				updated++
+			}
+		}
+	}
+
+	return ctx.JSON(200, map[string]int{"updated": updated, "notFound": notFound})
 }
 
 func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
