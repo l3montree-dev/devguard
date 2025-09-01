@@ -1116,6 +1116,11 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 func createYAMLMetadata(organizationName string, assetName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
 	title1, title2 := createTitles(assetName + "@" + assetVersionName)
+
+	if organizationName == "opencode" {
+		organizationName = "openCode"
+	}
+
 	// TO-DO: add sha hash to test the integrity
 	return yamlMetadata{
 		Vars: yamlVars{
