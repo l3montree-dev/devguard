@@ -287,7 +287,14 @@ func TestFromOSV(t *testing.T) {
 
 		affectedComponents := AffectedComponentFromOSV(osv)
 		for _, ac := range affectedComponents {
-			assert.Equal(t, ac.PurlWithoutVersion, "pkg:github.com/nextcloud/server")
+			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
+			assert.Equal(t, ac.Type, "github.com")
+			assert.Equal(t, ac.Name, "server")
+			assert.Equal(t, *ac.Namespace, "nextcloud")
+			assert.Nil(t, ac.SemverIntroduced)
+			assert.Nil(t, ac.SemverFixed)
+			assert.Nil(t, ac.VersionIntroduced)
+			assert.Nil(t, ac.VersionFixed)
 		}
 	})
 }

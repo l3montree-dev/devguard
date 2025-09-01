@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -240,13 +241,21 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 					continue
 				}
 
-				// repo: https://github.com/nextcloud/server
-				repo := strings.TrimPrefix(r.Repo, "https://")
-
-				name := strings.TrimPrefix(repo, "github.com/")
-				name = strings.Trim(name, "/")
-
-				purl := fmt.Sprintf("pkg:%s", repo)
+				// parse the repo as url
+				url, err := url.Parse(r.Repo)
+				if err != nil {
+					slog.Debug("could not parse repo url", "url", r.Repo, "err", err)
+					continue
+				}
+				// remove the scheme
+				url.Scheme = ""
+				purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
+				// parse the purl to get the name and namespace
+				purlParsed, err := packageurl.FromString(purl)
+				if err != nil {
+					slog.Debug("could not parse purl", "purl", purl, "err", err)
+					continue
+				}
 
 				notPurlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
 				for _, v := range affected.Versions {
@@ -255,9 +264,10 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 						PurlWithoutVersion: purl,
 						Ecosystem:          affected.Package.Ecosystem,
 						Scheme:             "pkg",
-						Type:               "git",
-						Name:               name,
+						Type:               purlParsed.Type,
+						Name:               purlParsed.Name,
 						Version:            &tmpV,
+						Namespace:          &purlParsed.Namespace,
 
 						Source: "osv",
 

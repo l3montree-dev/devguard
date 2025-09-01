@@ -21,6 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type PurlComparer struct {
@@ -33,48 +34,57 @@ func NewPurlComparer(db core.DB) *PurlComparer {
 	}
 }
 
-// if version is an empty string, the version provided by the purl gets used.
-// if that is an empty string as well - an error gets returned
+// GetAffectedComponents finds security vulnerabilities for a software package
 func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]models.AffectedComponent, error) {
-	// parse the purl
-	p, err := packageurl.FromString(purl)
+	// Step 1: Parse the package URL (purl)
+	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not parse purl")
+		return nil, errors.Wrap(err, "invalid package URL")
 	}
 
-	affectedComponents := []models.AffectedComponent{}
-
-	var semVer string
-	if version == "" {
-		semVer, err = normalize.SemverFix(p.Version)
-		if err != nil {
-			// we cannot find anything without a version
-			return []models.AffectedComponent{}, nil
+	// Step 2: Determine which version to use
+	targetVersion := version
+	if targetVersion == "" {
+		targetVersion = parsedPurl.Version
+		if targetVersion == "" {
+			return []models.AffectedComponent{}, nil // No version = no results
 		}
-		version = semVer
-	} else {
-		semVer, err = normalize.SemverFix(version)
 	}
 
-	// reset the purl version - the affected components are not version specific - instead range specific - not part of the purl
-	p.Version = ""
-	if err != nil {
-		// will be not null if the version is not a semver version
-		// we use the fake semver version - if we can convert it.
-		// this just allows best effort ordering
-		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where("version = ?", version).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
+	// Step 3: Try to normalize the version to semantic versioning format
+	normalizedVersion, versionIsValid := normalize.SemverFix(targetVersion)
+
+	// Step 4: Create search key (purl without version)
+	parsedPurl.Version = ""
+	searchPurl := parsedPurl.ToString()
+
+	var affectedComponents []models.AffectedComponent
+
+	if versionIsValid != nil {
+		// Version isn't semantic versioning - do exact match only
+		comparer.db.Model(&models.AffectedComponent{}).
+			Where("purl = ? AND version = ?", searchPurl, targetVersion).
+			Preload("CVE").Preload("CVE.Exploits").
+			Find(&affectedComponents)
 	} else {
-		// we can use the version from the purl todo a semver range check
-		// check if the package is present in the database
-		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where(
-			comparer.db.Where(
-				"version = ?", version).
-				Or("semver_introduced IS NULL AND semver_fixed > ?", semVer).
-				Or("semver_introduced < ? AND semver_fixed IS NULL", semVer).
-				Or("semver_introduced < ? AND semver_fixed > ?", semVer, semVer),
-		).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
+		// Version is semantic versioning - check version ranges
+		comparer.db.Model(&models.AffectedComponent{}).
+			Where("purl = ?", searchPurl).
+			Where(comparer.buildVersionRangeQuery(targetVersion, parsedPurl.Version, normalizedVersion)).
+			Preload("CVE").Preload("CVE.Exploits").
+			Find(&affectedComponents)
 	}
+
 	return affectedComponents, nil
+}
+
+// buildVersionRangeQuery creates the database query for version range matching
+func (comparer *PurlComparer) buildVersionRangeQuery(targetVersion, originalVersion, normalizedVersion string) *gorm.DB {
+	return comparer.db.Where("version = ?", targetVersion). // Exact match - to the target version
+								Or("version = ?", originalVersion).                                                    // Original purl version match
+								Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).               // Vulnerable from start until fixed version
+								Or("semver_introduced < ? AND semver_fixed IS NULL", normalizedVersion).               // Vulnerable from introduced version onwards
+								Or("semver_introduced < ? AND semver_fixed > ?", normalizedVersion, normalizedVersion) // Vulnerable in range
 }
 
 // some purls do contain versions, which cannot be found in the database. An example is git.

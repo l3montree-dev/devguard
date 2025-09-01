@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/distribution/reference"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
@@ -32,12 +31,6 @@ func NewContainerScanningCommand() *cobra.Command {
 		// Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if config.RuntimeBaseConfig.Image != "" {
-				// we want to scan a docker image (remote image)
-				img, err := reference.ParseNormalizedNamed(config.RuntimeBaseConfig.Image)
-				if err != nil {
-					return err
-				}
-				config.RuntimeBaseConfig.Image = img.Name()
 				return scaCommand(cmd, args)
 			} else {
 				hasTarSuffix := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar")

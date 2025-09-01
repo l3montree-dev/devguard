@@ -16,14 +16,11 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
-	"os"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/pkg/errors"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
@@ -39,31 +36,12 @@ func maybeLoginIntoOciRegistry(ctx context.Context) error {
 
 		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
 	} else {
-		slog.Info("skipping docker login - no registry / credentials provided")
+		slog.Info("skipping oci login - no registry / credentials provided")
 	}
 	return nil
 }
 
-func bomToString(bom *cdx.BOM) ([]byte, error) {
-	bomBuffer := &bytes.Buffer{}
-	encoder := cdx.NewBOMEncoder(bomBuffer, cdx.BOMFileFormatJSON)
-	if err := encoder.Encode(bom); err != nil {
-		return nil, err
-	}
-	return bomBuffer.Bytes(), nil
-}
-
-func bomToFile(bom *cdx.BOM, file *os.File) error {
-	data, err := bomToString(bom)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(file.Name(), data, 0600)
-	return err
-}
-
-func bomFromString(bomStr []byte) (*cdx.BOM, error) {
+func bomFromBytes(bomStr []byte) (*cdx.BOM, error) {
 	// Extract string encoded json as BOM
 	var bom cdx.BOM
 	err := json.Unmarshal(bomStr, &bom)
@@ -71,14 +49,4 @@ func bomFromString(bomStr []byte) (*cdx.BOM, error) {
 		return nil, err
 	}
 	return &bom, nil
-}
-
-func bomFromFile(file *os.File) (*cdx.BOM, error) {
-	bomStr, err := os.ReadFile(file.Name())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read bom file")
-	}
-
-	bom, err := bomFromString(bomStr)
-	return bom, err
 }

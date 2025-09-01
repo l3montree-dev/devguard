@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
@@ -43,22 +44,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-
-	cdx "github.com/CycloneDX/cyclonedx-go"
 )
-
-type AttestationPredicate struct {
-	Data      string `json:"Data"`
-	Timestamp string `json:"Timestamp"`
-
-	// https://github.com/in-toto/attestation/blob/main/spec/predicates/release.md#schema
-	Purl string `json:"purl"`
-}
-type AttestationPayload struct {
-	Type          string               `json:"_type"`
-	PredicateType string               `json:"predicateType"`
-	Predicate     AttestationPredicate `json:"predicate"`
-}
 
 type AttestationFileLine struct {
 	PayloadType string `json:"payloadType"`
@@ -93,7 +79,7 @@ func prepareTrivyCommand(workdir string) {
 	}
 }
 
-func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.File, error) {
+func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte, error) {
 	// generate random name
 	filename := uuid.New().String() + ".json"
 
@@ -120,7 +106,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.Fi
 			return nil, err
 		}
 
-		slog.Info("scanning docker image", "image", image)
+		slog.Info("scanning oci image", "image", image)
 		trivyCmd = exec.Command("trivy", "image", image, "--format", "cyclonedx", "--output", sbomFile)
 	} else if isDir {
 		slog.Info("scanning directory", "dir", workDir)
@@ -145,9 +131,19 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) (*os.Fi
 	if err != nil {
 		return nil, errors.Wrap(err, stderr.String())
 	}
-
+	file, err := os.Open(sbomFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open file")
+	}
 	// open the file and return the path
-	return os.Open(sbomFile)
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read file")
+	}
+
+	// delete the file after reading it
+	defer os.Remove(sbomFile)
+	return content, nil
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
@@ -327,7 +323,7 @@ func addScanFlags(cmd *cobra.Command) {
 	}
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("image", "", "The docker image to scan.")
+	cmd.Flags().String("image", "", "The oci image to scan.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
@@ -349,45 +345,7 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func getReleaseAttestationBOMs() ([]cdx.BOM, error) {
-	attestations, err := getReleaseAttestations(config.RuntimeBaseConfig.Image)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestations")
-	}
-
-	attestationBoms := []cdx.BOM{}
-	for _, attestation := range attestations {
-		bom, err := bomFromString([]byte(attestation.Predicate.Data))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not parse BOM from attestation")
-		}
-		attestationBoms = append(attestationBoms, *bom)
-	}
-
-	return attestationBoms, nil
-}
-
-func getReleaseAttestations(image string) ([]AttestationPayload, error) {
-	attestations, err := getAttestations(image)
-	if err != nil {
-		return nil, err
-	}
-
-	releaseAttestations := slices.Collect(func(yield func(AttestationPayload) bool) {
-		for _, attestation := range attestations {
-			if attestation.PredicateType == "https://in-toto.io/attestation/release/v0.1" || attestation.PredicateType == "https://cyclonedx.org/vex/v1.6" {
-				if !yield(attestation) {
-					return
-				}
-			}
-		}
-	})
-
-	return releaseAttestations, nil
-
-}
-
-func getAttestations(image string) ([]AttestationPayload, error) {
+func getAttestations(image string) ([]map[string]any, error) {
 	// cosign download attestation image
 	cosignCmd := exec.Command("cosign", "download", "attestation", image)
 
@@ -410,7 +368,7 @@ func getAttestations(image string) ([]AttestationPayload, error) {
 		jsonLines = jsonLines[:len(jsonLines)-1]
 	}
 
-	attestations := []AttestationPayload{}
+	attestations := []map[string]any{}
 	// go through each line (attestation) of the .jsonlines file
 	for _, jsonLine := range jsonLines {
 		var line AttestationFileLine
@@ -426,7 +384,7 @@ func getAttestations(image string) ([]AttestationPayload, error) {
 		}
 
 		// Parse payload as attestation
-		var attestation AttestationPayload
+		var attestation map[string]any
 		err = json.Unmarshal([]byte(data), &attestation)
 		if err != nil {
 			return nil, err
@@ -438,61 +396,146 @@ func getAttestations(image string) ([]AttestationPayload, error) {
 	return attestations, nil
 }
 
-func scaCommand(cmd *cobra.Command, args []string) error {
-	var file *os.File
-	var err error
+func scanExternalImage() error {
+	// download and extract release attestation BOMs first
+	attestations, err := getAttestations(config.RuntimeBaseConfig.Image)
+	if err != nil {
+		return err
+	}
 
-	ctx := cmd.Context()
+	ctx := context.Background()
 
-	// in case it's a docker image we need to scan the image and try to download attestations
-	if config.RuntimeBaseConfig.Image != "" {
-		// download and extract release attestation BOMs first
-		releaseAttestationBOMs, err := getReleaseAttestationBOMs()
-		if err != nil {
-			return err
+	// generate SBOM using Trivy
+	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Image, true)
+	if err != nil {
+		return err
+	}
+
+	// load sbom that was generated in the line above
+	bom, err := bomFromBytes(file)
+	if err != nil {
+		return err
+	}
+
+	var vex *cyclonedx.BOM
+
+	// check if there is any release attestation - if so, add the purl to the sbom
+	for _, attestation := range attestations {
+		if attestation["predicateType"] == "https://cyclonedx.org/vex" {
+			predicate, ok := attestation["predicate"].(map[string]any)
+			if !ok {
+				panic("could not parse predicate")
+			}
+
+			// marshal the predicate back to json
+			predicateBytes, err := json.Marshal(predicate)
+			if err != nil {
+				panic(err)
+			}
+			vex, err = bomFromBytes(predicateBytes)
+			if err != nil {
+				panic(err)
+			}
 		}
+		if attestation["predicateType"] == "https://in-toto.io/attestation/release/v0.1" {
+			predicate, ok := attestation["predicate"].(map[string]any)
+			if !ok {
+				panic("could not parse predicate")
+			}
+			purl, ok := predicate["purl"].(string)
+			if !ok || purl == "" {
+				panic("could not parse purl")
+			}
 
-		// generate SBOM using Trivy
-		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Image, true)
-		if err != nil {
-			return err
-		}
+			// try to parse a version from the purl
+			parsedPurl, err := packageurl.FromString(purl)
+			if err != nil {
+				slog.Warn("could not parse purl", "purl", purl, "err", err)
+				continue
+			}
 
-		// load sbom that was generated in the line above
-		bom, err := bomFromFile(file)
-		if err != nil {
-			return err
-		}
+			bom.Components = utils.Ptr(append(*bom.Components, cyclonedx.Component{
+				Type:       cyclonedx.ComponentTypeApplication,
+				Name:       purl,
+				BOMRef:     purl,
+				PackageURL: purl,
+				Version:    parsedPurl.Version,
+			}))
 
-		print(releaseAttestationBOMs)
-		// TODO!!.. add purl to sbom (figure out where to add it exactly..)
+			// get the root and mark a dependency on the purl
+			rootRef := bom.Metadata.Component.BOMRef
+			// find the root ref in the dependencies and add a dependency to the purl
+			index := slices.IndexFunc(*bom.Dependencies, func(d cyclonedx.Dependency) bool {
+				return d.Ref == rootRef
+			})
+			if index == -1 {
+				continue
+			}
+			dependencies := *(*bom.Dependencies)[index].Dependencies
+			if dependencies == nil {
+				dependencies = []string{}
+			}
+			// only add if not already present
+			if slices.Contains(dependencies, purl) {
+				continue
+			}
 
-		// override BOM file with new/modified sbom
-		err = bomToFile(bom, file)
-		if err != nil {
-			return err
-		}
-	} else {
-		// read the sbom file and post it to the scan endpoint
-		// get the dependencyVulns and print them to the console
-		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
-		if err != nil {
-			return errors.Wrap(err, "could not open file")
+			dependencies = append(dependencies, purl)
+			(*bom.Dependencies)[index].Dependencies = &dependencies
 		}
 	}
-	defer os.Remove(file.Name())
 
+	buff := &bytes.Buffer{}
+	// marshal the bom back to json
+	err = cyclonedx.NewBOMEncoder(buff, cyclonedx.BOMFileFormatJSON).Encode(bom)
+	if err != nil {
+		return err
+	}
+
+	// upload the bom to the scan endpoint
+	resp, err := uploadBOM(buff)
+	if err != nil {
+		return errors.Wrap(err, "could not send request")
+	}
+	defer resp.Body.Close()
+
+	// check if we can upload a vex as well
+	if vex != nil {
+		vexBuff := &bytes.Buffer{}
+		// marshal the bom back to json
+		err = cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).Encode(vex)
+		if err != nil {
+			return err
+		}
+
+		// upload the vex
+		vexResp, err := uploadVEX(vexBuff)
+		if err != nil {
+			slog.Error("could not upload vex", "err", err)
+		} else {
+			defer vexResp.Body.Close()
+			if vexResp.StatusCode != http.StatusOK {
+				slog.Error("could not upload vex", "status", vexResp.Status)
+			} else {
+				slog.Info("uploaded vex successfully")
+			}
+		}
+	}
+	return nil
+}
+
+func uploadVEX(vex io.Reader) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), file)
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "could not create request")
 	}
 
 	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
-		return errors.Wrap(err, "could not sign request")
+		return nil, errors.Wrap(err, "could not sign request")
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -500,10 +543,52 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	return http.DefaultClient.Do(req)
+}
+
+func uploadBOM(bom io.Reader) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create request")
+	}
+
+	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not sign request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
+	config.SetXAssetHeaders(req)
+
+	return http.DefaultClient.Do(req)
+}
+
+func scaCommand(cmd *cobra.Command, args []string) error {
+
+	ctx := cmd.Context()
+
+	// in case it's a docker image we need to scan the image and try to download attestations
+	if config.RuntimeBaseConfig.Image != "" {
+		return scanExternalImage()
+	}
+
+	// read the sbom file and post it to the scan endpoint
+	// get the dependencyVulns and print them to the console
+	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
+	if err != nil {
+		return errors.Wrap(err, "could not open file")
+	}
+
+	resp, err := uploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
