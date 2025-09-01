@@ -98,6 +98,7 @@ func init() {
 	rootCmd.AddCommand(
 		NewSCACommand(),
 		NewContainerScanningCommand(),
+		NewCleanCommand(),
 		NewAttestCommand(),
 		NewInspectCommand(),
 		NewSignCommand(),
@@ -178,12 +179,13 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Bind the current command's flags to viper
 	bindFlags(cmd)
 
-	config.ParseBaseConfig()
+	config.ParseBaseConfig(cmd.Use)
 	return nil
 }
 
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)
 func bindFlags(cmd *cobra.Command) {
+
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		configName := f.Name
 		// If using camelCase in the config file, replace hyphens with a camelCased string.

@@ -25,7 +25,8 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
+	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
+		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
@@ -33,7 +34,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	}
 
 	if search != "" && len(search) > 2 {
-		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? OR license_risks.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? ", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Count(&count).Error
@@ -80,10 +81,13 @@ func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID
 	return repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
 }
 
-func (repository *LicenseRiskRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
-	// scanner ids is a string array separated by whitespaces
-	err := repository.db.Where("asset_version_name = ? AND asset_id = ? AND ? = ANY(string_to_array(scanner_ids, ' '))", assetVersionName, assetID, scannerID).Find(&licenseRisks).Error
+
+	q := repository.db.Model(&models.LicenseRisk{}).
+		Joins("JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Joins("JOIN artifacts ON artifact_license_risks.artifact_artifact_name = artifacts.artifact_name AND artifact_license_risks.artifact_asset_version_name = artifacts.asset_version_name AND artifact_license_risks.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
+
+	err := q.Find(&licenseRisks).Error
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +124,7 @@ func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *m
 
 func (repository *LicenseRiskRepository) Read(vulnID string) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
-	err := repository.db.Where("id = ?", vulnID).Preload("Events").Preload("Component").First(&licenseRisk).Error
+	err := repository.db.Where("id = ?", vulnID).Preload("Artifacts").Preload("Events").Preload("Component").First(&licenseRisk).Error
 	if err != nil {
 		return licenseRisk, err
 	}

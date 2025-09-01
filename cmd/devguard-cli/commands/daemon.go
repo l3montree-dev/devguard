@@ -58,7 +58,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -114,7 +114,7 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "scan") {
 		start = time.Now()
 		// update scan
-		err := daemon.ScanAssetVersions(db, casbinRBACProvider)
+		err := daemon.ScanArtifacts(db, casbinRBACProvider)
 		if err != nil {
 			slog.Error("could not scan asset versions", "err", err)
 			return nil
@@ -138,9 +138,9 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 	// after we have a fresh vulndb we can update the dependencyVulns.
 	// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 	// those need to be updated before recalculating the risk
-	if emptyOrContains(daemons, "componentProperties") {
+	if emptyOrContains(daemons, "fixedVersions") {
 		start = time.Now()
-		if err := daemon.UpdateComponentProperties(db); err != nil {
+		if err := daemon.UpdateFixedVersions(db); err != nil {
 			slog.Error("could not update component properties", "err", err)
 			return nil
 		}

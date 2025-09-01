@@ -36,9 +36,6 @@ const (
 
 	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
-
-	EventTypeAddedScanner   VulnEventType = "addedScanner"
-	EventTypeRemovedScanner VulnEventType = "removedScanner"
 )
 
 type MechanicalJustificationType string
@@ -115,20 +112,6 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		v := vuln.(*LicenseRisk)
 		v.SetFinalLicenseDecision(finalLicenseDecision)
 		v.SetState(VulnStateFixed)
-	case EventTypeAddedScanner:
-		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
-		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
-			return
-		}
-		vuln.AddScannerID(scannerID)
-	case EventTypeRemovedScanner:
-		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
-		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
-			return
-		}
-		vuln.RemoveScannerID(scannerID)
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
@@ -191,7 +174,7 @@ func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification str
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, scannerID string) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, artifactName string) VulnEvent {
 	ev := VulnEvent{
 		Type:                    EventTypeFalsePositive,
 		VulnID:                  vulnID,
@@ -200,22 +183,22 @@ func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justificati
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
 	}
-	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewFixedEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
+func NewFixedEvent(vulnID string, vulnType VulnType, userID string, artifactName string) VulnEvent {
 	ev := VulnEvent{
 		Type:     EventTypeFixed,
 		VulnType: vulnType,
 		VulnID:   vulnID,
 		UserID:   userID,
 	}
-	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, justification, scannerID string, finalLicenseDecision string) VulnEvent {
+func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, justification, artifactName string, finalLicenseDecision string) VulnEvent {
 	ev := VulnEvent{
 		Type:          EventTypeLicenseDecision,
 		VulnType:      vulnType,
@@ -223,11 +206,11 @@ func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, ju
 		UserID:        userID,
 		Justification: &justification,
 	}
-	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID, "finalLicenseDecision": finalLicenseDecision})
+	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName, "finalLicenseDecision": finalLicenseDecision})
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string) VulnEvent {
+func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, artifactName string) VulnEvent {
 	ev := VulnEvent{
 		Type:     EventTypeDetected,
 		VulnType: vulnType,
@@ -236,7 +219,7 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	}
 
 	m := riskCalculationReport.Map()
-	m["scannerIds"] = scannerID
+	m["artifactNames"] = artifactName
 
 	ev.SetArbitraryJSONData(m)
 
@@ -270,30 +253,6 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType VulnType, userID s
 
 	event.SetArbitraryJSONData(m)
 	return event
-}
-
-func NewAddedScannerEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
-	ev := VulnEvent{
-		Type:     EventTypeAddedScanner,
-		VulnID:   vulnID,
-		VulnType: vulnType,
-		UserID:   userID,
-	}
-
-	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
-	return ev
-}
-
-func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
-	ev := VulnEvent{
-		Type:     EventTypeRemovedScanner,
-		VulnID:   vulnID,
-		VulnType: vulnType,
-		UserID:   userID,
-	}
-
-	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
-	return ev
 }
 
 func CheckStatusType(statusType string) error {

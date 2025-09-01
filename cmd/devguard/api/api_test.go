@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/auth"
@@ -13,6 +14,8 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 func TestMultiOrganizationMiddleware(t *testing.T) {
@@ -375,5 +378,184 @@ func TestNeededScope(t *testing.T) {
 		// assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+func TestAssetVersionMiddleware(t *testing.T) {
+	t.Run("it should update LastAccessedAt timestamp when asset version is found", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+
+		assetID := uuid.New()
+		assetVersionSlug := "v1.0.0"
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: assetID,
+			Slug:    assetVersionSlug,
+		}
+
+		// Set up context with asset and parameters
+		core.SetAsset(ctx, asset)
+		ctx.SetParamNames("assetVersionSlug")
+		ctx.SetParamValues(assetVersionSlug)
+
+		// Mock the repository calls
+		mockAssetVersionRepository.On("ReadBySlug", assetID, assetVersionSlug).Return(assetVersion, nil)
+		mockAssetVersionRepository.On("Save", (*gorm.DB)(nil), mock.MatchedBy(func(av *models.AssetVersion) bool {
+			// Verify that the asset version has the correct basic fields
+			if av.Name != "v1.0.0" || av.AssetID != assetID || av.Slug != assetVersionSlug {
+				return false
+			}
+			// Verify that LastAccessedAt is set and is recent (should not be zero time)
+			return !av.LastAccessedAt.IsZero() && time.Since(av.LastAccessedAt) < time.Minute
+		})).Return(nil)
+
+		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// Wait a bit for the goroutine to complete
+		time.Sleep(100 * time.Millisecond)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Verify that the asset version was set in context
+		setAssetVersion := core.GetAssetVersion(ctx)
+		assert.Equal(t, assetVersion.Name, setAssetVersion.Name)
+		assert.Equal(t, assetVersion.Slug, setAssetVersion.Slug)
+
+		mockAssetVersionRepository.AssertExpectations(t)
+	})
+
+	t.Run("it should handle default asset version gracefully", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+
+		assetID := uuid.New()
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+		}
+
+		// Set up context with asset and default slug
+		core.SetAsset(ctx, asset)
+		ctx.SetParamNames("assetVersionSlug")
+		ctx.SetParamValues("default")
+
+		// Mock the repository to return an error for default slug
+		mockAssetVersionRepository.On("ReadBySlug", assetID, "default").Return(models.AssetVersion{}, errors.New("not found"))
+
+		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Verify that an empty asset version was set in context for default
+		setAssetVersion := core.GetAssetVersion(ctx)
+		assert.Equal(t, "", setAssetVersion.Name)
+
+		mockAssetVersionRepository.AssertExpectations(t)
+	})
+
+	t.Run("it should return 404 when asset version is not found", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+
+		assetID := uuid.New()
+		assetVersionSlug := "nonexistent"
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+		}
+
+		// Set up context with asset and parameters
+		core.SetAsset(ctx, asset)
+		ctx.SetParamNames("assetVersionSlug")
+		ctx.SetParamValues(assetVersionSlug)
+
+		// Mock the repository to return an error
+		mockAssetVersionRepository.On("ReadBySlug", assetID, assetVersionSlug).Return(models.AssetVersion{}, errors.New("not found"))
+
+		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NotNil(t, err)
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, 404, httpErr.Code)
+		assert.Equal(t, "could not find asset version", httpErr.Message)
+
+		mockAssetVersionRepository.AssertExpectations(t)
+	})
+
+	t.Run("it should return 400 when asset version slug is missing", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+
+		assetID := uuid.New()
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+		}
+
+		// Set up context with asset but no asset version slug parameter
+		core.SetAsset(ctx, asset)
+		// Don't set param names/values to simulate missing slug
+
+		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NotNil(t, err)
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, 400, httpErr.Code)
+		assert.Equal(t, "invalid asset version slug", httpErr.Message)
+
+		mockAssetVersionRepository.AssertExpectations(t)
 	})
 }

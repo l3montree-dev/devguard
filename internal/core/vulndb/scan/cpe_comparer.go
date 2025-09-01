@@ -66,7 +66,7 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 	cpeMatches := []models.CPEMatch{}
 
 	if debug {
-		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	} else {
 		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	}

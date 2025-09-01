@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -77,7 +78,7 @@ func (a *httpController) List(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, toDTOs(apps))
+	return ctx.JSON(200, ToDTOs(apps))
 }
 
 func (a *httpController) AttachSigningKey(ctx core.Context) error {
@@ -147,13 +148,13 @@ func (a *httpController) Create(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, toDTO(*asset))
+	return ctx.JSON(200, ToDTO(*asset))
 }
 
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 
-	return ctx.JSON(200, toDTO(app))
+	return ctx.JSON(200, ToDTO(app))
 }
 
 func (a *httpController) Update(ctx core.Context) error {
@@ -326,12 +327,15 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, asset.ID, asset.Name)
+		results, err := a.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
 		if err != nil {
 			return err
 		}
+		if len(results) == 0 {
+			return echo.NewHTTPError(404, "badge not found")
+		}
+		svg = a.assetService.GetCVSSBadgeSVG(results[0].Distribution)
 
-		svg = a.assetService.GetCVSSBadgeSVG(results)
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")
 		}

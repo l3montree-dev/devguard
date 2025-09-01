@@ -53,13 +53,23 @@ func (repository *assetVersionRepository) Read(assetVersionName string, assetID 
 }
 
 func (repository *assetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVersion) error {
-	err := repository.db.Delete(assetVersion).Error //Call db delete function with the provided asset version
-	if err != nil {
-		slog.Error("error when deleting asset in database", "err", err)
-		return err
-	}
-	return err
+	// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
+	return repository.GetDB(tx).Transaction(func(dbTx core.DB) error {
+		// First, explicitly delete all related artifacts to ensure proper cleanup
+		if err := dbTx.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Delete(&models.Artifact{}).Error; err != nil {
+			slog.Error("error deleting artifacts for asset version", "err", err, "assetVersion", assetVersion.Name)
+			return err
+		}
 
+		// Delete the asset version itself - this will cascade to delete other related records
+		if err := dbTx.Delete(assetVersion).Error; err != nil {
+			slog.Error("error when deleting asset version in database", "err", err, "assetVersion", assetVersion.Name)
+			return err
+		}
+
+		slog.Info("successfully deleted asset version and all related artifacts", "assetVersion", assetVersion.Name)
+		return nil
+	})
 }
 
 func (repository *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
@@ -214,7 +224,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 
 	//this is not exploitable because the day is an int and golang is statically typed
 	interval := fmt.Sprintf("INTERVAL '%d days'", day)
-	query := fmt.Sprintf("updated_at < NOW() - %s AND default_branch = false", interval)
+	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch'", interval)
 
 	var count int64
 	err := repository.db.Model(&models.AssetVersion{}).
@@ -225,8 +235,38 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	if count > 0 {
-		err = repository.db.Unscoped().Where(query).
-			Delete(&models.AssetVersion{}).Error
+		slog.Info("deleting old asset versions", "count", count, "olderThanDays", day)
+
+		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
+		err = repository.db.Transaction(func(tx core.DB) error {
+			// Delete all artifacts for the asset versions being deleted in a single query
+			artifactDeleteQuery := `
+				DELETE FROM artifacts 
+				WHERE (asset_version_name, asset_id) IN (
+					SELECT name, asset_id 
+					FROM asset_versions 
+					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
+					AND default_branch = false 
+					AND type = 'branch'
+				)`
+
+			if err := tx.Exec(artifactDeleteQuery).Error; err != nil {
+				slog.Error("error deleting artifacts for old asset versions", "err", err)
+				return err
+			}
+
+			slog.Info("deleted artifacts for old asset versions", "olderThanDays", day)
+
+			// Now delete the asset versions, which should cascade to delete other related records
+			if err := tx.Unscoped().Where(query).Delete(&models.AssetVersion{}).Error; err != nil {
+				slog.Error("error deleting old asset versions", "err", err)
+				return err
+			}
+
+			slog.Info("deleted old asset versions", "count", count, "olderThanDays", day)
+			return nil
+		})
+
 		if err != nil {
 			return 0, err
 		}

@@ -12,157 +12,90 @@ import (
 )
 
 type service struct {
-	statisticsRepository         core.StatisticsRepository
-	componentRepository          core.ComponentRepository
-	assetRiskHistoryRepository   core.AssetRiskHistoryRepository
-	dependencyVulnRepository     core.DependencyVulnRepository
-	assetVersionRepository       core.AssetVersionRepository
-	projectRepository            core.ProjectRepository
-	projectRiskHistoryRepository core.ProjectRiskHistoryRepository
+	statisticsRepository          core.StatisticsRepository
+	componentRepository           core.ComponentRepository
+	artifactRiskHistoryRepository core.ArtifactRiskHistoryRepository
+	dependencyVulnRepository      core.DependencyVulnRepository
+	assetVersionRepository        core.AssetVersionRepository
+	projectRepository             core.ProjectRepository
+	releaseRepository             core.ReleaseRepository
 }
 
-func NewService(statisticsRepository core.StatisticsRepository, componentRepository core.ComponentRepository, assetRiskHistoryRepository core.AssetRiskHistoryRepository, dependencyVulnRepository core.DependencyVulnRepository, assetVersionRepository core.AssetVersionRepository, projectRepository core.ProjectRepository, projectRiskHistoryRepository core.ProjectRiskHistoryRepository) *service {
+func NewService(statisticsRepository core.StatisticsRepository, componentRepository core.ComponentRepository, assetRiskHistoryRepository core.ArtifactRiskHistoryRepository, dependencyVulnRepository core.DependencyVulnRepository, assetVersionRepository core.AssetVersionRepository, projectRepository core.ProjectRepository, releaseRepository core.ReleaseRepository) *service {
 	return &service{
-		statisticsRepository:         statisticsRepository,
-		componentRepository:          componentRepository,
-		assetRiskHistoryRepository:   assetRiskHistoryRepository,
-		dependencyVulnRepository:     dependencyVulnRepository,
-		assetVersionRepository:       assetVersionRepository,
-		projectRepository:            projectRepository,
-		projectRiskHistoryRepository: projectRiskHistoryRepository,
+		statisticsRepository:          statisticsRepository,
+		componentRepository:           componentRepository,
+		artifactRiskHistoryRepository: assetRiskHistoryRepository,
+		dependencyVulnRepository:      dependencyVulnRepository,
+		assetVersionRepository:        assetVersionRepository,
+		projectRepository:             projectRepository,
+		releaseRepository:             releaseRepository,
 	}
 }
 
-func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
-	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionName, assetID, start, end)
-}
-
-func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end time.Time) error {
-	// set begin to last second of date
-	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
-	// set end to last second of date
-	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
-
-	// fetch all assets history for the project
-	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		assetsHistory, err := s.assetRiskHistoryRepository.GetRiskHistoryByProject(projectID, time)
-
-		if err != nil {
-			return fmt.Errorf("could not get risk history by project: %w", err)
-		}
-		risks := map[string]struct {
-			Min float64
-			Max float64
-			Sum float64
-			Avg float64
-		}{
-			"open":  {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
-			"fixed": {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
-		}
-		riskAggregationOpen := risks["open"]
-		riskAggregationFixed := risks["fixed"]
-
-		var projectRiskHistory = models.ProjectRiskHistory{}
-
-		openDependencyVulns, fixedDependencyVulns := 0, 0
-		totalLow, totalMedium, totalHigh, totalCritical := 0, 0, 0, 0
-		totalLowCvss, totalMediumCvss, totalHighCvss, totalCriticalCvss := 0, 0, 0, 0
-
-		for _, assetHistory := range assetsHistory {
-			if assetHistory.OpenDependencyVulns > 0 {
-				openDependencyVulns += assetHistory.OpenDependencyVulns
-			} else if assetHistory.FixedDependencyVulns > 0 {
-				fixedDependencyVulns += assetHistory.FixedDependencyVulns
-			}
-
-			// Aggregate severity counts
-			totalLow += assetHistory.Low
-			totalMedium += assetHistory.Medium
-			totalHigh += assetHistory.High
-			totalCritical += assetHistory.Critical
-
-			totalLowCvss += assetHistory.LowCVSS
-			totalMediumCvss += assetHistory.MediumCVSS
-			totalHighCvss += assetHistory.HighCVSS
-			totalCriticalCvss += assetHistory.CriticalCVSS
-
-			if riskAggregationOpen.Min > assetHistory.MinOpenRisk {
-				riskAggregationOpen.Min = assetHistory.MinOpenRisk
-			}
-
-			if riskAggregationFixed.Min > assetHistory.MinClosedRisk {
-				riskAggregationFixed.Min = assetHistory.MinClosedRisk
-			}
-
-			riskAggregationOpen.Sum += assetHistory.SumOpenRisk
-			riskAggregationFixed.Sum += assetHistory.SumClosedRisk
-
-			if assetHistory.MaxOpenRisk > riskAggregationOpen.Max {
-				riskAggregationOpen.Max = assetHistory.MaxOpenRisk
-			}
-
-			if assetHistory.MaxClosedRisk > riskAggregationFixed.Max {
-				riskAggregationFixed.Max = assetHistory.MaxClosedRisk
-			}
-
-		}
-
-		openRisk := riskAggregationOpen
-		fixedRisk := riskAggregationFixed
-
-		if openRisk.Min == -1.0 {
-			openRisk.Min = 0.0
-		}
-		if fixedRisk.Min == -1.0 {
-			fixedRisk.Min = 0.0
-		}
-
-		if openDependencyVulns != 0 {
-			openRisk.Avg = openRisk.Sum / float64(openDependencyVulns)
-		}
-
-		if fixedDependencyVulns != 0 {
-			fixedRisk.Avg = fixedRisk.Sum / float64(fixedDependencyVulns)
-		}
-
-		projectRiskHistory = models.ProjectRiskHistory{
-			ProjectID: projectID,
-			History: models.History{
-				Day: time,
-
-				SumOpenRisk: openRisk.Sum,
-				AvgOpenRisk: openRisk.Avg,
-				MaxOpenRisk: openRisk.Max,
-				MinOpenRisk: openRisk.Min,
-
-				SumClosedRisk:        fixedRisk.Sum,
-				AvgClosedRisk:        fixedRisk.Avg,
-				MaxClosedRisk:        fixedRisk.Max,
-				MinClosedRisk:        fixedRisk.Min,
-				OpenDependencyVulns:  openDependencyVulns,
-				FixedDependencyVulns: fixedDependencyVulns,
-				Distribution: models.Distribution{
-					Low:      totalLow,
-					Medium:   totalMedium,
-					High:     totalHigh,
-					Critical: totalCritical,
-
-					LowCVSS:      totalLowCvss,
-					MediumCVSS:   totalMediumCvss,
-					HighCVSS:     totalHighCvss,
-					CriticalCVSS: totalCriticalCvss,
-				},
-			},
-		}
-		err = s.projectRiskHistoryRepository.UpdateRiskAggregation(&projectRiskHistory)
-		if err != nil {
-			return fmt.Errorf("could not update project risk aggregation: %w", err)
-		}
+func (s *service) GetComponentRisk(artifactName, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	distributionPerComponent := make(map[string]models.Distribution)
+
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.ComponentPurl == nil {
+			continue
+		}
+		componentName := *dependencyVuln.ComponentPurl
+		if _, exists := distributionPerComponent[componentName]; !exists {
+			distributionPerComponent[componentName] = models.Distribution{}
+		}
+		distribution := distributionPerComponent[componentName]
+
+		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+		cvss := float64(dependencyVuln.CVE.CVSS)
+
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			distribution.Low++
+		case risk >= 4.0 && risk < 7.0:
+			distribution.Medium++
+		case risk >= 7.0 && risk < 9.0:
+			distribution.High++
+		case risk >= 9.0 && risk <= 10.0:
+			distribution.Critical++
+		}
+
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			distribution.LowCVSS++
+		case cvss >= 4.0 && cvss < 7.0:
+			distribution.MediumCVSS++
+		case cvss >= 7.0 && cvss < 9.0:
+			distribution.HighCVSS++
+		case cvss >= 9.0 && cvss <= 10.0:
+			distribution.CriticalCVSS++
+		}
+
+		distributionPerComponent[componentName] = distribution
+	}
+
+	return distributionPerComponent, nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistory(nil, assetVersionName, assetID, start, end)
+}
+
+func (s *service) GetArtifactRiskHistory(artifactName, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistory(&artifactName, assetVersionName, assetID, start, end)
+}
+
+// project-level aggregation via project_risk_history has been removed.
+// Previously this method aggregated per-project risk history from asset histories.
+// That behavior was intentionally removed to focus statistics on artifact histories only.
+// If project-level aggregation is required in future, reintroduce with a new storage model.
+
+func (s *service) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past
@@ -174,7 +107,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(assetVersion.Name, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(&artifact.ArtifactName, artifact.AssetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -245,8 +178,9 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
 
-		result := models.AssetRiskHistory{
-			AssetVersionName: assetVersion.Name,
+		result := models.ArtifactRiskHistory{
+			ArtifactName:     artifact.ArtifactName,
+			AssetVersionName: artifact.AssetVersionName,
 			AssetID:          assetID,
 			History: models.History{
 				Day: time,
@@ -276,116 +210,31 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 			},
 		}
 
-		err = s.assetRiskHistoryRepository.UpdateRiskAggregation(&result)
+		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(&result)
 		if err != nil {
 			return err
 		}
-		slog.Info("updated risk aggregation", "assetVersionName", assetVersion.Name, "assetID", assetID, "day", time)
+		slog.Info("updated risk aggregation", "assetVersionName", artifact.AssetVersionName, "assetID", assetID, "artifact", artifact.ArtifactName, "day", time)
 	}
 
 	// save the last history update timestamp
-	assetVersion.LastHistoryUpdate = &end
+	artifact.LastHistoryUpdate = &end
 
-	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
-	// we update all assets and afterwards do a one time project update. This is just optimization.
-	if propagateToProject {
-		currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
-
-		if err != nil {
-			return fmt.Errorf("could not get project id by asset id: %w", err)
-		}
-		for {
-			// update all projects - parent projects as well.
-			err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
-			if err != nil {
-				return fmt.Errorf("could not update project risk aggregation: %w", err)
-			}
-
-			if currentProject.ParentID != nil {
-				currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
-				if err != nil {
-					return fmt.Errorf("could not get parent project: %w", err)
-				}
-			} else {
-				break
-			}
-		}
-	}
 	return nil
-
-}
-
-func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionName, assetID, assetName)
-}
-
-func (s *service) GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	return s.statisticsRepository.GetAssetCvssDistribution(assetVersionName, assetID, assetName)
 }
 
 func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
-	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
+	// project-level risk history storage was removed; return empty result for compatibility.
+	return []models.ProjectRiskHistory{}, nil
 }
 
-func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	distributionPerComponent := make(map[string]models.Distribution)
-
-	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.ComponentPurl == nil {
-			continue
-		}
-		componentName := *dependencyVuln.ComponentPurl
-		if _, exists := distributionPerComponent[componentName]; !exists {
-			distributionPerComponent[componentName] = models.Distribution{}
-		}
-		distribution := distributionPerComponent[componentName]
-
-		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
-		cvss := float64(dependencyVuln.CVE.CVSS)
-
-		switch {
-		case risk >= 0.0 && risk < 4.0:
-			distribution.Low++
-		case risk >= 4.0 && risk < 7.0:
-			distribution.Medium++
-		case risk >= 7.0 && risk < 9.0:
-			distribution.High++
-		case risk >= 9.0 && risk <= 10.0:
-			distribution.Critical++
-		}
-
-		switch {
-		case cvss >= 0.0 && cvss < 4.0:
-			distribution.LowCVSS++
-		case cvss >= 4.0 && cvss < 7.0:
-			distribution.MediumCVSS++
-		case cvss >= 7.0 && cvss < 9.0:
-			distribution.HighCVSS++
-		case cvss >= 9.0 && cvss <= 10.0:
-			distribution.CriticalCVSS++
-		}
-
-		distributionPerComponent[componentName] = distribution
-	}
-
-	return distributionPerComponent, nil
+// GetReleaseRiskHistory aggregates artifact risk histories for all artifacts included in the release tree
+func (s *service) GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	// Use a DB-level query to collect artifact histories for all artifacts present in the release tree.
+	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(releaseID, start, end)
 }
 
-func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetDependencyVulnCountByScannerID(assetVersionName, assetID)
-}
-
-func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.componentRepository.GetDependencyCountPerScanner(assetVersionName, assetID)
-}
-
-func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+func (s *service) GetAverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
 	switch severity {
 	case "critical":
@@ -402,38 +251,30 @@ func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUI
 		riskIntervalEnd = 4
 	}
 
-	return s.statisticsRepository.AverageFixingTime(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	return s.statisticsRepository.AverageFixingTime(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 }
 
-func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error) {
-	// check if calculateChangeTo is in the future
-	if calculateChangeTo.After(time.Now()) {
-		return DependencyVulnAggregationStateAndChange{}, fmt.Errorf("cannot calculate change to the future")
+// GetAverageFixingTimeForRelease computes average fixing time across all artifacts included in the release tree
+func (s *service) GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
+	var riskIntervalStart, riskIntervalEnd float64
+	switch severity {
+	case "critical":
+		riskIntervalStart = 9
+		riskIntervalEnd = 10
+	case "high":
+		riskIntervalStart = 7
+		riskIntervalEnd = 9
+	case "medium":
+		riskIntervalStart = 4
+		riskIntervalEnd = 7
+	case "low":
+		riskIntervalStart = 0
+		riskIntervalEnd = 4
+	default:
+		return 0, fmt.Errorf("invalid severity")
 	}
 
-	results := utils.Concurrently(
-		func() (any, error) {
-			return s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersionName, assetID, "")
-		},
-		func() (any, error) {
-			return s.statisticsRepository.TimeTravelDependencyVulnState(assetVersionName, assetID, calculateChangeTo)
-		},
-	)
-
-	if results.HasErrors() {
-		return DependencyVulnAggregationStateAndChange{}, results.Error()
-	}
-
-	now := results.GetValue(0).([]models.DependencyVuln)
-	was := results.GetValue(1).([]models.DependencyVuln)
-
-	nowState := calculateDependencyVulnAggregationState(now)
-	wasState := calculateDependencyVulnAggregationState(was)
-
-	return DependencyVulnAggregationStateAndChange{
-		Now: nowState,
-		Was: wasState,
-	}, nil
+	return s.statisticsRepository.AverageFixingTimeForRelease(releaseID, riskIntervalStart, riskIntervalEnd)
 }
 
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
@@ -468,18 +309,4 @@ func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low
 		}
 	}
 	return
-}
-
-func calculateDependencyVulnAggregationState(dependencyVulns []models.DependencyVuln) DependencyVulnAggregationState {
-	state := DependencyVulnAggregationState{}
-
-	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.State == models.VulnStateOpen {
-			state.Open++
-		} else {
-			state.Fixed++
-		}
-	}
-
-	return state
 }

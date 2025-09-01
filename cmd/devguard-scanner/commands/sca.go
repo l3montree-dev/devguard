@@ -265,7 +265,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 func addDefaultFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.org", "The url of the API to send the scan request to")
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
@@ -335,6 +335,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -375,6 +376,5 @@ func NewSCACommand() *cobra.Command {
 	}
 
 	addScanFlags(scaCommand)
-	scaCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca", "The ID of the scanner. This is used to identify the scanner in the scan results. Defaults to 'devguard-scanner'.")
 	return scaCommand
 }

@@ -713,74 +713,6 @@ func (_c *DependencyVulnRepository_GetAllVulnsByAssetID_Call) RunAndReturn(run f
 	return _c
 }
 
-// GetArtifacts provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetArtifacts(assetVersionName string, assetID uuid.UUID) ([]string, error) {
-	ret := _mock.Called(assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetArtifacts")
-	}
-
-	var r0 []string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) ([]string, error)); ok {
-		return returnFunc(assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) []string); ok {
-		r0 = returnFunc(assetVersionName, assetID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
-		r1 = returnFunc(assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// DependencyVulnRepository_GetArtifacts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifacts'
-type DependencyVulnRepository_GetArtifacts_Call struct {
-	*mock.Call
-}
-
-// GetArtifacts is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetArtifacts(assetVersionName interface{}, assetID interface{}) *DependencyVulnRepository_GetArtifacts_Call {
-	return &DependencyVulnRepository_GetArtifacts_Call{Call: _e.mock.On("GetArtifacts", assetVersionName, assetID)}
-}
-
-func (_c *DependencyVulnRepository_GetArtifacts_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *DependencyVulnRepository_GetArtifacts_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetArtifacts_Call) Return(strings []string, err error) *DependencyVulnRepository_GetArtifacts_Call {
-	_c.Call.Return(strings, err)
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetArtifacts_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) ([]string, error)) *DependencyVulnRepository_GetArtifacts_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetByAssetVersionPaged provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], map[string]int, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
@@ -1119,8 +1051,8 @@ func (_c *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Cal
 }
 
 // GetDependencyVulnsByAssetVersion provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, scannerID)
+func (_mock *DependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyVulnsByAssetVersion")
@@ -1129,17 +1061,17 @@ func (_mock *DependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx core.
 	var r0 []models.DependencyVuln
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, scannerID)
+		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1155,12 +1087,12 @@ type DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call struct {
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
-	return &DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByAssetVersion", tx, assetVersionName, assetID, scannerID)}
+//   - artifactName string
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
+	return &DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByAssetVersion", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string)) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1193,7 +1125,7 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call) Return
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1295,8 +1227,8 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_
 }
 
 // GetDependencyVulnsByDefaultAssetVersion provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(tx, assetID, scannerID)
+func (_mock *DependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyVulnsByDefaultAssetVersion")
@@ -1305,17 +1237,17 @@ func (_mock *DependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(t
 	var r0 []models.DependencyVuln
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(tx, assetID, scannerID)
+		return returnFunc(tx, assetID, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, assetID, scannerID)
+		r0 = returnFunc(tx, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(tx, assetID, scannerID)
+		r1 = returnFunc(tx, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1330,12 +1262,12 @@ type DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call struc
 // GetDependencyVulnsByDefaultAssetVersion is a helper method to define mock.On call
 //   - tx core.DB
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByDefaultAssetVersion(tx interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
-	return &DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByDefaultAssetVersion", tx, assetID, scannerID)}
+//   - artifactName string
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByDefaultAssetVersion(tx interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+	return &DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByDefaultAssetVersion", tx, assetID, artifactName)}
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) Run(run func(tx core.DB, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) Run(run func(tx core.DB, assetID uuid.UUID, artifactName string)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1363,14 +1295,14 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDependencyVulnsByOtherAssetVersions provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, scannerID)
+func (_mock *DependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyVulnsByOtherAssetVersions")
@@ -1378,18 +1310,18 @@ func (_mock *DependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1405,12 +1337,11 @@ type DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call struct
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByOtherAssetVersions(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
-	return &DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetDependencyVulnsByOtherAssetVersions", tx, assetVersionName, assetID, scannerID)}
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByOtherAssetVersions(tx interface{}, assetVersionName interface{}, assetID interface{}) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
+	return &DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetDependencyVulnsByOtherAssetVersions", tx, assetVersionName, assetID)}
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID)) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1424,15 +1355,10 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) 
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -1443,7 +1369,7 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) 
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
+func (_c *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1724,48 +1650,48 @@ func (_c *DependencyVulnRepository_ListByAssetAndAssetVersion_Call) RunAndReturn
 	return _c
 }
 
-// ListUnfixedByAssetAndAssetVersionAndScannerID provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(assetVersionName, assetID, scannerID)
+// ListUnfixedByAssetAndAssetVersionAndArtifactName provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListUnfixedByAssetAndAssetVersionAndScannerID")
+		panic("no return value specified for ListUnfixedByAssetAndAssetVersionAndArtifactName")
 	}
 
 	var r0 []models.DependencyVuln
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(assetVersionName, assetID, scannerID)
+		return returnFunc(assetVersionName, assetID, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(assetVersionName, assetID, scannerID)
+		r0 = returnFunc(assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, scannerID)
+		r1 = returnFunc(assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnfixedByAssetAndAssetVersionAndScannerID'
-type DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call struct {
+// DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnfixedByAssetAndAssetVersionAndArtifactName'
+type DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call struct {
 	*mock.Call
 }
 
-// ListUnfixedByAssetAndAssetVersionAndScannerID is a helper method to define mock.On call
+// ListUnfixedByAssetAndAssetVersionAndArtifactName is a helper method to define mock.On call
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
-	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScannerID", assetVersionName, assetID, scannerID)}
+//   - artifactName string
+func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call {
+	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndArtifactName", assetVersionName, assetID, artifactName)}
 }
 
-func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call) Run(run func(assetVersionName string, assetID uuid.UUID, artifactName string)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -1788,12 +1714,12 @@ func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID
 	return _c
 }
 
-func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call {
 	_c.Call.Return(dependencyVulns, err)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndArtifactName_Call {
 	_c.Call.Return(run)
 	return _c
 }

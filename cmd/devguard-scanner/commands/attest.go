@@ -76,7 +76,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		// use the cosign cli to sign the file
-		attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
+		attestCmd := exec.Command("cosign", "attest", "--type", config.RuntimeAttestationConfig.PredicateType, "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
 		attestCmd.Stdout = &out
 		attestCmd.Stderr = &errOut
 		attestCmd.Env = []string{
@@ -118,7 +118,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 	req.Header.Set("X-Predicate-Type", config.RuntimeAttestationConfig.PredicateType)
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -164,6 +164,7 @@ func NewAttestCommand() *cobra.Command {
 	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
 	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
 	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
+	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will generate a name based on the asset name.")
 
 	return cmd
 }

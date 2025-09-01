@@ -104,7 +104,10 @@ func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 	}
 }
 
-func buildDependencyTree(treeName string, elements []models.ComponentDependency) tree {
+func buildDependencyTree(elements []models.ComponentDependency) tree {
+
+	treeName := "root"
+
 	// create a new tree
 	tree := tree{
 		Root:    &treeNode{Name: treeName},
@@ -185,7 +188,7 @@ func (tree *tree) RenderToMermaid() string {
 }
 
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
-	tree := BuildDependencyTree(elements, "")
+	tree := BuildDependencyTree(elements)
 	// calculate the depth for each node
 	depthMap := make(map[string]int)
 	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
@@ -193,79 +196,8 @@ func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
 	return depthMap
 }
 
-func buildDependencyTreePerScanner(elements []models.ComponentDependency, onlyShowScannerID string) map[string]tree {
+func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	// create a new tree
-	res := make(map[string]tree)
-	scannerDependencyMap := make(map[string][]models.ComponentDependency)
-	for _, element := range elements {
-		scannerIDs := element.ScannerIDs
-		// split at whitespace
-		scannerIDsList := strings.Fields(scannerIDs)
-		for _, scannerID := range scannerIDsList {
-			if onlyShowScannerID == "" || onlyShowScannerID == scannerID {
-				if _, ok := scannerDependencyMap[scannerID]; !ok {
-					scannerDependencyMap[scannerID] = make([]models.ComponentDependency, 0)
-				}
-				scannerDependencyMap[scannerID] = append(scannerDependencyMap[scannerID], element)
-			}
-		}
-	}
+	return buildDependencyTree(elements)
 
-	for scannerID, elements := range scannerDependencyMap {
-		// group the elements by scanner id and build the dependency trees.
-		// for each scanner
-		tree := buildDependencyTree(scannerID, elements)
-		res[scannerID] = tree
-	}
-
-	return res
-}
-
-func mergeDependencyTrees(trees map[string]tree) tree {
-	// create a new tree
-	tree := tree{
-		Root:    &treeNode{Name: "root"},
-		cursors: make(map[string]*treeNode),
-	}
-
-	tree.cursors["root"] = tree.Root
-	// if we have the sca and container scanning tree, remove the container scanning tree: For most applications the sca tree is much more detailed.
-	if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"]; ok {
-		// check if the sca tree exists
-		if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"]; ok {
-			// remove the container scanning tree
-			delete(trees, "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning")
-		}
-	}
-
-	for _, t := range trees {
-		// merge the trees
-		tree.Root.Children = append(tree.Root.Children, t.Root)
-		// merge the cursors
-		for k, v := range t.cursors {
-			if _, ok := tree.cursors[k]; !ok {
-				tree.cursors[k] = v
-			}
-		}
-	}
-
-	// check if the root node only has a single child (single scanner)
-	// if so, remove the root node.
-	if len(tree.Root.Children) == 1 {
-		tree.Root = tree.Root.Children[0]
-	}
-	// check if the root node still has a single child (single inspected meta file by the scanner) - if so, lets keep the single metafile (like go.mod) as root
-	if len(tree.Root.Children) == 1 {
-		tree.Root = tree.Root.Children[0]
-	}
-
-	return tree
-}
-
-func BuildDependencyTree(elements []models.ComponentDependency, onlyShowScannerID string) tree {
-	// create a new tree
-	treeMap := buildDependencyTreePerScanner(elements, onlyShowScannerID)
-
-	// merge the trees
-	return mergeDependencyTrees(treeMap)
 }

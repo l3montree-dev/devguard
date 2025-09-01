@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/attestation"
@@ -43,6 +44,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
+	"github.com/l3montree-dev/devguard/internal/core/release"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -111,6 +113,30 @@ func assetMiddleware(repository core.AssetRepository) func(next echo.HandlerFunc
 	}
 }
 
+func artifactMiddleware(repository core.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			assetVersion := core.GetAssetVersion(ctx)
+
+			artifactName, err := core.GetArtifactName(ctx)
+			if err != nil {
+				slog.Error("invalid artifact name", "err", err)
+				return echo.NewHTTPError(400, "invalid artifact name")
+			}
+
+			artifact, err := repository.ReadArtifact(artifactName, assetVersion.Name, assetVersion.AssetID)
+
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find artifact").WithInternal(err)
+			}
+
+			core.SetArtifact(ctx, artifact)
+
+			return next(ctx)
+		}
+	}
+}
+
 func assetVersionMiddleware(repository core.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
@@ -134,6 +160,16 @@ func assetVersionMiddleware(repository core.AssetVersionRepository) func(next ec
 			}
 
 			core.SetAssetVersion(ctx, assetVersion)
+
+			// Update LastAccessedAt in a goroutine to avoid blocking the request
+			go func() {
+				now := time.Now()
+				assetVersion.LastAccessedAt = now
+				// Use nil for tx to use the default database connection
+				if err := repository.Save(nil, &assetVersion); err != nil {
+					slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
+				}
+			}()
 
 			return next(ctx)
 		}
@@ -455,9 +491,11 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
-	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
+	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	statisticsRepository := repositories.NewStatisticsRepository(db)
+	// release repository used by statistics for release-scoped stats
+	releaseRepository := repositories.NewReleaseRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
@@ -471,8 +509,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	attestationRepository := repositories.NewAttestationRepository(db)
 	policyRepository := repositories.NewPolicyRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-
 	webhookRepository := repositories.NewWebhookRepository(db)
+	artifactRepository := repositories.NewArtifactRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
@@ -487,8 +525,12 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
+	artifactService := artifact.NewService(artifactRepository)
+
+	// release module
+	// release repository will be created later when project router is available
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	invitationRepository := repositories.NewInvitationRepository(db)
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
@@ -504,10 +546,10 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService)
+	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService)
-	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
+	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
 
@@ -633,12 +675,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
-	organizationRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
-	organizationRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
-	//TODO: change it
-	//organizationRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
@@ -655,6 +691,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 
+	projectRouter.GET("/policies/", policyController.GetProjectPolicies, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 	projectRouter.PUT("/policies/:policyID/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 
@@ -669,16 +706,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	projectRouter.GET("/assets/", assetController.List)
 
-	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
-	projectRouter.GET("/stats/cvss-distribution/", statisticsController.GetProjectCvssDistribution)
-	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
-	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
-	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
-
-	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
-
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.POST("/members/", projectController.InviteMembers, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/members/:userID/", projectController.RemoveMember, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
@@ -692,11 +719,35 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionDelete))
 
+	// release routes inside project scope
+	releaseRepository = repositories.NewReleaseRepository(db)
+	releaseService := release.NewService(releaseRepository)
+
+	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository, dependencyVulnRepository, assetRepository)
+
+	projectRouter.GET("/releases/", releaseController.List, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.POST("/releases/", releaseController.Create, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.GET("/releases/:releaseID/", releaseController.Read, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.PUT("/releases/:releaseID/", releaseController.Update, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/releases/:releaseID/", releaseController.Delete, projectScopedRBAC(core.ObjectProject, core.ActionDelete))
+	// release-scoped statistics
+	projectRouter.GET("/releases/:releaseID/stats/risk-history/", statisticsController.GetReleaseRiskHistory, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/stats/average-fixing-time/", statisticsController.GetAverageReleaseFixingTime, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/candidates/", releaseController.ListCandidates, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/candidates/", releaseController.ListCandidates, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+
+	// add/remove items (artifact or child release) to/from a release
+	projectRouter.POST("/releases/:releaseID/items/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.AddItem))
+	projectRouter.DELETE("/releases/:releaseID/items/:itemID/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.RemoveItem))
+	// release SBOM / VEX endpoints
+	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.VEXJSON, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/:releaseID/vex.xml/", releaseController.VEXXML, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
-	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
-	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
 	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
@@ -705,42 +756,45 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
+	// Api to upload a VeX/OpenVEX file to update vulnerability states for a specific asset version
+	assetRouter.POST("/vex-file/", assetVersionController.UploadVEX, neededScope([]string{"scan"}))
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
-	assetVersionRouter.GET("/", assetVersionController.Read)
+	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
 
+	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetVersionRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
-	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
-	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
-	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
-	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
-	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
-	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
-	assetVersionRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
-	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
-	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
-	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 
-	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
-	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
-	assetVersionRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
+	artifactRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	artifactRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
+	artifactRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
+	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	artifactRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
+	artifactRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
+	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
+	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	artifactRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
 
-	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
+	/* 	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
+	   	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScannerID) */
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
+	artifactRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
+	// needs migration to artifact router
+	artifactRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
+	artifactRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
@@ -761,13 +815,14 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
-	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
+	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
+
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
-	dependencyVulnRouter.GET("/artifacts/", dependencyVulnController.ListArtifacts)
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

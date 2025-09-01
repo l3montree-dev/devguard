@@ -91,7 +91,7 @@ func runDependencyVulnHashMigration(db *gorm.DB) error {
 				return err
 			}
 
-			if err = db.Model(&DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("scanner_ids", utils.AddToWhitespaceSeparatedStringList(otherVuln.ScannerIDs, dependencyVuln.ScannerIDs)).Error; err != nil {
+			if err = db.Model(&DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("scanner_ids", utils.AddToWhitespaceSeparatedStringList(otherVuln.GetScannerIDsOrArtifactNames(), dependencyVuln.GetScannerIDsOrArtifactNames())).Error; err != nil {
 				slog.Error("could not update dependencyVuln", "err", err)
 				return err
 			}

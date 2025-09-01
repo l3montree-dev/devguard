@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
@@ -31,6 +32,7 @@ import (
 )
 
 type baseConfig struct {
+	CI        bool   `json:"ci" mapstructure:"ci"`
 	Token     string `json:"token" mapstructure:"token"`
 	AssetName string `json:"assetName" mapstructure:"assetName"`
 	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
@@ -44,7 +46,6 @@ type baseConfig struct {
 	Password string `json:"password" mapstructure:"password"`
 	Registry string `json:"registry" mapstructure:"registry"`
 
-	// used in SbomCMD
 	ScannerID     string `json:"scannerId" mapstructure:"scannerID"`
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
@@ -65,6 +66,8 @@ type InTotoConfig struct {
 
 	Key       toto.Key
 	LayoutKey toto.Key
+
+	Disabled bool
 }
 
 type AttestationConfig struct {
@@ -75,15 +78,10 @@ var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
 var RuntimeAttestationConfig AttestationConfig
 
-func ParseBaseConfig() {
+func ParseBaseConfig(runningCMD string) {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
 		panic(err)
-	}
-
-	// we don't add artifact name if it is 'default', because of backward compatibility, so we don't have new scanner IDs for existing assets
-	if RuntimeBaseConfig.ArtifactName != "" && RuntimeBaseConfig.ArtifactName != "default" {
-		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
 	}
 
 	if RuntimeBaseConfig.APIURL != "" {
@@ -123,19 +121,9 @@ func ParseBaseConfig() {
 		}
 	}
 
-	slog.Info("running with config",
-		"assetName", RuntimeBaseConfig.AssetName,
-		"apiUrl", RuntimeBaseConfig.APIURL,
-		"path", RuntimeBaseConfig.Path,
-		"ref", RuntimeBaseConfig.Ref,
-		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
-		"isTag", RuntimeBaseConfig.IsTag,
-		"scannerID", RuntimeBaseConfig.ScannerID,
-		"webUI", RuntimeBaseConfig.WebUI,
-		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
-		"failOnCVSS", RuntimeBaseConfig.FailOnCVSS,
-		"registry", RuntimeBaseConfig.Registry,
-	)
+	if RuntimeBaseConfig.ArtifactName == "" {
+		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
+	}
 }
 
 func StoreTokenInKeyring(assetName, token string) error {
@@ -198,8 +186,14 @@ func ParseInTotoConfig() {
 	if err != nil {
 		panic(err)
 	}
+	if RuntimeBaseConfig.Token == "" && utils.RunsInCI() {
+		// we cannot use in toto
+		RuntimeInTotoConfig.Disabled = true
+		slog.Info("no token provided, disabling in-toto functionality")
+		return
+	}
 
-	if RuntimeBaseConfig.Token == "" {
+	if RuntimeBaseConfig.Token == "" && RuntimeBaseConfig.CI {
 		RuntimeBaseConfig.Token, err = getTokenFromKeyring(RuntimeBaseConfig.AssetName)
 		if err != nil {
 			panic(err)

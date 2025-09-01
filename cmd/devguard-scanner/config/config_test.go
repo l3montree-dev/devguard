@@ -1,18 +1,3 @@
-// Copyright (C) 2025 l3montree UG (haftungsbeschraenkt)
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 package config
 
 import (
@@ -25,6 +10,74 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestArtifactNameGeneration(t *testing.T) {
+	// keep tests deterministic by setting required viper keys
+	cases := []struct {
+		name           string
+		runningCMD     string
+		assetName      string
+		ref            string
+		defaultRef     string
+		presetArtifact string
+		want           string
+	}{
+		{
+			name:           "container-scanning",
+			runningCMD:     "container-scanning",
+			assetName:      "org/projects/foo/assets/bar",
+			ref:            "main",
+			defaultRef:     "main",
+			presetArtifact: "",
+			want:           "pkg:oci/org/foo/bar",
+		},
+		{
+			name:           "default-command",
+			runningCMD:     "other",
+			assetName:      "org/projects/foo/assets/bar",
+			ref:            "main",
+			defaultRef:     "main",
+			presetArtifact: "",
+			want:           "pkg:devguard/org/foo/bar",
+		},
+		{
+			name:           "default-command",
+			runningCMD:     "other",
+			assetName:      "org/projects/foo/assets/bar",
+			ref:            "1.0.0",
+			defaultRef:     "main",
+			presetArtifact: "",
+			want:           "pkg:devguard/org/foo/bar",
+		},
+		{
+			name:           "preset-artifact-unchanged",
+			runningCMD:     "container-scanning",
+			assetName:      "/projects/aa/assets/bb",
+			ref:            "feature/x",
+			defaultRef:     "feature/x",
+			presetArtifact: "custom-artifact",
+			want:           "custom-artifact",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// set viper keys used by ParseBaseConfig (mapstructure tags)
+			viper.Set("assetName", tc.assetName)
+			viper.Set("ref", tc.ref)
+			viper.Set("defaultRef", tc.defaultRef)
+			viper.Set("artifactName", tc.presetArtifact)
+
+			// run the parser
+			ParseBaseConfig(tc.runningCMD)
+
+			if RuntimeBaseConfig.ArtifactName != tc.want {
+				t.Fatalf("unexpected artifact name for %s: got %q want %q", tc.name, RuntimeBaseConfig.ArtifactName, tc.want)
+			}
+		})
+	}
+}
 
 func setEmptyEnvVars(t *testing.T) {
 	// Clear the environment variables to avoid conflicts
@@ -43,7 +96,7 @@ func TestParseBaseConfig(t *testing.T) {
 		viper.Set("ref", "myref")
 		viper.Set("defaultRef", "mydefaultref")
 
-		ParseBaseConfig()
+		ParseBaseConfig("")
 		assert.Equal(t, "http://example.com", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "myref", RuntimeBaseConfig.Ref)
@@ -53,21 +106,21 @@ func TestParseBaseConfig(t *testing.T) {
 	t.Run("should panic if the path is invalid", func(t *testing.T) {
 		assert.Panics(t, func() {
 			viper.Set("path", "/invalid/path")
-			ParseBaseConfig()
+			ParseBaseConfig("")
 		}, "Expected panic due to invalid path")
 	})
 
 	t.Run("should sanitize the provided apiURL like adding the protocol", func(t *testing.T) {
 		viper.Set("apiUrl", "example.com/api")
 		viper.Set("path", ".")
-		ParseBaseConfig()
+		ParseBaseConfig("")
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 	})
 
 	t.Run("should remove a trailing slash from the apiURL", func(t *testing.T) {
 		viper.Set("apiUrl", "https://example.com/api/")
 		viper.Set("path", ".")
-		ParseBaseConfig()
+		ParseBaseConfig("")
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 	})
 
@@ -86,7 +139,7 @@ func TestParseBaseConfig(t *testing.T) {
 
 		utils.GitLister = m
 
-		ParseBaseConfig()
+		ParseBaseConfig("")
 
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
@@ -109,7 +162,7 @@ func TestParseBaseConfig(t *testing.T) {
 
 		utils.GitLister = m
 
-		ParseBaseConfig()
+		ParseBaseConfig("")
 
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)

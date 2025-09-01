@@ -289,6 +289,9 @@ func newInTotoSetupCommand() *cobra.Command {
 		Use:   "setup",
 		Short: "Setup in-toto",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if config.RuntimeInTotoConfig.Disabled {
+				return nil
+			}
 			// set the token to the keyring
 			err := config.StoreTokenInKeyring(config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.Token)
 			if err != nil {

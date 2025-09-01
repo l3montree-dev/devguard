@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -190,6 +191,15 @@ func GetParam(ctx Context, param string) string {
 	return v
 }
 
+func GetURLDecodedParam(ctx Context, param string) (string, error) {
+	v := GetParam(ctx, param)
+	decoded, err := url.PathUnescape(v)
+	if err != nil {
+		return "", fmt.Errorf("could not url decode param %s: %w", param, err)
+	}
+	return decoded, nil
+}
+
 func GetProjectSlug(ctx Context) (string, error) {
 	projectID := GetParam(ctx, "projectSlug")
 	if projectID == "" {
@@ -212,6 +222,28 @@ func SetProjectSlug(ctx Context, projectSlug string) {
 
 func SetAssetSlug(ctx Context, assetSlug string) {
 	ctx.Set("assetSlug", assetSlug)
+}
+
+func SetArtifact(ctx Context, artifact models.Artifact) {
+	ctx.Set("artifact", artifact)
+}
+
+func GetArtifact(ctx Context) models.Artifact {
+	return ctx.Get("artifact").(models.Artifact)
+}
+
+func GetArtifactName(ctx Context) (string, error) {
+	artifactName := GetParam(ctx, "artifactName")
+	if artifactName == "" {
+		return "", fmt.Errorf("could not get artifact name")
+	}
+	// urldecode the artifact name
+	artifactName, err := url.PathUnescape(artifactName)
+
+	if err != nil {
+		return "", fmt.Errorf("could not url decode artifact name: %w", err)
+	}
+	return artifactName, nil
 }
 
 func GetAssetSlug(ctx Context) (string, error) {

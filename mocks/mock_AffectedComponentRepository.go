@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewAffectedComponentRepository creates a new instance of AffectedComponentRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -35,6 +36,335 @@ type AffectedComponentRepository_Expecter struct {
 
 func (_m *AffectedComponentRepository) EXPECT() *AffectedComponentRepository_Expecter {
 	return &AffectedComponentRepository_Expecter{mock: &_m.Mock}
+}
+
+// Activate provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Activate(tx core.DB, id string) error {
+	ret := _mock.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Activate")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+		r0 = returnFunc(tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
+type AffectedComponentRepository_Activate_Call struct {
+	*mock.Call
+}
+
+// Activate is a helper method to define mock.On call
+//   - tx core.DB
+//   - id string
+func (_e *AffectedComponentRepository_Expecter) Activate(tx interface{}, id interface{}) *AffectedComponentRepository_Activate_Call {
+	return &AffectedComponentRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+}
+
+func (_c *AffectedComponentRepository_Activate_Call) Run(run func(tx core.DB, id string)) *AffectedComponentRepository_Activate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Activate_Call) Return(err error) *AffectedComponentRepository_Activate_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id string) error) *AffectedComponentRepository_Activate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// All provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) All() ([]models.AffectedComponent, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.AffectedComponent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() ([]models.AffectedComponent, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() []models.AffectedComponent); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.AffectedComponent)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AffectedComponentRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type AffectedComponentRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *AffectedComponentRepository_Expecter) All() *AffectedComponentRepository_All_Call {
+	return &AffectedComponentRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *AffectedComponentRepository_All_Call) Run(run func()) *AffectedComponentRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_All_Call) Return(affectedComponents []models.AffectedComponent, err error) *AffectedComponentRepository_All_Call {
+	_c.Call.Return(affectedComponents, err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_All_Call) RunAndReturn(run func() ([]models.AffectedComponent, error)) *AffectedComponentRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Begin provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Begin() core.DB {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 core.DB
+	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(core.DB)
+		}
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type AffectedComponentRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *AffectedComponentRepository_Expecter) Begin() *AffectedComponentRepository_Begin_Call {
+	return &AffectedComponentRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *AffectedComponentRepository_Begin_Call) Run(run func()) *AffectedComponentRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Begin_Call) Return(v core.DB) *AffectedComponentRepository_Begin_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Begin_Call) RunAndReturn(run func() core.DB) *AffectedComponentRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Create(tx core.DB, t *models.AffectedComponent) error {
+	ret := _mock.Called(tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.AffectedComponent) error); ok {
+		r0 = returnFunc(tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type AffectedComponentRepository_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - tx core.DB
+//   - t *models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) Create(tx interface{}, t interface{}) *AffectedComponentRepository_Create_Call {
+	return &AffectedComponentRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+}
+
+func (_c *AffectedComponentRepository_Create_Call) Run(run func(tx core.DB, t *models.AffectedComponent)) *AffectedComponentRepository_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].(*models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Create_Call) Return(err error) *AffectedComponentRepository_Create_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.AffectedComponent) error) *AffectedComponentRepository_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateBatch provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) CreateBatch(tx core.DB, ts []models.AffectedComponent) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
+type AffectedComponentRepository_CreateBatch_Call struct {
+	*mock.Call
+}
+
+// CreateBatch is a helper method to define mock.On call
+//   - tx core.DB
+//   - ts []models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AffectedComponentRepository_CreateBatch_Call {
+	return &AffectedComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+}
+
+func (_c *AffectedComponentRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_CreateBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_CreateBatch_Call) Return(err error) *AffectedComponentRepository_CreateBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_CreateBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Delete(tx core.DB, id string) error {
+	ret := _mock.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+		r0 = returnFunc(tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type AffectedComponentRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - tx core.DB
+//   - id string
+func (_e *AffectedComponentRepository_Expecter) Delete(tx interface{}, id interface{}) *AffectedComponentRepository_Delete_Call {
+	return &AffectedComponentRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+}
+
+func (_c *AffectedComponentRepository_Delete_Call) Run(run func(tx core.DB, id string)) *AffectedComponentRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Delete_Call) Return(err error) *AffectedComponentRepository_Delete_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id string) error) *AffectedComponentRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // DeleteAll provides a mock function for the type AffectedComponentRepository
@@ -94,6 +424,63 @@ func (_c *AffectedComponentRepository_DeleteAll_Call) RunAndReturn(run func(tx c
 	return _c
 }
 
+// DeleteBatch provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) DeleteBatch(tx core.DB, ids []models.AffectedComponent) error {
+	ret := _mock.Called(tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type AffectedComponentRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - tx core.DB
+//   - ids []models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AffectedComponentRepository_DeleteBatch_Call {
+	return &AffectedComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+}
+
+func (_c *AffectedComponentRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.AffectedComponent)) *AffectedComponentRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_DeleteBatch_Call) Return(err error) *AffectedComponentRepository_DeleteBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.AffectedComponent) error) *AffectedComponentRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllAffectedComponentsID provides a mock function for the type AffectedComponentRepository
 func (_mock *AffectedComponentRepository) GetAllAffectedComponentsID() ([]string, error) {
 	ret := _mock.Called()
@@ -145,6 +532,181 @@ func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) Return(st
 }
 
 func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) RunAndReturn(run func() ([]string, error)) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDB provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) GetDB(tx core.DB) core.DB {
+	ret := _mock.Called(tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 core.DB
+	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+		r0 = returnFunc(tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(core.DB)
+		}
+	}
+	return r0
+}
+
+// AffectedComponentRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type AffectedComponentRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - tx core.DB
+func (_e *AffectedComponentRepository_Expecter) GetDB(tx interface{}) *AffectedComponentRepository_GetDB_Call {
+	return &AffectedComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+}
+
+func (_c *AffectedComponentRepository_GetDB_Call) Run(run func(tx core.DB)) *AffectedComponentRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_GetDB_Call) Return(v core.DB) *AffectedComponentRepository_GetDB_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *AffectedComponentRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// List provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) List(ids []string) ([]models.AffectedComponent, error) {
+	ret := _mock.Called(ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []models.AffectedComponent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.AffectedComponent, error)); ok {
+		return returnFunc(ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]string) []models.AffectedComponent); ok {
+		r0 = returnFunc(ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.AffectedComponent)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
+		r1 = returnFunc(ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AffectedComponentRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type AffectedComponentRepository_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ids []string
+func (_e *AffectedComponentRepository_Expecter) List(ids interface{}) *AffectedComponentRepository_List_Call {
+	return &AffectedComponentRepository_List_Call{Call: _e.mock.On("List", ids)}
+}
+
+func (_c *AffectedComponentRepository_List_Call) Run(run func(ids []string)) *AffectedComponentRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_List_Call) Return(affectedComponents []models.AffectedComponent, err error) *AffectedComponentRepository_List_Call {
+	_c.Call.Return(affectedComponents, err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.AffectedComponent, error)) *AffectedComponentRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Read(id string) (models.AffectedComponent, error) {
+	ret := _mock.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.AffectedComponent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (models.AffectedComponent, error)); ok {
+		return returnFunc(id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) models.AffectedComponent); ok {
+		r0 = returnFunc(id)
+	} else {
+		r0 = ret.Get(0).(models.AffectedComponent)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AffectedComponentRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type AffectedComponentRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - id string
+func (_e *AffectedComponentRepository_Expecter) Read(id interface{}) *AffectedComponentRepository_Read_Call {
+	return &AffectedComponentRepository_Read_Call{Call: _e.mock.On("Read", id)}
+}
+
+func (_c *AffectedComponentRepository_Read_Call) Run(run func(id string)) *AffectedComponentRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Read_Call) Return(affectedComponent models.AffectedComponent, err error) *AffectedComponentRepository_Read_Call {
+	_c.Call.Return(affectedComponent, err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Read_Call) RunAndReturn(run func(id string) (models.AffectedComponent, error)) *AffectedComponentRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -259,6 +821,120 @@ func (_c *AffectedComponentRepository_SaveBatch_Call) Return(err error) *Affecte
 }
 
 func (_c *AffectedComponentRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, affectedPkgs []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Transaction(fn func(tx core.DB) error) error {
+	ret := _mock.Called(fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+		r0 = returnFunc(fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type AffectedComponentRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - fn func(tx core.DB) error
+func (_e *AffectedComponentRepository_Expecter) Transaction(fn interface{}) *AffectedComponentRepository_Transaction_Call {
+	return &AffectedComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) Return(err error) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Upsert(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.AffectedComponent, []clause.Column, []string) error); ok {
+		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type AffectedComponentRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t *[]*models.AffectedComponent
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *AffectedComponentRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AffectedComponentRepository_Upsert_Call {
+	return &AffectedComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+}
+
+func (_c *AffectedComponentRepository_Upsert_Call) Run(run func(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string)) *AffectedComponentRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *[]*models.AffectedComponent
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.AffectedComponent)
+		}
+		var arg1 []clause.Column
+		if args[1] != nil {
+			arg1 = args[1].([]clause.Column)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Upsert_Call) Return(err error) *AffectedComponentRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error) *AffectedComponentRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

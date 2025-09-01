@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type httpController struct {
@@ -28,6 +29,10 @@ type licenseResponse struct {
 func (httpController httpController) LicenseDistribution(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+
+	// check if there is an artifact name as query param
+	artifactName := ctx.QueryParam("artifact")
+
 	if err != nil {
 		// we need to get the default asset version
 		assetVersion, err = httpController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
@@ -36,12 +41,10 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 		}
 	}
 
-	scannerID := ctx.QueryParam("scannerID")
-
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
+		utils.EmptyThenNil(artifactName),
 	)
 
 	var res = make([]licenseResponse, 0, len(licenses))
@@ -69,10 +72,11 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 
 func (httpController httpController) ListPaged(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerID := ctx.QueryParam("scannerID")
+
+	filter := core.GetFilterQuery(ctx)
 
 	pageInfo := core.GetPageInfo(ctx)
-	filter := core.GetFilterQuery(ctx)
+
 	search := ctx.QueryParam("search")
 	sort := core.GetSortQuery(ctx)
 
@@ -85,7 +89,6 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
 		pageInfo,
 		search,
 		filter,

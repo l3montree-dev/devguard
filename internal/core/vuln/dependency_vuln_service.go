@@ -65,7 +65,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.ScannerIDs)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames())
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -189,22 +189,32 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 		return nil
 	}
 
-	// create a new VulnEvent for each fixed dependencyVuln
-	events := make([]models.VulnEvent, len(vulnerabilities))
-
 	for i := range vulnerabilities {
-		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
+		alreadyAssociated := false
+		for _, a := range vulnerabilities[i].Artifacts {
+			if a.ArtifactName == scannerID {
+				alreadyAssociated = true
+				break
+			}
+		}
+		if !alreadyAssociated {
+			vulnerabilities[i].Artifacts = append(vulnerabilities[i].Artifacts, models.Artifact{
+				ArtifactName:     scannerID,
+				AssetVersionName: vulnerabilities[i].AssetVersionName,
+				AssetID:          vulnerabilities[i].AssetID,
+			})
+			if err := tx.Exec("INSERT INTO artifact_dependency_vulns (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+				scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID, vulnerabilities[i].CalculateHash()).Error; err != nil {
+				return err
+			}
+		}
 	}
 
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
-
-	return s.vulnEventRepository.SaveBatch(tx, events)
-
+	return nil
 }
 
 func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
@@ -212,18 +222,24 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 		return nil
 	}
 
-	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
-		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
+		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
+		for _, a := range vulnerabilities[i].Artifacts {
+			if a.ArtifactName != scannerID {
+				filtered = append(filtered, a)
+			}
+		}
+		vulnerabilities[i].Artifacts = filtered
+		if err := tx.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ? AND artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ?",
+			vulnerabilities[i].CalculateHash(), scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID).Error; err != nil {
+			return err
+		}
 	}
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
-	// save the events
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return nil
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
@@ -313,7 +329,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames())
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeComment:

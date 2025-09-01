@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -40,6 +39,8 @@ type HTTPController struct {
 	assetVersionService    core.AssetVersionService
 	statisticsService      core.StatisticsService
 
+	artifactService core.ArtifactService
+
 	dependencyVulnService core.DependencyVulnService
 	firstPartyVulnService core.FirstPartyVulnService
 
@@ -47,7 +48,7 @@ type HTTPController struct {
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -64,6 +65,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		dependencyVulnService:     dependencyVulnService,
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		artifactService:           artifactService,
 	}
 }
 
@@ -108,23 +110,34 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no X-Scanner header found")
-		return scanResults, fmt.Errorf("no X-Scanner header found")
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	if artifactName == "" {
+		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
 
-	// update the sbom in the database in parallel
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, scannerID, normalizedBom)
-	if err != nil {
-		slog.Error("could not update sbom", "err", err)
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+
+	// save the artifact to the database
+	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+		slog.Error("could not save artifact", "err", err)
 		return scanResults, err
 	}
+	// update the sbom in the database in parallel
+	go func() {
+		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
+		if err != nil {
+			slog.Error("could not update sbom", "err", err)
+		}
+	}()
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }
 
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -134,7 +147,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, scannerID, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -149,17 +162,18 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 		}
 	})
 
-	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-	if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
-		slog.Error("could not recalculate risk history", "err", err)
-		return scanResults, err
-	}
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
 
-	// save the asset
-	if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
-		slog.Error("could not save asset", "err", err)
-		return scanResults, err
-	}
+		}
+
+		// save the asset
+		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
+		}
+	})
 
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)

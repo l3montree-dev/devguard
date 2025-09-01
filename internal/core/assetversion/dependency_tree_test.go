@@ -23,35 +23,50 @@ import (
 
 func TestDependencyTree(t *testing.T) {
 	t.Run("buildDependencyTree", func(t *testing.T) {
+
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+
 		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "d", Depth: 2, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "e", Depth: 2, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "f", Depth: 3, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "g", Depth: 3, ScannerIDs: "scanner1"},
+			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "d", Depth: 2, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "e", Depth: 2, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "f", Depth: 3, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "g", Depth: 3, Artifacts: []models.Artifact{artifact}},
 		}
-		tree := BuildDependencyTree(graph, "")
+		tree := BuildDependencyTree(graph)
 
-		// expect a to have two children: b and c
-		if len(tree.Root.Children) != 2 {
-			t.Errorf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
-		}
-
-		// expect b to have two children: d and e
-		if len(tree.Root.Children[0].Children) != 2 {
-			t.Errorf("expected 2 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
+		// expect root to have one child: a
+		if len(tree.Root.Children) != 1 {
+			t.Errorf("expected 1 child for root, got %d", len(tree.Root.Children))
 		}
 
-		// expect c to have two children: f and g
-		if len(tree.Root.Children[1].Children) != 2 {
-			t.Errorf("expected 2 children for c, got %d", len(tree.Root.Children[0].Children[1].Children))
+		// Only proceed with further checks if we have at least the expected number of children
+		if len(tree.Root.Children) >= 1 {
+			// expect a to have two children: b and c
+			if len(tree.Root.Children[0].Children) != 2 {
+				t.Errorf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
+			}
+
+			if len(tree.Root.Children[0].Children) >= 2 {
+				// expect b to have two children: d and e
+				if len(tree.Root.Children[0].Children[0].Children) != 2 {
+					t.Errorf("expected 2 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
+				}
+
+				// expect c to have two children: f and g
+				if len(tree.Root.Children[0].Children[1].Children) != 2 {
+					t.Errorf("expected 2 children for c, got %d", len(tree.Root.Children[0].Children[1].Children))
+				}
+			}
 		}
 
-		// expect d to have no children
-		if len(tree.Root.Children[0].Children[0].Children) != 0 {
-			t.Errorf("expected 0 children for d, got %d", len(tree.Root.Children[0].Children[0].Children[0].Children))
+		if len(tree.Root.Children) >= 1 && len(tree.Root.Children[0].Children) >= 1 && len(tree.Root.Children[0].Children[0].Children) >= 1 {
+			// expect d to have no children
+			if len(tree.Root.Children[0].Children[0].Children[0].Children) != 0 {
+				t.Errorf("expected 0 children for d, got %d", len(tree.Root.Children[0].Children[0].Children[0].Children))
+			}
 		}
 	})
 
@@ -61,22 +76,30 @@ func TestDependencyTree(t *testing.T) {
 			|       |
 			b <---> c # here is the cycle in the tree
 		*/
-		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "c", Depth: 2, ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "b", Depth: 2, ScannerIDs: "scanner1"}, // closes the cycle
-		}
-		tree := BuildDependencyTree(graph, "")
 
-		// expect a to have a two children b and c
-		if len(tree.Root.Children) != 2 {
-			t.Fatalf("expected 2 children for a, got %d", len(tree.Root.Children))
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+		graph := []models.ComponentDependency{
+			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "c", Depth: 2, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "b", Depth: 2, Artifacts: []models.Artifact{artifact}},
 		}
+		tree := BuildDependencyTree(graph)
+
+		// expect root to have one child: a
+		if len(tree.Root.Children) != 1 {
+			t.Fatalf("expected 1 child for root, got %d", len(tree.Root.Children))
+		}
+
+		// expect a to have two children b and c
+		if len(tree.Root.Children[0].Children) != 2 {
+			t.Fatalf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
+		}
+
 		// get b and c
 		var b, c *treeNode
-		for _, child := range tree.Root.Children {
+		for _, child := range tree.Root.Children[0].Children {
 			switch child.Name {
 			case "b":
 				b = child
@@ -162,53 +185,44 @@ func TestCalculateDepth(t *testing.T) {
 }
 
 func TestGetComponentDepth(t *testing.T) {
-	t.Run("should not use the SMALLEST DEPTH available approach, if devguard container scanning and sca is used. In this case: container-scanning is always wrong", func(t *testing.T) {
-		dependencies := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "pkg:golang/app@0.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-			{ComponentPurl: utils.Ptr("pkg:golang/app@0.0.0"), DependencyPurl: "pkg:golang/b@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-			{ComponentPurl: utils.Ptr("pkg:golang/b@1.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-
-			// sca is much more reliable compared to container-scanning
-			// there we should use the depth of the sca dependency
-			{ComponentPurl: utils.Ptr("app"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
-			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
+	t.Run("returns correct depth map for simple dependency graph", func(t *testing.T) {
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+		graph := []models.ComponentDependency{
+			{ComponentPurl: nil, DependencyPurl: "pkg:golang/a", Depth: 0, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("pkg:golang/a"), DependencyPurl: "pkg:golang/b", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("pkg:golang/a"), DependencyPurl: "pkg:golang/c", Depth: 1, Artifacts: []models.Artifact{artifact}},
+			{ComponentPurl: utils.Ptr("pkg:golang/b"), DependencyPurl: "pkg:golang/d", Depth: 2, Artifacts: []models.Artifact{artifact}},
 		}
-
-		depthMap := GetComponentDepth(dependencies)
-		expectedDepths := map[string]int{
-			"pkg:golang/b@1.0.0": 1,
-			"pkg:golang/c@1.0.0": 2,
+		depthMap := GetComponentDepth(graph)
+		expected := map[string]int{
+			"root":         -1,
+			"pkg:golang/a": 0,
+			"pkg:golang/b": 1,
+			"pkg:golang/c": 1,
+			"pkg:golang/d": 2,
 		}
-
-		for node, expectedDepth := range expectedDepths {
-			if depthMap[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
+		for k, v := range expected {
+			if depthMap[k] != v {
+				t.Errorf("expected depth of %s to be %d, got %d", k, v, depthMap[k])
 			}
 		}
 	})
 
-	t.Run("should use the SMALLEST DEPTH available approach (i have no idea which scanner is better, your own or our sca)", func(t *testing.T) {
-		dependencies := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "pkg:golang/app@0.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-			{ComponentPurl: utils.Ptr("pkg:golang/app@0.0.0"), DependencyPurl: "pkg:golang/b@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-			{ComponentPurl: utils.Ptr("pkg:golang/b@1.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
-
-			// sca is much more reliable compared to container-scanning
-			// there we should use the depth of the sca dependency
-			{ComponentPurl: nil, DependencyPurl: "pkg:golang/app@0.0.0", ScannerIDs: "my-own-scanner"},
-			{ComponentPurl: utils.Ptr("pkg:golang/app@0.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "my-own-scanner"},
+	t.Run("returns empty map for empty input", func(t *testing.T) {
+		depthMap := GetComponentDepth([]models.ComponentDependency{})
+		if len(depthMap) != 1 || depthMap["root"] != -1 {
+			t.Errorf("expected only root with depth -1, got %v", depthMap)
 		}
+	})
 
-		depthMap := GetComponentDepth(dependencies)
-		expectedDepths := map[string]int{
-			"pkg:golang/b@1.0.0": 1,
-			"pkg:golang/c@1.0.0": 1,
+	t.Run("returns correct depth for single node", func(t *testing.T) {
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+		graph := []models.ComponentDependency{
+			{ComponentPurl: nil, DependencyPurl: "pkg:golang/a", Depth: 0, Artifacts: []models.Artifact{artifact}},
 		}
-
-		for node, expectedDepth := range expectedDepths {
-			if depthMap[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
-			}
+		depthMap := GetComponentDepth(graph)
+		if depthMap["pkg:golang/a"] != 0 {
+			t.Errorf("expected depth 0 for 'pkg:golang/a', got %d", depthMap["pkg:golang/a"])
 		}
 	})
 }

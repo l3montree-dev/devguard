@@ -22,40 +22,40 @@ func UpdateStatistics(db core.DB) error {
 	statisticsService := statistics.NewService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
-		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewArtifactRiskHistoryRepository(db),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewProjectRepository(db),
-		repositories.NewProjectRiskHistoryRepository(db),
+		repositories.NewReleaseRepository(db),
 	)
 
-	assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDB(db)
-
-	if err != nil {
-		slog.Error("could not get assets from database", "err", err)
-		return err
-	}
+	artifactRepo := repositories.NewArtifactRepository(db)
 
 	monitoring.AssetVersionsStatisticsAmount.Inc()
-	for _, version := range assetVersions {
-		a := version
-		t := time.Now()
-		slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetID)
-		if err := statisticsService.UpdateAssetRiskAggregation(&version, a.AssetID, utils.OrDefault(version.LastHistoryUpdate, version.CreatedAt), t, true); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-			continue
-		}
-		slog.Info("finished calculation of risk history for asset", "assetVersionName", a.Name, "assetID", a.AssetID, "duration", time.Since(t))
-
-		err := assetVersionRepository.Save(db, &version)
-		if err != nil {
-			slog.Error("could not save asset", "err", err)
-			// continue with the next asset - just log the error
-			continue
-		}
-		monitoring.AssetVersionsStatisticsSuccess.Inc()
+	artifacts, err := artifactRepo.All()
+	if err != nil {
+		slog.Error("could not get all artifacts", "err", err)
+		return err
 	}
+	errgroup := utils.ErrGroup[any](10)
+	for _, artifact := range artifacts {
+		errgroup.Go(func() (any, error) {
+			if err := statisticsService.UpdateArtifactRiskAggregation(&artifact, artifact.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, time.Now().AddDate(0, -1, 0)), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+				return nil, nil
+			}
 
+			err := assetVersionRepository.GetDB(nil).Save(&artifact)
+			if err != nil {
+				slog.Error("could not save asset", "err", err)
+				// continue with the next asset - just log the error
+				return nil, nil
+			}
+			slog.Info("updated statistics for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", artifact.AssetVersionName, "assetID", artifact.AssetID)
+			monitoring.AssetVersionsStatisticsSuccess.Inc()
+			return nil, nil
+		})
+	}
 	monitoring.StatisticsUpdateDaemonAmount.Inc()
 	return nil
 }

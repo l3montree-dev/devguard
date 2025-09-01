@@ -221,7 +221,7 @@ type Explanation struct {
 	cveDescription string
 
 	ComponentPurl string
-	scannerIDs    string
+	ArtifactNames string
 	fixedVersion  *string
 
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
@@ -229,9 +229,9 @@ type Explanation struct {
 
 func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) jira.ADF {
 
-	scanners := strings.Fields(e.scannerIDs)
-	for i, s := range scanners {
-		scanners[i] = fmt.Sprintf("`%s`", s)
+	artifactNames := strings.Fields(e.ArtifactNames)
+	for i, s := range artifactNames {
+		artifactNames[i] = fmt.Sprintf("`%s`", s)
 	}
 
 	//add the description of the vulnerability
@@ -269,7 +269,7 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 		Content: []jira.ADFContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")),
+				Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")),
 			},
 		},
 	})
@@ -720,11 +720,11 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	scanners := strings.Fields(e.scannerIDs)
-	for i, s := range scanners {
-		scanners[i] = fmt.Sprintf("`%s`", s)
+	artifactNames := strings.Fields(e.ArtifactNames)
+	for i, s := range artifactNames {
+		artifactNames[i] = fmt.Sprintf("`%s`", s)
 	}
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
@@ -789,7 +789,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveDescription: dependencyVuln.CVE.Description,
 
 		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),
-		scannerIDs:    dependencyVuln.ScannerIDs,
+		ArtifactNames: dependencyVuln.GetScannerIDsOrArtifactNames(),
 		fixedVersion:  dependencyVuln.ComponentFixedVersion,
 
 		ShortenedComponentPurl: componentPurl,

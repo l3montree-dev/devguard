@@ -6,26 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetRiskDistribution struct {
-	// the range of the risk - something like 2-4, 4-6, 6-8, 8-10
-	Low      int `json:"low"`
-	High     int `json:"high"`
-	Medium   int `json:"medium"`
-	Critical int `json:"critical"`
-
-	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
-	Label            string    `json:"label"`
-}
-
-type AssetRiskHistory struct {
+type ArtifactRiskHistory struct {
 	History
+	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
-func (m AssetRiskHistory) TableName() string {
-	return "asset_risk_history"
+func (m ArtifactRiskHistory) TableName() string {
+	return "artifact_risk_history"
 }
 
 type Distribution struct {

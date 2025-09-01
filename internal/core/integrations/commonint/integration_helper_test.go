@@ -21,10 +21,10 @@ func TestRenderPathToComponent(t *testing.T) {
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		scannerID := "SBOM-File-Upload"
+		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
 		pURL := "pkg:npm:test"
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -38,10 +38,10 @@ func TestRenderPathToComponent(t *testing.T) {
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		scannerID := "SBOM-File-Upload"
+		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
 		pURL := "pkg:npm:test"
 
-		_, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		_, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err == nil {
 			t.Fail()
 		}
@@ -49,47 +49,47 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerIDs: "scanner1"}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
+			{ComponentPurl: nil, DependencyPurl: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
+			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		scannerID := "SBOM-File-Upload"
+		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
 		pURL := "pkg:npm:test"
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
 			t.Fail()
 		}
 
 		//String for the empty graph + 1 node being root with a linebreak
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\ntestDependency([\"testDependency\"]) --- testPURL([\"testPURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- testDependency([\"testDependency\"])\ntestDependency([\"testDependency\"]) --- testPURL([\"testPURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerIDs: "scanner1"}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "test@PURL", ScannerIDs: "scanner1"},
+			{ComponentPurl: nil, DependencyPurl: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
+			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "test@PURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		scannerID := "SBOM-File-Upload"
+		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
 		pURL := "pkg:npm:test"
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
 			t.Fail()
 		}
 
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\ntestDependency([\"testDependency\"]) --- test_PURL([\"test\\@PURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- testDependency([\"testDependency\"])\ntestDependency([\"testDependency\"]) --- test_PURL([\"test\\@PURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 }
@@ -97,8 +97,13 @@ func TestGetLabels(t *testing.T) {
 	t.Run("should return correct labels for a DependencyVuln with CVE", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:      models.VulnStateOpen,
-				ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:test github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca:test github.com/l3montree-dev/devguard/cmd/devguard-scanner/sast github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/iac",
+				State: models.VulnStateOpen,
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: "source-code"},
+				{ArtifactName: "container"},
+				{ArtifactName: "container:test"},
+				{ArtifactName: "source-code:test"},
 			},
 			RawRiskAssessment: utils.Ptr(0.2),
 		}
@@ -106,10 +111,26 @@ func TestGetLabels(t *testing.T) {
 			"devguard",
 			"state:open",
 			"risk:low",
-			"artifact:source-code",
-			"artifact:container",
-			"artifact:container:test",
-			"artifact:source-code:test",
+			"source-code",
+			"container",
+			"container:test",
+			"source-code:test",
+		}
+
+		assert.Equal(t, expectedLabels, GetLabels(vuln))
+	})
+
+	t.Run("should return correct labels for a FirstPartyVuln", func(t *testing.T) {
+		vuln := &models.FirstPartyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateFixed,
+			},
+			ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sast github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/iac",
+		}
+
+		expectedLabels := []string{
+			"devguard",
+			"state:fixed",
 			"sast",
 			"secret-scanning",
 			"iac",

@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -14,12 +15,18 @@ type DependencyVulnAggregationStateAndChange struct {
 	Was DependencyVulnAggregationState `json:"was"`
 }
 
-type AssetRiskHistory struct {
-	Asset       models.Asset              `json:"asset"`
-	RiskHistory []models.AssetRiskHistory `json:"riskHistory"`
+type RiskHistoryDTO struct {
+	models.History
+	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
-type ProjectRiskHistory struct {
-	Project     models.Project              `json:"project"`
-	RiskHistory []models.ProjectRiskHistory `json:"riskHistory"`
+func fromModelToRiskHistoryDTO(history models.ArtifactRiskHistory) RiskHistoryDTO {
+	return RiskHistoryDTO{
+		History:          history.History,
+		ArtifactName:     history.ArtifactName,
+		AssetVersionName: history.AssetVersionName,
+		AssetID:          history.AssetID,
+	}
 }
