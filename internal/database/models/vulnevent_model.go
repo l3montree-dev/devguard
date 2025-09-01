@@ -210,7 +210,7 @@ func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, ju
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, artifactName string) VulnEvent {
+func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string) VulnEvent {
 	ev := VulnEvent{
 		Type:     EventTypeDetected,
 		VulnType: vulnType,
@@ -219,7 +219,7 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	}
 
 	m := riskCalculationReport.Map()
-	m["artifactNames"] = artifactName
+	m["scannerID"] = scannerID
 
 	ev.SetArbitraryJSONData(m)
 

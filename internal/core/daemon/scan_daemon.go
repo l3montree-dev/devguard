@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
@@ -61,7 +62,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
 	depsDevService := vulndb.NewDepsDevService()
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
 

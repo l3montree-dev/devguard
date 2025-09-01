@@ -18,23 +18,6 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	err := db.AutoMigrate(
-		&models.Artifact{},
-		&models.Org{},
-		&models.Project{},
-		&models.AssetVersion{},
-		&models.Asset{},
-		&models.ComponentDependency{},
-		&models.Component{},
-		&models.CVE{},
-		&models.AffectedComponent{},
-		&models.DependencyVuln{},
-		&models.Exploit{},
-		&models.VulnEvent{},
-		&models.FirstPartyVuln{},
-	)
-	assert.NoError(t, err)
-
 	// Create test data
 	_, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 

@@ -16,9 +16,6 @@ type webhookRepository struct {
 }
 
 func NewWebhookRepository(db core.DB) *webhookRepository {
-	if err := db.AutoMigrate(&models.WebhookIntegration{}); err != nil {
-		panic(err)
-	}
 	return &webhookRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.WebhookIntegration](db),

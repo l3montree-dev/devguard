@@ -359,12 +359,12 @@ func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) RunAndReturn(run
 	return _c
 }
 
-// UserDetectedDependencyVulnWithAnotherScanner provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
+// UserDetectedDependencyVulnInAnotherArtifact provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
 	ret := _mock.Called(tx, vulnerabilities, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UserDetectedDependencyVulnWithAnotherScanner")
+		panic("no return value specified for UserDetectedDependencyVulnInAnotherArtifact")
 	}
 
 	var r0 error
@@ -376,20 +376,20 @@ func (_mock *DependencyVulnService) UserDetectedDependencyVulnWithAnotherScanner
 	return r0
 }
 
-// DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDetectedDependencyVulnWithAnotherScanner'
-type DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call struct {
+// DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDetectedDependencyVulnInAnotherArtifact'
+type DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call struct {
 	*mock.Call
 }
 
-// UserDetectedDependencyVulnWithAnotherScanner is a helper method to define mock.On call
+// UserDetectedDependencyVulnInAnotherArtifact is a helper method to define mock.On call
 //   - tx core.DB
 //   - vulnerabilities []models.DependencyVuln
 //   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnWithAnotherScanner(tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call {
-	return &DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call{Call: _e.mock.On("UserDetectedDependencyVulnWithAnotherScanner", tx, vulnerabilities, artifactName)}
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnInAnotherArtifact(tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
+	return &DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call{Call: _e.mock.On("UserDetectedDependencyVulnInAnotherArtifact", tx, vulnerabilities, artifactName)}
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call) Run(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) Run(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -412,12 +412,12 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Cal
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call) Return(err error) *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) Return(err error) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call) RunAndReturn(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) RunAndReturn(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -578,12 +578,12 @@ func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) 
 	return _c
 }
 
-// UserDidNotDetectDependencyVulnWithScannerAnymore provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
+// UserDidNotDetectDependencyVulnInArtifactAnymore provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
 	ret := _mock.Called(tx, vulnerabilities, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UserDidNotDetectDependencyVulnWithScannerAnymore")
+		panic("no return value specified for UserDidNotDetectDependencyVulnInArtifactAnymore")
 	}
 
 	var r0 error
@@ -595,20 +595,20 @@ func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnWithScannerAny
 	return r0
 }
 
-// DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDidNotDetectDependencyVulnWithScannerAnymore'
-type DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call struct {
+// DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDidNotDetectDependencyVulnInArtifactAnymore'
+type DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call struct {
 	*mock.Call
 }
 
-// UserDidNotDetectDependencyVulnWithScannerAnymore is a helper method to define mock.On call
+// UserDidNotDetectDependencyVulnInArtifactAnymore is a helper method to define mock.On call
 //   - tx core.DB
 //   - vulnerabilities []models.DependencyVuln
 //   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnWithScannerAnymore(tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call {
-	return &DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call{Call: _e.mock.On("UserDidNotDetectDependencyVulnWithScannerAnymore", tx, vulnerabilities, artifactName)}
+func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnInArtifactAnymore(tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
+	return &DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call{Call: _e.mock.On("UserDidNotDetectDependencyVulnInArtifactAnymore", tx, vulnerabilities, artifactName)}
 }
 
-func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call) Run(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call {
+func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) Run(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -631,12 +631,12 @@ func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call) Return(err error) *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call {
+func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) Return(err error) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call) RunAndReturn(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore_Call {
+func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) RunAndReturn(run func(tx core.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	_c.Call.Return(run)
 	return _c
 }

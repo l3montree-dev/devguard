@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func CreateLicenseRiskService(db core.DB) core.LicenseRiskService {
@@ -39,6 +40,8 @@ func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
+		repositories.NewArtifactRepository(db),
+		utils.NewSyncFireAndForgetSynchronizer(),
 	)
 	return &componentService
 }
@@ -97,6 +100,8 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
+		repositories.NewArtifactRepository(db),
+		utils.NewSyncFireAndForgetSynchronizer(),
 	)
 	return assetversion.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),

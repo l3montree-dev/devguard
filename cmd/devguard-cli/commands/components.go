@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +52,8 @@ func newUpdateDepsDevInformation() *cobra.Command {
 				componentProjectRepository,
 				componentRepository,
 				licenseRiskService,
+				repositories.NewArtifactRepository(database),
+				utils.NewFireAndForgetSynchronizer(),
 			)
 
 			bar := progressbar.Default(int64(len(components)))

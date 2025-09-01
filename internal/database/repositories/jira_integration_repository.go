@@ -16,9 +16,6 @@ type jiraIntegrationRepository struct {
 }
 
 func NewJiraIntegrationRepository(db core.DB) *jiraIntegrationRepository {
-	if err := db.AutoMigrate(&models.JiraIntegration{}); err != nil {
-		panic(err)
-	}
 	return &jiraIntegrationRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.JiraIntegration](db),

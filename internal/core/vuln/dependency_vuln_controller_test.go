@@ -55,13 +55,6 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 
 	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService)
 
-	assert.Nil(t, db.AutoMigrate(
-		&models.Org{},
-		&models.Project{},
-		&models.Asset{},
-		&models.AssetVersion{},
-		&models.Exploit{},
-		&models.DependencyVuln{}))
 	// Create org, project, asset, asset version, and dependency vuln
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 

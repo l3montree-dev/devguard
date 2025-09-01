@@ -523,7 +523,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	depsDevService := vulndb.NewDepsDevService()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	artifactService := artifact.NewService(artifactRepository)
 

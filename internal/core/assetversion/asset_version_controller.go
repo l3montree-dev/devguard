@@ -355,14 +355,16 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 // RefetchLicenses forces re-fetching license information for all components of the current asset version
 func (a *AssetVersionController) RefetchLicenses(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerID := ctx.Param("artifact")
+	artifactName := ctx.Param("artifactName")
 
-	updated, err := a.componentService.RefreshAllLicenses(assetVersion, scannerID)
+	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true)
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(200, updated)
+	return ctx.JSON(200, map[string]any{
+		"message": "refetched licenses for all components",
+	})
 }
 
 type yamlVars struct {

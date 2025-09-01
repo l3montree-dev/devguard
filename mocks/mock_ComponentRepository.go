@@ -856,6 +856,80 @@ func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core
 	return _c
 }
 
+// LoadComponentsForAllArtifacts provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadComponentsForAllArtifacts")
+	}
+
+	var r0 []models.ComponentDependency
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.ComponentDependency, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.ComponentDependency); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentDependency)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentRepository_LoadComponentsForAllArtifacts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponentsForAllArtifacts'
+type ComponentRepository_LoadComponentsForAllArtifacts_Call struct {
+	*mock.Call
+}
+
+// LoadComponentsForAllArtifacts is a helper method to define mock.On call
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *ComponentRepository_Expecter) LoadComponentsForAllArtifacts(tx interface{}, assetVersionName interface{}, assetID interface{}) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
+	return &ComponentRepository_LoadComponentsForAllArtifacts_Call{Call: _e.mock.On("LoadComponentsForAllArtifacts", tx, assetVersionName, assetID)}
+}
+
+func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID)) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
+	_c.Call.Return(componentDependencys, err)
+	return _c
+}
+
+func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LoadComponentsWithProject provides a mock function for the type ComponentRepository
 func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	ret := _mock.Called(tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
