@@ -49,11 +49,11 @@ jobs:
       run: |
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "CREATE EXTENSION IF NOT EXISTS semver;"
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
     - name: Install Golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
       with:
-        go-version: 1.22
+        go-version: 1.25
     - name: Import the last database version (this takes some time)
       if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
       run: |
