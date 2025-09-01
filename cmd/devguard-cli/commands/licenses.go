@@ -405,7 +405,7 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 			packageName:    packageName,
 			packageVersion: packageVersion,
 		}
-		bar.Add(1)
+		bar.Add(1) //nolint:all
 	}
 	close(channel) // tell go routines all task are distributed
 	wg.Wait()      // wait for the last go routine to finish
