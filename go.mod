@@ -1,6 +1,6 @@
 module github.com/l3montree-dev/devguard
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.9.2
@@ -8,7 +8,6 @@ require (
 	github.com/briandowns/spinner v1.23.2
 	github.com/casbin/casbin/v2 v2.105.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
-	github.com/distribution/reference v0.6.0
 	github.com/getsentry/sentry-go v0.34.0
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/go-playground/validator/v10 v10.26.0
@@ -125,6 +124,7 @@ require (
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
+	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v28.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
