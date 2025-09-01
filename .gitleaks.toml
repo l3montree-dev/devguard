@@ -32,4 +32,7 @@ useDefault = true
 paths = [
   '''leaks-baseline.json''',
   '''gitleaks.sarif.json''',
+  '''internal/core/component/debian-licenses.json''',
+  '''internal/core/component/alpine-licenses.json''',
+  '''internal/core/component/approved-licenses.json''',
 ]
