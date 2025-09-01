@@ -345,7 +345,6 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 	}
 
 	slog.Info("Scanning urls", "amount", len(urls))
-	errorURLs := make([]string, 0, len(urls)/10)
 
 	for range mumberOfGoRoutines {
 		go func() {
@@ -361,36 +360,30 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 				req, err := http.NewRequest(http.MethodGet, baseURL+task.url, nil)
 				if err != nil {
 					slog.Error("error when building request", "error", err, "url", baseURL+task.url)
-					errorURLs = append(errorURLs, baseURL+task.url)
 					continue //swallow errors
 				}
 
 				resp, err := client.Do(req)
 				if err != nil {
 					slog.Error("error when sending request", "error", err, "url", baseURL+task.url)
-					errorURLs = append(errorURLs, baseURL+task.url)
 					continue //swallow errors
 				}
 				defer resp.Body.Close()
 				if resp.StatusCode != 200 {
 					slog.Error("invalid status code in response", "code", resp.StatusCode, "url", baseURL+task.url)
-					errorURLs = append(errorURLs, baseURL+task.url)
-					resp.Body.Close() //swallow errors
-					continue
+					resp.Body.Close()
+					continue //swallow errors
 				}
 
 				_, err = io.Copy(buf, resp.Body)
 				if err != nil {
 					slog.Error("error when trying to copy response", "error", err, "url", baseURL+task.url)
-					errorURLs = append(errorURLs, baseURL+task.url)
-					resp.Body.Close() //swallow errors
-					continue
+					resp.Body.Close()
+					continue //swallow errors
 				}
 
 				cov := licensecheck.Scan(buf.Bytes()) // use google/licensecheck to guess the license and then use the most likely result
-				if len(cov.Match) == 0 {
-					//slog.Warn("could not determine license", "len buf", len(buf.Bytes()), "package name", task.packageName, "package version", task.packageVersion)
-				} else {
+				if len(cov.Match) > 0 {
 					mapMutex.Lock()
 					licenseMap[task.packageName+task.packageVersion] = cov.Match[0].ID
 					mapMutex.Unlock()
@@ -414,8 +407,7 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 		}
 		bar.Add(1)
 	}
-	close(channel)
-	wg.Wait()
-	slog.Info(fmt.Sprintf("Got %d / %d licenses: %f error rate", len(licenseMap), len(urls), (float32(len(licenseMap)) / float32(len(urls)))))
+	close(channel) // tell go routines all task are distributed
+	wg.Wait()      // wait for the last go routine to finish
 	return licenseMap, nil
 }
