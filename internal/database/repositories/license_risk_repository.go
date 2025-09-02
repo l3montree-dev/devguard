@@ -50,6 +50,17 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	return core.NewPaged(pageInfo, count, licenseRisks), nil
 }
 
+func (repository *LicenseRiskRepository) GetByAssetID(tx core.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+	var licenseRisks = []models.LicenseRisk{}
+
+	err := repository.db.Where("asset_id = ? ", assetID).Find(&licenseRisks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return licenseRisks, nil
+}
+
 func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
 	err := repository.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
