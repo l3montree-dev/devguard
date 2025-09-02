@@ -87,7 +87,6 @@ We developed an auto setup functionality to speed up the DevGuard integration pr
 When it comes to your actual vulnerability risk, the CVSS score is not enough. To help you prioritise based on the actual risk to your project, we enhance the CVSS score with information about exploitability and calculate the risk score based on your confidentiality, integrity and availability assessment. This ensures that the most important things come first!
 
 <img width="1706" height="973" alt="management" src="https://github.com/user-attachments/assets/1774eef0-2122-4601-a379-9b1c7b49394a" />
-<img width="281" height="672" alt="risk-assessment" src="https://github.com/user-attachments/assets/f37f28cf-d8af-42fc-8353-7e33945a453a" />
 
 
 
