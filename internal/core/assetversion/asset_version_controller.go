@@ -92,12 +92,10 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return err
-	}
+	artifactName := ctx.QueryParam("artifactName")
+
 	assetVersion := core.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, artifactName)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return err
 	}
@@ -107,7 +105,7 @@ func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
 	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
@@ -123,12 +121,9 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return err
-	}
+	artifactName := ctx.QueryParam("artifactName")
 
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
+	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return err
 	}
@@ -147,12 +142,9 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 
 	pURL := ctx.QueryParam("purl")
 
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return err
-	}
+	artifactName := ctx.QueryParam("artifactName")
 
-	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, artifactName)
+	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return err
 	}
@@ -248,12 +240,9 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return vex.VEX{}, err
-	}
+	artifactName := ctx.QueryParam("artifactName")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -261,10 +250,10 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName string) ([]models.DependencyVuln, error) {
-
+func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
+
 	if err != nil {
 		return nil, err
 	}
@@ -301,12 +290,9 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifactName, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return nil, err
-	}
+	artifactName := ctx.QueryParam("artifactName")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return nil, err
 	}
@@ -405,10 +391,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
-	artifact, err := core.GetURLDecodedParam(ctx, "artifactName")
-	if err != nil {
-		return err
-	}
+	artifact := ctx.QueryParam("artifactName")
 
 	// check if external entity provider
 	templateName := "default"
@@ -435,7 +418,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifact)
+			dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifact))
 			if err != nil {
 				return nil, err
 			}
@@ -484,7 +467,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 			return result, nil
 		},
 		func() (any, error) {
-			distribution, err := a.statisticsService.GetArtifactRiskHistory(artifact, assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
+			distribution, err := a.statisticsService.GetArtifactRiskHistory(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
 			if len(distribution) == 0 {
 				return models.Distribution{}, nil
 			}
@@ -492,16 +475,16 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "critical")
+			return a.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "critical")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "high")
+			return a.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "high")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "medium")
+			return a.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "medium")
 		},
 		func() (any, error) {
-			return a.statisticsService.GetAverageFixingTime(artifact, assetVersion.Name, assetVersion.AssetID, "low")
+			return a.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "low")
 		},
 	)
 

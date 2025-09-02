@@ -199,9 +199,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 
 	for _, item := range release.Items {
 		// gather dependency vulns for this artifact (empty artifactName for release-level vulns)
-		var artifactName string
-
-		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, artifactName)
+		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
 		if err != nil {
 			return nil, err
 		}

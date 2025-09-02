@@ -18,7 +18,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -55,7 +54,7 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 
 	return c.GetDB(tx).Create(&components).Error
 }
-func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+func (c *componentRepository) loadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
@@ -69,9 +68,13 @@ func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVer
 	}
 	return components, err
 }
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
-	var components []models.ComponentDependency
 
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+	if artifactName == nil {
+		return c.loadComponentsForAllArtifacts(tx, assetVersionName, assetID)
+	}
+
+	var components []models.ComponentDependency
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
 		Preload("Component").Preload("Dependency").
 		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
@@ -83,16 +86,74 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 }
 
 // function which returns all dependency_components which lead to the package transmitted via the pURL parameter
-func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
+	var query *gorm.DB
 	//Find all needed components  recursively until we hit the root component
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// using postgresql CYCLE Keyword to detect possible loops
-	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
+	if artifactName == nil {
+		// using postgresql CYCLE Keyword to detect possible loops
+		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
+	SELECT
+		cd.component_purl,
+		cd.dependency_purl,
+		cd.asset_id,
+		0 AS depth,
+		ARRAY[cd.dependency_purl] AS path
+	FROM component_dependencies cd
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
+	WHERE
+		cd.component_purl IS NULL AND
+		cd.asset_id = @assetID AND
+		cd.asset_version_name = @assetVersionName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID
+
+	UNION ALL
+
+	SELECT
+		co.component_purl,
+		co.dependency_purl,
+		co.asset_id,
+		cte.depth + 1,
+		cte.path || co.dependency_purl
+	FROM component_dependencies co
+	INNER JOIN components_cte cte
+		ON co.component_purl = cte.dependency_purl
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+	WHERE
+		co.asset_id = @assetID AND
+		co.asset_version_name = @assetVersionName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID AND
+		NOT co.dependency_purl = ANY(cte.path)
+),
+target_path AS (
+	SELECT * FROM components_cte
+	WHERE dependency_purl = @pURL
+	ORDER BY depth ASC
+),
+path_edges AS (
+	SELECT
+		DISTINCT
+		component_purl,
+		dependency_purl,
+		asset_id,
+		depth
+	FROM components_cte
+	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+)
+SELECT * FROM path_edges
+ORDER BY depth;
+`, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
+			sql.Named("assetVersionName", assetVersionName))
+	} else {
+		// using postgresql CYCLE Keyword to detect possible loops
+		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 	SELECT
 		cd.component_purl,
 		cd.dependency_purl,
@@ -147,7 +208,8 @@ path_edges AS (
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
+			sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
+	}
 
 	// Map the query results to the component model
 	err = query.Find(&components).Error
@@ -329,15 +391,12 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
 
-	fmt.Println("Removed:", len(removed), "Added:", len(added))
-
 	toRemove := []models.ComponentDependency{}
 	toUpdate := []models.ComponentDependency{}
 	toAdd := []models.ComponentDependency{}
 
-	//load all dependencies which are already present for the assetID and assetVersionName
-
-	components, err := c.LoadComponentsForAllArtifacts(tx, assetVersionName, assetID)
+	// load all dependencies which are already present for the assetID and assetVersionName
+	components, err := c.loadComponentsForAllArtifacts(tx, assetVersionName, assetID)
 	if err != nil {
 		return false, err
 	}

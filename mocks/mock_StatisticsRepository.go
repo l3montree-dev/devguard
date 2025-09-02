@@ -40,8 +40,8 @@ func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 }
 
 // AverageFixingTime provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+func (_mock *StatisticsRepository) AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTime")
@@ -49,16 +49,16 @@ func (_mock *StatisticsRepository) AverageFixingTime(artifactName string, assetV
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,20 +71,20 @@ type StatisticsRepository_AverageFixingTime_Call struct {
 }
 
 // AverageFixingTime is a helper method to define mock.On call
-//   - artifactName string
+//   - artifactNam *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - riskIntervalStart float64
 //   - riskIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTime(artifactName interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
-	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTime(artifactNam interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
+	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(*string)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -118,7 +118,7 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) Return(duration time.Dura
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Return(run)
 	return _c
 }

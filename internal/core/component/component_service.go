@@ -197,22 +197,11 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 }
 
 func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	var componentDependencies []models.ComponentDependency
-	var err error
-	if artifactName == nil {
-		// get all components for all artifacts
-		componentDependencies, err = s.componentRepository.LoadComponentsForAllArtifacts(nil, assetVersion.Name, assetVersion.AssetID)
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		componentDependencies, err = s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, *artifactName)
-		if err != nil {
-			return nil, err
-		}
-
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	if err != nil {
+		return nil, err
 	}
+
 	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)
 	seen := make(map[string]bool)

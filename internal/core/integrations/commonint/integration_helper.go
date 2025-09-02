@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, artifactName string) models.VulnEvent {
@@ -171,14 +172,12 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
 func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
-
-	//TODO
 	artifactName := ""
 	if len(artifacts) > 0 {
 		artifactName = artifacts[0].ArtifactName
 	}
 
-	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, artifactName)
+	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return "", err
 	}
