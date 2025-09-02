@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -227,14 +226,13 @@ ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses
 		return fmt.Errorf("failed to commit foreign key fix transaction: %w", err)
 	}
 
-	var wg sync.WaitGroup
+	// just wait for a second to ensure the commit is fully processed
+	time.Sleep(5 * time.Second)
+
 	// now drop the backup tables asynchronously
 	for _, backupTableName := range backupTableNames {
-		wg.Go(func() {
-			cleanupBackupTable(pool, backupTableName)
-		})
+		cleanupBackupTable(pool, backupTableName)
 	}
-	wg.Wait()
 
 	return nil
 }
