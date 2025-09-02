@@ -441,17 +441,6 @@ type Diffable interface {
 	GetEvents() []models.VulnEvent
 }
 
-var copyVulnEventTypes = []models.VulnEventType{
-	models.EventTypeLicenseDecision,
-	models.EventTypeReopened,
-	models.EventTypeAccepted,
-	models.EventTypeMitigate,
-	models.EventTypeFalsePositive,
-	models.EventTypeMarkedForTransfer,
-	models.EventTypeComment,
-	models.EventTypeDetected,
-}
-
 func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
 	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
 	newDetectedButOnOtherBranchExisting := make([]T, 0)
@@ -474,7 +463,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 			for _, existingVuln := range existingVulns {
 
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return slices.Contains(copyVulnEventTypes, ev.Type) && ev.OriginalAssetVersionName == nil
+					return ev.OriginalAssetVersionName == nil
 				})
 
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
