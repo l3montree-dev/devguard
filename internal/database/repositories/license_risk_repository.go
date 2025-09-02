@@ -59,6 +59,17 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(asset
 	return result, nil
 }
 
+func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+	var licenseRisks = []models.LicenseRisk{}
+
+	q := repository.Repository.GetDB(tx).Preload("Events").Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
+
+	if err := q.Find(&licenseRisks).Error; err != nil {
+		return nil, err
+	}
+	return licenseRisks, nil
+}
+
 func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
 	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, models.VulnStateFixed).Find(&result).Error

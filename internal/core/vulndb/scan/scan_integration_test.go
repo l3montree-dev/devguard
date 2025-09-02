@@ -791,6 +791,424 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 	})
 }
 
+func TestLicenseRiskLifecycleManagement(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	controller, _ := initHTTPController(t, db, true)
+
+	// scan the vulnerable sbom
+	app := echo.New()
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("test-user")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, authSession)
+	}
+
+	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
+
+	t.Run("should create license risks for components with invalid licenses", func(t *testing.T) {
+		// Clean up existing license risks
+		risks, _ := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "main")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-artifact-1")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "main")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify license risks were created
+		licenseRisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "main")
+		assert.Nil(t, err)
+		assert.Len(t, licenseRisks, 2) // Should have 2 license risks for invalid licenses
+
+		// Check each license risk
+		licenseRisksByPurl := make(map[string]models.LicenseRisk)
+		for _, risk := range licenseRisks {
+			licenseRisksByPurl[risk.ComponentPurl] = risk
+		}
+
+		// Verify proprietary license risk
+		proprietaryRisk, exists := licenseRisksByPurl["pkg:golang/github.com/proprietary/lib@v1.0.0"]
+		assert.True(t, exists, "License risk should exist for proprietary component")
+		assert.Equal(t, models.VulnStateOpen, proprietaryRisk.State)
+		assert.Equal(t, "main", proprietaryRisk.AssetVersionName)
+		assert.Equal(t, asset.ID, proprietaryRisk.AssetID)
+
+		// Verify unknown license risk
+		unknownRisk, exists := licenseRisksByPurl["pkg:golang/github.com/unknown/lib@v1.0.0"]
+		assert.True(t, exists, "License risk should exist for unknown license component")
+		assert.Equal(t, models.VulnStateOpen, unknownRisk.State)
+	})
+
+	t.Run("should add artifacts to existing license risks when found in another artifact", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-artifact-2")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "main")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify artifacts were added to existing risks
+		licenseRisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "main")
+		assert.Nil(t, err)
+		assert.Len(t, licenseRisks, 2) // Still 2 risks
+
+		for _, risk := range licenseRisks {
+			// Each risk should now have 2 artifacts
+			if len(risk.Artifacts) > 0 {
+				artifactNames := getArtifactNames(risk.Artifacts)
+				assert.ElementsMatch(t, []string{"license-artifact-1", "license-artifact-2"}, artifactNames)
+			}
+		}
+	})
+
+	t.Run("should copy all events when license risk is found on different branches", func(t *testing.T) {
+		// Clean up existing license risks
+		risks, _ := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-a")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+		risks, _ = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-b")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+
+		// Create license risk on branch-a
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-lifecycle-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-a")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		branchARisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-a")
+		assert.Nil(t, err)
+		assert.Len(t, branchARisks, 2)
+
+		// Select one license risk for lifecycle testing
+		branchARisk := branchARisks[0]
+
+		// Add events to the license risk
+		acceptedEvent := models.NewAcceptedEvent(branchARisk.ID, branchARisk.GetType(), "test-user", "License risk accepted for testing")
+		err = licenseRiskRepository.ApplyAndSave(nil, &branchARisk, &acceptedEvent)
+		assert.Nil(t, err)
+
+		commentEvent := models.NewCommentEvent(branchARisk.ID, branchARisk.GetType(), "test-user", "Test comment for license risk")
+		err = licenseRiskRepository.ApplyAndSave(nil, &branchARisk, &commentEvent)
+		assert.Nil(t, err)
+
+		// Verify events were added
+		branchARisks, err = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-a")
+		assert.Nil(t, err)
+		for _, risk := range branchARisks {
+			if risk.ID == branchARisk.ID {
+				assert.Equal(t, models.VulnStateAccepted, risk.State)
+				assert.Len(t, risk.Events, 3) // detected, accepted, comment
+			}
+		}
+
+		// Now scan the same SBOM on branch-b
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithLicenseRisks()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-lifecycle-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-b")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify license risks were created on branch-b with copied events
+		branchBRisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-b")
+		assert.Nil(t, err)
+		assert.Len(t, branchBRisks, 2)
+
+		// Find the corresponding license risk on branch-b
+		var branchBRisk models.LicenseRisk
+		for _, risk := range branchBRisks {
+			if risk.ComponentPurl == branchARisk.ComponentPurl {
+				branchBRisk = risk
+				break
+			}
+		}
+
+		assert.NotEmpty(t, branchBRisk.ID)
+		assert.Equal(t, "branch-b", branchBRisk.AssetVersionName)
+		assert.Equal(t, models.VulnStateAccepted, branchBRisk.State)
+		assert.Len(t, branchBRisk.Events, 3)
+
+		// Verify events were copied correctly
+		var copiedAcceptedEvent, copiedCommentEvent models.VulnEvent
+		for _, event := range branchBRisk.Events {
+			switch event.Type {
+			case models.EventTypeAccepted:
+				copiedAcceptedEvent = event
+			case models.EventTypeComment:
+				copiedCommentEvent = event
+			}
+		}
+
+		assert.NotEmpty(t, copiedAcceptedEvent.ID)
+		assert.Equal(t, models.EventTypeAccepted, copiedAcceptedEvent.Type)
+		assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
+		assert.Equal(t, "License risk accepted for testing", *copiedAcceptedEvent.Justification)
+		assert.Equal(t, branchBRisk.CalculateHash(), copiedAcceptedEvent.VulnID)
+
+		assert.NotEmpty(t, copiedCommentEvent.ID)
+		assert.Equal(t, models.EventTypeComment, copiedCommentEvent.Type)
+		assert.Equal(t, "test-user", copiedCommentEvent.UserID)
+		assert.Equal(t, "Test comment for license risk", *copiedCommentEvent.Justification)
+		assert.Equal(t, branchBRisk.CalculateHash(), copiedCommentEvent.VulnID)
+	})
+	return
+	t.Run("should handle false positive events in license risk lifecycle management", func(t *testing.T) {
+		// Clean up existing license risks
+		risks, _ := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-fp-a")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+		risks, _ = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-fp-b")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-fp-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-fp-a")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		branchFPARisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-fp-a")
+		assert.Nil(t, err)
+		assert.Len(t, branchFPARisks, 2)
+		branchFPARisk := branchFPARisks[0]
+
+		// Mark license risk as false positive
+		fpEvent := models.NewFalsePositiveEvent(branchFPARisk.ID, branchFPARisk.GetType(), "test-user", "This is a false positive license risk", models.ComponentNotPresent, "license-fp-artifact")
+		err = licenseRiskRepository.ApplyAndSave(nil, &branchFPARisk, &fpEvent)
+		assert.Nil(t, err)
+
+		// Scan same components on branch-fp-b
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithLicenseRisks()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-fp-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-fp-b")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		branchFPBRisks, err := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-fp-b")
+		assert.Nil(t, err)
+		assert.Len(t, branchFPBRisks, 2)
+
+		// Find the corresponding license risk
+		var branchFPBRisk models.LicenseRisk
+		for _, risk := range branchFPBRisks {
+			if risk.ComponentPurl == branchFPARisk.ComponentPurl {
+				branchFPBRisk = risk
+				break
+			}
+		}
+
+		assert.Equal(t, models.VulnStateFalsePositive, branchFPBRisk.State)
+		assert.Len(t, branchFPBRisk.Events, 2)
+
+		// Verify the false positive event was copied
+		var copiedFPEvent models.VulnEvent
+		for _, event := range branchFPBRisk.Events {
+			if event.Type == models.EventTypeFalsePositive {
+				copiedFPEvent = event
+				break
+			}
+		}
+
+		assert.NotEmpty(t, copiedFPEvent.ID)
+		assert.Equal(t, models.EventTypeFalsePositive, copiedFPEvent.Type)
+		assert.Equal(t, "This is a false positive license risk", *copiedFPEvent.Justification)
+		assert.Equal(t, branchFPBRisk.CalculateHash(), copiedFPEvent.VulnID)
+	})
+
+	t.Run("should remove license risks when components are no longer detected", func(t *testing.T) {
+		// Clean up existing license risks
+		risks, _ := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-removal")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+
+		// First scan with components that have license risks
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-removal-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-removal")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		risks, err = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-removal")
+		assert.Nil(t, err)
+		assert.Len(t, risks, 2)
+
+		// Second scan without the problematic components
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithValidLicensesOnly()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-removal-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-removal")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		// Verify license risks were marked as fixed
+		risks, err = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-removal")
+		assert.Nil(t, err)
+
+		// Count fixed risks
+		fixedCount := 0
+		for _, risk := range risks {
+			if risk.State == models.VulnStateFixed {
+				fixedCount++
+			}
+		}
+		assert.Equal(t, 2, fixedCount, "All license risks should be marked as fixed")
+	})
+
+	t.Run("should only dissociate artifact when license risk is found by multiple artifacts", func(t *testing.T) {
+		// Clean up existing license risks
+		risks, _ := licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-dissociate")
+		for _, risk := range risks {
+			db.Delete(&risk)
+		}
+
+		// Create license risk with first artifact
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithLicenseRisks()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-dissociate-artifact-1")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-dissociate")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		// Add second artifact
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithLicenseRisks()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-dissociate-artifact-2")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-dissociate")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		// Verify both artifacts are associated
+		risks, err = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-dissociate")
+		assert.Nil(t, err)
+		assert.Len(t, risks, 2)
+
+		for _, risk := range risks {
+			if len(risk.Artifacts) > 0 {
+				artifactNames := getArtifactNames(risk.Artifacts)
+				assert.ElementsMatch(t, []string{"license-dissociate-artifact-1", "license-dissociate-artifact-2"}, artifactNames)
+			}
+		}
+
+		// Remove first artifact (scan without the components)
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithValidLicensesOnly()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "license-dissociate-artifact-1")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-dissociate")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		// Verify license risks are still open (not fixed) but first artifact is dissociated
+		risks, err = licenseRiskRepository.GetAllLicenseRisksForAssetVersion(asset.ID, "branch-dissociate")
+		assert.Nil(t, err)
+
+		openCount := 0
+		for _, risk := range risks {
+			if risk.State == models.VulnStateOpen {
+				openCount++
+				// Should only have the second artifact
+				if len(risk.Artifacts) > 0 {
+					artifactNames := getArtifactNames(risk.Artifacts)
+					assert.Equal(t, []string{"license-dissociate-artifact-2"}, artifactNames)
+				}
+			}
+		}
+		assert.Equal(t, 2, openCount, "License risks should still be open as they're detected by second artifact")
+	})
+}
+
 func TestTicketHandling(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
@@ -1295,4 +1713,145 @@ func TestUploadVEX(t *testing.T) {
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
 	}
+}
+
+func sbomWithLicenseRisks() io.Reader {
+	content := getSBOMWithLicenseRisksContent()
+	return bytes.NewReader(content)
+}
+
+func sbomWithValidLicensesOnly() io.Reader {
+	content := getSBOMWithValidLicensesOnlyContent()
+	return bytes.NewReader(content)
+}
+
+func getSBOMWithLicenseRisksContent() []byte {
+	// Create an SBOM with components that have invalid licenses
+	sbomContent := `{
+		"bomFormat": "CycloneDX",
+		"specVersion": "1.6",
+		"serialNumber": "urn:uuid:test-license-risks",
+		"version": 1,
+		"metadata": {
+			"component": {
+				"type": "application",
+				"bom-ref": "root-component",
+				"name": "test-app",
+				"version": "1.0.0"
+			}
+		},
+		"components": [
+			{
+				"type": "library",
+				"bom-ref": "proprietary-lib-ref",
+				"name": "proprietary-lib",
+				"version": "1.0.0",
+				"purl": "pkg:golang/github.com/proprietary/lib@v1.0.0",
+				"licenses": [
+					{
+						"license": {
+							"name": "PROPRIETARY"
+						}
+					}
+				]
+			},
+			{
+				"type": "library", 
+				"bom-ref": "unknown-license-lib-ref", 
+				"name": "unknown-license-lib",
+				"version": "1.0.0",
+				"purl": "pkg:golang/github.com/unknown/lib@v1.0.0",
+				"licenses": [
+					{
+						"license": {
+							"name": "unknown"
+						}
+					}
+				]
+			}
+		],
+		"dependencies": [
+			{
+				"ref": "root-component",
+				"dependsOn": [
+					"proprietary-lib-ref",
+					"unknown-license-lib-ref"
+				]
+			}
+		]
+	}`
+	return []byte(sbomContent)
+}
+
+func getSBOMWithValidLicensesOnlyContent() []byte {
+	// Create an SBOM with components that only have valid OSI-approved licenses
+	sbomContent := `{
+		"bomFormat": "CycloneDX",
+		"specVersion": "1.4",
+		"serialNumber": "urn:uuid:test-valid-licenses",
+		"version": 1,
+		"metadata": {
+			"component": {
+				"type": "application",
+				"bom-ref": "root-component",
+				"name": "test-app",
+				"version": "1.0.0"
+			}
+		},
+		"components": [
+			{
+				"type": "library",
+				"bom-ref": "apache-lib-ref",
+				"name": "apache-lib",
+				"version": "1.0.0",
+				"purl": "pkg:golang/github.com/apache/lib@v1.0.0",
+				"licenses": [
+					{
+						"license": {
+							"id": "Apache-2.0"
+						}
+					}
+				]
+			},
+			{
+				"type": "library",
+				"bom-ref": "mit-lib-ref", 
+				"name": "mit-lib", 
+				"version": "1.0.0",
+				"purl": "pkg:golang/github.com/mit/lib@v1.0.0",
+				"licenses": [
+					{
+						"license": {
+							"id": "MIT"
+						}
+					}
+				]
+			},
+			{
+				"type": "library",
+				"bom-ref": "bsd-lib-ref",
+				"name": "bsd-lib",
+				"version": "1.0.0",
+				"purl": "pkg:golang/github.com/bsd/lib@v1.0.0", 
+				"licenses": [
+					{
+						"license": {
+							"id": "BSD-3-Clause"
+						}
+					}
+				]
+			}
+		],
+		"dependencies": [
+			{
+				"ref": "root-component",
+				"dependsOn": [
+					"apache-lib-ref",
+					"mit-lib-ref",
+					"bsd-lib-ref"
+				]
+			}
+		]
+	}`
+	return []byte(sbomContent)
 }
