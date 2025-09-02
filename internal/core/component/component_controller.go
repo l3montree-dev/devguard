@@ -1,6 +1,7 @@
 package component
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -66,6 +67,10 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 	if err != nil {
 		return err
 	}
+	// sort the array by count descending
+	slices.SortFunc(res, func(a, b licenseResponse) int {
+		return b.Count - a.Count
+	})
 
 	return ctx.JSON(200, res)
 }

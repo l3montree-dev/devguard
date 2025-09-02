@@ -87,7 +87,7 @@ func (c *httpController) GetArtifactRiskHistory(ctx core.Context) error {
 	}
 
 	// convert to dto
-	var dtoResults []RiskHistoryDTO
+	dtoResults := make([]RiskHistoryDTO, 0, len(results))
 	for _, r := range results {
 		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
 	}
@@ -167,7 +167,7 @@ func (c *httpController) GetReleaseRiskHistory(ctx core.Context) error {
 	}
 
 	// convert to dto
-	var dtoResults []RiskHistoryDTO
+	dtoResults := make([]RiskHistoryDTO, 0, len(res))
 	for _, r := range res {
 		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
 	}
