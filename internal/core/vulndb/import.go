@@ -12,11 +12,10 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -27,19 +26,6 @@ import (
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
 )
-
-var pruneTablesBeforeInsert = []string{
-	"affected_components",
-	"cve_affected_component",
-}
-
-var tableNameToPrimaryKey = map[string][]string{
-	"cves":                   {"cve"},
-	"cwes":                   {"cwe"},
-	"exploits":               {"id"},
-	"affected_components":    {"id"},
-	"cve_affected_component": {"cvecve", "affected_component_id"},
-}
 
 type importService struct {
 	cveRepository                core.CveRepository
@@ -58,7 +44,7 @@ func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweR
 }
 
 func (s importService) Import(tx core.DB, tag string) error {
-	slog.Info("Importing vulndb started")
+	slog.Info("importing vulndb started")
 	begin := time.Now()
 	tmp := "./vulndb-tmp"
 	sigFile := tmp + "/vulndb.zip.sig"
@@ -97,12 +83,12 @@ func (s importService) Import(tx core.DB, tag string) error {
 	}
 	defer f.Close()
 
-	// Unzip the blob file
+	// unzip the blob file
 	err = utils.Unzip(blobFile, tmp+"/")
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("Unzipping vulndb completed")
+	slog.Info("unzipping vulndb completed")
 
 	//copy csv files to database
 	err = s.copyCSVToDB(tmp)
@@ -110,7 +96,7 @@ func (s importService) Import(tx core.DB, tag string) error {
 		return err
 	}
 
-	slog.Info("Importing vulndb completed", "duration", time.Since(begin))
+	slog.Info("importing vulndb completed", "duration", time.Since(begin))
 
 	return nil
 }
@@ -122,17 +108,17 @@ func (s importService) copyCSVToDB(tmp string) error {
 	port := os.Getenv("POSTGRES_PORT")
 	dbname := os.Getenv("POSTGRES_DB")
 
-	// Replace with your PostgreSQL connection string
+	// replace with your PostgreSQL connection string
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
 
-	// Create a connection pool with increased connections for parallel processing
+	// create a connection pool with increased connections for parallel processing
 	ctx := context.Background()
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %v", err)
 	}
 
-	// Increase pool size for parallel operations
+	// increase pool size for parallel operations
 	config.MaxConns = 10
 	config.MinConns = 2
 
@@ -148,74 +134,23 @@ func (s importService) copyCSVToDB(tmp string) error {
 		log.Fatalf("Failed to read directory: %v", err)
 	}
 
-	// Separate files by import strategy for optimal processing order
-	var pruneFiles, upsertFiles []string
+	// process prune tables first (they have dependencies and need to be done sequentially)
+	wg := sync.WaitGroup{}
 	for _, file := range files {
-		if file.IsDir() || filepath.Ext(file.Name()) != ".csv" {
-			continue
-		}
+		wg.Go(func() {
+			startTime := time.Now()
+			csvFilePath := fmt.Sprintf("%s/%s", tmp, file.Name())
+			tableName := strings.TrimSuffix(file.Name(), ".csv")
 
-		tableName := strings.TrimSuffix(file.Name(), ".csv")
-		if utils.Contains(pruneTablesBeforeInsert, tableName) {
-			pruneFiles = append(pruneFiles, file.Name())
-		} else {
-			upsertFiles = append(upsertFiles, file.Name())
-		}
-	}
-
-	// Process prune tables first (they have dependencies and need to be done sequentially)
-	for _, fileName := range pruneFiles {
-		startTime := time.Now()
-		csvFilePath := fmt.Sprintf("%s/%s", tmp, fileName)
-		tableName := strings.TrimSuffix(fileName, ".csv")
-
-		slog.Info("Importing CSV (prune)", "file", fileName, "strategy", "shadow_table")
-		err = importCSV(ctx, pool, tableName, csvFilePath)
-		if err != nil {
-			log.Fatalf("Failed to import CSV %s: %v", csvFilePath, err)
-		}
-		slog.Info("Imported CSV (prune)", "file", fileName, "duration", time.Since(startTime))
-	}
-
-	// Process upsert tables in parallel (they can be done concurrently)
-	if len(upsertFiles) > 0 {
-		const maxConcurrency = 3 // Limit concurrent operations to avoid overwhelming the database
-		semaphore := make(chan struct{}, maxConcurrency)
-		errChan := make(chan error, len(upsertFiles))
-
-		slog.Info("Starting parallel import of upsert tables", "count", len(upsertFiles), "concurrency", maxConcurrency)
-
-		for _, fileName := range upsertFiles {
-			semaphore <- struct{}{} // Acquire semaphore
-			go func(fileName string) {
-				defer func() { <-semaphore }() // Release semaphore
-
-				startTime := time.Now()
-				csvFilePath := fmt.Sprintf("%s/%s", tmp, fileName)
-				tableName := strings.TrimSuffix(fileName, ".csv")
-
-				slog.Info("Importing CSV (upsert)", "file", fileName, "strategy", "parallel_upsert")
-				err := importCSV(ctx, pool, tableName, csvFilePath)
-				if err != nil {
-					errChan <- fmt.Errorf("failed to import CSV %s: %w", csvFilePath, err)
-					return
-				}
-
-				slog.Info("Imported CSV (upsert)", "file", fileName, "duration", time.Since(startTime))
-				errChan <- nil
-			}(fileName)
-		}
-
-		// Wait for all goroutines to complete and check for errors
-		for i := 0; i < len(upsertFiles); i++ {
-			if err := <-errChan; err != nil {
-				log.Fatalf("Parallel import failed: %v", err)
+			slog.Info("importing CSV (prune)", "file", file, "strategy", "shadowTable")
+			err = importCSV(ctx, pool, tableName, csvFilePath)
+			if err != nil {
+				log.Fatalf("Failed to import CSV %s: %v", csvFilePath, err)
 			}
-		}
-
-		slog.Info("Completed parallel import of upsert tables")
+			slog.Info("imported CSV (prune)", "file", file, "duration", time.Since(startTime))
+		})
 	}
-
+	wg.Wait()
 	return nil
 }
 
@@ -231,12 +166,7 @@ func countTableRows(ctx context.Context, pool *pgxpool.Pool, tableName string) (
 
 func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
 	// Use shadow table pattern for pruned tables to minimize downtime
-	if utils.Contains(pruneTablesBeforeInsert, tableName) {
-		return importWithShadowTable(ctx, pool, tableName, csvFilePath)
-	}
-
-	// Use improved upsert for other tables
-	return importWithUpsert(ctx, pool, tableName, csvFilePath)
+	return importWithShadowTable(ctx, pool, tableName, csvFilePath)
 }
 
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
@@ -244,23 +174,28 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
 	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
 
-	// Count initial rows
+	// count initial rows
 	initialCount, err := countTableRows(ctx, pool, tableName)
 	if err != nil {
-		slog.Warn("Failed to count initial rows", "table", tableName, "error", err)
+		slog.Warn("failed to count initial rows", "table", tableName, "error", err)
 		initialCount = -1 // Mark as unknown
 	}
 
-	slog.Info("Starting shadow table import", "table", tableName, "shadow_table", shadowTable, "csv_file", csvFilePath, "initial_rows", initialCount)
+	slog.Info("starting shadow table import", "table", tableName, "shadowTable", shadowTable, "csvFile", csvFilePath, "initialRows", initialCount)
 
 	// Phase 1: Create and populate shadow table (no locks on original)
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx) // nolint:errcheck
+	var committed = false
+	defer func() {
+		if !committed {
+			tx.Rollback(ctx) // nolint:errcheck
+		}
+	}()
 
-	slog.Debug("Creating shadow table", "shadow_table", shadowTable, "original_table", tableName)
+	slog.Debug("Creating shadow table", "shadowTable", shadowTable, "originalTable", tableName)
 	// Create shadow table with same structure
 	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTable, tableName))
 	if err != nil {
@@ -280,13 +215,13 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	}
 	defer file.Close()
 
-	slog.Info("Starting CSV data import to shadow table", "shadow_table", shadowTable)
+	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTable)
 	importStart := time.Now()
 	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTable))
 	if err != nil {
 		return fmt.Errorf("failed to import CSV: %w", err)
 	}
-	slog.Info("Completed CSV data import to shadow table", "shadow_table", shadowTable, "import_duration", time.Since(importStart))
+	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTable, "importDuration", time.Since(importStart))
 
 	slog.Debug("Re-enabling triggers", "table", shadowTable)
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
@@ -299,10 +234,11 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	if err != nil {
 		return fmt.Errorf("failed to commit shadow table: %w", err)
 	}
-	slog.Debug("Committed shadow table transaction", "shadow_table", shadowTable, "commit_duration", time.Since(commitStart))
+	committed = true
+	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTable, "commitDuration", time.Since(commitStart))
 
 	// Phase 2: Atomic table swap (minimal lock time)
-	slog.Info("Starting atomic table swap", "table", tableName, "shadow_table", shadowTable)
+	slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
 	if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
 		return err
 	}
@@ -322,9 +258,9 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 
 	slog.Info("Shadow table import completed successfully",
 		"table", tableName,
-		"initial_rows", initialCount,
-		"final_rows", finalCount,
-		"rows_added", addedRows)
+		"initialRows", initialCount,
+		"finalRows", finalCount,
+		"rowsAdded", addedRows)
 
 	return nil
 }
@@ -364,10 +300,10 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 	}
 
 	swapDuration := time.Since(swapStart)
-	slog.Info("Atomic table swap completed successfully", "table", originalTable, "swap_duration", swapDuration, "backup_table", backupTable)
+	slog.Info("Atomic table swap completed successfully", "table", originalTable, "swapDuration", swapDuration, "backupTable", backupTable)
 
 	// Clean up backup table asynchronously
-	slog.Debug("Scheduling asynchronous cleanup of backup table", "backup_table", backupTable)
+	slog.Debug("Scheduling asynchronous cleanup of backup table", "backupTable", backupTable)
 	go cleanupBackupTable(pool, backupTable)
 
 	return nil
@@ -375,224 +311,17 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 
 // cleanupBackupTable removes the backup table in the background
 func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
-	slog.Debug("Starting cleanup of backup table", "backup_table", backupTable)
+	slog.Debug("Starting cleanup of backup table", "backupTable", backupTable)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
 	cleanupStart := time.Now()
 	_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s;", backupTable))
 	if err != nil {
-		slog.Error("Failed to drop backup table", "table", backupTable, "error", err, "cleanup_duration", time.Since(cleanupStart))
+		slog.Error("Failed to drop backup table", "table", backupTable, "error", err, "cleanupDuration", time.Since(cleanupStart))
 	} else {
-		slog.Info("Successfully cleaned up backup table", "table", backupTable, "cleanup_duration", time.Since(cleanupStart))
+		slog.Info("Successfully cleaned up backup table", "table", backupTable, "cleanupDuration", time.Since(cleanupStart))
 	}
-}
-
-// importWithUpsert handles upsert operations for non-pruned tables
-func importWithUpsert(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
-	// Count initial rows
-	initialCount, err := countTableRows(ctx, pool, tableName)
-	if err != nil {
-		slog.Warn("Failed to count initial rows", "table", tableName, "error", err)
-		initialCount = -1 // Mark as unknown
-	}
-
-	slog.Info("Starting upsert import", "table", tableName, "csv_file", csvFilePath, "initial_rows", initialCount)
-
-	startTime := time.Now()
-	defer func() {
-		slog.Debug("Completed upsert import", "table", tableName, "total_duration", time.Since(startTime))
-	}()
-
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		slog.Error("Failed to begin transaction", "table", tableName, "error", err)
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-
-	committed := false
-	defer func() {
-		if !committed && err != nil {
-			slog.Error("Rolling back transaction", "table", tableName, "error", err)
-			tx.Rollback(ctx) // nolint:errcheck
-		}
-	}()
-
-	// Create temporary table for staging
-	tempTable := fmt.Sprintf("tmp_%s_%d", tableName, time.Now().Unix())
-	slog.Debug("Creating temporary staging table", "temp_table", tempTable, "original_table", tableName)
-	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TEMP TABLE %s AS SELECT * FROM %s LIMIT 0;", tempTable, tableName))
-	if err != nil {
-		slog.Error("Failed to create temporary table", "temp_table", tempTable, "error", err)
-		return fmt.Errorf("failed to create temp table: %w", err)
-	}
-
-	// Fast import with disabled triggers
-	slog.Debug("Disabling triggers for fast import", "table", tableName)
-	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
-	if err != nil {
-		slog.Error("Failed to disable triggers", "table", tableName, "error", err)
-		return fmt.Errorf("failed to disable triggers: %w", err)
-	}
-
-	file, err := os.Open(csvFilePath)
-	if err != nil {
-		slog.Error("Failed to open CSV file", "file", csvFilePath, "error", err)
-		return fmt.Errorf("failed to open CSV file: %w", err)
-	}
-	defer file.Close()
-
-	copyStart := time.Now()
-	slog.Debug("Starting COPY operation to temporary table", "temp_table", tempTable, "csv_file", csvFilePath)
-	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", tempTable))
-	if err != nil {
-		slog.Error("Failed to import CSV to temporary table", "temp_table", tempTable, "error", err)
-		return fmt.Errorf("failed to import CSV: %w", err)
-	}
-
-	copyDuration := time.Since(copyStart)
-	slog.Debug("Completed COPY operation", "temp_table", tempTable, "copy_duration", copyDuration)
-
-	slog.Debug("Re-enabling triggers", "table", tableName)
-	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
-	if err != nil {
-		slog.Error("Failed to re-enable triggers", "table", tableName, "error", err)
-		return fmt.Errorf("failed to re-enable triggers: %w", err)
-	}
-
-	// Perform bulk upsert
-	slog.Debug("Starting bulk upsert operation", "table", tableName, "temp_table", tempTable)
-	if err := performBulkUpsert(ctx, tx, tableName, tempTable); err != nil {
-		slog.Error("Failed to perform bulk upsert", "table", tableName, "temp_table", tempTable, "error", err)
-		return err
-	}
-
-	// Count final rows after upsert (note: we need to commit first to see the changes)
-	slog.Debug("Committing transaction", "table", tableName)
-	err = tx.Commit(ctx)
-	if err != nil {
-		slog.Error("Failed to commit upsert transaction", "table", tableName, "error", err)
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-	committed = true
-
-	// Count final rows
-	finalCount, err := countTableRows(ctx, pool, tableName)
-	if err != nil {
-		slog.Warn("Failed to count final rows", "table", tableName, "error", err)
-		finalCount = -1 // Mark as unknown
-	}
-
-	// Calculate and log the results
-	var addedRows int64 = -1
-	if initialCount >= 0 && finalCount >= 0 {
-		addedRows = finalCount - initialCount
-	}
-
-	slog.Info("Upsert import completed successfully",
-		"table", tableName,
-		"total_duration", time.Since(startTime),
-		"initial_rows", initialCount,
-		"final_rows", finalCount,
-		"rows_added", addedRows)
-
-	return nil
-}
-
-// performBulkUpsert executes an efficient bulk upsert operation
-func performBulkUpsert(ctx context.Context, tx pgx.Tx, tableName, tempTable string) error {
-	slog.Debug("Starting bulk upsert operation", "table", tableName, "temp_table", tempTable)
-
-	startTime := time.Now()
-	defer func() {
-		slog.Debug("Completed bulk upsert operation", "table", tableName, "upsert_duration", time.Since(startTime))
-	}()
-
-	// Get primary key for conflict resolution
-	primaryKey := tableNameToPrimaryKey[tableName]
-	if len(primaryKey) == 0 {
-		slog.Error("No primary key defined for table", "table", tableName)
-		return fmt.Errorf("no primary key defined for table %s", tableName)
-	}
-	slog.Debug("Retrieved primary key for table", "table", tableName, "primary_key", primaryKey)
-
-	// Get all columns
-	queryStart := time.Now()
-	rows, err := tx.Query(ctx, "SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position", tableName)
-	if err != nil {
-		slog.Error("Failed to get column names", "table", tableName, "error", err)
-		return fmt.Errorf("failed to get column names: %w", err)
-	}
-	defer rows.Close()
-
-	var columns []string
-	for rows.Next() {
-		var columnName string
-		if err := rows.Scan(&columnName); err != nil {
-			slog.Error("Failed to scan column name", "table", tableName, "error", err)
-			return fmt.Errorf("failed to scan column name: %w", err)
-		}
-		columns = append(columns, columnName)
-	}
-
-	if len(columns) == 0 {
-		slog.Error("No columns found for table", "table", tableName)
-		return fmt.Errorf("no columns found for table %s", tableName)
-	}
-
-	queryDuration := time.Since(queryStart)
-	slog.Debug("Retrieved table columns", "table", tableName, "column_count", len(columns), "query_duration", queryDuration)
-
-	// Build UPDATE clauses (exclude primary key columns)
-	var updateClauses []string
-	for _, col := range columns {
-		isPrimaryKey := false
-		for _, pk := range primaryKey {
-			if col == pk {
-				isPrimaryKey = true
-				break
-			}
-		}
-		if !isPrimaryKey {
-			updateClauses = append(updateClauses, fmt.Sprintf(`"%s" = EXCLUDED."%s"`, col, col))
-		}
-	}
-	slog.Debug("Built update clauses", "table", tableName, "update_clause_count", len(updateClauses))
-
-	// Execute bulk upsert
-	quotedColumns := make([]string, len(columns))
-	for i, col := range columns {
-		quotedColumns[i] = fmt.Sprintf(`"%s"`, col)
-	}
-
-	quotedPrimaryKey := make([]string, len(primaryKey))
-	for i, pk := range primaryKey {
-		quotedPrimaryKey[i] = fmt.Sprintf(`"%s"`, pk)
-	}
-
-	upsertSQL := fmt.Sprintf(`
-		INSERT INTO %s (%s)
-		SELECT %s FROM %s
-		ON CONFLICT (%s) DO UPDATE SET %s`,
-		tableName,
-		strings.Join(quotedColumns, ","),
-		strings.Join(quotedColumns, ","),
-		tempTable,
-		strings.Join(quotedPrimaryKey, ","),
-		strings.Join(updateClauses, ","))
-
-	upsertStart := time.Now()
-	slog.Debug("Executing bulk upsert SQL", "table", tableName, "temp_table", tempTable)
-	_, err = tx.Exec(ctx, upsertSQL)
-	if err != nil {
-		slog.Error("Failed to execute bulk upsert", "table", tableName, "temp_table", tempTable, "error", err)
-		return fmt.Errorf("failed to upsert data: %w", err)
-	}
-
-	upsertDuration := time.Since(upsertStart)
-	slog.Info("Successfully completed bulk upsert", "table", tableName, "upsert_duration", upsertDuration, "total_duration", time.Since(startTime))
-
-	return nil
 }
 
 func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx context.Context) error {
