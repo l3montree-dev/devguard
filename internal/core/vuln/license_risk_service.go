@@ -71,6 +71,10 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 			compToValidLicense[comp.Purl] = *comp.License
 		}
 	}
+	//filter out duplicates in foundLicenseRisks
+	foundLicenseRisks = utils.UniqBy(foundLicenseRisks, func(risk models.LicenseRisk) string {
+		return risk.CalculateHash()
+	})
 
 	// determine which existing risks were not observed this run -> these are fixed
 	// build comparison between existing risks (all in assetVersion) and newly detected ones
