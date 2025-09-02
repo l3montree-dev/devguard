@@ -136,26 +136,106 @@ func (s importService) copyCSVToDB(tmp string) error {
 	}
 
 	// process prune tables first (they have dependencies and need to be done sequentially)
-	wg := sync.WaitGroup{}
+	errgroup := utils.ErrGroup[string](5)
 	for _, file := range files {
 		fileExtension := filepath.Ext(file.Name())
 		if fileExtension != ".csv" {
 			continue
 		}
-		wg.Go(func() {
+		errgroup.Go(func() (string, error) {
 			startTime := time.Now()
 			csvFilePath := fmt.Sprintf("%s/%s", tmp, file.Name())
 			tableName := strings.TrimSuffix(file.Name(), ".csv")
 
 			slog.Info("importing CSV (prune)", "file", file, "strategy", "shadowTable")
-			err = importCSV(ctx, pool, tableName, csvFilePath)
+			backupTableName, err := importCSV(ctx, pool, tableName, csvFilePath)
 			if err != nil {
-				log.Fatalf("Failed to import CSV %s: %v", csvFilePath, err)
+				return "", fmt.Errorf("failed to import CSV %s: %w", file.Name(), err)
 			}
 			slog.Info("imported CSV (prune)", "file", file, "duration", time.Since(startTime))
+			return backupTableName, nil
+		})
+	}
+	backupTableNames, err := errgroup.WaitAndCollect()
+	if err != nil {
+		return fmt.Errorf("error importing prune tables: %w", err)
+	}
+
+	// fix the foreign keys
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+-- Drop the foreign key constraint first
+ALTER TABLE dependency_vulns DROP CONSTRAINT fk_dependency_vulns_cve;
+
+-- Set cve_id to NULL where the referenced CVE doesn't exist anymore
+UPDATE dependency_vulns 
+SET cve_id = NULL 
+WHERE cve_id IS NOT NULL 
+  AND NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
+  );
+
+-- Now recreate the foreign key constraint
+ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
+  FOREIGN KEY (cve_id) REFERENCES cves(cve);
+
+-- Drop the foreign key constraint (if it exists)
+ALTER TABLE cve_cpe_match DROP CONSTRAINT IF EXISTS fk_cve_cpe_match_cve;
+
+-- Clean up orphaned rows
+DELETE FROM cve_cpe_match 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = cve_cpe_match.cvecve
+);
+
+-- Recreate the foreign key constraint
+ALTER TABLE cve_cpe_match ADD CONSTRAINT fk_cve_cpe_match_cve 
+  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+
+-- Drop any foreign key constraint (if it exists)
+ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
+
+-- Delete orphaned rows where the CVE no longer exists
+DELETE FROM cve_affected_component 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
+);
+
+-- Recreate the foreign key constraint
+ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
+  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+
+
+ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
+
+DELETE FROM weaknesses 
+WHERE NOT EXISTS (
+   SELECT 1 FROM cves WHERE cves.cve = weaknesses.cve_id
+);
+
+ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
+ FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
+	if err != nil {
+		return tx.Rollback(ctx)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit foreign key fix transaction: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	// now drop the backup tables asynchronously
+	for _, backupTableName := range backupTableNames {
+		wg.Go(func() {
+			cleanupBackupTable(pool, backupTableName)
 		})
 	}
 	wg.Wait()
+
 	return nil
 }
 
@@ -169,14 +249,14 @@ func countTableRows(ctx context.Context, pool *pgxpool.Pool, tableName string) (
 	return count, nil
 }
 
-func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
+func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
 	// Use shadow table pattern for pruned tables to minimize downtime
 	return importWithShadowTable(ctx, pool, tableName, csvFilePath)
 }
 
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
 // This keeps the original table available during most of the import process
-func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
+func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
 	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
 
 	// count initial rows
@@ -191,7 +271,7 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	// Phase 1: Create and populate shadow table (no locks on original)
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	var committed = false
 	defer func() {
@@ -204,19 +284,19 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	// Create shadow table with same structure
 	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTable, tableName))
 	if err != nil {
-		return fmt.Errorf("failed to create shadow table: %w", err)
+		return "", fmt.Errorf("failed to create shadow table: %w", err)
 	}
 
 	slog.Debug("Disabling triggers for faster import", "table", shadowTable)
 	// Fast import with disabled triggers
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
 	if err != nil {
-		return fmt.Errorf("failed to disable triggers: %w", err)
+		return "", fmt.Errorf("failed to disable triggers: %w", err)
 	}
 
 	file, err := os.Open(csvFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to open CSV file: %w", err)
+		return "", fmt.Errorf("failed to open CSV file: %w", err)
 	}
 	defer file.Close()
 
@@ -224,28 +304,29 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	importStart := time.Now()
 	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTable))
 	if err != nil {
-		return fmt.Errorf("failed to import CSV: %w", err)
+		return "", fmt.Errorf("failed to import CSV: %w", err)
 	}
 	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTable, "importDuration", time.Since(importStart))
 
 	slog.Debug("Re-enabling triggers", "table", shadowTable)
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
 	if err != nil {
-		return fmt.Errorf("failed to re-enable triggers: %w", err)
+		return "", fmt.Errorf("failed to re-enable triggers: %w", err)
 	}
 
 	commitStart := time.Now()
 	err = tx.Commit(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to commit shadow table: %w", err)
+		return "", fmt.Errorf("failed to commit shadow table: %w", err)
 	}
 	committed = true
 	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTable, "commitDuration", time.Since(commitStart))
 
 	// Phase 2: Atomic table swap (minimal lock time)
 	slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
-	if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
-		return err
+	backupTableName, err := swapTables(ctx, pool, tableName, shadowTable)
+	if err != nil {
+		return "", err
 	}
 
 	// Count final rows after import
@@ -267,18 +348,18 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 		"finalRows", finalCount,
 		"rowsAdded", addedRows)
 
-	return nil
+	return backupTableName, nil
 }
 
 // swapTables performs atomic table swap with minimal downtime
-func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTable string) error {
+func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTable string) (string, error) {
 	backupTable := originalTable + "_backup_" + fmt.Sprintf("%d", time.Now().Unix())
 
 	slog.Info("Preparing atomic table swap", "original", originalTable, "shadow", shadowTable, "backup", backupTable)
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin swap transaction: %w", err)
+		return backupTable, fmt.Errorf("failed to begin swap transaction: %w", err)
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck
 
@@ -287,7 +368,7 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 	// Atomic rename sequence (very fast)
 	_, err = tx.Exec(ctx, fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", originalTable, backupTable))
 	if err != nil {
-		return fmt.Errorf("failed to backup original table: %w", err)
+		return backupTable, fmt.Errorf("failed to backup original table: %w", err)
 	}
 
 	slog.Debug("Renaming shadow table to original", "shadow", shadowTable, "original", originalTable)
@@ -296,12 +377,12 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 		// Restore on failure
 		slog.Error("Failed to rename shadow table, attempting to restore original", "error", err)
 		tx.Exec(ctx, fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", backupTable, originalTable)) // nolint:errcheck
-		return fmt.Errorf("failed to rename shadow table: %w", err)
+		return backupTable, fmt.Errorf("failed to rename shadow table: %w", err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to commit table swap: %w", err)
+		return backupTable, fmt.Errorf("failed to commit table swap: %w", err)
 	}
 
 	swapDuration := time.Since(swapStart)
@@ -309,9 +390,8 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 
 	// Clean up backup table asynchronously
 	slog.Debug("Scheduling asynchronous cleanup of backup table", "backupTable", backupTable)
-	go cleanupBackupTable(pool, backupTable)
 
-	return nil
+	return backupTable, nil
 }
 
 // cleanupBackupTable removes the backup table in the background
