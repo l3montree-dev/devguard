@@ -112,7 +112,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
 	}
 	// load existing dependency vulns for this asset version
-	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
+	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
 	if err != nil {
 		slog.Error("could not load dependency vulns", "err", err)
 		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)

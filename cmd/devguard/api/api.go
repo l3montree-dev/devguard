@@ -772,29 +772,23 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 
+	assetVersionRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
+	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
+	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
+	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
+	// needs migration to artifact router
+	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
+	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
+
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
-	artifactRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
-	artifactRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
-	artifactRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
+
 	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	artifactRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
 	artifactRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
-	artifactRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
-
-	//TODO: change it
-	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	/* 	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	   	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScannerID) */
-
-	//TODO: change it
-	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	artifactRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
-	// needs migration to artifact router
-	artifactRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
-	artifactRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

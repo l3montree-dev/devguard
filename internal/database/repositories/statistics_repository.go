@@ -67,11 +67,54 @@ var openEvents = []models.VulnEventType{
 	models.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
-	err := r.db.Raw(`
+
+	var err error
+
+	if artifactName == nil {
+		err = r.db.Raw(`
+WITH events AS (
+    SELECT
+        dependency_vulns.id,
+        dependency_vulns.component_purl,
+        fe.type,
+        fe.created_at,
+        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
+        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
+        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
+    FROM
+        dependency_vulns
+    JOIN
+        vuln_events fe ON dependency_vulns.id = fe.vuln_id
+	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
+    WHERE
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+),
+intervals AS (
+   SELECT
+        id,
+        component_purl,
+        COALESCE(next_type, type) AS type,
+        prev_type,
+        prev_created_at,
+        CASE
+            WHEN next_type IS NULL THEN NOW() - prev_created_at
+            ELSE created_at - prev_created_at
+        END AS fixing_time
+    FROM
+        events
+    WHERE
+        prev_type IN ? 
+)
+SELECT
+   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
+FROM
+    intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+	} else {
+		err = r.db.Raw(`
 WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -109,6 +152,8 @@ SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
     intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+	}
+
 	if err != nil {
 		return 0, err
 	}
