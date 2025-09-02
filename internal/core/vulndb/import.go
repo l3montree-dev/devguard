@@ -167,7 +167,7 @@ func (s importService) copyCSVToDB(tmp string) error {
 	}
 	_, err = tx.Exec(ctx, `
 -- Drop the foreign key constraint first
-ALTER TABLE dependency_vulns DROP CONSTRAINT fk_dependency_vulns_cve;
+ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
 
 -- Set cve_id to NULL where the referenced CVE doesn't exist anymore
 UPDATE dependency_vulns 
@@ -222,14 +222,11 @@ ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses
 	}
 
 	err = tx.Commit(ctx)
+
 	if err != nil {
 		return fmt.Errorf("failed to commit foreign key fix transaction: %w", err)
 	}
 
-	// just wait for a second to ensure the commit is fully processed
-	time.Sleep(5 * time.Second)
-
-	// now drop the backup tables asynchronously
 	for _, backupTableName := range backupTableNames {
 		cleanupBackupTable(pool, backupTableName)
 	}
@@ -399,7 +396,7 @@ func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
 	defer cancel()
 
 	cleanupStart := time.Now()
-	_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s;", backupTable))
+	_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", backupTable))
 	if err != nil {
 		slog.Error("Failed to drop backup table", "table", backupTable, "error", err, "cleanupDuration", time.Since(cleanupStart))
 	} else {
