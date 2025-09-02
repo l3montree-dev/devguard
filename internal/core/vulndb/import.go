@@ -12,6 +12,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -137,6 +138,10 @@ func (s importService) copyCSVToDB(tmp string) error {
 	// process prune tables first (they have dependencies and need to be done sequentially)
 	wg := sync.WaitGroup{}
 	for _, file := range files {
+		fileExtension := filepath.Ext(file.Name())
+		if fileExtension != ".csv" {
+			continue
+		}
 		wg.Go(func() {
 			startTime := time.Now()
 			csvFilePath := fmt.Sprintf("%s/%s", tmp, file.Name())
