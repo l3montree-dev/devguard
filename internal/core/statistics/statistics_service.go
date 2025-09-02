@@ -2,7 +2,6 @@ package statistics
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -210,7 +209,6 @@ func (s *service) UpdateArtifactRiskAggregation(artifact *models.Artifact, asset
 		if err != nil {
 			return err
 		}
-		slog.Info("updated risk aggregation", "assetVersionName", artifact.AssetVersionName, "assetID", assetID, "artifact", artifact.ArtifactName, "day", time)
 	}
 
 	// save the last history update timestamp

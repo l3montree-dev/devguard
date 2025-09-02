@@ -41,11 +41,16 @@ func NewComponentService(depsDevService core.DepsDevService, componentProjectRep
 }
 
 func loadLicensesIntoMemory() error {
+	alpineMutex.Lock()
 	err := json.Unmarshal(alpineLicenses, &alpineLicenseMap)
+	alpineMutex.Unlock()
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(debianLicenses, &debianLicenseMap)
+	debianMutex.Lock()
+	err = json.Unmarshal(debianLicenses, &debianLicenseMap)
+	debianMutex.Unlock()
+	return err
 }
 
 func combineNamespaceAndName(namespace, name string) string {

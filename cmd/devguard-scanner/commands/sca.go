@@ -121,7 +121,6 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
 		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(pathOrImage), "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
-	// TODO @tim.. setting the directory is really only necessary for the file system scan, right?
 
 	stderr := &bytes.Buffer{}
 	// get the output
@@ -493,10 +492,12 @@ func scanExternalImage() error {
 	}
 
 	// upload the bom to the scan endpoint
-	resp, err := uploadBOM(buff)
+	resp, err, cancel := uploadBOM(buff)
+
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
+	defer cancel()
 	defer resp.Body.Close()
 
 	// check if we can upload a vex as well
@@ -546,18 +547,17 @@ func uploadVEX(vex io.Reader) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func uploadBOM(bom io.Reader) (*http.Response, error) {
+func uploadBOM(bom io.Reader) (*http.Response, error, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "could not create request"), cancel
 	}
 
 	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not sign request")
+		return nil, errors.Wrap(err, "could not sign request"), cancel
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -565,7 +565,8 @@ func uploadBOM(bom io.Reader) (*http.Response, error) {
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
-	return http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	return resp, err, cancel
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
@@ -584,11 +585,11 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not open file")
 	}
 
-	resp, err := uploadBOM(bytes.NewBuffer(file))
+	resp, err, cancel := uploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
-
+	defer cancel()
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

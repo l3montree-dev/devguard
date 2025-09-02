@@ -1,0 +1,40 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-09-02T09:50:28Z",
+    "component": {
+      "bom-ref": "main",
+      "type": "application",
+      "author": "org",
+      "publisher": "github.com/l3montree-dev/devguard",
+      "name": "main",
+      "version": "latest"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2",
+      "type": "library",
+      "name": "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2",
+      "version": "v0.0.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "no-license"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "main",
+      "dependsOn": [
+        "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2"
+      ]
+    }
+  ]
+}

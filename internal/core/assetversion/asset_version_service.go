@@ -45,25 +45,27 @@ type service struct {
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	licenseRiskRepository    core.LicenseRiskRepository
 	artifactService          core.ArtifactService
+	core.FireAndForgetSynchronizer
 }
 
 func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository, artifactService core.ArtifactService) *service {
 	return &service{
-		assetVersionRepository:   assetVersionRepository,
-		componentRepository:      componentRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		firstPartyVulnRepository: firstPartyVulnRepository,
-		dependencyVulnService:    dependencyVulnService,
-		firstPartyVulnService:    firstPartyVulnService,
-		vulnEventRepository:      vulnEventRepository,
-		componentService:         componentService,
-		assetRepository:          assetRepository,
-		httpClient:               &http.Client{},
-		thirdPartyIntegration:    thirdPartyIntegration,
-		projectRepository:        projectRepository,
-		orgRepository:            orgRepository,
-		licenseRiskRepository:    licenseRiskRepository,
-		artifactService:          artifactService,
+		assetVersionRepository:    assetVersionRepository,
+		componentRepository:       componentRepository,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		firstPartyVulnRepository:  firstPartyVulnRepository,
+		dependencyVulnService:     dependencyVulnService,
+		firstPartyVulnService:     firstPartyVulnService,
+		vulnEventRepository:       vulnEventRepository,
+		componentService:          componentService,
+		assetRepository:           assetRepository,
+		httpClient:                &http.Client{},
+		thirdPartyIntegration:     thirdPartyIntegration,
+		projectRepository:         projectRepository,
+		orgRepository:             orgRepository,
+		licenseRiskRepository:     licenseRiskRepository,
+		artifactService:           artifactService,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -285,7 +287,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	}
 
 	if len(newDetectedVulnsNotOnOtherBranch) > 0 {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
@@ -295,7 +297,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			}); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
-		}()
+		})
 	}
 
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
@@ -363,7 +365,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	if len(opened) > 0 {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
@@ -373,7 +375,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 			}); err != nil {
 				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
 			}
-		}()
+		})
 	}
 
 	return opened, closed, newState, nil
@@ -681,7 +683,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	}
 
 	// update the license information in the background
-	go func() {
+	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
 		if err != nil {
@@ -689,9 +691,9 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		} else {
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
-	}()
+	})
 	if sbomUpdated {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
 				AssetVersion: core.ToAssetVersionObject(assetVersion),
 				Asset:        core.ToAssetObject(asset),
@@ -703,8 +705,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 			}
-
-		}()
+		})
 	}
 	return nil
 }

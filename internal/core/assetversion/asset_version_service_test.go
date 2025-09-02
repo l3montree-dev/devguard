@@ -462,7 +462,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeDetected,
+							Type: models.EventTypeAccepted,
 						},
 					},
 				},
@@ -496,7 +496,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeDetected,
+							Type: models.EventTypeComment,
 						},
 					},
 				},
@@ -507,7 +507,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "develop",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeAccepted,
+							Type: models.EventTypeComment,
 						},
 					},
 				},

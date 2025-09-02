@@ -1166,7 +1166,6 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	client, projectID, err := g.getClientBasedOnAsset(asset)
 	if err != nil {
-		slog.Error("could not get gitlab client based on asset", "err", err)
 		return err
 	}
 
