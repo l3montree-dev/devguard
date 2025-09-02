@@ -247,9 +247,15 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 					slog.Debug("could not parse repo url", "url", r.Repo, "err", err)
 					continue
 				}
+
+				if url.Host != "github.com" && url.Host != "gitlab.com" && url.Host != "bitbucket.org" {
+					// we currently dont support those.
+					continue
+				}
 				// remove the scheme
 				url.Scheme = ""
 				purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
+
 				// parse the purl to get the name and namespace
 				purlParsed, err := packageurl.FromString(purl)
 				if err != nil {
@@ -262,16 +268,14 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 					tmpV := v
 					affectedComponent := AffectedComponent{
 						PurlWithoutVersion: purl,
-						Ecosystem:          affected.Package.Ecosystem,
+						Ecosystem:          "GIT",
 						Scheme:             "pkg",
 						Type:               purlParsed.Type,
 						Name:               purlParsed.Name,
 						Version:            &tmpV,
 						Namespace:          &purlParsed.Namespace,
-
-						Source: "osv",
-
-						CVE: cves,
+						Source:             "osv",
+						CVE:                cves,
 					}
 					notPurlVersionedComponents = append(notPurlVersionedComponents, affectedComponent)
 				}
