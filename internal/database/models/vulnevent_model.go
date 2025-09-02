@@ -40,6 +40,16 @@ const (
 
 type MechanicalJustificationType string
 
+var ManualVulnEventTypes = []VulnEventType{
+	EventTypeLicenseDecision,
+	EventTypeReopened,
+	EventTypeAccepted,
+	EventTypeMitigate,
+	EventTypeFalsePositive,
+	EventTypeMarkedForTransfer,
+	EventTypeComment,
+}
+
 const (
 	ComponentNotPresent                         MechanicalJustificationType = "component_not_present"
 	VulnerableCodeNotPresent                    MechanicalJustificationType = "vulnerable_code_not_present"
