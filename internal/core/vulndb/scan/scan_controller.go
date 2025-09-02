@@ -235,12 +235,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// update the sbom in the database in parallel
-	go func() {
+	s.FireAndForget(func() {
 		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 		}
-	}()
+	})
 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }
