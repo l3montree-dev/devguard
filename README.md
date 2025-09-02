@@ -71,6 +71,33 @@ Identifying and managing software vulnerabilities is an increasingly critical ch
 In 2023 alone, cyberattacks caused approximately 206 billion euros in damage only in Germany. Many of these attacks exploited software vulnerabilities. With agile and DevOps methodologies becoming standard, the need for integrating security into the development process has never been greater. We aim to fill this gap with DevGuard, offering a seamless integration of vulnerability management into development workflows.
 
 
+### DevGuard Features
+
+DevGuard comes with a lot of features to make safe Software Development as easy as possible for you. Here are some impressions of feature you will experience while using DevGuard:
+
+#### Auto-Setup
+
+We developed an auto setup functionality to speed up the DevGuard integration process.
+
+<img width="3000" height="1680" alt="auto-setup" src="https://github.com/user-attachments/assets/ec7817ce-92cb-4cfc-a019-0129ffc6dcbf" />
+
+
+#### Enhanced Risk Calculation
+
+When it comes to your actual vulnerability risk, the CVSS score is not enough. To help you prioritise based on the actual risk to your project, we enhance the CVSS score with information about exploitability and calculate the risk score based on your confidentiality, integrity and availability assessment. This ensures that the most important things come first!
+
+<img width="1706" height="973" alt="management" src="https://github.com/user-attachments/assets/1774eef0-2122-4601-a379-9b1c7b49394a" />
+<img width="281" height="672" alt="risk-assessment" src="https://github.com/user-attachments/assets/f37f28cf-d8af-42fc-8353-7e33945a453a" />
+
+
+
+#### Dependency overview
+
+Security through obscurity may have worked in the past, but we want to develop software using modern methods! The obscurity shouldn't affect you either. That's why we developed DevGuard: to give you full transparency over your dependencies and highlight any vulnerabilities. This is also visible in a fancy dependency graph.
+
+<img width="1702" height="688" alt="deps" src="https://github.com/user-attachments/assets/3dce3e70-3e5b-49c0-8d99-803f7c95d9a2" />
+
+
 
 <!-- CONTRIBUTING -->
 ## Contributing
