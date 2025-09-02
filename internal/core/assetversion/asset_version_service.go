@@ -463,7 +463,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 			for _, existingVuln := range existingVulns {
 
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return ev.OriginalAssetVersionName == nil
+					return slices.Contains(models.ManualVulnEventTypes, ev.Type) && ev.OriginalAssetVersionName == nil
 				})
 
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
@@ -1072,13 +1072,7 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 		// find the newest/latest event that was triggered through a human / manual interaction
 		for _, event := range vulnEvents {
 			// only manual events
-			if event.Type == models.EventTypeFixed ||
-				event.Type == models.EventTypeReopened ||
-				event.Type == models.EventTypeAccepted ||
-				event.Type == models.EventTypeMitigate ||
-				event.Type == models.EventTypeFalsePositive ||
-				event.Type == models.EventTypeMarkedForTransfer ||
-				event.Type == models.EventTypeComment {
+			if slices.Contains(models.ManualVulnEventTypes, event.Type) {
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
