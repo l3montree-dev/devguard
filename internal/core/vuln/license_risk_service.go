@@ -210,11 +210,21 @@ func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(tx core.DB,
 		return nil
 	}
 	events := make([]models.VulnEvent, len(licenseRisks))
+	licenseRisksToSave := make([]models.LicenseRisk, len(licenseRisks))
 	for i := range licenseRisks {
 		ev := models.NewLicenseDecisionEvent(licenseRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, userID, "Automatically fixed by license refresh", artifactName, licenseRisks[i].NewFinalLicense)
-		ev.Apply(&licenseRisks[i])
 		events[i] = ev
+		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
+		ev.Apply(&licenseRisks[i].LicenseRisk)
 	}
+	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisksToSave); err != nil {
+		return err
+	}
+
+	if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
+		return err
+	}
+
 	return nil
 }
 
