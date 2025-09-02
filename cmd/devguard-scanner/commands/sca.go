@@ -492,7 +492,7 @@ func scanExternalImage() error {
 	}
 
 	// upload the bom to the scan endpoint
-	resp, err, cancel := uploadBOM(buff)
+	resp, cancel, err := uploadBOM(buff)
 
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
@@ -547,17 +547,17 @@ func uploadVEX(vex io.Reader) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func uploadBOM(bom io.Reader) (*http.Response, error, context.CancelFunc) {
+func uploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request"), cancel
+		return nil, cancel, errors.Wrap(err, "could not create request")
 	}
 
 	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not sign request"), cancel
+		return nil, cancel, errors.Wrap(err, "could not sign request")
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -566,7 +566,7 @@ func uploadBOM(bom io.Reader) (*http.Response, error, context.CancelFunc) {
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
-	return resp, err, cancel
+	return resp, cancel, err
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
@@ -585,7 +585,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not open file")
 	}
 
-	resp, err, cancel := uploadBOM(bytes.NewBuffer(file))
+	resp, cancel, err := uploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}

@@ -327,7 +327,7 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		results, err := a.statisticsService.GetArtifactRiskHistory(nil, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
 		if err != nil {
 			return err
 		}

@@ -32,8 +32,8 @@ func NewService(statisticsRepository core.StatisticsRepository, componentReposit
 	}
 }
 
-func (s *service) GetComponentRisk(artifactName, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
+func (s *service) GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, artifactName, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,12 +81,8 @@ func (s *service) GetComponentRisk(artifactName, assetVersionName string, assetI
 	return distributionPerComponent, nil
 }
 
-func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	return s.artifactRiskHistoryRepository.GetRiskHistory(nil, assetVersionName, assetID, start, end)
-}
-
-func (s *service) GetArtifactRiskHistory(artifactName, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	return s.artifactRiskHistoryRepository.GetRiskHistory(&artifactName, assetVersionName, assetID, start, end)
+func (s *service) GetArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistory(artifactName, assetVersionName, assetID, start, end)
 }
 
 // project-level aggregation via project_risk_history has been removed.
@@ -232,7 +228,7 @@ func (s *service) GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, en
 	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(releaseID, start, end)
 }
 
-func (s *service) GetAverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+func (s *service) GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
 	switch severity {
 	case "critical":

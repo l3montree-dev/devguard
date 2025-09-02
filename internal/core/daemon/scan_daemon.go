@@ -109,7 +109,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 					for _, artifact := range artifacts {
 
-						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, artifact.ArtifactName)
+						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, &artifact.ArtifactName)
 						if err != nil {
 							slog.Error("failed to load components", "error", err)
 							continue
