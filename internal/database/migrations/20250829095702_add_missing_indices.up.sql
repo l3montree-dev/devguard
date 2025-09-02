@@ -49,11 +49,40 @@ CREATE INDEX IF NOT EXISTS idx_license_risks_asset_lookup
 ON public.license_risks (asset_id, asset_version_name);
 
 
-CREATE INDEX IF NOT EXISTS idx_component_dependencies_null_roots ON public.component_dependencies (asset_id, asset_version_name) WHERE component_purl IS NULL;
+CREATE INDEX IF NOT EXISTS idx_component_dependencies_null_roots ON public.public.component_dependencies (asset_id, asset_version_name) WHERE component_purl IS NULL;
 
 
 ALTER TABLE ONLY public.component_dependencies
     DROP CONSTRAINT IF EXISTS fk_asset_versions_components;
 
 ALTER TABLE ONLY public.component_dependencies
-    ADD CONSTRAINT fk_asset_versions_components FOREIGN KEY (asset_version_name, asset_id) REFERENCES public.asset_versions(name, asset_id) ON DELETE CASCADE;
+    ADD CONSTRAINT fk_asset_versions_components FOREIGN KEY (asset_version_name, asset_id) REFERENCES public.asset_versions(name, asset_id) ON public.DELETE CASCADE;
+
+
+CREATE INDEX IF NOT EXISTS idx_components_project_key ON public.components (project_key);
+CREATE INDEX IF NOT EXISTS idx_dependency_vulns_cve_id ON public.dependency_vulns (cve_id);
+CREATE INDEX IF NOT EXISTS idx_dependency_vulns_component_purl ON public.dependency_vulns (component_purl);
+CREATE INDEX IF NOT EXISTS idx_dependency_vulns_cve_id ON public.dependency_vulns (cve_id);
+CREATE INDEX IF NOT EXISTS idx_exploits_cve_id ON public.exploits (cve_id);
+CREATE INDEX IF NOT EXISTS idx_vuln_events_flaw_id ON public.vuln_events (flaw_id);
+CREATE INDEX IF NOT EXISTS idx_projects_parent_id ON public.projects (parent_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_organization_id ON public.organizations (organization_id);
+CREATE INDEX IF NOT EXISTS idx_github_app_installations_org_id ON public.github_app_installations (org_id);
+CREATE INDEX IF NOT EXISTS idx_gitlab_integrations_org_id ON public.gitlab_integrations (org_id);
+CREATE INDEX IF NOT EXISTS idx_in_toto_links_pat_id ON public.in_toto_links (pat_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_organization_id ON public.invitations (organization_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_asset_version_name_asset_id ON public.supply_chain (asset_version_name, asset_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_asset_id ON public.supply_chain (asset_id);
+CREATE INDEX IF NOT EXISTS idx_supply_chain_asset_id ON public.supply_chain (asset_id);
+CREATE INDEX IF NOT EXISTS idx_first_party_vulnerabilities_asset_version_name_asset_id ON public.first_party_vulnerabilities (asset_version_name, asset_id);
+CREATE INDEX IF NOT EXISTS idx_policies_organization_id ON public.policies (organization_id);
+CREATE INDEX IF NOT EXISTS idx_jira_integrations_org_id ON public.jira_integrations (org_id);
+CREATE INDEX IF NOT EXISTS idx_license_risks_component_purl ON public.license_risks (component_purl);
+CREATE INDEX IF NOT EXISTS idx_webhook_integrations_org_id ON public.webhook_integrations (org_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_integrations_project_id ON public.webhook_integrations (project_id);
+CREATE INDEX IF NOT EXISTS idx_releases_project_id ON public.releases (project_id);
+CREATE INDEX IF NOT EXISTS idx_release_items_asset_version_name_artifact_name_asset_id ON public.release_items (asset_version_name, artifact_name, asset_id);
+CREATE INDEX IF NOT EXISTS idx_release_items_child_release_id ON public.release_items (child_release_id);
+CREATE INDEX IF NOT EXISTS idx_release_items_release_id ON public.release_items (release_id);
+CREATE INDEX IF NOT EXISTS idx_release_items_child_release_id ON public.release_items (child_release_id);
+CREATE INDEX IF NOT EXISTS idx_release_items_release_id ON public.release_items (release_id);
