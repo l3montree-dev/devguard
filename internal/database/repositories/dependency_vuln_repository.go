@@ -107,11 +107,11 @@ func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVers
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, models.VulnStateFixed)
 
-	if artifactName != "" {
+	if artifactName != nil {
 		// scanner ids is a string array separated by whitespaces
 		q = q.Joins("JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("JOIN artifacts ON artifact_dependency_vulns.artifact_artifact_name = artifacts.artifact_name AND artifact_dependency_vulns.artifact_asset_version_name = artifacts.asset_version_name AND artifact_dependency_vulns.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
 	}

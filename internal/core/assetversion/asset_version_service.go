@@ -534,7 +534,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
+	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err

@@ -109,7 +109,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	WHERE
 		cd.component_purl IS NULL AND
 		cd.asset_id = @assetID AND
-		cd.asset_version_name = @assetVersionName
+		cd.asset_version_name = @assetVersionName AND
 		acd.artifact_asset_version_name = @assetVersionName AND
 		acd.artifact_asset_id = @assetID
 

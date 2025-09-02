@@ -251,14 +251,8 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 }
 
 func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	var dependencyVulns []models.DependencyVuln
-	var err error
-	if artifactName == nil {
-		dependencyVulns, err = a.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
-	} else {
-		// get all associated dependencyVulns
-		dependencyVulns, err = a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, *artifactName)
-	}
+	// get all associated dependencyVulns
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
 
 	if err != nil {
 		return nil, err
