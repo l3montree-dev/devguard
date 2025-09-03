@@ -781,7 +781,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 			} else {
 				licenses = append(licenses, cdx.LicenseChoice{
 					License: &cdx.License{
-						Name: "non-standard",
+						ID: "non-standard",
 					},
 				})
 			}
@@ -797,7 +797,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 			} else {
 				licenses = append(licenses, cdx.LicenseChoice{
 					License: &cdx.License{
-						Name: "non-standard",
+						ID: "non-standard",
 					},
 				})
 			}
@@ -1099,7 +1099,8 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 // write the components from bom to the output file following the template
 func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
-	type ComponentData struct {
+
+	type componentData struct {
 		Package  string
 		Version  string
 		Licenses *cdx.Licenses
@@ -1109,29 +1110,18 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	licenseCounts := make(map[string]int)
 	totalComponents := 0
 
-	var templateData []ComponentData
+	var templateValues []componentData
 	for _, component := range *bom.Components {
 		packageName := component.BOMRef
-		ecosystem := "unknown"
 
 		// parse PURL to extract ecosystem for counting, but keep original packageName intact
-		if strings.HasPrefix(packageName, "pkg:") {
-			// split at the last "@" to remove version for ecosystem extraction only
-			lastAtIndex := strings.LastIndex(packageName, "@")
-			if lastAtIndex != -1 {
-				packageNameWithoutVersion := packageName[:lastAtIndex]
-				// extract ecosystem (first part before first "/")
-				ecosystemParts := strings.Split(packageNameWithoutVersion, "/")
-				if len(ecosystemParts) > 0 {
-					ecosystem = ecosystemParts[0]
-				}
-				// only remove version from display name, keep everything else intact
-				packageName = packageNameWithoutVersion
-			}
+		packageurlParsed, err := packageurl.FromString(component.PackageURL)
+		if err != nil {
+			continue
 		}
 
 		// count ecosystem
-		ecosystemCounts[ecosystem]++
+		ecosystemCounts[packageurlParsed.Type]++
 		totalComponents++
 
 		// count licenses
@@ -1140,8 +1130,6 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 				if licenseChoice.License != nil {
 					if licenseChoice.License.ID != "" {
 						licenseCounts[licenseChoice.License.ID]++
-					} else if licenseChoice.License.Name != "" {
-						licenseCounts[licenseChoice.License.Name]++
 					}
 				}
 			}
@@ -1149,7 +1137,7 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 			licenseCounts["Unknown"]++
 		}
 
-		templateData = append(templateData, ComponentData{
+		templateValues = append(templateValues, componentData{
 			Package:  packageName,
 			Version:  component.Version,
 			Licenses: component.Licenses,
@@ -1157,15 +1145,15 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	}
 
 	// create template data with statistics
-	type StatEntry struct {
+	type statEntry struct {
 		Name  string
 		Count int
 	}
 
-	type TemplateData struct {
-		Components      []ComponentData
-		EcosystemStats  []StatEntry
-		LicenseStats    []StatEntry
+	type templateData struct {
+		Components      []componentData
+		EcosystemStats  []statEntry
+		LicenseStats    []statEntry
 		TotalComponents int
 		ArtifactName    string
 		AssetVersion    string
@@ -1174,26 +1162,26 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	}
 
 	// convert maps to sorted slices
-	ecosystemSlice := make([]StatEntry, 0, len(ecosystemCounts))
+	ecosystemSlice := make([]statEntry, 0, len(ecosystemCounts))
 	for name, count := range ecosystemCounts {
-		ecosystemSlice = append(ecosystemSlice, StatEntry{Name: name, Count: count})
+		ecosystemSlice = append(ecosystemSlice, statEntry{Name: name, Count: count})
 	}
 
-	licenseSlice := make([]StatEntry, 0, len(licenseCounts))
+	licenseSlice := make([]statEntry, 0, len(licenseCounts))
 	for name, count := range licenseCounts {
-		licenseSlice = append(licenseSlice, StatEntry{Name: name, Count: count})
+		licenseSlice = append(licenseSlice, statEntry{Name: name, Count: count})
 	}
 
 	// sort by count descending (highest first)
-	slices.SortFunc(ecosystemSlice, func(a, b StatEntry) int {
+	slices.SortStableFunc(ecosystemSlice, func(a, b statEntry) int {
 		return b.Count - a.Count
 	})
-	slices.SortFunc(licenseSlice, func(a, b StatEntry) int {
+	slices.SortStableFunc(licenseSlice, func(a, b statEntry) int {
 		return b.Count - a.Count
 	})
 
-	data := TemplateData{
-		Components:      templateData,
+	data := templateData{
+		Components:      templateValues,
 		EcosystemStats:  ecosystemSlice,
 		LicenseStats:    licenseSlice,
 		TotalComponents: totalComponents,
