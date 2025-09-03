@@ -331,10 +331,7 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 		if err != nil {
 			return err
 		}
-		if len(results) == 0 {
-			return echo.NewHTTPError(404, "badge not found")
-		}
-		svg = a.assetService.GetCVSSBadgeSVG(results[0].Distribution)
+		svg = a.assetService.GetCVSSBadgeSVG(results)
 
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")

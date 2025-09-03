@@ -107,18 +107,29 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 	return nil
 }
 
-func (s *service) GetCVSSBadgeSVG(CVSS models.Distribution) string {
-	if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
+func (s *service) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string {
+
+	if len(results) == 0 {
 		return core.GetBadgeSVG("CVSS", []core.BadgeValues{
-			{Key: "all clear", Value: 0, Color: "#008000"},
+			{Key: "unknown", Value: 0, Color: "#808080"},
 		})
+	} else {
+
+		CVSS := results[0].Distribution
+
+		if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
+			return core.GetBadgeSVG("CVSS", []core.BadgeValues{
+				{Key: "all clear", Value: 0, Color: "#008000"},
+			})
+		}
+
+		values := []core.BadgeValues{
+			{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
+			{Key: "H", Value: CVSS.High, Color: "#B22222"},
+			{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
+			{Key: "L", Value: CVSS.Low, Color: "#F08080"},
+		}
+		return core.GetBadgeSVG("CVSS", values)
 	}
 
-	values := []core.BadgeValues{
-		{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
-		{Key: "H", Value: CVSS.High, Color: "#B22222"},
-		{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
-		{Key: "L", Value: CVSS.Low, Color: "#F08080"},
-	}
-	return core.GetBadgeSVG("CVSS", values)
 }
