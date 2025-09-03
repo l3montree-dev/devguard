@@ -41,3 +41,11 @@ func (r *githubAppInstallationRepository) FindByOrganizationID(orgID uuid.UUID) 
 	}
 	return installations, nil
 }
+
+func (r *githubAppInstallationRepository) Read(id int) (models.GithubAppInstallation, error) {
+	var installation models.GithubAppInstallation
+	if err := r.db.First(&installation, "installation_id = ?", id).Error; err != nil {
+		return models.GithubAppInstallation{}, err
+	}
+	return installation, nil
+}
