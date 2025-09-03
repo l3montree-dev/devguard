@@ -24,37 +24,25 @@ type cveReference struct {
 	Tags   []string `json:"tags"`
 }
 type CVE struct {
-	CVE string `json:"cve" gorm:"primaryKey;not null;type:text;"`
-
-	CreatedAt time.Time `json:"createdAt" cve:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt" cve:"updatedAt"`
-
-	DatePublished    time.Time `json:"datePublished" cve:"datePublished"`
-	DateLastModified time.Time `json:"dateLastModified" cve:"dateLastModified"`
-
-	Weaknesses  []*Weakness `json:"weaknesses" gorm:"foreignKey:CVEID;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
-	Description string      `json:"description" gorm:"type:text;" cve:"description"`
-
-	CVSS float32 `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
-
-	References string `json:"references" gorm:"type:text;" cve:"references"`
-
-	CISAExploitAdd        *datatypes.Date `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd"`
-	CISAActionDue         *datatypes.Date `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue"`
-	CISARequiredAction    string          `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
-	CISAVulnerabilityName string          `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
-
-	Configurations []*CPEMatch `json:"configurations" gorm:"many2many:cve_cpe_match;"`
-
-	EPSS       *float64 `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
-	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
-
-	AffectedComponents []*AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
-
-	Vector string `json:"vector" gorm:"type:text;" cve:"vector"`
-
-	Risk     common.RiskMetrics `json:"risk" gorm:"-" cve:"risk"`
-	Exploits []*Exploit         `json:"exploits" gorm:"foreignKey:CVEID;"`
+	CVE                   string               `json:"cve" gorm:"primaryKey;not null;type:text;"`
+	CreatedAt             time.Time            `json:"createdAt" cve:"createdAt"`
+	UpdatedAt             time.Time            `json:"updatedAt" cve:"updatedAt"`
+	DatePublished         time.Time            `json:"datePublished" cve:"datePublished"`
+	DateLastModified      time.Time            `json:"dateLastModified" cve:"dateLastModified"`
+	Weaknesses            []*Weakness          `json:"weaknesses" gorm:"foreignKey:CVEID;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
+	Description           string               `json:"description" gorm:"type:text;" cve:"description"`
+	CVSS                  float32              `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
+	References            string               `json:"references" gorm:"type:text;" cve:"references"`
+	CISAExploitAdd        *datatypes.Date      `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd"`
+	CISAActionDue         *datatypes.Date      `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue"`
+	CISARequiredAction    string               `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
+	CISAVulnerabilityName string               `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
+	EPSS                  *float64             `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
+	Percentile            *float32             `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
+	AffectedComponents    []*AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
+	Vector                string               `json:"vector" gorm:"type:text;" cve:"vector"`
+	Risk                  common.RiskMetrics   `json:"risk" gorm:"-" cve:"risk"`
+	Exploits              []*Exploit           `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {

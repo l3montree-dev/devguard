@@ -79,18 +79,16 @@ func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 
 	var cve models.CVE
 	var weaknesses []models.Weakness
-	var cpes []models.CPEMatch
+
 	err = nvdService.cveRepository.Transaction(func(tx core.DB) error {
-		cve, weaknesses, cpes = fromNVDCVE(resp.Vulnerabilities[0].Cve)
+		cve, weaknesses = fromNVDCVE(resp.Vulnerabilities[0].Cve)
 		if err := nvdService.cveRepository.Save(tx, &cve); err != nil {
 			return err
 		}
 		if err := nvdService.cveRepository.GetDB(tx).Model(&cve).Association("Weaknesses").Append(weaknesses); err != nil {
 			return err
 		}
-
-		// save the cpes
-		return nvdService.cveRepository.GetDB(tx).Model(&cve).Association("Configurations").Append(cpes)
+		return nil
 	})
 
 	if err != nil {
@@ -150,9 +148,8 @@ func (nvdService NVDService) fetchJSONFromNVD(url url.URL, currentTry int) (nist
 func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 	cves := make([]models.CVE, len(resp.Vulnerabilities))
 	weaknesses := make([][]models.Weakness, len(resp.Vulnerabilities))
-	cpes := make([][]models.CPEMatch, len(resp.Vulnerabilities))
 	for i, v := range resp.Vulnerabilities {
-		cves[i], weaknesses[i], cpes[i] = fromNVDCVE(v.Cve)
+		cves[i], weaknesses[i] = fromNVDCVE(v.Cve)
 	}
 
 	for i, cve := range cves {
@@ -165,11 +162,6 @@ func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 			// save the weaknesses
 			if err := nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Weaknesses").Append(weaknesses[i]); err != nil {
 				slog.Warn("Could not save weaknesses", "err", err)
-				return err
-			}
-			// save the cpes
-			if err := nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Configurations").Append(cpes[i]); err != nil {
-				slog.Warn("Could not save CPEs", "err", err)
 				return err
 			}
 			return nil
@@ -355,7 +347,7 @@ func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
 	}
 }
 
-func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatch) {
+func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness) {
 	published, err := time.Parse(utils.ISO8601Format, nistCVE.Published)
 	if err != nil {
 		published = time.Now()
@@ -378,7 +370,6 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatc
 
 	// build the cwe list
 	weaknesses := []models.Weakness{}
-	configurations := []models.CPEMatch{}
 
 	for _, w := range nistCVE.Weaknesses {
 		for _, d := range w.Description {
@@ -394,23 +385,6 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatc
 					CWEID:  d.Value,
 					CVEID:  nistCVE.ID,
 				})
-			}
-		}
-	}
-
-	matchCriteriaIds := make(map[string]struct{})
-
-	for _, c := range nistCVE.Configurations {
-		for _, n := range c.Nodes {
-			for _, m := range n.CpeMatch {
-				// check if we already have that criteria
-				if _, ok := matchCriteriaIds[m.MatchCriteriaID]; ok {
-					continue
-				}
-
-				matchCriteriaIds[m.MatchCriteriaID] = struct{}{}
-				cpe := fromNVDCPEMatch(m)
-				configurations = append(configurations, cpe)
 			}
 		}
 	}
@@ -440,33 +414,6 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatc
 		Vector: cvssMetric.Vector,
 
 		References: string(refs),
-	}, weaknesses, configurations
+	}, weaknesses
 
-}
-
-// criteria format:
-// cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
-func fromNVDCPEMatch(cpeMatch nvdCpeMatch) models.CPEMatch {
-	// split the criteria into its parts
-	parts := strings.Split(cpeMatch.Criteria, ":")
-
-	match := models.CPEMatch{
-		Criteria:              cpeMatch.Criteria,
-		Part:                  parts[2],
-		Vendor:                parts[3],
-		Product:               parts[4],
-		Version:               parts[5],
-		Update:                parts[6],
-		Edition:               parts[7],
-		Language:              parts[8],
-		SwEdition:             parts[9],
-		TargetSw:              parts[10],
-		TargetHw:              parts[11],
-		Other:                 parts[12],
-		VersionEndExcluding:   utils.EmptyThenNil(cpeMatch.VersionEndExcluding),
-		VersionEndIncluding:   utils.EmptyThenNil(cpeMatch.VersionEndIncluding),
-		VersionStartIncluding: utils.EmptyThenNil(cpeMatch.VersionStartIncluding),
-		Vulnerable:            cpeMatch.Vulnerable,
-	}
-	return match
 }

@@ -111,9 +111,7 @@ type CveRepository interface {
 	common.Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
 	GetLastModDate() (time.Time, error)
-	SaveBatchCPEMatch(tx DB, matches []models.CPEMatch) error
 	GetAllCVEsID() ([]string, error)
-	GetAllCPEMatchesID() ([]string, error)
 	Save(tx DB, cve *models.CVE) error
 	SaveCveAffectedComponents(tx DB, cveID string, affectedComponentHashes []string) error
 	FindCVE(tx DB, id string) (models.CVE, error)

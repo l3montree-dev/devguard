@@ -104,17 +104,6 @@ func newImportCVECommand() *cobra.Command {
 				slog.Error("could not import cve", "err", err)
 				return
 			}
-			slog.Info("successfully imported cve", "cveID", cve.CVE)
-
-			// the cvelist does provide additional cpe matches.
-			cvelistService := vulndb.NewCVEListService(cveRepository)
-			cpeMatches, err := cvelistService.ImportCVE(cveID)
-			if err != nil {
-				slog.Error("could not import cve from cvelist", "err", err)
-				return
-			}
-
-			slog.Info("successfully imported cpe matches", "cveID", cve.CVE, "cpeMatches", len(cpeMatches))
 
 			// the osv database provides additional information about affected packages
 			affectedPackages, err := osvService.ImportCVE(cveID)

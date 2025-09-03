@@ -51,10 +51,9 @@ type HTTPController struct {
 }
 
 func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
-	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
-	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
+	scanner := NewSBOMScanner(purlComparer, cveRepository)
 	return &HTTPController{
 		db:                        db,
 		sbomScanner:               scanner,
