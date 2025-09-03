@@ -1,7 +1,6 @@
 package events
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -36,10 +35,9 @@ func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
 }
 
 func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
-
-	originalAssetVersionName := *event.OriginalAssetVersionName
-	if originalAssetVersionName == "" {
-		originalAssetVersionName = event.AssetVersionName
+	originalAssetVersionName := event.AssetVersionName
+	if event.OriginalAssetVersionName != nil {
+		originalAssetVersionName = *event.OriginalAssetVersionName
 	}
 
 	return VulnEventDTO{
@@ -62,10 +60,9 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 	var dtos []VulnEventDTO
 	for _, e := range event {
-		originalAssetVersionName := *e.OriginalAssetVersionName
-		fmt.Println("Original Asset Version Name:", originalAssetVersionName)
-		if originalAssetVersionName == "" {
-			originalAssetVersionName = e.AssetVersionName
+		originalAssetVersionName := e.AssetVersionName
+		if e.OriginalAssetVersionName != nil {
+			originalAssetVersionName = *e.OriginalAssetVersionName
 		}
 		dtos = append(dtos, VulnEventDTO{
 			ID:                      e.ID,
