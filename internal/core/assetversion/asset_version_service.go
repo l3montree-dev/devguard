@@ -714,10 +714,6 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 	var pURL packageurl.PackageURL
 	var err error
 
-	if version == models.NoVersion {
-		version = "latest"
-	}
-
 	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
 	bom := cdx.BOM{
