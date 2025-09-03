@@ -397,6 +397,9 @@ type StatisticsRepository interface {
 	AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
 	AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	// CVSS-based average fixing time methods
+	AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
+	AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
@@ -420,6 +423,9 @@ type StatisticsService interface {
 	// Release scoped statistics
 	GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
+	// CVSS-based average fixing time methods
+	GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
+	GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
 	GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 

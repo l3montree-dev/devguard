@@ -203,6 +203,150 @@ func (_c *StatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(art
 	return _c
 }
 
+// GetAverageFixingTimeByCvss provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID, severity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAverageFixingTimeByCvss")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) (time.Duration, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID, severity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) time.Duration); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID, severity)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID, severity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetAverageFixingTimeByCvss_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageFixingTimeByCvss'
+type StatisticsService_GetAverageFixingTimeByCvss_Call struct {
+	*mock.Call
+}
+
+// GetAverageFixingTimeByCvss is a helper method to define mock.On call
+//   - artifactName *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - severity string
+func (_e *StatisticsService_Expecter) GetAverageFixingTimeByCvss(artifactName interface{}, assetVersionName interface{}, assetID interface{}, severity interface{}) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	return &StatisticsService_GetAverageFixingTimeByCvss_Call{Call: _e.mock.On("GetAverageFixingTimeByCvss", artifactName, assetVersionName, assetID, severity)}
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) Return(duration time.Duration, err error) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAverageFixingTimeByCvssForRelease provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
+	ret := _mock.Called(releaseID, severity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAverageFixingTimeByCvssForRelease")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) (time.Duration, error)); ok {
+		return returnFunc(releaseID, severity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) time.Duration); ok {
+		r0 = returnFunc(releaseID, severity)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = returnFunc(releaseID, severity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetAverageFixingTimeByCvssForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageFixingTimeByCvssForRelease'
+type StatisticsService_GetAverageFixingTimeByCvssForRelease_Call struct {
+	*mock.Call
+}
+
+// GetAverageFixingTimeByCvssForRelease is a helper method to define mock.On call
+//   - releaseID uuid.UUID
+//   - severity string
+func (_e *StatisticsService_Expecter) GetAverageFixingTimeByCvssForRelease(releaseID interface{}, severity interface{}) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	return &StatisticsService_GetAverageFixingTimeByCvssForRelease_Call{Call: _e.mock.On("GetAverageFixingTimeByCvssForRelease", releaseID, severity)}
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) Run(run func(releaseID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) Return(duration time.Duration, err error) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAverageFixingTimeForRelease provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
 	ret := _mock.Called(releaseID, severity)

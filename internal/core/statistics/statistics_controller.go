@@ -48,13 +48,25 @@ func (c *httpController) GetAverageFixingTime(ctx core.Context) error {
 		})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-	if err != nil {
-		return ctx.JSON(500, nil)
+	res := utils.Concurrently(
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+		},
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeByCvss(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get average fixing time", "errors", res.Errors())
+		return ctx.JSON(500, map[string]string{
+			"error": "could not get average fixing time",
+		})
 	}
 
 	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds": duration.Abs().Seconds(),
+		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
+		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
 	})
 }
 
@@ -203,11 +215,22 @@ func (c *httpController) GetAverageReleaseFixingTime(ctx core.Context) error {
 		return ctx.JSON(400, map[string]string{"error": err.Error()})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
-	if err != nil {
-		slog.Error("could not compute average fixing time for release", "err", err)
+	res := utils.Concurrently(
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
+		},
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(releaseID, severity)
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get average fixing time for release", "errors", res.Errors())
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, map[string]float64{"averageFixingTimeSeconds": duration.Abs().Seconds()})
+	return ctx.JSON(200, map[string]float64{
+		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
+		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
+	})
 }
