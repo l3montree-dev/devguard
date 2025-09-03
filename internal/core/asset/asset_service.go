@@ -60,7 +60,7 @@ func (s *service) CreateAsset(asset models.Asset) (*models.Asset, error) {
 				return nil, echo.NewHTTPError(500, "could not read asset").WithInternal(err)
 			}
 
-			if err = s.assetRepository.Activate(nil, newAsset.GetID()); err != nil {
+			if err = s.assetRepository.Activate(nil, asset.GetID()); err != nil {
 				return nil, echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
 			}
 			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", asset.ProjectID)
