@@ -1,6 +1,6 @@
 apiVersion: v2
 name: devguard
-description: A Helm chart for Kubernetes
+description: A Helm chart for DevGuard
 
 # A chart can be either an 'application' or a 'library' chart.
 #

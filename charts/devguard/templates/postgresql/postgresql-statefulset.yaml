@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   labels:
     app: postgresql
@@ -9,8 +9,6 @@ spec:
   selector:
     matchLabels:
       app: postgresql
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
