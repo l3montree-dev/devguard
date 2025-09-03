@@ -18,14 +18,14 @@ import (
 
 type service struct {
 	componentRepository        core.ComponentRepository
-	depsDevService             core.DepsDevService
+	openSourceInsightsService  core.OpenSourceInsightService
 	componentProjectRepository core.ComponentProjectRepository
 	licenseRiskService         core.LicenseRiskService
 	artifactRepository         core.ArtifactRepository
 	synchronizer               core.FireAndForgetSynchronizer
 }
 
-func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService, artifactRepository core.ArtifactRepository, synchronizer core.FireAndForgetSynchronizer) service {
+func NewComponentService(openSourceInsightsService core.OpenSourceInsightService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService, artifactRepository core.ArtifactRepository, synchronizer core.FireAndForgetSynchronizer) service {
 	err := loadLicensesIntoMemory()
 	if err != nil {
 		panic(fmt.Sprintf("error when trying to load licenses into memory, error: %s", err.Error()))
@@ -33,7 +33,7 @@ func NewComponentService(depsDevService core.DepsDevService, componentProjectRep
 	return service{
 		componentRepository:        componentRepository,
 		componentProjectRepository: componentProjectRepository,
-		depsDevService:             depsDevService,
+		openSourceInsightsService:  openSourceInsightsService,
 		licenseRiskService:         licenseRiskService,
 		artifactRepository:         artifactRepository,
 		synchronizer:               synchronizer,
@@ -63,7 +63,7 @@ func combineNamespaceAndName(namespace, name string) string {
 
 func (s *service) RefreshComponentProjectInformation(project models.ComponentProject) {
 	projectKey := project.ProjectKey
-	projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
+	projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
 
 	if err != nil {
 		slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
@@ -93,7 +93,7 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 		slog.Warn("could not save project", "err", err)
 	} else {
 		slog.Info("updated project", "projectKey", projectKey)
-		monitoring.DepsDevProjectUpdatedAmount.Inc()
+		monitoring.OpenSourceInsightProjectUpdatedAmount.Inc()
 	}
 }
 
@@ -125,7 +125,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &license
 	default:
-		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
+		resp, err := s.openSourceInsightsService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
@@ -158,7 +158,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 				projectKey := project.ProjectKey.ID
 
 				// fetch the project
-				projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
+				projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
 				if err != nil {
 					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 				}

@@ -95,13 +95,13 @@ func Start(db core.DB, broker pubsub.Broker) {
 		}
 
 		// update deps dev
-		if shouldMirror(configService, "vulndb.depsdev") {
-			err := UpdateDepsDevInformation(db)
+		if shouldMirror(configService, "vulndb.opensourceinsights") {
+			err := UpdateOpenSourceInsightInformation(db)
 			if err != nil {
 				slog.Error("could not update deps dev information", "err", err)
 				return nil
 			}
-			if err := markMirrored(configService, "vulndb.depsdev"); err != nil {
+			if err := markMirrored(configService, "vulndb.opensourceinsights"); err != nil {
 				slog.Error("could not mark deps dev as mirrored", "err", err)
 			}
 			slog.Info("deps dev information updated", "duration", time.Since(start))

@@ -135,12 +135,12 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 	clientfactory, _ := integration_tests.NewTestClientFactory(t)
 	repositories.NewExploitRepository(db)
-	mockDepsDevService := mocks.NewDepsDevService(t)
+	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
-	mockDepsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{
+	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{
 		Licenses: []string{},
 	}, nil)
-	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockDepsDevService)
+	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 

@@ -18,13 +18,13 @@ import (
 func TestHandleComponent(t *testing.T) {
 
 	t.Run("should set the license to unknown, if there is no license information", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -32,7 +32,7 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, nil)
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.OpenSourceInsightsVersionResponse{}, nil)
 
 		actual, err := service.GetLicense(component)
 
@@ -40,13 +40,13 @@ func TestHandleComponent(t *testing.T) {
 		assert.Equal(t, utils.Ptr("unknown"), actual.License)
 	})
 	t.Run("should also get alpine Licenses", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
 			Purl:    "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
@@ -61,13 +61,13 @@ func TestHandleComponent(t *testing.T) {
 	})
 
 	t.Run("should find debian licenses", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 		component := models.Component{
 			Purl:    "pkg:deb/debian/gdbm@1.23", // that is how the component looks - the version inside the purl is not the full version
 			Version: "1.23-3",
@@ -81,7 +81,7 @@ func TestHandleComponent(t *testing.T) {
 	})
 
 	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
@@ -93,8 +93,8 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, assert.AnError)
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.OpenSourceInsightsVersionResponse{}, assert.AnError)
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		actual, err := service.GetLicense(c)
 
@@ -104,7 +104,7 @@ func TestHandleComponent(t *testing.T) {
 	})
 
 	t.Run("should fetch the project information if there is a SOURCE_REPO defined in the related projects", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
@@ -116,7 +116,7 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.OpenSourceInsightsVersionResponse{
 			RelatedProjects: []struct {
 				ProjectKey struct {
 					ID string "json:\"id\""
@@ -133,14 +133,14 @@ func TestHandleComponent(t *testing.T) {
 			},
 		}, nil)
 
-		projectResponse := common.DepsDevProjectResponse{
+		projectResponse := common.OpenSourceInsightsProjectResponse{
 			ProjectKey: struct {
 				ID string "json:\"id\""
 			}{ID: "github/test/project"},
 		}
-		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
+		mockOpenSourceInsightService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		actual, err := service.GetLicense(c)
 
@@ -151,7 +151,7 @@ func TestHandleComponent(t *testing.T) {
 
 func TestHandleProject(t *testing.T) {
 	t.Run("should save the project information", func(t *testing.T) {
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
@@ -186,7 +186,7 @@ func TestHandleProject(t *testing.T) {
 			License:     "MIT",
 		}
 
-		projectResponse := common.DepsDevProjectResponse{
+		projectResponse := common.OpenSourceInsightsProjectResponse{
 			ProjectKey: struct {
 				ID string "json:\"id\""
 			}{ID: "github/test/project"},
@@ -196,11 +196,11 @@ func TestHandleProject(t *testing.T) {
 			Scorecard:   &scoreCard,
 		}
 
-		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
+		mockOpenSourceInsightService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
 		mockComponentProjectRepository.On("Save", mock.Anything, &expectedProject).Return(nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
+		service := component.NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, nil, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 		service.RefreshComponentProjectInformation(project)
 	})
 }

@@ -19,11 +19,11 @@ func NewComponentsCommand() *cobra.Command {
 		Use: "components",
 	}
 
-	vulndbCmd.AddCommand(newUpdateDepsDevInformation())
+	vulndbCmd.AddCommand(newUpdateOpenSourceInsightInformation())
 	return &vulndbCmd
 }
 
-func newUpdateDepsDevInformation() *cobra.Command {
+func newUpdateOpenSourceInsightInformation() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "update-deps-dev-info",
 		Short: "Will update the dev information for all existing components",
@@ -36,7 +36,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 				return
 			}
 
-			depsDevService := vulndb.NewDepsDevService()
+			openSourceInsightsService := vulndb.NewOpenSourceInsightService()
 			componentProjectRepository := repositories.NewComponentProjectRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database), repositories.NewVulnEventRepository(database))
@@ -48,7 +48,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 			}
 
 			componentService := component.NewComponentService(
-				&depsDevService,
+				&openSourceInsightsService,
 				componentProjectRepository,
 				componentRepository,
 				licenseRiskService,

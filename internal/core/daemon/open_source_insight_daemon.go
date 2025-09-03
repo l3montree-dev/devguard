@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -12,25 +13,28 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func UpdateDepsDevInformation(db core.DB) error {
+func UpdateOpenSourceInsightInformation(db core.DB) error {
 	strat := time.Now()
 	defer func() {
-		monitoring.UpdateDepsDevInformationDuration.Observe(time.Since(strat).Minutes())
+		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(strat).Minutes())
 	}()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
-	depsDevService := vulndb.NewDepsDevService()
+	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
 	licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
+	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
 
 	if err != nil {
 		return err
 	}
 
+	var wg sync.WaitGroup
 	for _, project := range projectsToUpdate {
-		go componentService.RefreshComponentProjectInformation(project)
+		wg.Go(func() { componentService.RefreshComponentProjectInformation(project) })
 	}
 
-	monitoring.UpdateDepsDevInformationDaemonAmount.Inc()
+	wg.Wait()
+
+	monitoring.UpdateOpenSourceInsightInformationDaemonAmount.Inc()
 	return nil
 }

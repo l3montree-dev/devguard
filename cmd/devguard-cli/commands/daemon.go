@@ -100,10 +100,10 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 		slog.Info("old asset versions deleted", "duration", time.Since(start))
 	}
 
-	if emptyOrContains(daemons, "depsDev") {
+	if emptyOrContains(daemons, "openSourceInsights") {
 		start = time.Now()
 		// update deps dev
-		err := daemon.UpdateDepsDevInformation(db)
+		err := daemon.UpdateOpenSourceInsightInformation(db)
 		if err != nil {
 			slog.Error("could not update deps dev information", "err", err)
 			return nil

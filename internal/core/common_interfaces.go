@@ -423,9 +423,9 @@ type StatisticsService interface {
 	GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 
-type DepsDevService interface {
-	GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error)
-	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
+type OpenSourceInsightService interface {
+	GetProject(ctx context.Context, projectID string) (common.OpenSourceInsightsProjectResponse, error)
+	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.OpenSourceInsightsVersionResponse, error)
 }
 
 type ComponentProjectRepository interface {

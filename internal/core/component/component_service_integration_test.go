@@ -124,18 +124,18 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		// Set up services
 		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
-		// Mock the DepsDevService for the component without license
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		// Mock the OpenSourceInsightService for the component without license
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
 		// Mock response for the component without license - simulate getting "unknown" license
-		mockDepsDevService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
-			Return(common.DepsDevVersionResponse{
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
+			Return(common.OpenSourceInsightsVersionResponse{
 				Licenses: []string{}, // No licenses returned
 			}, nil)
 
 		// Create the component service with mocked dependencies
 		componentService := component.NewComponentService(
-			mockDepsDevService,
+			mockOpenSourceInsightService,
 			componentProjectRepository,
 			componentRepository,
 			licenseRiskService,
@@ -262,10 +262,10 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		vulnEventRepository := repositories.NewVulnEventRepository(db)
 		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
-		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
 		componentService := component.NewComponentService(
-			mockDepsDevService,
+			mockOpenSourceInsightService,
 			componentProjectRepository,
 			componentRepository,
 			licenseRiskService,
