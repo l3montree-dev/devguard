@@ -256,7 +256,7 @@ main() {
     print_status "Running additional validation tests..."
     
     # Check if all expected resources are created
-    local expected_deployments=("devguard-api-deployment" "devguard-web-deployment" "kratos" "postgresql")
+    local expected_deployments=("devguard-api-deployment" "devguard-web-deployment" "kratos")
     for deployment in "${expected_deployments[@]}"; do
         if kubectl get deployment "$deployment" -n "$NAMESPACE" >/dev/null 2>&1; then
             print_success "Deployment $deployment exists"
@@ -264,6 +264,12 @@ main() {
             print_warning "Deployment $deployment not found"
         fi
     done
+
+    if kubectl get statefulset "postgresql" -n "$NAMESPACE" >/dev/null 2>&1; then
+        print_success "Stafulset postgresql exists"
+    else
+        print_warning "Stafulset postgresql not found"
+    fi
     
     # Check services
     local services=$(kubectl get services -n "$NAMESPACE" --no-headers | wc -l)
