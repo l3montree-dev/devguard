@@ -208,7 +208,7 @@ func Start(db core.DB, broker pubsub.Broker) {
 
 	go func() {
 		// check if the vulndb is empty
-		if err := db.Exec("SELECT 1 FROM cves LIMIT 1").Scan(new(int)).Error; err != nil {
+		if err := db.Raw("SELECT 1 as count FROM cves LIMIT 1;").Scan(new(int64)).Error; err != nil {
 			slog.Warn("vulndb is empty. skipping leader election and running daemons directly", "err", err)
 			if err := runDaemons(db, broker, configService); err != nil {
 				slog.Error("could not run daemons", "err", err)

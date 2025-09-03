@@ -270,8 +270,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)
-
-			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVEID)
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
