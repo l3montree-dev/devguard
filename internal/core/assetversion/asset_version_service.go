@@ -710,13 +710,11 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
 	var pURL packageurl.PackageURL
 	var err error
 
-	if version == models.NoVersion {
-		version = "latest"
-	}
+	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
 	bom := cdx.BOM{
 		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
@@ -726,10 +724,10 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    assetVersion.Slug,
+				BOMRef:    artifactName,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      artifactName,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
@@ -1101,20 +1099,157 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 // write the components from bom to the output file following the template
 func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
+	type ComponentData struct {
+		Package  string
+		Version  string
+		Licenses *cdx.Licenses
+	}
+
+	ecosystemCounts := make(map[string]int)
+	licenseCounts := make(map[string]int)
+	totalComponents := 0
+
+	var templateData []ComponentData
+	for _, component := range *bom.Components {
+		packageName := component.BOMRef
+		ecosystem := "unknown"
+
+		// parse PURL to extract ecosystem for counting, but keep original packageName intact
+		if strings.HasPrefix(packageName, "pkg:") {
+			// split at the last "@" to remove version for ecosystem extraction only
+			lastAtIndex := strings.LastIndex(packageName, "@")
+			if lastAtIndex != -1 {
+				packageNameWithoutVersion := packageName[:lastAtIndex]
+				// extract ecosystem (first part before first "/")
+				ecosystemParts := strings.Split(packageNameWithoutVersion, "/")
+				if len(ecosystemParts) > 0 {
+					ecosystem = ecosystemParts[0]
+				}
+				// only remove version from display name, keep everything else intact
+				packageName = packageNameWithoutVersion
+			}
+		}
+
+		// count ecosystem
+		ecosystemCounts[ecosystem]++
+		totalComponents++
+
+		// count licenses
+		if component.Licenses != nil && len(*component.Licenses) > 0 {
+			for _, licenseChoice := range *component.Licenses {
+				if licenseChoice.License != nil {
+					if licenseChoice.License.ID != "" {
+						licenseCounts[licenseChoice.License.ID]++
+					} else if licenseChoice.License.Name != "" {
+						licenseCounts[licenseChoice.License.Name]++
+					}
+				}
+			}
+		} else {
+			licenseCounts["Unknown"]++
+		}
+
+		templateData = append(templateData, ComponentData{
+			Package:  packageName,
+			Version:  component.Version,
+			Licenses: component.Licenses,
+		})
+	}
+
+	// create template data with statistics
+	type StatEntry struct {
+		Name  string
+		Count int
+	}
+
+	type TemplateData struct {
+		Components      []ComponentData
+		EcosystemStats  []StatEntry
+		LicenseStats    []StatEntry
+		TotalComponents int
+		ArtifactName    string
+		AssetVersion    string
+		CreationDate    string
+		Publisher       string
+	}
+
+	// convert maps to sorted slices
+	ecosystemSlice := make([]StatEntry, 0, len(ecosystemCounts))
+	for name, count := range ecosystemCounts {
+		ecosystemSlice = append(ecosystemSlice, StatEntry{Name: name, Count: count})
+	}
+
+	licenseSlice := make([]StatEntry, 0, len(licenseCounts))
+	for name, count := range licenseCounts {
+		licenseSlice = append(licenseSlice, StatEntry{Name: name, Count: count})
+	}
+
+	// sort by count descending (highest first)
+	slices.SortFunc(ecosystemSlice, func(a, b StatEntry) int {
+		return b.Count - a.Count
+	})
+	slices.SortFunc(licenseSlice, func(a, b StatEntry) int {
+		return b.Count - a.Count
+	})
+
+	data := TemplateData{
+		Components:      templateData,
+		EcosystemStats:  ecosystemSlice,
+		LicenseStats:    licenseSlice,
+		TotalComponents: totalComponents,
+		ArtifactName:    bom.Metadata.Component.Name,
+		AssetVersion:    bom.Metadata.Component.Version,
+		CreationDate:    bom.Metadata.Timestamp,
+		Publisher:       bom.Metadata.Component.Publisher,
+	}
+
 	//create template for the sbom markdown table
-	sbomTmpl, err := template.New("sbomTmpl").Parse(
+	sbomTmpl, err := template.New("sbomTmpl").Funcs(template.FuncMap{
+		"percentage": func(count, total int) float64 {
+			if total == 0 {
+				return 0
+			}
+			return float64(count) / float64(total) * 100.0
+		},
+	}).Parse(
 		`# SBOM
 
-| PURL | Name | Version | Licenses  |
-|-------------------|---------|---------|--------|
-{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
-{{ end }}`,
+## Overview
+
+- **Artifact Name:** {{ .ArtifactName }}
+- **Version:** {{ .AssetVersion }}
+- **Created:** {{ .CreationDate }}
+- **Publisher:** {{ .Publisher }}
+
+## Statistics
+
+### Ecosystem Distribution
+Total Components: {{ .TotalComponents }}
+
+| Ecosystem | Count | Percentage |
+|-----------|-------|------------|
+{{range .EcosystemStats}}| {{ .Name }} | {{ .Count }} | {{ printf "%.1f%%" (percentage .Count $.TotalComponents) }} |
+{{end}}
+
+### License Distribution
+| License | Count | Percentage |
+|---------|-------|------------|
+{{range .LicenseStats}}| {{ .Name }} | {{ .Count }} | {{ printf "%.1f%%" (percentage .Count $.TotalComponents) }} |
+{{end}}
+
+\newpage
+## Components
+
+| Package 						  | Version | Licenses  |
+|---------------------------------|---------|-------|
+{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
+{{end}}`,
 	)
 	if err != nil {
 		return err
 	}
-	//filling the template with data from the bom components and write that to the outputFile
-	return sbomTmpl.Execute(outputFile, *bom.Components)
+	//filling the template with data from the parsed components and write that to the outputFile
+	return sbomTmpl.Execute(outputFile, data)
 }
 
 // generate the metadata used to generate the sbom-pdf and return it as struct

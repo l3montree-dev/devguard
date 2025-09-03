@@ -18,6 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -350,9 +351,18 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
-	if err != nil {
-		return core.NewPaged(pageInfo, total, componentDependencies), err
+	// if page size is -1, we want to return all results
+	if pageInfo.PageSize == -1 {
+		slog.Warn("unlimited page size requested - returning all results...", "assetVersionName", assetVersionName, "assetID", assetID)
+		err := query.Select(distinctOnQuery).Find(&componentDependencies).Error
+		if err != nil {
+			return core.NewPaged(pageInfo, total, componentDependencies), err
+		}
+	} else {
+		err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
+		if err != nil {
+			return core.NewPaged(pageInfo, total, componentDependencies), err
+		}
 	}
 
 	// convert all overwritten licenses to a map which maps a purl to a new license
