@@ -54,6 +54,7 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 
 	return c.GetDB(tx).Create(&components).Error
 }
+
 func (c *componentRepository) loadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 
@@ -76,11 +77,13 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 
 	var components []models.ComponentDependency
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
-		Preload("Component").Preload("Dependency").
-		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
-		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
-		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
-		Find(&components).Error
+		Preload("Component").Preload("Dependency").Where(`EXISTS (
+        SELECT 1 FROM artifact_component_dependencies acd 
+        WHERE acd.component_dependency_id = id 
+            AND acd.artifact_artifact_name = ? 
+            AND acd.artifact_asset_version_name = ? 
+            AND acd.artifact_asset_id = ?
+    	)`, artifactName, assetVersionName, assetID).Find(&components).Error
 
 	return components, err
 }
@@ -257,8 +260,14 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	//We then still need to filter for the right scanner
 	if artifactName != nil {
-		overwrittenLicensesQuery = overwrittenLicensesQuery.Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = cd.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ?", artifactName)
-
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Where(`EXISTS (
+			SELECT 1 FROM artifact_component_dependencies acd 
+			JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name 
+				AND acd.artifact_asset_version_name = a.asset_version_name 
+				AND acd.artifact_asset_id = a.asset_id
+			WHERE acd.component_dependency_id = cd.id 
+				AND a.artifact_name = ?
+		)`, artifactName)
 	}
 	//Map the query to the right struct
 	err := overwrittenLicensesQuery.Scan(&overwrittenLicenses).Error

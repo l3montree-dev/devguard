@@ -6,6 +6,7 @@ package daemon_test
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -343,7 +344,16 @@ func TestDaemonSyncTickets(t *testing.T) {
 	)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
 
-	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(
+	// Capture the create issue call to verify the artifact name is included in the description
+	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+		// Verify that the issue description contains the artifact name
+		if opt.Description == nil {
+			return false
+		}
+		description := *opt.Description
+		// The artifact name "artifact1" should be mentioned in the description
+		return strings.Contains(description, "artifact1")
+	})).Return(
 		&gitlab.Issue{
 			ID: 12345,
 		}, nil, nil)
@@ -357,14 +367,23 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	db.Find(&dependencyVuln, "id = ?", dependencyVuln.ID)
 
-	t.Run("should create a ticket if the CVSS if above the threshold", func(t *testing.T) {
-
+	t.Run("should create a ticket with artifact name in description if CVSS is above the threshold", func(t *testing.T) {
 		var updatedDependencyVuln models.DependencyVuln
 		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
 		assert.Nil(t, err)
 
 		assert.NotNil(t, updatedDependencyVuln.TicketID)
 		assert.NotNil(t, updatedDependencyVuln.TicketURL)
+
+		// Verify that CreateIssue was called with the artifact name in the description
+		gitlabClientFacade.AssertCalled(t, "CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+			if opt.Description == nil {
+				return false
+			}
+			description := *opt.Description
+			// The artifact name "artifact1" should be mentioned in the description
+			return strings.Contains(description, "artifact1")
+		}))
 	})
 
 	t.Run("should not close the ticket if the CVSS is below the threshold but the ticket was manually created", func(t *testing.T) {
@@ -437,6 +456,120 @@ func TestDaemonSyncTickets(t *testing.T) {
 		assert.NotNil(t, updatedDependencyVuln.TicketURL)
 	})
 
+}
+
+func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+
+	org.Slug = "org-slug-multi"
+	err := db.Save(&org).Error
+	assert.Nil(t, err)
+	project.Slug = "project-slug-multi"
+	err = db.Save(&project).Error
+	assert.Nil(t, err)
+
+	repoID := "gitlab:7c95b7f6-a921-4b27-91ac-38cb94877324:456"
+	asset.RepositoryID = &repoID
+	cvssThreshold := 7.0
+	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
+	err = db.Save(&asset).Error
+	assert.Nil(t, err)
+
+	cve := models.CVE{
+		CVE:  "CVE-2025-46570",
+		CVSS: 8.5,
+	}
+	err = db.Save(&cve).Error
+	assert.Nil(t, err)
+
+	// Create a vulnerability with multiple artifacts
+	dependencyVuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			AssetID:          asset.ID,
+			AssetVersion:     assetVersion,
+			AssetVersionName: assetVersion.Name,
+			TicketID:         nil,
+			TicketURL:        nil,
+			State:            models.VulnStateOpen,
+			LastDetected:     time.Now(),
+		},
+		Artifacts: []models.Artifact{
+			{ArtifactName: "package.json", AssetVersionName: assetVersion.Name, AssetID: asset.ID},
+			{ArtifactName: "yarn.lock", AssetVersionName: assetVersion.Name, AssetID: asset.ID},
+			{ArtifactName: "Dockerfile", AssetVersionName: assetVersion.Name, AssetID: asset.ID},
+		},
+		CVE:               &cve,
+		CVEID:             utils.Ptr(cve.CVE),
+		ComponentDepth:    utils.Ptr(1),
+		RawRiskAssessment: utils.Ptr(8.5),
+	}
+	err = db.Create(&dependencyVuln).Error
+	assert.Nil(t, err)
+
+	assert.Nil(t, dependencyVuln.TicketID)
+	assert.Nil(t, dependencyVuln.TicketURL)
+
+	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
+		db,
+		gitlabint.NewGitLabOauth2Integrations(db),
+		mocks.NewRBACProvider(t),
+		clientfactory,
+	)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	// Capture the create issue call to verify all artifact names are included in the description
+	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+		if opt.Description == nil {
+			return false
+		}
+		description := *opt.Description
+		// All three artifact names should be mentioned in the description
+		hasPackageJSON := strings.Contains(description, "package.json")
+		hasYarnLock := strings.Contains(description, "yarn.lock")
+		hasDockerfile := strings.Contains(description, "Dockerfile")
+
+		return hasPackageJSON && hasYarnLock && hasDockerfile
+	})).Return(
+		&gitlab.Issue{
+			ID: 12346,
+		}, nil, nil)
+
+	gitlabClientFacade.On("CreateIssueComment", mock.Anything, 456, 0, &gitlab.CreateIssueNoteOptions{
+		Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
+	}).Return(nil, nil, nil)
+
+	// Run the ticket daemon
+	err = daemon.SyncTickets(db, thirdPartyIntegration)
+	assert.Nil(t, err)
+
+	t.Run("should create a ticket with all artifact names in description", func(t *testing.T) {
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.TicketID)
+		assert.NotNil(t, updatedDependencyVuln.TicketURL)
+
+		// Verify that CreateIssue was called with all artifact names in the description
+		gitlabClientFacade.AssertCalled(t, "CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+			if opt.Description == nil {
+				return false
+			}
+			description := *opt.Description
+			// All three artifact names should be mentioned in the description
+			hasPackageJSON := strings.Contains(description, "`package.json`")
+			hasYarnLock := strings.Contains(description, "`yarn.lock`")
+			hasDockerfile := strings.Contains(description, "`Dockerfile`")
+
+			return hasPackageJSON && hasYarnLock && hasDockerfile
+		}))
+	})
 }
 
 func TestDaemonRecalculateRisk(t *testing.T) {
