@@ -747,7 +747,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		}
 	}
 
-	bomComponents := make([]cdx.Component, len(components))
+	bomComponents := make([]cdx.Component, 0, len(components))
 	processedComponents := make(map[string]struct{}, len(components))
 
 	for _, component := range components {
@@ -756,63 +756,67 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 			//swallow error and move on to the next component
 			continue
 		}
-		_, alreadyProcessed := processedComponents[component.DependencyPurl]
+		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
+			continue
+		}
 
-		if !alreadyProcessed {
-			processedComponents[component.DependencyPurl] = struct{}{}
-			licenses := cdx.Licenses{}
+		processedComponents[component.DependencyPurl] = struct{}{}
+		licenses := cdx.Licenses{}
 
-			//first check if the license is overwritten by a license risk#
-			overwrite, exists := componentLicenseOverwrites[pURL.String()]
-			if exists && overwrite != "" {
-				// TO-DO: check if the license provided by the user is a valid license or not
+		//first check if the license is overwritten by a license risk#
+		overwrite, exists := componentLicenseOverwrites[pURL.String()]
+		if exists && overwrite != "" {
+			// TO-DO: check if the license provided by the user is a valid license or not
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: overwrite,
+				},
+			})
+
+		} else if component.Dependency.License != nil && *component.Dependency.License != "" {
+			if *component.Dependency.License != "non-standard" {
 				licenses = append(licenses, cdx.LicenseChoice{
 					License: &cdx.License{
-						ID: overwrite,
+						ID: *component.Dependency.License,
 					},
 				})
-
-			} else if component.Dependency.License != nil && *component.Dependency.License != "" {
-				if *component.Dependency.License != "non-standard" {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							ID: *component.Dependency.License,
-						},
-					})
-				} else {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							Name: "non-standard",
-						},
-					})
-				}
-
-			} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-				// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-				if component.Dependency.ComponentProject.License != "non-standard" {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							ID: component.Dependency.ComponentProject.License,
-						},
-					})
-				} else {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							Name: "non-standard",
-						},
-					})
-				}
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						Name: "non-standard",
+					},
+				})
 			}
 
-			bomComponents = append(bomComponents, cdx.Component{
-				Licenses:   &licenses,
-				BOMRef:     component.DependencyPurl,
-				Type:       cdx.ComponentType(component.Dependency.ComponentType),
-				PackageURL: component.DependencyPurl,
-				Version:    component.Dependency.Version,
-				Name:       component.DependencyPurl,
-			})
+		} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+			// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
+			if component.Dependency.ComponentProject.License != "non-standard" {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: component.Dependency.ComponentProject.License,
+					},
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						Name: "non-standard",
+					},
+				})
+			}
 		}
+		if component.DependencyPurl == "" {
+			slog.Info("skipping component with empty purl", "component", component)
+		}
+
+		bomComponents = append(bomComponents, cdx.Component{
+			Licenses:   &licenses,
+			BOMRef:     component.DependencyPurl,
+			Type:       cdx.ComponentType(component.Dependency.ComponentType),
+			PackageURL: component.DependencyPurl,
+			Version:    component.Dependency.Version,
+			Name:       component.DependencyPurl,
+		})
+
 	}
 
 	// build up the dependency map
