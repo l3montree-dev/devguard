@@ -33,8 +33,11 @@ func (s *service) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug st
 }
 
 func (s *service) CreateProject(ctx core.Context, project *models.Project) error {
+
+	newProject := project
+
 	err := s.assetRepository.Transaction(func(tx core.DB) error {
-		if err := s.projectRepository.Create(tx, project); err != nil {
+		if err := s.projectRepository.Create(tx, newProject); err != nil {
 			// check if duplicate key error
 			if database.IsDuplicateKeyError(err) {
 				// get the project by slug and project id unscoped
@@ -48,6 +51,7 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 				}
 
 				slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())
+				newProject = &project
 
 			} else {
 				return echo.NewHTTPError(500, "could not create project").WithInternal(err)
@@ -55,7 +59,7 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 		}
 
 		// enable the default community policies
-		return s.projectRepository.EnableCommunityManagedPolicies(tx, project.ID)
+		return s.projectRepository.EnableCommunityManagedPolicies(tx, newProject.ID)
 	})
 	if err != nil {
 		slog.Error("could not create project", "err", err, "projectSlug", project.Slug, "projectID", project.ID)
