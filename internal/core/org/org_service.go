@@ -51,9 +51,10 @@ func (o *orgService) bootstrapOrg(ctx core.Context, organization *models.Org) er
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := core.GetSession(ctx).GetUserID()
 
-	if err := rbac.GrantRole(userID, core.RoleAdmin); err != nil {
+	if err := rbac.GrantRole(userID, core.RoleOwner); err != nil {
 		return err
 	}
+
 	if err := rbac.InheritRole(core.RoleOwner, core.RoleAdmin); err != nil { // an owner is an admin
 		return err
 	}
