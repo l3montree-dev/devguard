@@ -181,19 +181,6 @@ WHERE cve_id IS NOT NULL
 ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
   FOREIGN KEY (cve_id) REFERENCES cves(cve);
 
--- Drop the foreign key constraint (if it exists)
-ALTER TABLE cve_cpe_match DROP CONSTRAINT IF EXISTS fk_cve_cpe_match_cve;
-
--- Clean up orphaned rows
-DELETE FROM cve_cpe_match 
-WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = cve_cpe_match.cvecve
-);
-
--- Recreate the foreign key constraint
-ALTER TABLE cve_cpe_match ADD CONSTRAINT fk_cve_cpe_match_cve 
-  FOREIGN KEY (cvecve) REFERENCES cves(cve);
-
 -- Drop any foreign key constraint (if it exists)
 ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
 
