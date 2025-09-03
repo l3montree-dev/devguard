@@ -225,14 +225,17 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, core.PageInfo{
-		PageSize: 1000,
+		PageSize: -1,
 		Page:     1,
 	}, "", filter, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data)
+	// get artifact from path
+	artifact := core.GetArtifact(ctx)
+
+	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, version, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {

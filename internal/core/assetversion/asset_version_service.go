@@ -710,13 +710,15 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
 	var pURL packageurl.PackageURL
 	var err error
 
 	if version == models.NoVersion {
 		version = "latest"
 	}
+
+	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
 	bom := cdx.BOM{
 		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
@@ -726,10 +728,10 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    assetVersion.Slug,
+				BOMRef:    artifactName,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      artifactName,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
@@ -1116,19 +1118,19 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 		packageName := component.BOMRef
 		ecosystem := "unknown"
 
-		// parse PURL to extract just the package path (type/namespace/name)
+		// parse PURL to extract ecosystem for counting, but keep original packageName intact
 		if strings.HasPrefix(packageName, "pkg:") {
-			// remove "pkg:" prefix
-			withoutPrefix := strings.TrimPrefix(packageName, "pkg:")
-			// split by "@" to remove version
-			parts := strings.Split(withoutPrefix, "@")
-			if len(parts) > 0 {
-				packageName = parts[0]
+			// split at the last "@" to remove version for ecosystem extraction only
+			lastAtIndex := strings.LastIndex(packageName, "@")
+			if lastAtIndex != -1 {
+				packageNameWithoutVersion := packageName[:lastAtIndex]
 				// extract ecosystem (first part before first "/")
-				ecosystemParts := strings.Split(packageName, "/")
+				ecosystemParts := strings.Split(packageNameWithoutVersion, "/")
 				if len(ecosystemParts) > 0 {
 					ecosystem = ecosystemParts[0]
 				}
+				// only remove version from display name, keep everything else intact
+				packageName = packageNameWithoutVersion
 			}
 		}
 
@@ -1169,6 +1171,10 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 		EcosystemStats  []StatEntry
 		LicenseStats    []StatEntry
 		TotalComponents int
+		ArtifactName    string
+		AssetVersion    string
+		CreationDate    string
+		Publisher       string
 	}
 
 	// convert maps to sorted slices
@@ -1195,6 +1201,10 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 		EcosystemStats:  ecosystemSlice,
 		LicenseStats:    licenseSlice,
 		TotalComponents: totalComponents,
+		ArtifactName:    bom.Metadata.Component.Name,
+		AssetVersion:    bom.Metadata.Component.Version,
+		CreationDate:    bom.Metadata.Timestamp,
+		Publisher:       bom.Metadata.Component.Publisher,
 	}
 
 	//create template for the sbom markdown table
@@ -1207,6 +1217,13 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 		},
 	}).Parse(
 		`# SBOM
+
+## Overview
+
+- **Artifact Name:** {{ .ArtifactName }}
+- **Version:** {{ .AssetVersion }}
+- **Created:** {{ .CreationDate }}
+- **Publisher:** {{ .Publisher }}
 
 ## Statistics
 
@@ -1227,8 +1244,8 @@ Total Components: {{ .TotalComponents }}
 \newpage
 ## Components
 
-| Package | Version | Licenses  |
-|---------|---------|--------|
+| Package 						  | Version | Licenses  |
+|---------------------------------|---------|-------|
 {{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
 {{end}}`,
 	)
