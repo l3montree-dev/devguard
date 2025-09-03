@@ -26,6 +26,7 @@ func NewVulndbCommand() *cobra.Command {
 	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
+	vulndbCmd.AddCommand(newExportIncrementalCommand())
 	return &vulndbCmd
 }
 
@@ -134,30 +135,41 @@ func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
 		Short: "Will import the vulnerability database",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			core.LoadConfig() // nolint
+			mode := args[0]
 
-			database, err := core.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return
-			}
-			migrateDB(database)
+			if mode == "inc" { // only import the incremental updates
+				// pull incremental files from github database
+				// implement changes from the files
+				//repeat for every diff
+			} else if mode == "full" { // import the full table
+				core.LoadConfig() // nolint
 
-			cveRepository := repositories.NewCVERepository(database)
-			cweRepository := repositories.NewCWERepository(database)
-			exploitsRepository := repositories.NewExploitRepository(database)
-			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+				database, err := core.DatabaseFactory()
+				if err != nil {
+					slog.Error("could not connect to database", "err", err)
+					return
+				}
+				migrateDB(database)
 
-			tag := "latest"
-			if len(args) > 0 {
-				tag = args[0]
-			}
-			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-			err = v.Import(database, tag)
-			if err != nil {
-				slog.Error("could not import vulndb", "err", err)
+				cveRepository := repositories.NewCVERepository(database)
+				cweRepository := repositories.NewCWERepository(database)
+				exploitsRepository := repositories.NewExploitRepository(database)
+				affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+
+				tag := "latest"
+				if len(args) > 0 {
+					tag = args[0]
+				}
+				v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
+				err = v.Import(database, tag)
+				if err != nil {
+					slog.Error("could not import vulndb", "err", err)
+					return
+				}
+			} else { // invalid argument
+				slog.Error("invalid first argument, most be 'inc' to only import the difference or 'full' to import the whole table")
 				return
 			}
 
@@ -303,4 +315,41 @@ func newSyncCommand() *cobra.Command {
 	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
 
 	return &syncCmd
+}
+
+func newExportIncrementalCommand() *cobra.Command {
+	exportCmd := cobra.Command{
+		Use:   "export",
+		Short: "Will import the new vuln db after sync and export the diff of the old and new state of the vuln db",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			// first import the new state
+			core.LoadConfig() // nolint
+
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				return
+			}
+			migrateDB(database)
+
+			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			exploitsRepository := repositories.NewExploitRepository(database)
+			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+
+			tag := "latest"
+			if len(args) > 0 {
+				tag = args[0]
+			}
+			os.Setenv("MAKE_TABLE_DIFF", "true")
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
+			err = v.Import(database, tag)
+			if err != nil {
+				slog.Error("could not import vulndb", "err", err)
+				return
+			}
+		},
+	}
+	return &exportCmd
 }

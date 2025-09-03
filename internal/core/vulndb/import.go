@@ -7,16 +7,20 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/csv"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -43,6 +47,12 @@ func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweR
 		affectedComponentsRepository: affectedComponentsRepository,
 	}
 }
+
+// maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}}
+
+// maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
+var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
 
 func (s importService) Import(tx core.DB, tag string) error {
 	slog.Info("importing vulndb started")
@@ -84,7 +94,7 @@ func (s importService) Import(tx core.DB, tag string) error {
 	}
 	defer f.Close()
 
-	// unzip the blob file
+	// unzip the blob file into vulndb-tmp dir
 	err = utils.Unzip(blobFile, tmp+"/")
 	if err != nil {
 		panic(err)
@@ -177,8 +187,8 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
 // This keeps the original table available during most of the import process
 func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
-	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
 
+	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
 	// count initial rows
 	initialCount, err := countTableRows(ctx, pool, tableName)
 	if err != nil {
@@ -187,65 +197,92 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	}
 
 	slog.Info("starting shadow table import", "table", tableName, "shadowTable", shadowTable, "csvFile", csvFilePath, "initialRows", initialCount)
-
 	// Phase 1: Create and populate shadow table (no locks on original)
-	tx, err := pool.Begin(ctx)
+	err = createShadowTable(ctx, pool, tableName, shadowTable, csvFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return err
 	}
-	var committed = false
-	defer func() {
-		if !committed {
-			tx.Rollback(ctx) // nolint:errcheck
-		}
-	}()
-
-	slog.Debug("Creating shadow table", "shadowTable", shadowTable, "originalTable", tableName)
-	// Create shadow table with same structure
-	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTable, tableName))
-	if err != nil {
-		return fmt.Errorf("failed to create shadow table: %w", err)
-	}
-
-	slog.Debug("Disabling triggers for faster import", "table", shadowTable)
-	// Fast import with disabled triggers
-	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
-	if err != nil {
-		return fmt.Errorf("failed to disable triggers: %w", err)
-	}
-
-	file, err := os.Open(csvFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to open CSV file: %w", err)
-	}
-	defer file.Close()
-
-	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTable)
-	importStart := time.Now()
-	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTable))
-	if err != nil {
-		return fmt.Errorf("failed to import CSV: %w", err)
-	}
-	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTable, "importDuration", time.Since(importStart))
-
-	slog.Debug("Re-enabling triggers", "table", shadowTable)
-	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
-	if err != nil {
-		return fmt.Errorf("failed to re-enable triggers: %w", err)
-	}
-
-	commitStart := time.Now()
-	err = tx.Commit(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to commit shadow table: %w", err)
-	}
-	committed = true
-	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTable, "commitDuration", time.Since(commitStart))
 
 	// Phase 2: Atomic table swap (minimal lock time)
-	slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
-	if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
-		return err
+	tableSwap := os.Getenv("MAKE_TABLE_DIFF")
+	if tableSwap != "true" {
+		slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
+		if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
+			return err
+		}
+	} else {
+		dirPath := "vulndb-tmp/"
+		slog.Info("start producing diff tables", "table", tableName)
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+		primaryKeys := primaryKeysFromTables[tableName]
+		if len(primaryKeys) == 0 {
+			slog.Error("no primary key found", "table", tableName)
+			return fmt.Errorf("no primary key found")
+		}
+
+		// all the new entries
+		var rows pgx.Rows
+		if len(primaryKeys) == 1 {
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT shadow.* FROM %s shadow LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
+		} else {
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT shadow.* FROM %s shadow LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
+		}
+
+		if err != nil {
+			return err
+		}
+		err = rowsToCSV(rows, dirPath+tableName+"_diff_insert")
+		if err != nil {
+			return err
+		}
+		rows.Close()
+
+		// all the deleted entries
+		if len(primaryKeys) == 1 {
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
+		} else {
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL OR shadow.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
+		}
+
+		if err != nil {
+			return err
+		}
+		err = rowsToCSV(rows, dirPath+tableName+"_diff_delete")
+		if err != nil {
+			return err
+		}
+		rows.Close()
+
+		// all the updated rows need table for all relevant attributes per table
+		columns := relevantAttributesFromTables[tableName]
+		if len(columns) == 0 {
+			slog.Info("no update diff table needed", "table", tableName)
+			return nil
+		}
+		oldFlags := "old." + columns[0]
+		shadowFlags := "shadow." + columns[0]
+		for _, column := range columns[1:] {
+			oldFlags += ",old." + column
+			shadowFlags += ",shadow." + column
+		}
+
+		slog.Debug("Calling update", "table", tableName, "oldFlags", oldFlags, "shadowFlags", shadowFlags)
+		rows, err = tx.Query(ctx, fmt.Sprintf(`SELECT old.%s AS old_row, shadow AS new_row FROM %s old
+			JOIN %s shadow USING (%s) WHERE (%s) 
+			IS DISTINCT FROM (%s);`, primaryKeys[0], tableName, shadowTable, primaryKeys[0], shadowFlags, oldFlags))
+		if err != nil {
+			return err
+		}
+		err = rowsToCSV(rows, dirPath+tableName+"_diff_update")
+		if err != nil {
+			return err
+		}
+		rows.Close()
+		slog.Info("finished producing diff tables", "table", tableName)
+
 	}
 
 	// Count final rows after import
@@ -267,6 +304,127 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 		"finalRows", finalCount,
 		"rowsAdded", addedRows)
 
+	return nil
+}
+
+func rowsToCSV(rows pgx.Rows, csvFileName string) error {
+	fd, err := os.Create(csvFileName + ".csv")
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	csvWriter := csv.NewWriter(fd)
+
+	columnNames := rows.FieldDescriptions()
+	headers := make([]string, len(columnNames))
+	for i, column := range columnNames {
+		headers[i] = column.Name
+	}
+
+	err = csvWriter.Write(headers)
+	if err != nil {
+		return err
+	}
+
+	record := make([]string, len(headers))
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			continue // continue with the next row maybe in the future count erroneous rows
+		}
+		for i, value := range values {
+			record[i] = anyToString(value)
+		}
+		err = csvWriter.Write(record)
+		if err != nil {
+			continue //continue with the next row
+		}
+	}
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func anyToString(value any) string {
+	if value == nil {
+		return "NULL"
+	}
+	switch t := value.(type) {
+	case string:
+		return t
+	case bool:
+		if t {
+			return "true"
+		}
+		return "false"
+	case int:
+		strconv.Itoa(t)
+	default:
+		b, err := json.Marshal(t)
+		if err == nil {
+			return string(b)
+		}
+		return fmt.Sprint(t)
+	}
+	return "NULL"
+}
+
+func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, shadowTableName, csvFilePath string) error {
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	var committed = false
+	defer func() {
+		if !committed {
+			tx.Rollback(ctx) // nolint:errcheck
+		}
+	}()
+
+	slog.Debug("Creating shadow table", "shadowTable", shadowTableName, "originalTable", tableName)
+	// Create shadow table with same structure
+	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTableName, tableName))
+	if err != nil {
+		return fmt.Errorf("failed to create shadow table: %w", err)
+	}
+
+	slog.Debug("Disabling triggers for faster import", "table", shadowTableName)
+	// Fast import with disabled triggers
+	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
+	if err != nil {
+		return fmt.Errorf("failed to disable triggers: %w", err)
+	}
+
+	file, err := os.Open(csvFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open CSV file: %w", err)
+	}
+	defer file.Close()
+
+	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTableName)
+	importStart := time.Now()
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTableName))
+	if err != nil {
+		return fmt.Errorf("failed to import CSV: %w", err)
+	}
+	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTableName, "importDuration", time.Since(importStart))
+
+	slog.Debug("Re-enabling triggers", "table", shadowTableName)
+	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
+	if err != nil {
+		return fmt.Errorf("failed to re-enable triggers: %w", err)
+	}
+
+	commitStart := time.Now()
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit shadow table: %w", err)
+	}
+	committed = true
+	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTableName, "commitDuration", time.Since(commitStart))
 	return nil
 }
 
