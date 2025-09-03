@@ -99,16 +99,16 @@ func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(asset models.Asse
 }
 
 // GetCVSSBadgeSVG provides a mock function for the type AssetService
-func (_mock *AssetService) GetCVSSBadgeSVG(CVSS models.Distribution) string {
-	ret := _mock.Called(CVSS)
+func (_mock *AssetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string {
+	ret := _mock.Called(results)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCVSSBadgeSVG")
 	}
 
 	var r0 string
-	if returnFunc, ok := ret.Get(0).(func(models.Distribution) string); ok {
-		r0 = returnFunc(CVSS)
+	if returnFunc, ok := ret.Get(0).(func([]models.ArtifactRiskHistory) string); ok {
+		r0 = returnFunc(results)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -121,16 +121,16 @@ type AssetService_GetCVSSBadgeSVG_Call struct {
 }
 
 // GetCVSSBadgeSVG is a helper method to define mock.On call
-//   - CVSS models.Distribution
-func (_e *AssetService_Expecter) GetCVSSBadgeSVG(CVSS interface{}) *AssetService_GetCVSSBadgeSVG_Call {
-	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", CVSS)}
+//   - results []models.ArtifactRiskHistory
+func (_e *AssetService_Expecter) GetCVSSBadgeSVG(results interface{}) *AssetService_GetCVSSBadgeSVG_Call {
+	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", results)}
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(CVSS models.Distribution)) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(results []models.ArtifactRiskHistory)) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Distribution
+		var arg0 []models.ArtifactRiskHistory
 		if args[0] != nil {
-			arg0 = args[0].(models.Distribution)
+			arg0 = args[0].([]models.ArtifactRiskHistory)
 		}
 		run(
 			arg0,
@@ -144,7 +144,7 @@ func (_c *AssetService_GetCVSSBadgeSVG_Call) Return(s string) *AssetService_GetC
 	return _c
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(CVSS models.Distribution) string) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(results []models.ArtifactRiskHistory) string) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Return(run)
 	return _c
 }
