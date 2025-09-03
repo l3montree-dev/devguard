@@ -795,6 +795,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	var req struct {
 		DevguardPrivateKey string `json:"devguardPrivateKey"`
 		DevguardAssetName  string `json:"devguardAssetName"`
+		DevguardAPIURL     string `json:"devguardApiUrl"`
 	}
 	err := ctx.Bind(&req)
 	if err != nil {
@@ -875,7 +876,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	enc.Encode(map[string]string{"step": "projectHook", "status": "success"}) //nolint:errcheck
 	ctx.Response().Flush()
 
-	err = g.addProjectVariables(ctx.Request().Context(), client, asset, projectIDInt, req.DevguardPrivateKey, req.DevguardAssetName)
+	err = g.addProjectVariables(ctx.Request().Context(), client, asset, projectIDInt, req.DevguardPrivateKey, req.DevguardAssetName, req.DevguardAPIURL)
 	if err != nil {
 		return errors.Wrap(err, "could not add project variables")
 	}
@@ -1018,7 +1019,7 @@ func createToken() (uuid.UUID, error) {
 	return token, nil
 }
 
-func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core.GitlabClientFacade, asset models.Asset, gitlabProjectID int, devguardPrivateKey string, devguardAssetName string) error {
+func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core.GitlabClientFacade, asset models.Asset, gitlabProjectID int, devguardPrivateKey string, devguardAssetName string, devguardAPIURL string) error {
 	toCreate := []string{"DEVGUARD_TOKEN", "DEVGUARD_ASSET_NAME"}
 
 	// check if the project variable already exists
@@ -1056,6 +1057,18 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core
 	}
 
 	_, _, err = client.CreateVariable(ctx, gitlabProjectID, assetNameVariable)
+
+	if err != nil {
+		return fmt.Errorf("could not create project variable: %w", err)
+	}
+
+	devguardAPIURLVariable := &gitlab.CreateProjectVariableOptions{
+		Key:    gitlab.Ptr("DEVGUARD_API_URL"),
+		Value:  gitlab.Ptr(devguardAPIURL),
+		Masked: gitlab.Ptr(false),
+	}
+
+	_, _, err = client.CreateVariable(ctx, gitlabProjectID, devguardAPIURLVariable)
 
 	return err
 }

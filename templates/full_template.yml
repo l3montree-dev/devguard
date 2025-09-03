@@ -8,3 +8,4 @@ include:
     inputs:
       asset_name: "$DEVGUARD_ASSET_NAME"
       token: "$DEVGUARD_TOKEN"
+      api_url: "$DEVGUARD_API_URL"
