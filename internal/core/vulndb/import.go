@@ -170,12 +170,10 @@ func (s importService) copyCSVToDB(tmp string) error {
 ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
 
 -- Set cve_id to NULL where the referenced CVE doesn't exist anymore
-UPDATE dependency_vulns 
-SET cve_id = NULL 
-WHERE cve_id IS NOT NULL 
-  AND NOT EXISTS (
+DELETE FROM dependency_vulns 
+WHERE NOT EXISTS (
     SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
-  );
+);
 
 -- Now recreate the foreign key constraint
 ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
