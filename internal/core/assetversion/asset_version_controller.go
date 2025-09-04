@@ -217,7 +217,18 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		}
 	}
 
+	// get artifact from path
+	artifact := core.GetArtifact(ctx)
+
 	filter := core.GetFilterQuery(ctx)
+	// set artifact name filter if artifact is set in path
+	if artifact.ArtifactName != "" {
+		filter = append(filter, core.FilterQuery{
+			Field:      "artifacts.artifact_name",
+			Operator:   "is",
+			FieldValue: artifact.ArtifactName,
+		})
+	}
 
 	overwrittenLicenses, err := a.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
@@ -231,9 +242,6 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// get artifact from path
-	artifact := core.GetArtifact(ctx)
 
 	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, version, org.Name, components.Data)
 }
