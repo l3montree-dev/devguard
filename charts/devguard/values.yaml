@@ -1,6 +1,14 @@
 # Default values for devguard.
 # This is a YAML-formatted file.
 # Declare variables to be passed into templates.
+webauthn:
+  enabled: false
+passkey:
+  enabled: true
+password:
+  enabled: true
+totp:
+  enabled: false
 oidc:
   enabled: false
   providers: []
