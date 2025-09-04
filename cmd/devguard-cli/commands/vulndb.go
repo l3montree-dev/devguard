@@ -200,14 +200,12 @@ func newImportCommand() *cobra.Command {
 					table := fields[0]
 					switch mode {
 					case "insert":
-						continue
 						slog.Info("start inserting", "file", name)
 						err = processInsertDiff(ctx, pool, "vulndb-tmp/"+name+".csv", table)
 						if err != nil {
 							continue
 						}
 					case "delete":
-						continue
 						slog.Info("start deleting", "file", name)
 						err = processDeleteDiff(ctx, pool, "vulndb-tmp/"+name+".csv", table)
 						if err != nil {
@@ -238,8 +236,8 @@ func newImportCommand() *cobra.Command {
 				affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 
 				tag := "latest"
-				if len(args) > 0 {
-					tag = args[0]
+				if len(args) > 1 {
+					tag = args[1]
 				}
 				v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
 				err = v.Import(database, tag)

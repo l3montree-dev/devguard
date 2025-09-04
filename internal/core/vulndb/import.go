@@ -270,9 +270,9 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 		}
 
 		slog.Debug("Calling update", "table", tableName, "oldFlags", oldFlags, "shadowFlags", shadowFlags)
-		rows, err = tx.Query(ctx, fmt.Sprintf(`SELECT old.%s AS old_row, shadow AS new_row FROM %s old
+		rows, err = tx.Query(ctx, fmt.Sprintf(`SELECT shadow.* FROM %s old
 			JOIN %s shadow USING (%s) WHERE (%s) 
-			IS DISTINCT FROM (%s);`, primaryKeys[0], tableName, shadowTable, primaryKeys[0], shadowFlags, oldFlags))
+			IS DISTINCT FROM (%s);`, tableName, shadowTable, primaryKeys[0], shadowFlags, oldFlags))
 		if err != nil {
 			return err
 		}
