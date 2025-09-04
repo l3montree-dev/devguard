@@ -9,6 +9,8 @@ password:
   enabled: true
 totp:
   enabled: false
+verificationAfterSignUp:
+  enabled: true
 oidc:
   enabled: false
   providers: []

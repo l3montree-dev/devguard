@@ -107,7 +107,7 @@ data:
               {{- if .issuerUrl }}
               issuer_url: {{ .issuerUrl | default "" | quote }}
               {{- end }}
-              mapper_url: "base64://bG9jYWwgY2xhaW1zID0gewogIGVtYWlsX3ZlcmlmaWVkOiBmYWxzZSwKfSArIHN0ZC5leHRWYXIoJ2NsYWltcycpOwp7CiAgaWRlbnRpdHk6IHsKICAgIHRyYWl0czogewogICAgICAvLyBBbGxvd2luZyB1bnZlcmlmaWVkIGVtYWlsIGFkZHJlc3NlcyBlbmFibGVzIGFjY291bnQKICAgICAgLy8gZW51bWVyYXRpb24gYXR0YWNrcywgZXNwZWNpYWxseSBpZiB0aGUgdmFsdWUgaXMgdXNlZCBmb3IKICAgICAgLy8gZS5nLiB2ZXJpZmljYXRpb24gb3IgYXMgYSBwYXNzd29yZCBsb2dpbiBpZGVudGlmaWVyLgogICAgICAvLwogICAgICAvLyBUaGVyZWZvcmUgd2Ugb25seSByZXR1cm4gdGhlIGVtYWlsIGlmIGl0IChhKSBleGlzdHMgYW5kIChiKSBpcyBtYXJrZWQgdmVyaWZpZWQKICAgICAgLy8gYnkgR2l0SHViLgogICAgICBbaWYgJ2VtYWlsJyBpbiBjbGFpbXMgJiYgY2xhaW1zLmVtYWlsX3ZlcmlmaWVkIHRoZW4gJ2VtYWlsJyBlbHNlIG51bGxdOiBjbGFpbXMuZW1haWwsCiAgICAgIG5hbWU6IHsKICAgICAgICBmaXJzdDogY2xhaW1zLm5hbWUsCiAgICAgIH0sCiAgICB9LAogIH0sCn0="
+              mapper_url: "base64://bG9jYWwgY2xhaW1zID0gewogIGVtYWlsX3ZlcmlmaWVkOiBmYWxzZSwKfSArIHN0ZC5leHRWYXIoJ2NsYWltcycpOwoKbG9jYWwgc3BsaXROYW1lKGZ1bGxOYW1lKSA9IAogIGxvY2FsIHBhcnRzID0gc3RkLnNwbGl0KGZ1bGxOYW1lLCAnICcpOwogIGlmIHN0ZC5sZW5ndGgocGFydHMpID4gMSB0aGVuCiAgICB7CiAgICAgIGZpcnN0OiBwYXJ0c1swXSwKICAgICAgbGFzdDogc3RkLmpvaW4oJyAnLCBwYXJ0c1sxOl0pCiAgICB9CiAgZWxzZQogICAgewogICAgICBmaXJzdDogZnVsbE5hbWUsCiAgICAgIGxhc3Q6ICcnCiAgICB9OwoKewogIGlkZW50aXR5OiB7CiAgICB0cmFpdHM6IHsKICAgICAgLy8gQWxsb3dpbmcgdW52ZXJpZmllZCBlbWFpbCBhZGRyZXNzZXMgZW5hYmxlcyBhY2NvdW50CiAgICAgIC8vIGVudW1lcmF0aW9uIGF0dGFja3MsIGVzcGVjaWFsbHkgaWYgdGhlIHZhbHVlIGlzIHVzZWQgZm9yCiAgICAgIC8vIGUuZy4gdmVyaWZpY2F0aW9uIG9yIGFzIGEgcGFzc3dvcmQgbG9naW4gaWRlbnRpZmllci4KICAgICAgLy8KICAgICAgLy8gVGhlcmVmb3JlIHdlIG9ubHkgcmV0dXJuIHRoZSBlbWFpbCBpZiBpdCAoYSkgZXhpc3RzIGFuZCAoYikgaXMgbWFya2VkIHZlcmlmaWVkCiAgICAgIC8vIGJ5IEdpdEh1Yi4KICAgICAgW2lmICdlbWFpbCcgaW4gY2xhaW1zICYmIGNsYWltcy5lbWFpbF92ZXJpZmllZCB0aGVuICdlbWFpbCcgZWxzZSBudWxsXTogY2xhaW1zLmVtYWlsLAogICAgICBuYW1lOiBzcGxpdE5hbWUoY2xhaW1zLm5hbWUpLAogICAgICBjb25maXJtZWRUZXJtczogdHJ1ZSwKICAgIH0sCiAgfSwKfQ=="
             {{- if .scope }}
               scope:
               {{- range .scope }}
@@ -176,11 +176,11 @@ data:
           privileged_session_max_age: 15m
           required_aal: highest_available
         recovery:
-          enabled: true
+          enabled: {{ .Values.verificationAfterSignUp.enabled }}
           ui_url: {{ $protocol }}://{{ $publicUrl }}/recovery
           use: code
         verification:
-          enabled: true
+          enabled: {{ .Values.verificationAfterSignUp.enabled }}
           ui_url: {{ $protocol }}://{{ $publicUrl }}/verification
           use: code
           after:
