@@ -242,9 +242,9 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 
 		// all the deleted entries
 		if len(primaryKeys) == 1 {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL;", tableName, shadowTable, primaryKeys[0], primaryKeys[0]))
 		} else {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL OR shadow.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
+			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL OR shadow.%s IS NULL;", tableName, shadowTable, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
 		}
 
 		if err != nil {
