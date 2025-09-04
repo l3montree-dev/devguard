@@ -19,12 +19,12 @@ type VulnEvent struct {
 }
 
 type SBOMCreatedEvent struct {
-	SBOM         *cdx.BOM
-	Org          OrgObject
-	Project      ProjectObject
-	Asset        AssetObject
-	AssetVersion AssetVersionObject
-	Artifact     ArtifactObject
+	SBOM         *cdx.BOM           `json:"sbom"`
+	Org          OrgObject          `json:"org"`
+	Project      ProjectObject      `json:"project"`
+	Asset        AssetObject        `json:"asset"`
+	AssetVersion AssetVersionObject `json:"assetVersion"`
+	Artifact     ArtifactObject     `json:"artifact"`
 }
 
 type DependencyVulnsDetectedEvent struct {
@@ -179,7 +179,6 @@ func ToProjectObject(p models.Project) ProjectObject {
 }
 
 func ToOrgObject(o models.Org) OrgObject {
-
 	return OrgObject{
 		ID:                     o.ID,
 		Name:                   o.Name,
