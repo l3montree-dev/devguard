@@ -38,18 +38,6 @@ api:
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  podSecurityContext: {}
-  # fsGroup: 2000
-  securityContext:
-    capabilities:
-      drop:
-        - ALL
-    seccompProfile:
-      type: RuntimeDefault
-    allowPrivilegeEscalation: false
-    runAsNonRoot: true
-    runAsUser: 53111
-
   autoscaling:
     enabled: false
     minReplicas: 1

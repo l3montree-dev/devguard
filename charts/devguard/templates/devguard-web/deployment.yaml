@@ -32,10 +32,10 @@ spec:
       {{- end }}
       automountServiceAccountToken: false
       securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 53111
         runAsNonRoot: true
+        runAsUser: 53111
+        runAsGroup: 3000
+        fsGroup: 2000
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
