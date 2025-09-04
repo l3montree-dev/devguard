@@ -226,7 +226,7 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, fixedOnThisArtifactName)
 	})
 
-	t.Run("should correctly identify a vulnerability which is not detected by the current artifact anymore", func(t *testing.T) {
+	t.Run("should correctly identify a vulnerability which is not found in the current artifact anymore", func(t *testing.T) {
 		currentArtifactName := "new-artifact"
 
 		artifact := models.Artifact{ArtifactName: "artifact1"}

@@ -269,7 +269,7 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 		Content: []jira.ADFContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")),
+				Text: fmt.Sprintf("The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")),
 			},
 		},
 	})
@@ -724,7 +724,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	for i, s := range artifactNames {
 		artifactNames[i] = fmt.Sprintf("`%s`", s)
 	}
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))

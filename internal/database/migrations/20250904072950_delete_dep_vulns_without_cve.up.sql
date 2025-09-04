@@ -13,6 +13,6 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-DELETE FROM public.dependency_vulns where cve_id IS NULL
+DELETE FROM public.dependency_vulns where cve_id IS NULL;
 
-DELETE from public.vuln_events WHERE vuln_type = 'dependencyVuln' and NOT EXISTS(SELECT 1 from public.dependency_vulns where id = vuln_id)
+DELETE from public.vuln_events WHERE vuln_type = 'dependencyVuln' and NOT EXISTS(SELECT 1 from public.dependency_vulns where id = vuln_id);

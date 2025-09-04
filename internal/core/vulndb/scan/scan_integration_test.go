@@ -141,7 +141,7 @@ func TestScanning(t *testing.T) {
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
 	})
 
-	t.Run("should return amount of closed 1, if the vulnerability is not detected by ANY artifact anymore", func(t *testing.T) {
+	t.Run("should return amount of closed 1, if the vulnerability is not detected in ANY artifact anymore", func(t *testing.T) {
 		// we found the CVE - Make sure, that if we scan again but with a different artifact, the artifacts get updated
 		recorder := httptest.NewRecorder()
 		sbomFile := sbomWithoutVulnerability()
