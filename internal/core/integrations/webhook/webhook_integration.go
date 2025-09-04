@@ -257,7 +257,6 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	switch event := event.(type) {
 	case core.SBOMCreatedEvent:
-
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)

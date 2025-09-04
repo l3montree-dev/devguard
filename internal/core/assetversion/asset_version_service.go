@@ -699,7 +699,10 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				Asset:        core.ToAssetObject(asset),
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
-				SBOM:         sbom.GetCdxBom(),
+				Artifact: core.ArtifactObject{
+					ArtifactName: artifactName,
+				},
+				SBOM: sbom.GetCdxBom(),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {

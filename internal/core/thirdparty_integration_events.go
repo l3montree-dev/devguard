@@ -24,6 +24,7 @@ type SBOMCreatedEvent struct {
 	Project      ProjectObject
 	Asset        AssetObject
 	AssetVersion AssetVersionObject
+	Artifact     ArtifactObject
 }
 
 type DependencyVulnsDetectedEvent struct {
@@ -116,6 +117,10 @@ type AssetVersionObject struct {
 	Type          string         `json:"type"`
 	SigningPubKey *string        `json:"signingPubKey"`
 	Metadata      map[string]any `json:"metadata"`
+}
+
+type ArtifactObject struct {
+	ArtifactName string `json:"artifactName"`
 }
 
 func ToAssetVersionObject(av models.AssetVersion) AssetVersionObject {
