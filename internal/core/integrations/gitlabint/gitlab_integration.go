@@ -929,7 +929,11 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		conf := g.oauth2Endpoints[*asset.ExternalEntityProviderID]
 		_, _, err := client.InviteReporter(ctx.Request().Context(), projectIDInt, conf.DevGuardBotUserID)
 		if err != nil {
-			return errors.Wrap(err, "could not invite devguard bot to project")
+			if strings.Contains(err.Error(), " 409 {message: Member already exists}") {
+				// user is already a member of the project
+			} else {
+				return errors.Wrap(err, "could not invite devguard bot to project")
+			}
 		}
 
 		// notify the user that the devguard bot was invited to the project
@@ -1020,7 +1024,10 @@ func createToken() (uuid.UUID, error) {
 }
 
 func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core.GitlabClientFacade, asset models.Asset, gitlabProjectID int, devguardPrivateKey string, devguardAssetName string, devguardAPIURL string) error {
-	toCreate := []string{"DEVGUARD_TOKEN", "DEVGUARD_ASSET_NAME"}
+	toCreate := map[string]string{}
+	toCreate["DEVGUARD_TOKEN"] = devguardPrivateKey
+	toCreate["DEVGUARD_ASSET_NAME"] = devguardAssetName
+	toCreate["DEVGUARD_API_URL"] = devguardAPIURL
 
 	// check if the project variable already exists
 	variables, _, err := client.ListVariables(ctx, gitlabProjectID, nil)
@@ -1029,46 +1036,38 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core
 	}
 
 	for _, variable := range variables {
-		if slices.Contains(toCreate, variable.Key) {
+		if _, exists := toCreate[variable.Key]; exists {
 			// the variable already exists
-			// remove it - we cannot update, since some are protected
-			_, err = client.RemoveVariable(ctx, gitlabProjectID, variable.Key)
-			if err != nil {
-				return errors.Wrap(err, "could not remove project variable")
+			update := &gitlab.UpdateProjectVariableOptions{
+				Value:  gitlab.Ptr(toCreate[variable.Key]),
+				Masked: gitlab.Ptr(false),
 			}
+
+			_, _, err = client.UpdateVariable(ctx, gitlabProjectID, variable.Key, update)
+			if err != nil {
+				return errors.Wrap(err, "could not update project variable")
+			}
+
+			delete(toCreate, variable.Key)
 		}
 	}
 
-	devguardTokenVariable := &gitlab.CreateProjectVariableOptions{
-		Key:    gitlab.Ptr("DEVGUARD_TOKEN"),
-		Value:  gitlab.Ptr(devguardPrivateKey),
-		Masked: gitlab.Ptr(true),
+	for key, value := range toCreate {
+		variable := &gitlab.CreateProjectVariableOptions{
+			Key:    gitlab.Ptr(key),
+			Value:  gitlab.Ptr(value),
+			Masked: gitlab.Ptr(false),
+		}
+
+		if key == "DEVGUARD_TOKEN" {
+			variable.Masked = gitlab.Ptr(true)
+		}
+
+		_, _, err = client.CreateVariable(ctx, gitlabProjectID, variable)
+		if err != nil {
+			return fmt.Errorf("could not create project variable: %w", err)
+		}
 	}
-
-	_, _, err = client.CreateVariable(ctx, gitlabProjectID, devguardTokenVariable)
-	if err != nil {
-		return fmt.Errorf("could not create project variable: %w", err)
-	}
-
-	assetNameVariable := &gitlab.CreateProjectVariableOptions{
-		Key:    gitlab.Ptr("DEVGUARD_ASSET_NAME"),
-		Value:  gitlab.Ptr(devguardAssetName),
-		Masked: gitlab.Ptr(false),
-	}
-
-	_, _, err = client.CreateVariable(ctx, gitlabProjectID, assetNameVariable)
-
-	if err != nil {
-		return fmt.Errorf("could not create project variable: %w", err)
-	}
-
-	devguardAPIURLVariable := &gitlab.CreateProjectVariableOptions{
-		Key:    gitlab.Ptr("DEVGUARD_API_URL"),
-		Value:  gitlab.Ptr(devguardAPIURL),
-		Masked: gitlab.Ptr(false),
-	}
-
-	_, _, err = client.CreateVariable(ctx, gitlabProjectID, devguardAPIURLVariable)
 
 	return err
 }
