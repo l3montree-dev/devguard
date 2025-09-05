@@ -25,6 +25,7 @@ type WebhookStruct struct {
 	AssetVersion core.AssetVersionObject `json:"assetVersion"`
 	Payload      any                     `json:"payload"`
 	Type         WebhookType             `json:"type"`
+	Artifact     core.ArtifactObject     `json:"artifact,omitempty"`
 }
 
 type WebhookType string
@@ -77,7 +78,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 	return http.DefaultClient.Do(req)
 }
 
-func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject) error {
+func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, artifact core.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -86,6 +87,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.
 		AssetVersion: assetVersion,
 		Payload:      SBOM,
 		Type:         WebhookTypeSBOM,
+		Artifact:     artifact,
 	}
 
 	var buf bytes.Buffer
@@ -136,7 +138,7 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVuln
 	return nil*/
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVulnDTO, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVulnDTO, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, artifact core.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -144,6 +146,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVuln
 		Asset:        asset,
 		AssetVersion: assetVersion,
 		Payload:      vuln,
+		Artifact:     artifact,
 		Type:         WebhookTypeDependencyVulnerabilities,
 	}
 

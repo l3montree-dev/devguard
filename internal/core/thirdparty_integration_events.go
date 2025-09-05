@@ -32,6 +32,7 @@ type DependencyVulnsDetectedEvent struct {
 	Org          OrgObject
 	Project      ProjectObject
 	Asset        AssetObject
+	Artifact     ArtifactObject
 	AssetVersion AssetVersionObject
 }
 

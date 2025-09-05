@@ -372,6 +372,9 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
 				Vulns:        utils.Map(opened, vuln.DependencyVulnToDto),
+				Artifact: core.ArtifactObject{
+					ArtifactName: artifactName,
+				},
 			}); err != nil {
 				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
 			}
