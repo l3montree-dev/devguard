@@ -1,6 +1,6 @@
 module github.com/l3montree-dev/devguard
 
-go 1.25.0
+go 1.25.1
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.9.2
