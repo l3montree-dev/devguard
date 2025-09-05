@@ -28,3 +28,7 @@ func (s *service) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID
 func (s *service) SaveArtifact(artifact *models.Artifact) error {
 	return s.artifactRepository.Save(nil, artifact)
 }
+
+func (s *service) DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error {
+	return s.artifactRepository.DeleteArtifact(artifactName, assetVersionName, assetID)
+}

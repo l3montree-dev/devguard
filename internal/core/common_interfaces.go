@@ -94,6 +94,7 @@ type ArtifactRepository interface {
 	common.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error
 }
 
 type ReleaseRepository interface {
@@ -268,6 +269,7 @@ type AssetService interface {
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
+	DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error
 }
 
 type DependencyVulnService interface {

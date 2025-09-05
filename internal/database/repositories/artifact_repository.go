@@ -4,6 +4,8 @@
 package repositories
 
 import (
+	"log/slog"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -36,4 +38,37 @@ func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, 
 	var artifact models.Artifact
 	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
 	return artifact, err
+}
+
+func (r *artifactRepository) DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error {
+	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		sql := `
+DELETE FROM dependency_vulns dv
+WHERE NOT EXISTS (SELECT 1 FROM artifact_dependency_vulns);
+
+DELETE FROM license_risks lr
+WHERE NOT EXISTS (SELECT 1 FROM artifact_license_risks);
+
+DELETE FROM component_dependencies cd
+WHERE NOT EXISTS (SELECT 1 FROM artifact_component_dependencies);
+
+DELETE FROM vuln_events ve
+WHERE NOT EXISTS (
+    SELECT 1 FROM dependency_vulns
+    UNION
+    SELECT 1 FROM first_party_vulnerabilities
+);
+`
+		err = r.db.Exec(sql).Error
+		if err != nil {
+			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+		}
+	}() //nolint:errcheck
+
+	return err
 }
