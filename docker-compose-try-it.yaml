@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:0.15.1
+    image: ghcr.io/l3montree-dev/devguard/postgresql:0.15.3
     container_name: devguard-postgres
     security_opt:
       - no-new-privileges:true 
@@ -71,7 +71,7 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:0.15.1
+    image: ghcr.io/l3montree-dev/devguard:0.15.3
     container_name: devguard-api
     security_opt:
       - no-new-privileges:true
@@ -101,7 +101,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:0.15.1
+    image: ghcr.io/l3montree-dev/devguard-web:0.15.3
     container_name: devguard-web
     security_opt:
       - no-new-privileges:true
