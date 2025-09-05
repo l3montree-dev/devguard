@@ -526,6 +526,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	artifactService := artifact.NewService(artifactRepository)
+	artifactController := artifact.NewController(artifactService)
 
 	// release module
 	// release repository will be created later when project router is available
@@ -789,6 +790,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+
+	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

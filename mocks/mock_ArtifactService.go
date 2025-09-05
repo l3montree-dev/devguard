@@ -37,6 +37,69 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 	return &ArtifactService_Expecter{mock: &_m.Mock}
 }
 
+// DeleteArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
+	ret := _mock.Called(assetID, assetVersionName, artifactName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteArtifact")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, string) error); ok {
+		r0 = returnFunc(assetID, assetVersionName, artifactName)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactService_DeleteArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteArtifact'
+type ArtifactService_DeleteArtifact_Call struct {
+	*mock.Call
+}
+
+// DeleteArtifact is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - artifactName string
+func (_e *ArtifactService_Expecter) DeleteArtifact(assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactService_DeleteArtifact_Call {
+	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", assetID, assetVersionName, artifactName)}
+}
+
+func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactService_DeleteArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_DeleteArtifact_Call) Return(err error) *ArtifactService_DeleteArtifact_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactService_DeleteArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetArtifactNamesByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
