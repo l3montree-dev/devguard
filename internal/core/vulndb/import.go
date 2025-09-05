@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/csv"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -20,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -165,7 +163,9 @@ func (s importService) copyCSVToDB(tmp string) error {
 			slog.Info("imported CSV (prune)", "file", file, "duration", time.Since(startTime))
 		})
 	}
+	slog.Warn("starting to wait")
 	wg.Wait()
+	slog.Warn("finished waiting")
 	return nil
 }
 
@@ -181,7 +181,24 @@ func countTableRows(ctx context.Context, pool *pgxpool.Pool, tableName string) (
 
 func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
 	// Use shadow table pattern for pruned tables to minimize downtime
-	return importWithShadowTable(ctx, pool, tableName, csvFilePath)
+	if os.Getenv("MAKE_DIFF_TABLES") == "true" {
+		err := importWithShadowTable(ctx, pool, tableName, csvFilePath)
+		if err != nil {
+			return err
+		}
+		return importWithShadowTableForDiff(ctx, pool, tableName, csvFilePath)
+	} else {
+		return importWithShadowTable(ctx, pool, tableName, csvFilePath)
+	}
+}
+
+func importWithShadowTableForDiff(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
+	shadowTable := tableName + "_diff"
+	err := createShadowTable(ctx, pool, tableName, shadowTable, csvFilePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
@@ -204,85 +221,9 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	}
 
 	// Phase 2: Atomic table swap (minimal lock time)
-	tableSwap := os.Getenv("MAKE_TABLE_DIFF")
-	if tableSwap != "true" {
-		slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
-		if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
-			return err
-		}
-	} else {
-		dirPath := "vulndb-tmp/"
-		slog.Info("start producing diff tables", "table", tableName)
-		tx, err := pool.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to begin transaction: %w", err)
-		}
-		primaryKeys := primaryKeysFromTables[tableName]
-		if len(primaryKeys) == 0 {
-			slog.Error("no primary key found", "table", tableName)
-			return fmt.Errorf("no primary key found")
-		}
-
-		// all the new entries
-		var rows pgx.Rows
-		if len(primaryKeys) == 1 {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT shadow.* FROM %s shadow LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
-		} else {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT shadow.* FROM %s shadow LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
-		}
-
-		if err != nil {
-			return err
-		}
-		err = rowsToCSV(rows, dirPath+tableName+"_diff_insert")
-		if err != nil {
-			return err
-		}
-		rows.Close()
-
-		// all the deleted entries
-		if len(primaryKeys) == 1 {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL;", tableName, shadowTable, primaryKeys[0], primaryKeys[0]))
-		} else {
-			rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s shadow USING (%s) WHERE shadow.%s IS NULL OR shadow.%s IS NULL;", tableName, shadowTable, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
-		}
-
-		if err != nil {
-			return err
-		}
-		err = rowsToCSV(rows, dirPath+tableName+"_diff_delete")
-		if err != nil {
-			return err
-		}
-		rows.Close()
-
-		// all the updated rows need table for all relevant attributes per table
-		columns := relevantAttributesFromTables[tableName]
-		if len(columns) == 0 {
-			slog.Info("no update diff table needed", "table", tableName)
-			return nil
-		}
-		oldFlags := "old." + columns[0]
-		shadowFlags := "shadow." + columns[0]
-		for _, column := range columns[1:] {
-			oldFlags += ",old." + column
-			shadowFlags += ",shadow." + column
-		}
-
-		slog.Debug("Calling update", "table", tableName, "oldFlags", oldFlags, "shadowFlags", shadowFlags)
-		rows, err = tx.Query(ctx, fmt.Sprintf(`SELECT shadow.* FROM %s old
-			JOIN %s shadow USING (%s) WHERE (%s) 
-			IS DISTINCT FROM (%s);`, tableName, shadowTable, primaryKeys[0], shadowFlags, oldFlags))
-		if err != nil {
-			return err
-		}
-		err = rowsToCSV(rows, dirPath+tableName+"_diff_update")
-		if err != nil {
-			return err
-		}
-		rows.Close()
-		slog.Info("finished producing diff tables", "table", tableName)
-
+	slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
+	if err := swapTables(ctx, pool, tableName, shadowTable); err != nil {
+		return err
 	}
 
 	// Count final rows after import
@@ -307,72 +248,7 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 	return nil
 }
 
-func rowsToCSV(rows pgx.Rows, csvFileName string) error {
-	fd, err := os.Create(csvFileName + ".csv")
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-	csvWriter := csv.NewWriter(fd)
-
-	columnNames := rows.FieldDescriptions()
-	headers := make([]string, len(columnNames))
-	for i, column := range columnNames {
-		headers[i] = column.Name
-	}
-
-	err = csvWriter.Write(headers)
-	if err != nil {
-		return err
-	}
-
-	record := make([]string, len(headers))
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			continue // continue with the next row maybe in the future count erroneous rows
-		}
-		for i, value := range values {
-			record[i] = anyToString(value)
-		}
-		err = csvWriter.Write(record)
-		if err != nil {
-			continue //continue with the next row
-		}
-	}
-	csvWriter.Flush()
-	if err := csvWriter.Error(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func anyToString(value any) string {
-	if value == nil {
-		return "NULL"
-	}
-	switch t := value.(type) {
-	case string:
-		return t
-	case bool:
-		if t {
-			return "true"
-		}
-		return "false"
-	case int:
-		strconv.Itoa(t)
-	default:
-		b, err := json.Marshal(t)
-		if err == nil {
-			return string(b)
-		}
-		return fmt.Sprint(t)
-	}
-	return "NULL"
-}
-
 func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, shadowTableName, csvFilePath string) error {
-
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -565,6 +441,202 @@ func copyCSVFromRemoteToLocal(ctx context.Context, reg string, tag string, fs *f
 	if err != nil {
 		return fmt.Errorf("could not copy from remote repository to file store: %w", err)
 	}
+
+	return nil
+}
+
+func ImportFromDiff() error {
+	username := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+	dbname := os.Getenv("POSTGRES_DB")
+
+	// replace with your PostgreSQL connection string
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
+	// create a connection pool with increased connections for parallel processing
+	ctx := context.Background()
+	config, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		log.Fatalf("Unable to parse config: %v", err)
+	}
+	// increase pool size for parallel operations
+	config.MaxConns = 10
+	config.MinConns = 2
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+
+	if err != nil {
+		log.Fatalf("Unable to create connection pool: %v", err)
+	}
+	defer pool.Close()
+	// only import the incremental updates
+	// pull incremental files from github database
+	files, err := os.ReadDir("diffs-tmp")
+	if err != nil {
+		slog.Error("error when reading dir", "error", err)
+		return err
+	}
+
+	for _, file := range files {
+		name := file.Name()
+		if filepath.Ext(name) != ".csv" {
+			continue
+		}
+		name = strings.TrimRight(name, ".csv")
+		fields := strings.Split(name, "_")
+		if len(fields) != 3 || fields[1] != "diff" {
+			continue
+		}
+		mode := fields[2]
+		table := fields[0]
+		switch mode {
+		case "insert":
+			slog.Info("start inserting", "file", name)
+			err = processInsertDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			if err != nil {
+				slog.Error("could not process insert diff", "table", name, "err", err)
+				continue
+			}
+		case "delete":
+			slog.Info("start deleting", "file", name)
+			err = processDeleteDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			if err != nil {
+				slog.Error("could not process delete diff", "table", name, "err", err)
+				continue
+			}
+		case "update":
+			slog.Info("start updating", "file", name)
+			err = processUpdateDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			if err != nil {
+				slog.Error("could not process update diff", "table", name, "err", err)
+				continue
+			}
+		default:
+			slog.Warn("invalid mode for diff file")
+		}
+	}
+	return nil
+}
+
+func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+	if tableName != "cves_diff" {
+		return nil
+	}
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Conn().Close(ctx)
+	slog.Info("start copying")
+	result, err := conn.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
+	if err != nil {
+		slog.Error("TOT", "err", err, "result", result)
+		return err
+	}
+	slog.Info("finished copying")
+
+	return nil
+}
+
+func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+	if tableName != "cves_diff" {
+		return nil
+	}
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Conn().Close(ctx)
+
+	csvReader := csv.NewReader(fd)
+	allRecords, err := csvReader.ReadAll()
+	if err != nil {
+		return err
+	}
+
+	primaryKey := allRecords[0][0]
+	allRecords = allRecords[1:]
+	slog.Info("start deleting")
+	for i := range allRecords {
+		key := allRecords[i][0]
+		sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
+		result, err := conn.Exec(ctx, sql)
+		if err != nil {
+			slog.Error("TOT", "err", err, "result", result)
+			continue
+		}
+	}
+	slog.Info("finished deleting")
+
+	return nil
+}
+
+func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+	if tableName != "cves_diff" {
+		return nil
+	}
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Conn().Close(ctx)
+
+	csvReader := csv.NewReader(fd)
+	record, err := csvReader.Read()
+	if err != nil {
+		return err
+	}
+	columnsToUpdate := record[1:] // exclude primary key(s)
+	for i, column := range columnsToUpdate {
+		if column == "references" {
+			columnsToUpdate[i] = fmt.Sprintf("\"%s\" = EXCLUDED.%s", column, column)
+		} else {
+			columnsToUpdate[i] = fmt.Sprintf("%s = EXCLUDED.%s", column, column)
+		}
+	}
+	assignSQL := strings.Join(columnsToUpdate, ", ")
+
+	tmpTable := tableName + "_tmp_" + strconv.Itoa(time.Now().Second())
+
+	_, err = conn.Conn().Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", tmpTable, tableName))
+	if err != nil {
+		return fmt.Errorf("failed to create tmp table: %w", err)
+	}
+	defer conn.Conn().Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable))
+	fd, err = os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tmpTable))
+	if err != nil {
+		return fmt.Errorf("failed to copy to tmp table: %w", err)
+	}
+
+	pkeys := primaryKeysFromTables[tableName]
+
+	upsertSQL := fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s) DO UPDATE SET %s", tableName, tmpTable, pkeys[0], assignSQL)
+
+	if _, err := conn.Exec(ctx, upsertSQL); err != nil {
+		return err
+	}
+	slog.Info("update completed")
 
 	return nil
 }
