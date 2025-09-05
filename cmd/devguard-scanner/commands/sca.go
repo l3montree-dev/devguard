@@ -435,8 +435,7 @@ func scanExternalImage() error {
 			if err != nil {
 				panic(err)
 			}
-		}
-		if attestation["predicateType"] == "https://in-toto.io/attestation/release/v0.1" {
+		} else if attestation["predicateType"] == "https://in-toto.io/attestation/release/v0.1" {
 			predicate, ok := attestation["predicate"].(map[string]any)
 			if !ok {
 				panic("could not parse predicate")

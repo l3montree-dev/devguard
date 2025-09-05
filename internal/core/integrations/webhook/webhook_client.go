@@ -221,7 +221,7 @@ func (c *webhookClient) SendTest(org core.OrgObject, project core.ProjectObject,
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return fmt.Errorf("failed to send test webhook, status: %s", resp.Status)
 	}
 
