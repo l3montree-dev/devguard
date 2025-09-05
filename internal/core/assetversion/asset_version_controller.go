@@ -301,9 +301,9 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifactName := ctx.QueryParam("artifactName")
+	artifact := core.GetArtifact(ctx)
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifactName))
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifact.ArtifactName))
 	if err != nil {
 		return nil, err
 	}
