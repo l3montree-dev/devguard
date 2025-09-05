@@ -25,7 +25,7 @@ func (c *controller) DeleteArtifact(ctx core.Context) error {
 
 	artifact := core.GetArtifact(ctx)
 
-	err := c.artifactService.DeleteArtifact(artifact.ArtifactName, assetVersion.Name, asset.ID)
+	err := c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err

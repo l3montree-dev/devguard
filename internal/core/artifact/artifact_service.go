@@ -29,6 +29,6 @@ func (s *service) SaveArtifact(artifact *models.Artifact) error {
 	return s.artifactRepository.Save(nil, artifact)
 }
 
-func (s *service) DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error {
-	return s.artifactRepository.DeleteArtifact(artifactName, assetVersionName, assetID)
+func (s *service) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
+	return s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
 }

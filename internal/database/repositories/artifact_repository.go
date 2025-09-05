@@ -40,7 +40,7 @@ func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, 
 	return artifact, err
 }
 
-func (r *artifactRepository) DeleteArtifact(artifactName string, assetVersionName string, assetID uuid.UUID) error {
+func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
 	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
 	if err != nil {
 		return err
