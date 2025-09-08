@@ -61,24 +61,29 @@ func Export() error {
 
 func cleanUpTables(ctx context.Context, pool *pgxpool.Pool) error {
 	tx, err := pool.Begin(ctx)
-	defer tx.Conn().Close(ctx)
 	if err != nil {
 		slog.Error("error when trying to begin transaction")
 		return err
 	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
 	for _, table := range tablesToUpdate {
 		sql := fmt.Sprintf("DROP TABLE %s_diff", table)
 		_, err := tx.Exec(ctx, sql)
 		if err != nil {
 			slog.Error("error when dropping table", "table", table, "err", err)
-			tx.Rollback(ctx)
 			return err
 		}
 	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		slog.Error("error when trying to commit cleanup", "err", err)
-		return err // maybe rollback
+		return err
 	}
 	return nil
 }
@@ -87,11 +92,11 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 
 	dirPath := "diffs-tmp/"
 	slog.Info("start producing diff tables", "table", tableName)
-	tx, err := pool.Begin(ctx) //get a new transaction from the pool
+	conn, err := pool.Acquire(ctx) //get a new transaction from the pool
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Conn().Close(ctx)
+	defer conn.Release()
 
 	primaryKeys := primaryKeysFromTables[tableName] // get the primary key(s) for the table
 	if len(primaryKeys) == 0 {
@@ -102,9 +107,9 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 	// query all the entries which are in the new table and not in the old table
 	var rows pgx.Rows
 	if len(primaryKeys) == 1 {
-		rows, err = tx.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL;", tableName, shadowTable, primaryKeys[0], primaryKeys[0]))
+		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL;", tableName, shadowTable, primaryKeys[0], primaryKeys[0]))
 	} else if len(primaryKeys) == 2 {
-		rows, err = tx.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", tableName, shadowTable, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
+		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", tableName, shadowTable, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
 	} else {
 		slog.Warn("3 or more primary keys in a table are not supported", "table", tableName)
 	}
@@ -112,16 +117,16 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 		return err
 	}
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_insert")
+	rows.Close()
 	if err != nil {
 		return err
 	}
-	rows.Close()
 
 	// query all the entries which are not in the new table but in the old table
 	if len(primaryKeys) == 1 {
-		rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
+		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
 	} else if len(primaryKeys) == 2 {
-		rows, err = tx.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL OR new.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
+		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL OR new.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
 	} else {
 		slog.Warn("3 or more primary keys in a table are not supported", "table", tableName)
 	}
@@ -130,10 +135,10 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 		return err
 	}
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_delete")
+	rows.Close()
 	if err != nil {
 		return err
 	}
-	rows.Close()
 
 	// query all the entries where a relevant attribute changed in the new table
 	columns := relevantAttributesFromTables[tableName]
@@ -148,17 +153,18 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 		shadowFlags += ",new." + column
 	}
 
-	rows, err = tx.Query(ctx, fmt.Sprintf(`SELECT new.* FROM %s old
+	rows, err = conn.Query(ctx, fmt.Sprintf(`SELECT new.* FROM %s old
 			JOIN %s new USING (%s) WHERE (%s) 
 			IS DISTINCT FROM (%s);`, shadowTable, tableName, primaryKeys[0], shadowFlags, oldFlags))
 	if err != nil {
 		return err
 	}
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_update")
+	rows.Close()
 	if err != nil {
 		return err
 	}
-	rows.Close()
+
 	slog.Info("finished producing diff tables", "table", tableName)
 	return nil
 }
