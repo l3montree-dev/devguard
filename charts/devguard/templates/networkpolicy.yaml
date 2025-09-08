@@ -1,0 +1,89 @@
+{{- if .Values.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: devguard-web-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: devguard-web
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          {{ (.Values.networkPolicy).ingressNamespaceSelectorKey | default "role" }}: {{ (.Values.networkPolicy).ingressNamespaceSelectorValue | default "ingress" }}
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: devguard-api-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: devguard-api
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          {{ (.Values.networkPolicy).ingressNamespaceSelectorKey | default "role" }}: {{ (.Values.networkPolicy).ingressNamespaceSelectorValue | default "ingress" }}
+    - podSelector:
+        matchLabels:
+          app: devguard-web
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: devguard-kratos-public-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kratos
+  ingress:
+  - ports:
+    - port: http-public # 4333
+    from:
+    - podSelector:
+        matchLabels:
+          app: devguard-web
+    - podSelector:
+        matchLabels:
+          app: devguard-api
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: devguard-kratos-admin-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kratos
+  ingress:
+  - ports:
+    - port: http-admin # 4434
+    from:
+    - podSelector:
+        matchLabels:
+          app: devguard-api
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: devguard-postgresql-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: devguard-api
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: kratos
+{{- end }}
