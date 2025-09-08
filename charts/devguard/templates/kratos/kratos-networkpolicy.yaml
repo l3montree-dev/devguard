@@ -14,7 +14,20 @@ spec:
     - from:
         - podSelector:
             matchLabels:
+                app: devguard-api
+        - podSelector:
+            matchLabels:
                 app.kubernetes.io/name: kratos
       ports:
       - protocol: TCP
         port: 4434 # restrict access to the admin port
+      - protocol: TCP
+        port: 4433 # restrict access to the public port
+    - from:
+        - podSelector:
+            matchLabels:
+                app: devguard-web
+      ports:
+      - protocol: TCP
+        port: 4433 # restrict access to the public port
+---
