@@ -485,11 +485,18 @@ func ImportFromDiff() error {
 		}
 		name = strings.TrimRight(name, ".csv")
 		fields := strings.Split(name, "_")
-		if len(fields) != 3 || fields[1] != "diff" {
+		// only handle csv files
+		if len(fields) <= 2 || fields[len(fields)-2] != "diff" {
 			continue
 		}
-		mode := fields[2]
+
+		// extract table information from csv file Name
+		mode := fields[len(fields)-1]
 		table := fields[0]
+		for _, field := range fields[1:(len(fields) - 2)] {
+			table += "_" + field
+		}
+
 		switch mode {
 		case "insert":
 			slog.Info("start inserting", "file", name)
@@ -520,9 +527,6 @@ func ImportFromDiff() error {
 }
 
 func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
-	if tableName != "cves_diff" {
-		return nil
-	}
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -532,22 +536,17 @@ func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	if err != nil {
 		return err
 	}
-	defer conn.Conn().Close(ctx)
-	slog.Info("start copying")
+
 	result, err := conn.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
 	if err != nil {
 		slog.Error("TOT", "err", err, "result", result)
 		return err
 	}
-	slog.Info("finished copying")
-
+	slog.Info("insert completed")
 	return nil
 }
 
 func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
-	if tableName != "cves_diff" {
-		return nil
-	}
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -565,27 +564,42 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		return err
 	}
 
-	primaryKey := allRecords[0][0]
+	primaryKeys := primaryKeysFromTables[tableName[:len(tableName)-5]]
+	if len(primaryKeys) == 0 {
+		slog.Error("could not determine primary key(s)", "table", tableName)
+		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
+	}
 	allRecords = allRecords[1:]
-	slog.Info("start deleting")
-	for i := range allRecords {
-		key := allRecords[i][0]
-		sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
-		result, err := conn.Exec(ctx, sql)
-		if err != nil {
-			slog.Error("TOT", "err", err, "result", result)
-			continue
+	if len(primaryKeys) == 1 {
+		primaryKey := primaryKeys[0]
+		for i := range allRecords {
+			key := allRecords[i][0]
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
+			_, err := conn.Exec(ctx, sql)
+			if err != nil {
+				slog.Error("error when deleting from table", "table", tableName, "id", key)
+				continue
+			}
+		}
+	} else {
+		primaryKey1 := primaryKeys[0]
+		primaryKey2 := primaryKeys[1]
+		for i := range allRecords {
+			key1 := allRecords[i][0]
+			key2 := allRecords[i][1]
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", tableName, primaryKey1, "'"+key1+"'", primaryKey2, "'"+key2+"'")
+			_, err := conn.Exec(ctx, sql)
+			if err != nil {
+				slog.Error("error when deleting from table", "table", tableName, "id1", key1, "id2", key2)
+				continue
+			}
 		}
 	}
-	slog.Info("finished deleting")
-
+	slog.Info("delete completed")
 	return nil
 }
 
 func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
-	if tableName != "cves_diff" {
-		return nil
-	}
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -602,7 +616,14 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	if err != nil {
 		return err
 	}
-	columnsToUpdate := record[1:] // exclude primary key(s)
+
+	primaryKeys := primaryKeysFromTables[tableName[:len(tableName)-5]]
+	if len(primaryKeys) == 0 {
+		slog.Error("could not determine primary key(s)", "table", tableName)
+		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
+	}
+
+	columnsToUpdate := record[len(primaryKeys):] // exclude primary key(s)
 	for i, column := range columnsToUpdate {
 		if column == "references" {
 			columnsToUpdate[i] = fmt.Sprintf("\"%s\" = EXCLUDED.%s", column, column)
@@ -612,14 +633,15 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	}
 	assignSQL := strings.Join(columnsToUpdate, ", ")
 
-	tmpTable := tableName + "_tmp_" + strconv.Itoa(time.Now().Second())
+	tmpTable := tableName + "_tmp_" + strconv.Itoa(int(time.Now().Unix()))
 
 	_, err = conn.Conn().Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", tmpTable, tableName))
 	if err != nil {
 		return fmt.Errorf("failed to create tmp table: %w", err)
 	}
 	defer conn.Conn().Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable))
-	fd, err = os.Open(filePath)
+
+	fd, err = os.Open(filePath) // reopen csv file since we read from it once already
 	if err != nil {
 		return err
 	}
@@ -629,9 +651,12 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		return fmt.Errorf("failed to copy to tmp table: %w", err)
 	}
 
-	pkeys := primaryKeysFromTables[tableName]
-
-	upsertSQL := fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s) DO UPDATE SET %s", tableName, tmpTable, pkeys[0], assignSQL)
+	var upsertSQL string
+	if len(primaryKeys) == 1 {
+		upsertSQL = fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s) DO UPDATE SET %s", tableName, tmpTable, primaryKeys[0], assignSQL)
+	} else {
+		upsertSQL = fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s, %s) DO UPDATE SET %s", tableName, tmpTable, primaryKeys[0], primaryKeys[1], assignSQL)
+	}
 
 	if _, err := conn.Exec(ctx, upsertSQL); err != nil {
 		return err

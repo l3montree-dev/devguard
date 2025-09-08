@@ -57,29 +57,24 @@ jobs:
     - name: Import the last database version (this takes some time)
       if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
       run: |
-        go run ./cmd/devguard-cli/main.go vulndb import || true
+        # import the latest vulndb version, diff flage copies the database for comparison later
+        go run ./cmd/devguard-cli/main.go vulndb import diff || true
     - name: Build the database (this takes some time)
       run: |
         # will fetch the latest build database from ghcr.io
         go run ./cmd/devguard-cli/main.go vulndb sync
-    - name: Dump the PostgreSQL database
-      # skip:checkov:CKV_SECRET_6
+
+    - name: Export the diff csv files (this does not take some time)
       run: |
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_components.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_affected_component.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cves.csv 
-        # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cpe_matches) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cpe_matches.csv  
-        # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_cpe_match) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_cpe_match.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cwes) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cwes.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM exploits) TO STDOUT WITH DELIMITER ',' CSV HEADER" > exploits.csv 
-        # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
-    
+        # writes the difference from the db before and after the sync into csv files
+        go run ./cmd/devguard-cli/main.go vulndb export
+
     - name: install zip
       run: sudo apt-get install zip
 
     - name: Zip the CSV files
       # run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
-      run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv
+      run: zip -r vulndb.zip diffs-tmp 
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
 
