@@ -141,22 +141,22 @@ func newImportCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			core.LoadConfig() // nolint
 
-			var mode string
+			var mode string // determines how we import
 			if len(args) > 0 {
 				mode = args[0]
 			}
-			// import incremental updates using the diff files
+			// import incremental updates using the difference between two databases states
 			if mode == "inc" {
 				err := vulndb.ImportFromDiff()
 				if err != nil {
-					slog.Error("could not import from diff files")
+					slog.Error("error when trying to import with diff files", "err", err)
 					return
 				}
-			} else { // import the data base from the package master
+			} else { // import the full table
 				if mode == "diff" { // additionally create a diff table to be used by the export command
 					os.Setenv("MAKE_DIFF_TABLES", "true")
 				}
-				// import the full table
+
 				database, err := core.DatabaseFactory()
 				if err != nil {
 					slog.Error("could not connect to database", "error", err)
@@ -169,10 +169,13 @@ func newImportCommand() *cobra.Command {
 				exploitsRepository := repositories.NewExploitRepository(database)
 				affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 
-				tag := "1757334027"
-				if len(args) > 1 {
+				tag := "latest"
+				if len(args) == 1 {
+					tag = args[0]
+				} else {
 					tag = args[1]
 				}
+
 				v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
 				err = v.Import(database, tag)
 				if err != nil {

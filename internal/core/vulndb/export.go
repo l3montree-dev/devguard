@@ -62,12 +62,11 @@ func Export() error {
 func cleanUpTables(ctx context.Context, pool *pgxpool.Pool) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		slog.Error("error when trying to begin transaction")
 		return err
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback(ctx)
+			tx.Rollback(ctx) //nolint
 		}
 	}()
 
@@ -89,12 +88,11 @@ func cleanUpTables(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, tableName string) error {
-
-	dirPath := "diffs-tmp/"
 	slog.Info("start producing diff tables", "table", tableName)
+	dirPath := "diffs-tmp/"
 	conn, err := pool.Acquire(ctx) //get a new transaction from the pool
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return err
 	}
 	defer conn.Release()
 
@@ -111,11 +109,14 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 	} else if len(primaryKeys) == 2 {
 		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", tableName, shadowTable, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
 	} else {
-		slog.Warn("3 or more primary keys in a table are not supported", "table", tableName)
+		slog.Error("3 or more primary keys in a table are not currently implemented", "table", tableName)
+		return fmt.Errorf("3 or more primary keys in a table are not currently implemented")
 	}
 	if err != nil {
 		return err
 	}
+
+	//create insert diff
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_insert")
 	rows.Close()
 	if err != nil {
@@ -127,25 +128,26 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL;", shadowTable, tableName, primaryKeys[0], primaryKeys[0]))
 	} else if len(primaryKeys) == 2 {
 		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT old.* FROM %s old LEFT JOIN %s new USING (%s) WHERE new.%s IS NULL OR new.%s IS NULL;", shadowTable, tableName, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
-	} else {
-		slog.Warn("3 or more primary keys in a table are not supported", "table", tableName)
 	}
-
 	if err != nil {
 		return err
 	}
+
+	// create delete diff
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_delete")
 	rows.Close()
 	if err != nil {
 		return err
 	}
 
-	// query all the entries where a relevant attribute changed in the new table
+	// get the relevant attributes which we want to watch if they changed between tables
 	columns := relevantAttributesFromTables[tableName]
-	if len(columns) == 0 {
+	if len(columns) == 0 { // some tables only change based on primary keys, hence we don't need to update them
 		slog.Info("no update diff table needed", "table", tableName)
 		return nil
 	}
+
+	// build sql attributes to query on for both tables
 	oldFlags := "old." + columns[0]
 	shadowFlags := "new." + columns[0]
 	for _, column := range columns[1:] {
@@ -153,12 +155,15 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, shadowTable string, ta
 		shadowFlags += ",new." + column
 	}
 
+	// query all entries where the primary key is the same but a relevant attribute changed
 	rows, err = conn.Query(ctx, fmt.Sprintf(`SELECT new.* FROM %s old
 			JOIN %s new USING (%s) WHERE (%s) 
 			IS DISTINCT FROM (%s);`, shadowTable, tableName, primaryKeys[0], shadowFlags, oldFlags))
 	if err != nil {
 		return err
 	}
+
+	// create update diffs
 	err = rowsToCSV(rows, dirPath+tableName+"_diff_update")
 	rows.Close()
 	if err != nil {
@@ -195,6 +200,7 @@ func rowsToCSV(rows pgx.Rows, csvFileName string) error {
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
+			slog.Warn("could not scan row, continuing... ", "file", csvFileName, "err", err)
 			continue // continue with the next row maybe in the future count erroneous rows
 		}
 		for i, value := range values {
@@ -202,6 +208,7 @@ func rowsToCSV(rows pgx.Rows, csvFileName string) error {
 		}
 		err = csvWriter.Write(record)
 		if err != nil {
+			slog.Warn("could not scan row", "file, continuing...", csvFileName, "err", err)
 			continue //continue with the next row
 		}
 	}
