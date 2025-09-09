@@ -53,51 +53,11 @@ var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
 
 func (s importService) Import(tx core.DB, tag string) error {
-	slog.Info("importing vulndb started")
 	begin := time.Now()
-	tmp := "./vulndb-tmp"
-	sigFile := tmp + "/vulndb.zip.sig"
-	blobFile := tmp + "/vulndb.zip"
-	pubKeyFile := "cosign.pub"
-
-	ctx := context.Background()
-
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
-
-	// create a file store
-	defer os.RemoveAll(tmp)
-	fs, err := file.New(tmp)
+	tmp, err := downloadAndSaveZipToTemp("vulndb", tag)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer fs.Close()
-
-	//import the vulndb csv to the file store
-	err = copyCSVFromRemoteToLocal(ctx, reg, tag, fs)
-	if err != nil {
-		return fmt.Errorf("could not copy csv from remote to local: %w", err)
-	}
-
-	// verify the signature of the imported data
-	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
-	if err != nil {
-		return fmt.Errorf("could not verify signature: %w", err)
-	}
-	slog.Info("successfully verified signature")
-
-	// open the blob file
-	f, err := os.Open(blobFile)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	// unzip the blob file into vulndb-tmp dir
-	err = utils.Unzip(blobFile, tmp+"/")
-	if err != nil {
-		panic(err)
-	}
-	slog.Info("unzipping vulndb completed")
 
 	//copy csv files to database
 	err = s.copyCSVToDB(tmp)
@@ -163,9 +123,7 @@ func (s importService) copyCSVToDB(tmp string) error {
 			slog.Info("imported CSV (prune)", "file", file, "duration", time.Since(startTime))
 		})
 	}
-	slog.Warn("starting to wait")
 	wg.Wait()
-	slog.Warn("finished waiting")
 	return nil
 }
 
@@ -465,14 +423,17 @@ func ImportFromDiff() error {
 	config.MinConns = 2
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
-
 	if err != nil {
 		log.Fatalf("Unable to create connection pool: %v", err)
 	}
 	defer pool.Close()
-	// only import the incremental updates
-	// pull incremental files from github database
-	files, err := os.ReadDir("diffs-tmp")
+
+	tmp, err := downloadAndSaveZipToTemp("vulndb-diff", "test")
+	if err != nil {
+		return err
+	}
+
+	files, err := os.ReadDir(tmp)
 	if err != nil {
 		slog.Error("error when reading dir", "error", err)
 		return err
@@ -500,21 +461,21 @@ func ImportFromDiff() error {
 		switch mode {
 		case "insert":
 			slog.Info("start inserting", "file", name)
-			err = processInsertDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			err = processInsertDiff(ctx, pool, tmp+"/"+name+".csv", table+"_diff")
 			if err != nil {
 				slog.Error("could not process insert diff", "table", name, "err", err)
 				continue
 			}
 		case "delete":
 			slog.Info("start deleting", "file", name)
-			err = processDeleteDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			err = processDeleteDiff(ctx, pool, tmp+"/"+name+".csv", table+"_diff")
 			if err != nil {
 				slog.Error("could not process delete diff", "table", name, "err", err)
 				continue
 			}
 		case "update":
 			slog.Info("start updating", "file", name)
-			err = processUpdateDiff(ctx, pool, "diffs-tmp/"+name+".csv", table+"_diff")
+			err = processUpdateDiff(ctx, pool, tmp+"/"+name+".csv", table+"_diff")
 			if err != nil {
 				slog.Error("could not process update diff", "table", name, "err", err)
 				continue
@@ -664,4 +625,50 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	slog.Info("update completed")
 
 	return nil
+}
+
+// downloads the fileName with the tag from the devguard package master, verifies the signature and unzips it into tmp Folder
+func downloadAndSaveZipToTemp(fileName string, tag string) (string, error) {
+	slog.Info("importing vulndb started")
+	tmp := "./vulndb-tmp"
+	sigFile := tmp + "/vulndb.zip.sig"
+	blobFile := tmp + "/vulndb.zip"
+	pubKeyFile := "cosign.pub"
+
+	ctx := context.Background()
+
+	reg := "ghcr.io/l3montree-dev/devguard/" + fileName
+	fs, err := file.New(tmp)
+	if err != nil {
+		panic(err)
+	}
+	defer fs.Close()
+
+	// import the vulndb csv to the file store
+	err = copyCSVFromRemoteToLocal(ctx, reg, tag, fs)
+	if err != nil {
+		return tmp, fmt.Errorf("could not copy csv from remote to local: %w", err)
+	}
+
+	// verify the signature of the imported data
+	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
+	if err != nil {
+		return tmp, fmt.Errorf("could not verify signature: %w", err)
+	}
+	slog.Info("successfully verified signature")
+
+	// open the blob file
+	f, err := os.Open(blobFile)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	// unzip the blob file into vulndb-tmp dir
+	err = utils.Unzip(blobFile, tmp+"/")
+	if err != nil {
+		return tmp, fmt.Errorf("error when trying to build zip file: %w", err)
+	}
+	slog.Info("unzipping vulndb completed")
+	return tmp, nil
 }

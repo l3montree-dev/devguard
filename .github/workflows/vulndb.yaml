@@ -99,9 +99,7 @@ jobs:
 
     - name: Push the database ZIP file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest vulndb.zip
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:test vulndb.zip
     - name: Push the signatures to the GitHub Container Registry  
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date.sig vulndb.zip.sig
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest.sig vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:test.sig vulndb.zip.sig

@@ -169,7 +169,7 @@ func newImportCommand() *cobra.Command {
 				exploitsRepository := repositories.NewExploitRepository(database)
 				affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 
-				tag := "latest"
+				tag := "1757334027"
 				if len(args) > 1 {
 					tag = args[1]
 				}
