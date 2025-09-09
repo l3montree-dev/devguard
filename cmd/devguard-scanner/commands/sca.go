@@ -398,7 +398,7 @@ func getAttestations(image string) ([]map[string]any, error) {
 func scanExternalImage() error {
 	// download and extract release attestation BOMs first
 	attestations, err := getAttestations(config.RuntimeBaseConfig.Image)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
 		return err
 	}
 
@@ -520,6 +520,28 @@ func scanExternalImage() error {
 				slog.Info("uploaded vex successfully")
 			}
 		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		// read the body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "could not scan file")
+		}
+
+		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+	}
+
+	// read and parse the body - it should be an array of dependencyVulns
+	// print the dependencyVulns to the console
+	var scanResponse scan.ScanResponse
+	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
+	if err != nil {
+		return errors.Wrap(err, "could not parse response")
+	}
+
+	err = printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	if err != nil {
+		return err
 	}
 	return nil
 }
