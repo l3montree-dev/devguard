@@ -54,7 +54,7 @@ var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
 
-func (s importService) Import(tx core.DB, tag string) error {
+func (service importService) Import(tx core.DB, tag string) error {
 	begin := time.Now()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
@@ -70,7 +70,7 @@ func (s importService) Import(tx core.DB, tag string) error {
 	}
 
 	//copy csv files to database
-	err = s.copyCSVToDB(tmp)
+	err = service.copyCSVToDB(tmp)
 	if err != nil {
 		return err
 	}
@@ -145,9 +145,9 @@ func (service importService) ImportFromDiff() error {
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
 	if len(tags) >= 1 {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+tags[len(tags)-1]+"\"}")
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+tags[len(tags)-1]+"\"}") //nolint
 	} else if snapshot != "" {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+snapshot+"\"}")
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+snapshot+"\"}") //nolint
 	}
 
 	return nil
@@ -231,7 +231,7 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 	return nil
 }
 
-func (s importService) copyCSVToDB(tmp string) error {
+func (service importService) copyCSVToDB(tmp string) error {
 	ctx := context.Background()
 	pool, err := establishConnection(ctx)
 	if err != nil {
@@ -384,7 +384,7 @@ func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName string
 	if err != nil {
 		return fmt.Errorf("failed to open CSV file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint
 
 	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTableName)
 	importStart := time.Now()
@@ -597,7 +597,7 @@ func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	if err != nil {
 		return err
 	}
-	defer fd.Close()
+	defer fd.Close() //nolint
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return err
@@ -619,7 +619,7 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	if err != nil {
 		return err
 	}
-	defer fd.Close()
+	defer fd.Close() //nolint
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return err
@@ -680,7 +680,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	if err != nil {
 		return err
 	}
-	defer fd.Close()
+	defer fd.Close() //nolint
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return err
@@ -712,7 +712,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		slog.Error("error when trying to create tmp table used for updating", "table", tableName, "err", err)
 		return err
 	}
-	defer conn.Conn().Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable))
+	defer conn.Conn().Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable)) //nolint
 
 	fd, err = os.Open(filePath) // reopen csv file since we read from it once already
 	if err != nil {
@@ -774,7 +774,7 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, *fil
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint
 
 	// unzip the blob file into vulndb-tmp dir
 	err = utils.Unzip(blobFile, tmp+"/")
@@ -786,8 +786,9 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, *fil
 }
 
 func (service importService) GetIncrementalTags(ctx context.Context, repo *remote.Repository) ([]string, error) {
-	var allTags []string = make([]string, 0, 3000)
 	var lastVersion string
+	allTags := make([]string, 0, 3000)
+
 	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
 	if err != nil || lastVersion == "" {
 		// we do not have a database version yet, we get the latest snapshot and each incremental update since then
@@ -854,7 +855,7 @@ func MakeSnapshot(ctx context.Context) error {
 		}
 		return err
 	}
-	defer fs.Close()
+	defer fs.Close() //nolint
 
 	_, err = oras.Copy(ctx, fs, "latest", repoDiff, "latest", oras.DefaultCopyOptions)
 	if err != nil {

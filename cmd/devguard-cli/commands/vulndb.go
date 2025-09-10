@@ -19,8 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}}
-
 func NewVulndbCommand() *cobra.Command {
 	vulndbCmd := cobra.Command{
 		Use:   "vulndb",

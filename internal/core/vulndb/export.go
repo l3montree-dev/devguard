@@ -55,7 +55,7 @@ func Export() error {
 			return err
 		}
 	}
-	cleanUpTables(ctx, pool)
+	cleanUpTables(ctx, pool) //no lint
 	return nil
 }
 
