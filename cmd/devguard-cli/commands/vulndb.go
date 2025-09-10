@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -30,6 +31,7 @@ func NewVulndbCommand() *cobra.Command {
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportIncrementalCommand())
+	vulndbCmd.AddCommand(newSnapshotCommand())
 	return &vulndbCmd
 }
 
@@ -336,4 +338,21 @@ func newExportIncrementalCommand() *cobra.Command {
 		},
 	}
 	return &exportCmd
+}
+
+func newSnapshotCommand() *cobra.Command {
+	snapshotCmd := cobra.Command{
+		Use:   "snapshot",
+		Short: "copies the latest vulndb state into vulndb-diffs",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			ctx := context.Background()
+			err := vulndb.MakeSnapshot(ctx)
+			if err != nil {
+				slog.Error("error when trying to make snapshot", "err", err)
+				return
+			}
+		},
+	}
+	return &snapshotCmd
 }

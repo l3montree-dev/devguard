@@ -64,7 +64,7 @@ func (s importService) Import(tx core.DB, tag string) error {
 		return fmt.Errorf("could not connect to remote repository: %w", err)
 	}
 
-	tmp, err := downloadAndSaveZipToTemp(repo, tag)
+	tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 	if err != nil {
 		return err
 	}
@@ -98,11 +98,33 @@ func (service importService) ImportFromDiff() error {
 	if err != nil {
 		return err
 	}
+	if len(tags) == 0 {
+		slog.Info("vulndb is already up to date")
+		return nil
+	}
+	var snapshot string
+	if strings.Contains(tags[0], "snapshot") {
+		slog.Info("no version detected start loading latest vulndb state")
+		snapshot = tags[0]
+		tmp, _, err := downloadAndSaveZipToTemp(repo, snapshot)
+		if err != nil {
+			return err
+		}
+
+		//copy csv files to database
+		err = service.copyCSVToDB(tmp)
+		if err != nil {
+			return err
+		}
+		slog.Info("finished loading latest vulndb state")
+		tags = tags[1:]
+	}
 	begin := time.Now()
 	slog.Info("start updating tags", "amount", len(tags))
 	for i, tag := range tags {
+		slog.Info("", "tag", tag)
 		os.RemoveAll("vulndb-tmp/")
-		tmp, err := downloadAndSaveZipToTemp(repo, tag)
+		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 		if err != nil {
 			if i != 0 { // avoid out of bounds error
 				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) // save the last successful updated tag
@@ -122,7 +144,12 @@ func (service importService) ImportFromDiff() error {
 		}
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
-	service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1])
+	if len(tags) >= 1 {
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+tags[len(tags)-1]+"\"}")
+	} else if snapshot != "" {
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+snapshot+"\"}")
+	}
+
 	return nil
 }
 
@@ -180,21 +207,21 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 		// could be run concurrent but probably won't yield a lot of performance improvement
 		switch mode {
 		case "insert":
-			err = processInsertDiff(ctx, pool, dirPath+"/"+name+".csv", table+"_diff")
+			err = processInsertDiff(ctx, pool, dirPath+"/"+name+".csv", table)
 			if err != nil {
-				slog.Error("could not process insert diff, continuing...", "table", name, "err", err)
+				slog.Error("could not process insert diff, continuing...", "table", table, "err", err)
 				continue
 			}
 		case "delete":
-			err = processDeleteDiff(ctx, pool, dirPath+"/"+name+".csv", table+"_diff")
+			err = processDeleteDiff(ctx, pool, dirPath+"/"+name+".csv", table)
 			if err != nil {
-				slog.Error("could not process delete diff, continuing...", "table", name, "err", err)
+				slog.Error("could not process delete diff, continuing...", "table", table, "err", err)
 				continue
 			}
 		case "update":
-			err = processUpdateDiff(ctx, pool, dirPath+"/"+name+".csv", table+"_diff")
+			err = processUpdateDiff(ctx, pool, dirPath+"/"+name+".csv", table)
 			if err != nil {
-				slog.Error("could not process update diff, continuing...", "table", name, "err", err)
+				slog.Error("could not process update diff, continuing...", "table", table, "err", err)
 				continue
 			}
 		default:
@@ -605,7 +632,12 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		return err
 	}
 
-	primaryKeys := primaryKeysFromTables[tableName[:len(tableName)-5]]
+	if len(allRecords) == 0 {
+		slog.Info("nothing to delete", "table", tableName)
+		return nil
+	}
+
+	primaryKeys := primaryKeysFromTables[tableName]
 	if len(primaryKeys) == 0 {
 		slog.Error("could not determine primary key(s)", "table", tableName)
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
@@ -661,7 +693,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		return err
 	}
 
-	primaryKeys := primaryKeysFromTables[tableName[:len(tableName)-5]]
+	primaryKeys := primaryKeysFromTables[tableName]
 	if len(primaryKeys) == 0 {
 		slog.Error("could not determine primary key(s)", "table", tableName)
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
@@ -710,7 +742,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 }
 
 // downloads the fileName with the tag from the devguard package master, verifies the signature and unzips it into tmp Folder
-func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, error) {
+func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, *file.Store, error) {
 	slog.Info("importing vulndb started")
 	tmp := "./vulndb-tmp"
 	sigFile := tmp + "/vulndb.zip.sig"
@@ -723,18 +755,17 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, erro
 	if err != nil {
 		panic(err)
 	}
-	defer fs.Close()
 
 	// import the vulndb csv to the file store
 	err = copyCSVFromRemoteToLocal(ctx, repo, tag, fs)
 	if err != nil {
-		return tmp, fmt.Errorf("could not copy csv from remote to local: %w", err)
+		return tmp, fs, fmt.Errorf("could not copy csv from remote to local: %w", err)
 	}
 
 	// verify the signature of the imported data
 	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
 	if err != nil {
-		return tmp, fmt.Errorf("could not verify signature: %w", err)
+		return tmp, fs, fmt.Errorf("could not verify signature: %w", err)
 	}
 	slog.Info("successfully verified signature")
 
@@ -748,16 +779,39 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, erro
 	// unzip the blob file into vulndb-tmp dir
 	err = utils.Unzip(blobFile, tmp+"/")
 	if err != nil {
-		return tmp, fmt.Errorf("error when trying to build zip file: %w", err)
+		return tmp, fs, fmt.Errorf("error when trying to build zip file: %w", err)
 	}
 	slog.Info("unzipping vulndb completed")
-	return tmp, nil
+	return tmp, fs, nil
 }
 
 func (service importService) GetIncrementalTags(ctx context.Context, repo *remote.Repository) ([]string, error) {
-	var allTags []string = make([]string, 0, 2000)
+	var allTags []string = make([]string, 0, 3000)
+	var lastVersion string
+	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
+	if err != nil || lastVersion == "" {
+		// we do not have a database version yet, we get the latest snapshot and each incremental update since then
+		repo.TagListPageSize = 1000
+		var index int
+		err = repo.Tags(ctx, "", func(tags []string) error {
+			for i := range tags {
+				if strings.Contains(tags[len(tags)-1-i], "snapshot") && !strings.Contains(tags[len(tags)-1-i], ".sig") {
+					index = len(tags) - 1 - i
+				}
+			}
+			for index < len(tags) {
+				if !strings.Contains(tags[index], ".sig") {
+					allTags = append(allTags, tags[index])
+				}
+				index++
+			}
+			return nil
+		})
+		return allTags, nil
+	}
+
 	repo.TagListPageSize = 1000
-	err := repo.Tags(ctx, "", func(tags []string) error {
+	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
 		for _, tag := range tags {
 			if !strings.Contains(tag, ".") {
 				_, err := strconv.Atoi(tag)
@@ -772,22 +826,41 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 		return nil, err
 	}
 
-	var lastVersion int
-	err = service.configService.GetJSONConfig("vulndb.lastIncrementalImport", lastVersion)
-	if err != nil || lastVersion == 0 {
-		lastVersion = -1
-	}
-
-	newTags := make([]string, 0, len(allTags))
-	for i := range allTags {
-		num, _ := strconv.Atoi(allTags[i])
-		if num > lastVersion {
-			newTags = append(newTags, allTags[i])
-		}
-	}
-	if slices.IsSorted(newTags) {
+	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
 		slog.Error("slice not sorted")
 		return nil, fmt.Errorf("slice not sorted")
 	}
-	return newTags, nil
+	return allTags, nil
+}
+
+func MakeSnapshot(ctx context.Context) error {
+	vulndb := "ghcr.io/l3montree-dev/devguard/vulndb"
+	vulndbDiff := "ghcr.io/l3montree-dev/devguard/vulndb-diffs"
+	repo, err := remote.NewRepository(vulndb)
+	if err != nil {
+		slog.Error("could not create vulndb repository")
+		return err
+	}
+	repoDiff, err := remote.NewRepository(vulndbDiff)
+	if err != nil {
+		slog.Error("could not create vulndb-diff repository")
+		return err
+	}
+
+	_, fs, err := downloadAndSaveZipToTemp(repo, "latest")
+	if err != nil {
+		if fs != nil {
+			fs.Close()
+		}
+		return err
+	}
+	defer fs.Close()
+
+	_, err = oras.Copy(ctx, fs, "latest", repoDiff, "latest", oras.DefaultCopyOptions)
+	if err != nil {
+		slog.Error("could not copy to remote repository", "err", err)
+		return err
+	}
+	slog.Info("successfully made snapshot")
+	return nil
 }
