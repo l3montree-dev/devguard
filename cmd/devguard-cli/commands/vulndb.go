@@ -143,7 +143,9 @@ func newImportCommand() *cobra.Command {
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 			configService := config.NewService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
-
+			for _, arg := range args {
+				slog.Info(arg)
+			}
 			var mode string // determines how we import
 			if len(args) > 0 {
 				mode = args[0]
@@ -161,11 +163,11 @@ func newImportCommand() *cobra.Command {
 				}
 
 				tag := "latest"
-				if len(args) == 1 {
-					tag = args[0]
-				} else {
-					tag = args[1]
-				}
+				// if len(args) == 1 {
+				// 	tag = args[0]
+				// } else {
+				// 	tag = args[1]
+				// }
 
 				err = v.Import(database, tag)
 				if err != nil {
