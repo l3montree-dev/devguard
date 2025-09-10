@@ -35,6 +35,11 @@ func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
 }
 
 func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
+	originalAssetVersionName := event.AssetVersionName
+	if event.OriginalAssetVersionName != nil {
+		originalAssetVersionName = *event.OriginalAssetVersionName
+	}
+
 	return VulnEventDTO{
 		ID:                event.ID,
 		Type:              event.Type,
@@ -44,7 +49,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		Justification:     event.Justification,
 		ArbitraryJSONData: event.GetArbitraryJSONData(),
 		CreatedAt:         event.CreatedAt,
-		AssetVersionName:  event.AssetVersionName,
+		AssetVersionName:  originalAssetVersionName,
 		AssetVersionSlug:  event.Slug,
 		VulnerabilityName: event.CVEID,
 		PackageName:       event.ComponentPurl,
@@ -55,6 +60,10 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 	var dtos []VulnEventDTO
 	for _, e := range event {
+		originalAssetVersionName := e.AssetVersionName
+		if e.OriginalAssetVersionName != nil {
+			originalAssetVersionName = *e.OriginalAssetVersionName
+		}
 		dtos = append(dtos, VulnEventDTO{
 			ID:                      e.ID,
 			Type:                    e.Type,
@@ -65,7 +74,7 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 			MechanicalJustification: e.MechanicalJustification,
 			ArbitraryJSONData:       e.GetArbitraryJSONData(),
 			CreatedAt:               e.CreatedAt,
-			AssetVersionName:        e.AssetVersionName,
+			AssetVersionName:        originalAssetVersionName,
 			AssetVersionSlug:        e.Slug,
 			PackageName:             e.ComponentPurl,
 			URI:                     e.URI,

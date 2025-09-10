@@ -18,7 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -55,7 +55,8 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 
 	return c.GetDB(tx).Create(&components).Error
 }
-func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+
+func (c *componentRepository) loadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
@@ -69,30 +70,94 @@ func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVer
 	}
 	return components, err
 }
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
-	var components []models.ComponentDependency
 
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+	if artifactName == nil {
+		return c.loadComponentsForAllArtifacts(tx, assetVersionName, assetID)
+	}
+
+	var components []models.ComponentDependency
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
-		Preload("Component").Preload("Dependency").
-		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
-		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
-		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
-		Find(&components).Error
+		Preload("Component").Preload("Dependency").Where(`EXISTS (
+        SELECT 1 FROM artifact_component_dependencies acd 
+        WHERE acd.component_dependency_id = id 
+            AND acd.artifact_artifact_name = ? 
+            AND acd.artifact_asset_version_name = ? 
+            AND acd.artifact_asset_id = ?
+    	)`, artifactName, assetVersionName, assetID).Find(&components).Error
 
 	return components, err
 }
 
 // function which returns all dependency_components which lead to the package transmitted via the pURL parameter
-func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
+	var query *gorm.DB
 	//Find all needed components  recursively until we hit the root component
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// using postgresql CYCLE Keyword to detect possible loops
-	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
+	if artifactName == nil {
+		// using postgresql CYCLE Keyword to detect possible loops
+		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
+	SELECT
+		cd.component_purl,
+		cd.dependency_purl,
+		cd.asset_id,
+		0 AS depth,
+		ARRAY[cd.dependency_purl] AS path
+	FROM component_dependencies cd
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
+	WHERE
+		cd.component_purl IS NULL AND
+		cd.asset_id = @assetID AND
+		cd.asset_version_name = @assetVersionName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID
+
+	UNION ALL
+
+	SELECT
+		co.component_purl,
+		co.dependency_purl,
+		co.asset_id,
+		cte.depth + 1,
+		cte.path || co.dependency_purl
+	FROM component_dependencies co
+	INNER JOIN components_cte cte
+		ON co.component_purl = cte.dependency_purl
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+	WHERE
+		co.asset_id = @assetID AND
+		co.asset_version_name = @assetVersionName AND
+		acd.artifact_asset_version_name = @assetVersionName AND
+		acd.artifact_asset_id = @assetID AND
+		NOT co.dependency_purl = ANY(cte.path)
+),
+target_path AS (
+	SELECT * FROM components_cte
+	WHERE dependency_purl = @pURL
+	ORDER BY depth ASC
+),
+path_edges AS (
+	SELECT
+		DISTINCT
+		component_purl,
+		dependency_purl,
+		asset_id,
+		depth
+	FROM components_cte
+	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+)
+SELECT * FROM path_edges
+ORDER BY depth;
+`, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
+			sql.Named("assetVersionName", assetVersionName))
+	} else {
+		// using postgresql CYCLE Keyword to detect possible loops
+		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 	SELECT
 		cd.component_purl,
 		cd.dependency_purl,
@@ -147,7 +212,8 @@ path_edges AS (
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
+			sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
+	}
 
 	// Map the query results to the component model
 	err = query.Find(&components).Error
@@ -195,8 +261,14 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	//We then still need to filter for the right scanner
 	if artifactName != nil {
-		overwrittenLicensesQuery = overwrittenLicensesQuery.Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = cd.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ?", artifactName)
-
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Where(`EXISTS (
+			SELECT 1 FROM artifact_component_dependencies acd 
+			JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name 
+				AND acd.artifact_asset_version_name = a.asset_version_name 
+				AND acd.artifact_asset_id = a.asset_id
+			WHERE acd.component_dependency_id = cd.id 
+				AND a.artifact_name = ?
+		)`, artifactName)
 	}
 	//Map the query to the right struct
 	err := overwrittenLicensesQuery.Scan(&overwrittenLicenses).Error
@@ -251,7 +323,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Joins("LEFT JOIN components as dependency ON dependency.purl = dependency_purl").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -279,9 +351,18 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
-	if err != nil {
-		return core.NewPaged(pageInfo, total, componentDependencies), err
+	// if page size is -1, we want to return all results
+	if pageInfo.PageSize == -1 {
+		slog.Warn("unlimited page size requested - returning all results...", "assetVersionName", assetVersionName, "assetID", assetID)
+		err := query.Select(distinctOnQuery).Find(&componentDependencies).Error
+		if err != nil {
+			return core.NewPaged(pageInfo, total, componentDependencies), err
+		}
+	} else {
+		err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
+		if err != nil {
+			return core.NewPaged(pageInfo, total, componentDependencies), err
+		}
 	}
 
 	// convert all overwritten licenses to a map which maps a purl to a new license
@@ -329,15 +410,12 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
 
-	fmt.Println("Removed:", len(removed), "Added:", len(added))
-
 	toRemove := []models.ComponentDependency{}
 	toUpdate := []models.ComponentDependency{}
 	toAdd := []models.ComponentDependency{}
 
-	//load all dependencies which are already present for the assetID and assetVersionName
-
-	components, err := c.LoadComponentsForAllArtifacts(tx, assetVersionName, assetID)
+	// load all dependencies which are already present for the assetID and assetVersionName
+	components, err := c.loadComponentsForAllArtifacts(tx, assetVersionName, assetID)
 	if err != nil {
 		return false, err
 	}

@@ -777,7 +777,7 @@ func (_c *ComponentRepository_List_Call) RunAndReturn(run func(ids []string) ([]
 }
 
 // LoadComponents provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
+func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
@@ -786,17 +786,17 @@ func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName st
 
 	var r0 []models.ComponentDependency
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) ([]models.ComponentDependency, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, *string) ([]models.ComponentDependency, error)); ok {
 		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) []models.ComponentDependency); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, *string) []models.ComponentDependency); ok {
 		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, *string) error); ok {
 		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
@@ -813,12 +813,12 @@ type ComponentRepository_LoadComponents_Call struct {
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - artifactName string
+//   - artifactName *string
 func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_LoadComponents_Call {
 	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string)) *ComponentRepository_LoadComponents_Call {
+func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -832,9 +832,9 @@ func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, asse
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
+		var arg3 *string
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(*string)
 		}
 		run(
 			arg0,
@@ -851,81 +851,7 @@ func (_c *ComponentRepository_LoadComponents_Call) Return(componentDependencys [
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// LoadComponentsForAllArtifacts provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for LoadComponentsForAllArtifacts")
-	}
-
-	var r0 []models.ComponentDependency
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.ComponentDependency); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ComponentDependency)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ComponentRepository_LoadComponentsForAllArtifacts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponentsForAllArtifacts'
-type ComponentRepository_LoadComponentsForAllArtifacts_Call struct {
-	*mock.Call
-}
-
-// LoadComponentsForAllArtifacts is a helper method to define mock.On call
-//   - tx core.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *ComponentRepository_Expecter) LoadComponentsForAllArtifacts(tx interface{}, assetVersionName interface{}, assetID interface{}) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
-	return &ComponentRepository_LoadComponentsForAllArtifacts_Call{Call: _e.mock.On("LoadComponentsForAllArtifacts", tx, assetVersionName, assetID)}
-}
-
-func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID)) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
-	_c.Call.Return(componentDependencys, err)
-	return _c
-}
-
-func (_c *ComponentRepository_LoadComponentsForAllArtifacts_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponentsForAllArtifacts_Call {
+func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1033,7 +959,7 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run f
 }
 
 // LoadPathToComponent provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
+func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, pURL, artifactName)
 
 	if len(ret) == 0 {
@@ -1042,17 +968,17 @@ func (_mock *ComponentRepository) LoadPathToComponent(tx core.DB, assetVersionNa
 
 	var r0 []models.ComponentDependency
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, string) ([]models.ComponentDependency, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, *string) ([]models.ComponentDependency, error)); ok {
 		return returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, string) []models.ComponentDependency); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string, *string) []models.ComponentDependency); ok {
 		r0 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string, *string) error); ok {
 		r1 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
 	} else {
 		r1 = ret.Error(1)
@@ -1070,12 +996,12 @@ type ComponentRepository_LoadPathToComponent_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - pURL string
-//   - artifactName string
+//   - artifactName *string
 func (_e *ComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, artifactName interface{}) *ComponentRepository_LoadPathToComponent_Call {
 	return &ComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, artifactName)}
 }
 
-func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string)) *ComponentRepository_LoadPathToComponent_Call {
+func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1093,9 +1019,9 @@ func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB,
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
+		var arg4 *string
 		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg4 = args[4].(*string)
 		}
 		run(
 			arg0,
@@ -1113,7 +1039,7 @@ func (_c *ComponentRepository_LoadPathToComponent_Call) Return(componentDependen
 	return _c
 }
 
-func (_c *ComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadPathToComponent_Call {
+func (_c *ComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }

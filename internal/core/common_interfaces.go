@@ -23,10 +23,10 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/labstack/echo/v4"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm/clause"
@@ -94,6 +94,7 @@ type ArtifactRepository interface {
 	common.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 }
 
 type ReleaseRepository interface {
@@ -111,9 +112,7 @@ type CveRepository interface {
 	common.Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
 	GetLastModDate() (time.Time, error)
-	SaveBatchCPEMatch(tx DB, matches []models.CPEMatch) error
 	GetAllCVEsID() ([]string, error)
-	GetAllCPEMatchesID() ([]string, error)
 	Save(tx DB, cve *models.CVE) error
 	SaveCveAffectedComponents(tx DB, cveID string, affectedComponentHashes []string) error
 	FindCVE(tx DB, id string) (models.CVE, error)
@@ -141,10 +140,9 @@ type AffectedComponentRepository interface {
 
 type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
-	LoadComponentsForAllArtifacts(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error)
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
-	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error)
+	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
@@ -153,10 +151,9 @@ type ComponentRepository interface {
 
 type DependencyVulnRepository interface {
 	common.Repository[string, models.DependencyVuln, DB]
-
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
 	GetDefaultDependencyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
@@ -164,8 +161,8 @@ type DependencyVulnRepository interface {
 	ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
-	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
-	ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -191,6 +188,7 @@ type LicenseRiskRepository interface {
 	common.Repository[string, models.LicenseRisk, DB]
 	GetAllLicenseRisksForAssetVersionPaged(tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.LicenseRisk], error)
 	GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)
+	GetLicenseRisksByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error)
 	GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)
 	MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error)
 	DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error
@@ -265,12 +263,13 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
-	GetCVSSBadgeSVG(CVSS models.Distribution) string
+	GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string
 	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
+	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 }
 
 type DependencyVulnService interface {
@@ -292,7 +291,7 @@ type FireAndForgetSynchronizer interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) (*cdx.BOM, error)
+	BuildSBOM(assetVersion models.AssetVersion, artifactName string, version, orgName string, components []models.ComponentDependency) (*cdx.BOM, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
@@ -398,9 +397,12 @@ type ConfigService interface {
 
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	AverageFixingTime(artifactName, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
 	AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	// CVSS-based average fixing time methods
+	AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
+	AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
@@ -419,18 +421,20 @@ type ProjectRiskHistoryRepository interface {
 
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
-	GetAverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
-	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetArtifactRiskHistory(artifactName, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
+	GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
+	GetArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	// Release scoped statistics
 	GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
-	GetComponentRisk(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
+	// CVSS-based average fixing time methods
+	GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
+	GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
+	GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 
-type DepsDevService interface {
-	GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error)
-	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
+type OpenSourceInsightService interface {
+	GetProject(ctx context.Context, projectID string) (common.OpenSourceInsightsProjectResponse, error)
+	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.OpenSourceInsightsVersionResponse, error)
 }
 
 type ComponentProjectRepository interface {

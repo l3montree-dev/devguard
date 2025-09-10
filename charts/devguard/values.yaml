@@ -1,6 +1,16 @@
 # Default values for devguard.
 # This is a YAML-formatted file.
 # Declare variables to be passed into templates.
+webauthn:
+  enabled: false
+passkey:
+  enabled: true
+password:
+  enabled: true
+totp:
+  enabled: false
+verificationAfterSignUp:
+  enabled: true
 oidc:
   enabled: false
   providers: []
@@ -20,6 +30,10 @@ oidc:
   #     - profile
   #     - email
 
+networkPolicy:
+  enabled: true
+  #ingressNamespaceSelectorKey: "role"
+  #ingressNamespaceSelectorValue: "ingress"
 
 mail:
   # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
@@ -38,18 +52,6 @@ api:
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  podSecurityContext: {}
-  # fsGroup: 2000
-  securityContext:
-    capabilities:
-      drop:
-        - ALL
-    seccompProfile:
-      type: RuntimeDefault
-    allowPrivilegeEscalation: false
-    runAsNonRoot: true
-    runAsUser: 53111
-
   autoscaling:
     enabled: false
     minReplicas: 1

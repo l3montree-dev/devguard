@@ -160,11 +160,10 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 		if err != nil {
 			return nil, err
 		}
-
 		// build sbom for this artifact via assetVersionService
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
-		bom, err := h.assetVersionService.BuildSBOM(av, models.NoVersion, orgName, compsPage.Data)
+		bom, err := h.assetVersionService.BuildSBOM(av, *item.ArtifactName, models.NoVersion, orgName, compsPage.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -199,9 +198,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 
 	for _, item := range release.Items {
 		// gather dependency vulns for this artifact (empty artifactName for release-level vulns)
-		var artifactName string
-
-		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, artifactName)
+		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
 		if err != nil {
 			return nil, err
 		}

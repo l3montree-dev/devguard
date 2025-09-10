@@ -40,7 +40,7 @@ func (_m *StatisticsService) EXPECT() *StatisticsService_Expecter {
 }
 
 // GetArtifactRiskHistory provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetArtifactRiskHistory(artifactName string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (_mock *StatisticsService) GetArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(artifactName, assetVersionName, assetID, start, end)
 
 	if len(ret) == 0 {
@@ -49,17 +49,17 @@ func (_mock *StatisticsService) GetArtifactRiskHistory(artifactName string, asse
 
 	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
 		return returnFunc(artifactName, assetVersionName, assetID, start, end)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
 		r0 = returnFunc(artifactName, assetVersionName, assetID, start, end)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID, time.Time, time.Time) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, time.Time, time.Time) error); ok {
 		r1 = returnFunc(artifactName, assetVersionName, assetID, start, end)
 	} else {
 		r1 = ret.Error(1)
@@ -73,7 +73,7 @@ type StatisticsService_GetArtifactRiskHistory_Call struct {
 }
 
 // GetArtifactRiskHistory is a helper method to define mock.On call
-//   - artifactName string
+//   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - start time.Time
@@ -82,11 +82,11 @@ func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(artifactName interf
 	return &StatisticsService_GetArtifactRiskHistory_Call{Call: _e.mock.On("GetArtifactRiskHistory", artifactName, assetVersionName, assetID, start, end)}
 }
 
-func (_c *StatisticsService_GetArtifactRiskHistory_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetArtifactRiskHistory_Call {
+func (_c *StatisticsService_GetArtifactRiskHistory_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetArtifactRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(*string)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -120,93 +120,13 @@ func (_c *StatisticsService_GetArtifactRiskHistory_Call) Return(artifactRiskHist
 	return _c
 }
 
-func (_c *StatisticsService_GetArtifactRiskHistory_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetArtifactRiskHistory_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAssetVersionRiskHistory provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	ret := _mock.Called(assetVersionName, assetID, start, end)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAssetVersionRiskHistory")
-	}
-
-	var r0 []models.ArtifactRiskHistory
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
-		return returnFunc(assetVersionName, assetID, start, end)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
-		r0 = returnFunc(assetVersionName, assetID, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, start, end)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsService_GetAssetVersionRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetVersionRiskHistory'
-type StatisticsService_GetAssetVersionRiskHistory_Call struct {
-	*mock.Call
-}
-
-// GetAssetVersionRiskHistory is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - start time.Time
-//   - end time.Time
-func (_e *StatisticsService_Expecter) GetAssetVersionRiskHistory(assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsService_GetAssetVersionRiskHistory_Call {
-	return &StatisticsService_GetAssetVersionRiskHistory_Call{Call: _e.mock.On("GetAssetVersionRiskHistory", assetVersionName, assetID, start, end)}
-}
-
-func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Run(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetAssetVersionRiskHistory_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Return(artifactRiskHistorys []models.ArtifactRiskHistory, err error) *StatisticsService_GetAssetVersionRiskHistory_Call {
-	_c.Call.Return(artifactRiskHistorys, err)
-	return _c
-}
-
-func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetAssetVersionRiskHistory_Call {
+func (_c *StatisticsService_GetArtifactRiskHistory_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetArtifactRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAverageFixingTime provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetAverageFixingTime(artifactName string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+func (_mock *StatisticsService) GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	ret := _mock.Called(artifactName, assetVersionName, assetID, severity)
 
 	if len(ret) == 0 {
@@ -215,15 +135,15 @@ func (_mock *StatisticsService) GetAverageFixingTime(artifactName string, assetV
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, string) (time.Duration, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) (time.Duration, error)); ok {
 		return returnFunc(artifactName, assetVersionName, assetID, severity)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID, string) time.Duration); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) time.Duration); ok {
 		r0 = returnFunc(artifactName, assetVersionName, assetID, severity)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, string) error); ok {
 		r1 = returnFunc(artifactName, assetVersionName, assetID, severity)
 	} else {
 		r1 = ret.Error(1)
@@ -237,7 +157,7 @@ type StatisticsService_GetAverageFixingTime_Call struct {
 }
 
 // GetAverageFixingTime is a helper method to define mock.On call
-//   - artifactName string
+//   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - severity string
@@ -245,11 +165,11 @@ func (_e *StatisticsService_Expecter) GetAverageFixingTime(artifactName interfac
 	return &StatisticsService_GetAverageFixingTime_Call{Call: _e.mock.On("GetAverageFixingTime", artifactName, assetVersionName, assetID, severity)}
 }
 
-func (_c *StatisticsService_GetAverageFixingTime_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTime_Call {
+func (_c *StatisticsService_GetAverageFixingTime_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(*string)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -278,7 +198,151 @@ func (_c *StatisticsService_GetAverageFixingTime_Call) Return(duration time.Dura
 	return _c
 }
 
-func (_c *StatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTime_Call {
+func (_c *StatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAverageFixingTimeByCvss provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+	ret := _mock.Called(artifactName, assetVersionName, assetID, severity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAverageFixingTimeByCvss")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) (time.Duration, error)); ok {
+		return returnFunc(artifactName, assetVersionName, assetID, severity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, string) time.Duration); ok {
+		r0 = returnFunc(artifactName, assetVersionName, assetID, severity)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(artifactName, assetVersionName, assetID, severity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetAverageFixingTimeByCvss_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageFixingTimeByCvss'
+type StatisticsService_GetAverageFixingTimeByCvss_Call struct {
+	*mock.Call
+}
+
+// GetAverageFixingTimeByCvss is a helper method to define mock.On call
+//   - artifactName *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - severity string
+func (_e *StatisticsService_Expecter) GetAverageFixingTimeByCvss(artifactName interface{}, assetVersionName interface{}, assetID interface{}, severity interface{}) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	return &StatisticsService_GetAverageFixingTimeByCvss_Call{Call: _e.mock.On("GetAverageFixingTimeByCvss", artifactName, assetVersionName, assetID, severity)}
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) Return(duration time.Duration, err error) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvss_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTimeByCvss_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAverageFixingTimeByCvssForRelease provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
+	ret := _mock.Called(releaseID, severity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAverageFixingTimeByCvssForRelease")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) (time.Duration, error)); ok {
+		return returnFunc(releaseID, severity)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) time.Duration); ok {
+		r0 = returnFunc(releaseID, severity)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = returnFunc(releaseID, severity)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetAverageFixingTimeByCvssForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageFixingTimeByCvssForRelease'
+type StatisticsService_GetAverageFixingTimeByCvssForRelease_Call struct {
+	*mock.Call
+}
+
+// GetAverageFixingTimeByCvssForRelease is a helper method to define mock.On call
+//   - releaseID uuid.UUID
+//   - severity string
+func (_e *StatisticsService_Expecter) GetAverageFixingTimeByCvssForRelease(releaseID interface{}, severity interface{}) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	return &StatisticsService_GetAverageFixingTimeByCvssForRelease_Call{Call: _e.mock.On("GetAverageFixingTimeByCvssForRelease", releaseID, severity)}
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) Run(run func(releaseID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) Return(duration time.Duration, err error) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, severity string) (time.Duration, error)) *StatisticsService_GetAverageFixingTimeByCvssForRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -350,7 +414,7 @@ func (_c *StatisticsService_GetAverageFixingTimeForRelease_Call) RunAndReturn(ru
 }
 
 // GetComponentRisk provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetComponentRisk(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+func (_mock *StatisticsService) GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
 	ret := _mock.Called(artifactName, assetVersionName, assetID)
 
 	if len(ret) == 0 {
@@ -359,17 +423,17 @@ func (_mock *StatisticsService) GetComponentRisk(artifactName string, assetVersi
 
 	var r0 map[string]models.Distribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (map[string]models.Distribution, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID) (map[string]models.Distribution, error)); ok {
 		return returnFunc(artifactName, assetVersionName, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) map[string]models.Distribution); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID) map[string]models.Distribution); ok {
 		r0 = returnFunc(artifactName, assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]models.Distribution)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID) error); ok {
 		r1 = returnFunc(artifactName, assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
@@ -383,18 +447,18 @@ type StatisticsService_GetComponentRisk_Call struct {
 }
 
 // GetComponentRisk is a helper method to define mock.On call
-//   - artifactName string
+//   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 func (_e *StatisticsService_Expecter) GetComponentRisk(artifactName interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsService_GetComponentRisk_Call {
 	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", artifactName, assetVersionName, assetID)}
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(artifactName string, assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 *string
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(*string)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -418,7 +482,7 @@ func (_c *StatisticsService_GetComponentRisk_Call) Return(stringToDistribution m
 	return _c
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(artifactName string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Return(run)
 	return _c
 }

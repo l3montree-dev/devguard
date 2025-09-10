@@ -141,7 +141,7 @@ func TestScanning(t *testing.T) {
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
 	})
 
-	t.Run("should return amount of closed 1, if the vulnerability is not detected by ANY artifact anymore", func(t *testing.T) {
+	t.Run("should return amount of closed 1, if the vulnerability is not detected in ANY artifact anymore", func(t *testing.T) {
 		// we found the CVE - Make sure, that if we scan again but with a different artifact, the artifacts get updated
 		recorder := httptest.NewRecorder()
 		sbomFile := sbomWithoutVulnerability()
@@ -1148,18 +1148,18 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func initHTTPController(t *testing.T, db core.DB, mockDepsDev bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
+func initHTTPController(t *testing.T, db core.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
 
 	repositories.NewExploitRepository(db)
-	// mock the depsDevService to avoid any external calls during tests
-	depsDevService := mocks.NewDepsDevService(t)
-	if mockDepsDev {
-		depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
+	// mock the openSourceInsightsService to avoid any external calls during tests
+	openSourceInsightsService := mocks.NewOpenSourceInsightService(t)
+	if mockOpenSourceInsight {
+		openSourceInsightsService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{}, nil)
 	}
 
-	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
+	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, openSourceInsightsService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client

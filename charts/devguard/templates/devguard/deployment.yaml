@@ -44,11 +44,21 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        {{- toYaml .Values.api.podSecurityContext | nindent 8 }}
+        runAsNonRoot: true
+        runAsUser: 53111
+        runAsGroup: 3000
+        fsGroup: 2000
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.api.securityContext | nindent 12 }}
+            capabilities:
+                drop:
+                - ALL
+            seccompProfile:
+                type: RuntimeDefault
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 53111
           image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.api.image.pullPolicy }}
           env:

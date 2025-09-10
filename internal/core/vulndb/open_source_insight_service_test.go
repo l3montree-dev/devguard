@@ -20,10 +20,10 @@ func TestGetProject(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevAPIURL to point to the mock server
-		depsDevAPIURL = mockServer.URL
+		// Override the openSourceInsightsAPIURL to point to the mock server
+		openSourceInsightsAPIURL = mockServer.URL
 
-		service := NewDepsDevService()
+		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
 		_, err := service.GetProject(ctx, "github/test/project")
@@ -47,10 +47,10 @@ func TestGetVersion(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevAPIURL to point to the mock server
-		depsDevAPIURL = mockServer.URL
+		// Override the openSourceInsightsAPIURL to point to the mock server
+		openSourceInsightsAPIURL = mockServer.URL
 
-		service := NewDepsDevService()
+		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
 		_, err := service.GetVersion(ctx, "golang", "gorm", "1.0.0")
@@ -75,10 +75,10 @@ func TestGetVersion(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevAPIURL to point to the mock server
-		depsDevAPIURL = mockServer.URL
+		// Override the openSourceInsightsAPIURL to point to the mock server
+		openSourceInsightsAPIURL = mockServer.URL
 
-		service := NewDepsDevService()
+		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
 		// Test with a Maven package that has slashes in the name
@@ -120,10 +120,10 @@ func TestGetVersion(t *testing.T) {
 				}))
 				defer mockServer.Close()
 
-				// Override the depsDevAPIURL to point to the mock server
-				depsDevAPIURL = mockServer.URL
+				// Override the openSourceInsightsAPIURL to point to the mock server
+				openSourceInsightsAPIURL = mockServer.URL
 
-				service := NewDepsDevService()
+				service := NewOpenSourceInsightService()
 				ctx := context.Background()
 
 				_, err := service.GetVersion(ctx, tc.ecosystem, tc.packageName, "1.0.0")
@@ -150,10 +150,10 @@ func TestGetVersion(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevAPIURL to point to the mock server
-		depsDevAPIURL = mockServer.URL
+		// Override the openSourceInsightsAPIURL to point to the mock server
+		openSourceInsightsAPIURL = mockServer.URL
 
-		service := NewDepsDevService()
+		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
 		// Test with a Maven package that has multiple slashes

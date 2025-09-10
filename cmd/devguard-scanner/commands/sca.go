@@ -121,7 +121,6 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
 		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(pathOrImage), "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
-	// TODO @tim.. setting the directory is really only necessary for the file system scan, right?
 
 	stderr := &bytes.Buffer{}
 	// get the output
@@ -399,7 +398,7 @@ func getAttestations(image string) ([]map[string]any, error) {
 func scanExternalImage() error {
 	// download and extract release attestation BOMs first
 	attestations, err := getAttestations(config.RuntimeBaseConfig.Image)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
 		return err
 	}
 
@@ -436,8 +435,7 @@ func scanExternalImage() error {
 			if err != nil {
 				panic(err)
 			}
-		}
-		if attestation["predicateType"] == "https://in-toto.io/attestation/release/v0.1" {
+		} else if attestation["predicateType"] == "https://in-toto.io/attestation/release/v0.1" {
 			predicate, ok := attestation["predicate"].(map[string]any)
 			if !ok {
 				panic("could not parse predicate")
@@ -493,10 +491,12 @@ func scanExternalImage() error {
 	}
 
 	// upload the bom to the scan endpoint
-	resp, err := uploadBOM(buff)
+	resp, cancel, err := uploadBOM(buff)
+
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
+	defer cancel()
 	defer resp.Body.Close()
 
 	// check if we can upload a vex as well
@@ -520,6 +520,28 @@ func scanExternalImage() error {
 				slog.Info("uploaded vex successfully")
 			}
 		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		// read the body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "could not scan file")
+		}
+
+		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+	}
+
+	// read and parse the body - it should be an array of dependencyVulns
+	// print the dependencyVulns to the console
+	var scanResponse scan.ScanResponse
+	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
+	if err != nil {
+		return errors.Wrap(err, "could not parse response")
+	}
+
+	err = printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -546,18 +568,17 @@ func uploadVEX(vex io.Reader) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func uploadBOM(bom io.Reader) (*http.Response, error) {
+func uploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, cancel, errors.Wrap(err, "could not create request")
 	}
 
 	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not sign request")
+		return nil, cancel, errors.Wrap(err, "could not sign request")
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -565,7 +586,8 @@ func uploadBOM(bom io.Reader) (*http.Response, error) {
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
-	return http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	return resp, cancel, err
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
@@ -584,11 +606,11 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not open file")
 	}
 
-	resp, err := uploadBOM(bytes.NewBuffer(file))
+	resp, cancel, err := uploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
-
+	defer cancel()
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

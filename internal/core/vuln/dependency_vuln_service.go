@@ -163,7 +163,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	for _, assetVersion := range assetVersions {
 		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsAmount.Inc()
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -270,8 +270,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)
-
-			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVEID)
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
@@ -341,7 +339,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 
 func (s *service) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all dependencyVulns for the assetVersion
-	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, "")
+	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, nil)
 	if err != nil {
 		return fmt.Errorf("could not get dependencyVulns by asset version: %w", err)
 	}

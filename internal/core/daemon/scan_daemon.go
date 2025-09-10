@@ -60,9 +60,9 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
-	depsDevService := vulndb.NewDepsDevService()
+	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
+	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
 
@@ -109,13 +109,13 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 					for _, artifact := range artifacts {
 
-						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, artifact.ArtifactName)
+						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, &artifact.ArtifactName)
 						if err != nil {
 							slog.Error("failed to load components", "error", err)
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", components)
+						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "0.0.0", "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 )
 
@@ -39,8 +40,7 @@ func (c *httpController) GetAverageFixingTime(ctx core.Context) error {
 		})
 	}
 
-	artifact := core.GetArtifact(ctx)
-
+	artifact := ctx.QueryParam("artifactName")
 	// check the severity value
 	if err := checkSeverity(severity); err != nil {
 		return ctx.JSON(400, map[string]string{
@@ -48,13 +48,25 @@ func (c *httpController) GetAverageFixingTime(ctx core.Context) error {
 		})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTime(artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID, severity)
-	if err != nil {
-		return ctx.JSON(500, nil)
+	res := utils.Concurrently(
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+		},
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeByCvss(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get average fixing time", "errors", res.Errors())
+		return ctx.JSON(500, map[string]string{
+			"error": "could not get average fixing time",
+		})
 	}
 
 	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds": duration.Abs().Seconds(),
+		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
+		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
 	})
 }
 
@@ -72,18 +84,22 @@ func checkSeverity(severity string) error {
 }
 
 func (c *httpController) GetArtifactRiskHistory(ctx core.Context) error {
-	artifact := core.GetArtifact(ctx)
+	artifact := ctx.QueryParam("artifactName")
 	// get the start and end query params
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
-	results, err := c.getArtifactRiskHistory(start, end, artifact)
+
+	assetVersion := core.GetAssetVersion(ctx)
+	asset := core.GetAsset(ctx)
+
+	results, err := c.getArtifactRiskHistory(utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
 	// convert to dto
-	var dtoResults []RiskHistoryDTO
+	dtoResults := make([]RiskHistoryDTO, 0, len(results))
 	for _, r := range results {
 		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
 	}
@@ -91,7 +107,7 @@ func (c *httpController) GetArtifactRiskHistory(ctx core.Context) error {
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *httpController) getArtifactRiskHistory(start, end string, artifact models.Artifact) ([]models.ArtifactRiskHistory, error) {
+func (c *httpController) getArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -108,7 +124,7 @@ func (c *httpController) getArtifactRiskHistory(start, end string, artifact mode
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetArtifactRiskHistory(artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, beginTime, endTime)
+	return c.statisticsService.GetArtifactRiskHistory(artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
 func (c *httpController) GetCVESWithKnownExploits(ctx core.Context) error {
@@ -163,7 +179,7 @@ func (c *httpController) GetReleaseRiskHistory(ctx core.Context) error {
 	}
 
 	// convert to dto
-	var dtoResults []RiskHistoryDTO
+	dtoResults := make([]RiskHistoryDTO, 0, len(res))
 	for _, r := range res {
 		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
 	}
@@ -173,8 +189,8 @@ func (c *httpController) GetReleaseRiskHistory(ctx core.Context) error {
 
 func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	artifact := core.GetArtifact(ctx)
-	results, err := c.statisticsService.GetComponentRisk(artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID)
+	artifact := ctx.QueryParam("artifactName")
+	results, err := c.statisticsService.GetComponentRisk(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -199,11 +215,22 @@ func (c *httpController) GetAverageReleaseFixingTime(ctx core.Context) error {
 		return ctx.JSON(400, map[string]string{"error": err.Error()})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
-	if err != nil {
-		slog.Error("could not compute average fixing time for release", "err", err)
+	res := utils.Concurrently(
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
+		},
+		func() (any, error) {
+			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(releaseID, severity)
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get average fixing time for release", "errors", res.Errors())
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, map[string]float64{"averageFixingTimeSeconds": duration.Abs().Seconds()})
+	return ctx.JSON(200, map[string]float64{
+		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
+		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
+	})
 }

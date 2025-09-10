@@ -2,7 +2,7 @@ package common
 
 import "time"
 
-type DepsDevVersionResponse struct {
+type OpenSourceInsightsVersionResponse struct {
 	VersionKey struct {
 		System  string `json:"system"`
 		Name    string `json:"name"`
@@ -28,7 +28,7 @@ type DepsDevVersionResponse struct {
 	} `json:"relatedProjects"`
 }
 
-type DepsDevProjectResponse struct {
+type OpenSourceInsightsProjectResponse struct {
 	ProjectKey struct {
 		ID string `json:"id"`
 	} `json:"projectKey"`

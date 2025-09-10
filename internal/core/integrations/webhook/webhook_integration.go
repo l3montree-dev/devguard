@@ -257,7 +257,6 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	switch event := event.(type) {
 	case core.SBOMCreatedEvent:
-
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
@@ -268,7 +267,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 			client := NewWebhookClient(webhook.URL, webhook.Secret)
 			if webhook.SbomEnabled {
 				//send sbom
-				if err := client.SendSBOM(*event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
+				if err := client.SendSBOM(*event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send SBOM to webhook", "webhookID", webhook.ID, "err", err)
 				}
 				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
@@ -309,7 +308,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 			client := NewWebhookClient(webhook.URL, webhook.Secret)
 			if webhook.VulnEnabled {
 				//send vulnerability
-				if err := client.SendDependencyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
+				if err := client.SendDependencyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
 				}
 				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)

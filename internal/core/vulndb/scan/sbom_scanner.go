@@ -25,7 +25,6 @@ import (
 )
 
 type sbomScanner struct {
-	cpeComparer  comparer
 	purlComparer comparer
 }
 
@@ -37,9 +36,8 @@ type comparer interface {
 	GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error)
 }
 
-func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository core.CveRepository) *sbomScanner {
+func NewSBOMScanner(purlComparer comparer, cveRepository core.CveRepository) *sbomScanner {
 	return &sbomScanner{
-		cpeComparer:  cpeComparer,
 		purlComparer: purlComparer,
 	}
 }
@@ -55,14 +53,6 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 			func() ([]models.VulnInPackage, error) {
 				// check if CPE is present
 				vulns := []models.VulnInPackage{}
-				if component.CPE != "" {
-					res, err := s.cpeComparer.GetVulns(component.CPE, component.Version, string(component.Type))
-					if err != nil {
-						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
-						return nil, nil
-					}
-					vulns = append(vulns, res...)
-				}
 				if component.PackageURL != "" {
 					var res []models.VulnInPackage
 					var err error

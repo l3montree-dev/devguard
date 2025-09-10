@@ -61,6 +61,11 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.U
 			FROM release_items ri
 			JOIN release_tree rt ON ri.release_id = rt.id
 			WHERE ri.child_release_id IS NOT NULL
+		),
+		unique_release_items AS (
+			SELECT DISTINCT asset_id, asset_version_name, artifact_name
+			FROM release_items
+			WHERE release_id IN (SELECT id FROM release_tree)
 		)
 		SELECT DISTINCT arh.artifact_name, arh.asset_version_name, arh.asset_id, arh.day, arh.sum_open_risk, arh.avg_open_risk, arh.max_open_risk, arh.min_open_risk,
 		       arh.sum_closed_risk, arh.avg_closed_risk, arh.max_closed_risk, arh.min_closed_risk,
@@ -68,13 +73,15 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.U
 		       arh.low, arh.medium, arh.high, arh.critical,
 		       arh.low_cvss, arh.medium_cvss, arh.high_cvss, arh.critical_cvss
 		FROM artifact_risk_history arh
-		JOIN release_items ri ON arh.asset_version_name = ri.asset_version_name AND arh.asset_id = ri.asset_id
-		WHERE ri.release_id IN (SELECT id FROM release_tree)
-		  AND arh.day >= ? AND arh.day <= ?
+		JOIN unique_release_items uri
+		ON arh.asset_id = uri.asset_id
+		AND arh.asset_version_name = uri.asset_version_name
+		AND arh.artifact_name = uri.artifact_name
+		AND arh.day >= ? AND arh.day <= ?
 		ORDER BY arh.day ASC
 	`
 
-	if err := db.Raw(query, releaseID, start, end).Scan(&assetRisk).Error; err != nil {
+	if err := db.Raw(query, releaseID, start, end).Debug().Scan(&assetRisk).Error; err != nil {
 		return nil, err
 	}
 

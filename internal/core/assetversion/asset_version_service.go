@@ -45,25 +45,27 @@ type service struct {
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	licenseRiskRepository    core.LicenseRiskRepository
 	artifactService          core.ArtifactService
+	core.FireAndForgetSynchronizer
 }
 
 func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository, artifactService core.ArtifactService) *service {
 	return &service{
-		assetVersionRepository:   assetVersionRepository,
-		componentRepository:      componentRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		firstPartyVulnRepository: firstPartyVulnRepository,
-		dependencyVulnService:    dependencyVulnService,
-		firstPartyVulnService:    firstPartyVulnService,
-		vulnEventRepository:      vulnEventRepository,
-		componentService:         componentService,
-		assetRepository:          assetRepository,
-		httpClient:               &http.Client{},
-		thirdPartyIntegration:    thirdPartyIntegration,
-		projectRepository:        projectRepository,
-		orgRepository:            orgRepository,
-		licenseRiskRepository:    licenseRiskRepository,
-		artifactService:          artifactService,
+		assetVersionRepository:    assetVersionRepository,
+		componentRepository:       componentRepository,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		firstPartyVulnRepository:  firstPartyVulnRepository,
+		dependencyVulnService:     dependencyVulnService,
+		firstPartyVulnService:     firstPartyVulnService,
+		vulnEventRepository:       vulnEventRepository,
+		componentService:          componentService,
+		assetRepository:           assetRepository,
+		httpClient:                &http.Client{},
+		thirdPartyIntegration:     thirdPartyIntegration,
+		projectRepository:         projectRepository,
+		orgRepository:             orgRepository,
+		licenseRiskRepository:     licenseRiskRepository,
+		artifactService:           artifactService,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -285,7 +287,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	}
 
 	if len(newDetectedVulnsNotOnOtherBranch) > 0 {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
@@ -295,7 +297,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			}); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
-		}()
+		})
 	}
 
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
@@ -307,7 +309,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -363,17 +365,20 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	if len(opened) > 0 {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
 				Vulns:        utils.Map(opened, vuln.DependencyVulnToDto),
+				Artifact: core.ArtifactObject{
+					ArtifactName: artifactName,
+				},
 			}); err != nil {
 				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
 			}
-		}()
+		})
 	}
 
 	return opened, closed, newState, nil
@@ -534,7 +539,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
+	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -575,7 +580,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -681,7 +686,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	}
 
 	// update the license information in the background
-	go func() {
+	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
 		if err != nil {
@@ -689,33 +694,33 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		} else {
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
-	}()
+	})
 	if sbomUpdated {
-		go func() {
+		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
 				AssetVersion: core.ToAssetVersionObject(assetVersion),
 				Asset:        core.ToAssetObject(asset),
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
-				SBOM:         sbom.GetCdxBom(),
+				Artifact: core.ArtifactObject{
+					ArtifactName: artifactName,
+				},
+				SBOM: sbom.GetCdxBom(),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 			}
-
-		}()
+		})
 	}
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
 	var pURL packageurl.PackageURL
 	var err error
 
-	if version == models.NoVersion {
-		version = "latest"
-	}
+	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
 	bom := cdx.BOM{
 		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
@@ -725,10 +730,10 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    assetVersion.Slug,
+				BOMRef:    artifactName,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      artifactName,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
@@ -746,7 +751,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		}
 	}
 
-	bomComponents := make([]cdx.Component, len(components))
+	bomComponents := make([]cdx.Component, 0, len(components))
 	processedComponents := make(map[string]struct{}, len(components))
 
 	for _, component := range components {
@@ -755,63 +760,67 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 			//swallow error and move on to the next component
 			continue
 		}
-		_, alreadyProcessed := processedComponents[component.DependencyPurl]
+		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
+			continue
+		}
 
-		if !alreadyProcessed {
-			processedComponents[component.DependencyPurl] = struct{}{}
-			licenses := cdx.Licenses{}
+		processedComponents[component.DependencyPurl] = struct{}{}
+		licenses := cdx.Licenses{}
 
-			//first check if the license is overwritten by a license risk#
-			overwrite, exists := componentLicenseOverwrites[pURL.String()]
-			if exists && overwrite != "" {
-				// TO-DO: check if the license provided by the user is a valid license or not
+		//first check if the license is overwritten by a license risk#
+		overwrite, exists := componentLicenseOverwrites[pURL.String()]
+		if exists && overwrite != "" {
+			// TO-DO: check if the license provided by the user is a valid license or not
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: overwrite,
+				},
+			})
+
+		} else if component.Dependency.License != nil && *component.Dependency.License != "" {
+			if *component.Dependency.License != "non-standard" {
 				licenses = append(licenses, cdx.LicenseChoice{
 					License: &cdx.License{
-						ID: overwrite,
+						ID: *component.Dependency.License,
 					},
 				})
-
-			} else if component.Dependency.License != nil && *component.Dependency.License != "" {
-				if *component.Dependency.License != "non-standard" {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							ID: *component.Dependency.License,
-						},
-					})
-				} else {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							Name: "non-standard",
-						},
-					})
-				}
-
-			} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-				// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-				if component.Dependency.ComponentProject.License != "non-standard" {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							ID: component.Dependency.ComponentProject.License,
-						},
-					})
-				} else {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							Name: "non-standard",
-						},
-					})
-				}
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: "non-standard",
+					},
+				})
 			}
 
-			bomComponents = append(bomComponents, cdx.Component{
-				Licenses:   &licenses,
-				BOMRef:     component.DependencyPurl,
-				Type:       cdx.ComponentType(component.Dependency.ComponentType),
-				PackageURL: component.DependencyPurl,
-				Version:    component.Dependency.Version,
-				Name:       component.DependencyPurl,
-			})
+		} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+			// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
+			if component.Dependency.ComponentProject.License != "non-standard" {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: component.Dependency.ComponentProject.License,
+					},
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: "non-standard",
+					},
+				})
+			}
 		}
+		if component.DependencyPurl == "" {
+			slog.Info("skipping component with empty purl", "component", component)
+		}
+
+		bomComponents = append(bomComponents, cdx.Component{
+			Licenses:   &licenses,
+			BOMRef:     component.DependencyPurl,
+			Type:       cdx.ComponentType(component.Dependency.ComponentType),
+			PackageURL: component.DependencyPurl,
+			Version:    component.Dependency.Version,
+			Name:       component.DependencyPurl,
+		})
+
 	}
 
 	// build up the dependency map
@@ -1096,20 +1105,145 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 // write the components from bom to the output file following the template
 func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
+
+	type componentData struct {
+		Package  string
+		Version  string
+		Licenses *cdx.Licenses
+	}
+
+	ecosystemCounts := make(map[string]int)
+	licenseCounts := make(map[string]int)
+	totalComponents := 0
+
+	var templateValues []componentData
+	for _, component := range *bom.Components {
+		packageName := component.BOMRef
+
+		// parse PURL to extract ecosystem for counting, but keep original packageName intact
+		packageurlParsed, err := packageurl.FromString(component.PackageURL)
+		if err != nil {
+			continue
+		}
+
+		// count ecosystem
+		ecosystemCounts[packageurlParsed.Type]++
+		totalComponents++
+
+		// count licenses
+		if component.Licenses != nil && len(*component.Licenses) > 0 {
+			for _, licenseChoice := range *component.Licenses {
+				if licenseChoice.License != nil {
+					if licenseChoice.License.ID != "" {
+						licenseCounts[licenseChoice.License.ID]++
+					}
+				}
+			}
+		} else {
+			licenseCounts["Unknown"]++
+		}
+
+		templateValues = append(templateValues, componentData{
+			Package:  packageName,
+			Version:  component.Version,
+			Licenses: component.Licenses,
+		})
+	}
+
+	// create template data with statistics
+	type statEntry struct {
+		Name  string
+		Count int
+	}
+
+	type templateData struct {
+		Components      []componentData
+		EcosystemStats  []statEntry
+		LicenseStats    []statEntry
+		TotalComponents int
+		ArtifactName    string
+		AssetVersion    string
+		CreationDate    string
+		Publisher       string
+	}
+
+	// convert maps to sorted slices
+	ecosystemSlice := make([]statEntry, 0, len(ecosystemCounts))
+	for name, count := range ecosystemCounts {
+		ecosystemSlice = append(ecosystemSlice, statEntry{Name: name, Count: count})
+	}
+
+	licenseSlice := make([]statEntry, 0, len(licenseCounts))
+	for name, count := range licenseCounts {
+		licenseSlice = append(licenseSlice, statEntry{Name: name, Count: count})
+	}
+
+	// sort by count descending (highest first)
+	slices.SortStableFunc(ecosystemSlice, func(a, b statEntry) int {
+		return b.Count - a.Count
+	})
+	slices.SortStableFunc(licenseSlice, func(a, b statEntry) int {
+		return b.Count - a.Count
+	})
+
+	data := templateData{
+		Components:      templateValues,
+		EcosystemStats:  ecosystemSlice,
+		LicenseStats:    licenseSlice,
+		TotalComponents: totalComponents,
+		ArtifactName:    bom.Metadata.Component.Name,
+		AssetVersion:    bom.Metadata.Component.Version,
+		CreationDate:    bom.Metadata.Timestamp,
+		Publisher:       bom.Metadata.Component.Publisher,
+	}
+
 	//create template for the sbom markdown table
-	sbomTmpl, err := template.New("sbomTmpl").Parse(
+	sbomTmpl, err := template.New("sbomTmpl").Funcs(template.FuncMap{
+		"percentage": func(count, total int) float64 {
+			if total == 0 {
+				return 0
+			}
+			return float64(count) / float64(total) * 100.0
+		},
+	}).Parse(
 		`# SBOM
 
-| PURL | Name | Version | Licenses  |
-|-------------------|---------|---------|--------|
-{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
-{{ end }}`,
+## Overview
+
+- **Artifact Name:** {{ .ArtifactName }}
+- **Version:** {{ .AssetVersion }}
+- **Created:** {{ .CreationDate }}
+- **Publisher:** {{ .Publisher }}
+
+## Statistics
+
+### Ecosystem Distribution
+Total Components: {{ .TotalComponents }}
+
+| Ecosystem | Count | Percentage |
+|-----------|-------|------------|
+{{range .EcosystemStats}}| {{ .Name }} | {{ .Count }} | {{ printf "%.1f%%" (percentage .Count $.TotalComponents) }} |
+{{end}}
+
+### License Distribution
+| License | Count | Percentage |
+|---------|-------|------------|
+{{range .LicenseStats}}| {{ .Name }} | {{ .Count }} | {{ printf "%.1f%%" (percentage .Count $.TotalComponents) }} |
+{{end}}
+
+\newpage
+## Components
+
+| Package 						  | Version | Licenses  |
+|---------------------------------|---------|-------|
+{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
+{{end}}`,
 	)
 	if err != nil {
 		return err
 	}
-	//filling the template with data from the bom components and write that to the outputFile
-	return sbomTmpl.Execute(outputFile, *bom.Components)
+	//filling the template with data from the parsed components and write that to the outputFile
+	return sbomTmpl.Execute(outputFile, data)
 }
 
 // generate the metadata used to generate the sbom-pdf and return it as struct

@@ -51,10 +51,9 @@ type HTTPController struct {
 }
 
 func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
-	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
-	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
+	scanner := NewSBOMScanner(purlComparer, cveRepository)
 	return &HTTPController{
 		db:                        db,
 		sbomScanner:               scanner,
@@ -112,7 +111,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
 	}
 	// load existing dependency vulns for this asset version
-	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
+	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
 	if err != nil {
 		slog.Error("could not load dependency vulns", "err", err)
 		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
@@ -235,12 +234,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// update the sbom in the database in parallel
-	go func() {
+	s.FireAndForget(func() {
 		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 		}
-	}()
+	})
 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }

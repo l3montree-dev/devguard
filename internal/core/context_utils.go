@@ -369,9 +369,9 @@ func GetPageInfo(ctx Context) PageInfo {
 }
 
 type FilterQuery struct {
-	field    string
-	value    string
-	operator string
+	Field      string
+	FieldValue string
+	Operator   string
 }
 
 func GetFilterQuery(ctx Context) []FilterQuery {
@@ -400,9 +400,9 @@ func GetFilterQuery(ctx Context) []FilterQuery {
 		operator = strings.TrimSuffix(operator, "]")
 
 		filterQuerys = append(filterQuerys, FilterQuery{
-			field:    field,
-			value:    value,
-			operator: operator,
+			Field:      field,
+			FieldValue: value,
+			Operator:   operator,
 		})
 	}
 
@@ -470,9 +470,9 @@ func sanitizeField(field string) string {
 
 func (f FilterQuery) SQL() string {
 
-	field := sanitizeField(f.field)
+	field := sanitizeField(f.Field)
 
-	switch f.operator {
+	switch f.Operator {
 	case "is":
 		return field + " = ?"
 	case "is not":
@@ -491,18 +491,18 @@ func (f FilterQuery) SQL() string {
 		return "? = ANY(string_to_array(" + field + ", ' '))"
 	default:
 		// default do an equals
-		return f.field + " = ?"
+		return f.Field + " = ?"
 	}
 
 }
 
 func (f FilterQuery) Value() any {
 	// convert the value to the correct type
-	switch f.operator {
+	switch f.Operator {
 	case "like":
-		return "%" + f.value + "%"
+		return "%" + f.FieldValue + "%"
 	default:
-		return f.value
+		return f.FieldValue
 	}
 }
 

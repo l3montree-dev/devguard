@@ -3,6 +3,7 @@ package vuln
 import (
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
@@ -43,8 +44,18 @@ func LicenseRiskToDto(f models.LicenseRisk) LicenseRiskDTO {
 		TicketURL:            f.TicketURL,
 		ManualTicketCreation: f.ManualTicketCreation,
 
-		FinalLicenseDecision: f.FinalLicenseDecision,
+		FinalLicenseDecision: beautifyFinalLicenseDecision(f.FinalLicenseDecision),
 		ComponentPurl:        f.ComponentPurl,
 		Component:            f.Component,
 	}
+}
+
+func beautifyFinalLicenseDecision(licenseDecision *string) *string {
+	if licenseDecision == nil {
+		return nil
+	}
+	if val, ok := component.LicenseMap[*licenseDecision]; ok {
+		return &val.Name
+	}
+	return licenseDecision
 }

@@ -133,7 +133,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLic
 				UserID:                  ev.UserID,
 				Justification:           ev.Justification,
 				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        licenseRisk.AssetVersionName,
+				AssetVersionName:        getAssetVersionName(licenseRisk.Vulnerability, ev),
 				VulnerabilityName:       licenseRisk.ComponentPurl,
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,

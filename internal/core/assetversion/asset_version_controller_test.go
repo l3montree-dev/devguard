@@ -27,12 +27,15 @@ func TestBuildVEX(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	artifactName := "test-artifact"
+
 	setupContext := func(ctx *core.Context) {
 		// set basic context values
 		core.SetAsset(*ctx, asset)
 		core.SetProject(*ctx, project)
 		core.SetOrg(*ctx, org)
 		core.SetAssetVersion(*ctx, assetVersion)
+		core.SetArtifact(*ctx, models.Artifact{ArtifactName: artifactName, AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 	}
 	t.Run("test with empty db should return vex bom with no vulnerabilities", func(t *testing.T) {
 		//setup function call
@@ -58,7 +61,7 @@ func TestBuildVEX(t *testing.T) {
 
 		assert.Empty(t, VEXResult.Vulnerabilities)
 	})
-	vuln1, vuln2 := createDependencyVulns(db, asset.ID, assetVersion.Name)
+	vuln1, vuln2 := createDependencyVulns(db, asset.ID, assetVersion.Name, artifactName)
 	t.Run("build Vex with everything set as intended", func(t *testing.T) {
 		//setup function call
 		recorder := httptest.NewRecorder()
@@ -152,7 +155,7 @@ func TestBuildVEX(t *testing.T) {
 	})
 }
 
-func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) (models.DependencyVuln, models.DependencyVuln) {
+func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string, artifactName string) (models.DependencyVuln, models.DependencyVuln) {
 
 	var err error
 
@@ -175,6 +178,16 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&exploit).Error; err != nil {
 		panic(err)
 	}
+
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersionName,
+		AssetID:          assetID,
+	}
+	if err := db.Create(&artifact).Error; err != nil {
+		panic(err)
+	}
+
 	//create our 2 dependency vuln referencing the cve
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
@@ -183,6 +196,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		CVEID:             &cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
 		ComponentDepth:    utils.Ptr(8),
+		Artifacts:         []models.Artifact{artifact},
 	}
 	if err = db.Create(&vuln1).Error; err != nil {
 		panic(err)
@@ -194,8 +208,14 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		CVEID:             &cve.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
 		ComponentDepth:    utils.Ptr(2),
+		Artifacts:         []models.Artifact{artifact},
 	}
 	if err = db.Create(&vuln2).Error; err != nil {
+		panic(err)
+	}
+
+	// save the relation to the artifact
+	if err = db.Model(&artifact).Association("DependencyVuln").Append(&vuln1, &vuln2); err != nil {
 		panic(err)
 	}
 

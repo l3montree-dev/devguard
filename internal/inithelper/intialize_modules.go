@@ -34,9 +34,9 @@ func CreateStatisticsService(db core.DB) core.StatisticsService {
 	)
 }
 
-func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core.ComponentService {
+func CreateComponentService(db core.DB, openSourceInsightsService core.OpenSourceInsightService) core.ComponentService {
 	componentService := component.NewComponentService(
-		depsDevService,
+		openSourceInsightsService,
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
@@ -74,9 +74,9 @@ func CreateArtifactService(db core.DB) core.ArtifactService {
 	)
 }
 
-func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) core.AssetVersionService {
+func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) core.AssetVersionService {
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
-	return assetversion.NewService(
+	s := assetversion.NewService(
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),
@@ -87,16 +87,18 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		repositories.NewProjectRepository(db),
 		repositories.NewOrgRepository(db),
 		repositories.NewVulnEventRepository(db),
-		CreateComponentService(db, depsDevService),
+		CreateComponentService(db, openSourceInsightsService),
 		thirdPartyIntegration,
 		repositories.NewLicenseRiskRepository(db),
 		CreateArtifactService(db),
 	)
+	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
+	return s
 }
 
-func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *assetversion.AssetVersionController {
+func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) *assetversion.AssetVersionController {
 	cmpService := component.NewComponentService(
-		depsDevService,
+		openSourceInsightsService,
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateLicenseRiskService(db),
@@ -105,7 +107,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 	)
 	return assetversion.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),
-		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
+		CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewComponentRepository(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
@@ -125,14 +127,14 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 	)
 }
 
-func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HTTPController {
+func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) *scan.HTTPController {
 	return scan.NewHTTPController(
 		db,
 		repositories.NewCVERepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewAssetVersionRepository(db),
-		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
+		CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService),
 		CreateStatisticsService(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
 		CreateFirstPartyVulnService(db, integrations.NewThirdPartyIntegrations(

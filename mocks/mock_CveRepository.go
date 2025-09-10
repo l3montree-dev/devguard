@@ -698,61 +698,6 @@ func (_c *CveRepository_FindCVEs_Call) RunAndReturn(run func(tx core.DB, ids []s
 	return _c
 }
 
-// GetAllCPEMatchesID provides a mock function for the type CveRepository
-func (_mock *CveRepository) GetAllCPEMatchesID() ([]string, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllCPEMatchesID")
-	}
-
-	var r0 []string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]string, error)); ok {
-		return returnFunc()
-	}
-	if returnFunc, ok := ret.Get(0).(func() []string); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// CveRepository_GetAllCPEMatchesID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllCPEMatchesID'
-type CveRepository_GetAllCPEMatchesID_Call struct {
-	*mock.Call
-}
-
-// GetAllCPEMatchesID is a helper method to define mock.On call
-func (_e *CveRepository_Expecter) GetAllCPEMatchesID() *CveRepository_GetAllCPEMatchesID_Call {
-	return &CveRepository_GetAllCPEMatchesID_Call{Call: _e.mock.On("GetAllCPEMatchesID")}
-}
-
-func (_c *CveRepository_GetAllCPEMatchesID_Call) Run(run func()) *CveRepository_GetAllCPEMatchesID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *CveRepository_GetAllCPEMatchesID_Call) Return(strings []string, err error) *CveRepository_GetAllCPEMatchesID_Call {
-	_c.Call.Return(strings, err)
-	return _c
-}
-
-func (_c *CveRepository_GetAllCPEMatchesID_Call) RunAndReturn(run func() ([]string, error)) *CveRepository_GetAllCPEMatchesID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetAllCVEsID provides a mock function for the type CveRepository
 func (_mock *CveRepository) GetAllCVEsID() ([]string, error) {
 	ret := _mock.Called()
@@ -1146,63 +1091,6 @@ func (_c *CveRepository_SaveBatch_Call) Return(err error) *CveRepository_SaveBat
 }
 
 func (_c *CveRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.CVE) error) *CveRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchCPEMatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) SaveBatchCPEMatch(tx core.DB, matches []models.CPEMatch) error {
-	ret := _mock.Called(tx, matches)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchCPEMatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.CPEMatch) error); ok {
-		r0 = returnFunc(tx, matches)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CveRepository_SaveBatchCPEMatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchCPEMatch'
-type CveRepository_SaveBatchCPEMatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatchCPEMatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - matches []models.CPEMatch
-func (_e *CveRepository_Expecter) SaveBatchCPEMatch(tx interface{}, matches interface{}) *CveRepository_SaveBatchCPEMatch_Call {
-	return &CveRepository_SaveBatchCPEMatch_Call{Call: _e.mock.On("SaveBatchCPEMatch", tx, matches)}
-}
-
-func (_c *CveRepository_SaveBatchCPEMatch_Call) Run(run func(tx core.DB, matches []models.CPEMatch)) *CveRepository_SaveBatchCPEMatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.CPEMatch
-		if args[1] != nil {
-			arg1 = args[1].([]models.CPEMatch)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CveRepository_SaveBatchCPEMatch_Call) Return(err error) *CveRepository_SaveBatchCPEMatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CveRepository_SaveBatchCPEMatch_Call) RunAndReturn(run func(tx core.DB, matches []models.CPEMatch) error) *CveRepository_SaveBatchCPEMatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

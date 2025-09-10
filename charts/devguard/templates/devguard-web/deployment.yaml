@@ -32,10 +32,10 @@ spec:
       {{- end }}
       automountServiceAccountToken: false
       securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 53111
         runAsNonRoot: true
+        runAsUser: 53111
+        runAsGroup: 3000
+        fsGroup: 2000
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -56,6 +56,10 @@ spec:
             value: http://devguard-api-service:8080
           - name: DEVGUARD_API_URL_PUBLIC_INTERNET
             value: {{ .Values.web.devguardApiUrlPublicInternet }}
+          {{- if and .Values.oidc.enabled (gt (len .Values.oidc.providers) 0) (not .Values.webauthn.enabled) (not .Values.passkey.enabled) (not .Values.password.enabled) (not .Values.totp.enabled) }}
+          - name: OIDC_ONLY
+            value: "true"
+          {{- end }}
           ports:
             - name: http
               containerPort: 3000
