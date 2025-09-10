@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -123,27 +124,44 @@ func (service importService) ImportFromDiff() error {
 	slog.Info("start updating tags", "amount", len(tags))
 	for i, tag := range tags {
 		slog.Info("", "tag", tag)
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() { // if we run into errors we want to rollback the last transaction
+			if err != nil {
+				tx.Rollback(ctx) //nolint
+			}
+		}()
+
 		os.RemoveAll("vulndb-tmp/") //nolint
 		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 		if err != nil {
 			if i != 0 { // avoid out of bounds error
-				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) // save the last successful updated tag
+				// save the last successful update
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
 			}
 			slog.Error("error when trying to get diff files", "tag", tag)
 			return err
 		}
 		dirPath := tmp + "/diffs-tmp"
 
-		err = processDiffCSVs(ctx, dirPath, pool)
+		err = processDiffCSVs(ctx, dirPath, tx)
 		if err != nil {
 			if i != 0 { // avoid out of bounds error
-				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) // save the last successful updated tag
+				// save the last successful update
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
 			}
 			slog.Error("error when trying to update from diff files", "tag", tag)
 			return err
 		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
+	// when everything ran successful we save the last updated tag to use as versioning
 	if len(tags) >= 1 {
 		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1]) //nolint
 	} else if snapshot != "" {
@@ -180,7 +198,7 @@ func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) error {
+func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
@@ -223,19 +241,19 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 		// could be run concurrent but probably won't yield a lot of performance improvement
 		switch mode {
 		case "insert":
-			err = processInsertDiff(ctx, pool, dirPath+"/"+name+".csv", table)
+			err = processInsertDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process insert diff, continuing...", "table", table, "err", err)
 				continue
 			}
 		case "delete":
-			err = processDeleteDiff(ctx, pool, dirPath+"/"+name+".csv", table)
+			err = processDeleteDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process delete diff, continuing...", "table", table, "err", err)
 				continue
 			}
 		case "update":
-			err = processUpdateDiff(ctx, pool, dirPath+"/"+name+".csv", table)
+			err = processUpdateDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process update diff, continuing...", "table", table, "err", err)
 				continue
@@ -607,20 +625,15 @@ func copyCSVFromRemoteToLocal(ctx context.Context, repo *remote.Repository, tag 
 	return nil
 }
 
-func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
 	slog.Info(fmt.Sprintf("start inserting for table=%s", tableName))
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer fd.Close() //nolint
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
 
-	_, err = conn.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
 	if err != nil {
 		slog.Error("error when trying to insert into table", "err", err)
 		return err
@@ -629,18 +642,13 @@ func processInsertDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	return nil
 }
 
-func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
 	slog.Info(fmt.Sprintf("start deleting for table=%s", tableName))
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer fd.Close() //nolint
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
 
 	csvReader := csv.NewReader(fd)
 	allRecords, err := csvReader.ReadAll() // could use rows.Next() to hold less space in memory
@@ -666,7 +674,7 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		for i := range allRecords {
 			key := allRecords[i][0]
 			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
-			_, err := conn.Exec(ctx, sql)
+			_, err := tx.Exec(ctx, sql)
 			if err != nil {
 				slog.Error("error when deleting from table", "table", tableName, "id", key)
 				continue
@@ -679,7 +687,7 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 			key1 := allRecords[i][0]
 			key2 := allRecords[i][1]
 			sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", tableName, primaryKey1, "'"+key1+"'", primaryKey2, "'"+key2+"'")
-			_, err := conn.Exec(ctx, sql)
+			_, err := tx.Exec(ctx, sql)
 			if err != nil {
 				slog.Error("error when deleting from table", "table", tableName, "id1", key1, "id2", key2)
 				continue
@@ -690,18 +698,13 @@ func processDeleteDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 	return nil
 }
 
-func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string, tableName string) error {
+func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
 	slog.Info(fmt.Sprintf("start updating for table=%s", tableName))
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer fd.Close() //nolint
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
 
 	csvReader := csv.NewReader(fd)
 	record, err := csvReader.Read() // read all the column names from the header row
@@ -723,19 +726,19 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 
 	tmpTable := tableName + "_tmp_" + strconv.Itoa(int(time.Now().Unix()))
 
-	_, err = conn.Conn().Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", tmpTable, tableName))
+	_, err = tx.Conn().Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", tmpTable, tableName))
 	if err != nil {
 		slog.Error("error when trying to create tmp table used for updating", "table", tableName, "err", err)
 		return err
 	}
-	defer conn.Conn().Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable)) //nolint
+	defer tx.Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable)) //nolint
 
 	fd, err = os.Open(filePath) // reopen csv file since we read from it once already
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tmpTable))
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tmpTable))
 	if err != nil {
 		slog.Error("could not copy to tmp table", "table", tableName, "err", err)
 		return err
@@ -748,7 +751,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 		upsertSQL = fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s, %s) DO UPDATE SET %s", tableName, tmpTable, primaryKeys[0], primaryKeys[1], assignSQL)
 	}
 
-	if _, err := conn.Exec(ctx, upsertSQL); err != nil {
+	if _, err := tx.Exec(ctx, upsertSQL); err != nil {
 		slog.Error("could not insert from tmp table to original table", "table", tableName, "err", err)
 		return err
 	}
@@ -824,6 +827,9 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 			}
 			return nil
 		})
+		if err != nil {
+			return nil, err
+		}
 		return allTags, nil
 	}
 
