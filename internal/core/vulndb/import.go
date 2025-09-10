@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,14 +36,16 @@ type importService struct {
 	cweRepository                core.CweRepository
 	exploitRepository            core.ExploitRepository
 	affectedComponentsRepository core.AffectedComponentRepository
+	configService                core.ConfigService
 }
 
-func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository) *importService {
+func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository, configService core.ConfigService) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
 		cweRepository:                cweRepository,
 		exploitRepository:            exploitRepository,
 		affectedComponentsRepository: affectedComponentsRepository,
+		configService:                configService,
 	}
 }
 
@@ -54,7 +57,15 @@ var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modif
 
 func (s importService) Import(tx core.DB, tag string) error {
 	begin := time.Now()
-	tmp, err := downloadAndSaveZipToTemp("vulndb", tag)
+
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
+	// Connect to a remote repository
+	repo, err := remote.NewRepository(reg)
+	if err != nil {
+		return fmt.Errorf("could not connect to remote repository: %w", err)
+	}
+
+	tmp, err := downloadAndSaveZipToTemp(repo, tag)
 	if err != nil {
 		return err
 	}
@@ -70,25 +81,85 @@ func (s importService) Import(tx core.DB, tag string) error {
 	return nil
 }
 
-func ImportFromDiff() error {
+func (service importService) ImportFromDiff() error {
 	ctx := context.Background()
 	pool, err := establishConnection(ctx)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb-diff"
+	// Connect to a remote repository
+	repo, err := remote.NewRepository(reg)
+	if err != nil {
+		return fmt.Errorf("could not connect to remote repository: %w", err)
+	}
 
-	tmp, err := downloadAndSaveZipToTemp("vulndb-diff", "test")
+	tags, err := service.GetIncrementalTags(ctx, repo)
 	if err != nil {
 		return err
 	}
+	begin := time.Now()
+	slog.Info("start updating tags", "amount", len(tags))
+	for i, tag := range tags {
+		tmp, err := downloadAndSaveZipToTemp(repo, tag)
+		if err != nil {
+			if i != 0 { // avoid out of bounds error
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) // save the last successful updated tag
+			}
+			slog.Error("error when trying to get diff files", "tag", tag)
+			return err
+		}
+		dirPath := tmp + "/diffs-tmp"
 
-	dirPath := tmp + "/diffs-tmp"
+		err = processDiffCSVs(ctx, dirPath, pool)
+		if err != nil {
+			if i != 0 { // avoid out of bounds error
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) // save the last successful updated tag
+			}
+			slog.Error("error when trying to update from diff files", "tag", tag)
+			return err
+		}
+	}
+	slog.Info("finished updating tags", "duration", time.Since(begin))
+	service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1])
+	return nil
+}
+
+// read envs to connect to postgres db and returns a pgx pool for it
+func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
+	username := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+	dbname := os.Getenv("POSTGRES_DB")
+
+	// replace with your PostgreSQL connection string
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
+	// create a connection pool with increased connections for parallel processing
+	config, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+	// increase pool size for parallel operations
+	config.MaxConns = 10
+	config.MinConns = 2
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		slog.Error("could not create pool", "err", err)
+		return nil, err
+	}
+	return pool, nil
+}
+
+func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) error {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
 	}
 
+	defer os.RemoveAll(strings.TrimRight(dirPath, "diffs-tmp")[2:])
 	for _, file := range files {
 		name := file.Name()
 		if filepath.Ext(name) != ".csv" {
@@ -133,33 +204,6 @@ func ImportFromDiff() error {
 		}
 	}
 	return nil
-}
-
-// read envs to connect to postgres db and returns a pgx pool for it
-func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
-	username := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	dbname := os.Getenv("POSTGRES_DB")
-
-	// replace with your PostgreSQL connection string
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
-	// create a connection pool with increased connections for parallel processing
-	config, err := pgxpool.ParseConfig(connStr)
-	if err != nil {
-		return nil, err
-	}
-	// increase pool size for parallel operations
-	config.MaxConns = 10
-	config.MinConns = 2
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		slog.Error("could not create pool", "err", err)
-		return nil, err
-	}
-	return pool, nil
 }
 
 func (s importService) copyCSVToDB(tmp string) error {
@@ -217,19 +261,10 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 		if err != nil {
 			return err
 		}
-		return importWithShadowTableForDiff(ctx, pool, tableName, csvFilePath)
+		return createShadowTable(ctx, pool, tableName, tableName+"_diff", csvFilePath)
 	} else {
 		return importWithShadowTable(ctx, pool, tableName, csvFilePath)
 	}
-}
-
-func importWithShadowTableForDiff(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) error {
-	shadowTable := tableName + "_diff"
-	err := createShadowTable(ctx, pool, tableName, shadowTable, csvFilePath)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
@@ -453,15 +488,9 @@ func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx con
 	return nil
 }
 
-func copyCSVFromRemoteToLocal(ctx context.Context, reg string, tag string, fs *file.Store) error {
-	// Connect to a remote repository
-	repo, err := remote.NewRepository(reg)
-	if err != nil {
-		return fmt.Errorf("could not connect to remote repository: %w", err)
-	}
-
+func copyCSVFromRemoteToLocal(ctx context.Context, repo *remote.Repository, tag string, fs *file.Store) error {
 	// Copy csv from the remote repository to the file store
-	_, err = oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
+	_, err := oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
 	if err != nil {
 		return fmt.Errorf("could not copy from remote repository to file store: %w", err)
 	}
@@ -622,7 +651,7 @@ func processUpdateDiff(ctx context.Context, pool *pgxpool.Pool, filePath string,
 }
 
 // downloads the fileName with the tag from the devguard package master, verifies the signature and unzips it into tmp Folder
-func downloadAndSaveZipToTemp(fileName string, tag string) (string, error) {
+func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, error) {
 	slog.Info("importing vulndb started")
 	tmp := "./vulndb-tmp"
 	sigFile := tmp + "/vulndb.zip.sig"
@@ -631,7 +660,6 @@ func downloadAndSaveZipToTemp(fileName string, tag string) (string, error) {
 
 	ctx := context.Background()
 
-	reg := "ghcr.io/l3montree-dev/devguard/" + fileName
 	fs, err := file.New(tmp)
 	if err != nil {
 		panic(err)
@@ -639,7 +667,7 @@ func downloadAndSaveZipToTemp(fileName string, tag string) (string, error) {
 	defer fs.Close()
 
 	// import the vulndb csv to the file store
-	err = copyCSVFromRemoteToLocal(ctx, reg, tag, fs)
+	err = copyCSVFromRemoteToLocal(ctx, repo, tag, fs)
 	if err != nil {
 		return tmp, fmt.Errorf("could not copy csv from remote to local: %w", err)
 	}
@@ -665,4 +693,42 @@ func downloadAndSaveZipToTemp(fileName string, tag string) (string, error) {
 	}
 	slog.Info("unzipping vulndb completed")
 	return tmp, nil
+}
+
+func (service importService) GetIncrementalTags(ctx context.Context, repo *remote.Repository) ([]string, error) {
+	var allTags []string = make([]string, 0, 2000)
+	repo.TagListPageSize = 1000
+	err := repo.Tags(ctx, "", func(tags []string) error {
+		for _, tag := range tags {
+			if !strings.Contains(tag, ".") {
+				_, err := strconv.Atoi(tag)
+				if err == nil {
+					allTags = append(allTags, tag)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var lastVersion int
+	err = service.configService.GetJSONConfig("vulndb.lastIncrementalImport", lastVersion)
+	if err != nil || lastVersion == 0 {
+		lastVersion = -1
+	}
+
+	newTags := make([]string, 0, len(allTags))
+	for i := range allTags {
+		num, _ := strconv.Atoi(allTags[i])
+		if num > lastVersion {
+			newTags = append(newTags, allTags[i])
+		}
+	}
+	if slices.IsSorted(newTags) {
+		slog.Error("slice not sorted")
+		return nil, fmt.Errorf("slice not sorted")
+	}
+	return newTags, nil
 }

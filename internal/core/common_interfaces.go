@@ -391,6 +391,7 @@ type GitLabOauth2TokenRepository interface {
 }
 
 type ConfigService interface {
+	// retrieves the value for the given key and marshals it into v
 	GetJSONConfig(key string, v any) error
 	SetJSONConfig(key string, v any) error
 }

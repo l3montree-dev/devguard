@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -140,6 +141,19 @@ func newImportCommand() *cobra.Command {
 		Args:  cobra.MaximumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.LoadConfig() // nolint
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "error", err)
+				return
+			}
+			migrateDB(database)
+
+			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			exploitsRepository := repositories.NewExploitRepository(database)
+			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+			configService := config.NewService(database)
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 
 			var mode string // determines how we import
 			if len(args) > 0 {
@@ -147,7 +161,7 @@ func newImportCommand() *cobra.Command {
 			}
 			// import incremental updates using the difference between two databases states
 			if mode == "inc" {
-				err := vulndb.ImportFromDiff()
+				err := v.ImportFromDiff()
 				if err != nil {
 					slog.Error("error when trying to import with diff files", "err", err)
 					return
@@ -157,18 +171,6 @@ func newImportCommand() *cobra.Command {
 					os.Setenv("MAKE_DIFF_TABLES", "true")
 				}
 
-				database, err := core.DatabaseFactory()
-				if err != nil {
-					slog.Error("could not connect to database", "error", err)
-					return
-				}
-				migrateDB(database)
-
-				cveRepository := repositories.NewCVERepository(database)
-				cweRepository := repositories.NewCWERepository(database)
-				exploitsRepository := repositories.NewExploitRepository(database)
-				affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-
 				tag := "latest"
 				if len(args) == 1 {
 					tag = args[0]
@@ -176,7 +178,6 @@ func newImportCommand() *cobra.Command {
 					tag = args[1]
 				}
 
-				v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
 				err = v.Import(database, tag)
 				if err != nil {
 					slog.Error("could not import vulndb", "err", err)
