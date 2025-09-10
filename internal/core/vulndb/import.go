@@ -7,15 +7,19 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/pem"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -32,66 +36,42 @@ type importService struct {
 	cweRepository                core.CweRepository
 	exploitRepository            core.ExploitRepository
 	affectedComponentsRepository core.AffectedComponentRepository
+	configService                core.ConfigService
 }
 
-func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository) *importService {
+func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository, configService core.ConfigService) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
 		cweRepository:                cweRepository,
 		exploitRepository:            exploitRepository,
 		affectedComponentsRepository: affectedComponentsRepository,
+		configService:                configService,
 	}
 }
 
-func (s importService) Import(tx core.DB, tag string) error {
-	slog.Info("importing vulndb started")
-	begin := time.Now()
-	tmp := "./vulndb-tmp"
-	sigFile := tmp + "/vulndb.zip.sig"
-	blobFile := tmp + "/vulndb.zip"
-	pubKeyFile := "cosign.pub"
+// maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}}
 
-	ctx := context.Background()
+// maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
+var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
+
+func (service importService) Import(tx core.DB, tag string) error {
+	begin := time.Now()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
-
-	// create a file store
-	defer os.RemoveAll(tmp)
-	fs, err := file.New(tmp)
+	// Connect to a remote repository
+	repo, err := remote.NewRepository(reg)
 	if err != nil {
-		panic(err)
-	}
-	defer fs.Close()
-
-	//import the vulndb csv to the file store
-	err = copyCSVFromRemoteToLocal(ctx, reg, tag, fs)
-	if err != nil {
-		return fmt.Errorf("could not copy csv from remote to local: %w", err)
+		return fmt.Errorf("could not connect to remote repository: %w", err)
 	}
 
-	// verify the signature of the imported data
-	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
+	tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 	if err != nil {
-		return fmt.Errorf("could not verify signature: %w", err)
+		return err
 	}
-	slog.Info("successfully verified signature")
-
-	// open the blob file
-	f, err := os.Open(blobFile)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	// unzip the blob file
-	err = utils.Unzip(blobFile, tmp+"/")
-	if err != nil {
-		panic(err)
-	}
-	slog.Info("unzipping vulndb completed")
 
 	//copy csv files to database
-	err = s.copyCSVToDB(tmp)
+	err = service.copyCSVToDB(tmp)
 	if err != nil {
 		return err
 	}
@@ -101,7 +81,98 @@ func (s importService) Import(tx core.DB, tag string) error {
 	return nil
 }
 
-func (s importService) copyCSVToDB(tmp string) error {
+func (service importService) ImportFromDiff() error {
+	ctx := context.Background()
+	pool, err := establishConnection(ctx)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb-diff"
+	// Connect to a remote repository
+	repo, err := remote.NewRepository(reg)
+	if err != nil {
+		return fmt.Errorf("could not connect to remote repository: %w", err)
+	}
+
+	tags, err := service.GetIncrementalTags(ctx, repo)
+	if err != nil {
+		return err
+	}
+	if len(tags) == 0 {
+		slog.Info("vulndb is already up to date")
+		return nil
+	}
+	var snapshot string
+	if strings.Contains(tags[0], "snapshot") {
+		slog.Info("no version detected start loading latest vulndb state")
+		snapshot = tags[0]
+		tmp, _, err := downloadAndSaveZipToTemp(repo, snapshot)
+		if err != nil {
+			return err
+		}
+
+		//copy csv files to database
+		err = service.copyCSVToDB(tmp)
+		if err != nil {
+			return err
+		}
+		slog.Info("finished loading latest vulndb state")
+		tags = tags[1:]
+	}
+	begin := time.Now()
+	slog.Info("start updating tags", "amount", len(tags))
+	for i, tag := range tags {
+		slog.Info("", "tag", tag)
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() { // if we run into errors we want to rollback the last transaction
+			if err != nil {
+				tx.Rollback(ctx) //nolint
+			}
+		}()
+
+		os.RemoveAll("vulndb-tmp/") //nolint
+		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
+		if err != nil {
+			if i != 0 { // avoid out of bounds error
+				// save the last successful update
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
+			}
+			slog.Error("error when trying to get diff files", "tag", tag)
+			return err
+		}
+		dirPath := tmp + "/diffs-tmp"
+
+		err = processDiffCSVs(ctx, dirPath, tx)
+		if err != nil {
+			if i != 0 { // avoid out of bounds error
+				// save the last successful update
+				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
+			}
+			slog.Error("error when trying to update from diff files", "tag", tag)
+			return err
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	slog.Info("finished updating tags", "duration", time.Since(begin))
+	// when everything ran successful we save the last updated tag to use as versioning
+	if len(tags) >= 1 {
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1]) //nolint
+	} else if snapshot != "" {
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", snapshot) //nolint
+	}
+
+	return nil
+}
+
+// read envs to connect to postgres db and returns a pgx pool for it
+func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
 	username := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")
 	host := os.Getenv("POSTGRES_HOST")
@@ -110,21 +181,95 @@ func (s importService) copyCSVToDB(tmp string) error {
 
 	// replace with your PostgreSQL connection string
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
-
 	// create a connection pool with increased connections for parallel processing
-	ctx := context.Background()
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
-		log.Fatalf("Unable to parse config: %v", err)
+		return nil, err
 	}
-
 	// increase pool size for parallel operations
 	config.MaxConns = 10
 	config.MinConns = 2
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		log.Fatalf("Unable to create connection pool: %v", err)
+		slog.Error("could not create pool", "err", err)
+		return nil, err
+	}
+	return pool, nil
+}
+
+func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return err
+	}
+	filesToProcess := make([]os.DirEntry, 13)
+	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
+	i := 0
+	j := 0
+	for i+j < len(files) {
+		name := files[i].Name()
+		if filepath.Ext(name) != ".csv" {
+			continue
+		}
+		name = strings.TrimRight(name, ".csv")
+		fields := strings.Split(name, "_")
+		// only handle csv files
+		if len(fields) <= 2 || fields[len(fields)-2] != "diff" {
+			continue
+		}
+		if strings.Contains(files[i+j].Name(), "cve_affected_component") {
+			filesToProcess[12-j] = files[i+j]
+			j++
+		} else {
+			filesToProcess[i] = files[i+j]
+			i++
+		}
+	}
+
+	for _, file := range filesToProcess {
+		name := strings.TrimRight(file.Name(), ".csv")
+		fields := strings.Split(name, "_")
+
+		// extract table information from the name of the csv file
+		mode := fields[len(fields)-1]
+		table := fields[0]
+		for _, field := range fields[1:(len(fields) - 2)] { //append the remaining fields to the table name
+			table += "_" + field
+		}
+
+		// could be run concurrent but probably won't yield a lot of performance improvement
+		switch mode {
+		case "insert":
+			err = processInsertDiff(ctx, tx, dirPath+"/"+name+".csv", table)
+			if err != nil {
+				slog.Error("could not process insert diff, continuing...", "table", table, "err", err)
+				continue
+			}
+		case "delete":
+			err = processDeleteDiff(ctx, tx, dirPath+"/"+name+".csv", table)
+			if err != nil {
+				slog.Error("could not process delete diff, continuing...", "table", table, "err", err)
+				continue
+			}
+		case "update":
+			err = processUpdateDiff(ctx, tx, dirPath+"/"+name+".csv", table)
+			if err != nil {
+				slog.Error("could not process update diff, continuing...", "table", table, "err", err)
+				continue
+			}
+		default:
+			slog.Warn("invalid mode for diff file", "mode", mode)
+		}
+	}
+	return nil
+}
+
+func (service importService) copyCSVToDB(tmp string) error {
+	ctx := context.Background()
+	pool, err := establishConnection(ctx)
+	if err != nil {
+		return err
 	}
 	defer pool.Close()
 
@@ -231,27 +376,22 @@ func countTableRows(ctx context.Context, pool *pgxpool.Pool, tableName string) (
 
 func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
 	// Use shadow table pattern for pruned tables to minimize downtime
-	return importWithShadowTable(ctx, pool, tableName, csvFilePath)
+	if os.Getenv("MAKE_DIFF_TABLES") == "true" {
+		_, err := importWithShadowTable(ctx, pool, tableName, csvFilePath)
+		if err != nil {
+			return "", err
+		}
+		err = createShadowTable(ctx, pool, tableName, tableName+"_diff", csvFilePath)
+		return "", err
+	} else {
+		return importWithShadowTable(ctx, pool, tableName, csvFilePath)
+	}
 }
 
-// importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
-// This keeps the original table available during most of the import process
-func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
-	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
-
-	// count initial rows
-	initialCount, err := countTableRows(ctx, pool, tableName)
-	if err != nil {
-		slog.Warn("failed to count initial rows", "table", tableName, "error", err)
-		initialCount = -1 // Mark as unknown
-	}
-
-	slog.Info("starting shadow table import", "table", tableName, "shadowTable", shadowTable, "csvFile", csvFilePath, "initialRows", initialCount)
-
-	// Phase 1: Create and populate shadow table (no locks on original)
+func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName string, shadowTableName string, csvFilePath string) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	var committed = false
 	defer func() {
@@ -260,47 +400,67 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 		}
 	}()
 
-	slog.Debug("Creating shadow table", "shadowTable", shadowTable, "originalTable", tableName)
+	slog.Debug("Creating shadow table", "shadowTable", shadowTableName, "originalTable", tableName)
 	// Create shadow table with same structure
-	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTable, tableName))
+	_, err = tx.Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", shadowTableName, tableName))
 	if err != nil {
-		return "", fmt.Errorf("failed to create shadow table: %w", err)
+		return fmt.Errorf("failed to create shadow table: %w", err)
 	}
 
-	slog.Debug("Disabling triggers for faster import", "table", shadowTable)
+	slog.Debug("Disabling triggers for faster import", "table", shadowTableName)
 	// Fast import with disabled triggers
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
 	if err != nil {
-		return "", fmt.Errorf("failed to disable triggers: %w", err)
+		return fmt.Errorf("failed to disable triggers: %w", err)
 	}
 
 	file, err := os.Open(csvFilePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to open CSV file: %w", err)
+		return fmt.Errorf("failed to open CSV file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint
 
-	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTable)
+	slog.Info("Starting CSV data import to shadow table", "shadowTable", shadowTableName)
 	importStart := time.Now()
-	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTable))
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", shadowTableName))
 	if err != nil {
-		return "", fmt.Errorf("failed to import CSV: %w", err)
+		return fmt.Errorf("failed to import CSV: %w", err)
 	}
-	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTable, "importDuration", time.Since(importStart))
+	slog.Info("Completed CSV data import to shadow table", "shadowTable", shadowTableName, "importDuration", time.Since(importStart))
 
-	slog.Debug("Re-enabling triggers", "table", shadowTable)
+	slog.Debug("Re-enabling triggers", "table", shadowTableName)
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
 	if err != nil {
-		return "", fmt.Errorf("failed to re-enable triggers: %w", err)
+		return fmt.Errorf("failed to re-enable triggers: %w", err)
 	}
 
 	commitStart := time.Now()
 	err = tx.Commit(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to commit shadow table: %w", err)
+		return fmt.Errorf("failed to commit shadow table: %w", err)
 	}
 	committed = true
-	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTable, "commitDuration", time.Since(commitStart))
+	slog.Debug("Committed shadow table transaction", "shadowTable", shadowTableName, "commitDuration", time.Since(commitStart))
+	return nil
+}
+
+// importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
+// This keeps the original table available during most of the import process
+func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
+	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
+	// count initial rows
+	initialCount, err := countTableRows(ctx, pool, tableName)
+	if err != nil {
+		slog.Warn("failed to count initial rows", "table", tableName, "error", err)
+		initialCount = -1 // Mark as unknown
+	}
+
+	slog.Info("starting shadow table import", "table", tableName, "shadowTable", shadowTable, "csvFile", csvFilePath, "initialRows", initialCount)
+	// Phase 1: Create and populate shadow table (no locks on original)
+	err = createShadowTable(ctx, pool, tableName, shadowTable, csvFilePath)
+	if err != nil {
+		return "", err
+	}
 
 	// Phase 2: Atomic table swap (minimal lock time)
 	slog.Info("Starting atomic table swap", "table", tableName, "shadowTable", shadowTable)
@@ -448,15 +608,9 @@ func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx con
 	return nil
 }
 
-func copyCSVFromRemoteToLocal(ctx context.Context, reg string, tag string, fs *file.Store) error {
-	// Connect to a remote repository
-	repo, err := remote.NewRepository(reg)
-	if err != nil {
-		return fmt.Errorf("could not connect to remote repository: %w", err)
-	}
-
+func copyCSVFromRemoteToLocal(ctx context.Context, repo *remote.Repository, tag string, fs *file.Store) error {
 	// Copy csv from the remote repository to the file store
-	_, err = oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
+	_, err := oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
 	if err != nil {
 		return fmt.Errorf("could not copy from remote repository to file store: %w", err)
 	}
@@ -468,5 +622,268 @@ func copyCSVFromRemoteToLocal(ctx context.Context, reg string, tag string, fs *f
 		return fmt.Errorf("could not copy from remote repository to file store: %w", err)
 	}
 
+	return nil
+}
+
+func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
+	slog.Info(fmt.Sprintf("start inserting for table=%s", tableName))
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close() //nolint
+
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
+	if err != nil {
+		slog.Error("error when trying to insert into table", "err", err)
+		return err
+	}
+	slog.Info("insert completed")
+	return nil
+}
+
+func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
+	slog.Info(fmt.Sprintf("start deleting for table=%s", tableName))
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close() //nolint
+
+	csvReader := csv.NewReader(fd)
+	allRecords, err := csvReader.ReadAll() // could use rows.Next() to hold less space in memory
+	if err != nil {
+		return err
+	}
+
+	if len(allRecords) == 0 {
+		slog.Info("nothing to delete", "table", tableName)
+		return nil
+	}
+
+	primaryKeys := primaryKeysFromTables[tableName]
+	if len(primaryKeys) == 0 {
+		slog.Error("could not determine primary key(s)", "table", tableName)
+		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
+	}
+
+	// sql needs to be adjusted based on the number of primary keys
+	allRecords = allRecords[1:] // cut off the header row
+	if len(primaryKeys) == 1 {
+		primaryKey := primaryKeys[0]
+		for i := range allRecords {
+			key := allRecords[i][0]
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
+			_, err := tx.Exec(ctx, sql)
+			if err != nil {
+				slog.Error("error when deleting from table", "table", tableName, "id", key)
+				continue
+			}
+		}
+	} else {
+		primaryKey1 := primaryKeys[0]
+		primaryKey2 := primaryKeys[1]
+		for i := range allRecords {
+			key1 := allRecords[i][0]
+			key2 := allRecords[i][1]
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", tableName, primaryKey1, "'"+key1+"'", primaryKey2, "'"+key2+"'")
+			_, err := tx.Exec(ctx, sql)
+			if err != nil {
+				slog.Error("error when deleting from table", "table", tableName, "id1", key1, "id2", key2)
+				continue
+			}
+		}
+	}
+	slog.Info("delete completed")
+	return nil
+}
+
+func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
+	slog.Info(fmt.Sprintf("start updating for table=%s", tableName))
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer fd.Close() //nolint
+
+	csvReader := csv.NewReader(fd)
+	record, err := csvReader.Read() // read all the column names from the header row
+	if err != nil {
+		return err
+	}
+
+	primaryKeys := primaryKeysFromTables[tableName]
+	if len(primaryKeys) == 0 {
+		slog.Error("could not determine primary key(s)", "table", tableName)
+		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
+	}
+
+	columnsToUpdate := record[len(primaryKeys):] // exclude primary key(s)
+	for i, column := range columnsToUpdate {
+		columnsToUpdate[i] = fmt.Sprintf("\"%s\" = EXCLUDED.%s", column, column) // escape possible sql syntax column names with ""
+	}
+	assignSQL := strings.Join(columnsToUpdate, ", ")
+
+	tmpTable := tableName + "_tmp_" + strconv.Itoa(int(time.Now().Unix()))
+
+	_, err = tx.Conn().Exec(ctx, fmt.Sprintf("CREATE TABLE %s (LIKE %s INCLUDING ALL);", tmpTable, tableName))
+	if err != nil {
+		slog.Error("error when trying to create tmp table used for updating", "table", tableName, "err", err)
+		return err
+	}
+	defer tx.Exec(ctx, fmt.Sprintf("DROP TABLE %s;", tmpTable)) //nolint
+
+	fd, err = os.Open(filePath) // reopen csv file since we read from it once already
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tmpTable))
+	if err != nil {
+		slog.Error("could not copy to tmp table", "table", tableName, "err", err)
+		return err
+	}
+
+	var upsertSQL string
+	if len(primaryKeys) == 1 {
+		upsertSQL = fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s) DO UPDATE SET %s", tableName, tmpTable, primaryKeys[0], assignSQL)
+	} else {
+		upsertSQL = fmt.Sprintf("INSERT INTO %s SELECT * FROM %s ON CONFLICT (%s, %s) DO UPDATE SET %s", tableName, tmpTable, primaryKeys[0], primaryKeys[1], assignSQL)
+	}
+
+	if _, err := tx.Exec(ctx, upsertSQL); err != nil {
+		slog.Error("could not insert from tmp table to original table", "table", tableName, "err", err)
+		return err
+	}
+	slog.Info("update completed")
+
+	return nil
+}
+
+// downloads the fileName with the tag from the devguard package master, verifies the signature and unzips it into tmp Folder
+func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, *file.Store, error) {
+	slog.Info("importing vulndb started")
+	tmp := "./vulndb-tmp"
+	sigFile := tmp + "/vulndb.zip.sig"
+	blobFile := tmp + "/vulndb.zip"
+	pubKeyFile := "cosign.pub"
+
+	ctx := context.Background()
+
+	fs, err := file.New(tmp)
+	if err != nil {
+		panic(err)
+	}
+
+	// import the vulndb csv to the file store
+	err = copyCSVFromRemoteToLocal(ctx, repo, tag, fs)
+	if err != nil {
+		return tmp, fs, fmt.Errorf("could not copy csv from remote to local: %w", err)
+	}
+
+	// verify the signature of the imported data
+	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
+	if err != nil {
+		return tmp, fs, fmt.Errorf("could not verify signature: %w", err)
+	}
+	slog.Info("successfully verified signature")
+
+	// open the blob file
+	f, err := os.Open(blobFile)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close() //nolint
+
+	// unzip the blob file into vulndb-tmp dir
+	err = utils.Unzip(blobFile, tmp+"/")
+	if err != nil {
+		return tmp, fs, fmt.Errorf("error when trying to build zip file: %w", err)
+	}
+	slog.Info("unzipping vulndb completed")
+	return tmp, fs, nil
+}
+
+func (service importService) GetIncrementalTags(ctx context.Context, repo *remote.Repository) ([]string, error) {
+	var lastVersion string
+	allTags := make([]string, 0, 3000)
+
+	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
+	if err != nil || lastVersion == "" {
+		// we do not have a database version yet, we get the latest snapshot and each incremental update since then
+		repo.TagListPageSize = 1000
+		var index int
+		err = repo.Tags(ctx, "", func(tags []string) error {
+			for i := range tags {
+				if strings.Contains(tags[len(tags)-1-i], "snapshot") && !strings.Contains(tags[len(tags)-1-i], ".sig") {
+					index = len(tags) - 1 - i
+				}
+			}
+			for index < len(tags) {
+				if !strings.Contains(tags[index], ".sig") {
+					allTags = append(allTags, tags[index])
+				}
+				index++
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return allTags, nil
+	}
+
+	repo.TagListPageSize = 1000
+	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
+		for _, tag := range tags {
+			if !strings.Contains(tag, ".sig") {
+				_, err := strconv.Atoi(tag)
+				if err == nil {
+					allTags = append(allTags, tag)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
+		slog.Error("slice not sorted")
+		return nil, fmt.Errorf("slice not sorted")
+	}
+	return allTags, nil
+}
+
+func MakeSnapshot(ctx context.Context) error {
+	vulndb := "ghcr.io/l3montree-dev/devguard/vulndb"
+	vulndbDiff := "ghcr.io/l3montree-dev/devguard/vulndb-diffs"
+	repo, err := remote.NewRepository(vulndb)
+	if err != nil {
+		slog.Error("could not create vulndb repository")
+		return err
+	}
+	repoDiff, err := remote.NewRepository(vulndbDiff)
+	if err != nil {
+		slog.Error("could not create vulndb-diff repository")
+		return err
+	}
+
+	_, fs, err := downloadAndSaveZipToTemp(repo, "latest")
+	if err != nil {
+		if fs != nil {
+			fs.Close()
+		}
+		return err
+	}
+	defer fs.Close() //nolint
+
+	_, err = oras.Copy(ctx, fs, "latest", repoDiff, "latest", oras.DefaultCopyOptions)
+	if err != nil {
+		slog.Error("could not copy to remote repository", "err", err)
+		return err
+	}
+	slog.Info("successfully made snapshot")
 	return nil
 }
