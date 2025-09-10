@@ -123,7 +123,7 @@ func (service importService) ImportFromDiff() error {
 	slog.Info("start updating tags", "amount", len(tags))
 	for i, tag := range tags {
 		slog.Info("", "tag", tag)
-		os.RemoveAll("vulndb-tmp/")
+		os.RemoveAll("vulndb-tmp/") //nolint
 		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 		if err != nil {
 			if i != 0 { // avoid out of bounds error
@@ -145,9 +145,9 @@ func (service importService) ImportFromDiff() error {
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
 	if len(tags) >= 1 {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+tags[len(tags)-1]+"\"}") //nolint
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1]) //nolint
 	} else if snapshot != "" {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", "{\""+snapshot+"\"}") //nolint
+		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", snapshot) //nolint
 	}
 
 	return nil
@@ -185,8 +185,12 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 	if err != nil {
 		return err
 	}
-	for _, file := range files {
-		name := file.Name()
+	filesToProcess := make([]os.DirEntry, 13)
+	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
+	i := 0
+	j := 0
+	for i+j < len(files) {
+		name := files[i].Name()
 		if filepath.Ext(name) != ".csv" {
 			continue
 		}
@@ -196,11 +200,23 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 		if len(fields) <= 2 || fields[len(fields)-2] != "diff" {
 			continue
 		}
+		if strings.Contains(files[i+j].Name(), "cve_affected_component") {
+			filesToProcess[12-j] = files[i+j]
+			j++
+		} else {
+			filesToProcess[i] = files[i+j]
+			i++
+		}
+	}
+
+	for _, file := range filesToProcess {
+		name := strings.TrimRight(file.Name(), ".csv")
+		fields := strings.Split(name, "_")
 
 		// extract table information from the name of the csv file
 		mode := fields[len(fields)-1]
 		table := fields[0]
-		for _, field := range fields[1:(len(fields) - 2)] {
+		for _, field := range fields[1:(len(fields) - 2)] { //append the remaining fields to the table name
 			table += "_" + field
 		}
 
@@ -225,7 +241,7 @@ func processDiffCSVs(ctx context.Context, dirPath string, pool *pgxpool.Pool) er
 				continue
 			}
 		default:
-			slog.Warn("invalid mode for diff file")
+			slog.Warn("invalid mode for diff file", "mode", mode)
 		}
 	}
 	return nil
@@ -814,7 +830,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	repo.TagListPageSize = 1000
 	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
 		for _, tag := range tags {
-			if !strings.Contains(tag, ".") {
+			if !strings.Contains(tag, ".sig") {
 				_, err := strconv.Atoi(tag)
 				if err == nil {
 					allTags = append(allTags, tag)
