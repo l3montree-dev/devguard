@@ -74,6 +74,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		slog.Error("login failed", "err", err)
 	}
 
-	slog.Info("login successful")
+	slog.Debug("login successful")
 	return nil
 }

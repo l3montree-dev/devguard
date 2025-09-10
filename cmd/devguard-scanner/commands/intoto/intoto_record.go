@@ -101,7 +101,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		slog.Info("successfully generated provenance", "step", config.RuntimeInTotoConfig.Step)
+		slog.Debug("successfully generated provenance", "step", config.RuntimeInTotoConfig.Step)
 	}
 
 	output, err := cmd.Flags().GetString("output")
@@ -119,7 +119,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	slog.Info("successfully uploaded in-toto link", "step", config.RuntimeInTotoConfig.Step, "filename", output)
+	slog.Debug("successfully uploaded in-toto link", "step", config.RuntimeInTotoConfig.Step, "filename", output)
 	return nil
 }
 

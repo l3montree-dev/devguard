@@ -235,7 +235,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	if count > 0 {
-		slog.Info("deleting old asset versions", "count", count, "olderThanDays", day)
 
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
 		err = repository.db.Transaction(func(tx core.DB) error {
@@ -255,15 +254,12 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 				return err
 			}
 
-			slog.Info("deleted artifacts for old asset versions", "olderThanDays", day)
-
 			// Now delete the asset versions, which should cascade to delete other related records
 			if err := tx.Unscoped().Where(query).Delete(&models.AssetVersion{}).Error; err != nil {
 				slog.Error("error deleting old asset versions", "err", err)
 				return err
 			}
 
-			slog.Info("deleted old asset versions", "count", count, "olderThanDays", day)
 			return nil
 		})
 

@@ -54,8 +54,6 @@ func (c *Client) GetIssueTransitions(ctx context.Context, issueID string) ([]Tra
 		return nil, fmt.Errorf("failed to decode transitions response: %w", err)
 	}
 
-	slog.Info("Fetched issue transitions successfully", "issue_id", issueID, "transitions_count", len(transitions.Transitions))
-
 	return transitions.Transitions, nil
 }
 
@@ -117,8 +115,6 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 		return fmt.Errorf("failed to create issue comment, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
 	}
 
-	slog.Info("Issue comment created successfully", "issue_id", issueID, "project_id", projectID)
-
 	return nil
 }
 
@@ -150,7 +146,6 @@ func (c *Client) TransitionIssue(ctx context.Context, issueID string, transition
 		return fmt.Errorf("failed to transition issue, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
 	}
 
-	slog.Info("Issue transitioned successfully", "issue_id", issueID, "transition_id", transitionID, "response_status", resp.StatusCode)
 	return nil
 }
 
@@ -175,7 +170,6 @@ func (c *Client) EditIssue(ctx context.Context, issue *Issue) error {
 		return fmt.Errorf("failed to edit issue, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
 	}
 
-	slog.Info("Issue edited successfully", "issue_id", issue.ID, "response_status", resp.StatusCode)
 	return nil
 }
 
@@ -198,7 +192,6 @@ func (c *Client) GetIssue(ctx context.Context, issueID string) (*Issue, error) {
 		return nil, fmt.Errorf("failed to decode issue response: %w", err)
 	}
 
-	slog.Info("Fetched issue successfully", "issue_id", issueID, "response_status", resp.StatusCode)
 	return &issue, nil
 }
 
@@ -250,12 +243,6 @@ func (c *Client) FetchAllRepos() ([]*Project, error) {
 		return nil, fmt.Errorf("failed to fetch projects, status code: %d", resp.StatusCode)
 	}
 
-	slog.Info("Jira response body ",
-		"status", resp.StatusCode,
-		"headers", resp.Header,
-		"body", resp.Body,
-	)
-
 	var projects []*Project
 	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
 		return nil, fmt.Errorf("failed to decode projects response: %w", err)
@@ -294,8 +281,6 @@ func ParseWebhook(payload []byte) (*WebhookEvent, error) {
 		slog.Error("Webhook event type is empty")
 		return nil, fmt.Errorf("webhook event type is empty")
 	}
-
-	slog.Info("Parsed webhook event", "event", event.Event)
 
 	return &event, nil
 }
