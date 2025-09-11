@@ -522,10 +522,10 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 		AppVersion:         escapeLatex(assetVersion.Name),
 		ReportCreationDate: escapeLatex(time.Now().Format("2006-01-02 15:04")),
 
-		AmountCritical: distribution.Critical,
-		AmountHigh:     distribution.High,
-		AmountMedium:   distribution.Medium,
-		AmountLow:      distribution.Low,
+		AmountCritical: distribution.CriticalCVSS,
+		AmountHigh:     distribution.HighCVSS,
+		AmountMedium:   distribution.MediumCVSS,
+		AmountLow:      distribution.LowCVSS,
 
 		AvgFixTimeCritical: fmt.Sprintf("%d Tage", int(avgCritical.Hours()/24)),
 		AvgFixTimeHigh:     fmt.Sprintf("%d Tage", int(avgHigh.Hours()/24)),
