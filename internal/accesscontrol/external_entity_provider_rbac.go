@@ -114,7 +114,7 @@ func (e *externalEntityProviderRBAC) GetOwnerOfOrganization() (string, error) {
 }
 
 func (e *externalEntityProviderRBAC) GetAllMembersOfOrganization() ([]string, error) {
-	return []string{}, nil
+	return e.rootAccessControl.GetAllMembersOfOrganization()
 }
 
 func (e *externalEntityProviderRBAC) GetAllMembersOfProject(projectID string) ([]string, error) {
@@ -122,7 +122,7 @@ func (e *externalEntityProviderRBAC) GetAllMembersOfProject(projectID string) ([
 }
 
 func (e *externalEntityProviderRBAC) GetDomainRole(user string) (core.Role, error) {
-	return core.RoleMember, nil
+	return e.rootAccessControl.GetDomainRole(user)
 }
 
 func (e *externalEntityProviderRBAC) GetProjectRole(user string, project string) (core.Role, error) {
