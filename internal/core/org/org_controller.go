@@ -297,7 +297,7 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		// get the auth admin client from the context
 		authAdminClient := core.GetAuthAdminClient(ctx)
 		// fetch the users from the auth service
-		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids([]string{}))
+		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 		if err != nil {
 			return nil, err
 		}
