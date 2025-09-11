@@ -645,7 +645,6 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	}
 
 	if !doUpdateStatus {
-		slog.Info("Jira issue is already in the expected state", "issueID", ticketID, "status", issue.Fields.Status.Name)
 		return nil
 	}
 
@@ -655,8 +654,6 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 		slog.Error("failed to get Jira transition by name", "err", err, "state", stateID, "ticketID", ticketID)
 		return fmt.Errorf("failed to get Jira transition by name: %w", err)
 	}
-
-	slog.Info("Jira issue status updated", "issueID", ticketID, "status", stateID)
 
 	return nil
 }
@@ -728,8 +725,6 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		slog.Error("failed to update Jira issue state", "err", err, "ticketID", ticketID)
 		return fmt.Errorf("failed to update Jira issue state: %w", err)
 	}
-
-	slog.Info("Jira issue updated successfully", "issueID", ticketID, "projectID", jiraProjectID)
 
 	return nil
 }

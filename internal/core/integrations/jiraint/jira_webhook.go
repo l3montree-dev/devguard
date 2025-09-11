@@ -39,7 +39,6 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	// and status changes on the issue (IssueEventType = "issue_generic").
 	// "issue_updated" events are ignored because creating a comment also triggers an "issue_updated" event.
 	if event.IssueEventType == "issue_updated" {
-		slog.Info("Ignoring issue updated event without comment", "event", event.Event)
 		return nil
 	}
 
@@ -110,11 +109,9 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	switch event.Event {
 	case jira.CommentCreated:
 		// Handle comment created event
-		slog.Info("Handling comment created event", "event", event.Event)
 
 		//check if the event is triggered by a DevGuard
 		if strings.Contains(event.Comment.Body, DevguardCommentText) {
-			slog.Info("Ignoring comment created event triggered by DevGuard", "event", event.Event)
 			return nil
 		}
 
