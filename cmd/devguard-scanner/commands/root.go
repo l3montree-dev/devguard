@@ -111,6 +111,7 @@ func init() {
 		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
+		NewCurlCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
