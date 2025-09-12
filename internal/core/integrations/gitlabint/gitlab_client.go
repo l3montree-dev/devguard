@@ -220,7 +220,13 @@ func (client gitlabClient) ListProjectMembers(ctx context.Context, projectID int
 }
 
 func (client gitlabClient) IsProjectMember(ctx context.Context, projectID int, userID int, options *gitlab.ListProjectMembersOptions) (bool, error) {
-	members, _, err := client.ListProjectMembers(ctx, projectID, options, nil)
+	members, err := fetchPaginatedData(func(page int) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
+		// get the groups for this user
+		return client.ListProjectMembers(ctx, projectID, &gitlab.ListProjectMembersOptions{
+			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
+		}, nil)
+	})
+
 	if err != nil {
 		return false, err
 	}
