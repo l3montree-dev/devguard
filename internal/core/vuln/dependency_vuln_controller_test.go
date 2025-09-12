@@ -113,7 +113,6 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		core.SetRBAC(ctx, rbac)
 
 		adminClient := mocks.NewAdminClient(t)
-		adminClient.On("ListUser", mock.Anything, mock.Anything).Return(nil, nil)
 		core.SetAuthAdminClient(ctx, adminClient)
 		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
