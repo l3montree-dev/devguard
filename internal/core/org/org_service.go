@@ -40,56 +40,13 @@ func (o *orgService) CreateOrganization(ctx core.Context, organization *models.O
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 
-	if err = o.bootstrapOrg(ctx, organization); err != nil {
-		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
-	}
-	return nil
-}
-
-func (o *orgService) bootstrapOrg(ctx core.Context, organization *models.Org) error {
-	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := core.GetSession(ctx).GetUserID()
-
-	if err := rbac.GrantRole(userID, core.RoleOwner); err != nil {
-		return err
+	if err = core.BootstrapOrg(rbac, userID, core.RoleOwner); err != nil {
+		return echo.NewHTTPError(500, "could not bootstrap organization roles").WithInternal(err)
 	}
-
-	if err := rbac.InheritRole(core.RoleOwner, core.RoleAdmin); err != nil { // an owner is an admin
-		return err
-	}
-	if err := rbac.InheritRole(core.RoleAdmin, core.RoleMember); err != nil { // an admin is a member
-		return err
-	}
-
-	if err := rbac.AllowRole(core.RoleOwner, core.ObjectOrganization, []core.Action{
-		core.ActionDelete,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole(core.RoleAdmin, core.ObjectOrganization, []core.Action{
-		core.ActionUpdate,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole(core.RoleAdmin, core.ObjectProject, []core.Action{
-		core.ActionCreate,
-		core.ActionRead, // listing all projects
-		core.ActionUpdate,
-		core.ActionDelete,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole(core.RoleMember, core.ObjectOrganization, []core.Action{
-		core.ActionRead,
-	}); err != nil {
-		return err
-	}
-
 	ctx.Set("rbac", rbac)
+
 	return nil
 }
 
