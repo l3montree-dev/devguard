@@ -39,6 +39,10 @@ func (firstPartyVuln *FirstPartyVuln) AddScannerID(scannerID string) {
 	firstPartyVuln.ScannerIDs = utils.AddToWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
 }
 
+func (firstPartyVuln *FirstPartyVuln) GetArtifacts() []Artifact {
+	return []Artifact{}
+}
+
 func (firstPartyVuln *FirstPartyVuln) RemoveScannerID(scannerID string) {
 	firstPartyVuln.ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
 }

@@ -53,7 +53,9 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 	)
 	projectService := mocks.NewProjectService(t)
 
-	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService)
+	statisticsService := mocks.NewStatisticsService(t)
+
+	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService, statisticsService)
 
 	// Create org, project, asset, asset version, and dependency vuln
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)

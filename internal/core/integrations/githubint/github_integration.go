@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -72,6 +73,7 @@ type GithubIntegration struct {
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
 	githubClientFactory func(repoID string) (githubClientFacade, error)
+	statisticsService   core.StatisticsService
 }
 
 var _ core.ThirdPartyIntegration = &GithubIntegration{}
@@ -89,7 +91,11 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 	orgRepository := repositories.NewOrgRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-
+	statisticsRepository := repositories.NewStatisticsRepository(db)
+	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
+	releaseRepository := repositories.NewReleaseRepository(db)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
@@ -104,11 +110,12 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 		vulnEventRepository:             vulnEventRepository,
 		frontendURL:                     frontendURL,
 		assetRepository:                 repositories.NewAssetRepository(db),
-		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
+		assetVersionRepository:          assetVersionRepository,
 		componentRepository:             componentRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 		licenseRiskRepository:           licenseRiskRepository,
+		statisticsService:               statisticsService,
 
 		githubClientFactory: func(repoID string) (githubClientFacade, error) {
 			return NewGithubClient(installationIDFromRepositoryID(repoID))
@@ -219,6 +226,8 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 		slog.Error("could not parse github webhook", "err", err)
 		return err
 	}
+	var vuln models.Vuln
+	doUpdateArtifactRiskHistory := false
 
 	switch event := event.(type) {
 	case *github.IssuesEvent:
@@ -271,6 +280,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 
 		case "reopened":
 			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()))
@@ -279,6 +289,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 
 		case "deleted":
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames())
@@ -287,6 +298,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 		}
 	case *github.IssueCommentEvent:
 		// check if the issue is a devguard issues
@@ -297,7 +309,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			return nil
 		}
 		// look for a vuln with such a github ticket id
-		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+		vuln, err = githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
 			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
@@ -382,6 +394,10 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
+		if vulnEvent.Type == models.EventTypeAccepted || vulnEvent.Type == models.EventTypeFalsePositive || vulnEvent.Type == models.EventTypeReopened {
+			doUpdateArtifactRiskHistory = true
+		}
+
 		err = githubIntegration.UpdateIssue(ctx.Request().Context(), asset, vuln)
 
 		if err != nil {
@@ -419,6 +435,15 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}
 
+	}
+
+	if doUpdateArtifactRiskHistory && vuln != nil {
+		artifacts := vuln.GetArtifacts()
+		for _, artifact := range artifacts {
+			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+			}
+		}
 	}
 
 	return ctx.JSON(200, "ok")
