@@ -59,23 +59,47 @@ func NewWebhookClient(url string, secret *string) *webhookClient {
 }
 
 func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http.Response, error) {
+	bodyBytes, err := io.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request body: %w", err)
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return nil, err
+	// Retry logic with delays: 1s, 5s, 10s
+	retryDelays := []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}
+
+	var resp *http.Response
+
+	for i, delay := range retryDelays {
+		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return nil, err
+		}
+
+		if c.Secret != nil {
+			req.Header.Set("X-Webhook-Secret", *c.Secret)
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err = http.DefaultClient.Do(req)
+
+		if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return resp, nil
+		}
+
+		if i == len(retryDelays)-1 {
+			return nil, fmt.Errorf("webhook request failed with no response")
+		}
+
+		time.Sleep(delay)
 	}
 
-	if c.Secret != nil {
-		req.Header.Set("X-Webhook-Secret", *c.Secret)
-	}
+	// This should never be reached due to the break condition above
+	return nil, fmt.Errorf("unexpected end of retry loop")
 
-	req.Header.Set("Content-Type", "application/json")
-
-	return http.DefaultClient.Do(req)
 }
 
 func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, artifact core.ArtifactObject) error {
@@ -99,6 +123,9 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.
 	resp, err := c.CreateRequest("POST", c.URL, &buf)
 	if err != nil {
 		return err
+	}
+	if resp == nil {
+		return fmt.Errorf("received nil response when sending SBOM")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -160,6 +187,9 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVuln
 	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return fmt.Errorf("received nil response when sending dependency vulnerabilities")
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to send vulnerability, status: %s", resp.Status)
@@ -220,12 +250,15 @@ func (c *webhookClient) SendTest(org core.OrgObject, project core.ProjectObject,
 	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return fmt.Errorf("received nil response when sending test webhook")
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return fmt.Errorf("failed to send test webhook, status: %s", resp.Status)
+		return nil // Success
 	}
 
-	return nil
+	return fmt.Errorf("failed to send test webhook, status: %s", resp.Status)
 }
 
 func createSampleSBOM() cdx.BOM {
