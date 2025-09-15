@@ -215,7 +215,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum *.tar.gz *.zip *.json > checksums.txt
+          sha256sum *.tar.gz *.zip > checksums.txt
           echo "Generated checksums for all release artifacts"
 
       - name: Sign release artifacts with devguard-scanner
@@ -223,7 +223,7 @@ jobs:
           DEVGUARD_TOKEN: ${{ secrets.DEVGUARD_TOKEN }}
         run: |
           cd dist
-          for file in *.tar.gz *.zip *.json checksums.txt; do
+          for file in *.tar.gz *.zip checksums.txt; do
             if [ -f "$file" ]; then
               echo "Signing $file with devguard-scanner..."
               ../devguard-scanner-local sign --token "$DEVGUARD_TOKEN" "$file"
