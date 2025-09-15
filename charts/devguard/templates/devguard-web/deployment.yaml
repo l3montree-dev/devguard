@@ -56,6 +56,12 @@ spec:
             value: http://devguard-api-service:8080
           - name: DEVGUARD_API_URL_PUBLIC_INTERNET
             value: {{ .Values.web.devguardApiUrlPublicInternet }}
+          - name: PRIVACY_POLICY_LINK
+            value: {{ .Values.web.privacyPolicyLink | quote }}
+          - name: TERMS_OF_SERVICE_LINK
+            value: {{ .Values.web.termsOfServiceLink | quote }}
+          - name: IMPRINT_LINK
+            value: {{ .Values.web.imprintLink | quote }}
           {{- if and .Values.oidc.enabled (gt (len .Values.oidc.providers) 0) (not .Values.webauthn.enabled) (not .Values.passkey.enabled) (not .Values.password.enabled) (not .Values.totp.enabled) }}
           - name: OIDC_ONLY
             value: "true"

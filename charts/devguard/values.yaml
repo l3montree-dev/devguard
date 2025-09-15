@@ -90,7 +90,12 @@ api:
     existingPrivateKeySecretName: github-app-private-key
 
 web:
+
   devguardApiUrlPublicInternet: ""
+  privacyPolicyLink: ""
+  termsOfServiceLink: ""
+  imprintLink: ""
+
   image:
     repository: ghcr.io/l3montree-dev/devguard-web
     # TODO: As we are curently in ALPHA, we are using the latest tag. 
