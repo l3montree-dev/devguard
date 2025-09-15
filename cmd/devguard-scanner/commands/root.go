@@ -116,7 +116,7 @@ func init() {
 			fmt.Printf("Built by:   %s\n", builtBy)
 		},
 	}
-	
+
 	rootCmd.AddCommand(
 		versionCmd,
 		NewSCACommand(),

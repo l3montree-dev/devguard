@@ -315,9 +315,6 @@ jobs:
             # Pull from registry
             docker pull ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }}
             
-            # Or load from offline archive
-            docker load < devguard-scanner-${{ needs.release.outputs.tag }}-docker-image.tar.gz
-            
             # Run container
             docker run --rm -v $(pwd):/workspace ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }} scan /workspace
             ```
@@ -351,26 +348,6 @@ jobs:
             # Verify in-toto attestation and SLSA provenance
             devguard-scanner intoto verify --help
             ```
-            
-            ### 📋 What's New
-            
-            - ✅ Multi-platform binaries (Linux, macOS, Windows) for AMD64 and ARM64
-            - ✅ Container images with multi-architecture support
-            - ✅ Complete SLSA Level 3 provenance attestation  
-            - ✅ in-toto supply chain verification
-            - ✅ Native DevGuard signing and verification
-            - ✅ Software Bill of Materials (SBOM) generation
-            - ✅ Comprehensive security scanning capabilities
-            
-            ### 🛠️ Capabilities
-            
-            - **Static Analysis (SAST)** - Code vulnerability scanning
-            - **Software Composition Analysis (SCA)** - Dependency vulnerability detection
-            - **Secret Scanning** - Credential and API key detection
-            - **Container Scanning** - Docker image vulnerability assessment
-            - **Infrastructure as Code (IaC)** - Terraform, CloudFormation, Kubernetes scanning
-            - **SBOM Generation** - Software Bill of Materials creation
-            - **Supply Chain Security** - in-toto attestation and verification
             
             ---
             
