@@ -1036,7 +1036,7 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
-			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Justification != nil {
+			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Type != models.EventTypeComment && dependencyVuln.Events[i].Justification != nil {
 				return dependencyVuln.Events[i].Justification
 			}
 		}
