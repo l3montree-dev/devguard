@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
@@ -256,4 +257,102 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
 		assert.Equal(t, models.VulnStateFixed, vulnFromDB.State)
 	})
+
+	t.Run("should regenerate risk history when vulnerability state changes via comment", func(t *testing.T) {
+		// Reset vuln state to open for this test
+		vuln.State = models.VulnStateOpen
+		assert.Nil(t, db.Save(&vuln).Error)
+
+		// Create an artifact associated with the vulnerability
+		artifact := models.Artifact{
+			ArtifactName:     "test-artifact-comment",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          asset.ID,
+		}
+		assert.Nil(t, db.Create(&artifact).Error)
+
+		// Associate the artifact with the vulnerability
+		assert.Nil(t, db.Model(&vuln).Association("Artifacts").Append(&artifact))
+
+		// Pre-create an artifact risk history record for today to see if it gets updated
+		artifactRiskHistory := models.ArtifactRiskHistory{
+			ArtifactName:     artifact.ArtifactName,
+			AssetVersionName: artifact.AssetVersionName,
+			AssetID:          artifact.AssetID,
+			History: models.History{
+				Day: time.Now().UTC(),
+				Distribution: models.Distribution{
+					Critical: 1,
+				},
+			},
+		}
+		assert.Nil(t, db.Create(&artifactRiskHistory).Error)
+
+		// Test a comment event that changes vulnerability state to accepted
+		// Note Hook events have different structure than Issue Hook events according to GitLab documentation
+		commentEvent := map[string]any{
+			"object_kind":   "note",
+			"noteable_type": "Issue", // try uppercase again
+			"user": map[string]any{
+				"id":       2,
+				"username": "testuser",
+			},
+			"issue": map[string]any{
+				"iid": 123,
+			},
+			"project_id": 0,
+			"object_attributes": map[string]any{
+				"note":          "/accept This vulnerability is acceptable for our use case",
+				"noteable_type": "Issue",
+			},
+		}
+		b, err := json.Marshal(commentEvent)
+		assert.Nil(t, err)
+
+		req := httptest.NewRequest("POST", "/webhook", bytes.NewBuffer(b))
+		req.Header.Set("X-Gitlab-Event", "Note Hook")
+		req.Header.Set("X-Gitlab-Token", asset.WebhookSecret.String())
+
+		rec := httptest.NewRecorder()
+		app := echo.New()
+		ctx := app.NewContext(req, rec)
+
+		client.Calls = nil // reset the calls to the client
+		client.ExpectedCalls = nil
+
+		// Mock the user authorization check - IsProjectMember expects (ctx, projectID, userID, accessLevel)
+		client.On("IsProjectMember", mock.Anything, 0, 2, mock.Anything).Return(true, nil).Once()
+		client.On("EditIssue", mock.Anything, 0, 123, mock.Anything).Return(nil, nil, nil).Once()
+
+		// Check if there are any artifact risk history records before the webhook call
+		var artifactRiskHistoryBefore models.ArtifactRiskHistory
+		err = db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND day = CURRENT_DATE",
+			artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).
+			Find(&artifactRiskHistoryBefore).Error
+		assert.Nil(t, err, "Should find artifact risk history record for today before webhook processing")
+
+		assert.Equal(t, 1, artifactRiskHistoryBefore.Critical, "Critical risk count should be 1 before processing comment")
+
+		// Call the webhook handler
+		assert.Nil(t, gitlabInt.HandleWebhook(ctx))
+
+		// Verify the vulnerability state changed to accepted
+		vulnFromDB := models.DependencyVuln{}
+		assert.Nil(t, db.Preload("Artifacts").First(&vulnFromDB, "id = ?", vuln.ID).Error)
+		assert.Equal(t, models.VulnStateAccepted, vulnFromDB.State)
+
+		// Verify that the vulnerability has artifacts
+		assert.NotEmpty(t, vulnFromDB.GetArtifacts(), "Vulnerability should have associated artifacts for risk history update")
+
+		// Verify that risk history was updated for today's date
+		var artifactRiskHistoryAfter models.ArtifactRiskHistory
+		err = db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND day = CURRENT_DATE",
+			artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).
+			Find(&artifactRiskHistoryAfter).Error
+		assert.Nil(t, err, "Should find artifact risk history record for today after webhook processing")
+
+		assert.Equal(t, artifactRiskHistoryAfter.Critical, 0, "Critical risk count should be 0")
+
+	})
+
 }

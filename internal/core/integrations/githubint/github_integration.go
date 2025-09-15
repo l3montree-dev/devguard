@@ -440,7 +440,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 	if doUpdateArtifactRiskHistory && vuln != nil {
 		artifacts := vuln.GetArtifacts()
 		for _, artifact := range artifacts {
-			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
