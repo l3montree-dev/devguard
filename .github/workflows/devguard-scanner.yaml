@@ -175,6 +175,9 @@ jobs:
           # Build flags for security-hardened binaries
           BUILD_FLAGS="-s -w -buildid= -X main.version=${{ steps.tag.outputs.tag }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.builtBy=github-actions"
           
+          # Build local binary for signing (native to runner - Linux amd64)
+          CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o devguard-scanner-local ./cmd/devguard-scanner
+          
           # Build for Linux amd64
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-amd64 ./cmd/devguard-scanner
           
