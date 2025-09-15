@@ -211,23 +211,6 @@ jobs:
           rm -f devguard-scanner-linux-amd64 devguard-scanner-linux-arm64 devguard-scanner-darwin-amd64 devguard-scanner-darwin-arm64
           rm -f devguard-scanner-windows-amd64.exe devguard-scanner-windows-arm64.exe
 
-      - name: Download scanner image artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: scanner
-          path: ./scanner-artifacts
-
-
-      - name: Generate SBOM with devguard-scanner
-        run: |
-          # Build a local copy of devguard-scanner for SBOM generation
-          go build -o devguard-scanner-local ./cmd/devguard-scanner
-          
-          cd dist
-          echo "Generating SBOM for devguard-scanner..."
-          
-          # Generate SBOM for the project
-          ../devguard-scanner-local sbom --output devguard-scanner-${{ steps.tag.outputs.tag }}-sbom.json ../
 
       - name: Generate checksums
         run: |
