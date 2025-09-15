@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -117,6 +118,7 @@ type GitlabIntegration struct {
 	casbinRBACProvider          core.RBACProvider
 	licenseRiskRepository       core.LicenseRiskRepository
 	licenseRiskService          core.LicenseRiskService
+	statisticsService           core.StatisticsService
 }
 
 var _ core.ThirdPartyIntegration = &GitlabIntegration{}
@@ -138,9 +140,13 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
+	statisticsRepository := repositories.NewStatisticsRepository(db)
+	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
+	releaseRepository := repositories.NewReleaseRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
 
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
@@ -173,6 +179,7 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 		clientFactory:               clientFactory,
 		licenseRiskRepository:       licenseRiskRepository,
 		licenseRiskService:          licenseRiskService,
+		statisticsService:           statisticsService,
 	}
 }
 

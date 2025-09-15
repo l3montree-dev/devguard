@@ -515,9 +515,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
 	projectService := project.NewService(projectRepository, assetRepository)
-	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService)
-
-	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
@@ -541,6 +538,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
+	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService)
+	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
 	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)

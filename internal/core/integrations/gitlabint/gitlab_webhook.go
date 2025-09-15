@@ -3,6 +3,7 @@ package gitlabint
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -46,6 +47,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	var vuln models.Vuln
 	var issueID int
 	var projectID int
+
+	doUpdateArtifactRiskHistory := false
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
@@ -112,6 +115,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 
 		case "reopen":
 			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
@@ -125,6 +129,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 				slog.Error("could not save vuln and event", "err", err)
 
 			}
+			doUpdateArtifactRiskHistory = true
 		}
 		asset, err := g.assetRepository.Read(vuln.GetAssetID())
 		if err != nil {
@@ -234,7 +239,21 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			slog.Error("could not save dependencyVuln and event", "err", err)
 
 		}
+
+		if vulnEvent.Type == models.EventTypeAccepted || vulnEvent.Type == models.EventTypeFalsePositive || vulnEvent.Type == models.EventTypeReopened {
+			doUpdateArtifactRiskHistory = true
+		}
+
 	}
+
+	if doUpdateArtifactRiskHistory {
+		for _, artifact := range vuln.GetArtifacts() {
+			if err := g.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+			}
+		}
+	}
+
 	switch vulnEvent.Type {
 	case models.EventTypeAccepted, models.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
@@ -242,6 +261,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			StateEvent: gitlab.Ptr("close"),
 			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 		})
+
 		return err
 	case models.EventTypeReopened:
 		labels := commonint.GetLabels(vuln)
@@ -250,7 +270,6 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 		})
 		return err
-
 	}
 	return ctx.JSON(200, "ok")
 }

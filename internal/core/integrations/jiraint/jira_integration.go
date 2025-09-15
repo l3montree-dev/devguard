@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -52,6 +53,7 @@ type JiraIntegration struct {
 	orgRepository             core.OrganizationRepository
 	projectRepository         core.ProjectRepository
 	frontendURL               string
+	statisticsService         core.StatisticsService
 }
 
 var _ core.ThirdPartyIntegration = &JiraIntegration{}
@@ -73,6 +75,12 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 		panic("FRONTEND_URL is not set")
 	}
 
+	statisticsRepository := repositories.NewStatisticsRepository(db)
+	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
+	releaseRepository := repositories.NewReleaseRepository(db)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
+
 	return &JiraIntegration{
 		jiraIntegrationRepository: jiraIntegrationRepository,
 		aggregatedVulnRepository:  aggregatedVulnRepository,
@@ -81,11 +89,12 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 		vulnEventRepository:       vulnEventRepository,
 		externalUserRepository:    externalUserRepository,
 		assetRepository:           repositories.NewAssetRepository(db),
-		assetVersionRepository:    repositories.NewAssetVersionRepository(db),
+		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		frontendURL:               frontendURL,
+		statisticsService:         statisticsService,
 	}
 }
 
