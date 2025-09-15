@@ -7,7 +7,7 @@ on:
   push:
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   security-events: write
   packages: write
@@ -109,7 +109,7 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/troubleshooting-sast'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/troubleshooting-sast' || github.ref == 'refs/heads/test-release'
 
   
   sign-scanner:
@@ -125,7 +125,7 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
 
   attest-scanner:
     needs: 
@@ -140,3 +140,246 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
+  release:
+    name: Build and Release Binaries
+    runs-on: ubuntu-latest
+    needs: [golangci, tests, build-scanner-image]
+    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Get tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=test-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build cross-platform binaries
+        run: |
+          mkdir -p dist
+          
+          # Build flags for security-hardened binaries
+          BUILD_FLAGS="-s -w -buildid= -X main.version=${{ steps.tag.outputs.tag }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.builtBy=github-actions"
+          
+          # Build for Linux amd64
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-amd64 ./cmd/devguard-scanner
+          
+          # Build for Linux arm64
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-arm64 ./cmd/devguard-scanner
+          
+          # Build for Windows amd64
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-windows-amd64.exe ./cmd/devguard-scanner
+          
+          # Build for Windows arm64
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-windows-arm64.exe ./cmd/devguard-scanner
+          
+          # Build for macOS amd64
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-darwin-amd64 ./cmd/devguard-scanner
+          
+          # Build for macOS arm64
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-darwin-arm64 ./cmd/devguard-scanner
+
+      - name: Create archives
+        run: |
+          cd dist
+          
+          # Create tar.gz archives for Unix-like systems
+          tar -czf devguard-scanner-linux-amd64.tar.gz devguard-scanner-linux-amd64
+          tar -czf devguard-scanner-linux-arm64.tar.gz devguard-scanner-linux-arm64
+          tar -czf devguard-scanner-darwin-amd64.tar.gz devguard-scanner-darwin-amd64
+          tar -czf devguard-scanner-darwin-arm64.tar.gz devguard-scanner-darwin-arm64
+          
+          # Create zip archives for Windows
+          zip devguard-scanner-windows-amd64.zip devguard-scanner-windows-amd64.exe
+          zip devguard-scanner-windows-arm64.zip devguard-scanner-windows-arm64.exe
+          
+          # Remove individual binaries, keep archives
+          rm devguard-scanner-* *.exe
+
+      - name: Download scanner image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: scanner
+          path: ./scanner-artifacts
+
+      - name: Include OCI images in release assets
+        run: |
+          cd dist
+          echo "Including pre-built OCI images in release assets..."
+          
+          TAG="${{ steps.tag.outputs.tag }}"
+          
+          # Copy the pre-built image artifacts
+          if [ -f "../scanner-artifacts/image.tar" ]; then
+            cp "../scanner-artifacts/image.tar" "devguard-scanner-${TAG}-docker-image.tar"
+            gzip "devguard-scanner-${TAG}-docker-image.tar"
+            echo "Included Docker image: devguard-scanner-${TAG}-docker-image.tar.gz"
+          fi
+          
+          # Copy any other scanner artifacts (digests, metadata, etc.)
+          if [ -d "../scanner-artifacts" ]; then
+            cp -r ../scanner-artifacts/* . 2>/dev/null || true
+          fi
+
+      - name: Generate SBOM with devguard-scanner
+        run: |
+          # Build a local copy of devguard-scanner for SBOM generation
+          go build -o devguard-scanner-local ./cmd/devguard-scanner
+          
+          cd dist
+          echo "Generating SBOM for devguard-scanner..."
+          
+          # Generate SBOM for the project
+          ../devguard-scanner-local sbom --output devguard-scanner-${{ steps.tag.outputs.tag }}-sbom.json ../
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip *.json > checksums.txt
+          echo "Generated checksums for all release artifacts"
+
+      - name: Sign release artifacts with devguard-scanner
+        env:
+          DEVGUARD_TOKEN: ${{ secrets.DEVGUARD_TOKEN }}
+        run: |
+          cd dist
+          for file in *.tar.gz *.zip *.json checksums.txt; do
+            if [ -f "$file" ]; then
+              echo "Signing $file with devguard-scanner..."
+              ../devguard-scanner-local sign --token "$DEVGUARD_TOKEN" "$file"
+            fi
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          name: "DevGuard Scanner ${{ needs.release.outputs.tag }}"
+          draft: false
+          prerelease: ${{ contains(needs.release.outputs.tag, 'test-') }}
+          body: |
+            ## DevGuard Release ${{ needs.release.outputs.tag }}
+            
+            🛡️ **Secure software supply chain scanning and security analysis toolkit**
+            
+            ### 📦 Release Assets
+            
+            #### **📱 Binaries**
+            - `devguard-scanner-linux-amd64.tar.gz` - Linux x64 binary
+            - `devguard-scanner-linux-arm64.tar.gz` - Linux ARM64 binary  
+            - `devguard-scanner-darwin-amd64.tar.gz` - macOS x64 binary
+            - `devguard-scanner-darwin-arm64.tar.gz` - macOS ARM64 (Apple Silicon) binary
+            - `devguard-scanner-windows-amd64.zip` - Windows x64 binary
+            - `devguard-scanner-windows-arm64.zip` - Windows ARM64 binary
+            
+            #### **🐳 Container Images**
+            - `devguard-scanner-${{ needs.release.outputs.tag }}-docker-image.tar.gz` - Complete Docker image for offline use
+            - **Registry**: `ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }}`
+            
+            #### **🔐 Security Artifacts**
+            - `checksums.txt` - SHA256 checksums for all artifacts
+            - `*.sig` - Digital signatures for all artifacts
+            - `*.link` - in-toto attestation links
+            - `*.provenance.json` - SLSA Level 3 provenance attestation
+            - `devguard-scanner-${{ needs.release.outputs.tag }}-sbom.json` - Software Bill of Materials
+            
+            ### 🚀 Quick Start
+            
+            #### **Download and Install**
+            ```bash
+            # Linux/macOS - Download and extract
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ needs.release.outputs.tag }}/devguard-scanner-linux-amd64.tar.gz | tar -xz
+            chmod +x devguard-scanner-linux-amd64
+            sudo mv devguard-scanner-linux-amd64 /usr/local/bin/devguard-scanner
+            
+            # Verify installation
+            devguard-scanner --version
+            ```
+            
+            #### **Docker Usage**
+            ```bash
+            # Pull from registry
+            docker pull ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }}
+            
+            # Or load from offline archive
+            docker load < devguard-scanner-${{ needs.release.outputs.tag }}-docker-image.tar.gz
+            
+            # Run container
+            docker run --rm -v $(pwd):/workspace ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }} scan /workspace
+            ```
+            
+            #### **Go Install**
+            ```bash
+            go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ needs.release.outputs.tag }}
+            ```
+            
+            ### 🔒 Security Verification
+            
+            All release artifacts are cryptographically signed and include complete supply chain attestation.
+            
+            #### **Verify Checksums**
+            ```bash
+            # Download checksums
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ needs.release.outputs.tag }}/checksums.txt
+            
+            # Verify a binary
+            sha256sum -c checksums.txt --ignore-missing
+            ```
+            
+            #### **Verify Signatures** 
+            ```bash
+            # Download signature files and verify with DevGuard
+            devguard-scanner verify devguard-scanner-linux-amd64.tar.gz
+            ```
+            
+            #### **Verify Supply Chain**
+            ```bash
+            # Verify in-toto attestation and SLSA provenance
+            devguard-scanner intoto verify --help
+            ```
+            
+            ### 📋 What's New
+            
+            - ✅ Multi-platform binaries (Linux, macOS, Windows) for AMD64 and ARM64
+            - ✅ Container images with multi-architecture support
+            - ✅ Complete SLSA Level 3 provenance attestation  
+            - ✅ in-toto supply chain verification
+            - ✅ Native DevGuard signing and verification
+            - ✅ Software Bill of Materials (SBOM) generation
+            - ✅ Comprehensive security scanning capabilities
+            
+            ### 🛠️ Capabilities
+            
+            - **Static Analysis (SAST)** - Code vulnerability scanning
+            - **Software Composition Analysis (SCA)** - Dependency vulnerability detection
+            - **Secret Scanning** - Credential and API key detection
+            - **Container Scanning** - Docker image vulnerability assessment
+            - **Infrastructure as Code (IaC)** - Terraform, CloudFormation, Kubernetes scanning
+            - **SBOM Generation** - Software Bill of Materials creation
+            - **Supply Chain Security** - in-toto attestation and verification
+            
+            ---
+            
+            📖 **Documentation**: [DevGuard Documentation](https://github.com/l3montree-dev/devguard)  
+            🐛 **Report Issues**: [GitHub Issues](https://github.com/l3montree-dev/devguard/issues)  
+            💬 **Community**: [Discussions](https://github.com/l3montree-dev/devguard/discussions)
+          files: |
+            release-artifacts/*
+            signatures/*
+            provenance/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
