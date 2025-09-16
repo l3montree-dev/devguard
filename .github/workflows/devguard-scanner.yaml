@@ -236,12 +236,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.release.outputs.tag }}
-          name: "${{ needs.release.outputs.tag }}"
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "DevGuard Scanner ${{ steps.tag.outputs.tag }}"
           draft: false
-          prerelease: ${{ contains(needs.release.outputs.tag, 'test-') }}
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') }}
           body: |
-            ## DevGuard Release ${{ needs.release.outputs.tag }}
+            ## DevGuard Release ${{ steps.tag.outputs.tag }}
             
             🛡️ **Secure software supply chain scanning and security analysis toolkit**
             
@@ -257,22 +257,22 @@ jobs:
             
             #### **🐳 Container Images**
             - **Registry**: 
-              - `ghcr.io/l3montree-dev/devguard:${{ needs.release.outputs.tag }}` (Main platform)
-              - `ghcr.io/l3montree-dev/devguard/scanner:${{ needs.release.outputs.tag }}` (Scanner tool)
+              - `ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}` (Main platform)
+              - `ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}` (Scanner tool)
             
             #### **🔐 Security Artifacts**
             - `checksums.txt` - SHA256 checksums for all artifacts
             - `*.sig` - Digital signatures for all artifacts
             - `*.link` - in-toto attestation links
             - `*.provenance.json` - SLSA Level 3 provenance attestation
-            - `devguard-scanner-${{ needs.release.outputs.tag }}-sbom.json` - Software Bill of Materials
+            - `devguard-scanner-${{ steps.tag.outputs.tag }}-sbom.json` - Software Bill of Materials
             
             ### 🚀 Quick Start
             
             #### **Download and Install**
             ```bash
             # Linux/macOS - Download and extract
-            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ needs.release.outputs.tag }}/devguard-scanner-linux-amd64.tar.gz | tar -xz
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/devguard-scanner-linux-amd64.tar.gz | tar -xz
             chmod +x devguard-scanner-linux-amd64
             sudo mv devguard-scanner-linux-amd64 /usr/local/bin/devguard-scanner
             
@@ -283,15 +283,15 @@ jobs:
             #### **Docker Usage**
             ```bash
             # Pull DevGuard Scanner from registry
-            docker pull ghcr.io/l3montree-dev/devguard/scanner:${{ needs.release.outputs.tag }}
+            docker pull ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}
             
             # Pull DevGuard Platform from registry
-            docker pull ghcr.io/l3montree-dev/devguard:${{ needs.release.outputs.tag }}
+            docker pull ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}
             ```
             
             #### **Go Install**
             ```bash
-            go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ needs.release.outputs.tag }}
+            go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ steps.tag.outputs.tag }}
             ```
             
             ### 🔒 Security Verification
@@ -301,16 +301,10 @@ jobs:
             #### **Verify Checksums**
             ```bash
             # Download checksums
-            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ needs.release.outputs.tag }}/checksums.txt
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/checksums.txt
             
             # Verify a binary
             sha256sum -c checksums.txt --ignore-missing
-            ```
-            
-            #### **Verify Signatures** 
-            ```bash
-            # Download signature files and verify with DevGuard
-            devguard-scanner verify devguard-scanner-linux-amd64.tar.gz
             ```
             
             #### **Verify Supply Chain**
