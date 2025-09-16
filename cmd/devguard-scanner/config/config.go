@@ -52,6 +52,8 @@ type baseConfig struct {
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
+
+	Offline bool `json:"offline" mapstructure:"offline"`
 }
 
 type InTotoConfig struct {
