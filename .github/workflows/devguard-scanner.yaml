@@ -164,6 +164,7 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
           else
             echo "tag=test-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
           fi
@@ -241,11 +242,11 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') }}
           body: |
-            ## DevGuard Release ${{ steps.tag.outputs.tag }}
+            ## 🚀 DevGuard Release ${{ steps.tag.outputs.tag }}
             
-            🛡️ **Secure software supply chain scanning and security analysis toolkit**
+            **Secure software supply chain scanning and security analysis toolkit**
             
-            ### 📦 Release Assets
+            ### Release Assets
             
             #### **📱 Binaries**
             - `devguard-scanner-linux-amd64.tar.gz` - Linux x64 binary
@@ -258,16 +259,17 @@ jobs:
             #### **🐳 Container Images**
             - **Registry**: 
               - `ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}` (Main platform)
+              - `ghcr.io/l3montree-dev/devguard-web:${{ steps.tag.outputs.tag }}` (Frontend of the platform)
               - `ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}` (Scanner tool)
+
+            #### Helm Charts
+            - **Registry**:
+              - `oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard` (Main platform Helm chart)
+                ```bash
+                helm install my-devguard oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard --version $TAG_NO_V
+                ```
             
-            #### **🔐 Security Artifacts**
-            - `checksums.txt` - SHA256 checksums for all artifacts
-            - `*.sig` - Digital signatures for all artifacts
-            - `*.link` - in-toto attestation links
-            - `*.provenance.json` - SLSA Level 3 provenance attestation
-            - `devguard-scanner-${{ steps.tag.outputs.tag }}-sbom.json` - Software Bill of Materials
-            
-            ### 🚀 Quick Start
+            ### Quick Start
             
             #### **Download and Install**
             ```bash
@@ -292,25 +294,6 @@ jobs:
             #### **Go Install**
             ```bash
             go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ steps.tag.outputs.tag }}
-            ```
-            
-            ### 🔒 Security Verification
-            
-            All release artifacts are cryptographically signed and include complete supply chain attestation.
-            
-            #### **Verify Checksums**
-            ```bash
-            # Download checksums
-            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/checksums.txt
-            
-            # Verify a binary
-            sha256sum -c checksums.txt --ignore-missing
-            ```
-            
-            #### **Verify Supply Chain**
-            ```bash
-            # Verify in-toto attestation and SLSA provenance
-            devguard-scanner intoto verify --help
             ```
             
             ---
