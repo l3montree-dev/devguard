@@ -228,7 +228,7 @@ jobs:
             for file in *.tar.gz *.zip checksums.txt; do
               if [ -f \"\$file\" ]; then
                 echo \"Signing \$file with devguard-scanner...\"
-                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} \"\$file\"
+                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} \"\$file\" > ${file}.sig
               fi
             done
             "
@@ -237,7 +237,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.release.outputs.tag }}
-          name: "DevGuard Scanner ${{ needs.release.outputs.tag }}"
+          name: "${{ needs.release.outputs.tag }}"
           draft: false
           prerelease: ${{ contains(needs.release.outputs.tag, 'test-') }}
           body: |
@@ -259,7 +259,6 @@ jobs:
             - **Registry**: 
               - `ghcr.io/l3montree-dev/devguard:${{ needs.release.outputs.tag }}` (Main platform)
               - `ghcr.io/l3montree-dev/devguard/scanner:${{ needs.release.outputs.tag }}` (Scanner tool)
-              - `ghcr.io/l3montree-dev/devguard-web/devguard-web:${{ needs.release.outputs.tag }}` (Scanner tool)
             
             #### **🔐 Security Artifacts**
             - `checksums.txt` - SHA256 checksums for all artifacts
@@ -284,11 +283,13 @@ jobs:
             #### **Docker Usage**
             ```bash
             # Pull DevGuard Scanner from registry
-            docker pull ghcr.io/l3montree-dev/devguard-scanner:${{ needs.release.outputs.tag }}
+            docker pull ghcr.io/l3montree-dev/devguard/scanner:${{ needs.release.outputs.tag }}
             
-            # Pull DevGuard Platform from registry  
+            # Pull DevGuard Platform from registry
             docker pull ghcr.io/l3montree-dev/devguard:${{ needs.release.outputs.tag }}
-            ```            #### **Go Install**
+            ```
+            
+            #### **Go Install**
             ```bash
             go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ needs.release.outputs.tag }}
             ```
@@ -324,8 +325,12 @@ jobs:
             🐛 **Report Issues**: [GitHub Issues](https://github.com/l3montree-dev/devguard/issues)  
             💬 **Community**: [Discussions](https://github.com/l3montree-dev/devguard/discussions)
           files: |
-            release-artifacts/*
-            signatures/*
-            provenance/*
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+            dist/*.sig
+            dist/*.link
+            dist/*.provenance.json
+            dist/*.sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
