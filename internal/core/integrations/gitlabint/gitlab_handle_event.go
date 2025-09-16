@@ -155,7 +155,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			if err != nil {
 				return err

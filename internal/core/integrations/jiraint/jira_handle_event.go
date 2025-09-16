@@ -196,7 +196,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 
 		case models.EventTypeComment:
-			justification := i.createADFComment(member.Name, " commented on the vulnerability", utils.SafeDereference(ev.Justification))
+			justification := i.createADFComment(utils.SafeDereference(ev.Justification), "", "Sent from "+member.Name+" using DevGuard")
 
 			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
