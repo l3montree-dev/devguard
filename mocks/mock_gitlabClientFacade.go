@@ -372,6 +372,88 @@ func (_c *GitlabClientFacade_CreateMergeRequest_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// CreateNewLabel provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) CreateNewLabel(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, label)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateNewLabel")
+	}
+
+	var r0 *gitlab.Label
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectID, label)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.CreateLabelOptions) *gitlab.Label); ok {
+		r0 = returnFunc(ctx, projectID, label)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *gitlab.CreateLabelOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectID, label)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *gitlab.CreateLabelOptions) error); ok {
+		r2 = returnFunc(ctx, projectID, label)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_CreateNewLabel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateNewLabel'
+type GitlabClientFacade_CreateNewLabel_Call struct {
+	*mock.Call
+}
+
+// CreateNewLabel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - projectID int
+//   - label *gitlab.CreateLabelOptions
+func (_e *GitlabClientFacade_Expecter) CreateNewLabel(ctx interface{}, projectID interface{}, label interface{}) *GitlabClientFacade_CreateNewLabel_Call {
+	return &GitlabClientFacade_CreateNewLabel_Call{Call: _e.mock.On("CreateNewLabel", ctx, projectID, label)}
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) Run(run func(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions)) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.CreateLabelOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.CreateLabelOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) Return(label1 *gitlab.Label, response *gitlab.Response, err error) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Return(label1, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) RunAndReturn(run func(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error)) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateVariable provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) CreateVariable(ctx context.Context, projectID int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, projectID, opt)

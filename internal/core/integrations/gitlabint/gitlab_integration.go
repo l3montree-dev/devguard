@@ -1416,3 +1416,34 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	})
 	return createdIssue, err
 }
+
+func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	client, projectID, err := g.getClientBasedOnAsset(asset)
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
+	labels := commonint.GetAllRiskLabelsWithColors()
+
+	for _, label := range labels {
+		_, _, err := client.CreateNewLabel(ctx, projectID, &gitlab.CreateLabelOptions{
+			Name:        gitlab.Ptr(label.Name),
+			Color:       gitlab.Ptr(label.Color),
+			Description: gitlab.Ptr(label.Description),
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), " 409 {message: Label already exists}") {
+				// label already exists - ignore error
+				continue
+			}
+			slog.Error("failed to create label", "err", err, "label", label)
+			return err
+		}
+	}
+
+	return nil
+}

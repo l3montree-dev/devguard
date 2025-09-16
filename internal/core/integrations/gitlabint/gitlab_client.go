@@ -117,6 +117,10 @@ func (client gitlabClient) GetGroup(ctx context.Context, groupID int) (*gitlab.G
 	return client.Groups.GetGroup(groupID, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) CreateNewLabel(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
+	return client.Labels.CreateLabel(projectID, label, gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error) {
 	return client.GroupMembers.GetInheritedGroupMember(groupID, userID, nil, gitlab.WithContext(ctx))
 }
