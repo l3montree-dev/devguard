@@ -263,11 +263,12 @@ jobs:
               - `ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}` (Scanner tool)
 
             #### Helm Charts
-            - **Registry**:
-              - `oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard` (Main platform Helm chart)
-                ```bash
-                helm install my-devguard oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard --version $TAG_NO_V
-                ```
+            
+            `oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard` (Main platform Helm chart)
+
+            ```bash
+            helm install my-devguard oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard --version ${{ env.TAG_NO_V }}
+            ```
             
             ### Quick Start
             
