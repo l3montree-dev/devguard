@@ -715,7 +715,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 			}
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf(" %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			return err
 		}
