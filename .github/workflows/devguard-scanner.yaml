@@ -221,14 +221,17 @@ jobs:
       - name: Sign release artifacts with devguard-scanner
         uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main-latest
         with:
+          entrypoint: /bin/sh
           args: |
+            -c "
             cd dist
             for file in *.tar.gz *.zip checksums.txt; do
-              if [ -f "$file" ]; then
-                echo "Signing $file with devguard-scanner..."
-                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} "$file"
+              if [ -f \"\$file\" ]; then
+                echo \"Signing \$file with devguard-scanner...\"
+                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} \"\$file\"
               fi
             done
+            "
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
