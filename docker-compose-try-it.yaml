@@ -1,5 +1,8 @@
 version: '3.8'
 
+### WARNING: This is for local testing and development only. Do not use in production! ###
+### Review carefully and change passwords and secrets before using in any other environment. ###
+
 services:
   postgresql:
     image: ghcr.io/l3montree-dev/devguard/postgresql:v0.17.1
@@ -8,10 +11,10 @@ services:
       - no-new-privileges:true 
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: change-me-definitely-when-not-testing
       POSTGRES_DB: devguard
-    ports:
-      - "5432:5432"
+    #ports:
+    #  - "5432:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
@@ -94,7 +97,7 @@ services:
       - FRONTEND_URL=http://localhost:3000
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=devguard
+      - POSTGRES_DB=change-me-definitely-when-not-testing
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
     networks:
