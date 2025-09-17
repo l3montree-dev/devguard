@@ -103,8 +103,8 @@ services:
       - INSTANCE_DOMAIN=http://localhost:8080
       - FRONTEND_URL=http://localhost:3000
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=change-me-definitely-when-not-testing
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing
+      - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
     networks:
