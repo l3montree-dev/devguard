@@ -1,8 +1,0 @@
-stages:
-  - test
-
-include:
-  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/software-composition-analysis.yml"
-    inputs:
-      asset_name: "$DEVGUARD_ASSET_NAME"
-      token: "$DEVGUARD_TOKEN"

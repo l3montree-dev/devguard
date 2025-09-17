@@ -1,9 +1,0 @@
-stages:
-  - build
-  - test
-
-include:
-  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/container-scanning.yml"
-    inputs:
-      asset_name: "$DEVGUARD_ASSET_NAME"
-      token: "$DEVGUARD_TOKEN"
