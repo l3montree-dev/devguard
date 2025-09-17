@@ -1,7 +1,14 @@
 version: '3.8'
 
 ### WARNING: This is for local testing and development only. Do not use in production! ###
-### Review carefully and change passwords and secrets before using in any other environment. ###
+# Review carefully and change passwords and secrets before using in any other environment. 
+#
+# Change:
+# - POSTGRES_PASSWORD in the postgresql service
+# - The kratos users password in initdb.sql / via psql
+# - DSN environment variable in the kratos and kratos-migrate services
+# - POSTGRES_PASSWORD environment variable in the devguard-api service
+###
 
 services:
   postgresql:
@@ -40,7 +47,7 @@ services:
         source: ./kratos
         target: /etc/config/kratos
     environment:
-      - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+      - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
     networks:
       - devguard-local
@@ -67,7 +74,7 @@ services:
       #- "4433:4433"  # Public
       #- "4434:4434"  # Admin
     environment:
-      - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+      - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
       - LOG_LEVEL=debug
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     networks:
