@@ -904,9 +904,9 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not get project name")
 	}
 
-	templatePath := getTemplatePath(ctx.QueryParam("scanner"))
+	templateID := ctx.QueryParam("scanner")
 
-	err = commonint.SetupAndPushPipeline(accessToken, gitlabURL, project.PathWithNamespace, templatePath, branchName)
+	err = commonint.SetupAndPushPipeline(accessToken, gitlabURL, project.PathWithNamespace, templateID, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -1077,19 +1077,6 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core
 	}
 
 	return err
-}
-
-func getTemplatePath(scannerID string) string {
-	switch scannerID {
-	case "full":
-		return "./templates/full_template.yml"
-	case "sca":
-		return "./templates/sca_template.yml"
-	case "container-scanning":
-		return "./templates/container_scanning_template.yml"
-	default:
-		return "./templates/full_template.yml"
-	}
 }
 
 func (g *GitlabIntegration) GetUsers(org models.Org) []core.User {

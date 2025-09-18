@@ -144,6 +144,7 @@ func TestGetLabels(t *testing.T) {
 }
 
 func TestBuildGitlabCiTemplate(t *testing.T) {
+
 	t.Run("should build full template with default environment variables", func(t *testing.T) {
 		// Clear environment variables to test defaults
 		os.Unsetenv("DEVGUARD_CI_COMPONENT_BASE")
@@ -196,21 +197,19 @@ func TestBuildGitlabCiTemplate(t *testing.T) {
 		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
 	})
 
-	t.Run("should return error for unknown template ID", func(t *testing.T) {
+	t.Run("should NOT return error for unknown template ID", func(t *testing.T) {
 		result, err := buildGitlabCiTemplate("unknown")
 
-		assert.Error(t, err)
-		assert.Equal(t, "", result)
-		assert.Contains(t, err.Error(), "unknown template ID: unknown")
-		assert.Contains(t, err.Error(), "Only full is currently implemented")
-	})
+		assert.Nil(t, err)
 
-	t.Run("should return error for empty template ID", func(t *testing.T) {
-		result, err := buildGitlabCiTemplate("")
-
-		assert.Error(t, err)
-		assert.Equal(t, "", result)
-		assert.Contains(t, err.Error(), "unknown template ID:")
+		// defaults to full
+		assert.Contains(t, result, "stages:")
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- test")
+		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "include:")
+		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
+		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
 	})
 
 	t.Run("should generate valid YAML structure", func(t *testing.T) {
