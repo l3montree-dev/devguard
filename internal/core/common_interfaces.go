@@ -505,6 +505,11 @@ const (
 	RoleAdmin  Role = "admin"
 	RoleMember Role = "member"
 	RoleGuest  Role = "guest"
+
+	// this is mainly for backwards compatibility - and to have a default value
+	// noone should ever have the role unknown. This happens, if you logged into devguard before the "real permission sync" - not forwarding permission sync
+	// was added
+	RoleUnknown Role = "unknown"
 )
 
 func ValidRole(role Role) bool {

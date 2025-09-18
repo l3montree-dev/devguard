@@ -37,7 +37,10 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		mocks.NewRBACProvider(t),
 		factory,
 	)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	// Setup repositories and services
 	depVulnRepo := repositories.NewDependencyVulnRepository(db)

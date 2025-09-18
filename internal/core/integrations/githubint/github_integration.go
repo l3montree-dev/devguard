@@ -197,22 +197,6 @@ func (githubIntegration *GithubIntegration) WantsToHandleWebhook(ctx core.Contex
 	return true
 }
 
-func (githubIntegration *GithubIntegration) GetUsers(org models.Org) []core.User {
-	users, err := githubIntegration.externalUserRepository.FindByOrgID(nil, org.ID)
-	if err != nil {
-		slog.Error("could not get users from github", "err", err)
-		return nil
-	}
-
-	return utils.Map(users, func(user models.ExternalUser) core.User {
-		return core.User{
-			ID:        user.ID,
-			Name:      user.Username,
-			AvatarURL: &user.AvatarURL,
-		}
-	})
-}
-
 func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) error {
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))

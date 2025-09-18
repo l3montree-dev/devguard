@@ -342,7 +342,10 @@ func TestDaemonSyncTickets(t *testing.T) {
 		mocks.NewRBACProvider(t),
 		clientfactory,
 	)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	// Capture the create issue call to verify the artifact name is included in the description
 	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
@@ -521,7 +524,9 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 		mocks.NewRBACProvider(t),
 		clientfactory,
 	)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	// Capture the create issue call to verify all artifact names are included in the description
 	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
@@ -628,7 +633,8 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 		mocks.NewRBACProvider(t),
 		clientfactory,
 	)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	t.Run("should recalculate the risk of the dependency vuln", func(t *testing.T) {
 		err = daemon.RecalculateRisk(db, thirdPartyIntegration)

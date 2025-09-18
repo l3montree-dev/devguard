@@ -176,59 +176,6 @@ func (_c *ThirdPartyIntegration_GetID_Call) RunAndReturn(run func() core.Integra
 	return _c
 }
 
-// GetUsers provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) GetUsers(org models.Org) []core.User {
-	ret := _mock.Called(org)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUsers")
-	}
-
-	var r0 []core.User
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []core.User); ok {
-		r0 = returnFunc(org)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]core.User)
-		}
-	}
-	return r0
-}
-
-// ThirdPartyIntegration_GetUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUsers'
-type ThirdPartyIntegration_GetUsers_Call struct {
-	*mock.Call
-}
-
-// GetUsers is a helper method to define mock.On call
-//   - org models.Org
-func (_e *ThirdPartyIntegration_Expecter) GetUsers(org interface{}) *ThirdPartyIntegration_GetUsers_Call {
-	return &ThirdPartyIntegration_GetUsers_Call{Call: _e.mock.On("GetUsers", org)}
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) Run(run func(org models.Org)) *ThirdPartyIntegration_GetUsers_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Org
-		if args[0] != nil {
-			arg0 = args[0].(models.Org)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) Return(users []core.User) *ThirdPartyIntegration_GetUsers_Call {
-	_c.Call.Return(users)
-	return _c
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) RunAndReturn(run func(org models.Org) []core.User) *ThirdPartyIntegration_GetUsers_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // HandleEvent provides a mock function for the type ThirdPartyIntegration
 func (_mock *ThirdPartyIntegration) HandleEvent(event any) error {
 	ret := _mock.Called(event)
