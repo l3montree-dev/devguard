@@ -10,9 +10,14 @@
 
 TAG=$1
 
-# check if valid semver
-if ! [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Error: Invalid version number. Please use semantic versioning (e.g., 1.0.0)."
+# check if TAG starts with 'v' and strip it for semver validation
+if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    SEMVER="${TAG#v}"  # Remove 'v' prefix for validation
+elif [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0)."
+    exit 1
+else
+    echo "Error: Invalid version number. Please use semantic versioning with 'v' prefix (e.g., v1.0.0)."
     exit 1
 fi
 
@@ -22,16 +27,6 @@ for dir in "${dirlist[@]}"; do
     if [ ! -d "$dir" ]; then
         echo "Error: Directory $dir does not exist."
         exit 1
-    fi
-done
-
-# check if the tag does already exist
-for dir in "${dirlist[@]}"; do
-    if [ -d "$dir/.git" ]; then
-        if (cd "$dir" && git tag) | grep -q "$TAG"; then
-            echo "Error: Tag $TAG already exists in $dir."
-            exit 1
-        fi
     fi
 done
 
@@ -47,14 +42,41 @@ for dir in "${dirlist[@]}"; do
 done
 
 
-# replace "main-latest" with the tag-name in the devguard-ci-component and devguard-action dir
+firsttrain=(devguard devguard-web)
+# check if the tag does already exist
+for dir in "${firsttrain[@]}"; do
+    if [ -d "$dir/.git" ]; then
+        if (cd "$dir" && git tag) | grep -q "$TAG"; then
+            echo "Great! Tag $TAG exists in $dir."
+        else
+            echo "Tag $TAG does not exist in $dir."
+            exit 1
+        fi
+    fi
+done
+
+
 secondtrain=(devguard-ci-component devguard-action)
+# check if we need to pull the latest changes
+for dir in "${secondtrain[@]}"; do
+    if [ -d "$dir/.git" ]; then
+        (cd "$dir" && git pull origin main)
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to pull latest changes in $dir."
+            exit 1
+        fi
+    fi
+done
+
+
+
+# replace "main-latest" with the tag-name in the devguard-ci-component and devguard-action dir
 for dir in "${secondtrain[@]}"; do
     if [ -d "$dir" ]; then
         for file in $dir/**/*.yml(D); do
             echo "Replacing in $file"
             if [[ -f $file ]]; then
-                sed -i '' "s|ghcr.io/l3montree-dev/devguard-scanner:main-latest|ghcr.io/l3montree-dev/devguard-scanner:$TAG|g" "$file"
+                sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:main-latest|ghcr.io/l3montree-dev/devguard/scanner:$TAG|g" "$file"
             fi
         done
     fi
@@ -89,7 +111,7 @@ for dir in "${secondtrain[@]}"; do
         for file in $dir/**/*.yml(D); do
             echo "Replacing back in $file"
             if [[ -f $file ]]; then
-                sed -i '' "s|ghcr.io/l3montree-dev/devguard-scanner:$TAG|ghcr.io/l3montree-dev/devguard-scanner:main-latest|g" "$file"
+                sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main-latest|g" "$file"
             fi
         done
     fi
