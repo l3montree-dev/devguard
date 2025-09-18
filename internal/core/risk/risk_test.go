@@ -394,3 +394,222 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 func floatsEqual(a, b float64) bool {
 	return math.Abs(a-b) < 0.01
 }
+
+func TestExplanationMarkdown(t *testing.T) {
+	baseURL := "https://devguard.example.com"
+	orgSlug := "my-org"
+	projectSlug := "my-project"
+	assetSlug := "my-asset"
+	assetVersionSlug := "v1-0-0"
+	mermaidPathToComponent := "```mermaid\ngraph TD\n  A[Root] --> B[Component]\n```"
+
+	t.Run("should generate complete markdown with all sections", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore:                            7.5,
+				WithEnvironment:                      6.8,
+				WithThreatIntelligence:               7.2,
+				WithEnvironmentAndThreatIntelligence: 6.5,
+			},
+			exploitMessage: struct {
+				Short string
+				Long  string
+			}{
+				Short: "Proof of Concept",
+				Long:  "A proof of concept is available for this vulnerability",
+			},
+			epssMessage:            "The exploit probability is moderate. The vulnerability is likely to be exploited in the next 30 days.",
+			cvssBEMessage:          "- Exploiting this vulnerability significantly impacts availability.",
+			componentDepthMessage:  "The vulnerability is in a direct dependency of your project.",
+			cvssMessage:            "- The vulnerability can be exploited over the network without needing physical access.",
+			dependencyVulnID:       "test-vuln-id",
+			risk:                   7.5,
+			depth:                  1,
+			epss:                   0.35,
+			cveID:                  "CVE-2023-1234",
+			cveDescription:         "This is a test vulnerability description with potential security implications.",
+			ComponentPurl:          "pkg:npm/test-package@1.0.0",
+			ArtifactNames:          "artifact1 artifact2",
+			fixedVersion:           ptr("1.2.3"),
+			ShortenedComponentPurl: "npm/test-package@1.0.0",
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		// Test header
+		assert.Contains(t, result, "## CVE-2023-1234 found in npm/test-package@1.0.0")
+
+		// Test risk information
+		assert.Contains(t, result, "> **Risk**: `7.50 (High)`")
+		assert.Contains(t, result, "> **CVSS**: `7.5`")
+
+		// Test description
+		assert.Contains(t, result, "### Description")
+		assert.Contains(t, result, "This is a test vulnerability description with potential security implications.")
+
+		// Test affected component
+		assert.Contains(t, result, "### Affected component")
+		assert.Contains(t, result, "The vulnerability is in `pkg:npm/test-package@1.0.0`, found in artifacts `artifact1`, `artifact2`.")
+
+		// Test recommended fix
+		assert.Contains(t, result, "### Recommended fix")
+		assert.Contains(t, result, "Upgrade to version 1.2.3 or later.")
+		assert.Contains(t, result, "npm install test-package@1.2.3")
+
+		// Test additional guidance
+		assert.Contains(t, result, "### Additional guidance for mitigating vulnerabilities")
+		assert.Contains(t, result, "[devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)")
+
+		// Test details section
+		assert.Contains(t, result, "<details>")
+		assert.Contains(t, result, "<summary>See more details...</summary>")
+		assert.Contains(t, result, "### Path to component")
+		assert.Contains(t, result, mermaidPathToComponent)
+
+		// Test risk factors table
+		assert.Contains(t, result, "| Risk Factor  | Value | Description |")
+		assert.Contains(t, result, "| Vulnerability Depth | `1` | The vulnerability is in a direct dependency of your project. |")
+		assert.Contains(t, result, "| EPSS | `35.00 %` | The exploit probability is moderate. The vulnerability is likely to be exploited in the next 30 days. |")
+		assert.Contains(t, result, "| EXPLOIT | `Proof of Concept` | A proof of concept is available for this vulnerability |")
+		assert.Contains(t, result, "| CVSS-BE | `6.8` | - Exploiting this vulnerability significantly impacts availability. |")
+		assert.Contains(t, result, "| CVSS-B | `7.5` | - The vulnerability can be exploited over the network without needing physical access. |")
+
+		// Test DevGuard link
+		assert.Contains(t, result, "More details can be found in [DevGuard](https://devguard.example.com/my-org/projects/my-project/assets/my-asset/refs/v1-0-0/dependency-risks/test-vuln-id)")
+
+		// Test closing details tag
+		assert.Contains(t, result, "</details>")
+	})
+
+	t.Run("should handle no fixed version available", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 5.0,
+			},
+			cveID:                  "CVE-2023-5678",
+			cveDescription:         "Another test vulnerability",
+			ComponentPurl:          "pkg:pypi/vulnerable-package@2.0.0",
+			ArtifactNames:          "single-artifact",
+			fixedVersion:           nil,
+			ShortenedComponentPurl: "pypi/vulnerable-package@2.0.0",
+			risk:                   5.0,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		assert.Contains(t, result, "## CVE-2023-5678 found in pypi/vulnerable-package@2.0.0")
+		assert.Contains(t, result, "No fix is available.")
+		assert.NotContains(t, result, "Upgrade to version")
+	})
+
+	t.Run("should handle critical risk level", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 9.5,
+			},
+			cveID:                  "CVE-2023-9999",
+			cveDescription:         "Critical vulnerability",
+			ComponentPurl:          "pkg:golang/critical-package@1.0.0",
+			ArtifactNames:          "critical-artifact",
+			fixedVersion:           ptr("2.0.0"),
+			ShortenedComponentPurl: "golang/critical-package@1.0.0",
+			risk:                   9.5,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		assert.Contains(t, result, "> **Risk**: `9.50 (Critical)`")
+		assert.Contains(t, result, "go get critical-package@2.0.0")
+	})
+
+	t.Run("should handle low risk level", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 2.1,
+			},
+			cveID:                  "CVE-2023-0001",
+			cveDescription:         "Low severity vulnerability",
+			ComponentPurl:          "pkg:deb/low-risk-package@1.0.0",
+			ArtifactNames:          "low-risk-artifact",
+			fixedVersion:           ptr("1.0.1"),
+			ShortenedComponentPurl: "deb/low-risk-package@1.0.0",
+			risk:                   2.1,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		assert.Contains(t, result, "> **Risk**: `2.10 (Low)`")
+		assert.Contains(t, result, "apt install low-risk-package=1.0.1")
+	})
+
+	t.Run("should handle multiple artifacts", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 6.0,
+			},
+			cveID:                  "CVE-2023-1111",
+			cveDescription:         "Multi-artifact vulnerability",
+			ComponentPurl:          "pkg:npm/multi-package@1.0.0",
+			ArtifactNames:          "artifact1 artifact2 artifact3",
+			fixedVersion:           ptr("1.1.0"),
+			ShortenedComponentPurl: "npm/multi-package@1.0.0",
+			risk:                   6.0,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		assert.Contains(t, result, "The vulnerability is in `pkg:npm/multi-package@1.0.0`, found in artifacts `artifact1`, `artifact2`, `artifact3`.")
+	})
+
+	t.Run("should handle zero risk level", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 0,
+			},
+			cveID:                  "CVE-2023-0000",
+			cveDescription:         "Zero risk vulnerability",
+			ComponentPurl:          "pkg:npm/zero-risk@1.0.0",
+			ArtifactNames:          "test-artifact",
+			fixedVersion:           nil,
+			ShortenedComponentPurl: "npm/zero-risk@1.0.0",
+			risk:                   0,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		assert.Contains(t, result, "> **Risk**: `0.00 (Unknown)`")
+	})
+
+	t.Run("should include proper markdown formatting", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: common.RiskMetrics{
+				BaseScore: 5.5,
+			},
+			cveID:                  "CVE-2023-FORMAT",
+			cveDescription:         "Formatting test vulnerability",
+			ComponentPurl:          "pkg:maven/format-test@1.0.0",
+			ArtifactNames:          "format-artifact",
+			fixedVersion:           ptr("1.1.0"),
+			ShortenedComponentPurl: "maven/format-test@1.0.0",
+			risk:                   5.5,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+
+		// Check for proper markdown headers
+		assert.Contains(t, result, "## CVE-2023-FORMAT")
+		assert.Contains(t, result, "### Description")
+		assert.Contains(t, result, "### Affected component")
+		assert.Contains(t, result, "### Recommended fix")
+		assert.Contains(t, result, "### Additional guidance for mitigating vulnerabilities")
+		assert.Contains(t, result, "### Path to component")
+
+		// Check for proper markdown elements
+		assert.Contains(t, result, "> [!important]")
+		assert.Contains(t, result, "| Risk Factor  | Value | Description |")
+		assert.Contains(t, result, "| ---- | ----- | ----------- |")
+		assert.Contains(t, result, "<details>")
+		assert.Contains(t, result, "<summary>See more details...</summary>")
+		assert.Contains(t, result, "</details>")
+	})
+}

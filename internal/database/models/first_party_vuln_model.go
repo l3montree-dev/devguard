@@ -241,9 +241,12 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown(baseURL, orgSlug, projectSl
 			locationString = fmt.Sprintf("**Found at:** %s\n**Lines:** %d - %d\n", link, snippet.StartLine, snippet.EndLine)
 		}
 		str.WriteString(locationString)
-
-		str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
 	}
+
+	str.WriteString("\n\n")
+
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
+	fmt.Println("str:", str.String())
 
 	common.AddSlashCommandsToFirstPartyVuln(&str)
 
