@@ -39,6 +39,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 	)
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
+	externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything).Return(nil, nil)
 
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
