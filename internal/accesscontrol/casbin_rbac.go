@@ -153,7 +153,7 @@ func getMostPowerfulRole(roles []core.Role) (core.Role, error) {
 		return core.RoleMember, nil
 	}
 
-	return "", fmt.Errorf("no domain role found for user")
+	return "", fmt.Errorf("no domain role found for user. Roles from user: %v", roles)
 }
 
 func (c *casbinRBAC) GetProjectRole(user string, project string) (core.Role, error) {
