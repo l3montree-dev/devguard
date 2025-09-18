@@ -205,22 +205,22 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, vuln)
+			return struct{}{}, i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, justification, userID)
 		})
 	}
 
