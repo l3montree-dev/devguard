@@ -138,7 +138,11 @@ func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
 		return core.Role(r)
 	})
 
-	return getMostPowerfulRole(r)
+	role, err := getMostPowerfulRole(r)
+	if err != nil {
+		slog.Warn("GetDomainRole: no domain role found for user", "user", user, "roles", roles, "domain", c.domain)
+	}
+	return role, err
 }
 
 func getMostPowerfulRole(roles []core.Role) (core.Role, error) {
