@@ -61,16 +61,16 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 
 		//check if we have already created the labels in gitlab, if not create them
-		if asset.MetaData == nil {
-			asset.MetaData = map[string]any{}
+		if asset.Metadata == nil {
+			asset.Metadata = map[string]any{}
 		}
-		if asset.MetaData["gitlabLabels"] == nil {
+		if asset.Metadata["gitlabLabels"] == nil {
 			fmt.Println("Creating labels in gitlab")
 			err = g.CreateLabels(event.Ctx.Request().Context(), asset)
 			if err != nil {
 				return err
 			}
-			asset.MetaData["gitlabLabels"] = true
+			asset.Metadata["gitlabLabels"] = true
 			err = g.assetRepository.Update(nil, &asset)
 			if err != nil {
 				return err
