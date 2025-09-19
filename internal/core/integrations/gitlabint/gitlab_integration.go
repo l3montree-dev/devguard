@@ -1183,7 +1183,7 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 }
 
 func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		return err
 	}
@@ -1281,7 +1281,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 var notConnectedError = errors.New("not connected to gitlab")
 
-func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
+func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
@@ -1319,7 +1319,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil

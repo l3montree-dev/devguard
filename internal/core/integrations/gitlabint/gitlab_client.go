@@ -117,6 +117,31 @@ func (client gitlabClient) GetGroup(ctx context.Context, groupID int) (*gitlab.G
 	return client.Groups.GetGroup(groupID, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) GetProjectIssues(projectID int) ([]*gitlab.Issue, error) {
+	collectedIssues := make([]*gitlab.Issue, 0)
+	opt := gitlab.ListProjectIssuesOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+	}
+	for {
+		issues, resp, err := client.Issues.ListProjectIssues(projectID, &opt, nil)
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil {
+			break
+		}
+		collectedIssues = append(collectedIssues, issues...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return collectedIssues, nil
+}
+
 func (client gitlabClient) GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error) {
 	return client.GroupMembers.GetInheritedGroupMember(groupID, userID, nil, gitlab.WithContext(ctx))
 }
@@ -262,8 +287,8 @@ func (client gitlabClient) CreateIssueComment(ctx context.Context, projectID int
 	return client.Notes.CreateIssueNote(projectID, issueID, comment, gitlab.WithContext(ctx))
 }
 
-func (client gitlabClient) EditIssue(ctx context.Context, projectID int, issueID int, issue *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
-	return client.Issues.UpdateIssue(projectID, issueID, issue, gitlab.WithContext(ctx))
+func (client gitlabClient) EditIssue(ctx context.Context, projectID int, issueID int, issueOptions *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
+	return client.Issues.UpdateIssue(projectID, issueID, issueOptions, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, issueID int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error) {
