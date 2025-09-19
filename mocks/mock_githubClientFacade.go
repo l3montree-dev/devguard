@@ -80,38 +80,17 @@ type GithubClientFacade_CreateIssue_Call struct {
 }
 
 // CreateIssue is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner string
-//   - repo string
-//   - issue *github.IssueRequest
+//   - ctx
+//   - owner
+//   - repo
+//   - issue
 func (_e *GithubClientFacade_Expecter) CreateIssue(ctx interface{}, owner interface{}, repo interface{}, issue interface{}) *GithubClientFacade_CreateIssue_Call {
 	return &GithubClientFacade_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, owner, repo, issue)}
 }
 
 func (_c *GithubClientFacade_CreateIssue_Call) Run(run func(ctx context.Context, owner string, repo string, issue *github.IssueRequest)) *GithubClientFacade_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 *github.IssueRequest
-		if args[3] != nil {
-			arg3 = args[3].(*github.IssueRequest)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(*github.IssueRequest))
 	})
 	return _c
 }
@@ -168,44 +147,18 @@ type GithubClientFacade_CreateIssueComment_Call struct {
 }
 
 // CreateIssueComment is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner string
-//   - repo string
-//   - number int
-//   - comment *github.IssueComment
+//   - ctx
+//   - owner
+//   - repo
+//   - number
+//   - comment
 func (_e *GithubClientFacade_Expecter) CreateIssueComment(ctx interface{}, owner interface{}, repo interface{}, number interface{}, comment interface{}) *GithubClientFacade_CreateIssueComment_Call {
 	return &GithubClientFacade_CreateIssueComment_Call{Call: _e.mock.On("CreateIssueComment", ctx, owner, repo, number, comment)}
 }
 
 func (_c *GithubClientFacade_CreateIssueComment_Call) Run(run func(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment)) *GithubClientFacade_CreateIssueComment_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int
-		if args[3] != nil {
-			arg3 = args[3].(int)
-		}
-		var arg4 *github.IssueComment
-		if args[4] != nil {
-			arg4 = args[4].(*github.IssueComment)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(int), args[4].(*github.IssueComment))
 	})
 	return _c
 }
@@ -262,44 +215,18 @@ type GithubClientFacade_EditIssue_Call struct {
 }
 
 // EditIssue is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner string
-//   - repo string
-//   - number int
-//   - issue *github.IssueRequest
+//   - ctx
+//   - owner
+//   - repo
+//   - number
+//   - issue
 func (_e *GithubClientFacade_Expecter) EditIssue(ctx interface{}, owner interface{}, repo interface{}, number interface{}, issue interface{}) *GithubClientFacade_EditIssue_Call {
 	return &GithubClientFacade_EditIssue_Call{Call: _e.mock.On("EditIssue", ctx, owner, repo, number, issue)}
 }
 
 func (_c *GithubClientFacade_EditIssue_Call) Run(run func(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest)) *GithubClientFacade_EditIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int
-		if args[3] != nil {
-			arg3 = args[3].(int)
-		}
-		var arg4 *github.IssueRequest
-		if args[4] != nil {
-			arg4 = args[4].(*github.IssueRequest)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(int), args[4].(*github.IssueRequest))
 	})
 	return _c
 }
@@ -356,44 +283,18 @@ type GithubClientFacade_EditIssueLabel_Call struct {
 }
 
 // EditIssueLabel is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner string
-//   - repo string
-//   - name string
-//   - label *github.Label
+//   - ctx
+//   - owner
+//   - repo
+//   - name
+//   - label
 func (_e *GithubClientFacade_Expecter) EditIssueLabel(ctx interface{}, owner interface{}, repo interface{}, name interface{}, label interface{}) *GithubClientFacade_EditIssueLabel_Call {
 	return &GithubClientFacade_EditIssueLabel_Call{Call: _e.mock.On("EditIssueLabel", ctx, owner, repo, name, label)}
 }
 
 func (_c *GithubClientFacade_EditIssueLabel_Call) Run(run func(ctx context.Context, owner string, repo string, name string, label *github.Label)) *GithubClientFacade_EditIssueLabel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 *github.Label
-		if args[4] != nil {
-			arg4 = args[4].(*github.Label)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(*github.Label))
 	})
 	return _c
 }
@@ -440,44 +341,18 @@ type GithubClientFacade_IsCollaboratorInRepository_Call struct {
 }
 
 // IsCollaboratorInRepository is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner string
-//   - repoID string
-//   - userID int64
-//   - opts *github.ListCollaboratorsOptions
+//   - ctx
+//   - owner
+//   - repoID
+//   - userID
+//   - opts
 func (_e *GithubClientFacade_Expecter) IsCollaboratorInRepository(ctx interface{}, owner interface{}, repoID interface{}, userID interface{}, opts interface{}) *GithubClientFacade_IsCollaboratorInRepository_Call {
 	return &GithubClientFacade_IsCollaboratorInRepository_Call{Call: _e.mock.On("IsCollaboratorInRepository", ctx, owner, repoID, userID, opts)}
 }
 
 func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) Run(run func(ctx context.Context, owner string, repoID string, userID int64, opts *github.ListCollaboratorsOptions)) *GithubClientFacade_IsCollaboratorInRepository_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 *github.ListCollaboratorsOptions
-		if args[4] != nil {
-			arg4 = args[4].(*github.ListCollaboratorsOptions)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(int64), args[4].(*github.ListCollaboratorsOptions))
 	})
 	return _c
 }

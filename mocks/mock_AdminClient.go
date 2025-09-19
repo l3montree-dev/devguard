@@ -70,26 +70,15 @@ type AdminClient_GetIdentity_Call struct {
 }
 
 // GetIdentity is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
+//   - ctx
+//   - userID
 func (_e *AdminClient_Expecter) GetIdentity(ctx interface{}, userID interface{}) *AdminClient_GetIdentity_Call {
 	return &AdminClient_GetIdentity_Call{Call: _e.mock.On("GetIdentity", ctx, userID)}
 }
 
 func (_c *AdminClient_GetIdentity_Call) Run(run func(ctx context.Context, userID string)) *AdminClient_GetIdentity_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -136,26 +125,15 @@ type AdminClient_GetIdentityFromCookie_Call struct {
 }
 
 // GetIdentityFromCookie is a helper method to define mock.On call
-//   - ctx context.Context
-//   - cookie string
+//   - ctx
+//   - cookie
 func (_e *AdminClient_Expecter) GetIdentityFromCookie(ctx interface{}, cookie interface{}) *AdminClient_GetIdentityFromCookie_Call {
 	return &AdminClient_GetIdentityFromCookie_Call{Call: _e.mock.On("GetIdentityFromCookie", ctx, cookie)}
 }
 
 func (_c *AdminClient_GetIdentityFromCookie_Call) Run(run func(ctx context.Context, cookie string)) *AdminClient_GetIdentityFromCookie_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -202,26 +180,15 @@ type AdminClient_GetIdentityWithCredentials_Call struct {
 }
 
 // GetIdentityWithCredentials is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
+//   - ctx
+//   - userID
 func (_e *AdminClient_Expecter) GetIdentityWithCredentials(ctx interface{}, userID interface{}) *AdminClient_GetIdentityWithCredentials_Call {
 	return &AdminClient_GetIdentityWithCredentials_Call{Call: _e.mock.On("GetIdentityWithCredentials", ctx, userID)}
 }
 
 func (_c *AdminClient_GetIdentityWithCredentials_Call) Run(run func(ctx context.Context, userID string)) *AdminClient_GetIdentityWithCredentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -270,20 +237,14 @@ type AdminClient_ListUser_Call struct {
 }
 
 // ListUser is a helper method to define mock.On call
-//   - client1 client.IdentityAPIListIdentitiesRequest
+//   - client1
 func (_e *AdminClient_Expecter) ListUser(client1 interface{}) *AdminClient_ListUser_Call {
 	return &AdminClient_ListUser_Call{Call: _e.mock.On("ListUser", client1)}
 }
 
 func (_c *AdminClient_ListUser_Call) Run(run func(client1 client.IdentityAPIListIdentitiesRequest)) *AdminClient_ListUser_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 client.IdentityAPIListIdentitiesRequest
-		if args[0] != nil {
-			arg0 = args[0].(client.IdentityAPIListIdentitiesRequest)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(client.IdentityAPIListIdentitiesRequest))
 	})
 	return _c
 }

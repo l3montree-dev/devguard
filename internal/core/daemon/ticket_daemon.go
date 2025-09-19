@@ -133,8 +133,8 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 					slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
 					continue
 				}
-
-				err = compareStatesAndResolveDifferences(gitlabClient, dependencyVulnRepository, asset)
+				depVulnsIIDs := assetToTicketIIDs[asset.ID]
+				err = CompareStatesAndResolveDifferences(gitlabClient, asset, depVulnsIIDs)
 				if err != nil {
 					slog.Error("could not compare ticket states", "err", err)
 					continue
@@ -149,7 +149,7 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 	return nil
 }
 
-func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependencyVulnRepository core.DependencyVulnRepository, asset models.Asset) error {
+func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
 	// if do not have a connection to a repo we do not need to do anything
 	if asset.RepositoryID == nil {
 		return nil
@@ -158,7 +158,7 @@ func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependen
 	//extract projectID
 	fields := strings.Split(*asset.RepositoryID, ":")
 	if len(fields) == 1 {
-		return fmt.Errorf("invalid repository id", "id", asset.RepositoryID)
+		return fmt.Errorf("invalid repository id (%s)", *asset.RepositoryID)
 	}
 	if fields[0] != "gitlab" {
 		slog.Warn("only gitlab is currently supported for this function")
@@ -168,8 +168,6 @@ func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependen
 	if err != nil {
 		return err
 	}
-
-	depVulnsIIDs := assetToTicketIIDs[asset.ID]
 
 	issues, err := client.GetProjectIssues(projectID)
 	if err != nil {
@@ -185,7 +183,7 @@ func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependen
 	}
 
 	// compare both states
-	comparison := utils.CompareSlices(depVulnsIIDs, gitlabIIDs, func(iid int) int { return iid })
+	comparison := utils.CompareSlices(devguardStateIIDs, gitlabIIDs, func(iid int) int { return iid })
 	excessIIDs := comparison.OnlyInB
 
 	// close all excess devguard tickets

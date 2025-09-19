@@ -62,26 +62,15 @@ type OrganizationRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *OrganizationRepository_Expecter) Activate(tx interface{}, id interface{}) *OrganizationRepository_Activate_Call {
 	return &OrganizationRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *OrganizationRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *OrganizationRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -222,26 +211,15 @@ type OrganizationRepository_ContentTree_Call struct {
 }
 
 // ContentTree is a helper method to define mock.On call
-//   - orgID uuid.UUID
-//   - projects []string
+//   - orgID
+//   - projects
 func (_e *OrganizationRepository_Expecter) ContentTree(orgID interface{}, projects interface{}) *OrganizationRepository_ContentTree_Call {
 	return &OrganizationRepository_ContentTree_Call{Call: _e.mock.On("ContentTree", orgID, projects)}
 }
 
 func (_c *OrganizationRepository_ContentTree_Call) Run(run func(orgID uuid.UUID, projects []string)) *OrganizationRepository_ContentTree_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].([]string))
 	})
 	return _c
 }
@@ -279,26 +257,15 @@ type OrganizationRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Org
+//   - tx
+//   - t
 func (_e *OrganizationRepository_Expecter) Create(tx interface{}, t interface{}) *OrganizationRepository_Create_Call {
 	return &OrganizationRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *OrganizationRepository_Create_Call) Run(run func(tx core.DB, t *models.Org)) *OrganizationRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Org
-		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Org))
 	})
 	return _c
 }
@@ -336,26 +303,15 @@ type OrganizationRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Org
+//   - tx
+//   - ts
 func (_e *OrganizationRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *OrganizationRepository_CreateBatch_Call {
 	return &OrganizationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *OrganizationRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Org)) *OrganizationRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Org
-		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Org))
 	})
 	return _c
 }
@@ -393,26 +349,15 @@ type OrganizationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *OrganizationRepository_Expecter) Delete(tx interface{}, id interface{}) *OrganizationRepository_Delete_Call {
 	return &OrganizationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *OrganizationRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *OrganizationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -450,26 +395,15 @@ type OrganizationRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ids []models.Org
+//   - tx
+//   - ids
 func (_e *OrganizationRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *OrganizationRepository_DeleteBatch_Call {
 	return &OrganizationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *OrganizationRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Org)) *OrganizationRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Org
-		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Org))
 	})
 	return _c
 }
@@ -509,20 +443,14 @@ type OrganizationRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *OrganizationRepository_Expecter) GetDB(tx interface{}) *OrganizationRepository_GetDB_Call {
 	return &OrganizationRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *OrganizationRepository_GetDB_Call) Run(run func(tx core.DB)) *OrganizationRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -569,20 +497,14 @@ type OrganizationRepository_GetOrgByID_Call struct {
 }
 
 // GetOrgByID is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *OrganizationRepository_Expecter) GetOrgByID(id interface{}) *OrganizationRepository_GetOrgByID_Call {
 	return &OrganizationRepository_GetOrgByID_Call{Call: _e.mock.On("GetOrgByID", id)}
 }
 
 func (_c *OrganizationRepository_GetOrgByID_Call) Run(run func(id uuid.UUID)) *OrganizationRepository_GetOrgByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -631,20 +553,14 @@ type OrganizationRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []uuid.UUID
+//   - ids
 func (_e *OrganizationRepository_Expecter) List(ids interface{}) *OrganizationRepository_List_Call {
 	return &OrganizationRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *OrganizationRepository_List_Call) Run(run func(ids []uuid.UUID)) *OrganizationRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].([]uuid.UUID))
 	})
 	return _c
 }
@@ -691,20 +607,14 @@ type OrganizationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *OrganizationRepository_Expecter) Read(id interface{}) *OrganizationRepository_Read_Call {
 	return &OrganizationRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *OrganizationRepository_Read_Call) Run(run func(id uuid.UUID)) *OrganizationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -751,20 +661,14 @@ type OrganizationRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - slug string
+//   - slug
 func (_e *OrganizationRepository_Expecter) ReadBySlug(slug interface{}) *OrganizationRepository_ReadBySlug_Call {
 	return &OrganizationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", slug)}
 }
 
 func (_c *OrganizationRepository_ReadBySlug_Call) Run(run func(slug string)) *OrganizationRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -802,26 +706,15 @@ type OrganizationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Org
+//   - tx
+//   - t
 func (_e *OrganizationRepository_Expecter) Save(tx interface{}, t interface{}) *OrganizationRepository_Save_Call {
 	return &OrganizationRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *OrganizationRepository_Save_Call) Run(run func(tx core.DB, t *models.Org)) *OrganizationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Org
-		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Org))
 	})
 	return _c
 }
@@ -859,26 +752,15 @@ type OrganizationRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Org
+//   - tx
+//   - ts
 func (_e *OrganizationRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *OrganizationRepository_SaveBatch_Call {
 	return &OrganizationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *OrganizationRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Org)) *OrganizationRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Org
-		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Org))
 	})
 	return _c
 }
@@ -916,20 +798,14 @@ type OrganizationRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *OrganizationRepository_Expecter) Transaction(fn interface{}) *OrganizationRepository_Transaction_Call {
 	return &OrganizationRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *OrganizationRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *OrganizationRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }
@@ -967,26 +843,15 @@ type OrganizationRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - tx core.DB
-//   - organization *models.Org
+//   - tx
+//   - organization
 func (_e *OrganizationRepository_Expecter) Update(tx interface{}, organization interface{}) *OrganizationRepository_Update_Call {
 	return &OrganizationRepository_Update_Call{Call: _e.mock.On("Update", tx, organization)}
 }
 
 func (_c *OrganizationRepository_Update_Call) Run(run func(tx core.DB, organization *models.Org)) *OrganizationRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Org
-		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Org))
 	})
 	return _c
 }
@@ -1024,32 +889,16 @@ type OrganizationRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t *[]*models.Org
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
+//   - t
+//   - conflictingColumns
+//   - updateOnly
 func (_e *OrganizationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *OrganizationRepository_Upsert_Call {
 	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *OrganizationRepository_Upsert_Call) Run(run func(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string)) *OrganizationRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Org
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Org)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(*[]*models.Org), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }

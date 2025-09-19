@@ -62,26 +62,15 @@ type ReleaseRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *ReleaseRepository_Expecter) Activate(tx interface{}, id interface{}) *ReleaseRepository_Activate_Call {
 	return &ReleaseRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *ReleaseRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *ReleaseRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -220,26 +209,15 @@ type ReleaseRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Release
+//   - tx
+//   - t
 func (_e *ReleaseRepository_Expecter) Create(tx interface{}, t interface{}) *ReleaseRepository_Create_Call {
 	return &ReleaseRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *ReleaseRepository_Create_Call) Run(run func(tx core.DB, t *models.Release)) *ReleaseRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Release
-		if args[1] != nil {
-			arg1 = args[1].(*models.Release)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Release))
 	})
 	return _c
 }
@@ -277,26 +255,15 @@ type ReleaseRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Release
+//   - tx
+//   - ts
 func (_e *ReleaseRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ReleaseRepository_CreateBatch_Call {
 	return &ReleaseRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *ReleaseRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Release)) *ReleaseRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Release
-		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Release))
 	})
 	return _c
 }
@@ -334,26 +301,15 @@ type ReleaseRepository_CreateReleaseItem_Call struct {
 }
 
 // CreateReleaseItem is a helper method to define mock.On call
-//   - tx core.DB
-//   - item *models.ReleaseItem
+//   - tx
+//   - item
 func (_e *ReleaseRepository_Expecter) CreateReleaseItem(tx interface{}, item interface{}) *ReleaseRepository_CreateReleaseItem_Call {
 	return &ReleaseRepository_CreateReleaseItem_Call{Call: _e.mock.On("CreateReleaseItem", tx, item)}
 }
 
 func (_c *ReleaseRepository_CreateReleaseItem_Call) Run(run func(tx core.DB, item *models.ReleaseItem)) *ReleaseRepository_CreateReleaseItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.ReleaseItem
-		if args[1] != nil {
-			arg1 = args[1].(*models.ReleaseItem)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.ReleaseItem))
 	})
 	return _c
 }
@@ -391,26 +347,15 @@ type ReleaseRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *ReleaseRepository_Expecter) Delete(tx interface{}, id interface{}) *ReleaseRepository_Delete_Call {
 	return &ReleaseRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *ReleaseRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *ReleaseRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -448,26 +393,15 @@ type ReleaseRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ids []models.Release
+//   - tx
+//   - ids
 func (_e *ReleaseRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ReleaseRepository_DeleteBatch_Call {
 	return &ReleaseRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *ReleaseRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Release)) *ReleaseRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Release
-		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Release))
 	})
 	return _c
 }
@@ -505,26 +439,15 @@ type ReleaseRepository_DeleteReleaseItem_Call struct {
 }
 
 // DeleteReleaseItem is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *ReleaseRepository_Expecter) DeleteReleaseItem(tx interface{}, id interface{}) *ReleaseRepository_DeleteReleaseItem_Call {
 	return &ReleaseRepository_DeleteReleaseItem_Call{Call: _e.mock.On("DeleteReleaseItem", tx, id)}
 }
 
 func (_c *ReleaseRepository_DeleteReleaseItem_Call) Run(run func(tx core.DB, id uuid.UUID)) *ReleaseRepository_DeleteReleaseItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -573,20 +496,14 @@ type ReleaseRepository_GetByProjectID_Call struct {
 }
 
 // GetByProjectID is a helper method to define mock.On call
-//   - projectID uuid.UUID
+//   - projectID
 func (_e *ReleaseRepository_Expecter) GetByProjectID(projectID interface{}) *ReleaseRepository_GetByProjectID_Call {
 	return &ReleaseRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", projectID)}
 }
 
 func (_c *ReleaseRepository_GetByProjectID_Call) Run(run func(projectID uuid.UUID)) *ReleaseRepository_GetByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -633,50 +550,19 @@ type ReleaseRepository_GetByProjectIDPaged_Call struct {
 }
 
 // GetByProjectIDPaged is a helper method to define mock.On call
-//   - tx core.DB
-//   - projectID uuid.UUID
-//   - pageInfo core.PageInfo
-//   - search string
-//   - filter []core.FilterQuery
-//   - sort []core.SortQuery
+//   - tx
+//   - projectID
+//   - pageInfo
+//   - search
+//   - filter
+//   - sort
 func (_e *ReleaseRepository_Expecter) GetByProjectIDPaged(tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseRepository_GetByProjectIDPaged_Call {
 	return &ReleaseRepository_GetByProjectIDPaged_Call{Call: _e.mock.On("GetByProjectIDPaged", tx, projectID, pageInfo, search, filter, sort)}
 }
 
 func (_c *ReleaseRepository_GetByProjectIDPaged_Call) Run(run func(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ReleaseRepository_GetByProjectIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 core.PageInfo
-		if args[2] != nil {
-			arg2 = args[2].(core.PageInfo)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 []core.FilterQuery
-		if args[4] != nil {
-			arg4 = args[4].([]core.FilterQuery)
-		}
-		var arg5 []core.SortQuery
-		if args[5] != nil {
-			arg5 = args[5].([]core.SortQuery)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
 	})
 	return _c
 }
@@ -733,26 +619,15 @@ type ReleaseRepository_GetCandidateItemsForRelease_Call struct {
 }
 
 // GetCandidateItemsForRelease is a helper method to define mock.On call
-//   - projectID uuid.UUID
-//   - releaseID *uuid.UUID
+//   - projectID
+//   - releaseID
 func (_e *ReleaseRepository_Expecter) GetCandidateItemsForRelease(projectID interface{}, releaseID interface{}) *ReleaseRepository_GetCandidateItemsForRelease_Call {
 	return &ReleaseRepository_GetCandidateItemsForRelease_Call{Call: _e.mock.On("GetCandidateItemsForRelease", projectID, releaseID)}
 }
 
 func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) Run(run func(projectID uuid.UUID, releaseID *uuid.UUID)) *ReleaseRepository_GetCandidateItemsForRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 *uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(*uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(*uuid.UUID))
 	})
 	return _c
 }
@@ -792,20 +667,14 @@ type ReleaseRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *ReleaseRepository_Expecter) GetDB(tx interface{}) *ReleaseRepository_GetDB_Call {
 	return &ReleaseRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ReleaseRepository_GetDB_Call) Run(run func(tx core.DB)) *ReleaseRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -854,20 +723,14 @@ type ReleaseRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []uuid.UUID
+//   - ids
 func (_e *ReleaseRepository_Expecter) List(ids interface{}) *ReleaseRepository_List_Call {
 	return &ReleaseRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *ReleaseRepository_List_Call) Run(run func(ids []uuid.UUID)) *ReleaseRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].([]uuid.UUID))
 	})
 	return _c
 }
@@ -914,20 +777,14 @@ type ReleaseRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *ReleaseRepository_Expecter) Read(id interface{}) *ReleaseRepository_Read_Call {
 	return &ReleaseRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *ReleaseRepository_Read_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -974,20 +831,14 @@ type ReleaseRepository_ReadRecursive_Call struct {
 }
 
 // ReadRecursive is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *ReleaseRepository_Expecter) ReadRecursive(id interface{}) *ReleaseRepository_ReadRecursive_Call {
 	return &ReleaseRepository_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", id)}
 }
 
 func (_c *ReleaseRepository_ReadRecursive_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_ReadRecursive_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -1034,20 +885,14 @@ type ReleaseRepository_ReadWithItems_Call struct {
 }
 
 // ReadWithItems is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *ReleaseRepository_Expecter) ReadWithItems(id interface{}) *ReleaseRepository_ReadWithItems_Call {
 	return &ReleaseRepository_ReadWithItems_Call{Call: _e.mock.On("ReadWithItems", id)}
 }
 
 func (_c *ReleaseRepository_ReadWithItems_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_ReadWithItems_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -1085,26 +930,15 @@ type ReleaseRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Release
+//   - tx
+//   - t
 func (_e *ReleaseRepository_Expecter) Save(tx interface{}, t interface{}) *ReleaseRepository_Save_Call {
 	return &ReleaseRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *ReleaseRepository_Save_Call) Run(run func(tx core.DB, t *models.Release)) *ReleaseRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Release
-		if args[1] != nil {
-			arg1 = args[1].(*models.Release)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Release))
 	})
 	return _c
 }
@@ -1142,26 +976,15 @@ type ReleaseRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Release
+//   - tx
+//   - ts
 func (_e *ReleaseRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ReleaseRepository_SaveBatch_Call {
 	return &ReleaseRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *ReleaseRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Release)) *ReleaseRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Release
-		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Release))
 	})
 	return _c
 }
@@ -1199,20 +1022,14 @@ type ReleaseRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *ReleaseRepository_Expecter) Transaction(fn interface{}) *ReleaseRepository_Transaction_Call {
 	return &ReleaseRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *ReleaseRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *ReleaseRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }
@@ -1250,32 +1067,16 @@ type ReleaseRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t *[]*models.Release
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
+//   - t
+//   - conflictingColumns
+//   - updateOnly
 func (_e *ReleaseRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ReleaseRepository_Upsert_Call {
 	return &ReleaseRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *ReleaseRepository_Upsert_Call) Run(run func(t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string)) *ReleaseRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Release
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Release)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(*[]*models.Release), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }

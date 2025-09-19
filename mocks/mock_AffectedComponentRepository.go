@@ -61,26 +61,15 @@ type AffectedComponentRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - id string
+//   - tx
+//   - id
 func (_e *AffectedComponentRepository_Expecter) Activate(tx interface{}, id interface{}) *AffectedComponentRepository_Activate_Call {
 	return &AffectedComponentRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *AffectedComponentRepository_Activate_Call) Run(run func(tx core.DB, id string)) *AffectedComponentRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -219,26 +208,15 @@ type AffectedComponentRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.AffectedComponent
+//   - tx
+//   - t
 func (_e *AffectedComponentRepository_Expecter) Create(tx interface{}, t interface{}) *AffectedComponentRepository_Create_Call {
 	return &AffectedComponentRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *AffectedComponentRepository_Create_Call) Run(run func(tx core.DB, t *models.AffectedComponent)) *AffectedComponentRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].(*models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.AffectedComponent))
 	})
 	return _c
 }
@@ -276,26 +254,15 @@ type AffectedComponentRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.AffectedComponent
+//   - tx
+//   - ts
 func (_e *AffectedComponentRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AffectedComponentRepository_CreateBatch_Call {
 	return &AffectedComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *AffectedComponentRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.AffectedComponent))
 	})
 	return _c
 }
@@ -333,26 +300,15 @@ type AffectedComponentRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id string
+//   - tx
+//   - id
 func (_e *AffectedComponentRepository_Expecter) Delete(tx interface{}, id interface{}) *AffectedComponentRepository_Delete_Call {
 	return &AffectedComponentRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *AffectedComponentRepository_Delete_Call) Run(run func(tx core.DB, id string)) *AffectedComponentRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -390,26 +346,15 @@ type AffectedComponentRepository_DeleteAll_Call struct {
 }
 
 // DeleteAll is a helper method to define mock.On call
-//   - tx core.DB
-//   - ecosystem string
+//   - tx
+//   - ecosystem
 func (_e *AffectedComponentRepository_Expecter) DeleteAll(tx interface{}, ecosystem interface{}) *AffectedComponentRepository_DeleteAll_Call {
 	return &AffectedComponentRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", tx, ecosystem)}
 }
 
 func (_c *AffectedComponentRepository_DeleteAll_Call) Run(run func(tx core.DB, ecosystem string)) *AffectedComponentRepository_DeleteAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -447,26 +392,15 @@ type AffectedComponentRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ids []models.AffectedComponent
+//   - tx
+//   - ids
 func (_e *AffectedComponentRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AffectedComponentRepository_DeleteBatch_Call {
 	return &AffectedComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *AffectedComponentRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.AffectedComponent)) *AffectedComponentRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.AffectedComponent))
 	})
 	return _c
 }
@@ -561,20 +495,14 @@ type AffectedComponentRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *AffectedComponentRepository_Expecter) GetDB(tx interface{}) *AffectedComponentRepository_GetDB_Call {
 	return &AffectedComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *AffectedComponentRepository_GetDB_Call) Run(run func(tx core.DB)) *AffectedComponentRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -623,20 +551,14 @@ type AffectedComponentRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []string
+//   - ids
 func (_e *AffectedComponentRepository_Expecter) List(ids interface{}) *AffectedComponentRepository_List_Call {
 	return &AffectedComponentRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *AffectedComponentRepository_List_Call) Run(run func(ids []string)) *AffectedComponentRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
-		if args[0] != nil {
-			arg0 = args[0].([]string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].([]string))
 	})
 	return _c
 }
@@ -683,20 +605,14 @@ type AffectedComponentRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id string
+//   - id
 func (_e *AffectedComponentRepository_Expecter) Read(id interface{}) *AffectedComponentRepository_Read_Call {
 	return &AffectedComponentRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *AffectedComponentRepository_Read_Call) Run(run func(id string)) *AffectedComponentRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -734,26 +650,15 @@ type AffectedComponentRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - affectedComponent *models.AffectedComponent
+//   - tx
+//   - affectedComponent
 func (_e *AffectedComponentRepository_Expecter) Save(tx interface{}, affectedComponent interface{}) *AffectedComponentRepository_Save_Call {
 	return &AffectedComponentRepository_Save_Call{Call: _e.mock.On("Save", tx, affectedComponent)}
 }
 
 func (_c *AffectedComponentRepository_Save_Call) Run(run func(tx core.DB, affectedComponent *models.AffectedComponent)) *AffectedComponentRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].(*models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.AffectedComponent))
 	})
 	return _c
 }
@@ -791,26 +696,15 @@ type AffectedComponentRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - affectedPkgs []models.AffectedComponent
+//   - tx
+//   - affectedPkgs
 func (_e *AffectedComponentRepository_Expecter) SaveBatch(tx interface{}, affectedPkgs interface{}) *AffectedComponentRepository_SaveBatch_Call {
 	return &AffectedComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, affectedPkgs)}
 }
 
 func (_c *AffectedComponentRepository_SaveBatch_Call) Run(run func(tx core.DB, affectedPkgs []models.AffectedComponent)) *AffectedComponentRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.AffectedComponent))
 	})
 	return _c
 }
@@ -848,20 +742,14 @@ type AffectedComponentRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *AffectedComponentRepository_Expecter) Transaction(fn interface{}) *AffectedComponentRepository_Transaction_Call {
 	return &AffectedComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *AffectedComponentRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *AffectedComponentRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }
@@ -899,32 +787,16 @@ type AffectedComponentRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t *[]*models.AffectedComponent
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
+//   - t
+//   - conflictingColumns
+//   - updateOnly
 func (_e *AffectedComponentRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AffectedComponentRepository_Upsert_Call {
 	return &AffectedComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *AffectedComponentRepository_Upsert_Call) Run(run func(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string)) *AffectedComponentRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.AffectedComponent
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.AffectedComponent)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(*[]*models.AffectedComponent), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }

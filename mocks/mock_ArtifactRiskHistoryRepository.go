@@ -73,44 +73,18 @@ type ArtifactRiskHistoryRepository_GetRiskHistory_Call struct {
 }
 
 // GetRiskHistory is a helper method to define mock.On call
-//   - artifactName *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - start time.Time
-//   - end time.Time
+//   - artifactName
+//   - assetVersionName
+//   - assetID
+//   - start
+//   - end
 func (_e *ArtifactRiskHistoryRepository_Expecter) GetRiskHistory(artifactName interface{}, assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *ArtifactRiskHistoryRepository_GetRiskHistory_Call {
 	return &ArtifactRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", artifactName, assetVersionName, assetID, start, end)}
 }
 
 func (_c *ArtifactRiskHistoryRepository_GetRiskHistory_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *ArtifactRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *string
-		if args[0] != nil {
-			arg0 = args[0].(*string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		var arg4 time.Time
-		if args[4] != nil {
-			arg4 = args[4].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(*string), args[1].(string), args[2].(uuid.UUID), args[3].(time.Time), args[4].(time.Time))
 	})
 	return _c
 }
@@ -159,32 +133,16 @@ type ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call struct {
 }
 
 // GetRiskHistoryByRelease is a helper method to define mock.On call
-//   - releaseID uuid.UUID
-//   - start time.Time
-//   - end time.Time
+//   - releaseID
+//   - start
+//   - end
 func (_e *ArtifactRiskHistoryRepository_Expecter) GetRiskHistoryByRelease(releaseID interface{}, start interface{}, end interface{}) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
 	return &ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call{Call: _e.mock.On("GetRiskHistoryByRelease", releaseID, start, end)}
 }
 
 func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) Run(run func(releaseID uuid.UUID, start time.Time, end time.Time)) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 time.Time
-		if args[1] != nil {
-			arg1 = args[1].(time.Time)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time))
 	})
 	return _c
 }
@@ -222,20 +180,14 @@ type ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call struct {
 }
 
 // UpdateRiskAggregation is a helper method to define mock.On call
-//   - assetRisk *models.ArtifactRiskHistory
+//   - assetRisk
 func (_e *ArtifactRiskHistoryRepository_Expecter) UpdateRiskAggregation(assetRisk interface{}) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
 	return &ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", assetRisk)}
 }
 
 func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(assetRisk *models.ArtifactRiskHistory)) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.ArtifactRiskHistory
-		if args[0] != nil {
-			arg0 = args[0].(*models.ArtifactRiskHistory)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(*models.ArtifactRiskHistory))
 	})
 	return _c
 }

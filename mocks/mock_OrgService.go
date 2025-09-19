@@ -60,26 +60,15 @@ type OrgService_CreateOrganization_Call struct {
 }
 
 // CreateOrganization is a helper method to define mock.On call
-//   - ctx core.Context
-//   - organization *models.Org
+//   - ctx
+//   - organization
 func (_e *OrgService_Expecter) CreateOrganization(ctx interface{}, organization interface{}) *OrgService_CreateOrganization_Call {
 	return &OrgService_CreateOrganization_Call{Call: _e.mock.On("CreateOrganization", ctx, organization)}
 }
 
 func (_c *OrgService_CreateOrganization_Call) Run(run func(ctx core.Context, organization *models.Org)) *OrgService_CreateOrganization_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
-		if args[0] != nil {
-			arg0 = args[0].(core.Context)
-		}
-		var arg1 *models.Org
-		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.Context), args[1].(*models.Org))
 	})
 	return _c
 }
@@ -128,20 +117,14 @@ type OrgService_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - slug string
+//   - slug
 func (_e *OrgService_Expecter) ReadBySlug(slug interface{}) *OrgService_ReadBySlug_Call {
 	return &OrgService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", slug)}
 }
 
 func (_c *OrgService_ReadBySlug_Call) Run(run func(slug string)) *OrgService_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
