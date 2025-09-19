@@ -280,6 +280,7 @@ func GetLabels(vuln models.Vuln) []string {
 }
 
 type Label struct {
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Color       string `json:"color"`
 	Description string `json:"description"`

@@ -270,6 +270,14 @@ func (client gitlabClient) EditIssue(ctx context.Context, projectID int, issueID
 	return client.Issues.UpdateIssue(projectID, issueID, issue, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) ListLabels(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error) {
+	return client.Labels.ListLabels(projectID, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) UpdateLabel(ctx context.Context, projectID int, labelID int, opt *gitlab.UpdateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
+	return client.Labels.UpdateLabel(projectID, labelID, opt, gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, issueID int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error) {
 	// fetch the issue to check the existing labels
 	issue, _, err := client.Issues.GetIssue(projectID, issueID, gitlab.WithContext(ctx))

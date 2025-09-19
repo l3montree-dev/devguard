@@ -36,6 +36,8 @@ type GitlabClientFacade interface {
 	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
 	CreateNewLabel(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error)
+	ListLabels(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error)
+	UpdateLabel(ctx context.Context, projectID int, labelID int, opt *gitlab.UpdateLabelOptions) (*gitlab.Label, *gitlab.Response, error)
 
 	ListProjectHooks(ctx context.Context, projectID int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
 	AddProjectHook(ctx context.Context, projectID int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
