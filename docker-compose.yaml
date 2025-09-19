@@ -22,7 +22,7 @@ services:
     depends_on:
     - postgresql
     environment:
-    - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+    - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
     volumes:
     - type: bind
       source: ./.kratos
@@ -42,7 +42,7 @@ services:
     - '4434:4434' # admin
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     environment:
-    - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+    - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
     - LOG_LEVEL=trace
     volumes:
     - type: bind

@@ -56,7 +56,9 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration, jiraIntegration, webhookIntegration)
+	externalUserRepository := repositories.NewExternalUserRepository(db)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, githubIntegration, gitlabIntegration, jiraIntegration, webhookIntegration)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)

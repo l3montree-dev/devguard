@@ -13,7 +13,8 @@ import (
 
 // batches multiple third party integrations
 type thirdPartyIntegrations struct {
-	integrations []core.ThirdPartyIntegration
+	integrations           []core.ThirdPartyIntegration
+	externalUserRepository core.ExternalUserRepository
 }
 
 var _ core.IntegrationAggregate = &thirdPartyIntegrations{}
@@ -185,12 +186,22 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
 }
 
 func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
-	users := []core.User{}
-	for _, i := range t.integrations {
-		users = append(users, i.GetUsers(org)...)
+
+	users, err := t.externalUserRepository.FindByOrgID(nil, org.ID)
+	if err != nil {
+		slog.Error("could not fetch external users for org", "org", org.Slug, "err", err)
+		return nil
 	}
 
-	return users
+	return utils.Map(users, func(user models.ExternalUser) core.User {
+		return core.User{
+			ID:        user.ID,
+			Name:      user.Username,
+			AvatarURL: &user.AvatarURL,
+
+			Role: string(core.RoleUnknown), // all users from github are members
+		}
+	})
 }
 
 func (t *thirdPartyIntegrations) HandleEvent(event any) error {
@@ -228,8 +239,9 @@ func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.A
 	return err
 }
 
-func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
+func NewThirdPartyIntegrations(externalUserRepository core.ExternalUserRepository, integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
 	return &thirdPartyIntegrations{
-		integrations: integrations,
+		integrations:           integrations,
+		externalUserRepository: externalUserRepository,
 	}
 }

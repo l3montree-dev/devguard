@@ -56,14 +56,13 @@ type ThirdPartyIntegration interface {
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error
 	UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error
 
-	GetUsers(org models.Org) []User
-
 	GetID() IntegrationID
 }
 
 type IntegrationAggregate interface {
 	ThirdPartyIntegration
 	GetIntegration(id IntegrationID) ThirdPartyIntegration
+	GetUsers(org models.Org) []User
 }
 
 type ExternalEntitySlug string

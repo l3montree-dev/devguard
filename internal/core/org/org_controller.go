@@ -18,6 +18,7 @@ package org
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -303,13 +304,12 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		}
 
 		// get the roles for the members
-
 		errGroup := utils.ErrGroup[map[string]core.Role](10)
 		for _, member := range m {
 			errGroup.Go(func() (map[string]core.Role, error) {
 				role, err := accessControl.GetDomainRole(member.Id)
 				if err != nil {
-					return nil, err
+					return map[string]core.Role{member.Id: core.RoleUnknown}, nil
 				}
 				return map[string]core.Role{member.Id: role}, nil
 			})
@@ -321,9 +321,7 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		}
 
 		roleMap := utils.Reduce(roles, func(acc map[string]core.Role, r map[string]core.Role) map[string]core.Role {
-			for k, v := range r {
-				acc[k] = v
-			}
+			maps.Copy(acc, r)
 			return acc
 		}, make(map[string]core.Role))
 
@@ -346,7 +344,6 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 			})
 		}
 	}
-	// get the role of the users in the organization
 
 	// fetch all members from third party integrations
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)

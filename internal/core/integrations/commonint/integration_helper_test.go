@@ -2,6 +2,8 @@ package commonint
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -139,4 +141,97 @@ func TestGetLabels(t *testing.T) {
 		assert.Equal(t, expectedLabels, GetLabels(vuln))
 	})
 
+}
+
+func TestBuildGitlabCiTemplate(t *testing.T) {
+
+	t.Run("should build full template with default environment variables", func(t *testing.T) {
+		// Clear environment variables to test defaults
+		os.Unsetenv("DEVGUARD_CI_COMPONENT_BASE")
+		os.Unsetenv("FRONTEND_URL")
+
+		result, err := buildGitlabCiTemplate("full")
+
+		assert.NoError(t, err)
+		assert.Contains(t, result, "stages:")
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- test")
+		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "include:")
+		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
+		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
+		assert.Contains(t, result, "asset_name: \"$DEVGUARD_ASSET_NAME\"")
+		assert.Contains(t, result, "token: \"$DEVGUARD_TOKEN\"")
+		assert.Contains(t, result, "api_url: \"$DEVGUARD_API_URL\"")
+	})
+
+	t.Run("should build full template with custom environment variables", func(t *testing.T) {
+		// Set custom environment variables
+		os.Setenv("DEVGUARD_CI_COMPONENT_BASE", "https://custom.gitlab.com/devguard/-/raw/main")
+		os.Setenv("FRONTEND_URL", "custom.devguard.example.com")
+		defer func() {
+			os.Unsetenv("DEVGUARD_CI_COMPONENT_BASE")
+			os.Unsetenv("FRONTEND_URL")
+		}()
+
+		result, err := buildGitlabCiTemplate("full")
+
+		assert.NoError(t, err)
+		assert.Contains(t, result, "remote: \"https://custom.gitlab.com/devguard/-/raw/main/templates/full.yml\"")
+		assert.Contains(t, result, "web_ui: \"custom.devguard.example.com\"")
+	})
+
+	t.Run("should handle empty environment variables and use defaults", func(t *testing.T) {
+		// Set empty environment variables
+		os.Setenv("DEVGUARD_CI_COMPONENT_BASE", "")
+		os.Setenv("FRONTEND_URL", "")
+		defer func() {
+			os.Unsetenv("DEVGUARD_CI_COMPONENT_BASE")
+			os.Unsetenv("FRONTEND_URL")
+		}()
+
+		result, err := buildGitlabCiTemplate("full")
+
+		assert.NoError(t, err)
+		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
+		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
+	})
+
+	t.Run("should NOT return error for unknown template ID", func(t *testing.T) {
+		result, err := buildGitlabCiTemplate("unknown")
+
+		assert.Nil(t, err)
+
+		// defaults to full
+		assert.Contains(t, result, "stages:")
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- test")
+		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "include:")
+		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
+		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
+	})
+
+	t.Run("should generate valid YAML structure", func(t *testing.T) {
+		result, err := buildGitlabCiTemplate("full")
+
+		assert.NoError(t, err)
+		// Verify basic YAML structure
+		lines := strings.Split(result, "\n")
+		assert.True(t, len(lines) > 0)
+
+		// Check that stages section exists and is properly formatted
+		hasStages := false
+		hasInclude := false
+		for _, line := range lines {
+			if strings.TrimSpace(line) == "stages:" {
+				hasStages = true
+			}
+			if strings.TrimSpace(line) == "include:" {
+				hasInclude = true
+			}
+		}
+		assert.True(t, hasStages, "Template should contain stages section")
+		assert.True(t, hasInclude, "Template should contain include section")
+	})
 }

@@ -4,8 +4,9 @@ stages:
   - deploy
 
 include:
-  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+  - remote: "{{ .DevGuardCiComponentBase }}/templates/full.yml"
     inputs:
       asset_name: "$DEVGUARD_ASSET_NAME"
       token: "$DEVGUARD_TOKEN"
       api_url: "$DEVGUARD_API_URL"
+      web_ui: "{{ .DevGuardFrontendUrl }}"

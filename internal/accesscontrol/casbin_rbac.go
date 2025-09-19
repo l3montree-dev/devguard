@@ -125,9 +125,9 @@ func (c *casbinRBAC) GetAllRoles(user string) []string {
 }
 
 func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
-	roles := c.GetAllRoles(user)
+	dbRoles := c.GetAllRoles(user)
 	// filter the roles to only get the domain roles
-	roles = utils.Map(utils.Filter(roles, func(r string) bool {
+	roles := utils.Map(utils.Filter(dbRoles, func(r string) bool {
 		return strings.HasPrefix(r, "role::")
 	}), func(r string) string {
 		return strings.TrimPrefix(r, "role::")
@@ -138,7 +138,11 @@ func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
 		return core.Role(r)
 	})
 
-	return getMostPowerfulRole(r)
+	role, err := getMostPowerfulRole(r)
+	if err != nil {
+		slog.Warn("GetDomainRole: no domain role found for user", "user", user, "roles", roles, "dbRoles", dbRoles, "domain", c.domain)
+	}
+	return role, err
 }
 
 func getMostPowerfulRole(roles []core.Role) (core.Role, error) {
@@ -153,7 +157,7 @@ func getMostPowerfulRole(roles []core.Role) (core.Role, error) {
 		return core.RoleMember, nil
 	}
 
-	return "", fmt.Errorf("no domain role found for user")
+	return "", fmt.Errorf("no domain role found for user. Roles from user: %v", roles)
 }
 
 func (c *casbinRBAC) GetProjectRole(user string, project string) (core.Role, error) {
