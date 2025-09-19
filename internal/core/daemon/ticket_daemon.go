@@ -186,7 +186,6 @@ func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependen
 
 	// compare both states
 	comparison := utils.CompareSlices(depVulnsIIDs, gitlabIIDs, func(iid int) int { return iid })
-	missingIIDs := comparison.OnlyInA
 	excessIIDs := comparison.OnlyInB
 
 	// close all excess devguard tickets
@@ -203,17 +202,6 @@ func compareStatesAndResolveDifferences(client core.GitlabClientFacade, dependen
 		amountClosed++
 	}
 
-	// then try to reopen all missing tickets
-	opt.StateEvent = utils.Ptr("reopen")
-	amountReopened := 0
-	for _, iid := range missingIIDs {
-		_, _, err = client.EditIssue(context.Background(), projectID, iid, &opt)
-		if err != nil {
-			// if we do not find the issue just continue
-			continue
-		}
-		amountReopened++
-	}
-	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed, "amount reopened", amountReopened)
+	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
 	return nil
 }
