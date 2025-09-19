@@ -54,9 +54,7 @@ type ThirdPartyIntegration interface {
 
 	HandleEvent(event any) error
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error
-	UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error
-
-	GetUsers(org models.Org) []User
+	UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error
 
 	GetID() IntegrationID
 }
@@ -64,6 +62,7 @@ type ThirdPartyIntegration interface {
 type IntegrationAggregate interface {
 	ThirdPartyIntegration
 	GetIntegration(id IntegrationID) ThirdPartyIntegration
+	GetUsers(org models.Org) []User
 }
 
 type ExternalEntitySlug string

@@ -208,7 +208,7 @@ func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Projec
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(asset, vulnerability), nil
+				return s.updateIssue(asset, assetVersion.Slug, vulnerability), nil
 			})
 		}
 	}
@@ -217,11 +217,11 @@ func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Projec
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(asset models.Asset, vulnerability models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
 	if err != nil {
 		return err
 	}

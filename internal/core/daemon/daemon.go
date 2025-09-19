@@ -66,8 +66,9 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 		gitlabOauth2Integrations,
 	)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
+	externalUserRepository := repositories.NewExternalUserRepository(db)
 
-	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(externalUserRepository, githubIntegration, gitlabIntegration)
 
 	daemonStart := time.Now()
 	defer time.Sleep(5 * time.Minute) // wait for 5 minutes before checking again - always - even in case of error

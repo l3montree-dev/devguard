@@ -1,15 +1,27 @@
 package models_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRenderMarkdown(t *testing.T) {
+
+	baseURL := "https://devguard.example.com"
+	orgSlug := "my-org"
+	projectSlug := "my-project"
+	assetSlug := "my-asset"
+	assetVersionName := "v1.0.0"
+
+	assertVersionSlug := slug.Make(assetVersionName)
+	assert.Equal(t, "v1-0-0", assertVersionSlug)
+
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
 		snippetContents := models.SnippetContents{
 			Snippets: []models.SnippetContent{
@@ -27,13 +39,16 @@ func TestRenderMarkdown(t *testing.T) {
 
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability:   models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			URI:             "the/uri/of/the/vuln",
+			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+				ID: "test-vuln-id",
+			},
+			URI: "the/uri/of/the/vuln",
 		}
-		result := firstPartyVuln.RenderMarkdown()
+		result := firstPartyVuln.RenderMarkdown(baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "TestSnippet")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
+		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
 	})
 	t.Run("vuln without snippet contents", func(t *testing.T) {
 		snippetContents := models.SnippetContents{
@@ -45,13 +60,15 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.NoError(t, err)
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability:   models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			URI:             "the/uri/of/the/vuln",
+			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+				ID: "test-vuln-id"},
+			URI: "the/uri/of/the/vuln",
 		}
 
-		result := firstPartyVuln.RenderMarkdown()
+		result := firstPartyVuln.RenderMarkdown(baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
+		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
 	})
 }
 func TestTableName(t *testing.T) {

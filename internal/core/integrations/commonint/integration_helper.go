@@ -75,9 +75,9 @@ func buildGitlabCiTemplate(templateID string) (string, error) {
 
 	switch templateID {
 	case "full":
-		templateFile = fullTemplate
+		fallthrough
 	default:
-		return "", fmt.Errorf("unknown template ID: %s. Only full is currently implemented", templateID)
+		templateFile = fullTemplate
 	}
 
 	tmpl, err := template.New("gitlab-ci-template").Parse(templateFile)
