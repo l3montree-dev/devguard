@@ -70,15 +70,26 @@ type OpenSourceInsightService_GetProject_Call struct {
 }
 
 // GetProject is a helper method to define mock.On call
-//   - ctx
-//   - projectID
+//   - ctx context.Context
+//   - projectID string
 func (_e *OpenSourceInsightService_Expecter) GetProject(ctx interface{}, projectID interface{}) *OpenSourceInsightService_GetProject_Call {
 	return &OpenSourceInsightService_GetProject_Call{Call: _e.mock.On("GetProject", ctx, projectID)}
 }
 
 func (_c *OpenSourceInsightService_GetProject_Call) Run(run func(ctx context.Context, projectID string)) *OpenSourceInsightService_GetProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -125,17 +136,38 @@ type OpenSourceInsightService_GetVersion_Call struct {
 }
 
 // GetVersion is a helper method to define mock.On call
-//   - ctx
-//   - ecosystem
-//   - packageName
-//   - version
+//   - ctx context.Context
+//   - ecosystem string
+//   - packageName string
+//   - version string
 func (_e *OpenSourceInsightService_Expecter) GetVersion(ctx interface{}, ecosystem interface{}, packageName interface{}, version interface{}) *OpenSourceInsightService_GetVersion_Call {
 	return &OpenSourceInsightService_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx, ecosystem, packageName, version)}
 }
 
 func (_c *OpenSourceInsightService_GetVersion_Call) Run(run func(ctx context.Context, ecosystem string, packageName string, version string)) *OpenSourceInsightService_GetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }

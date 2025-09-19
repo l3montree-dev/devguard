@@ -62,15 +62,26 @@ type ArtifactRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ArtifactRepository_Expecter) Activate(tx interface{}, id interface{}) *ArtifactRepository_Activate_Call {
 	return &ArtifactRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *ArtifactRepository_Activate_Call) Run(run func(tx core.DB, id string)) *ArtifactRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -209,15 +220,26 @@ type ArtifactRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Artifact
 func (_e *ArtifactRepository_Expecter) Create(tx interface{}, t interface{}) *ArtifactRepository_Create_Call {
 	return &ArtifactRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *ArtifactRepository_Create_Call) Run(run func(tx core.DB, t *models.Artifact)) *ArtifactRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Artifact))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].(*models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -255,15 +277,26 @@ type ArtifactRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.Artifact
 func (_e *ArtifactRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ArtifactRepository_CreateBatch_Call {
 	return &ArtifactRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *ArtifactRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Artifact)) *ArtifactRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Artifact))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -301,15 +334,26 @@ type ArtifactRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ArtifactRepository_Expecter) Delete(tx interface{}, id interface{}) *ArtifactRepository_Delete_Call {
 	return &ArtifactRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *ArtifactRepository_Delete_Call) Run(run func(tx core.DB, id string)) *ArtifactRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -347,16 +391,32 @@ type ArtifactRepository_DeleteArtifact_Call struct {
 }
 
 // DeleteArtifact is a helper method to define mock.On call
-//   - assetID
-//   - assetVersionName
-//   - artifactName
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - artifactName string
 func (_e *ArtifactRepository_Expecter) DeleteArtifact(assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactRepository_DeleteArtifact_Call {
 	return &ArtifactRepository_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", assetID, assetVersionName, artifactName)}
 }
 
 func (_c *ArtifactRepository_DeleteArtifact_Call) Run(run func(assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactRepository_DeleteArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string), args[2].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -394,15 +454,26 @@ type ArtifactRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.Artifact
 func (_e *ArtifactRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ArtifactRepository_DeleteBatch_Call {
 	return &ArtifactRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *ArtifactRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Artifact)) *ArtifactRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Artifact))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -451,15 +522,26 @@ type ArtifactRepository_GetByAssetIDAndAssetVersionName_Call struct {
 }
 
 // GetByAssetIDAndAssetVersionName is a helper method to define mock.On call
-//   - assetID
-//   - assetVersionName
+//   - assetID uuid.UUID
+//   - assetVersionName string
 func (_e *ArtifactRepository_Expecter) GetByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
 	return &ArtifactRepository_GetByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetByAssetIDAndAssetVersionName", assetID, assetVersionName)}
 }
 
 func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -499,14 +581,20 @@ type ArtifactRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *ArtifactRepository_Expecter) GetDB(tx interface{}) *ArtifactRepository_GetDB_Call {
 	return &ArtifactRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ArtifactRepository_GetDB_Call) Run(run func(tx core.DB)) *ArtifactRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -555,14 +643,20 @@ type ArtifactRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []string
 func (_e *ArtifactRepository_Expecter) List(ids interface{}) *ArtifactRepository_List_Call {
 	return &ArtifactRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *ArtifactRepository_List_Call) Run(run func(ids []string)) *ArtifactRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -609,14 +703,20 @@ type ArtifactRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id string
 func (_e *ArtifactRepository_Expecter) Read(id interface{}) *ArtifactRepository_Read_Call {
 	return &ArtifactRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *ArtifactRepository_Read_Call) Run(run func(id string)) *ArtifactRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -663,16 +763,32 @@ type ArtifactRepository_ReadArtifact_Call struct {
 }
 
 // ReadArtifact is a helper method to define mock.On call
-//   - name
-//   - assetVersionName
-//   - assetID
+//   - name string
+//   - assetVersionName string
+//   - assetID uuid.UUID
 func (_e *ArtifactRepository_Expecter) ReadArtifact(name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactRepository_ReadArtifact_Call {
 	return &ArtifactRepository_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", name, assetVersionName, assetID)}
 }
 
 func (_c *ArtifactRepository_ReadArtifact_Call) Run(run func(name string, assetVersionName string, assetID uuid.UUID)) *ArtifactRepository_ReadArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(uuid.UUID))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -710,15 +826,26 @@ type ArtifactRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Artifact
 func (_e *ArtifactRepository_Expecter) Save(tx interface{}, t interface{}) *ArtifactRepository_Save_Call {
 	return &ArtifactRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *ArtifactRepository_Save_Call) Run(run func(tx core.DB, t *models.Artifact)) *ArtifactRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Artifact))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].(*models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -756,15 +883,26 @@ type ArtifactRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.Artifact
 func (_e *ArtifactRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ArtifactRepository_SaveBatch_Call {
 	return &ArtifactRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *ArtifactRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Artifact))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -802,14 +940,20 @@ type ArtifactRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *ArtifactRepository_Expecter) Transaction(fn interface{}) *ArtifactRepository_Transaction_Call {
 	return &ArtifactRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *ArtifactRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *ArtifactRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -847,16 +991,32 @@ type ArtifactRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
-//   - updateOnly
+//   - t *[]*models.Artifact
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
 func (_e *ArtifactRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ArtifactRepository_Upsert_Call {
 	return &ArtifactRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *ArtifactRepository_Upsert_Call) Run(run func(t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string)) *ArtifactRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Artifact), args[1].([]clause.Column), args[2].([]string))
+		var arg0 *[]*models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.Artifact)
+		}
+		var arg1 []clause.Column
+		if args[1] != nil {
+			arg1 = args[1].([]clause.Column)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }

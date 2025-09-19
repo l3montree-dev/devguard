@@ -17,7 +17,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -48,12 +47,7 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	broker, err := pubsub.BrokerFactory()
-	if err != nil {
-		slog.Error("failed to create broker", "err", err)
-		panic(err)
-	}
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, nil)
 	if err != nil {
 		panic(err)
 	}

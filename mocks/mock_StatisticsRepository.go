@@ -71,18 +71,44 @@ type StatisticsRepository_AverageFixingTime_Call struct {
 }
 
 // AverageFixingTime is a helper method to define mock.On call
-//   - artifactNam
-//   - assetVersionName
-//   - assetID
-//   - riskIntervalStart
-//   - riskIntervalEnd
+//   - artifactNam *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - riskIntervalStart float64
+//   - riskIntervalEnd float64
 func (_e *StatisticsRepository_Expecter) AverageFixingTime(artifactNam interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
 	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
 }
 
 func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*string), args[1].(string), args[2].(uuid.UUID), args[3].(float64), args[4].(float64))
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 float64
+		if args[3] != nil {
+			arg3 = args[3].(float64)
+		}
+		var arg4 float64
+		if args[4] != nil {
+			arg4 = args[4].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -129,18 +155,44 @@ type StatisticsRepository_AverageFixingTimeByCvss_Call struct {
 }
 
 // AverageFixingTimeByCvss is a helper method to define mock.On call
-//   - artifactName
-//   - assetVersionName
-//   - assetID
-//   - cvssIntervalStart
-//   - cvssIntervalEnd
+//   - artifactName *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - cvssIntervalStart float64
+//   - cvssIntervalEnd float64
 func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvss(artifactName interface{}, assetVersionName interface{}, assetID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvss_Call {
 	return &StatisticsRepository_AverageFixingTimeByCvss_Call{Call: _e.mock.On("AverageFixingTimeByCvss", artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)}
 }
 
 func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*string), args[1].(string), args[2].(uuid.UUID), args[3].(float64), args[4].(float64))
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 float64
+		if args[3] != nil {
+			arg3 = args[3].(float64)
+		}
+		var arg4 float64
+		if args[4] != nil {
+			arg4 = args[4].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -187,16 +239,32 @@ type StatisticsRepository_AverageFixingTimeByCvssForRelease_Call struct {
 }
 
 // AverageFixingTimeByCvssForRelease is a helper method to define mock.On call
-//   - releaseID
-//   - cvssIntervalStart
-//   - cvssIntervalEnd
+//   - releaseID uuid.UUID
+//   - cvssIntervalStart float64
+//   - cvssIntervalEnd float64
 func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvssForRelease(releaseID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
 	return &StatisticsRepository_AverageFixingTimeByCvssForRelease_Call{Call: _e.mock.On("AverageFixingTimeByCvssForRelease", releaseID, cvssIntervalStart, cvssIntervalEnd)}
 }
 
 func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) Run(run func(releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(float64), args[2].(float64))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 float64
+		if args[1] != nil {
+			arg1 = args[1].(float64)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -243,16 +311,32 @@ type StatisticsRepository_AverageFixingTimeForRelease_Call struct {
 }
 
 // AverageFixingTimeForRelease is a helper method to define mock.On call
-//   - releaseID
-//   - riskIntervalStart
-//   - riskIntervalEnd
+//   - releaseID uuid.UUID
+//   - riskIntervalStart float64
+//   - riskIntervalEnd float64
 func (_e *StatisticsRepository_Expecter) AverageFixingTimeForRelease(releaseID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeForRelease_Call {
 	return &StatisticsRepository_AverageFixingTimeForRelease_Call{Call: _e.mock.On("AverageFixingTimeForRelease", releaseID, riskIntervalStart, riskIntervalEnd)}
 }
 
 func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Run(run func(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(float64), args[2].(float64))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 float64
+		if args[1] != nil {
+			arg1 = args[1].(float64)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -301,14 +385,20 @@ type StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call struct {
 }
 
 // CVESWithKnownExploitsInAssetVersion is a helper method to define mock.On call
-//   - assetVersion
+//   - assetVersion models.AssetVersion
 func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", assetVersion)}
 }
 
 func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Run(run func(assetVersion models.AssetVersion)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.AssetVersion))
+		var arg0 models.AssetVersion
+		if args[0] != nil {
+			arg0 = args[0].(models.AssetVersion)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -357,17 +447,38 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 }
 
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
-//   - artifactName
-//   - assetVersionName
-//   - assetID
-//   - time1
+//   - artifactName *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - time1 time.Time
 func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", artifactName, assetVersionName, assetID, time1)}
 }
 
 func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*string), args[1].(string), args[2].(uuid.UUID), args[3].(time.Time))
+		var arg0 *string
+		if args[0] != nil {
+			arg0 = args[0].(*string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }

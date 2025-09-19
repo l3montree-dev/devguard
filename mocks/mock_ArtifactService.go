@@ -60,16 +60,32 @@ type ArtifactService_DeleteArtifact_Call struct {
 }
 
 // DeleteArtifact is a helper method to define mock.On call
-//   - assetID
-//   - assetVersionName
-//   - artifactName
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - artifactName string
 func (_e *ArtifactService_Expecter) DeleteArtifact(assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactService_DeleteArtifact_Call {
 	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", assetID, assetVersionName, artifactName)}
 }
 
 func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactService_DeleteArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string), args[2].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -118,15 +134,26 @@ type ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call struct {
 }
 
 // GetArtifactNamesByAssetIDAndAssetVersionName is a helper method to define mock.On call
-//   - assetID
-//   - assetVersionName
+//   - assetID uuid.UUID
+//   - assetVersionName string
 func (_e *ArtifactService_Expecter) GetArtifactNamesByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
 	return &ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetArtifactNamesByAssetIDAndAssetVersionName", assetID, assetVersionName)}
 }
 
 func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -164,14 +191,20 @@ type ArtifactService_SaveArtifact_Call struct {
 }
 
 // SaveArtifact is a helper method to define mock.On call
-//   - artifact
+//   - artifact *models.Artifact
 func (_e *ArtifactService_Expecter) SaveArtifact(artifact interface{}) *ArtifactService_SaveArtifact_Call {
 	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", artifact)}
 }
 
 func (_c *ArtifactService_SaveArtifact_Call) Run(run func(artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*models.Artifact))
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

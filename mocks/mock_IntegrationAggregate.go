@@ -62,21 +62,62 @@ type IntegrationAggregate_CreateIssue_Call struct {
 }
 
 // CreateIssue is a helper method to define mock.On call
-//   - ctx
-//   - asset
-//   - assetVersionName
-//   - vuln
-//   - projectSlug
-//   - orgSlug
-//   - justification
-//   - userID
+//   - ctx context.Context
+//   - asset models.Asset
+//   - assetVersionName string
+//   - vuln models.Vuln
+//   - projectSlug string
+//   - orgSlug string
+//   - justification string
+//   - userID string
 func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, userID interface{}) *IntegrationAggregate_CreateIssue_Call {
 	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)}
 }
 
 func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string)) *IntegrationAggregate_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(models.Vuln), args[4].(string), args[5].(string), args[6].(string), args[7].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Vuln
+		if args[3] != nil {
+			arg3 = args[3].(models.Vuln)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+		)
 	})
 	return _c
 }
@@ -160,14 +201,20 @@ type IntegrationAggregate_GetIntegration_Call struct {
 }
 
 // GetIntegration is a helper method to define mock.On call
-//   - id
+//   - id core.IntegrationID
 func (_e *IntegrationAggregate_Expecter) GetIntegration(id interface{}) *IntegrationAggregate_GetIntegration_Call {
 	return &IntegrationAggregate_GetIntegration_Call{Call: _e.mock.On("GetIntegration", id)}
 }
 
 func (_c *IntegrationAggregate_GetIntegration_Call) Run(run func(id core.IntegrationID)) *IntegrationAggregate_GetIntegration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.IntegrationID))
+		var arg0 core.IntegrationID
+		if args[0] != nil {
+			arg0 = args[0].(core.IntegrationID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -207,14 +254,20 @@ type IntegrationAggregate_GetUsers_Call struct {
 }
 
 // GetUsers is a helper method to define mock.On call
-//   - org
+//   - org models.Org
 func (_e *IntegrationAggregate_Expecter) GetUsers(org interface{}) *IntegrationAggregate_GetUsers_Call {
 	return &IntegrationAggregate_GetUsers_Call{Call: _e.mock.On("GetUsers", org)}
 }
 
 func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Org))
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -252,14 +305,20 @@ type IntegrationAggregate_HandleEvent_Call struct {
 }
 
 // HandleEvent is a helper method to define mock.On call
-//   - event
+//   - event any
 func (_e *IntegrationAggregate_Expecter) HandleEvent(event interface{}) *IntegrationAggregate_HandleEvent_Call {
 	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", event)}
 }
 
 func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(event any)) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(any))
+		var arg0 any
+		if args[0] != nil {
+			arg0 = args[0].(any)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -297,14 +356,20 @@ type IntegrationAggregate_HandleWebhook_Call struct {
 }
 
 // HandleWebhook is a helper method to define mock.On call
-//   - ctx
+//   - ctx core.Context
 func (_e *IntegrationAggregate_Expecter) HandleWebhook(ctx interface{}) *IntegrationAggregate_HandleWebhook_Call {
 	return &IntegrationAggregate_HandleWebhook_Call{Call: _e.mock.On("HandleWebhook", ctx)}
 }
 
 func (_c *IntegrationAggregate_HandleWebhook_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_HandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -351,15 +416,26 @@ type IntegrationAggregate_HasAccessToExternalEntityProvider_Call struct {
 }
 
 // HasAccessToExternalEntityProvider is a helper method to define mock.On call
-//   - ctx
-//   - externalEntityProviderID
+//   - ctx core.Context
+//   - externalEntityProviderID string
 func (_e *IntegrationAggregate_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	return &IntegrationAggregate_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
 }
 
 func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Run(run func(ctx core.Context, externalEntityProviderID string)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context), args[1].(string))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -416,16 +492,32 @@ type IntegrationAggregate_ListGroups_Call struct {
 }
 
 // ListGroups is a helper method to define mock.On call
-//   - ctx
-//   - userID
-//   - providerID
+//   - ctx context.Context
+//   - userID string
+//   - providerID string
 func (_e *IntegrationAggregate_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *IntegrationAggregate_ListGroups_Call {
 	return &IntegrationAggregate_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
 }
 
 func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx context.Context, userID string, providerID string)) *IntegrationAggregate_ListGroups_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -474,14 +566,20 @@ type IntegrationAggregate_ListOrgs_Call struct {
 }
 
 // ListOrgs is a helper method to define mock.On call
-//   - ctx
+//   - ctx core.Context
 func (_e *IntegrationAggregate_Expecter) ListOrgs(ctx interface{}) *IntegrationAggregate_ListOrgs_Call {
 	return &IntegrationAggregate_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
 }
 
 func (_c *IntegrationAggregate_ListOrgs_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_ListOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -538,17 +636,38 @@ type IntegrationAggregate_ListProjects_Call struct {
 }
 
 // ListProjects is a helper method to define mock.On call
-//   - ctx
-//   - userID
-//   - providerID
-//   - groupID
+//   - ctx context.Context
+//   - userID string
+//   - providerID string
+//   - groupID string
 func (_e *IntegrationAggregate_Expecter) ListProjects(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *IntegrationAggregate_ListProjects_Call {
 	return &IntegrationAggregate_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
 }
 
 func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -597,14 +716,20 @@ type IntegrationAggregate_ListRepositories_Call struct {
 }
 
 // ListRepositories is a helper method to define mock.On call
-//   - ctx
+//   - ctx core.Context
 func (_e *IntegrationAggregate_Expecter) ListRepositories(ctx interface{}) *IntegrationAggregate_ListRepositories_Call {
 	return &IntegrationAggregate_ListRepositories_Call{Call: _e.mock.On("ListRepositories", ctx)}
 }
 
 func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_ListRepositories_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -642,17 +767,38 @@ type IntegrationAggregate_UpdateIssue_Call struct {
 }
 
 // UpdateIssue is a helper method to define mock.On call
-//   - ctx
-//   - asset
-//   - assetVersionSlug
-//   - vuln
+//   - ctx context.Context
+//   - asset models.Asset
+//   - assetVersionSlug string
+//   - vuln models.Vuln
 func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
 	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln)}
 }
 
 func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln)) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(models.Vuln))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Vuln
+		if args[3] != nil {
+			arg3 = args[3].(models.Vuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -690,14 +836,20 @@ type IntegrationAggregate_WantsToHandleWebhook_Call struct {
 }
 
 // WantsToHandleWebhook is a helper method to define mock.On call
-//   - ctx
+//   - ctx core.Context
 func (_e *IntegrationAggregate_Expecter) WantsToHandleWebhook(ctx interface{}) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	return &IntegrationAggregate_WantsToHandleWebhook_Call{Call: _e.mock.On("WantsToHandleWebhook", ctx)}
 }
 
 func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

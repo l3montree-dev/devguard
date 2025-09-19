@@ -60,17 +60,38 @@ type FirstPartyVulnService_SyncAllIssues_Call struct {
 }
 
 // SyncAllIssues is a helper method to define mock.On call
-//   - org
-//   - project
-//   - asset
-//   - assetVersion
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
 func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}) *FirstPartyVulnService_SyncAllIssues_Call {
 	return &FirstPartyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", org, project, asset, assetVersion)}
 }
 
 func (_c *FirstPartyVulnService_SyncAllIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion)) *FirstPartyVulnService_SyncAllIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Org), args[1].(models.Project), args[2].(models.Asset), args[3].(models.AssetVersion))
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		var arg1 models.Project
+		if args[1] != nil {
+			arg1 = args[1].(models.Project)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
+		}
+		var arg3 models.AssetVersion
+		if args[3] != nil {
+			arg3 = args[3].(models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -108,18 +129,44 @@ type FirstPartyVulnService_SyncIssues_Call struct {
 }
 
 // SyncIssues is a helper method to define mock.On call
-//   - org
-//   - project
-//   - asset
-//   - assetVersion
-//   - vulnList
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - vulnList []models.FirstPartyVuln
 func (_e *FirstPartyVulnService_Expecter) SyncIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}) *FirstPartyVulnService_SyncIssues_Call {
 	return &FirstPartyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", org, project, asset, assetVersion, vulnList)}
 }
 
 func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln)) *FirstPartyVulnService_SyncIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Org), args[1].(models.Project), args[2].(models.Asset), args[3].(models.AssetVersion), args[4].([]models.FirstPartyVuln))
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		var arg1 models.Project
+		if args[1] != nil {
+			arg1 = args[1].(models.Project)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
+		}
+		var arg3 models.AssetVersion
+		if args[3] != nil {
+			arg3 = args[3].(models.AssetVersion)
+		}
+		var arg4 []models.FirstPartyVuln
+		if args[4] != nil {
+			arg4 = args[4].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -166,19 +213,50 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 }
 
 // UpdateFirstPartyVulnState is a helper method to define mock.On call
-//   - tx
-//   - userID
-//   - firstPartyVuln
-//   - statusType
-//   - justification
-//   - mechanicalJustification
+//   - tx core.DB
+//   - userID string
+//   - firstPartyVuln *models.FirstPartyVuln
+//   - statusType string
+//   - justification string
+//   - mechanicalJustification models.MechanicalJustificationType
 func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)}
 }
 
 func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(*models.FirstPartyVuln), args[3].(string), args[4].(string), args[5].(models.MechanicalJustificationType))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 *models.FirstPartyVuln
+		if args[2] != nil {
+			arg2 = args[2].(*models.FirstPartyVuln)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 models.MechanicalJustificationType
+		if args[5] != nil {
+			arg5 = args[5].(models.MechanicalJustificationType)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
 	})
 	return _c
 }
@@ -216,19 +294,50 @@ type FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_C
 }
 
 // UserDetectedExistingFirstPartyVulnOnDifferentBranch is a helper method to define mock.On call
-//   - tx
-//   - scannerID
-//   - firstPartyVulns
-//   - alreadyExistingEvents
-//   - assetVersion
-//   - asset
+//   - tx core.DB
+//   - scannerID string
+//   - firstPartyVulns []models.FirstPartyVuln
+//   - alreadyExistingEvents [][]models.VulnEvent
+//   - assetVersion models.AssetVersion
+//   - asset models.Asset
 func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx interface{}, scannerID interface{}, firstPartyVulns interface{}, alreadyExistingEvents interface{}, assetVersion interface{}, asset interface{}) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)}
 }
 
 func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].([]models.FirstPartyVuln), args[3].([][]models.VulnEvent), args[4].(models.AssetVersion), args[5].(models.Asset))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []models.FirstPartyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.FirstPartyVuln)
+		}
+		var arg3 [][]models.VulnEvent
+		if args[3] != nil {
+			arg3 = args[3].([][]models.VulnEvent)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 models.Asset
+		if args[5] != nil {
+			arg5 = args[5].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
 	})
 	return _c
 }
@@ -266,17 +375,38 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 }
 
 // UserDetectedFirstPartyVulns is a helper method to define mock.On call
-//   - tx
-//   - userID
-//   - scannerID
-//   - firstPartyVulns
+//   - tx core.DB
+//   - userID string
+//   - scannerID string
+//   - firstPartyVulns []models.FirstPartyVuln
 func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interface{}, userID interface{}, scannerID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerID, firstPartyVulns)}
 }
 
 func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(string), args[3].([]models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []models.FirstPartyVuln
+		if args[3] != nil {
+			arg3 = args[3].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -314,16 +444,32 @@ type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
 }
 
 // UserFixedFirstPartyVulns is a helper method to define mock.On call
-//   - tx
-//   - userID
-//   - firstPartyVulns
+//   - tx core.DB
+//   - userID string
+//   - firstPartyVulns []models.FirstPartyVuln
 func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(tx interface{}, userID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", tx, userID, firstPartyVulns)}
 }
 
 func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].([]models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []models.FirstPartyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
