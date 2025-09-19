@@ -369,7 +369,7 @@ func (w *WebhookIntegration) CreateIssue(ctx context.Context, asset models.Asset
 	return nil
 }
 
-func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	// Logic to update an issue
 	return nil
 }
