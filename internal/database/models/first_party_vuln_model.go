@@ -138,7 +138,7 @@ func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
+func (firstPartyVuln *FirstPartyVuln) RenderADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
 	snippets, err := firstPartyVuln.FromJSONSnippetContents()
 	if err != nil {
 		slog.Error("could not parse snippet contents", "error", err)
@@ -186,13 +186,23 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 		})
 	}
 
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID),
+			},
+		},
+	})
+
 	//add slash commands
 	common.AddSlashCommandsToToFirstPartyVulnADF(&adf)
 
 	return adf
 }
 
-func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
+func (firstPartyVuln *FirstPartyVuln) RenderMarkdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
 	var str strings.Builder
 	str.WriteString("## Vulnerability Description\n\n")
 	str.WriteString(*firstPartyVuln.Message)
@@ -232,6 +242,11 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 		}
 		str.WriteString(locationString)
 	}
+
+	str.WriteString("\n\n")
+
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
+	fmt.Println("str:", str.String())
 
 	common.AddSlashCommandsToFirstPartyVuln(&str)
 

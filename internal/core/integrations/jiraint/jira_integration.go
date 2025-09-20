@@ -396,7 +396,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	return createdIssue, nil
 }
 
-func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
+func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
 
 	labels := commonint.GetLabels(firstPartyVuln)
 
@@ -409,7 +409,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
-	description := firstPartyVuln.RenderADF()
+	description := firstPartyVuln.RenderADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)
 	summary := firstPartyVuln.Title()
 
 	issue := &jira.Issue{
@@ -444,7 +444,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 	return createdIssue, nil
 }
 
-func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
 		return fmt.Errorf("asset %s is not a Jira repository", asset.ID)
@@ -458,12 +458,12 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		createdIssue, err = i.createDependencyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, projectID)
+		createdIssue, err = i.createDependencyVulnIssue(ctx, v, asset, client, assetVersionSlug, justification, orgSlug, projectSlug, projectID)
 		if err != nil {
 			return err
 		}
 	case *models.FirstPartyVuln:
-		createdIssue, err = i.createFirstPartyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, projectID)
+		createdIssue, err = i.createFirstPartyVulnIssue(ctx, v, asset, client, assetVersionSlug, justification, orgSlug, projectSlug, projectID)
 		if err != nil {
 			return err
 		}
@@ -560,7 +560,7 @@ func getOpenAndDoneStatusIDs(transitions []jira.Transition) (openStatusID, doneS
 
 }
 
-func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
 		return fmt.Errorf("asset %s is not a Jira repository", asset.ID)
@@ -585,9 +585,9 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, v
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		err = i.updateDependencyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug)
+		err = i.updateDependencyVulnTicket(ctx, v, asset, client, assetVersionSlug, org.Slug, project.Slug)
 	case *models.FirstPartyVuln:
-		err = i.updateFirstPartyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug)
+		err = i.updateFirstPartyVulnTicket(ctx, v, asset, client, assetVersionSlug, org.Slug, project.Slug)
 	}
 
 	if err != nil {
@@ -667,7 +667,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	return nil
 }
 
-func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, orgSlug string, projectSlug string) error {
+func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
@@ -705,7 +705,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 			Reporter: &jira.User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionName, componentTree),
+			Description: exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree),
 			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
 		},
 	}
@@ -738,7 +738,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 	return nil
 }
 
-func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionName string, orgSlug string, projectSlug string) error {
+func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
 
 	jiraProjectID, ticketID, err := jiraTicketIDToProjectIDAndIssueID(utils.SafeDereference(firstPartyVuln.GetTicketID()))
 	if err != nil {
@@ -767,7 +767,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 			Reporter: &jira.User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: firstPartyVuln.RenderADF(),
+			Description: firstPartyVuln.RenderADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug),
 			Summary:     firstPartyVuln.Title(),
 		},
 	}

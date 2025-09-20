@@ -106,6 +106,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		asset := core.GetAsset(event.Ctx)
+		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
 
 		if vuln.GetTicketID() == nil {
 			// we do not have a ticket id - we do not need to do anything
@@ -178,7 +179,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 				return err
 			}
 		}
-		return g.UpdateIssue(event.Ctx.Request().Context(), asset, vuln)
+		return g.UpdateIssue(event.Ctx.Request().Context(), asset, assetVersionSlug, vuln)
 	}
 	return nil
 }

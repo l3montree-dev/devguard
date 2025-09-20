@@ -701,7 +701,7 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 	return adf
 }
 
-func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
+func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string, mermaidPathToComponent string) string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveID, e.ShortenedComponentPurl))
 
@@ -749,7 +749,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.dependencyVulnID))
 	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
