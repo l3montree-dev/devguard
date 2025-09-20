@@ -1472,7 +1472,6 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	for _, labelToUpdate := range labelsToUpdate {
 		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
-			fmt.Println("updating label", label.Name)
 			_, res, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
 				Color:       gitlab.Ptr(labelToUpdate.Color),
 				Description: gitlab.Ptr(labelToUpdate.Description),
@@ -1481,7 +1480,6 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 				slog.Error("failed to update label", "err", err, "label", label)
 				return err
 			}
-			fmt.Println("response status:", res.StatusCode)
 		} else {
 			slog.Warn("label does not exist in project", "label", label.Name)
 			continue
