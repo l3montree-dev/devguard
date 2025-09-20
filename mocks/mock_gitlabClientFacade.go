@@ -1176,6 +1176,68 @@ func (_c *GitlabClientFacade_GetProject_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// GetProjectIssues provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetProjectIssues(projectID int) ([]*gitlab.Issue, error) {
+	ret := _mock.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProjectIssues")
+	}
+
+	var r0 []*gitlab.Issue
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int) ([]*gitlab.Issue, error)); ok {
+		return returnFunc(projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int) []*gitlab.Issue); ok {
+		r0 = returnFunc(projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Issue)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
+		r1 = returnFunc(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// GitlabClientFacade_GetProjectIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProjectIssues'
+type GitlabClientFacade_GetProjectIssues_Call struct {
+	*mock.Call
+}
+
+// GetProjectIssues is a helper method to define mock.On call
+//   - projectID int
+func (_e *GitlabClientFacade_Expecter) GetProjectIssues(projectID interface{}) *GitlabClientFacade_GetProjectIssues_Call {
+	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", projectID)}
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(projectID int)) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Return(issues []*gitlab.Issue, err error) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Return(issues, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(projectID int) ([]*gitlab.Issue, error)) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetVersion provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
 	ret := _mock.Called(ctx)
