@@ -912,7 +912,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
 		SpecVersion: cdx.SpecVersion1_6,
@@ -920,9 +920,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    assetVersion.Slug,
+				BOMRef:    artifactName,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      asset.Name,
+				Name:      artifactName,
 				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
