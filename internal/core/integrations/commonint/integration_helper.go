@@ -279,6 +279,61 @@ func GetLabels(vuln models.Vuln) []string {
 	return labels
 }
 
+type Label struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+}
+
+func GetAllRiskLabelsWithColors() []Label {
+
+	riskDescription := "Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"
+
+	return []Label{
+		{
+			Name:        "risk:critical",
+			Color:       "#FF0000",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:high",
+			Color:       "#FFA500",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:medium",
+			Color:       "#FFFF00",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:low",
+			Color:       "#00FF00",
+			Description: riskDescription,
+		},
+		{
+			Name:        "cvss-severity:critical",
+			Color:       "#FF0000",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:high",
+			Color:       "#FFA500",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:medium",
+			Color:       "#FFFF00",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:low",
+			Color:       "#00FF00",
+			Description: "CVSS severity of the vulnerability",
+		},
+	}
+}
+
 func AddPipelineTemplate(content []byte, template string) string { //nolint:unused
 	fileStr := string(content)
 	includeIndex := -1
