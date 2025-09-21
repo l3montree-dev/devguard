@@ -54,6 +54,24 @@ func TestCreateProjectHook(t *testing.T) {
 		assert.Equal(t, "https://api.stage.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
+	t.Run("Returned ProjectHookOption Struct should have the URL set to localhost if INSTANCE_DOMAIN is set to localhost - and enable ssl set to false", func(t *testing.T) {
+
+		os.Setenv("INSTANCE_DOMAIN", "http://localhost:8080")
+
+		hooks := []*gitlab.ProjectHook{}
+		token, err := uuid.NewUUID()
+		if err != nil {
+			slog.Error("error when trying to generate token")
+			return
+		}
+		results, err := createProjectHookOptions(&token, hooks)
+		if err != nil {
+			slog.Error(err.Error())
+			return
+		}
+		assert.Equal(t, "http://localhost:8080/api/v1/webhook/", *results.URL)
+		assert.Equal(t, false, *results.EnableSSLVerification)
+	})
 	t.Run("function should default to main if the ENV Variable is empty", func(t *testing.T) {
 
 		os.Setenv("INSTANCE_DOMAIN", "")
