@@ -1476,7 +1476,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	for _, labelToUpdate := range labelsToUpdate {
 		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
-			_, res, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
+			_, _, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
 				Color:       gitlab.Ptr(labelToUpdate.Color),
 				Description: gitlab.Ptr(labelToUpdate.Description),
 			})
