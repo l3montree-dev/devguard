@@ -55,9 +55,9 @@ func TestBuildVEX(t *testing.T) {
 		assert.Nil(t, err)
 
 		//test general metadata
-		assert.Equal(t, VEXResult.Metadata.Component.BOMRef, "main")
-		assert.Equal(t, VEXResult.Metadata.Component.Name, "Test Asset")
-		assert.Equal(t, VEXResult.Metadata.Component.Author, "Test Org")
+		assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.BOMRef)
+		assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.Name)
+		assert.Equal(t, "Test Org", VEXResult.Metadata.Component.Author)
 
 		assert.Empty(t, VEXResult.Vulnerabilities)
 	})
