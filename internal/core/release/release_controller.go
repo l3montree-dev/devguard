@@ -213,7 +213,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(asset, av, orgName, depVulns)
+		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, orgName, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}

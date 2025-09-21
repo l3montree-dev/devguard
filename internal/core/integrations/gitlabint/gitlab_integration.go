@@ -1012,6 +1012,10 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists
 		constructedURL := instanceDomain + "/api/v1/webhook/"
 		projectOptions.URL = &constructedURL
+		// check if we should really enable ssl verification
+		if strings.HasPrefix(instanceDomain, "http://") {
+			projectOptions.EnableSSLVerification = gitlab.Ptr(false)
+		}
 	}
 	if token != nil {
 		projectOptions.Token = gitlab.Ptr(token.String())
