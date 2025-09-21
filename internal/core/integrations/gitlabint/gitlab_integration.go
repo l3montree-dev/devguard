@@ -1407,3 +1407,89 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	})
 	return createdIssue, err
 }
+
+func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	client, projectID, err := g.getClientBasedOnAsset(asset)
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
+	labels := commonint.GetAllRiskLabelsWithColors()
+
+	labelsToUpdate := []commonint.Label{}
+
+	for _, label := range labels {
+		_, _, err := client.CreateNewLabel(ctx, projectID, &gitlab.CreateLabelOptions{
+			Name:        gitlab.Ptr(label.Name),
+			Color:       gitlab.Ptr(label.Color),
+			Description: gitlab.Ptr(label.Description),
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), " 409 {message: Label already exists}") {
+				labelsToUpdate = append(labelsToUpdate, label)
+				continue
+			}
+			slog.Error("failed to create label", "err", err, "label", label)
+			return err
+		}
+	}
+
+	if len(labelsToUpdate) > 0 {
+		err = g.UpdateLabels(ctx, asset, labelsToUpdate)
+		if err != nil {
+			slog.Error("failed to update labels", "err", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset, labelsToUpdate []commonint.Label) error {
+	if len(labelsToUpdate) == 0 {
+		return nil
+	}
+
+	client, projectID, err := g.getClientBasedOnAsset(asset)
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
+	projectLabels, _, err := client.ListLabels(ctx, projectID, &gitlab.ListLabelsOptions{})
+	if err != nil {
+		slog.Error("failed to list labels", "err", err)
+		return err
+	}
+
+	projectLabelsMap := make(map[string]gitlab.Label)
+	for _, label := range projectLabels {
+		projectLabelsMap[label.Name] = *label
+	}
+
+	for _, labelToUpdate := range labelsToUpdate {
+		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
+			_, _, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
+				Color:       gitlab.Ptr(labelToUpdate.Color),
+				Description: gitlab.Ptr(labelToUpdate.Description),
+			})
+			if err != nil {
+				slog.Error("failed to update label", "err", err, "label", label)
+				return err
+			}
+		} else {
+			slog.Warn("label does not exist in project", "label", label.Name)
+			continue
+		}
+	}
+
+	return nil
+
+}
