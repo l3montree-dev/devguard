@@ -1409,7 +1409,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 }
 
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1454,7 +1454,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 		return nil
 	}
 
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
