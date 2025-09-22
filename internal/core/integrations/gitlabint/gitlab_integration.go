@@ -373,7 +373,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 
-	groups, err := fetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
+	groups, err := FetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
 		// get the groups for this user
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
@@ -478,7 +478,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 }
 
 // Generic function to fetch paginated data with rate limiting and concurrency
-func fetchPaginatedData[T any](
+func FetchPaginatedData[T any](
 	fetchPage func(page int) ([]T, *gitlab.Response, error),
 ) ([]T, error) {
 
@@ -780,7 +780,7 @@ func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
 	return uuid.Parse(strings.Split(repoID, ":")[1])
 }
 
-func extractProjectIDFromRepoID(repoID string) (int, error) {
+func ExtractProjectIDFromRepoID(repoID string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
@@ -868,7 +868,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
 
-		projectIDInt, err = extractProjectIDFromRepoID(repoID)
+		projectIDInt, err = ExtractProjectIDFromRepoID(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
@@ -1174,7 +1174,7 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 }
 
 func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		return err
 	}
@@ -1272,7 +1272,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 var notConnectedError = errors.New("not connected to gitlab")
 
-func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
+func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
@@ -1283,7 +1283,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
-		projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)
+		projectID, err := ExtractProjectIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
 		}
@@ -1310,7 +1310,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1409,7 +1409,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 }
 
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1454,7 +1454,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 		return nil
 	}
 
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil

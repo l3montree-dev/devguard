@@ -175,7 +175,7 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 	if shouldMirror(configService, "vulndb.tickets") {
 		start = time.Now()
 		// sync tickets
-		if err := SyncTickets(db, thirdPartyIntegrationAggregate); err != nil {
+		if err := SyncTickets(db, thirdPartyIntegrationAggregate, casbinRBACProvider); err != nil {
 			slog.Error("could not sync tickets", "err", err)
 			return nil
 		}

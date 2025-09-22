@@ -136,7 +136,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			slog.Error("could not read asset", "err", err)
 			return err
 		}
-		client, _, err = g.getClientBasedOnAsset(asset)
+		client, _, err = g.GetClientBasedOnAsset(asset)
 		if err != nil {
 			slog.Error("could not get gitlab client based on asset", "err", err)
 			return err
@@ -177,7 +177,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		client, _, err = g.getClientBasedOnAsset(asset)
+		client, _, err = g.GetClientBasedOnAsset(asset)
 		if err != nil {
 			slog.Error("could not get gitlab client based on asset", "err", err)
 			return err

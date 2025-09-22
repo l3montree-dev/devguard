@@ -113,7 +113,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		// we create a new ticket in github
-		client, projectID, err := g.getClientBasedOnAsset(asset)
+		client, projectID, err := g.GetClientBasedOnAsset(asset)
 		if err == notConnectedError {
 			return nil
 		} else if err != nil {
