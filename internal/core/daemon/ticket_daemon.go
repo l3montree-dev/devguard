@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -179,9 +178,7 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 	gitlabIIDs := make([]int, 0, len(issues))
 	// only count open tickets created by devguard
 	for _, issue := range issues {
-		if issue.State == "opened" && slices.Contains(issue.Labels, "devguard") {
-			gitlabIIDs = append(gitlabIIDs, issue.IID)
-		}
+		gitlabIIDs = append(gitlabIIDs, issue.IID)
 	}
 
 	// compare both states
