@@ -158,6 +158,10 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 		return nil
 	}
 	projectID, err := gitlabint.ExtractProjectIDFromRepoID(*asset.RepositoryID)
+	if err != nil {
+		slog.Error("could not extract projectID from RepoID")
+		return err
+	}
 
 	listIssuesOptions := gitlab.ListProjectIssuesOptions{
 		ListOptions: gitlab.ListOptions{
