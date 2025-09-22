@@ -37,7 +37,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		projectID := 69787207
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
-		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, nil)
+		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
 
 		err := CompareStatesAndResolveDifferences(client, asset, depVulnIIDs)
 		assert.Nil(t, err)
@@ -53,7 +53,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
 
-		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, nil)
+		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
 		client.On("EditIssue", mock.Anything, projectID, 57, mock.Anything).Return(nil, nil, nil)
 		client.On("EditIssue", mock.Anything, projectID, 42, mock.Anything).Return(nil, nil, nil)
 
