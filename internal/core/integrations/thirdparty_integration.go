@@ -239,6 +239,17 @@ func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.A
 	return err
 }
 
+func (t *thirdPartyIntegrations) CreateLabels(ctx context.Context, asset models.Asset) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CreateLabels(ctx, asset)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
 func NewThirdPartyIntegrations(externalUserRepository core.ExternalUserRepository, integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
 	return &thirdPartyIntegrations{
 		integrations:           integrations,

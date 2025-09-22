@@ -132,6 +132,63 @@ func (_c *ThirdPartyIntegration_CreateIssue_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// CreateLabels provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	ret := _mock.Called(ctx, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLabels")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset) error); ok {
+		r0 = returnFunc(ctx, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ThirdPartyIntegration_CreateLabels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLabels'
+type ThirdPartyIntegration_CreateLabels_Call struct {
+	*mock.Call
+}
+
+// CreateLabels is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asset models.Asset
+func (_e *ThirdPartyIntegration_Expecter) CreateLabels(ctx interface{}, asset interface{}) *ThirdPartyIntegration_CreateLabels_Call {
+	return &ThirdPartyIntegration_CreateLabels_Call{Call: _e.mock.On("CreateLabels", ctx, asset)}
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) Run(run func(ctx context.Context, asset models.Asset)) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) Return(err error) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset) error) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetID provides a mock function for the type ThirdPartyIntegration
 func (_mock *ThirdPartyIntegration) GetID() core.IntegrationID {
 	ret := _mock.Called()

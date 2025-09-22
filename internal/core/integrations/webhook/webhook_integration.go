@@ -319,6 +319,11 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 	return nil
 }
 
+func (w *WebhookIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	// Webhook integration does not support creating labels
+	return nil
+}
+
 func (w *WebhookIntegration) WantsToHandleWebhook(ctx core.Context) bool {
 	// Logic to determine if this integration wants to handle the webhook
 	return true
