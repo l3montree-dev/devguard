@@ -491,7 +491,7 @@ func (f FilterQuery) SQL() string {
 		return "? = ANY(string_to_array(" + field + ", ' '))"
 	default:
 		// default do an equals
-		return f.Field + " = ?"
+		return field + " = ?"
 	}
 
 }
@@ -523,7 +523,7 @@ func (s SortQuery) SQL() string {
 		return field + " desc NULLS LAST"
 	default:
 		// default do an equals
-		return s.Field + " asc NULLS LAST"
+		return field + " asc NULLS LAST"
 	}
 }
 
