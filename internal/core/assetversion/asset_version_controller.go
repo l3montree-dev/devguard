@@ -308,7 +308,7 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, org.Name, dependencyVulns), nil
+	return a.assetVersionService.BuildVeX(asset, assetVersion, artifact.ArtifactName, org.Name, dependencyVulns), nil
 }
 
 func (a *AssetVersionController) Metrics(ctx core.Context) error {
@@ -433,7 +433,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 			if err != nil {
 				return nil, err
 			}
-			vex := a.assetVersionService.BuildVeX(asset, assetVersion, org.Name, dependencyVulns)
+			vex := a.assetVersionService.BuildVeX(asset, assetVersion, artifact, org.Name, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]VulnerabilityInReport, 0, len(dependencyVulns))

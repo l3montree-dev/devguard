@@ -60,6 +60,23 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 
 		session := core.GetSession(event.Ctx)
 
+		//check if we have already created the labels in gitlab, if not create them
+		if asset.Metadata == nil {
+			asset.Metadata = map[string]any{}
+		}
+		if asset.Metadata["gitlabLabels"] == nil {
+			fmt.Println("Creating labels in gitlab")
+			err = g.CreateLabels(event.Ctx.Request().Context(), asset)
+			if err != nil {
+				return err
+			}
+			asset.Metadata["gitlabLabels"] = true
+			err = g.assetRepository.Update(nil, &asset)
+			if err != nil {
+				return err
+			}
+		}
+
 		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case core.VulnEvent:
 		ev := event.Event
