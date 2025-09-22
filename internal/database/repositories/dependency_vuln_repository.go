@@ -372,3 +372,13 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, ass
 	}
 	return vulns, nil
 }
+
+func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var vulns = []models.DependencyVuln{}
+	sql := fmt.Sprintf("SELECT * FROM dependency_vulns WHERE asset_id = '%s' AND ticket_id IS NOT NULL", assetID.String())
+	err := repository.Repository.GetDB(tx).Raw(sql).Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}

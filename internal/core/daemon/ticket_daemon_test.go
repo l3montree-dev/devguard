@@ -43,7 +43,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		assert.Nil(t, err)
 	})
 	t.Run("if we have 2 excess tickets we should close these tickets", func(t *testing.T) {
-		depVulnIIDs := []int{} // we have 2 vulnerabilities in our database
+		depVulnIIDs := []int{}
 		client := mocks.NewGitlabClientFacade(t)
 
 		asset := models.Asset{
@@ -62,7 +62,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 
 	})
 	t.Run("if we provide an invalid repository id we should fail", func(t *testing.T) {
-		depVulnIIDs := []int{} // we have 2 vulnerabilities in our database
+		depVulnIIDs := []int{}
 		client := mocks.NewGitlabClientFacade(t)
 
 		asset := models.Asset{
@@ -73,7 +73,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		assert.Equal(t, "invalid repository id (gitlaba73edfce-10f6-402d-9073-157cbc220c0f6978720d7)", err.Error())
 	})
 	t.Run("if we use another integration than gitlab, we should get no error but wont do any function calls", func(t *testing.T) {
-		depVulnIIDs := []int{} // we have 2 vulnerabilities in our database
+		depVulnIIDs := []int{}
 		client := mocks.NewGitlabClientFacade(t)
 
 		asset := models.Asset{

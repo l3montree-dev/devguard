@@ -373,7 +373,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 
-	groups, err := fetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
+	groups, err := FetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
 		// get the groups for this user
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
@@ -478,7 +478,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 }
 
 // Generic function to fetch paginated data with rate limiting and concurrency
-func fetchPaginatedData[T any](
+func FetchPaginatedData[T any](
 	fetchPage func(page int) ([]T, *gitlab.Response, error),
 ) ([]T, error) {
 

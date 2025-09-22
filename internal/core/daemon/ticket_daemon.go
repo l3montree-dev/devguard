@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -18,8 +17,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
-
-var assetToTicketIIDs map[uuid.UUID][]int
 
 func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyIntegration, casbinRBACProvider core.RBACProvider) error {
 	start := time.Now()
@@ -57,30 +54,6 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 	if err != nil {
 		slog.Error("failed to load organizations", "error", err)
 		return err
-	}
-
-	// fetch all dependency vulns and map their ticket iid to each the respective asset
-	vulns, err := dependencyVulnRepository.All()
-	if err != nil {
-		return err
-	}
-	assetToTicketIIDs = make(map[uuid.UUID][]int, len(vulns))
-
-	for _, vuln := range vulns {
-		if vuln.TicketID != nil {
-			fields := strings.Split(*vuln.TicketID, "/")
-			if len(fields) == 1 {
-				continue
-			}
-			// iid is found in the last part of the ticketID
-			iid, err := strconv.Atoi(fields[len(fields)-1])
-			if err != nil {
-				slog.Warn("invalid ticket id", "vulnID", vuln.ID)
-				continue
-			}
-			// append the iid to previously found ones
-			assetToTicketIIDs[vuln.AssetID] = append(assetToTicketIIDs[vuln.AssetID], iid)
-		}
 	}
 
 	for _, org := range orgs {
@@ -121,19 +94,36 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 					slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
 					continue
 				}
-				depVulnsIIDs := assetToTicketIIDs[asset.ID]
+				depVulns, err := dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(nil, asset.ID)
+				if err != nil {
+					return err
+				}
+
+				// convert the dependency vulns into a list of iids for this asset
+				depVulnsIIDs := make([]int, 0, len(depVulns))
+				for _, vuln := range depVulns {
+					fields := strings.Split(*vuln.TicketID, "/")
+					if len(fields) == 1 {
+						continue
+					}
+					// iid is found in the last part of the ticketID
+					iid, err := strconv.Atoi(fields[len(fields)-1])
+					if err != nil {
+						slog.Warn("invalid ticket id", "vulnID", vuln.ID)
+						continue
+					}
+					depVulnsIIDs = append(depVulnsIIDs, iid)
+				}
+
 				err = CompareStatesAndResolveDifferences(gitlabClient, asset, depVulnsIIDs)
 				if err != nil {
 					slog.Error("could not compare ticket states", "err", err)
 					continue
 				}
-
 			}
 		}
 	}
-
 	monitoring.SyncTicketDaemonAmount.Inc()
-
 	return nil
 }
 
@@ -158,18 +148,19 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 		return err
 	}
 
-	listIssuesOptions := gitlab.ListProjectIssuesOptions{
-		ListOptions: gitlab.ListOptions{
-			PerPage: 100,
-			Page:    1,
-		},
-		State: utils.Ptr("opened"),
-		Labels: &gitlab.LabelOptions{
-			"devguard",
-		},
-	}
-
-	issues, err := client.GetProjectIssues(projectID, &listIssuesOptions)
+	issues, err := gitlabint.FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
+		listIssuesOptions := gitlab.ListProjectIssuesOptions{
+			ListOptions: gitlab.ListOptions{
+				PerPage: 100,
+				Page:    page,
+			},
+			State: utils.Ptr("opened"),
+			Labels: &gitlab.LabelOptions{
+				"devguard",
+			},
+		}
+		return client.GetProjectIssues(projectID, &listIssuesOptions)
+	})
 	if err != nil {
 		return err
 	}
