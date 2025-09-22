@@ -19,15 +19,17 @@ type httpController struct {
 	assetService           core.AssetService
 	dependencyVulnService  core.DependencyVulnService
 	statisticsService      core.StatisticsService
+	thirdPartyIntegration  core.ThirdPartyIntegration
 }
 
-func NewHTTPController(repository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService) *httpController {
+func NewHTTPController(repository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService, thirdPartyIntegration core.ThirdPartyIntegration) *httpController {
 	return &httpController{
 		assetRepository:        repository,
 		assetVersionRepository: assetVersionRepository,
 		assetService:           assetService,
 		dependencyVulnService:  dependencyVulnService,
 		statisticsService:      statisticsService,
+		thirdPartyIntegration:  thirdPartyIntegration,
 	}
 }
 
@@ -245,6 +247,20 @@ func (a *httpController) Update(ctx core.Context) error {
 	org := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	if enableTicketRangeUpdated || justification != "" {
+		//check if we have already created the labels in gitlab, if not create them
+		// do NOT update the asset in the database yet, we do this after the ticket sync
+		//we can't do this in the background task, because we need this before we save the asset
+		if asset.Metadata == nil {
+			asset.Metadata = map[string]any{}
+		}
+		if asset.Metadata["gitlabLabels"] == nil {
+			err = a.thirdPartyIntegration.CreateLabels(ctx.Request().Context(), asset)
+			if err != nil {
+				slog.Error("could not create labels in gitlab", "err", err)
+			}
+			asset.Metadata["gitlabLabels"] = true
+		}
+
 		go func() {
 			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 			if err != nil {

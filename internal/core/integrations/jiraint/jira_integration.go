@@ -160,6 +160,10 @@ func (i *JiraIntegration) Delete(ctx core.Context) error {
 	})
 }
 
+func (i *JiraIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	return nil
+}
+
 func (i *JiraIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// Jira integration does not have organizations in the same way as GitLab or GitHub
 	return nil, fmt.Errorf("Jira integration does not support listing organizations")

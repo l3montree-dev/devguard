@@ -56,6 +56,8 @@ type ThirdPartyIntegration interface {
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error
 	UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error
 
+	CreateLabels(ctx context.Context, asset models.Asset) error
+
 	GetID() IntegrationID
 }
 

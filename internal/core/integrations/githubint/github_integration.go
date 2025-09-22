@@ -123,6 +123,10 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 	}
 }
 
+func (githubIntegration *GithubIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	return nil
+}
+
 func (githubIntegration *GithubIntegration) GetID() core.IntegrationID {
 	return core.GitHubIntegrationID
 }

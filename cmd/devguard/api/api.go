@@ -544,7 +544,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	patController := pat.NewHTTPController(patRepository)
 	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
-	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
+	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
 

@@ -65,7 +65,6 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			asset.Metadata = map[string]any{}
 		}
 		if asset.Metadata["gitlabLabels"] == nil {
-			fmt.Println("Creating labels in gitlab")
 			err = g.CreateLabels(event.Ctx.Request().Context(), asset)
 			if err != nil {
 				return err
