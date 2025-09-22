@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -22,7 +21,7 @@ import (
 
 var assetToTicketIIDs map[uuid.UUID][]int
 
-func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyIntegration) error {
+func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyIntegration, casbinRBACProvider core.RBACProvider) error {
 	start := time.Now()
 	defer func() {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
@@ -46,10 +45,6 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, nil)
-	if err != nil {
-		panic(err)
-	}
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 

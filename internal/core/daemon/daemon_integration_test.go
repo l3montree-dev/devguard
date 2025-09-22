@@ -344,6 +344,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	)
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
+	casbinRBACProvider := mocks.NewRBACProvider(t)
 
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
@@ -365,7 +366,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 		Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
 	}).Return(nil, nil, nil)
 
-	err = daemon.SyncTickets(db, thirdPartyIntegration)
+	err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 	assert.Nil(t, err)
 
 	db.Find(&dependencyVuln, "id = ?", dependencyVuln.ID)
@@ -408,7 +409,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 				State: "opened",
 			}, nil, nil)
 
-		err = daemon.SyncTickets(db, thirdPartyIntegration)
+		err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		// Check if the ticket was updated
@@ -443,7 +444,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 				State: "closed",
 			}, nil, nil)
 
-		err = daemon.SyncTickets(db, thirdPartyIntegration)
+		err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		// Check if the ticket was updated
@@ -526,6 +527,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 	)
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
+	casbinRBACProvider := mocks.NewRBACProvider(t)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	// Capture the create issue call to verify all artifact names are included in the description
@@ -550,7 +552,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 	}).Return(nil, nil, nil)
 
 	// Run the ticket daemon
-	err = daemon.SyncTickets(db, thirdPartyIntegration)
+	err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 	assert.Nil(t, err)
 
 	t.Run("should create a ticket with all artifact names in description", func(t *testing.T) {
