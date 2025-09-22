@@ -117,29 +117,10 @@ func (client gitlabClient) GetGroup(ctx context.Context, groupID int) (*gitlab.G
 	return client.Groups.GetGroup(groupID, nil, gitlab.WithContext(ctx))
 }
 
-func (client gitlabClient) GetProjectIssues(projectID int) ([]*gitlab.Issue, error) {
-	collectedIssues := make([]*gitlab.Issue, 0)
-	opt := gitlab.ListProjectIssuesOptions{
-		ListOptions: gitlab.ListOptions{
-			PerPage: 100,
-			Page:    1,
-		},
-	}
-	for {
-		issues, resp, err := client.Issues.ListProjectIssues(projectID, &opt, nil)
-		if err != nil {
-			return nil, err
-		}
-		if resp == nil {
-			break
-		}
-		collectedIssues = append(collectedIssues, issues...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opt.Page = resp.NextPage
-	}
-	return collectedIssues, nil
+func (client gitlabClient) GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, error) {
+	return fetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
+		return client.Issues.ListProjectIssues(projectID, opt, nil)
+	})
 }
 
 func (client gitlabClient) GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error) {

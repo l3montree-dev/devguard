@@ -149,7 +149,7 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 		return nil
 	}
 
-	//extract projectID
+	//extract information from repository ID
 	fields := strings.Split(*asset.RepositoryID, ":")
 	if len(fields) == 1 {
 		return fmt.Errorf("invalid repository id (%s)", *asset.RepositoryID)
@@ -158,12 +158,20 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 		slog.Warn("only gitlab is currently supported for this function")
 		return nil
 	}
-	projectID, err := strconv.Atoi(fields[len(fields)-1])
-	if err != nil {
-		return err
+	projectID, err := gitlabint.ExtractProjectIDFromRepoID(*asset.RepositoryID)
+
+	listIssuesOptions := gitlab.ListProjectIssuesOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+		State: utils.Ptr("opened"),
+		Labels: &gitlab.LabelOptions{
+			"devguard",
+		},
 	}
 
-	issues, err := client.GetProjectIssues(projectID)
+	issues, err := client.GetProjectIssues(projectID, &listIssuesOptions)
 	if err != nil {
 		return err
 	}
@@ -181,12 +189,12 @@ func CompareStatesAndResolveDifferences(client core.GitlabClientFacade, asset mo
 	excessIIDs := comparison.OnlyInB
 
 	// close all excess devguard tickets
-	opt := gitlab.UpdateIssueOptions{
+	updateOptions := gitlab.UpdateIssueOptions{
 		StateEvent: utils.Ptr("close"),
 	}
 	amountClosed := 0
 	for _, iid := range excessIIDs {
-		_, _, err = client.EditIssue(context.Background(), projectID, iid, &opt)
+		_, _, err = client.EditIssue(context.Background(), projectID, iid, &updateOptions)
 		if err != nil {
 			slog.Error("could not close issue", "iid", iid)
 			continue

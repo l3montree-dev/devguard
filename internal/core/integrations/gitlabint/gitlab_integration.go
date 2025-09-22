@@ -780,7 +780,7 @@ func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
 	return uuid.Parse(strings.Split(repoID, ":")[1])
 }
 
-func extractProjectIDFromRepoID(repoID string) (int, error) {
+func ExtractProjectIDFromRepoID(repoID string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
@@ -868,7 +868,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
 
-		projectIDInt, err = extractProjectIDFromRepoID(repoID)
+		projectIDInt, err = ExtractProjectIDFromRepoID(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
@@ -1279,7 +1279,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (core.Gitl
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
-		projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)
+		projectID, err := ExtractProjectIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
 		}

@@ -1177,8 +1177,8 @@ func (_c *GitlabClientFacade_GetProject_Call) RunAndReturn(run func(ctx context.
 }
 
 // GetProjectIssues provides a mock function for the type GitlabClientFacade
-func (_mock *GitlabClientFacade) GetProjectIssues(projectID int) ([]*gitlab.Issue, error) {
-	ret := _mock.Called(projectID)
+func (_mock *GitlabClientFacade) GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, error) {
+	ret := _mock.Called(projectID, opt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProjectIssues")
@@ -1186,18 +1186,18 @@ func (_mock *GitlabClientFacade) GetProjectIssues(projectID int) ([]*gitlab.Issu
 
 	var r0 []*gitlab.Issue
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int) ([]*gitlab.Issue, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, error)); ok {
+		return returnFunc(projectID, opt)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int) []*gitlab.Issue); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) []*gitlab.Issue); ok {
+		r0 = returnFunc(projectID, opt)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*gitlab.Issue)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(int, *gitlab.ListProjectIssuesOptions) error); ok {
+		r1 = returnFunc(projectID, opt)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1211,18 +1211,24 @@ type GitlabClientFacade_GetProjectIssues_Call struct {
 
 // GetProjectIssues is a helper method to define mock.On call
 //   - projectID int
-func (_e *GitlabClientFacade_Expecter) GetProjectIssues(projectID interface{}) *GitlabClientFacade_GetProjectIssues_Call {
-	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", projectID)}
+//   - opt *gitlab.ListProjectIssuesOptions
+func (_e *GitlabClientFacade_Expecter) GetProjectIssues(projectID interface{}, opt interface{}) *GitlabClientFacade_GetProjectIssues_Call {
+	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", projectID, opt)}
 }
 
-func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(projectID int)) *GitlabClientFacade_GetProjectIssues_Call {
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(projectID int, opt *gitlab.ListProjectIssuesOptions)) *GitlabClientFacade_GetProjectIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
 			arg0 = args[0].(int)
 		}
+		var arg1 *gitlab.ListProjectIssuesOptions
+		if args[1] != nil {
+			arg1 = args[1].(*gitlab.ListProjectIssuesOptions)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1233,7 +1239,7 @@ func (_c *GitlabClientFacade_GetProjectIssues_Call) Return(issues []*gitlab.Issu
 	return _c
 }
 
-func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(projectID int) ([]*gitlab.Issue, error)) *GitlabClientFacade_GetProjectIssues_Call {
+func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, error)) *GitlabClientFacade_GetProjectIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }
