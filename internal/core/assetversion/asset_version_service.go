@@ -680,6 +680,11 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		return err
 	}
 
+	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
+	if err != nil {
+		return err
+	}
+
 	// update the license information in the background
 	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
