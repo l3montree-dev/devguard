@@ -1,3 +1,60 @@
+-- Delete soft-deleted rows in asset_versions
+DELETE FROM public.asset_versions
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in assets
+DELETE FROM public.assets
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in projects
+DELETE FROM public.projects
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in attestations
+DELETE FROM public.attestations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in pat
+DELETE FROM public.pat
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in cwes
+DELETE FROM public.cwes
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in gitlab_integrations
+DELETE FROM public.gitlab_integrations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in invitations
+DELETE FROM public.invitations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in jira_integrations
+DELETE FROM public.jira_integrations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in webhook_integrations
+DELETE FROM public.webhook_integrations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in organizations
+DELETE FROM public.organizations
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in vuln_events
+DELETE FROM public.vuln_events
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in dependency_vulns
+DELETE FROM public.dependency_vulns
+WHERE deleted_at IS NOT NULL;
+
+-- Delete soft-deleted rows in releases
+DELETE FROM public.releases
+WHERE deleted_at IS NOT NULL;
+
+--- Now drop everything ---
 
 ALTER TABLE ONLY public.asset_versions
     DROP COLUMN IF EXISTS deleted_at;
