@@ -49,7 +49,7 @@ func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Pro
         WITH RECURSIVE parents AS (
             SELECT *
             FROM projects
-            WHERE organization_id = ? AND slug = ? AND deleted_at IS NULL
+            WHERE organization_id = ? AND slug = ? 
             UNION ALL
             SELECT p.*
             FROM projects p
@@ -158,7 +158,7 @@ func (g *projectRepository) RecursivelyGetChildProjects(projectID uuid.UUID) ([]
 		WITH RECURSIVE children AS (
 			SELECT *
 			FROM projects
-			WHERE parent_id = ? AND deleted_at IS NULL
+			WHERE parent_id = ? 
 			UNION ALL
 			SELECT p.*
 			FROM projects p
