@@ -46,8 +46,6 @@ func (s *service) CreateAsset(asset models.Asset) (*models.Asset, error) {
 
 	newAsset := asset
 
-	fmt.Println("Creating asset:", newAsset.Name, "with slug:", newAsset.Slug)
-
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
