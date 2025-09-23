@@ -47,7 +47,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	}
 
 	go func() {
-		sql := CleanUpRecordsSQL
+		sql := CleanupRecordsSQL
 		err = r.db.Exec(sql).Error
 		if err != nil {
 			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
@@ -57,7 +57,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	return err
 }
 
-var CleanUpRecordsSQL = `
+var CleanupRecordsSQL = `
 DELETE FROM dependency_vulns dv
 WHERE NOT EXISTS (SELECT artifact_dependency_vulns.dependency_vuln_id FROM artifact_dependency_vulns WHERE artifact_dependency_vulns.dependency_vuln_id = dv.id);
 
@@ -67,10 +67,15 @@ WHERE NOT EXISTS (SELECT artifact_license_risks.license_risk_id FROM artifact_li
 DELETE FROM component_dependencies cd
 WHERE NOT EXISTS (SELECT artifact_component_dependencies.component_dependency_id FROM artifact_component_dependencies WHERE artifact_component_dependencies.component_dependency_id = cd.id);
 
-DELETE FROM vuln_events ve
-WHERE NOT EXISTS (
+DELETE FROM vuln_events ve WHERE ve.vuln_type = 'dependencyVuln' AND NOT EXISTS (
     SELECT dependency_vulns.id FROM dependency_vulns WHERE dependency_vulns.id = ve.vuln_id
-	UNION
+);
+
+DELETE FROM vuln_events ve WHERE ve.vuln_type = 'firstPartyVuln' AND NOT EXISTS(
 	SELECT first_party_vulnerabilities.id FROM first_party_vulnerabilities WHERE first_party_vulnerabilities.id = ve.vuln_id
+);
+
+DELETE FROM vuln_events ve WHERE ve.vuln_type = 'licenseRisk' AND NOT EXISTS(
+	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.vuln_id
 );
 `

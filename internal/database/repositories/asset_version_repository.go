@@ -267,7 +267,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 			return 0, err
 		}
 		go func() {
-			sql := CleanUpRecordsSQL
+			sql := CleanupRecordsSQL
 			err = repository.db.Exec(sql).Error
 			if err != nil {
 				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
