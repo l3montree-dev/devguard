@@ -1,5 +1,3 @@
--- Copyright 2025 l3montree GmbH.
--- SPDX-License-Identifier: 	AGPL-3.0-or-later
 
 ALTER TABLE ONLY public.asset_versions
     DROP COLUMN IF EXISTS deleted_at;
@@ -50,7 +48,7 @@ ALTER TABLE ONLY public.webhook_integrations
     DROP COLUMN IF EXISTS deleted_at;     
 
 ALTER TABLE ONLY public.webhook_integrations
-    DROP CONSTRAINT IF EXISTS fk_projects_webhooks 
+    DROP CONSTRAINT IF EXISTS fk_projects_webhooks;
 
 ALTER TABLE ONLY public.webhook_integrations
     ADD CONSTRAINT fk_projects_webhooks
