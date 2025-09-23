@@ -47,7 +47,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	}
 
 	go func() {
-		sql := CleanupRecordsSQL
+		sql := CleanupOrphanedRecordsSQL
 		err = r.db.Exec(sql).Error
 		if err != nil {
 			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
@@ -57,7 +57,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	return err
 }
 
-var CleanupRecordsSQL = `
+var CleanupOrphanedRecordsSQL = `
 DELETE FROM dependency_vulns dv
 WHERE NOT EXISTS (SELECT artifact_dependency_vulns.dependency_vuln_id FROM artifact_dependency_vulns WHERE artifact_dependency_vulns.dependency_vuln_id = dv.id);
 
