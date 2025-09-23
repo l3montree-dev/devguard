@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type PAT struct {
@@ -18,8 +17,6 @@ type PAT struct {
 	Fingerprint string     `json:"fingerprint"`
 	LastUsedAt  *time.Time `json:"lastUsedAt" gorm:"default:null"`
 	Scopes      string     `json:"scopes" gorm:"type:text"` // whitespace separated scopes manage-project read-project scan-asset manage-all
-
-	DeletedAt gorm.DeletedAt `json:"deletedAt"`
 }
 
 func (p PAT) TableName() string {

@@ -204,7 +204,6 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("av.default_branch = true OR av.type = 'tag'").
 		Where("projects.id IN ?", projectIDs).
-		Where("assets.deleted_at IS NULL").
 		Find(&artifacts).Error; err != nil {
 		return nil, nil, err
 	}
