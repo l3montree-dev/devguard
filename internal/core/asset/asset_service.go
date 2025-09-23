@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 )
@@ -47,27 +46,17 @@ func (s *service) CreateAsset(asset models.Asset) (*models.Asset, error) {
 
 	newAsset := asset
 
+	fmt.Println("Creating asset:", newAsset.Name, "with slug:", newAsset.Slug)
+
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
 	err := s.assetRepository.Create(nil, &newAsset)
 
 	if err != nil {
-		if database.IsDuplicateKeyError(err) {
-			// get the asset by slug and project id unscoped
-			asset, err := s.assetRepository.ReadBySlugUnscoped(newAsset.ProjectID, newAsset.Slug)
-			if err != nil {
-				return nil, echo.NewHTTPError(500, "could not read asset").WithInternal(err)
-			}
 
-			if err = s.assetRepository.Activate(nil, asset.GetID()); err != nil {
-				return nil, echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
-			}
-			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", asset.ProjectID)
-			newAsset = asset
-		} else {
-			return nil, echo.NewHTTPError(500, "could not create asset").WithInternal(err)
-		}
+		return nil, echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+
 	}
 
 	return &newAsset, nil

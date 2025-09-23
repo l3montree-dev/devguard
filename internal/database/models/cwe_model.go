@@ -1,14 +1,12 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
 type CWE struct {
-	CreatedAt time.Time    `json:"createdAt"`
-	UpdatedAt time.Time    `json:"updatedAt"`
-	DeletedAt sql.NullTime `gorm:"index" json:"-"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	CWE string `json:"cwe" gorm:"primaryKey;not null;"`
 

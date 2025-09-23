@@ -202,7 +202,7 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID
 
 func (g *projectRepository) Create(tx core.DB, project *models.Project) error {
 	// set the slug if not set
-	slug, err := g.nextSlug(project.OrganizationID, project.Slug)
+	slug, err := g.firstFreeSlug(project.OrganizationID, project.Slug)
 	if err != nil {
 		return err
 	}
@@ -257,21 +257,34 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	return newProjects, updatedProjects, nil
 }
 
-func (g *projectRepository) nextSlug(orgID uuid.UUID, projectSlug string) (string, error) {
-	// check if the slug already exists in the database
-	var count int64
-	err := g.db.Model(&models.Project{}).Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").Count(&count).Error
+func (g *projectRepository) firstFreeSlug(orgID uuid.UUID, projectSlug string) (string, error) {
+	var slugs []string
+	err := g.db.Model(&models.Project{}).
+		Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").
+		Pluck("slug", &slugs).Error
 	if err != nil {
 		return "", err
 	}
 
-	// if the count is 0, return the slug as is
-	if count == 0 {
+	baseTaken := false
+	existing := make(map[string]bool)
+	for _, s := range slugs {
+		existing[s] = true
+		if s == projectSlug {
+			baseTaken = true
+		}
+	}
+
+	if !baseTaken {
 		return projectSlug, nil
 	}
 
-	// otherwise, append a number to the slug
-	return fmt.Sprintf("%s-%d", projectSlug, count+1), nil
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", projectSlug, i)
+		if !existing[candidate] {
+			return candidate, nil
+		}
+	}
 }
 
 func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*models.Project) error {
