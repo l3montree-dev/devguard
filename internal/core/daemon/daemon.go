@@ -2,10 +2,11 @@ package daemon
 
 import (
 	"context"
-	"errors"
+
 	"log/slog"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
@@ -15,6 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -109,8 +111,10 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 	if shouldMirror(configService, "vulndb.vulndb") {
 		start = time.Now()
 		if err := UpdateVulnDB(db); err != nil {
+			sentry.CurrentHub().CaptureException(errors.Wrap(err, "failed to update vulndb"))
 			slog.Error("could not update vulndb", "err", err)
-			return nil
+			// We do not return right here! Even if the vulndb update fails, we mark it as mirrored to avoid getting stuck in an endless loop
+			// of backup tables.
 		}
 		if err := markMirrored(configService, "vulndb.vulndb"); err != nil {
 			slog.Error("could not mark vulndb.vulndb as mirrored", "err", err)
