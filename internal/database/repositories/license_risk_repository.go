@@ -63,7 +63,7 @@ func (repository *LicenseRiskRepository) GetByAssetID(tx core.DB, assetID uuid.U
 
 func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
+	err := repository.db.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
