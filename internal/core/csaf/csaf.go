@@ -7,9 +7,12 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type csaf_controller struct {
@@ -21,40 +24,40 @@ type csaf_controller struct {
 // root struct of the document
 type csaf struct {
 	Document        documentObject  `json:"document,omitempty"`
-	ProductTree     productTree     `json:"product_tree,omitempty"`
+	ProductTree     *productTree    `json:"product_tree,omitempty"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities,omitempty"`
 }
 
 // ----------MAJOR CATEGORIES----------
 // only mandatory parent category
 type documentObject struct {
-	Acknowledgements  acknowledgements `json:"acknowledgements,omitempty"`
-	AggregateSeverity struct {
+	Acknowledgements  *acknowledgements `json:"acknowledgements,omitempty"`
+	AggregateSeverity *struct {
 		Namespace string `json:"namespace,omitempty"`
 		Text      string `json:"text,omitempty"`
 	} `json:"aggregate_severity,omitempty"`
 	Category     string `json:"category,omitempty"`     //mandatory
 	CSAFVersion  string `json:"csaf_version,omitempty"` //mandatory
-	Distribution struct {
+	Distribution *struct {
 		Text string `json:"text,omitempty"`
 		TLP  struct {
 			Label string `json:"label,omitempty"`
 			URL   string `json:"url,omitempty"`
 		} `json:"tlp,omitempty"`
 	} `json:"distribution,omitempty"`
-	Language       language             `json:"lang,omitempty"`
+	Language       *language            `json:"lang,omitempty"`
 	Notes          []note               `json:"notes,omitempty"`
 	Publisher      publisherReplacement `json:"publisher,omitempty"` //mandatory
 	References     []reference          `json:"references,omitempty"`
-	SourceLanguage language             `json:"source_lang,omitempty"`
-	Title          string               `json:"title,omitempty"` //mandatory
-	Tracking       trackingObject       `json:"tracking,omitempty"`
+	SourceLanguage *language            `json:"source_lang,omitempty"`
+	Title          string               `json:"title,omitempty"`    //mandatory
+	Tracking       trackingObject       `json:"tracking,omitempty"` //mandatory
 }
 
 type trackingObject struct {
 	Aliases            []string `json:"aliases,omitempty"`
 	CurrentReleaseDate string   `json:"current_release_date,omitempty"` //mandatory
-	Generator          struct {
+	Generator          *struct {
 		Date   string `json:"date,omitempty"`
 		Engine struct {
 			Name    string `json:"name,omitempty"`
@@ -79,7 +82,7 @@ type publisherReplacement struct {
 type revisionReplacement struct {
 	Date          string  `json:"date,omitempty"` //mandatory
 	LegacyVersion string  `json:"legacy_version,omitempty"`
-	Number        version //mandatory
+	Number        version `json:"number,omitempty"`  //mandatory
 	Summary       string  `json:"summary,omitempty"` //mandatory
 }
 
@@ -261,7 +264,9 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 			Name:      org.Slug,
 			Namespace: "https://l3montree.com", // TODO
 		},
-		Title: "Dependency Vulnerabilities present in the software",
+		Title:          "Dependency Vulnerabilities present in the software",
+		Language:       utils.Ptr("de-DE"),
+		SourceLanguage: utils.Ptr("en-US"),
 	}
 	tracking, err := generateTrackingObject(artifact, controller.DependencyVulnRepository, controller.VulnEventRepository)
 	if err != nil {
@@ -294,7 +299,7 @@ func generateVulnerabilitiesObject(artifact models.Artifact, dependencyVulnRepos
 			return nil, err
 		}
 		vulnObject.CVE = *vuln.CVEID
-		vulnObject.DiscoveryDate = events[0].CreatedAt.String()
+		vulnObject.DiscoveryDate = events[0].CreatedAt.Format(time.RFC3339)
 		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
 	return vulnerabilites, nil
@@ -306,48 +311,98 @@ func generateTrackingObject(artifact models.Artifact, dependencyVulnRepository c
 	if err != nil {
 		return tracking, err
 	}
-	allEvents := make([]models.VulnEventDetail, 0, len(vulns))
+	allEvents := make([]models.VulnEvent, 0, len(vulns))
 	for _, vuln := range vulns {
-		events, err := vulnEventRepository.ReadAssetEventsByVulnID(vuln.ID, models.VulnTypeDependencyVuln)
+		events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
 		if err != nil {
 			return tracking, err
 		}
 		allEvents = append(allEvents, events...)
 	}
-	slices.SortFunc(allEvents, func(event1 models.VulnEventDetail, event2 models.VulnEventDetail) int {
+	slices.SortFunc(allEvents, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
 		return event1.CreatedAt.Compare(event2.CreatedAt)
 	})
 
-	version := fmt.Sprintf("version %d", len(allEvents))
-	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", artifact.ArtifactName, version)
-	tracking.Version = version
-	tracking.InitialReleaseDate = allEvents[0].CreatedAt.String()
-	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.String()
+	tracking.InitialReleaseDate = allEvents[0].CreatedAt.Format(time.RFC3339)
+	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
 	revisions, err := buildRevisionHistory(allEvents)
 	if err != nil {
 		return tracking, err
 	}
 	tracking.RevisionHistory = revisions
-
+	version := fmt.Sprintf("%d", len(revisions))
+	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", artifact.ArtifactName, version)
+	tracking.Version = version
+	tracking.Status = "interim"
 	return tracking, nil
 }
 
-func buildRevisionHistory(events []models.VulnEventDetail) ([]revisionReplacement, error) {
+func buildRevisionHistory(events []models.VulnEvent) ([]revisionReplacement, error) {
 	var revisions []revisionReplacement
-	for i, event := range events {
+	timeBuckets := make(map[string][]models.VulnEvent, len(events)) // group events by time created to clean up the history
+	for _, event := range events {
+		timeBuckets[event.CreatedAt.Format(time.DateTime)] = append(timeBuckets[event.CreatedAt.Format(time.DateTime)], event)
+	}
+
+	eventGroups := make([][]models.VulnEvent, 0, len(events))
+	for _, events := range timeBuckets {
+		eventGroups = append(eventGroups, events)
+	}
+
+	slices.SortFunc(eventGroups, func(events1 []models.VulnEvent, events2 []models.VulnEvent) int {
+		return events1[0].CreatedAt.Compare(events2[0].CreatedAt)
+	})
+
+	for i, eventGroup := range eventGroups {
 		revisionObject := revisionReplacement{
-			Date: event.CreatedAt.String(),
+			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
-		switch event.Type {
-		case models.EventTypeDetected:
-			revisionObject.Summary = fmt.Sprintf("Detected new vulnerability (CVE:%s)", event.CVEID)
-		case models.EventTypeFixed:
-			revisionObject.Summary = fmt.Sprintf("Fixed Vulnerability (CVE:%s)", event.CVEID)
-		case models.EventTypeMitigate:
-			revisionObject.Summary = fmt.Sprintf("Mitigated Vulnerability (CVE:%s)", event.CVEID)
-		}
-		revisionObject.Number = strconv.Itoa(i)
+		revisionObject.Number = strconv.Itoa(i + 1)
+		revisionObject.Summary = generateSummaryForEvents(eventGroup)
 		revisions = append(revisions, revisionObject)
 	}
+
 	return revisions, nil
+}
+
+func generateSummaryForEvents(events []models.VulnEvent) string {
+	acceptedVulns := []models.VulnEvent{}
+	detectedVulns := []models.VulnEvent{}
+	falsePositiveVulns := []models.VulnEvent{}
+	fixedVulns := []models.VulnEvent{}
+	reopenedVulns := []models.VulnEvent{}
+	for _, event := range events {
+		switch event.Type {
+		case models.EventTypeAccepted:
+			acceptedVulns = append(acceptedVulns, event)
+		case models.EventTypeDetected:
+			detectedVulns = append(detectedVulns, event)
+		case models.EventTypeFalsePositive:
+			falsePositiveVulns = append(falsePositiveVulns, event)
+		case models.EventTypeFixed:
+			fixedVulns = append(fixedVulns, event)
+		case models.EventTypeReopened:
+			reopenedVulns = append(reopenedVulns, event)
+		}
+	}
+	summary := ""
+	if len(detectedVulns) > 0 {
+		summary += fmt.Sprintf("Detected %d new vulnerabilities,", len(detectedVulns))
+	}
+	if len(reopenedVulns) > 0 {
+		summary += fmt.Sprintf(" Reopened %d old vulnerabilities,", len(reopenedVulns))
+	}
+	if len(fixedVulns) > 0 {
+		summary += fmt.Sprintf(" Fixed %d existing vulnerabilities,", len(fixedVulns))
+	}
+	if len(acceptedVulns) > 0 {
+		summary += fmt.Sprintf(" Accepted %d existing vulnerabilities,", len(acceptedVulns))
+	}
+	if len(falsePositiveVulns) > 0 {
+		summary += fmt.Sprintf(" Marked %d existing vulnerabilities as false positives", len(falsePositiveVulns))
+	}
+	summary = strings.TrimLeft(summary, " ")
+	summary = strings.TrimRight(summary, ",")
+	summary += "."
+	return summary
 }

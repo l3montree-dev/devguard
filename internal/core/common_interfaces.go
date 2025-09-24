@@ -334,6 +334,7 @@ type VulnEventRepository interface {
 	Save(db DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
+	GetSecurityRelevantEventsForVulnID(tx DB, vulnID string) ([]models.VulnEvent, error)
 }
 
 type GithubAppInstallationRepository interface {
