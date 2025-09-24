@@ -361,11 +361,11 @@ func (s *service) SyncIssues(org models.Org, project models.Project, asset model
 				continue
 			}
 			errgroup.Go(func() (any, error) {
-				return s.createIssue(vulnerability, asset, assetVersion.Name, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system"), nil
+				return s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system"), nil
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(asset, vulnerability), nil
+				return s.updateIssue(asset, assetVersion.Slug, vulnerability), nil
 			})
 		}
 	}
@@ -375,18 +375,18 @@ func (s *service) SyncIssues(org models.Org, project models.Project, asset model
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, orgSlug string, projectSlug string, justification string, userID string) error {
+func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, &vulnerability, projectSlug, orgSlug, justification, userID)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
-func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln) error {
+func (s *service) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
 	if err != nil {
 		return err
 	}

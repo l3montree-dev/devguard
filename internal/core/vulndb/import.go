@@ -74,26 +74,24 @@ func (s importService) Import(tx core.DB, tag string) error {
 	if err != nil {
 		return fmt.Errorf("could not verify signature: %w", err)
 	}
-	slog.Info("successfully verified signature")
 
 	// open the blob file
 	f, err := os.Open(blobFile)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("could not open blob file: %w", err))
 	}
 	defer f.Close()
 
 	// unzip the blob file
 	err = utils.Unzip(blobFile, tmp+"/")
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("could not unzip blob file: %w", err))
 	}
-	slog.Info("unzipping vulndb completed")
 
 	//copy csv files to database
 	err = s.copyCSVToDB(tmp)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not copy csv to db: %w", err)
 	}
 
 	slog.Info("importing vulndb completed", "duration", time.Since(begin))

@@ -89,7 +89,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		emptyList := []client.Identity{}
 
 		accesscontrol := mocks.NewAccessControl(t)
-		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{"abc"}, nil)
 
 		adminClient := mocks.NewAdminClient(t)
 		adminClient.On("ListUser", mock.Anything).Return(emptyList, fmt.Errorf("Something went wrong"))
@@ -110,12 +110,39 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		}
 
 	})
-	t.Run("Should succeed if everything works as expected with empty lists", func(t *testing.T) {
+	t.Run("should NOT call ListUser if the GetAllMembersOfOrganization returns an empty array succeed if everything works as expected with empty lists", func(t *testing.T) {
+		accesscontrol := mocks.NewAccessControl(t)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
 
+		adminClient := mocks.NewAdminClient(t)
+
+		// THIS SHOULD NOT BE CALLED
+		// adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
+
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]core.User{})
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		ctx := e.NewContext(req, httptest.NewRecorder())
+
+		core.SetOrg(ctx, models.Org{})
+		core.SetRBAC(ctx, accesscontrol)
+		core.SetAuthAdminClient(ctx, adminClient)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		_, err := org.FetchMembersOfOrganization(ctx)
+		if err != nil {
+			t.Fail()
+		}
+	})
+
+	t.Run("should succeed if everything works as expected", func(t *testing.T) {
 		emptyList := []client.Identity{}
 
 		accesscontrol := mocks.NewAccessControl(t)
-		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{"abc"}, nil)
 
 		adminClient := mocks.NewAdminClient(t)
 		adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
@@ -138,6 +165,5 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 
 			t.Fail()
 		}
-
 	})
 }

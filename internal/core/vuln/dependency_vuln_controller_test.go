@@ -37,7 +37,11 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		mocks.NewRBACProvider(t),
 		factory,
 	)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+	externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything).Return(nil, nil)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	// Setup repositories and services
 	depVulnRepo := repositories.NewDependencyVulnRepository(db)
@@ -53,7 +57,9 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 	)
 	projectService := mocks.NewProjectService(t)
 
-	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService)
+	statisticsService := mocks.NewStatisticsService(t)
+
+	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService, statisticsService)
 
 	// Create org, project, asset, asset version, and dependency vuln
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -113,7 +119,6 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		core.SetRBAC(ctx, rbac)
 
 		adminClient := mocks.NewAdminClient(t)
-		adminClient.On("ListUser", mock.Anything, mock.Anything).Return(nil, nil)
 		core.SetAuthAdminClient(ctx, adminClient)
 		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 

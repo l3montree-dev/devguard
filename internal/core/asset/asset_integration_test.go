@@ -16,6 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestHandleLookup(t *testing.T) {
@@ -27,8 +28,9 @@ func TestHandleLookup(t *testing.T) {
 	assetService := mocks.NewAssetService(t)
 	depVulnService := mocks.NewDependencyVulnService(t)
 	statsService := mocks.NewStatisticsService(t)
+	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
-	controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService)
+	controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService, thirdPartyIntegration)
 
 	// create an organization, project, and asset1 for testing
 	_, _, asset1, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -89,8 +91,11 @@ func TestAssetUpdate(t *testing.T) {
 		assetService := mocks.NewAssetService(t)
 		assetVersionRepo := repositories.NewAssetVersionRepository(db)
 		vulnService := inithelper.CreateDependencyVulnService(db, nil, nil, nil)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
-		controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, vulnService, nil)
+		thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
+
+		controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, vulnService, nil, thirdPartyIntegration)
 
 		// create an organization, project, and asset1 for testing
 		org, project, asset1, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)

@@ -33,7 +33,6 @@ WORKDIR /app
 COPY --chown=53111:53111 config/rbac_model.conf /app/config/rbac_model.conf
 COPY --chown=53111:53111 --from=build /go/src/app/devguard /usr/local/bin/devguard
 COPY --chown=53111:53111 --from=build /go/src/app/devguard-cli /usr/local/bin/devguard-cli
-COPY --chown=53111:53111 templates /app/templates
 COPY --chown=53111:53111 intoto-public-key.pem /app/intoto-public-key.pem
 COPY --chown=53111:53111 cosign.pub /app/cosign.pub
 

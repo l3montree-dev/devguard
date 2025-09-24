@@ -35,7 +35,7 @@ type Asset struct {
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 
-	AssetVersions []AssetVersion `json:"refs" gorm:"foreignKey:AssetID;references:ID;"`
+	AssetVersions []AssetVersion `json:"refs" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	Importance            int  `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet bool `json:"reachableFromInternet" gorm:"default:false;"`
@@ -61,9 +61,10 @@ type Asset struct {
 	BadgeSecret   *uuid.UUID `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
 	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
 
-	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	RepositoryProvider       *string `json:"repositoryProvider" gorm:"type:text;"`
+	ExternalEntityID         *string        `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID *string        `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	RepositoryProvider       *string        `json:"repositoryProvider" gorm:"type:text;"`
+	Metadata                 database.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
 }
 
 func (m Asset) TableName() string {

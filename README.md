@@ -59,10 +59,12 @@ We are using DevGuard to scan and manage the risks of DevGuard itself—essentia
 
 We believe VEX information should be shared via a link due to its dynamic nature, as what is risk-free today may be affected by a CVE tomorrow. We've integrated the DevGuard risk scoring into the metrics, with detailed documentation on its calculation to follow soon. SBOM and VEX data are always up to date at these links: 
 
+https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/vex.json/
+
 |Project|SBOM|VeX|
 |---|---|---|
-|[Devguard Golang API](https://github.com/l3montree-dev/devguard)|[SBOM](https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/sbom.json?scanner=github.com%2Fl3montree-dev%2Fdevguard%2Fcmd%2Fdevguard-scanner%2Fcontainer-scanning)|[VeX](https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/vex.json?scanner=github.com%2Fl3montree-dev%2Fdevguard%2Fcmd%2Fdevguard-scanner%2Fcontainer-scanning)|
-|[Devguard Web-Frontend](https://github.com/l3montree-dev/devguard-web)|[SBOM](https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/sbom.json?scanner=github.com%2Fl3montree-dev%2Fdevguard%2Fcmd%2Fdevguard-scanner%2Fcontainer-scanning)|[VeX](https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/vex.json?scanner=github.com%2Fl3montree-dev%2Fdevguard%2Fcmd%2Fdevguard-scanner%2Fcontainer-scanning)|
+|[Devguard Golang API](https://github.com/l3montree-dev/devguard)|[SBOM](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/sbom.json/)|[VeX](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/vex.json/)|
+|[Devguard Web-Frontend](https://github.com/l3montree-dev/devguard-web)|[SBOM](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web/sbom.json/)|[VeX](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web/vex.json/)|
 
 ### The problem we solve
 
@@ -96,6 +98,103 @@ Security through obscurity may have worked in the past, but we want to develop s
 
 <img width="1702" height="688" alt="deps" src="https://github.com/user-attachments/assets/3dce3e70-3e5b-49c0-8d99-803f7c95d9a2" />
 
+
+<!-- INSTALLATION -->
+## Scanner Installation
+
+DevGuard Scanner can be installed in multiple ways. Choose the method that best fits your environment:
+
+### Go Install (Recommended)
+
+The easiest way to install the latest version:
+
+```bash
+# Install the latest version
+go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@latest
+
+# Install a specific version
+go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@v1.0.0
+```
+
+### Pre-built Binaries
+
+Download pre-built binaries from our [releases page](https://github.com/l3montree-dev/devguard/releases):
+
+```bash
+# Download and verify (example for Linux AMD64)
+curl -L https://github.com/l3montree-dev/devguard/releases/download/v1.0.0/devguard-scanner_1.0.0_Linux_x86_64.tar.gz -o devguard-scanner.tar.gz
+
+# Verify the download (optional but recommended)
+curl -L https://github.com/l3montree-dev/devguard/releases/download/v1.0.0/checksums.txt -o checksums.txt
+sha256sum --check --ignore-missing checksums.txt
+
+# Extract and install
+tar -xzf devguard-scanner.tar.gz
+sudo mv devguard-scanner /usr/local/bin/
+```
+
+### Docker
+
+```bash
+# Run directly from Docker Hub
+docker run --rm -v $(pwd):/app ghcr.io/l3montree-dev/devguard-scanner:latest sca /app
+
+# Pull the image first
+docker pull ghcr.io/l3montree-dev/devguard-scanner:latest
+```
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/l3montree-dev/devguard.git
+cd devguard
+
+# Build the scanner
+make devguard-scanner
+
+# Or build with release flags for production
+make release-devguard-scanner
+```
+
+### Security Verification
+
+All our releases are cryptographically signed and include SLSA Level 3 provenance for supply chain security.
+
+**Verify binary signatures:**
+```bash
+# Install cosign
+go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+
+# Verify the checksums file signature
+cosign verify-blob \
+  --certificate-identity-regexp="^https://github.com/l3montree-dev/devguard/.github/workflows/" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  --bundle checksums.txt.sig.bundle \
+  checksums.txt
+```
+
+**Verify container images:**
+```bash
+cosign verify ghcr.io/l3montree-dev/devguard-scanner:latest \
+  --certificate-identity-regexp="^https://github.com/l3montree-dev/devguard/.github/workflows/" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+```
+
+### ✅ Verify Installation
+
+```bash
+# Check if installation was successful
+devguard-scanner --version
+
+# Get help
+devguard-scanner --help
+
+# Run a quick security scan
+devguard-scanner sca --help
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 <!-- CONTRIBUTING -->

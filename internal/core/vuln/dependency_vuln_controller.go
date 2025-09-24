@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
@@ -31,6 +32,7 @@ type dependencyVulnHTTPController struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	dependencyVulnService    core.DependencyVulnService
 	projectService           core.ProjectService
+	statisticsService        core.StatisticsService
 }
 
 type DependencyVulnStatus struct {
@@ -39,11 +41,12 @@ type DependencyVulnStatus struct {
 	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHTTPController {
+func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService) *dependencyVulnHTTPController {
 	return &dependencyVulnHTTPController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		projectService:           projectService,
+		statisticsService:        statisticsService,
 	}
 }
 
@@ -300,6 +303,19 @@ func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) err
 	if err != nil {
 		return err
 	}
+
+	//update risk history if the risk has changed
+	eventType := models.VulnEventType(statusType)
+
+	for _, artifact := range dependencyVuln.Artifacts {
+		if eventType == models.EventTypeAccepted || eventType == models.EventTypeFalsePositive || eventType == models.EventTypeReopened {
+			if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+
+			}
+		}
+	}
+
 	err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,

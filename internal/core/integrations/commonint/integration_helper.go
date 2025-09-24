@@ -1,11 +1,15 @@
 package commonint
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
+
+	_ "embed"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -63,7 +67,39 @@ func commentTrimmedPrefix(vulnType models.VulnType, comment string) (models.Vuln
 	return models.EventTypeComment, "", comment
 }
 
-func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName string, templatePath string, branchName string) error {
+//go:embed templates/full_template.yml.gotmpl
+var fullTemplate string
+
+func buildGitlabCiTemplate(templateID string) (string, error) {
+	var templateFile string
+
+	switch templateID {
+	case "full":
+		fallthrough
+	default:
+		templateFile = fullTemplate
+	}
+
+	tmpl, err := template.New("gitlab-ci-template").Parse(templateFile)
+	if err != nil {
+		return "", fmt.Errorf("could not parse template: %v", err)
+	}
+
+	output := bytes.NewBuffer(nil)
+
+	err = tmpl.Execute(output, map[string]string{
+		"DevGuardCiComponentBase": utils.OrDefault(utils.EmptyThenNil(os.Getenv("DEVGUARD_CI_COMPONENT_BASE")), "https://gitlab.com/l3montree/devguard/-/raw/main"),
+		"DevGuardFrontendUrl":     utils.OrDefault(utils.EmptyThenNil(os.Getenv("FRONTEND_URL")), "app.devguard.org"),
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("could not execute template: %v", err)
+	}
+
+	return output.String(), nil
+}
+
+func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName string, templateID string, branchName string) error {
 	dir, err := os.MkdirTemp("", "repo-clone")
 	if err != nil {
 		return fmt.Errorf("could not create temporary directory: %v", err)
@@ -102,12 +138,6 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 		return fmt.Errorf("could not checkout branch: %v", err)
 	}
 
-	templateFile, err := os.ReadFile(templatePath)
-	if err != nil {
-		return fmt.Errorf("could not read template file: %v", err)
-	}
-	template := string(templateFile)
-
 	//read the file
 	//var newContent string
 	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
@@ -137,10 +167,17 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 		return fmt.Errorf("could not open file: %v", err)
 	}
 
+	template, err := buildGitlabCiTemplate(templateID)
+	if err != nil {
+		return fmt.Errorf("could not build template: %v", err)
+	}
+
 	_, err = f.Write([]byte(template))
+
 	if err != nil {
 		return fmt.Errorf("could not write to file: %v", err)
 	}
+
 	f.Close()
 
 	//push the changes
@@ -240,6 +277,61 @@ func GetLabels(vuln models.Vuln) []string {
 	}
 
 	return labels
+}
+
+type Label struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+}
+
+func GetAllRiskLabelsWithColors() []Label {
+
+	riskDescription := "Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"
+
+	return []Label{
+		{
+			Name:        "risk:critical",
+			Color:       "#FF0000",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:high",
+			Color:       "#FFA500",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:medium",
+			Color:       "#FFFF00",
+			Description: riskDescription,
+		},
+		{
+			Name:        "risk:low",
+			Color:       "#00FF00",
+			Description: riskDescription,
+		},
+		{
+			Name:        "cvss-severity:critical",
+			Color:       "#FF0000",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:high",
+			Color:       "#FFA500",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:medium",
+			Color:       "#FFFF00",
+			Description: "CVSS severity of the vulnerability",
+		},
+		{
+			Name:        "cvss-severity:low",
+			Color:       "#00FF00",
+			Description: "CVSS severity of the vulnerability",
+		},
+	}
 }
 
 func AddPipelineTemplate(content []byte, template string) string { //nolint:unused

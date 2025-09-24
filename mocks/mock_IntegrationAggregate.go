@@ -132,6 +132,63 @@ func (_c *IntegrationAggregate_CreateIssue_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// CreateLabels provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) CreateLabels(ctx context.Context, asset models.Asset) error {
+	ret := _mock.Called(ctx, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLabels")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset) error); ok {
+		r0 = returnFunc(ctx, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// IntegrationAggregate_CreateLabels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLabels'
+type IntegrationAggregate_CreateLabels_Call struct {
+	*mock.Call
+}
+
+// CreateLabels is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asset models.Asset
+func (_e *IntegrationAggregate_Expecter) CreateLabels(ctx interface{}, asset interface{}) *IntegrationAggregate_CreateLabels_Call {
+	return &IntegrationAggregate_CreateLabels_Call{Call: _e.mock.On("CreateLabels", ctx, asset)}
+}
+
+func (_c *IntegrationAggregate_CreateLabels_Call) Run(run func(ctx context.Context, asset models.Asset)) *IntegrationAggregate_CreateLabels_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_CreateLabels_Call) Return(err error) *IntegrationAggregate_CreateLabels_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_CreateLabels_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset) error) *IntegrationAggregate_CreateLabels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetID provides a mock function for the type IntegrationAggregate
 func (_mock *IntegrationAggregate) GetID() core.IntegrationID {
 	ret := _mock.Called()
@@ -745,16 +802,16 @@ func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx 
 }
 
 // UpdateIssue provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, asset, vuln)
+func (_mock *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+	ret := _mock.Called(ctx, asset, assetVersionSlug, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, asset, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln) error); ok {
+		r0 = returnFunc(ctx, asset, assetVersionSlug, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -769,12 +826,13 @@ type IntegrationAggregate_UpdateIssue_Call struct {
 // UpdateIssue is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asset models.Asset
+//   - assetVersionSlug string
 //   - vuln models.Vuln
-func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, vuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
-	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, vuln)}
+func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
+	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln)}
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln)) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -784,14 +842,19 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Contex
 		if args[1] != nil {
 			arg1 = args[1].(models.Asset)
 		}
-		var arg2 models.Vuln
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(models.Vuln)
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Vuln
+		if args[3] != nil {
+			arg3 = args[3].(models.Vuln)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -802,7 +865,7 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vuln models.Vuln) error) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -19,6 +19,10 @@ func (licenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision str
 	licenseRisk.FinalLicenseDecision = &finalLicenseDecision
 }
 
+func (licenseRisk *LicenseRisk) GetArtifacts() []Artifact {
+	return licenseRisk.Artifacts
+}
+
 func (licenseRisk LicenseRisk) TableName() string {
 	return "license_risks"
 }

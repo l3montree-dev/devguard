@@ -60,6 +60,22 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 
 		session := core.GetSession(event.Ctx)
 
+		//check if we have already created the labels in gitlab, if not create them
+		if asset.Metadata == nil {
+			asset.Metadata = map[string]any{}
+		}
+		if asset.Metadata["gitlabLabels"] == nil {
+			err = g.CreateLabels(event.Ctx.Request().Context(), asset)
+			if err != nil {
+				return err
+			}
+			asset.Metadata["gitlabLabels"] = true
+			err = g.assetRepository.Update(nil, &asset)
+			if err != nil {
+				return err
+			}
+		}
+
 		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case core.VulnEvent:
 		ev := event.Event
@@ -89,6 +105,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		asset := core.GetAsset(event.Ctx)
+		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
 
 		if vuln.GetTicketID() == nil {
 			// we do not have a ticket id - we do not need to do anything
@@ -96,7 +113,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		// we create a new ticket in github
-		client, projectID, err := g.getClientBasedOnAsset(asset)
+		client, projectID, err := g.GetClientBasedOnAsset(asset)
 		if err == notConnectedError {
 			return nil
 		} else if err != nil {
@@ -155,13 +172,13 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			if err != nil {
 				return err
 			}
 		}
-		return g.UpdateIssue(event.Ctx.Request().Context(), asset, vuln)
+		return g.UpdateIssue(event.Ctx.Request().Context(), asset, assetVersionSlug, vuln)
 	}
 	return nil
 }

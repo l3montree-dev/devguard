@@ -72,6 +72,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)
+		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
 		vulnType := ev.VulnType
 
 		var vuln models.Vuln
@@ -196,7 +197,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 
 		case models.EventTypeComment:
-			justification := i.createADFComment(member.Name, " commented on the vulnerability", utils.SafeDereference(ev.Justification))
+			justification := i.createADFComment(utils.SafeDereference(ev.Justification), "", "Sent from "+member.Name+" using DevGuard")
 
 			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
@@ -211,7 +212,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 
 		}
-		return i.UpdateIssue(context.Background(), asset, vuln)
+		return i.UpdateIssue(context.Background(), asset, assetVersionSlug, vuln)
 	}
 	return nil
 

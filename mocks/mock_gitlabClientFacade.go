@@ -372,6 +372,88 @@ func (_c *GitlabClientFacade_CreateMergeRequest_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// CreateNewLabel provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) CreateNewLabel(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, label)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateNewLabel")
+	}
+
+	var r0 *gitlab.Label
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectID, label)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.CreateLabelOptions) *gitlab.Label); ok {
+		r0 = returnFunc(ctx, projectID, label)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *gitlab.CreateLabelOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectID, label)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *gitlab.CreateLabelOptions) error); ok {
+		r2 = returnFunc(ctx, projectID, label)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_CreateNewLabel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateNewLabel'
+type GitlabClientFacade_CreateNewLabel_Call struct {
+	*mock.Call
+}
+
+// CreateNewLabel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - projectID int
+//   - label *gitlab.CreateLabelOptions
+func (_e *GitlabClientFacade_Expecter) CreateNewLabel(ctx interface{}, projectID interface{}, label interface{}) *GitlabClientFacade_CreateNewLabel_Call {
+	return &GitlabClientFacade_CreateNewLabel_Call{Call: _e.mock.On("CreateNewLabel", ctx, projectID, label)}
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) Run(run func(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions)) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.CreateLabelOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.CreateLabelOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) Return(label1 *gitlab.Label, response *gitlab.Response, err error) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Return(label1, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_CreateNewLabel_Call) RunAndReturn(run func(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error)) *GitlabClientFacade_CreateNewLabel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateVariable provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) CreateVariable(ctx context.Context, projectID int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, projectID, opt)
@@ -1176,6 +1258,82 @@ func (_c *GitlabClientFacade_GetProject_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// GetProjectIssues provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error) {
+	ret := _mock.Called(projectID, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProjectIssues")
+	}
+
+	var r0 []*gitlab.Issue
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)); ok {
+		return returnFunc(projectID, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) []*gitlab.Issue); ok {
+		r0 = returnFunc(projectID, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Issue)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(int, *gitlab.ListProjectIssuesOptions) *gitlab.Response); ok {
+		r1 = returnFunc(projectID, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(int, *gitlab.ListProjectIssuesOptions) error); ok {
+		r2 = returnFunc(projectID, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_GetProjectIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProjectIssues'
+type GitlabClientFacade_GetProjectIssues_Call struct {
+	*mock.Call
+}
+
+// GetProjectIssues is a helper method to define mock.On call
+//   - projectID int
+//   - opt *gitlab.ListProjectIssuesOptions
+func (_e *GitlabClientFacade_Expecter) GetProjectIssues(projectID interface{}, opt interface{}) *GitlabClientFacade_GetProjectIssues_Call {
+	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", projectID, opt)}
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(projectID int, opt *gitlab.ListProjectIssuesOptions)) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		var arg1 *gitlab.ListProjectIssuesOptions
+		if args[1] != nil {
+			arg1 = args[1].(*gitlab.ListProjectIssuesOptions)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Return(issues []*gitlab.Issue, response *gitlab.Response, err error) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Return(issues, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)) *GitlabClientFacade_GetProjectIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetVersion provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
 	ret := _mock.Called(ctx)
@@ -1478,6 +1636,88 @@ func (_c *GitlabClientFacade_ListGroups_Call) Return(groups []*gitlab.Group, res
 }
 
 func (_c *GitlabClientFacade_ListGroups_Call) RunAndReturn(run func(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error)) *GitlabClientFacade_ListGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListLabels provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) ListLabels(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListLabels")
+	}
+
+	var r0 []*gitlab.Label
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectID, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListLabelsOptions) []*gitlab.Label); ok {
+		r0 = returnFunc(ctx, projectID, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *gitlab.ListLabelsOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectID, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *gitlab.ListLabelsOptions) error); ok {
+		r2 = returnFunc(ctx, projectID, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_ListLabels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListLabels'
+type GitlabClientFacade_ListLabels_Call struct {
+	*mock.Call
+}
+
+// ListLabels is a helper method to define mock.On call
+//   - ctx context.Context
+//   - projectID int
+//   - opt *gitlab.ListLabelsOptions
+func (_e *GitlabClientFacade_Expecter) ListLabels(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_ListLabels_Call {
+	return &GitlabClientFacade_ListLabels_Call{Call: _e.mock.On("ListLabels", ctx, projectID, opt)}
+}
+
+func (_c *GitlabClientFacade_ListLabels_Call) Run(run func(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions)) *GitlabClientFacade_ListLabels_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.ListLabelsOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.ListLabelsOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListLabels_Call) Return(labels []*gitlab.Label, response *gitlab.Response, err error) *GitlabClientFacade_ListLabels_Call {
+	_c.Call.Return(labels, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListLabels_Call) RunAndReturn(run func(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error)) *GitlabClientFacade_ListLabels_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1874,6 +2114,94 @@ func (_c *GitlabClientFacade_RemoveVariable_Call) Return(response *gitlab.Respon
 }
 
 func (_c *GitlabClientFacade_RemoveVariable_Call) RunAndReturn(run func(ctx context.Context, projectID int, key string) (*gitlab.Response, error)) *GitlabClientFacade_RemoveVariable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateLabel provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) UpdateLabel(ctx context.Context, projectID int, labelID int, opt *gitlab.UpdateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, labelID, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateLabel")
+	}
+
+	var r0 *gitlab.Label
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *gitlab.UpdateLabelOptions) (*gitlab.Label, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectID, labelID, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *gitlab.UpdateLabelOptions) *gitlab.Label); ok {
+		r0 = returnFunc(ctx, projectID, labelID, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int, *gitlab.UpdateLabelOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectID, labelID, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, int, *gitlab.UpdateLabelOptions) error); ok {
+		r2 = returnFunc(ctx, projectID, labelID, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_UpdateLabel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateLabel'
+type GitlabClientFacade_UpdateLabel_Call struct {
+	*mock.Call
+}
+
+// UpdateLabel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - projectID int
+//   - labelID int
+//   - opt *gitlab.UpdateLabelOptions
+func (_e *GitlabClientFacade_Expecter) UpdateLabel(ctx interface{}, projectID interface{}, labelID interface{}, opt interface{}) *GitlabClientFacade_UpdateLabel_Call {
+	return &GitlabClientFacade_UpdateLabel_Call{Call: _e.mock.On("UpdateLabel", ctx, projectID, labelID, opt)}
+}
+
+func (_c *GitlabClientFacade_UpdateLabel_Call) Run(run func(ctx context.Context, projectID int, labelID int, opt *gitlab.UpdateLabelOptions)) *GitlabClientFacade_UpdateLabel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 *gitlab.UpdateLabelOptions
+		if args[3] != nil {
+			arg3 = args[3].(*gitlab.UpdateLabelOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_UpdateLabel_Call) Return(label *gitlab.Label, response *gitlab.Response, err error) *GitlabClientFacade_UpdateLabel_Call {
+	_c.Call.Return(label, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_UpdateLabel_Call) RunAndReturn(run func(ctx context.Context, projectID int, labelID int, opt *gitlab.UpdateLabelOptions) (*gitlab.Label, *gitlab.Response, error)) *GitlabClientFacade_UpdateLabel_Call {
 	_c.Call.Return(run)
 	return _c
 }

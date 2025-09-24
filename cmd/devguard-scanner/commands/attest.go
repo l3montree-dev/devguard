@@ -49,7 +49,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	defer func() {
 		// even remove the key file if a panic occurs
 		err := recover()
-		slog.Info("removing key file", "keyPath", keyPath)
+		slog.Debug("removing key file", "keyPath", keyPath)
 		os.Remove(keyPath)
 
 		if err != nil {

@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -156,14 +157,15 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	var errOut bytes.Buffer
 
 	defer os.RemoveAll(path.Dir(keyPath))
-
-	// upload the public key to the backend
-	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
-	if err != nil {
-		slog.Error("could not upload public key", "err", err)
-		return err
+	if !config.RuntimeBaseConfig.Offline {
+		slog.Info("uploading public key to devguard")
+		// upload the public key to the backend
+		err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
+		if err != nil {
+			slog.Error("could not upload public key", "err", err)
+			return err
+		}
 	}
-
 	// forward the current process envs as well
 	envs := os.Environ()
 	envs = append(envs, "COSIGN_PASSWORD=")
@@ -199,8 +201,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// print the signature
-	slog.Info("signed file", "file", fileOrImageName, "signature", out.String())
+	fmt.Print(strings.TrimSpace(out.String()))
 	return nil
 }
 
@@ -220,5 +221,6 @@ func NewSignCommand() *cobra.Command {
 	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
 	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
 
+	cmd.Flags().BoolP("offline", "o", false, "If set, the scanner will not attempt to upload the signing key to devguard")
 	return cmd
 }

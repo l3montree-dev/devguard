@@ -233,13 +233,11 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Error("could not save artifact", "err", err)
 		return scanResults, err
 	}
-	// update the sbom in the database in parallel
-	s.FireAndForget(func() {
-		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
-		if err != nil {
-			slog.Error("could not update sbom", "err", err)
-		}
-	})
+	// do NOT update the sbom in parallel, because we load the components during the scan from the database
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
+	if err != nil {
+		slog.Error("could not update sbom", "err", err)
+	}
 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 }

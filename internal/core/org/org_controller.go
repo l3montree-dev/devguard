@@ -18,6 +18,7 @@ package org
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -292,60 +293,57 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		return nil, err
 	}
 
-	// get the auth admin client from the context
-	authAdminClient := core.GetAuthAdminClient(ctx)
-	// fetch the users from the auth service
-	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
-	if err != nil {
-		return nil, err
-	}
-
-	// get the roles for the members
-
-	errGroup := utils.ErrGroup[map[string]core.Role](10)
-	for _, member := range m {
-		errGroup.Go(func() (map[string]core.Role, error) {
-			role, err := accessControl.GetDomainRole(member.Id)
-			if err != nil {
-				return nil, err
-			}
-			return map[string]core.Role{member.Id: role}, nil
-		})
-	}
-
-	roles, err := errGroup.WaitAndCollect()
-	if err != nil {
-		return nil, err
-	}
-
-	roleMap := utils.Reduce(roles, func(acc map[string]core.Role, r map[string]core.Role) map[string]core.Role {
-		for k, v := range r {
-			acc[k] = v
-		}
-		return acc
-	}, make(map[string]core.Role))
-
-	users := make([]core.User, len(m))
-	for i, member := range m {
-		nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
-		var name string
-		if nameMap != nil {
-			if nameMap["first"] != nil {
-				name += nameMap["first"].(string)
-			}
-			if nameMap["last"] != nil {
-				name += " " + nameMap["last"].(string)
-			}
+	users := make([]core.User, 0, len(members))
+	if len(members) > 0 {
+		// get the auth admin client from the context
+		authAdminClient := core.GetAuthAdminClient(ctx)
+		// fetch the users from the auth service
+		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+		if err != nil {
+			return nil, err
 		}
 
-		users[i] = core.User{
-			ID:   member.Id,
-			Name: name,
-			Role: string(roleMap[member.Id]),
+		// get the roles for the members
+		errGroup := utils.ErrGroup[map[string]core.Role](10)
+		for _, member := range m {
+			errGroup.Go(func() (map[string]core.Role, error) {
+				role, err := accessControl.GetDomainRole(member.Id)
+				if err != nil {
+					return map[string]core.Role{member.Id: core.RoleUnknown}, nil
+				}
+				return map[string]core.Role{member.Id: role}, nil
+			})
+		}
+
+		roles, err := errGroup.WaitAndCollect()
+		if err != nil {
+			return nil, err
+		}
+
+		roleMap := utils.Reduce(roles, func(acc map[string]core.Role, r map[string]core.Role) map[string]core.Role {
+			maps.Copy(acc, r)
+			return acc
+		}, make(map[string]core.Role))
+
+		for _, member := range m {
+			nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
+			var name string
+			if nameMap != nil {
+				if nameMap["first"] != nil {
+					name += nameMap["first"].(string)
+				}
+				if nameMap["last"] != nil {
+					name += " " + nameMap["last"].(string)
+				}
+			}
+
+			users = append(users, core.User{
+				ID:   member.Id,
+				Name: name,
+				Role: string(roleMap[member.Id]),
+			})
 		}
 	}
-
-	// get the role of the users in the organization
 
 	// fetch all members from third party integrations
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
