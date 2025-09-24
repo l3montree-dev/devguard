@@ -34,6 +34,14 @@ import (
 
 var cfgFile string
 
+// Version information - set via ldflags during build
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+	builtBy = "unknown"
+)
+
 const (
 	defaultConfigFilename = ".devguard"
 )
@@ -42,6 +50,7 @@ var rootCmd = &cobra.Command{
 	SilenceUsage: true,
 	Use:          "devguard-scanner",
 	Short:        "Secure your Software Supply Chain",
+	Version:      version,
 	Long: `Secure your Software Supply Chain
 	
 Attestation-based compliance as Code, 
@@ -71,7 +80,7 @@ OWASP Incubating Project`,
 		}
 
 		if utils.RunsInCI() {
-			slog.Info("Running in CI")
+			slog.Debug("Running in CI")
 			err := utils.GitLister.MarkAllPathsAsSafe()
 			if err != nil {
 				slog.Error("could not mark all paths as safe", "err", err)
@@ -95,7 +104,21 @@ func Execute() {
 }
 
 func init() {
+	// Add version details command
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Show version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("DevGuard Scanner\n")
+			fmt.Printf("Version:    %s\n", version)
+			fmt.Printf("Commit:     %s\n", commit)
+			fmt.Printf("Built:      %s\n", date)
+			fmt.Printf("Built by:   %s\n", builtBy)
+		},
+	}
+
 	rootCmd.AddCommand(
+		versionCmd,
 		NewSCACommand(),
 		NewContainerScanningCommand(),
 		NewCleanCommand(),
@@ -111,6 +134,7 @@ func init() {
 		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
+		NewCurlCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

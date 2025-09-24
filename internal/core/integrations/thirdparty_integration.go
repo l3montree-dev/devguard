@@ -13,7 +13,8 @@ import (
 
 // batches multiple third party integrations
 type thirdPartyIntegrations struct {
-	integrations []core.ThirdPartyIntegration
+	integrations           []core.ThirdPartyIntegration
+	externalUserRepository core.ExternalUserRepository
 }
 
 var _ core.IntegrationAggregate = &thirdPartyIntegrations{}
@@ -185,12 +186,22 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
 }
 
 func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
-	users := []core.User{}
-	for _, i := range t.integrations {
-		users = append(users, i.GetUsers(org)...)
+
+	users, err := t.externalUserRepository.FindByOrgID(nil, org.ID)
+	if err != nil {
+		slog.Error("could not fetch external users for org", "org", org.Slug, "err", err)
+		return nil
 	}
 
-	return users
+	return utils.Map(users, func(user models.ExternalUser) core.User {
+		return core.User{
+			ID:        user.ID,
+			Name:      user.Username,
+			AvatarURL: &user.AvatarURL,
+
+			Role: string(core.RoleUnknown), // all users from github are members
+		}
+	})
 }
 
 func (t *thirdPartyIntegrations) HandleEvent(event any) error {
@@ -205,22 +216,22 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, vuln)
+			return struct{}{}, i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, justification, userID)
 		})
 	}
 
@@ -228,8 +239,20 @@ func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.A
 	return err
 }
 
-func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
+func (t *thirdPartyIntegrations) CreateLabels(ctx context.Context, asset models.Asset) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CreateLabels(ctx, asset)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
+func NewThirdPartyIntegrations(externalUserRepository core.ExternalUserRepository, integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
 	return &thirdPartyIntegrations{
-		integrations: integrations,
+		integrations:           integrations,
+		externalUserRepository: externalUserRepository,
 	}
 }

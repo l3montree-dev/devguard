@@ -63,7 +63,7 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 		repositories.NewCVERepository(db),
 		repositories.NewOrgRepository(db),
 		repositories.NewProjectRepository(db),
-		integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db)),
+		integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db)),
 		repositories.NewAssetVersionRepository(db),
 	)
 }
@@ -75,7 +75,7 @@ func CreateArtifactService(db core.DB) core.ArtifactService {
 }
 
 func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) core.AssetVersionService {
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
 	s := assetversion.NewService(
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewComponentRepository(db),
@@ -138,6 +138,7 @@ func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOau
 		CreateStatisticsService(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
 		CreateFirstPartyVulnService(db, integrations.NewThirdPartyIntegrations(
+			repositories.NewExternalUserRepository(db),
 			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
 			githubint.NewGithubIntegration(db),
 		)),

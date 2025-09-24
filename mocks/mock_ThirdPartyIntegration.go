@@ -132,6 +132,63 @@ func (_c *ThirdPartyIntegration_CreateIssue_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// CreateLabels provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	ret := _mock.Called(ctx, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLabels")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset) error); ok {
+		r0 = returnFunc(ctx, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ThirdPartyIntegration_CreateLabels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLabels'
+type ThirdPartyIntegration_CreateLabels_Call struct {
+	*mock.Call
+}
+
+// CreateLabels is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asset models.Asset
+func (_e *ThirdPartyIntegration_Expecter) CreateLabels(ctx interface{}, asset interface{}) *ThirdPartyIntegration_CreateLabels_Call {
+	return &ThirdPartyIntegration_CreateLabels_Call{Call: _e.mock.On("CreateLabels", ctx, asset)}
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) Run(run func(ctx context.Context, asset models.Asset)) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) Return(err error) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_CreateLabels_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset) error) *ThirdPartyIntegration_CreateLabels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetID provides a mock function for the type ThirdPartyIntegration
 func (_mock *ThirdPartyIntegration) GetID() core.IntegrationID {
 	ret := _mock.Called()
@@ -172,59 +229,6 @@ func (_c *ThirdPartyIntegration_GetID_Call) Return(integrationID core.Integratio
 }
 
 func (_c *ThirdPartyIntegration_GetID_Call) RunAndReturn(run func() core.IntegrationID) *ThirdPartyIntegration_GetID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetUsers provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) GetUsers(org models.Org) []core.User {
-	ret := _mock.Called(org)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUsers")
-	}
-
-	var r0 []core.User
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []core.User); ok {
-		r0 = returnFunc(org)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]core.User)
-		}
-	}
-	return r0
-}
-
-// ThirdPartyIntegration_GetUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUsers'
-type ThirdPartyIntegration_GetUsers_Call struct {
-	*mock.Call
-}
-
-// GetUsers is a helper method to define mock.On call
-//   - org models.Org
-func (_e *ThirdPartyIntegration_Expecter) GetUsers(org interface{}) *ThirdPartyIntegration_GetUsers_Call {
-	return &ThirdPartyIntegration_GetUsers_Call{Call: _e.mock.On("GetUsers", org)}
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) Run(run func(org models.Org)) *ThirdPartyIntegration_GetUsers_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Org
-		if args[0] != nil {
-			arg0 = args[0].(models.Org)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) Return(users []core.User) *ThirdPartyIntegration_GetUsers_Call {
-	_c.Call.Return(users)
-	return _c
-}
-
-func (_c *ThirdPartyIntegration_GetUsers_Call) RunAndReturn(run func(org models.Org) []core.User) *ThirdPartyIntegration_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -692,16 +696,16 @@ func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx
 }
 
 // UpdateIssue provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, asset, vuln)
+func (_mock *ThirdPartyIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+	ret := _mock.Called(ctx, asset, assetVersionSlug, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, asset, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln) error); ok {
+		r0 = returnFunc(ctx, asset, assetVersionSlug, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -716,12 +720,13 @@ type ThirdPartyIntegration_UpdateIssue_Call struct {
 // UpdateIssue is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asset models.Asset
+//   - assetVersionSlug string
 //   - vuln models.Vuln
-func (_e *ThirdPartyIntegration_Expecter) UpdateIssue(ctx interface{}, asset interface{}, vuln interface{}) *ThirdPartyIntegration_UpdateIssue_Call {
-	return &ThirdPartyIntegration_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, vuln)}
+func (_e *ThirdPartyIntegration_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}) *ThirdPartyIntegration_UpdateIssue_Call {
+	return &ThirdPartyIntegration_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln)}
 }
 
-func (_c *ThirdPartyIntegration_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *ThirdPartyIntegration_UpdateIssue_Call {
+func (_c *ThirdPartyIntegration_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln)) *ThirdPartyIntegration_UpdateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -731,14 +736,19 @@ func (_c *ThirdPartyIntegration_UpdateIssue_Call) Run(run func(ctx context.Conte
 		if args[1] != nil {
 			arg1 = args[1].(models.Asset)
 		}
-		var arg2 models.Vuln
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(models.Vuln)
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Vuln
+		if args[3] != nil {
+			arg3 = args[3].(models.Vuln)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -749,7 +759,7 @@ func (_c *ThirdPartyIntegration_UpdateIssue_Call) Return(err error) *ThirdPartyI
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vuln models.Vuln) error) *ThirdPartyIntegration_UpdateIssue_Call {
+func (_c *ThirdPartyIntegration_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error) *ThirdPartyIntegration_UpdateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -52,6 +52,8 @@ type baseConfig struct {
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
+
+	Offline bool `json:"offline" mapstructure:"offline"`
 }
 
 type InTotoConfig struct {
@@ -106,7 +108,7 @@ func ParseBaseConfig(runningCMD string) {
 				RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
 			} else {
 				// if we don't have a git version info, we use the current time as ref
-				slog.Info("could not get git version info, using current 'main' as ref")
+				slog.Debug("could not get git version info, using current 'main' as ref")
 				RuntimeBaseConfig.Ref = "main"
 			}
 		}
@@ -117,7 +119,7 @@ func ParseBaseConfig(runningCMD string) {
 				RuntimeBaseConfig.DefaultBranch = *gitVersionInfo.DefaultBranch
 			} else {
 				// if we don't have a git version info, we use the current time as default ref
-				slog.Info("could not get git default ref. Not updating anything default branch information")
+				slog.Debug("could not get git default ref. Not updating anything default branch information")
 			}
 		}
 	}
@@ -190,7 +192,7 @@ func ParseInTotoConfig() {
 	if RuntimeBaseConfig.Token == "" && utils.RunsInCI() {
 		// we cannot use in toto
 		RuntimeInTotoConfig.Disabled = true
-		slog.Info("no token provided, disabling in-toto functionality")
+		slog.Debug("no token provided, disabling in-toto functionality")
 		return
 	}
 

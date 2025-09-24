@@ -73,6 +73,10 @@ func (vuln *DependencyVuln) GetType() VulnType {
 	return VulnTypeDependencyVuln
 }
 
+func (vuln *DependencyVuln) GetArtifacts() []Artifact {
+	return vuln.Artifacts
+}
+
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
 	if vuln.CVEID == nil {
 		return utils.HashString(fmt.Sprintf("%s/%s/%s", utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID))

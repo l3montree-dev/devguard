@@ -132,6 +132,9 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 		if len(fr.Artifacts) > 1 {
 			// we are not the last artifact - just dissociate
 			existingNeedsDissoc = append(existingNeedsDissoc, fr)
+		} else if len(fr.Artifacts) == 1 && fr.Artifacts[0].ArtifactName != artifactName {
+			// we are not the last artifact - just dissociate
+			existingNeedsDissoc = append(existingNeedsDissoc, fr)
 		} else {
 			finallyFixed = append(finallyFixed, fr)
 		}

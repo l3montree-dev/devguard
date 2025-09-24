@@ -42,7 +42,7 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 	if err != nil {
 		return gitVersionInfo, err
 	}
-	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
+	slog.Debug("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 	return gitVersionInfo, nil
 }
 
@@ -69,7 +69,7 @@ func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 
 	defaultBranch, err := GitLister.GetDefaultBranchName(path)
 	if err != nil {
-		slog.Info("could not get default branch name", "err", err, "path", getDirFromPath(path), "msg", err.Error())
+		slog.Debug("could not get default branch name", "err", err, "path", getDirFromPath(path), "msg", err.Error())
 		return GitVersionInfo{
 			BranchOrTag:   branchOrTag,
 			DefaultBranch: nil,
@@ -107,7 +107,7 @@ func (g commandLineGitLister) GetDefaultBranchName(path string) (string, error) 
 	cmd.Dir = getDirFromPath(path)
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println(errOut.String())
+		slog.Debug("could not get default branch name", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
 		return "", err
 	}
 

@@ -272,6 +272,7 @@ func TestSyncOrgs(t *testing.T) {
 				ExternalEntityProviderID: utils.Ptr("github"),
 			},
 		}
+
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 		thirdPartyIntegration.On("ListOrgs", ctx).Return(orgs, nil)
 		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
@@ -290,6 +291,24 @@ func TestSyncOrgs(t *testing.T) {
 
 		domainRBAC1.On("GrantRole", "user123", core.RoleMember).Return(nil)
 		domainRBAC2.On("GrantRole", "user123", core.RoleMember).Return(nil)
+
+		// those orgs have to get bootstrapped - thus mock those function
+		domainRBAC1.On("InheritRole", core.RoleOwner, core.RoleAdmin).Return(nil)
+		domainRBAC2.On("InheritRole", core.RoleOwner, core.RoleAdmin).Return(nil)
+		domainRBAC1.On("InheritRole", core.RoleAdmin, core.RoleMember).Return(nil)
+		domainRBAC2.On("InheritRole", core.RoleAdmin, core.RoleMember).Return(nil)
+
+		domainRBAC1.On("AllowRole", core.RoleOwner, core.ObjectOrganization, []core.Action{core.ActionDelete}).Return(nil)
+		domainRBAC2.On("AllowRole", core.RoleOwner, core.ObjectOrganization, []core.Action{core.ActionDelete}).Return(nil)
+
+		domainRBAC1.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, []core.Action{core.ActionUpdate}).Return(nil)
+		domainRBAC2.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, []core.Action{core.ActionUpdate}).Return(nil)
+
+		domainRBAC1.On("AllowRole", core.RoleAdmin, core.ObjectProject, []core.Action{core.ActionCreate, core.ActionRead, core.ActionUpdate, core.ActionDelete}).Return(nil)
+		domainRBAC2.On("AllowRole", core.RoleAdmin, core.ObjectProject, []core.Action{core.ActionCreate, core.ActionRead, core.ActionUpdate, core.ActionDelete}).Return(nil)
+
+		domainRBAC1.On("AllowRole", core.RoleMember, core.ObjectOrganization, []core.Action{core.ActionRead}).Return(nil)
+		domainRBAC2.On("AllowRole", core.RoleMember, core.ObjectOrganization, []core.Action{core.ActionRead}).Return(nil)
 
 		// Create service with mocked org repo
 		serviceWithOrgRepo := NewExternalEntityProviderService(

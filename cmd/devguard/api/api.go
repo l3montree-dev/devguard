@@ -486,7 +486,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	)
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -515,9 +515,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
 	projectService := project.NewService(projectRepository, assetRepository)
-	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService)
-
-	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
@@ -541,11 +538,13 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
+	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService)
+	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
 	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
-	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
+	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
 

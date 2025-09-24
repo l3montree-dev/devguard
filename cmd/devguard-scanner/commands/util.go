@@ -34,9 +34,9 @@ func maybeLoginIntoOciRegistry(ctx context.Context) error {
 			return err
 		}
 
-		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+		slog.Debug("logged in", "registry", config.RuntimeBaseConfig.Registry)
 	} else {
-		slog.Info("skipping oci login - no registry / credentials provided")
+		slog.Debug("skipping oci login - no registry / credentials provided")
 	}
 	return nil
 }

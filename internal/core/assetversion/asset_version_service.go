@@ -286,7 +286,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
-	if len(newDetectedVulnsNotOnOtherBranch) > 0 {
+	if len(newDetectedVulnsNotOnOtherBranch) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
 		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
@@ -364,7 +364,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	if len(opened) > 0 {
+	if len(opened) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
 		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
@@ -680,7 +680,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		return err
 	}
 
-	sbomUpdated, err := s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
+	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
 	if err != nil {
 		return err
 	}
@@ -695,7 +695,8 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
 	})
-	if sbomUpdated {
+
+	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		s.FireAndForget(func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
 				AssetVersion: core.ToAssetVersionObject(assetVersion),
@@ -713,6 +714,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			}
 		})
 	}
+
 	return nil
 }
 
@@ -912,7 +914,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
 		SpecVersion: cdx.SpecVersion1_6,
@@ -920,9 +922,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    assetVersion.Slug,
+				BOMRef:    artifactName,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      asset.Name,
+				Name:      artifactName,
 				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
@@ -1036,7 +1038,7 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
-			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Justification != nil {
+			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Type != models.EventTypeComment && dependencyVuln.Events[i].Justification != nil {
 				return dependencyVuln.Events[i].Justification
 			}
 		}

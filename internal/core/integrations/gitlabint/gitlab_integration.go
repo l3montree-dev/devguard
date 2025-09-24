@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -117,6 +118,7 @@ type GitlabIntegration struct {
 	casbinRBACProvider          core.RBACProvider
 	licenseRiskRepository       core.LicenseRiskRepository
 	licenseRiskService          core.LicenseRiskService
+	statisticsService           core.StatisticsService
 }
 
 var _ core.ThirdPartyIntegration = &GitlabIntegration{}
@@ -138,9 +140,13 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
+	statisticsRepository := repositories.NewStatisticsRepository(db)
+	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
+	releaseRepository := repositories.NewReleaseRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
 
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
@@ -173,6 +179,7 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 		clientFactory:               clientFactory,
 		licenseRiskRepository:       licenseRiskRepository,
 		licenseRiskService:          licenseRiskService,
+		statisticsService:           statisticsService,
 	}
 }
 
@@ -366,7 +373,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 
-	groups, err := fetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
+	groups, err := FetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
 		// get the groups for this user
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
@@ -471,7 +478,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 }
 
 // Generic function to fetch paginated data with rate limiting and concurrency
-func fetchPaginatedData[T any](
+func FetchPaginatedData[T any](
 	fetchPage func(page int) ([]T, *gitlab.Response, error),
 ) ([]T, error) {
 
@@ -773,7 +780,7 @@ func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
 	return uuid.Parse(strings.Split(repoID, ":")[1])
 }
 
-func extractProjectIDFromRepoID(repoID string) (int, error) {
+func ExtractProjectIDFromRepoID(repoID string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
@@ -861,7 +868,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
 
-		projectIDInt, err = extractProjectIDFromRepoID(repoID)
+		projectIDInt, err = ExtractProjectIDFromRepoID(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
@@ -897,9 +904,9 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not get project name")
 	}
 
-	templatePath := getTemplatePath(ctx.QueryParam("scanner"))
+	templateID := ctx.QueryParam("scanner")
 
-	err = commonint.SetupAndPushPipeline(accessToken, gitlabURL, project.PathWithNamespace, templatePath, branchName)
+	err = commonint.SetupAndPushPipeline(accessToken, gitlabURL, project.PathWithNamespace, templateID, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -1005,6 +1012,10 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists
 		constructedURL := instanceDomain + "/api/v1/webhook/"
 		projectOptions.URL = &constructedURL
+		// check if we should really enable ssl verification
+		if strings.HasPrefix(instanceDomain, "http://") {
+			projectOptions.EnableSSLVerification = gitlab.Ptr(false)
+		}
 	}
 	if token != nil {
 		projectOptions.Token = gitlab.Ptr(token.String())
@@ -1070,19 +1081,6 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client core
 	}
 
 	return err
-}
-
-func getTemplatePath(scannerID string) string {
-	switch scannerID {
-	case "full":
-		return "./templates/full_template.yml"
-	case "sca":
-		return "./templates/sca_template.yml"
-	case "container-scanning":
-		return "./templates/container_scanning_template.yml"
-	default:
-		return "./templates/full_template.yml"
-	}
 }
 
 func (g *GitlabIntegration) GetUsers(org models.Org) []core.User {
@@ -1175,8 +1173,8 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		return err
 	}
@@ -1195,10 +1193,10 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		err = g.updateDependencyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, projectID)
+		err = g.updateDependencyVulnIssue(ctx, v, asset, client, assetVersionSlug, org.Slug, project.Slug, projectID)
 
 	case *models.FirstPartyVuln:
-		err = g.updateFirstPartyIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, projectID)
+		err = g.updateFirstPartyIssue(ctx, v, asset, client, assetVersionSlug, org.Slug, project.Slug, projectID)
 	}
 
 	if err != nil {
@@ -1220,7 +1218,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, orgSlug, projectSlug string, projectID int) error {
+func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionSlug, orgSlug, projectSlug string, projectID int) error {
 	stateEvent := "close"
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1237,13 +1235,13 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(stateEvent),
 		Title:       gitlab.Ptr(dependencyVuln.Title()),
-		Description: gitlab.Ptr(dependencyVuln.RenderMarkdown()),
+		Description: gitlab.Ptr(dependencyVuln.RenderMarkdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	return err
 }
 
-func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, orgSlug, projectSlug string, projectID int) error {
+func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionSlug, orgSlug, projectSlug string, projectID int) error {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
@@ -1266,7 +1264,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1274,7 +1272,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 var notConnectedError = errors.New("not connected to gitlab")
 
-func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
+func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
@@ -1285,7 +1283,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
-		projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)
+		projectID, err := ExtractProjectIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
 		}
@@ -1312,7 +1310,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	client, projectID, err := g.getClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1353,13 +1351,13 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 }
 
-func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
+func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
 
 	labels := commonint.GetLabels(vuln)
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(vuln.Title()),
-		Description: gitlab.Ptr(vuln.RenderMarkdown()),
+		Description: gitlab.Ptr(vuln.RenderMarkdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 
@@ -1380,21 +1378,21 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	return createdIssue, nil
 }
 
-func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
+func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 
@@ -1408,4 +1406,90 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
+}
+
+func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
+	labels := commonint.GetAllRiskLabelsWithColors()
+
+	labelsToUpdate := []commonint.Label{}
+
+	for _, label := range labels {
+		_, _, err := client.CreateNewLabel(ctx, projectID, &gitlab.CreateLabelOptions{
+			Name:        gitlab.Ptr(label.Name),
+			Color:       gitlab.Ptr(label.Color),
+			Description: gitlab.Ptr(label.Description),
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), " 409 {message: Label already exists}") {
+				labelsToUpdate = append(labelsToUpdate, label)
+				continue
+			}
+			slog.Error("failed to create label", "err", err, "label", label)
+			return err
+		}
+	}
+
+	if len(labelsToUpdate) > 0 {
+		err = g.UpdateLabels(ctx, asset, labelsToUpdate)
+		if err != nil {
+			slog.Error("failed to update labels", "err", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset, labelsToUpdate []commonint.Label) error {
+	if len(labelsToUpdate) == 0 {
+		return nil
+	}
+
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
+	projectLabels, _, err := client.ListLabels(ctx, projectID, &gitlab.ListLabelsOptions{})
+	if err != nil {
+		slog.Error("failed to list labels", "err", err)
+		return err
+	}
+
+	projectLabelsMap := make(map[string]gitlab.Label)
+	for _, label := range projectLabels {
+		projectLabelsMap[label.Name] = *label
+	}
+
+	for _, labelToUpdate := range labelsToUpdate {
+		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
+			_, _, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
+				Color:       gitlab.Ptr(labelToUpdate.Color),
+				Description: gitlab.Ptr(labelToUpdate.Description),
+			})
+			if err != nil {
+				slog.Error("failed to update label", "err", err, "label", label)
+				return err
+			}
+		} else {
+			slog.Warn("label does not exist in project", "label", label.Name)
+			continue
+		}
+	}
+
+	return nil
+
 }

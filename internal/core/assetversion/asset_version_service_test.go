@@ -638,3 +638,79 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** \n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
 	})
 }
+
+func TestBuildVeX(t *testing.T) {
+	// Create a mock service instance for testing
+	s := &service{}
+
+	t.Run("should handle justification from events", func(t *testing.T) {
+		asset := models.Asset{
+			Model: models.Model{
+				ID: uuid.New(),
+			},
+			Name: "test-asset",
+			Slug: "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: asset.ID,
+			Slug:    "v1-0-0",
+		}
+		organizationName := "test-org"
+
+		cveID := "CVE-2023-12345"
+		componentPurl := "pkg:npm/test-component@1.0.0"
+		componentDepth := 1
+		justification := "This vulnerability does not affect our use case"
+
+		dependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:          &cveID,
+				ComponentPurl:  &componentPurl,
+				ComponentDepth: &componentDepth,
+				CVE: &models.CVE{
+					CVE:         cveID,
+					CVSS:        float32(5.0),
+					Vector:      "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+					Description: "Test CVE Description",
+				},
+				Vulnerability: models.Vulnerability{
+					State: models.VulnStateAccepted,
+					Events: []models.VulnEvent{
+						{
+							Type:          models.EventTypeDetected,
+							Justification: utils.Ptr("Initial detection event without justification"),
+							Model: models.Model{
+								CreatedAt: time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+							},
+						},
+						{
+							Type:          models.EventTypeAccepted,
+							Justification: &justification,
+							Model: models.Model{
+								CreatedAt: time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC),
+							},
+						},
+						{
+							Type:          models.EventTypeComment,
+							Justification: utils.Ptr("This is a comment and should be ignored"),
+							Model: models.Model{
+								CreatedAt: time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),
+							},
+						},
+					},
+				},
+			},
+		}
+
+		result := s.BuildVeX(asset, assetVersion, organizationName, "test-artifact", dependencyVulns)
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Vulnerabilities)
+		assert.Len(t, *result.Vulnerabilities, 1)
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Equal(t, justification, vuln.Analysis.Detail)
+	})
+
+}

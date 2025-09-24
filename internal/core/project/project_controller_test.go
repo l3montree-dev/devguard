@@ -151,6 +151,6 @@ func TestProjectCreation(t *testing.T) {
 		assert.Nil(t, err)
 
 		// check that the slug is unique
-		assert.Equal(t, fmt.Sprintf("%s-2", slug.Make(project.Name)), response.Slug, "The slug should be unique")
+		assert.Equal(t, fmt.Sprintf("%s-1", slug.Make(project.Name)), response.Slug, "The slug should be unique")
 	})
 }

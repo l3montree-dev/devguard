@@ -292,7 +292,7 @@ type FireAndForgetSynchronizer interface {
 
 type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, artifactName string, version, orgName string, components []models.ComponentDependency) (*cdx.BOM, error)
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
+	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error
@@ -506,6 +506,11 @@ const (
 	RoleAdmin  Role = "admin"
 	RoleMember Role = "member"
 	RoleGuest  Role = "guest"
+
+	// this is mainly for backwards compatibility - and to have a default value
+	// noone should ever have the role unknown. This happens, if you logged into devguard before the "real permission sync" - not forwarding permission sync
+	// was added
+	RoleUnknown Role = "unknown"
 )
 
 func ValidRole(role Role) bool {

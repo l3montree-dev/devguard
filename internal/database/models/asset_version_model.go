@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database"
-	"gorm.io/gorm"
 )
 
 type AssetVersionType string
@@ -20,9 +19,8 @@ type ScannerInformation struct {
 }
 
 type AssetVersion struct {
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	Name    string    `json:"name" gorm:"primarykey;type:text;not null;"`
 	AssetID uuid.UUID `json:"assetId" gorm:"primarykey;not null;type:uuid;"`

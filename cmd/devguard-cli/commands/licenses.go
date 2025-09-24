@@ -72,9 +72,6 @@ func newUpdateLicensesCommand() *cobra.Command {
 }
 
 func updateApprovedLicenses() error {
-	slog.Info("start updating approved licenses")
-	start := time.Now()
-
 	apiURL := "https://raw.githubusercontent.com/spdx/license-list-data/refs/heads/main/json/licenses.json"
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -104,13 +101,11 @@ func updateApprovedLicenses() error {
 		return err
 	}
 
-	slog.Info(fmt.Sprintf("successfully finished updating approved licenses, done in %f seconds", time.Since(start).Seconds()))
 	return nil
 }
 
 func updateAlpineLicenses() error {
-	slog.Info("start updating alpine licenses")
-	start := time.Now()
+
 	err := retrieveAlpineVersions()
 	if err != nil {
 		return err
@@ -128,14 +123,11 @@ func updateAlpineLicenses() error {
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprintf("successfully finished updating alpine licenses, done in %f seconds", time.Since(start).Seconds()))
+
 	return nil
 }
 
 func updateDebianLicenses() error {
-	start := time.Now()
-	slog.Info("start updating debian licenses")
-
 	fileList, err := getFileListYAML()
 	if err != nil {
 		return err
@@ -151,8 +143,6 @@ func updateDebianLicenses() error {
 	if err != nil {
 		return err
 	}
-
-	slog.Info(fmt.Sprintf("successfully finished updating debian licenses, done in %f seconds", time.Since(start).Seconds()))
 	return nil
 }
 
@@ -343,8 +333,6 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
-
-	slog.Info("Scanning urls", "amount", len(urls))
 
 	for range mumberOfGoRoutines {
 		go func() {

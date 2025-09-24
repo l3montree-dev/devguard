@@ -95,11 +95,11 @@ func (repository *assetRepository) Upsert(t *[]*models.Asset, conflictingColumns
 
 func (repository *assetRepository) Create(db core.DB, asset *models.Asset) error {
 	// get the next slug for the asset
-	nextSlug, err := repository.nextSlug(asset.ProjectID, asset.Slug)
+	firstFreeSlug, err := repository.firstFreeSlug(asset.ProjectID, asset.Slug)
 	if err != nil {
 		return fmt.Errorf("failed to get next slug: %w", err)
 	}
-	asset.Slug = nextSlug
+	asset.Slug = firstFreeSlug
 
 	if err := repository.GetDB(db).Create(asset).Error; err != nil {
 		return err
@@ -110,11 +110,11 @@ func (repository *assetRepository) Create(db core.DB, asset *models.Asset) error
 func (repository *assetRepository) Save(db core.DB, asset *models.Asset) error {
 	if asset.ID == uuid.Nil {
 		// get the next slug for the asset
-		nextSlug, err := repository.nextSlug(asset.ProjectID, asset.Slug)
+		firstFreeSlug, err := repository.firstFreeSlug(asset.ProjectID, asset.Slug)
 		if err != nil {
 			return fmt.Errorf("failed to get next slug: %w", err)
 		}
-		asset.Slug = nextSlug
+		asset.Slug = firstFreeSlug
 	}
 
 	if err := repository.GetDB(db).Save(asset).Error; err != nil {
@@ -246,18 +246,32 @@ func (repository *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (mod
 	return asset, nil
 }
 
-func (repository *assetRepository) nextSlug(projectID uuid.UUID, assetSlug string) (string, error) {
-	var count int64
-	err := repository.db.Model(&models.Asset{}).Where("project_id = ? AND slug LIKE ?", projectID, assetSlug+"%").Count(&count).Error
+func (repository *assetRepository) firstFreeSlug(projectID uuid.UUID, assetSlug string) (string, error) {
+	var slugs []string
+	err := repository.db.Model(&models.Asset{}).
+		Where("project_id = ? AND slug LIKE ?", projectID, assetSlug+"%").
+		Pluck("slug", &slugs).Error
 	if err != nil {
 		return "", err
 	}
 
-	// if no assets with this slug exist, return the slug as is
-	if count == 0 {
+	baseTaken := false
+	existing := make(map[string]bool)
+	for _, s := range slugs {
+		existing[s] = true
+		if s == assetSlug {
+			baseTaken = true
+		}
+	}
+
+	if !baseTaken {
 		return assetSlug, nil
 	}
 
-	// otherwise, append a number to the slug
-	return fmt.Sprintf("%s-%d", assetSlug, count+1), nil
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", assetSlug, i)
+		if !existing[candidate] {
+			return candidate, nil
+		}
+	}
 }

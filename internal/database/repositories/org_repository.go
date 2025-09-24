@@ -39,11 +39,11 @@ func NewOrgRepository(db core.DB) *orgRepository {
 }
 
 func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
-	nextSlug, err := g.nextSlug(org.Slug)
+	firstFreeSlug, err := g.firstFreeSlug(org.Slug)
 	if err != nil {
 		return fmt.Errorf("could not generate next slug: %w", err)
 	}
-	org.Slug = nextSlug
+	org.Slug = firstFreeSlug
 
 	return g.GetDB(tx).Create(org).Error
 }
@@ -51,11 +51,11 @@ func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
 func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
 	// if the slug is empty, generate a new one
 	if org.ID == uuid.Nil {
-		nextSlug, err := g.nextSlug(org.Name)
+		firstFreeSlug, err := g.firstFreeSlug(org.Name)
 		if err != nil {
 			return fmt.Errorf("could not generate next slug: %w", err)
 		}
-		org.Slug = nextSlug
+		org.Slug = firstFreeSlug
 	}
 
 	return g.GetDB(tx).Save(org).Error
@@ -95,16 +95,32 @@ func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
 	return org, err
 }
 
-func (g *orgRepository) nextSlug(organizationSlug string) (string, error) {
-	var count int64
-	err := g.db.Model(models.Org{}).Where("slug LIKE ?", organizationSlug+"%").Count(&count).Error
+func (g *orgRepository) firstFreeSlug(organizationSlug string) (string, error) {
+	var slugs []string
+	err := g.db.Model(&models.Org{}).
+		Where("slug LIKE ?", organizationSlug+"%").
+		Pluck("slug", &slugs).Error
 	if err != nil {
 		return "", err
 	}
 
-	if count == 0 {
+	baseTaken := false
+	existing := make(map[string]bool)
+	for _, s := range slugs {
+		existing[s] = true
+		if s == organizationSlug {
+			baseTaken = true
+		}
+	}
+
+	if !baseTaken {
 		return organizationSlug, nil
 	}
 
-	return fmt.Sprintf("%s-%d", organizationSlug, count+1), nil
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", organizationSlug, i)
+		if !existing[candidate] {
+			return candidate, nil
+		}
+	}
 }

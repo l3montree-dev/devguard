@@ -85,8 +85,8 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, 
 
 		// make sure the user is a member of the organizations
 		for _, org := range orgsPtr {
-			if err := s.rbacProvider.GetDomainRBAC(org.GetID().String()).GrantRole(userID, core.RoleMember); err != nil {
-				slog.Warn("could not grant role for user in organization", "user", userID, "orgID", org.GetID(), "err", err)
+			if err := core.BootstrapOrg(s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, core.RoleMember); err != nil {
+				slog.Warn("could not bootstrap organization", "orgID", org.GetID(), "err", err)
 			}
 		}
 

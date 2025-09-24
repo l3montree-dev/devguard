@@ -115,7 +115,7 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 		err := repository.db.Create(&assetVersion).Error
 		//Check if the given assetVersion already exists if thats the case don't want to add repository new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			repository.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
+			repository.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName)
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
@@ -156,7 +156,6 @@ func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(pro
 	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("projects.id = ?", projectID).
-		Where("assets.deleted_at IS NULL").
 		Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -175,7 +174,6 @@ func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(pr
 	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("default_branch = true").
-		Where("assets.deleted_at IS NULL").
 		Where("projects.id IN (?)", projectIDs).
 		Find(&apps).Error
 	if err != nil {
@@ -235,7 +233,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	if count > 0 {
-		slog.Info("deleting old asset versions", "count", count, "olderThanDays", day)
 
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
 		err = repository.db.Transaction(func(tx core.DB) error {
@@ -255,21 +252,26 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 				return err
 			}
 
-			slog.Info("deleted artifacts for old asset versions", "olderThanDays", day)
-
 			// Now delete the asset versions, which should cascade to delete other related records
 			if err := tx.Unscoped().Where(query).Delete(&models.AssetVersion{}).Error; err != nil {
 				slog.Error("error deleting old asset versions", "err", err)
 				return err
 			}
 
-			slog.Info("deleted old asset versions", "count", count, "olderThanDays", day)
 			return nil
 		})
 
 		if err != nil {
 			return 0, err
 		}
+		go func() {
+			sql := CleanupOrphanedRecordsSQL
+			err = repository.db.Exec(sql).Error
+			if err != nil {
+				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+			}
+		}() //nolint:errcheck
+
 	}
 
 	return count, nil

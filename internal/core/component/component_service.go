@@ -243,6 +243,12 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	}
 
 	s.synchronizer.FireAndForget(func() {
+
+		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
+			//check if the purl is valid and has a version
+			_, err = packageurl.FromString(component.Purl)
+			return err == nil
+		})
 		// find potential license risks
 		if artifactName == nil {
 			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts

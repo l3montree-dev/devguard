@@ -73,7 +73,7 @@ func (service importService) Import(tx core.DB, tag string) error {
 	//copy csv files to database
 	err = service.copyCSVToDB(tmp)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not copy csv to db: %w", err)
 	}
 
 	slog.Info("importing vulndb completed", "duration", time.Since(begin))

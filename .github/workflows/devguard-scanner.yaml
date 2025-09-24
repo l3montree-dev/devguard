@@ -7,7 +7,7 @@ on:
   push:
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   security-events: write
   packages: write
@@ -109,7 +109,7 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/troubleshooting-sast'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/troubleshooting-sast' || github.ref == 'refs/heads/test-release'
 
   
   sign-scanner:
@@ -125,7 +125,7 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
 
   attest-scanner:
     needs: 
@@ -140,3 +140,175 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
+  release:
+    name: Build and Release Binaries
+    runs-on: ubuntu-latest
+    # needs: [golangci, tests, sign-scanner, devguard]
+    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Get tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          else
+            echo "tag=test-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build cross-platform binaries
+        run: |
+          mkdir -p dist
+          
+          # Build flags for security-hardened binaries
+          BUILD_FLAGS="-s -w -buildid= -X main.version=${{ steps.tag.outputs.tag }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.builtBy=github-actions"
+          
+          # Build for Linux amd64
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-amd64 ./cmd/devguard-scanner
+          
+          # Build for Linux arm64
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-arm64 ./cmd/devguard-scanner
+          
+          # Build for Windows amd64
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-windows-amd64.exe ./cmd/devguard-scanner
+          
+          # Build for Windows arm64
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-windows-arm64.exe ./cmd/devguard-scanner
+          
+          # Build for macOS amd64
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-darwin-amd64 ./cmd/devguard-scanner
+          
+          # Build for macOS arm64
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-darwin-arm64 ./cmd/devguard-scanner
+
+      - name: Create archives
+        run: |
+          cd dist
+          
+          # Create tar.gz archives for Unix-like systems
+          tar -czf devguard-scanner-linux-amd64.tar.gz devguard-scanner-linux-amd64
+          tar -czf devguard-scanner-linux-arm64.tar.gz devguard-scanner-linux-arm64
+          tar -czf devguard-scanner-darwin-amd64.tar.gz devguard-scanner-darwin-amd64
+          tar -czf devguard-scanner-darwin-arm64.tar.gz devguard-scanner-darwin-arm64
+          
+          # Create zip archives for Windows
+          zip devguard-scanner-windows-amd64.zip devguard-scanner-windows-amd64.exe
+          zip devguard-scanner-windows-arm64.zip devguard-scanner-windows-arm64.exe
+          
+          # Remove individual binaries, keep archives
+          rm -f devguard-scanner-linux-amd64 devguard-scanner-linux-arm64 devguard-scanner-darwin-amd64 devguard-scanner-darwin-arm64
+          rm -f devguard-scanner-windows-amd64.exe devguard-scanner-windows-arm64.exe
+
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > checksums.txt
+          echo "Generated checksums for all release artifacts"
+
+      - name: Sign release artifacts with devguard-scanner
+        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main-latest
+        with:
+          entrypoint: /bin/sh
+          args: |
+            -c "
+            cd dist
+            for file in *.tar.gz *.zip checksums.txt; do
+              if [ -f \"\$file\" ]; then
+                echo \"Signing \$file with devguard-scanner...\"
+                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} \"\$file\" > ${file}.sig
+              fi
+            done
+            "
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "DevGuard Scanner ${{ steps.tag.outputs.tag }}"
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') }}
+          body: |
+            ## 🚀 DevGuard Release ${{ steps.tag.outputs.tag }}
+            
+            **Secure software supply chain scanning and security analysis toolkit**
+            
+            ### Release Assets
+            
+            #### **📱 Binaries**
+            - `devguard-scanner-linux-amd64.tar.gz` - Linux x64 binary
+            - `devguard-scanner-linux-arm64.tar.gz` - Linux ARM64 binary  
+            - `devguard-scanner-darwin-amd64.tar.gz` - macOS x64 binary
+            - `devguard-scanner-darwin-arm64.tar.gz` - macOS ARM64 (Apple Silicon) binary
+            - `devguard-scanner-windows-amd64.zip` - Windows x64 binary
+            - `devguard-scanner-windows-arm64.zip` - Windows ARM64 binary
+            
+            #### **🐳 Container Images**
+            - **Registry**: 
+              - `ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}` (Main platform)
+              - `ghcr.io/l3montree-dev/devguard-web:${{ steps.tag.outputs.tag }}` (Frontend of the platform)
+              - `ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}` (Scanner tool)
+
+            #### Helm Charts
+            
+            `oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard` (Main platform Helm chart)
+
+            ```bash
+            helm install my-devguard oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard --version ${{ env.TAG_NO_V }}
+            ```
+            
+            ### Quick Start
+            
+            #### **Download and Install**
+            ```bash
+            # Linux/macOS - Download and extract
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/devguard-scanner-linux-amd64.tar.gz | tar -xz
+            chmod +x devguard-scanner-linux-amd64
+            sudo mv devguard-scanner-linux-amd64 /usr/local/bin/devguard-scanner
+            
+            # Verify installation
+            devguard-scanner --version
+            ```
+            
+            #### **Docker Usage**
+            ```bash
+            # Pull DevGuard Scanner from registry
+            docker pull ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}
+            
+            # Pull DevGuard Platform from registry
+            docker pull ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}
+            ```
+            
+            #### **Go Install**
+            ```bash
+            go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ steps.tag.outputs.tag }}
+            ```
+            
+            ---
+            
+            📖 **Documentation**: [DevGuard Documentation](https://github.com/l3montree-dev/devguard)  
+            🐛 **Report Issues**: [GitHub Issues](https://github.com/l3montree-dev/devguard/issues)  
+            💬 **Community**: [Discussions](https://github.com/l3montree-dev/devguard/discussions)
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+            dist/*.sig
+            dist/*.link
+            dist/*.provenance.json
+            dist/*.sbom.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

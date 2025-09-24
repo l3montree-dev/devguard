@@ -76,8 +76,8 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 		gitlabOauth2Integrations,
 	)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-
-	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+	externalUserRepository := repositories.NewExternalUserRepository(db)
+	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(externalUserRepository, githubIntegration, gitlabIntegration)
 
 	// we only update the vulnerability database each 6 hours.
 	// thus there is no need to recalculate the risk or anything earlier
@@ -165,7 +165,7 @@ func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 
 	if emptyOrContains(daemons, "tickets") {
 		start = time.Now()
-		if err := daemon.SyncTickets(db, thirdPartyIntegrationAggregate); err != nil {
+		if err := daemon.SyncTickets(db, thirdPartyIntegrationAggregate, casbinRBACProvider); err != nil {
 			slog.Error("could not sync tickets", "err", err)
 			return nil
 		}

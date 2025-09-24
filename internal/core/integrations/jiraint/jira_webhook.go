@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
@@ -39,7 +40,6 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	// and status changes on the issue (IssueEventType = "issue_generic").
 	// "issue_updated" events are ignored because creating a comment also triggers an "issue_updated" event.
 	if event.IssueEventType == "issue_updated" {
-		slog.Info("Ignoring issue updated event without comment", "event", event.Event)
 		return nil
 	}
 
@@ -47,6 +47,8 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	var vuln models.Vuln
 	var issueID string
 	var projectID string
+
+	doUpdateArtifactRiskHistory := false
 
 	issueID = event.Issue.ID
 	projectID = event.Issue.Fields.Project.ID
@@ -110,11 +112,9 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	switch event.Event {
 	case jira.CommentCreated:
 		// Handle comment created event
-		slog.Info("Handling comment created event", "event", event.Event)
 
 		//check if the event is triggered by a DevGuard
 		if strings.Contains(event.Comment.Body, DevguardCommentText) {
-			slog.Info("Ignoring comment created event triggered by DevGuard", "event", event.Event)
 			return nil
 		}
 
@@ -158,7 +158,11 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		err = i.UpdateIssue(ctx.Request().Context(), asset, vuln)
+		if vulnEvent.Type == models.EventTypeAccepted || vulnEvent.Type == models.EventTypeFalsePositive || vulnEvent.Type == models.EventTypeReopened {
+			doUpdateArtifactRiskHistory = true
+		}
+
+		err = i.UpdateIssue(ctx.Request().Context(), asset, assetVersion.Slug, vuln)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)
@@ -179,6 +183,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 		case jira.StatusCategoryToDo, jira.StatusCategoryInProgress:
 			if vuln.GetState() == models.VulnStateOpen {
 				return nil
@@ -189,6 +194,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
+			doUpdateArtifactRiskHistory = true
 
 		}
 	case jira.EventIssueDeleted:
@@ -201,7 +207,15 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		if err != nil {
 			slog.Error("could not save vuln and event", "err", err)
 		}
+		doUpdateArtifactRiskHistory = true
 	}
 
+	if doUpdateArtifactRiskHistory {
+		for _, artifact := range vuln.GetArtifacts() {
+			if err := i.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+			}
+		}
+	}
 	return nil
 }
