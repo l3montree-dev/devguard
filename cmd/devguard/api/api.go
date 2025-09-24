@@ -529,7 +529,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactService := artifact.NewService(artifactRepository)
 	artifactController := artifact.NewController(artifactService)
 
-	csafController := csaf.NewCSAFCollector(db)
+	csafController := csaf.NewCSAFController(db, dependencyVulnRepository, vulnEventRepository)
 
 	// release module
 	// release repository will be created later when project router is available
@@ -794,6 +794,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	artifactRouter.GET("/csaf.json/", csafController.GenerateCSAFReport)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
 

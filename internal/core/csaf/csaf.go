@@ -2,25 +2,32 @@ package csaf
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"os"
+	"slices"
+	"strconv"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type csaf_controller struct {
-	DB core.DB
+	DB                       core.DB
+	DependencyVulnRepository core.DependencyVulnRepository
+	VulnEventRepository      core.VulnEventRepository
 }
 
 // root struct of the document
 type csaf struct {
-	Document        document        `json:"document,omitempty"`
+	Document        documentObject  `json:"document,omitempty"`
 	ProductTree     productTree     `json:"product_tree,omitempty"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities,omitempty"`
 }
 
 // ----------MAJOR CATEGORIES----------
 // only mandatory parent category
-type document struct {
+type documentObject struct {
 	Acknowledgements  acknowledgements `json:"acknowledgements,omitempty"`
 	AggregateSeverity struct {
 		Namespace string `json:"namespace,omitempty"`
@@ -37,26 +44,28 @@ type document struct {
 	} `json:"distribution,omitempty"`
 	Language       language             `json:"lang,omitempty"`
 	Notes          []note               `json:"notes,omitempty"`
-	Publisher      publisherReplacement `json:"publisher,omitempty"`
+	Publisher      publisherReplacement `json:"publisher,omitempty"` //mandatory
 	References     []reference          `json:"references,omitempty"`
 	SourceLanguage language             `json:"source_lang,omitempty"`
 	Title          string               `json:"title,omitempty"` //mandatory
-	Tracking       struct {
-		Aliases            []string `json:"aliases,omitempty"`
-		CurrentReleaseDate string   `json:"current_release_date,omitempty"` //mandatory
-		Generator          struct {
-			Date   string `json:"date,omitempty"`
-			Engine struct {
-				Name    string `json:"name,omitempty"`
-				Version string `json:"version,omitempty"`
-			} `json:"engine,omitempty"`
-		} `json:"generator,omitempty"`
-		ID                 string                `json:"id,omitempty"`                   //mandatory
-		InitialReleaseDate string                `json:"initial_release_date,omitempty"` //mandatory
-		RevisionHistory    []revisionReplacement `json:"revision_history,omitempty"`
-		Status             string                `json:"status,omitempty"`  //mandatory
-		Version            version               `json:"version,omitempty"` //mandatory
-	} `json:"tracking,omitempty"`
+	Tracking       trackingObject       `json:"tracking,omitempty"`
+}
+
+type trackingObject struct {
+	Aliases            []string `json:"aliases,omitempty"`
+	CurrentReleaseDate string   `json:"current_release_date,omitempty"` //mandatory
+	Generator          struct {
+		Date   string `json:"date,omitempty"`
+		Engine struct {
+			Name    string `json:"name,omitempty"`
+			Version string `json:"version,omitempty"`
+		} `json:"engine,omitempty"`
+	} `json:"generator,omitempty"`
+	ID                 string                `json:"id,omitempty"`                   //mandatory
+	InitialReleaseDate string                `json:"initial_release_date,omitempty"` //mandatory
+	RevisionHistory    []revisionReplacement `json:"revision_history,omitempty"`
+	Status             string                `json:"status,omitempty"`  //mandatory
+	Version            version               `json:"version,omitempty"` //mandatory
 }
 
 type publisherReplacement struct {
@@ -231,41 +240,114 @@ type version = string
 
 type productID = string
 
-func NewCSAFCollector(db core.DB) *csaf_controller {
+func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) *csaf_controller {
 	return &csaf_controller{
-		DB: db,
+		DB:                       db,
+		DependencyVulnRepository: dependencyVulnRepository,
+		VulnEventRepository:      vulnEventRepository,
 	}
 }
 
-func (*csaf_controller) GenerateCSAFReport(ctx core.Context) error {
-	fd, err := os.Create("csaf.json")
+func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
+	slog.Info("start generating CSAF Document")
+	csafDoc := csaf{}
+	artifact := core.GetArtifact(ctx)
+	org := core.GetOrg(ctx)
+	csafDoc.Document = documentObject{
+		Category:    "csaf_security_advisory",
+		CSAFVersion: "2.0",
+		Publisher: publisherReplacement{
+			Category:  "vendor",
+			Name:      org.Slug,
+			Namespace: "https://l3montree.com", // TODO
+		},
+		Title: "Dependency Vulnerabilities present in the software",
+	}
+	tracking, err := generateTrackingObject(artifact, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	if err != nil {
+		return err
+	}
+	csafDoc.Document.Tracking = tracking
+	fd, err := os.Create(csafDoc.Document.Title)
 	if err != nil {
 		return err
 	}
 	encoder := json.NewEncoder(fd)
-	document, err := generateDocumentValues(ctx)
+	err = encoder.Encode(csafDoc)
 	if err != nil {
 		return err
 	}
-	err = encoder.Encode(document)
-	if err != nil {
-		return err
-	}
-
+	slog.Info("successfully generated CSAF Document")
 	return nil
 }
 
-func generateDocumentValues(ctx core.Context) (document, error) {
-	var document document
-	org := core.GetOrg(ctx)
-
-	document.Category = "csaf_security_advisory"
-	document.CSAFVersion = "2.0"
-	document.Publisher = publisherReplacement{
-		Category:  "vendor",
-		Name:      org.Slug,
-		Namespace: "", //TODO
+func generateVulnerabilitiesObject(artifact models.Artifact, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
+	vulns, err := dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	if err != nil {
+		return nil, err
 	}
-	document.Title = "csaf_v1"
-	return document, nil
+	var vulnerabilites []vulnerability
+	for _, vuln := range vulns {
+		vulnObject := vulnerability{}
+		events, err := vulnEventRepository.ReadAssetEventsByVulnID(vuln.ID, models.VulnTypeDependencyVuln)
+		if err != nil {
+			return nil, err
+		}
+		vulnObject.CVE = *vuln.CVEID
+		vulnObject.DiscoveryDate = events[0].CreatedAt.String()
+		vulnerabilites = append(vulnerabilites, vulnObject)
+	}
+	return vulnerabilites, nil
+}
+
+func generateTrackingObject(artifact models.Artifact, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
+	tracking := trackingObject{}
+	vulns, err := dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	if err != nil {
+		return tracking, err
+	}
+	allEvents := make([]models.VulnEventDetail, 0, len(vulns))
+	for _, vuln := range vulns {
+		events, err := vulnEventRepository.ReadAssetEventsByVulnID(vuln.ID, models.VulnTypeDependencyVuln)
+		if err != nil {
+			return tracking, err
+		}
+		allEvents = append(allEvents, events...)
+	}
+	slices.SortFunc(allEvents, func(event1 models.VulnEventDetail, event2 models.VulnEventDetail) int {
+		return event1.CreatedAt.Compare(event2.CreatedAt)
+	})
+
+	version := fmt.Sprintf("version %d", len(allEvents))
+	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", artifact.ArtifactName, version)
+	tracking.Version = version
+	tracking.InitialReleaseDate = allEvents[0].CreatedAt.String()
+	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.String()
+	revisions, err := buildRevisionHistory(allEvents)
+	if err != nil {
+		return tracking, err
+	}
+	tracking.RevisionHistory = revisions
+
+	return tracking, nil
+}
+
+func buildRevisionHistory(events []models.VulnEventDetail) ([]revisionReplacement, error) {
+	var revisions []revisionReplacement
+	for i, event := range events {
+		revisionObject := revisionReplacement{
+			Date: event.CreatedAt.String(),
+		}
+		switch event.Type {
+		case models.EventTypeDetected:
+			revisionObject.Summary = fmt.Sprintf("Detected new vulnerability (CVE:%s)", event.CVEID)
+		case models.EventTypeFixed:
+			revisionObject.Summary = fmt.Sprintf("Fixed Vulnerability (CVE:%s)", event.CVEID)
+		case models.EventTypeMitigate:
+			revisionObject.Summary = fmt.Sprintf("Mitigated Vulnerability (CVE:%s)", event.CVEID)
+		}
+		revisionObject.Number = strconv.Itoa(i)
+		revisions = append(revisions, revisionObject)
+	}
+	return revisions, nil
 }

@@ -372,3 +372,17 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, ass
 	}
 	return vulns, nil
 }
+
+func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx core.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
+	var vulns []models.DependencyVuln
+	err := repository.Repository.GetDB(tx).Raw(`
+		SELECT vulns.* FROM dependency_vulns vulns 
+		LEFT JOIN artifact_dependency_vulns adv ON vulns.id = adv.dependency_vuln_id
+		WHERE adv.artifact_artifact_name = ? 
+		AND adv.artifact_asset_version_name = ? 
+		AND adv.artifact_asset_id = ?;`, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
