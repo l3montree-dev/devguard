@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -99,31 +100,34 @@ func (service importService) ImportFromDiff() error {
 	if err != nil {
 		return err
 	}
-	if len(tags) == 0 {
-		slog.Info("vulndb is already up to date")
-		return nil
-	}
-	var snapshot string
-	if strings.Contains(tags[0], "snapshot") {
-		slog.Info("no version detected start loading latest vulndb state")
-		snapshot = tags[0]
-		tmp, _, err := downloadAndSaveZipToTemp(repo, snapshot)
+
+	begin := time.Now()
+	slog.Info("start updating tags", "amount", len(tags))
+	for i, tag := range tags {
+		slog.Info("updating tag", "tag", tag, "number", i+1, "of", len(tags))
+
+		os.RemoveAll("vulndb-tmp/") //nolint
+
+		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
 		if err != nil {
 			return err
 		}
 
-		//copy csv files to database
-		err = service.copyCSVToDB(tmp)
-		if err != nil {
-			return err
+		// if it is a snapshot tag we load the full state
+		if strings.Contains(tag, "snapshot") {
+			if i != 0 {
+				slog.Warn("snapshot tag in between incremental tags, skipping", "tag", tag)
+			}
+			slog.Info("no version detected start loading latest vulndb state")
+			err = service.copyCSVToDB(tmp)
+			if err != nil {
+				return err
+			}
+
+			slog.Info("finished loading latest snapshot state")
+			continue
 		}
-		slog.Info("finished loading latest vulndb state")
-		tags = tags[1:]
-	}
-	begin := time.Now()
-	slog.Info("start updating tags", "amount", len(tags))
-	for i, tag := range tags {
-		slog.Info("", "tag", tag)
+
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			return err
@@ -134,24 +138,10 @@ func (service importService) ImportFromDiff() error {
 			}
 		}()
 
-		os.RemoveAll("vulndb-tmp/") //nolint
-		tmp, _, err := downloadAndSaveZipToTemp(repo, tag)
-		if err != nil {
-			if i != 0 { // avoid out of bounds error
-				// save the last successful update
-				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
-			}
-			slog.Error("error when trying to get diff files", "tag", tag)
-			return err
-		}
 		dirPath := tmp + "/diffs-tmp"
 
 		err = processDiffCSVs(ctx, dirPath, tx)
 		if err != nil {
-			if i != 0 { // avoid out of bounds error
-				// save the last successful update
-				service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[i-1]) //nolint
-			}
 			slog.Error("error when trying to update from diff files", "tag", tag)
 			return err
 		}
@@ -162,10 +152,11 @@ func (service importService) ImportFromDiff() error {
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
 	// when everything ran successful we save the last updated tag to use as versioning
-	if len(tags) >= 1 {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1]) //nolint
-	} else if snapshot != "" {
-		service.configService.SetJSONConfig("vulndb.lastIncrementalImport", snapshot) //nolint
+	if len(tags) > 0 {
+		err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1])
+		if err != nil {
+			slog.Error("could not save last incremental import version", "err", err)
+		}
 	}
 
 	return nil
@@ -203,40 +194,28 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 	if err != nil {
 		return err
 	}
-	filesToProcess := make([]os.DirEntry, 13)
+
 	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
-	i := 0
-	j := 0
-	for i+j < len(files) {
-		name := files[i].Name()
-		if filepath.Ext(name) != ".csv" {
-			continue
+	sort.Slice(files, func(i, j int) bool {
+		if files[i].Name() == "cve_affected_component" {
+			return false
 		}
-		name = strings.TrimRight(name, ".csv")
-		fields := strings.Split(name, "_")
-		// only handle csv files
-		if len(fields) <= 2 || fields[len(fields)-2] != "diff" {
-			continue
+		if files[j].Name() == "cve_affected_component" {
+			return true
 		}
-		if strings.Contains(files[i+j].Name(), "cve_affected_component") {
-			filesToProcess[12-j] = files[i+j]
-			j++
-		} else {
-			filesToProcess[i] = files[i+j]
-			i++
-		}
-	}
+		return files[i].Name() < files[j].Name()
+	})
 
-	for _, file := range filesToProcess {
+	for _, file := range files {
 		name := strings.TrimRight(file.Name(), ".csv")
-		fields := strings.Split(name, "_")
-
 		// extract table information from the name of the csv file
-		mode := fields[len(fields)-1]
-		table := fields[0]
-		for _, field := range fields[1:(len(fields) - 2)] { //append the remaining fields to the table name
-			table += "_" + field
+		var index int
+		if index = strings.LastIndex(name, "_"); index == -1 {
+			slog.Warn("could not determine mode of diff file, skipping", "file", name)
+			continue
 		}
+		mode := name[index+1:]
+		table := name[:index]
 
 		// could be run concurrent but probably won't yield a lot of performance improvement
 		switch mode {
@@ -650,13 +629,12 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 	}
 	defer fd.Close() //nolint
 
-	csvReader := csv.NewReader(fd)
-	allRecords, err := csvReader.ReadAll() // could use rows.Next() to hold less space in memory
+	entries, err := utils.ReadCsvFile(filePath)
 	if err != nil {
-		return err
+		slog.Error("error when reading csv file", "err", err)
 	}
 
-	if len(allRecords) == 0 {
+	if len(entries) == 0 {
 		slog.Info("nothing to delete", "table", tableName)
 		return nil
 	}
@@ -667,29 +645,32 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
 	}
 
-	// sql needs to be adjusted based on the number of primary keys
-	allRecords = allRecords[1:] // cut off the header row
+	if len(primaryKeys) > 2 {
+		slog.Error("more than 2 primary keys not supported", "table", tableName)
+		return fmt.Errorf("more than 2 primary keys not supported for table: %s", tableName)
+	}
+
 	if len(primaryKeys) == 1 {
-		primaryKey := primaryKeys[0]
-		for i := range allRecords {
-			key := allRecords[i][0]
-			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKey, "'"+key+"'")
+		primaryKeyColumnName := primaryKeys[0]
+		for _, entry := range entries {
+			primaryKeyValue := entry[primaryKeyColumnName].(string)
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKeyColumnName, "'"+primaryKeyValue+"'")
 			_, err := tx.Exec(ctx, sql)
 			if err != nil {
-				slog.Error("error when deleting from table", "table", tableName, "id", key)
+				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue)
 				continue
 			}
 		}
 	} else {
 		primaryKey1 := primaryKeys[0]
 		primaryKey2 := primaryKeys[1]
-		for i := range allRecords {
-			key1 := allRecords[i][0]
-			key2 := allRecords[i][1]
-			sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", tableName, primaryKey1, "'"+key1+"'", primaryKey2, "'"+key2+"'")
+		for _, entry := range entries {
+			primaryKey1Value := entry[primaryKey1].(string)
+			primaryKey2Value := entry[primaryKey2].(string)
+			sql := fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", tableName, primaryKey1, "'"+primaryKey1Value+"'", primaryKey2, "'"+primaryKey2Value+"'")
 			_, err := tx.Exec(ctx, sql)
 			if err != nil {
-				slog.Error("error when deleting from table", "table", tableName, "id1", key1, "id2", key2)
+				slog.Error("error when deleting from table", "table", tableName, "id1", primaryKey1Value, "id2", primaryKey2Value)
 				continue
 			}
 		}
@@ -716,6 +697,11 @@ func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 	if len(primaryKeys) == 0 {
 		slog.Error("could not determine primary key(s)", "table", tableName)
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
+	}
+
+	if len(primaryKeys) > 2 {
+		slog.Error("more than 2 primary keys not supported", "table", tableName)
+		return fmt.Errorf("more than 2 primary keys not supported for table: %s", tableName)
 	}
 
 	columnsToUpdate := record[len(primaryKeys):] // exclude primary key(s)
@@ -805,49 +791,35 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string) (string, *fil
 }
 
 func (service importService) GetIncrementalTags(ctx context.Context, repo *remote.Repository) ([]string, error) {
-	var lastVersion string
+	lastVersion := ""
 	allTags := make([]string, 0, 3000)
 
 	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
-	if err != nil || lastVersion == "" {
-		// we do not have a database version yet, we get the latest snapshot and each incremental update since then
-		repo.TagListPageSize = 1000
-		var index int
-		err = repo.Tags(ctx, "", func(tags []string) error {
-			for i := range tags {
-				if strings.Contains(tags[len(tags)-1-i], "snapshot") && !strings.Contains(tags[len(tags)-1-i], ".sig") {
-					index = len(tags) - 1 - i
-				}
-			}
-			for index < len(tags) {
-				if !strings.Contains(tags[index], ".sig") {
-					allTags = append(allTags, tags[index])
-				}
-				index++
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		return allTags, nil
+	if err != nil {
+		slog.Warn("could not get last incremental import version, assuming no version is set yet", "err", err)
 	}
 
 	repo.TagListPageSize = 1000
 	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
-		for _, tag := range tags {
-			if !strings.Contains(tag, ".sig") {
-				_, err := strconv.Atoi(tag)
-				if err == nil {
-					allTags = append(allTags, tag)
-				}
+		slices.Reverse(tags)
+		for i := range tags {
+			if strings.Contains(tags[i], ".sig") {
+				continue
+			}
+			allTags = append(allTags, tags[i])
+			if strings.Contains(tags[i], "snapshot") {
+				break
 			}
 		}
+
+		fmt.Println("tags found", tags)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	slices.Reverse(allTags)
+	fmt.Println("found tags", allTags)
 
 	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
 		slog.Error("slice not sorted")

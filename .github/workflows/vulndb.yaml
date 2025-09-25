@@ -7,6 +7,10 @@ on:
         description: 'Run import job'
         required: false
         default: 'true'
+      run_generate_snapshot:
+        description: 'Run generate snapshot job'
+        required: false
+        default: 'false'
   schedule:
     - cron: '0 */6 * * *' # every hour
 
@@ -64,7 +68,14 @@ jobs:
         # will fetch the latest build database from ghcr.io
         go run ./cmd/devguard-cli/main.go vulndb sync
 
+    - name: Copy the latest vulndb state into vulndb-diffs as snapshot
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: |
+        # this will copy the latest vulndb state into vulndb-diffs as snapshot
+        go run ./cmd/devguard-cli/main.go vulndb snapshot
+
     - name: Export the diff csv files (this does not take some time)
+      if : ${{ github.event.inputs.run_generate_snapshot == 'false' }}  
       run: |
         # writes the difference from the db before and after the sync into csv files
         go run ./cmd/devguard-cli/main.go vulndb export
