@@ -812,14 +812,12 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 			}
 		}
 
-		fmt.Println("tags found", tags)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	slices.Reverse(allTags)
-	fmt.Println("found tags", allTags)
 
 	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
 		slog.Error("slice not sorted")
