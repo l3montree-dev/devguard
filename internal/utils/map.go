@@ -15,6 +15,11 @@
 
 package utils
 
+import (
+	"encoding/csv"
+	"os"
+)
+
 func Mapper[Key comparable, T any](s []T, f func(T) Key) map[Key]T {
 	res := make(map[Key]T)
 	for _, v := range s {
@@ -30,4 +35,31 @@ func Values[K comparable, T any](m map[K]T) []T {
 		res = append(res, v)
 	}
 	return res
+}
+
+func ReadCsvFile(filePath string) ([]map[string]any, error) {
+	csvFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer csvFile.Close()
+
+	reader := csv.NewReader(csvFile)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	// get the headers
+	headers := records[0]
+	result := make([]map[string]any, 0, len(records)-1)
+	for _, record := range records[1:] {
+		row := make(map[string]any)
+		for i, value := range record {
+			row[headers[i]] = value
+		}
+		result = append(result, row)
+	}
+
+	return result, nil
 }
