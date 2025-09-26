@@ -218,11 +218,11 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	// get artifact from path
-	artifact := core.GetArtifact(ctx)
+	artifact, err := core.MaybeGetArtifact(ctx)
 
 	filter := core.GetFilterQuery(ctx)
 	// set artifact name filter if artifact is set in path
-	if artifact.ArtifactName != "" {
+	if err == nil {
 		filter = append(filter, core.FilterQuery{
 			Field:      "artifacts.artifact_name",
 			Operator:   "is",
@@ -251,9 +251,14 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	artifactName := ctx.QueryParam("artifactName")
+	var dependencyVulns []models.DependencyVuln
+	artifact, err := core.MaybeGetArtifact(ctx)
+	if err == nil {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	} else {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, nil)
+	}
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -301,9 +306,16 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifact := core.GetArtifact(ctx)
+	artifact, err := core.MaybeGetArtifact(ctx)
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifact.ArtifactName))
+	var dependencyVulns []models.DependencyVuln
+
+	if err != nil {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, nil)
+	} else {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	}
+
 	if err != nil {
 		return nil, err
 	}
