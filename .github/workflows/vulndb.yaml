@@ -68,11 +68,17 @@ jobs:
         # will fetch the latest build database from ghcr.io
         go run ./cmd/devguard-cli/main.go vulndb sync
 
-    - name: Copy the latest vulndb state into vulndb-diffs as snapshot
+    - name: Dump the PostgreSQL database
       if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      # skip:checkov:CKV_SECRET_6
       run: |
-        # this will copy the latest vulndb state into vulndb-diffs as snapshot
-        go run ./cmd/devguard-cli/main.go vulndb snapshot
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_components.csv 
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_affected_component.csv 
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cves.csv 
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cwes) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cwes.csv 
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM exploits) TO STDOUT WITH DELIMITER ',' CSV HEADER" > exploits.csv 
+        # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
+
 
     - name: Export the diff csv files (this does not take some time)
       if : ${{ github.event.inputs.run_generate_snapshot == 'false' }}  
@@ -84,7 +90,10 @@ jobs:
       run: sudo apt-get install zip
 
     - name: Zip the CSV files
-      # run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv
+    - name: Zip the CSV files
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
       run: zip -r vulndb.zip diffs-tmp 
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
@@ -108,9 +117,20 @@ jobs:
     - name: set the date
       run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
 
-    - name: Push the database ZIP file to GitHub Container Registry
+    - name: Push the database ZIP file to GitHub Container Registry (diff)
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
       run: |
         oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date vulndb.zip
+
+    - name: Push the database ZIP file to GitHub Container Registry (snapshot)
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: |
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-$date-snapshot vulndb.zip
     - name: Push the signatures to the GitHub Container Registry  
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
       run: |
         oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date.sig vulndb.zip.sig
+    - name: Push the signatures to the GitHub Container Registry (snapshot)  
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: |
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-$date-snapshot.sig vulndb.zip.sig
