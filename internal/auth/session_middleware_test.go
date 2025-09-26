@@ -41,14 +41,14 @@ func TestSessionMiddleware(t *testing.T) {
 		verifier.AssertExpectations(t)
 	})
 
-	t.Run("should set no session, if pat auth fails, no admin token is used an no cookie is used.", func(t *testing.T) {
+	t.Run("should set no session, if the error equals could not verify request", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return("", "", errors.New("fail"))
+		verifier.On("VerifyRequestSignature", mock.Anything).Return("", "", errors.New("could not verify request"))
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -62,6 +62,30 @@ func TestSessionMiddleware(t *testing.T) {
 
 		_ = handler(c)
 		assert.True(t, called)
+		verifier.AssertExpectations(t)
+	})
+
+	t.Run("should not call next handler if the error is different than could not verify request", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		verifier := new(mocks.Verifier)
+		verifier.On("VerifyRequestSignature", mock.Anything).Return("", "", errors.New("failed"))
+
+		mw := SessionMiddleware(nil, verifier)
+
+		var called bool
+		handler := mw(func(ctx echo.Context) error {
+			called = true
+			sess := core.GetSession(ctx)
+			assert.Equal(t, NoSession, sess)
+			return nil
+		})
+
+		_ = handler(c)
+		assert.False(t, called)
 		verifier.AssertExpectations(t)
 	})
 
