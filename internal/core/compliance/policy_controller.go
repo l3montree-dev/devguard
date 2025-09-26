@@ -36,7 +36,7 @@ func convertPolicyFsToModel(policy PolicyFS) models.Policy {
 		Description:    policy.Description,
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
-		OpaqueID:       policy.Filename,
+		OpaqueID:       &policy.Filename,
 		OrganizationID: nil,
 	}
 }
@@ -58,8 +58,8 @@ func (c *policyController) migratePolicies() error {
 	}
 
 	// compare the policies
-	comp := utils.CompareSlices(dbPolicies, policyModels, func(p models.Policy) string {
-		return p.OpaqueID
+	comp := utils.CompareSlices(policyModels, dbPolicies, func(p models.Policy) string {
+		return *p.OpaqueID
 	})
 
 	toCreate := comp.OnlyInB
@@ -175,6 +175,7 @@ func (c *policyController) CreatePolicy(ctx core.Context) error {
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
 		OrganizationID: utils.Ptr(org.ID),
+		OpaqueID:       nil,
 	}
 
 	// create the policy
