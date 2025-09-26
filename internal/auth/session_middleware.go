@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/labstack/echo/v4"
 )
@@ -82,8 +83,12 @@ func SessionMiddleware(oryAPIClient core.AdminClient, verifier core.Verifier) ec
 			} else {
 				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
-					ctx.Set("session", NoSession)
-					return next(ctx)
+					if strings.EqualFold(err.Error(), "could not verify request") {
+						ctx.Set("session", NoSession)
+						return next(ctx)
+					}
+					sentry.CurrentHub().CaptureException(err)
+					return echo.NewHTTPError(500)
 				}
 				scopesArray := strings.Fields(scopes)
 				ctx.Set("session", NewSession(userID, scopesArray))
