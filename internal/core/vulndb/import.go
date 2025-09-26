@@ -825,35 +825,3 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	}
 	return allTags, nil
 }
-
-func MakeSnapshot(ctx context.Context) error {
-	vulndb := "ghcr.io/l3montree-dev/devguard/vulndb"
-	vulndbDiff := "ghcr.io/l3montree-dev/devguard/vulndb-diffs"
-	repo, err := remote.NewRepository(vulndb)
-	if err != nil {
-		slog.Error("could not create vulndb repository")
-		return err
-	}
-	repoDiff, err := remote.NewRepository(vulndbDiff)
-	if err != nil {
-		slog.Error("could not create vulndb-diff repository")
-		return err
-	}
-
-	_, fs, err := downloadAndSaveZipToTemp(repo, "latest")
-	if err != nil {
-		if fs != nil {
-			fs.Close()
-		}
-		return err
-	}
-	defer fs.Close() //nolint
-
-	_, err = oras.Copy(ctx, fs, "latest", repoDiff, "latest", oras.DefaultCopyOptions)
-	if err != nil {
-		slog.Error("could not copy to remote repository", "err", err)
-		return err
-	}
-	slog.Info("successfully made snapshot")
-	return nil
-}
