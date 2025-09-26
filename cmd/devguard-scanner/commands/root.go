@@ -83,7 +83,7 @@ OWASP Incubating Project`,
 			slog.Debug("Running in CI")
 			err := utils.GitLister.MarkAllPathsAsSafe()
 			if err != nil {
-				slog.Error("could not mark all paths as safe", "err", err)
+				slog.Debug("could not mark all paths as safe", "err", err)
 			}
 		}
 

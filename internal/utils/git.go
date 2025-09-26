@@ -226,7 +226,7 @@ func getCurrentVersion(path string) (string, int, error) {
 	// get tags from the git repository
 	tags, err := GitLister.GetTags(path)
 	if err != nil {
-		slog.Info("could not get tags", "err", err, "path", getDirFromPath(path), "msg", err.Error())
+		slog.Debug("could not get tags", "err", err, "path", getDirFromPath(path), "msg", err.Error())
 		return "", 0, err
 	}
 

@@ -100,7 +100,7 @@ func ParseBaseConfig(runningCMD string) {
 	if RuntimeBaseConfig.Ref == "" || RuntimeBaseConfig.DefaultBranch == "" {
 		gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
 		if err != nil {
-			slog.Warn("could not get git version info")
+			slog.Debug("could not get git version info")
 		}
 		if RuntimeBaseConfig.Ref == "" {
 			// check if we have a git version info
