@@ -395,3 +395,14 @@ func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx core.DB, ar
 	}
 	return vulns, nil
 }
+
+func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var vulns []models.DependencyVuln
+	err := repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
+		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
+		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}

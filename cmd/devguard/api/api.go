@@ -526,7 +526,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactService := artifact.NewService(artifactRepository)
 	artifactController := artifact.NewController(artifactService)
 
-	csafController := csaf.NewCSAFController(db, dependencyVulnRepository, vulnEventRepository)
+	csafController := csaf.NewCSAFController(db, dependencyVulnRepository, vulnEventRepository, assetVersionRepository)
 
 	// release module
 	// release repository will be created later when project router is available

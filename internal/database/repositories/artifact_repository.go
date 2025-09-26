@@ -57,6 +57,19 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	return err
 }
 
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx core.DB, vulnID string) ([]models.Artifact, error) {
+	var artifacts []models.Artifact
+	err := r.Repository.GetDB(tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
+		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 
+		AND adv.artifact_asset_version_name = adv.artifact_asset_version_name
+		AND adv.artifact_asset_id = a.asset_id
+		WHERE adv.dependency_vuln_id = ?;`, vulnID).Find(&artifacts).Error
+	if err != nil {
+		return nil, err
+	}
+	return artifacts, nil
+}
+
 var CleanupOrphanedRecordsSQL = `
 DELETE FROM dependency_vulns dv
 WHERE NOT EXISTS (SELECT artifact_dependency_vulns.dependency_vuln_id FROM artifact_dependency_vulns WHERE artifact_dependency_vulns.dependency_vuln_id = dv.id);

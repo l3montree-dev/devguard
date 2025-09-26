@@ -19,6 +19,7 @@ type csaf_controller struct {
 	DB                       core.DB
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
+	AssetVersionRepository   core.AssetVersionRepository
 }
 
 // root struct of the document
@@ -88,7 +89,7 @@ type revisionReplacement struct {
 
 // describe the relation between products (optional)
 type productTree struct { //security advisory
-	Branches         branches                  `json:"branches,omitempty"`
+	Branches         []branches                `json:"branches,omitempty"`
 	FullProductNames []fullProductName         `json:"full_product_name,omitempty"`
 	ProductGroups    []productGroupReplacement `json:"product_groups,omitempty"`
 	Relationships    []relationshipReplacement `json:"relationships,omitempty"`
@@ -126,7 +127,7 @@ type vulnerability struct { //security advisory
 	ProductStatus productStatusReplacement `json:"product_status,omitempty"`
 	References    []reference              `json:"references,omitempty"`
 	ReleaseDate   string                   `json:"release_date,omitempty"`
-	Remediatons   []struct {
+	Remediations  []struct {
 		Category        string         `json:"category,omitempty"`
 		Date            string         `json:"date,omitempty"`
 		Details         string         `json:"details,omitempty"`
@@ -190,10 +191,10 @@ type acknowledgements struct {
 }
 
 type branches struct {
-	Branches []branches      `json:"branches,omitempty"`
-	Category string          `json:"category,omitempty"`
-	Name     string          `json:"name,omitempty"`
-	Product  fullProductName `json:"product,omitempty"`
+	Branches []branches       `json:"branches,omitempty"`
+	Category string           `json:"category,omitempty"`
+	Name     string           `json:"name,omitempty"`
+	Product  *fullProductName `json:"product,omitempty"`
 }
 
 type fullProductName struct {
@@ -243,36 +244,49 @@ type version = string
 
 type productID = string
 
-func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) *csaf_controller {
+func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository) *csaf_controller {
 	return &csaf_controller{
 		DB:                       db,
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
+		AssetVersionRepository:   assetVersionRepository,
 	}
 }
 
 func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	slog.Info("start generating CSAF Document")
+
 	csafDoc := csaf{}
-	artifact := core.GetArtifact(ctx)
 	org := core.GetOrg(ctx)
+	asset := core.GetAsset(ctx)
 	csafDoc.Document = documentObject{
 		Category:    "csaf_security_advisory",
 		CSAFVersion: "2.0",
 		Publisher: publisherReplacement{
 			Category:  "vendor",
 			Name:      org.Slug,
-			Namespace: "https://l3montree.com", // TODO
+			Namespace: "https://devguard.org",
 		},
-		Title:          "Dependency Vulnerabilities present in the software",
-		Language:       utils.Ptr("de-DE"),
+		Title:          fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
+		Language:       utils.Ptr("en-US"),
 		SourceLanguage: utils.Ptr("en-US"),
 	}
-	tracking, err := generateTrackingObject(artifact, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
 	if err != nil {
 		return err
 	}
 	csafDoc.Document.Tracking = tracking
+	tree, err := generateProductTree(asset, controller.AssetVersionRepository)
+	if err != nil {
+		return err
+	}
+	csafDoc.ProductTree = &tree
+
+	csafDoc.Vulnerabilities, err = generateVulnerabilitiesObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	if err != nil {
+		return err
+	}
+
 	fd, err := os.Create(csafDoc.Document.Title)
 	if err != nil {
 		return err
@@ -286,31 +300,45 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	return nil
 }
 
-func generateVulnerabilitiesObject(artifact models.Artifact, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
-	vulns, err := dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository) (productTree, error) {
+	tree := productTree{}
+	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
+	if err != nil {
+		return tree, err
+	}
+
+	for _, version := range assetVersions {
+		branch := branches{Category: "product_version", Name: version.Slug}
+		tree.Branches = append(tree.Branches, branch)
+	}
+
+	return tree, nil
+}
+
+func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]vulnerability, error) {
+	var vulnerabilites []vulnerability
+	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID)
 	if err != nil {
 		return nil, err
 	}
-	var vulnerabilites []vulnerability
-	for _, vuln := range vulns {
-		vulnObject := vulnerability{}
-		events, err := vulnEventRepository.ReadAssetEventsByVulnID(vuln.ID, models.VulnTypeDependencyVuln)
-		if err != nil {
-			return nil, err
-		}
-		vulnObject.CVE = *vuln.CVEID
-		vulnObject.DiscoveryDate = events[0].CreatedAt.Format(time.RFC3339)
-		vulnerabilites = append(vulnerabilites, vulnObject)
-	}
+
 	return vulnerabilites, nil
 }
 
-func generateTrackingObject(artifact models.Artifact, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
+func generateProductStatus() (productStatusReplacement, error) {
+	productStatus := productStatusReplacement{}
+
+	return productStatus, nil
+}
+
+func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
 	tracking := trackingObject{}
-	vulns, err := dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	// first get all dependency vulns for an asset
+	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
 		return tracking, err
 	}
+	// then get all events for each of those vulns
 	allEvents := make([]models.VulnEvent, 0, len(vulns))
 	for _, vuln := range vulns {
 		events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
@@ -319,19 +347,22 @@ func generateTrackingObject(artifact models.Artifact, dependencyVulnRepository c
 		}
 		allEvents = append(allEvents, events...)
 	}
+	// then we want to sort all events by their created_at timestamp
 	slices.SortFunc(allEvents, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
 		return event1.CreatedAt.Compare(event2.CreatedAt)
 	})
 
+	// now we can extract the first release and current release timestamp that being the first and last event
 	tracking.InitialReleaseDate = allEvents[0].CreatedAt.Format(time.RFC3339)
 	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
+	// then we can construct the full revision history
 	revisions, err := buildRevisionHistory(allEvents)
 	if err != nil {
 		return tracking, err
 	}
 	tracking.RevisionHistory = revisions
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", artifact.ArtifactName, version)
+	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", asset.Slug, version)
 	tracking.Version = version
 	tracking.Status = "interim"
 	return tracking, nil
@@ -339,20 +370,25 @@ func generateTrackingObject(artifact models.Artifact, dependencyVulnRepository c
 
 func buildRevisionHistory(events []models.VulnEvent) ([]revisionReplacement, error) {
 	var revisions []revisionReplacement
-	timeBuckets := make(map[string][]models.VulnEvent, len(events)) // group events by time created to clean up the history
+	// we want to group all events based on their creation time to reduce entries and improve readability
+	timeBuckets := make(map[string][]models.VulnEvent, len(events))
 	for _, event := range events {
 		timeBuckets[event.CreatedAt.Format(time.DateTime)] = append(timeBuckets[event.CreatedAt.Format(time.DateTime)], event)
 	}
 
+	// since maps are unordered data structures we need to convert it to a ordered one using slices
 	eventGroups := make([][]models.VulnEvent, 0, len(events))
 	for _, events := range timeBuckets {
 		eventGroups = append(eventGroups, events)
 	}
 
+	// now we need to order the groups based on time
+	// Disclaimer: technically this method is not 100% accurate since we make groups based on time.DateTime Format (only seconds) but then compare based on 5 digits precision seconds
 	slices.SortFunc(eventGroups, func(events1 []models.VulnEvent, events2 []models.VulnEvent) int {
 		return events1[0].CreatedAt.Compare(events2[0].CreatedAt)
 	})
 
+	// then just create a revision entry for every event group
 	for i, eventGroup := range eventGroups {
 		revisionObject := revisionReplacement{
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),

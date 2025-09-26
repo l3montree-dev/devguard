@@ -95,6 +95,7 @@ type ArtifactRepository interface {
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	GetAllArtifactAffectedByDependencyVuln(tx DB, vulnID string) ([]models.Artifact, error)
 }
 
 type ReleaseRepository interface {
@@ -167,6 +168,7 @@ type DependencyVulnRepository interface {
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
+	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -307,12 +309,13 @@ type AssetVersionRepository interface {
 	GetDB(DB) DB
 	Delete(tx DB, assetVersion *models.AssetVersion) error
 	Save(tx DB, assetVersion *models.AssetVersion) error
-	GetAllAssetsVersionFromDBByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
+	GetAssetVersionsByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
+	GetAllTagsAndDefaultBranchForAsset(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {

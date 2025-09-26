@@ -70,7 +70,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 }
 
 func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error) {
-	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
+	return s.assetVersionRepository.GetAssetVersionsByAssetID(nil, assetID)
 }
 
 var sarifResultKindsIndicatingNotAndIssue = []string{

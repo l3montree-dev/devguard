@@ -93,7 +93,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 			}
 			for _, asset := range assets {
 				// get all asset versions for the asset
-				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(db, asset.ID)
+				assetVersions, err := assetVersionRepository.GetAssetVersionsByAssetID(db, asset.ID)
 				if err != nil {
 					slog.Error("failed to load asset versions for asset", "assetID", asset.ID, "error", err)
 					continue

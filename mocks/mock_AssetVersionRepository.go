@@ -228,12 +228,12 @@ func (_c *AssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(assetV
 	return _c
 }
 
-// GetAllAssetsVersionFromDBByAssetID provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+// GetAllTagsAndDefaultBranchForAsset provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	ret := _mock.Called(tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllAssetsVersionFromDBByAssetID")
+		panic("no return value specified for GetAllTagsAndDefaultBranchForAsset")
 	}
 
 	var r0 []models.AssetVersion
@@ -256,19 +256,19 @@ func (_mock *AssetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.
 	return r0, r1
 }
 
-// AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAssetsVersionFromDBByAssetID'
-type AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call struct {
+// AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllTagsAndDefaultBranchForAsset'
+type AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call struct {
 	*mock.Call
 }
 
-// GetAllAssetsVersionFromDBByAssetID is a helper method to define mock.On call
+// GetAllTagsAndDefaultBranchForAsset is a helper method to define mock.On call
 //   - tx core.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAllAssetsVersionFromDBByAssetID(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
-	return &AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call{Call: _e.mock.On("GetAllAssetsVersionFromDBByAssetID", tx, assetID)}
+func (_e *AssetVersionRepository_Expecter) GetAllTagsAndDefaultBranchForAsset(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
+	return &AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call{Call: _e.mock.On("GetAllTagsAndDefaultBranchForAsset", tx, assetID)}
 }
 
-func (_c *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
+func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -286,12 +286,80 @@ func (_c *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call) Run(ru
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
+func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	_c.Call.Return(assetVersions, err)
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
+func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAssetVersionsByAssetID provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) GetAssetVersionsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+	ret := _mock.Called(tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAssetVersionsByAssetID")
+	}
+
+	var r0 []models.AssetVersion
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) ([]models.AssetVersion, error)); ok {
+		return returnFunc(tx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) []models.AssetVersion); ok {
+		r0 = returnFunc(tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.AssetVersion)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionRepository_GetAssetVersionsByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetVersionsByAssetID'
+type AssetVersionRepository_GetAssetVersionsByAssetID_Call struct {
+	*mock.Call
+}
+
+// GetAssetVersionsByAssetID is a helper method to define mock.On call
+//   - tx core.DB
+//   - assetID uuid.UUID
+func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetID(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+	return &AssetVersionRepository_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", tx, assetID)}
+}
+
+func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+	_c.Call.Return(assetVersions, err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
