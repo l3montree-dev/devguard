@@ -781,6 +781,13 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 
+	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
+	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	assetVersionRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
+	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
+	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", projectScopedRBAC(core.ObjectAsset, core.ActionRead), artifactMiddleware(artifactRepository))
 
 	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
