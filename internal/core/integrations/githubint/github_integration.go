@@ -205,14 +205,12 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
-		slog.Debug("could not validate github webhook", "err", err)
 		return nil
 	}
 
 	event, err := github.ParseWebHook(github.WebHookType(req), payload)
 	if err != nil {
-		slog.Error("could not parse github webhook", "err", err)
-		return err
+		return nil
 	}
 	var vuln models.Vuln
 	doUpdateArtifactRiskHistory := false
