@@ -25,7 +25,7 @@ func NewSecretScanningCommand() *cobra.Command {
 		RunE:  sarifCommandFactory("secret-scanning"),
 	}
 
-	addScanFlags(secretScanningCommand)
+	addFirstPartyVulnsScanFlags(secretScanningCommand)
 	return secretScanningCommand
 }
 

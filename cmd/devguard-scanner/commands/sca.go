@@ -306,7 +306,7 @@ func addAssetRefFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
 }
 
-func addScanFlags(cmd *cobra.Command) {
+func addDependencyVulnsScanFlags(cmd *cobra.Command) {
 	addDefaultFlags(cmd)
 	addAssetRefFlags(cmd)
 
@@ -322,11 +322,29 @@ func addScanFlags(cmd *cobra.Command) {
 	}
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("image", "", "The oci image to scan.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will default to the empty artifact name ''.")
+
+}
+func addFirstPartyVulnsScanFlags(cmd *cobra.Command) {
+	addDefaultFlags(cmd)
+	addAssetRefFlags(cmd)
+
+	err := cmd.MarkPersistentFlagRequired("assetName")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		return
+	}
+	err = cmd.MarkPersistentFlagRequired("token")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		return
+	}
+
+	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
+	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 
 }
 
@@ -644,6 +662,6 @@ func NewSCACommand() *cobra.Command {
 		RunE: scaCommand,
 	}
 
-	addScanFlags(scaCommand)
+	addDependencyVulnsScanFlags(scaCommand)
 	return scaCommand
 }

@@ -114,7 +114,7 @@ func NewSarifCommand() *cobra.Command {
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
-	addScanFlags(cmd)
+	addFirstPartyVulnsScanFlags(cmd)
 	return cmd
 }
 
@@ -326,11 +326,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
-		}
-
-		if err != nil {
-			printGitHelp(err)
-			return errors.Wrap(err, "could not get version info")
 		}
 
 		req.Header.Set("Content-Type", "application/json")

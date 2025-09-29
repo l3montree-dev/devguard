@@ -70,6 +70,6 @@ func NewIaCCommand() *cobra.Command {
 		},
 	}
 
-	addScanFlags(iacCommand)
+	addFirstPartyVulnsScanFlags(iacCommand)
 	return iacCommand
 }
