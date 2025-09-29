@@ -243,8 +243,6 @@ func (s externalEntityProviderService) updateUserRole(domainRBAC core.AccessCont
 	if err := domainRBAC.RevokeRoleInProject(user, currentRole, projectID); err != nil {
 		slog.Warn("could not revoke role for user", "user", user, "role", currentRole, "projectID", projectID, "err", err)
 		// we don't care if the user does not have the role
-	} else {
-		slog.Info("revoked role for user", "user", user, "role", currentRole, "projectID", projectID)
 	}
 
 	if err := domainRBAC.GrantRoleInProject(user, userRole, projectID); err != nil {
