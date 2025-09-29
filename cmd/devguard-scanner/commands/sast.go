@@ -95,6 +95,6 @@ func NewSastCommand() *cobra.Command {
 		RunE: sarifCommandFactory("sast"),
 	}
 
-	addScanFlags(sastCommand)
+	addFirstPartyVulnsScanFlags(sastCommand)
 	return sastCommand
 }

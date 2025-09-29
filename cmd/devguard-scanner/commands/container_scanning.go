@@ -42,6 +42,8 @@ func NewContainerScanningCommand() *cobra.Command {
 		},
 	}
 
-	addScanFlags(containerScanningCommand)
+	addDependencyVulnsScanFlags(containerScanningCommand)
+	containerScanningCommand.Flags().String("image", "", "The oci image to scan.")
+
 	return containerScanningCommand
 }

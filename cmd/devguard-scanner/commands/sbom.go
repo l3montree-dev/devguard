@@ -104,6 +104,6 @@ func NewSbomCommand() *cobra.Command {
 		RunE:  sbomCmd,
 	}
 
-	addScanFlags(cmd)
+	addDependencyVulnsScanFlags(cmd)
 	return cmd
 }
