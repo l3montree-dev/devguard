@@ -37,22 +37,16 @@ type documentObject struct {
 		Namespace string `json:"namespace,omitempty"`
 		Text      string `json:"text,omitempty"`
 	} `json:"aggregate_severity,omitempty"`
-	Category     string `json:"category,omitempty"`     //mandatory
-	CSAFVersion  string `json:"csaf_version,omitempty"` //mandatory
-	Distribution *struct {
-		Text string `json:"text,omitempty"`
-		TLP  struct {
-			Label string `json:"label,omitempty"`
-			URL   string `json:"url,omitempty"`
-		} `json:"tlp,omitempty"`
-	} `json:"distribution,omitempty"`
-	Language       *language            `json:"lang,omitempty"`
-	Notes          []note               `json:"notes,omitempty"`
-	Publisher      publisherReplacement `json:"publisher,omitempty"` //mandatory
-	References     []reference          `json:"references,omitempty"`
-	SourceLanguage *language            `json:"source_lang,omitempty"`
-	Title          string               `json:"title,omitempty"`    //mandatory
-	Tracking       trackingObject       `json:"tracking,omitempty"` //mandatory
+	Category       string                   `json:"category,omitempty"`     //mandatory
+	CSAFVersion    string                   `json:"csaf_version,omitempty"` //mandatory
+	Distribution   *distributionReplacement `json:"distribution,omitempty"`
+	Language       *language                `json:"lang,omitempty"`
+	Notes          []note                   `json:"notes,omitempty"`
+	Publisher      publisherReplacement     `json:"publisher,omitempty"` //mandatory
+	References     []reference              `json:"references,omitempty"`
+	SourceLanguage *language                `json:"source_lang,omitempty"`
+	Title          string                   `json:"title,omitempty"`    //mandatory
+	Tracking       trackingObject           `json:"tracking,omitempty"` //mandatory
 }
 
 type trackingObject struct {
@@ -70,6 +64,14 @@ type trackingObject struct {
 	RevisionHistory    []revisionReplacement `json:"revision_history,omitempty"`
 	Status             string                `json:"status,omitempty"`  //mandatory
 	Version            version               `json:"version,omitempty"` //mandatory
+}
+
+type distributionReplacement struct {
+	Text string `json:"text,omitempty"`
+	TLP  struct {
+		Label string `json:"label,omitempty"`
+		URL   string `json:"url,omitempty"`
+	} `json:"tlp,omitempty"`
 }
 
 type publisherReplacement struct {
@@ -110,9 +112,9 @@ type relationshipReplacement struct {
 
 // describe the vulnerabilities present in products
 type vulnerability struct { //security advisory
-	Acknowledgements acknowledgements `json:"acknowledgements,omitempty"`
-	CVE              string           `json:"cve,omitempty"`
-	CWE              struct {
+	Acknowledgements *acknowledgements `json:"acknowledgements,omitempty"`
+	CVE              string            `json:"cve,omitempty"`
+	CWE              *struct {
 		ID   string `json:"id,omitempty"`
 		Name string `json:"name,omitempty"`
 	} `json:"cwe,omitempty"`
@@ -198,9 +200,9 @@ type branches struct {
 }
 
 type fullProductName struct {
-	Name                        string                      `json:"name,omitempty"`
-	ProductID                   productID                   `json:"product_id,omitempty"`
-	ProductIdentificationHelper productIdentificationHelper `json:"product_identification_helper,omitempty"`
+	Name                        string                       `json:"name,omitempty"`
+	ProductID                   productID                    `json:"product_id,omitempty"`
+	ProductIdentificationHelper *productIdentificationHelper `json:"product_identification_helper,omitempty"`
 }
 
 type productIdentificationHelper struct {
@@ -260,16 +262,24 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
 	csafDoc.Document = documentObject{
-		Category:    "csaf_security_advisory",
+		Category:    "csaf_base",
 		CSAFVersion: "2.0",
 		Publisher: publisherReplacement{
 			Category:  "vendor",
 			Name:      org.Slug,
 			Namespace: "https://devguard.org",
 		},
-		Title:          fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
-		Language:       utils.Ptr("en-US"),
-		SourceLanguage: utils.Ptr("en-US"),
+		Title:    fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
+		Language: utils.Ptr("en-US"),
+		Distribution: &distributionReplacement{
+			TLP: struct {
+				Label string "json:\"label,omitempty\""
+				URL   string "json:\"url,omitempty\""
+			}{
+				Label: "WHITE",
+				URL:   "https://first.org/tlp",
+			},
+		},
 	}
 	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
 	if err != nil {
@@ -282,10 +292,11 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	}
 	csafDoc.ProductTree = &tree
 
-	csafDoc.Vulnerabilities, err = generateVulnerabilitiesObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
 	if err != nil {
 		return err
 	}
+	csafDoc.Vulnerabilities = vulnerabilities
 
 	fd, err := os.Create(csafDoc.Document.Title)
 	if err != nil {
@@ -308,27 +319,55 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 	}
 
 	for _, version := range assetVersions {
-		branch := branches{Category: "product_version", Name: version.Slug}
+		branch := branches{
+			Category: "product_version",
+			Name:     version.Name,
+			Product: &fullProductName{
+				Name:      version.Name,
+				ProductID: version.Name,
+			},
+		}
 		tree.Branches = append(tree.Branches, branch)
 	}
 
 	return tree, nil
 }
 
-func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]vulnerability, error) {
-	var vulnerabilites []vulnerability
+type vulnInformation struct {
+	versionsAffected []string
+	dateDiscovered   *time.Time
+}
+
+func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
+	vulnerabilites := []vulnerability{}
 	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID)
 	if err != nil {
 		return nil, err
 	}
-
+	// maps a cve ID to a set of asset versions where it is present
+	cveGroups := make(map[string]vulnInformation)
+	for _, vuln := range vulns {
+		if cveGroups[*vuln.CVEID].versionsAffected == nil || !slices.Contains(cveGroups[*vuln.CVEID].versionsAffected, vuln.AssetVersionName) {
+			currentState := cveGroups[*vuln.CVEID]
+			if currentState.dateDiscovered == nil || currentState.dateDiscovered.After(vuln.CreatedAt) {
+				currentState.dateDiscovered = &vuln.CreatedAt
+			}
+			currentState.versionsAffected = append(currentState.versionsAffected, vuln.AssetVersionName)
+			cveGroups[*vuln.CVEID] = currentState
+		}
+	}
+	// then make a vulnerability object for every cve and list the asset version in the product status property
+	for cve, information := range cveGroups {
+		vulnerabilites = append(vulnerabilites, vulnerability{
+			CVE:   cve,
+			Title: cve,
+			ProductStatus: productStatusReplacement{
+				KnownAffected: information.versionsAffected,
+			},
+			ReleaseDate: information.dateDiscovered.Format(time.RFC3339),
+		})
+	}
 	return vulnerabilites, nil
-}
-
-func generateProductStatus() (productStatusReplacement, error) {
-	productStatus := productStatusReplacement{}
-
-	return productStatus, nil
 }
 
 func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
