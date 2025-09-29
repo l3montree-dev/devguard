@@ -159,35 +159,6 @@ func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnD
 	}
 }
 
-func printGitHelp(err error) {
-	// do a detailed explaination on how to version the software using git tags
-	slog.Error("could not get semver version", "err", err)
-	slog.Info(`1. What is SemVer:
-Semantic Versioning (SemVer) uses a version number format: MAJOR.MINOR.PATCH
-- MAJOR: Incompatible API changes
-- MINOR: Backward-compatible new features
-- PATCH: Backward-compatible bug fixes
-
-2. How to do it:
-- Initial tag:
-git tag -a 1.0.0 -m "Initial release"
-git push origin 1.0.0
-
-- New versions:
-- Breaking changes:
-git tag -a 2.0.0 -m "Breaking changes"
-git push origin 2.0.0
-
-- New features:
-git tag -a 1.1.0 -m "New features"
-git push origin 1.1.0
-
-- Bug fixes:
-git tag -a 1.0.1 -m "Bug fixes"
-git push origin 1.0.1
-`)
-}
-
 // can be reused for container scanning as well.
 func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
