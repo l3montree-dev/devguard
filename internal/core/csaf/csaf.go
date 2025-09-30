@@ -1,8 +1,12 @@
 package csaf
 
 import (
+	"bytes"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"slices"
@@ -297,17 +301,45 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 		return err
 	}
 	csafDoc.Vulnerabilities = vulnerabilities
+	buf := bytes.Buffer{}
 
-	fd, err := os.Create(csafDoc.Document.Title)
-	if err != nil {
-		return err
-	}
-	encoder := json.NewEncoder(fd)
+	encoder := json.NewEncoder(&buf)
 	err = encoder.Encode(csafDoc)
 	if err != nil {
 		return err
 	}
+	hash := sha512.Sum512(buf.Bytes())
+
+	fdCSAF, err := os.Create(csafDoc.Document.Tracking.ID + ".json")
+	if err != nil {
+		return err
+	}
+	defer fdCSAF.Close()
+	_, err = io.Copy(fdCSAF, &buf)
+	if err != nil {
+		return err
+	}
+
+	hashString := hex.EncodeToString(hash[:])
+
+	fdHash, err := os.Create(csafDoc.Document.Tracking.ID + ".json.sha512")
+	if err != nil {
+		return err
+	}
+	defer fdHash.Close()
+
+	_, err = fdHash.WriteString(hashString)
+	if err != nil {
+		return err
+	}
+
+	err = generateProviderMetadataFile()
+
 	slog.Info("successfully generated CSAF Document")
+	return nil
+}
+
+func generateProviderMetadataFile() error {
 	return nil
 }
 
@@ -331,12 +363,6 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 	}
 
 	return tree, nil
-}
-
-type vulnInformation struct {
-	versionsAffected []string
-	dateDiscovered   *time.Time
-	vulns            []models.DependencyVuln
 }
 
 func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
@@ -433,7 +459,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	}
 	tracking.RevisionHistory = revisions
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", asset.Slug, version)
+	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", strings.ToLower(asset.Slug), strings.ToLower(version))
 	tracking.Version = version
 	tracking.Status = "interim"
 	return tracking, nil

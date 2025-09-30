@@ -399,12 +399,13 @@ func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx core.DB, ar
 func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx core.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error) {
 	var vulns []models.DependencyVuln
 	var err error
+	// choose which states we want to include
 	if len(excludedStates) == 0 {
 		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
 		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Find(&vulns).Error
 	} else {
-		err = repository.Repository.GetDB(tx).Debug().Raw(`SELECT vulns.* FROM dependency_vulns vulns 
+		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
 		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Find(&vulns).Error
 	}
