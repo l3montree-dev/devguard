@@ -36,8 +36,7 @@ func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, as
 func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
-		slog.Error("could not parse gitlab webhook", "err", err)
-		return err
+		return nil
 	}
 
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")

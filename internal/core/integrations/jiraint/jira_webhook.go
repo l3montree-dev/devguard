@@ -24,15 +24,12 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 
 	payload, err := io.ReadAll(req.Body)
 	if err != nil {
-		slog.Error("failed to read request body", "err", err)
 		return ctx.JSON(400, "Invalid request body")
 	}
 
 	defer req.Body.Close()
 	event, err := jira.ParseWebhook(payload)
 	if err != nil {
-		slog.Error("failed to parse Jira webhook event", "err", err)
-
 		return nil
 	}
 
