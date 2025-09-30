@@ -168,7 +168,7 @@ type DependencyVulnRepository interface {
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
-	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {

@@ -262,7 +262,7 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
 	csafDoc.Document = documentObject{
-		Category:    "csaf_base",
+		Category:    "csaf_security_advisory",
 		CSAFVersion: "2.0",
 		Publisher: publisherReplacement{
 			Category:  "vendor",
@@ -336,38 +336,70 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 type vulnInformation struct {
 	versionsAffected []string
 	dateDiscovered   *time.Time
+	vulns            []models.DependencyVuln
 }
 
 func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
 	vulnerabilites := []vulnerability{}
-	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID)
+	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID, []models.VulnState{models.VulnStateFixed})
 	if err != nil {
 		return nil, err
 	}
 	// maps a cve ID to a set of asset versions where it is present
-	cveGroups := make(map[string]vulnInformation)
+	cveGroups := make(map[string][]models.DependencyVuln)
 	for _, vuln := range vulns {
-		if cveGroups[*vuln.CVEID].versionsAffected == nil || !slices.Contains(cveGroups[*vuln.CVEID].versionsAffected, vuln.AssetVersionName) {
-			currentState := cveGroups[*vuln.CVEID]
-			if currentState.dateDiscovered == nil || currentState.dateDiscovered.After(vuln.CreatedAt) {
-				currentState.dateDiscovered = &vuln.CreatedAt
-			}
-			currentState.versionsAffected = append(currentState.versionsAffected, vuln.AssetVersionName)
-			cveGroups[*vuln.CVEID] = currentState
-		}
+		cveGroups[*vuln.CVEID] = append(cveGroups[*vuln.CVEID], vuln)
 	}
 	// then make a vulnerability object for every cve and list the asset version in the product status property
-	for cve, information := range cveGroups {
-		vulnerabilites = append(vulnerabilites, vulnerability{
+	for cve, vulns := range cveGroups {
+		vulnObject := vulnerability{
 			CVE:   cve,
 			Title: cve,
-			ProductStatus: productStatusReplacement{
-				KnownAffected: information.versionsAffected,
-			},
-			ReleaseDate: information.dateDiscovered.Format(time.RFC3339),
-		})
+		}
+		uniqueVersionsAffected := make([]string, 0, len(vulns))
+		for _, vuln := range vulns {
+			if !slices.Contains(uniqueVersionsAffected, vuln.AssetVersionName) {
+				uniqueVersionsAffected = append(uniqueVersionsAffected, vuln.AssetVersionName)
+			}
+		}
+		vulnObject.ProductStatus = productStatusReplacement{
+			KnownAffected: uniqueVersionsAffected,
+		}
+
+		vulnObject.Notes = generateNoteForVulnerabilityObject(vulns)
+		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
 	return vulnerabilites, nil
+}
+
+func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
+	vulnDetails := note{
+		Category: "details",
+		Title:    "state of the vulnerability in the product",
+	}
+	summary := ""
+	versionsToVulns := make(map[string][]models.DependencyVuln, len(vulns))
+	for _, vuln := range vulns {
+		versionsToVulns[vuln.AssetVersionName] = append(versionsToVulns[vuln.AssetVersionName], vuln)
+	}
+	for version, versionVulns := range versionsToVulns {
+		summary += fmt.Sprintf("Version %s: ", version)
+		for _, vuln := range versionVulns {
+			switch vuln.State {
+			case models.VulnStateOpen:
+				summary += "Unhandled for purl " + *vuln.ComponentPurl + ", "
+			case models.VulnStateAccepted:
+				summary += "Accepted for purl " + *vuln.ComponentPurl + ", "
+			case models.VulnStateFalsePositive:
+				summary += "Marked as false positive for purl " + *vuln.ComponentPurl + ", "
+			}
+		}
+		summary = strings.TrimRight(summary, ", ")
+		summary += "| "
+	}
+	summary = strings.TrimRight(summary, "| ")
+	vulnDetails.Text = summary
+	return []note{vulnDetails}
 }
 
 func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
