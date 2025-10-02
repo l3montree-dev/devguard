@@ -3,6 +3,7 @@ package csaf
 import (
 	"bytes"
 	"crypto/sha512"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -257,6 +258,65 @@ func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnR
 		VulnEventRepository:      vulnEventRepository,
 		AssetVersionRepository:   assetVersionRepository,
 	}
+}
+
+func (controller *csaf_controller) GetIndexHTML(ctx core.Context) error {
+	html := `<html>
+	<head><title>Index of /csaf/</title></head>
+	<body cz-shortcut-listen="true">
+	<h1>Index of /csaf/</h1><hr><pre>
+	<a href="openpgp/">openpgp/</a>
+	<a href="white/">white/</a>
+	<a href="provider-metadata.json">provider-metadata.json</a>
+	</pre><hr>
+	</body>
+	</html>`
+	return ctx.HTML(200, html)
+}
+
+func (controller *csaf_controller) GetOpenPGP(ctx core.Context) error {
+	html := `<html>
+	<head><title>Index of /csaf/openpgp/</title></head>
+	<body cz-shortcut-listen="true">
+	<h1>Index of /csaf/openpgp</h1><hr><pre>
+	<a href="public_key.asc">public_key.asc</a>
+	<a href="public_key.sha512">public_key.asc.sha512</a>
+	</pre><hr>
+	</body>
+	</html>`
+	return ctx.HTML(200, html)
+}
+
+func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
+	file := ctx.Param("file")
+	file = file[:len(file)-1]
+	index := strings.LastIndex(file, ".")
+	if index == -1 {
+		return fmt.Errorf("invalid resource: %s", file)
+	}
+	extension := file[index:] //get the file extension
+	if extension != ".asc" && extension != ".sha512" {
+		return fmt.Errorf("invalid resource: %s", file)
+	}
+	publicKey := os.Getenv("CSAF_PUBLIC_KEY")
+	if publicKey == "" {
+		return fmt.Errorf("could read public key from env variables, make sure the variable <CSAF_PUBLIC_KEY> is set in the .env file of your project")
+	}
+	decodedPublicKey, err := base64.StdEncoding.DecodeString(publicKey)
+	if err != nil {
+		return err
+	}
+	pem := []byte("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n")
+	pem = append(pem, decodedPublicKey...)
+	pem = append(pem, []byte("\n-----END PGP PUBLIC KEY BLOCK-----")...)
+	if extension == ".asc" {
+		return ctx.String(200, string(pem))
+	} else if extension == ".sha512" {
+		hash := sha512.Sum512(pem)
+		hashString := hex.EncodeToString(hash[:])
+		return ctx.String(200, hashString)
+	}
+	return fmt.Errorf("invalid resource: %s", file)
 }
 
 func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {

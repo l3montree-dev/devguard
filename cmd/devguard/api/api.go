@@ -762,7 +762,10 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
-
+	assetRouter.GET("/csaf.json/", csafController.GenerateCSAFReport)
+	assetRouter.GET("/csaf/", csafController.GetIndexHTML)
+	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGP)
+	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
@@ -793,7 +796,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
-	artifactRouter.GET("/csaf.json/", csafController.GenerateCSAFReport)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
 
