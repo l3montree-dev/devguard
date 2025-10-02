@@ -125,6 +125,11 @@ func (service importService) ImportFromDiff() error {
 			}
 
 			slog.Info("finished loading latest snapshot state")
+			err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
+			if err != nil {
+				slog.Error("could not save last incremental import version", "err", err)
+			}
+			slog.Info("finished updating tag", "tag", tag)
 			continue
 		}
 
@@ -149,15 +154,13 @@ func (service importService) ImportFromDiff() error {
 		if err != nil {
 			return err
 		}
-	}
-	slog.Info("finished updating tags", "duration", time.Since(begin))
-	// when everything ran successful we save the last updated tag to use as versioning
-	if len(tags) > 0 {
-		err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tags[len(tags)-1])
+		err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
 		if err != nil {
 			slog.Error("could not save last incremental import version", "err", err)
 		}
+		slog.Info("finished updating tag", "tag", tag)
 	}
+	slog.Info("finished updating tags", "duration", time.Since(begin))
 
 	return nil
 }
@@ -197,25 +200,23 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 
 	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
 	sort.Slice(files, func(i, j int) bool {
-		if files[i].Name() == "cve_affected_component" {
+		if strings.HasPrefix(files[i].Name(), "cve_affected_component") {
 			return false
 		}
-		if files[j].Name() == "cve_affected_component" {
+		if strings.HasPrefix(files[j].Name(), "cve_affected_component") {
 			return true
 		}
-		return files[i].Name() < files[j].Name()
+		return strings.Compare(files[i].Name(), files[j].Name()) < 0
 	})
 
+loop:
 	for _, file := range files {
 		name := strings.TrimRight(file.Name(), ".csv")
+		fields := strings.Split(name, "_")
 		// extract table information from the name of the csv file
-		var index int
-		if index = strings.LastIndex(name, "_"); index == -1 {
-			slog.Warn("could not determine mode of diff file, skipping", "file", name)
-			continue
-		}
-		mode := name[index+1:]
-		table := name[:index]
+
+		mode := fields[len(fields)-1] // insert, delete, update
+		table := strings.Replace(strings.Join(fields[:len(fields)-1], "_"), "_diff", "", 1)
 
 		// could be run concurrent but probably won't yield a lot of performance improvement
 		switch mode {
@@ -223,19 +224,19 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 			err = processInsertDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process insert diff, continuing...", "table", table, "err", err)
-				continue
+				break loop
 			}
 		case "delete":
 			err = processDeleteDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process delete diff, continuing...", "table", table, "err", err)
-				continue
+				break loop
 			}
 		case "update":
 			err = processUpdateDiff(ctx, tx, dirPath+"/"+name+".csv", table)
 			if err != nil {
 				slog.Error("could not process update diff, continuing...", "table", table, "err", err)
-				continue
+				break loop
 			}
 		default:
 			slog.Warn("invalid mode for diff file", "mode", mode)
@@ -606,16 +607,49 @@ func copyCSVFromRemoteToLocal(ctx context.Context, repo *remote.Repository, tag 
 
 func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
 	slog.Info(fmt.Sprintf("start inserting for table=%s", tableName))
-	fd, err := os.Open(filePath)
+
+	entries, err := utils.ReadCsvFile(filePath)
 	if err != nil {
+		slog.Error("error when reading csv file", "err", err)
 		return err
 	}
-	defer fd.Close() //nolint
 
-	_, err = tx.Conn().PgConn().CopyFrom(ctx, fd, fmt.Sprintf("COPY %s FROM STDIN WITH (FORMAT csv, HEADER true, NULL 'NULL')", tableName))
-	if err != nil {
-		slog.Error("error when trying to insert into table", "err", err)
-		return err
+	if len(entries) == 0 {
+		slog.Info("nothing to insert", "table", tableName)
+		return nil
+	}
+
+	for _, entry := range entries {
+		columns := []string{}
+		placeholders := []string{}
+		values := []any{}
+
+		i := 1
+		for key, value := range entry {
+			columns = append(columns, pgx.Identifier{key}.Sanitize())
+			placeholders = append(placeholders, fmt.Sprintf("$%d", i))
+
+			// Handle NULL values
+			if value == "NULL" || value == "" {
+				values = append(values, nil)
+			} else {
+				values = append(values, value)
+			}
+			i++
+		}
+
+		sql := fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT DO NOTHING",
+			pgx.Identifier{tableName}.Sanitize(),
+			strings.Join(columns, ","),
+			strings.Join(placeholders, ","),
+		)
+
+		_, err := tx.Exec(ctx, sql, values...)
+		if err != nil {
+			slog.Error("error when inserting into table", "table", tableName, "err", err)
+			continue
+		}
 	}
 	slog.Info("insert completed")
 	return nil

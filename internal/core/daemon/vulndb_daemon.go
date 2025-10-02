@@ -31,7 +31,7 @@ func UpdateVulnDB(db core.DB) error {
 
 	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 
-	err := v.Import(db, "latest")
+	err := v.ImportFromDiff()
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err
