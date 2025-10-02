@@ -23,10 +23,10 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/labstack/echo/v4"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm/clause"
@@ -390,6 +390,7 @@ type GitLabOauth2TokenRepository interface {
 }
 
 type ConfigService interface {
+	// retrieves the value for the given key and marshals it into v
 	GetJSONConfig(key string, v any) error
 	SetJSONConfig(key string, v any) error
 }

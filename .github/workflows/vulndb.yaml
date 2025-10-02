@@ -7,6 +7,10 @@ on:
         description: 'Run import job'
         required: false
         default: 'true'
+      run_generate_snapshot:
+        description: 'Run generate snapshot job'
+        required: false
+        default: 'false'
   schedule:
     - cron: '0 */6 * * *' # every hour
 
@@ -57,12 +61,15 @@ jobs:
     - name: Import the last database version (this takes some time)
       if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
       run: |
-        go run ./cmd/devguard-cli/main.go vulndb import || true
+        # import the latest vulndb version, diff flage copies the database for comparison later
+        go run ./cmd/devguard-cli/main.go vulndb import diff || true
     - name: Build the database (this takes some time)
       run: |
         # will fetch the latest build database from ghcr.io
         go run ./cmd/devguard-cli/main.go vulndb sync
+
     - name: Dump the PostgreSQL database
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
       # skip:checkov:CKV_SECRET_6
       run: |
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_components.csv 
@@ -71,12 +78,23 @@ jobs:
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cwes) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cwes.csv 
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM exploits) TO STDOUT WITH DELIMITER ',' CSV HEADER" > exploits.csv 
         # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
-    
+
+
+    - name: Export the diff csv files (this does not take some time)
+      if : ${{ github.event.inputs.run_generate_snapshot == 'false' }}  
+      run: |
+        # writes the difference from the db before and after the sync into csv files
+        go run ./cmd/devguard-cli/main.go vulndb export
+
     - name: install zip
       run: sudo apt-get install zip
 
     - name: Zip the CSV files
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
       run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv
+    - name: Zip the CSV files
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
+      run: zip -r vulndb.zip diffs-tmp 
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
 
@@ -99,11 +117,20 @@ jobs:
     - name: set the date
       run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
 
-    - name: Push the database ZIP file to GitHub Container Registry
+    - name: Push the database ZIP file to GitHub Container Registry (diff)
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest vulndb.zip
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date vulndb.zip
+
+    - name: Push the database ZIP file to GitHub Container Registry (snapshot)
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: |
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot vulndb.zip
     - name: Push the signatures to the GitHub Container Registry  
+      if: ${{ github.event.inputs.run_generate_snapshot == 'false' }}
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date.sig vulndb.zip.sig
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest.sig vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date.sig vulndb.zip.sig
+    - name: Push the signatures to the GitHub Container Registry (snapshot)  
+      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+      run: |
+        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot.sig vulndb.zip.sig
