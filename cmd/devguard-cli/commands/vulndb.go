@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -144,38 +145,14 @@ func newImportCommand() *cobra.Command {
 			for _, arg := range args {
 				slog.Info(arg)
 			}
-			var mode string // determines how we import
-			if len(args) > 0 {
-				mode = args[0]
+
+			err = v.ImportFromDiff(nil)
+			if err != nil {
+				slog.Error("error when trying to import with diff files", "err", err)
 			}
-			// import incremental updates using the difference between two databases states
-			if mode == "inc" {
-				err := v.ImportFromDiff()
-				if err != nil {
-					slog.Error("error when trying to import with diff files", "err", err)
-					return
-				}
-			} else { // import the full table
-				if mode == "diff" { // additionally create a diff table to be used by the export command
-					os.Setenv("MAKE_DIFF_TABLES", "true")
-				}
-
-				tag := "latest"
-				// if len(args) == 1 {
-				// 	tag = args[0]
-				// } else {
-				// 	tag = args[1]
-				// }
-
-				err = v.Import(database, tag)
-				if err != nil {
-					slog.Error("could not import vulndb", "err", err)
-					return
-				}
-			}
-
 		},
 	}
+
 	return importCmd
 }
 
@@ -327,7 +304,37 @@ func newExportIncrementalCommand() *cobra.Command {
 			// first import the new state
 			core.LoadConfig() // nolint
 			os.RemoveAll("diffs-tmp/")
-			err := vulndb.Export()
+			core.LoadConfig() // nolint
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "error", err)
+				return
+			}
+			migrateDB(database)
+
+			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			exploitsRepository := repositories.NewExploitRepository(database)
+			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+			configService := config.NewService(database)
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+			for _, arg := range args {
+				slog.Info(arg)
+			}
+
+			// import the last vulndb version into some clean tables
+			// we use the _diff suffix to identify those tables
+			err = v.CreateTablesWithSuffix("_diff")
+			if err != nil {
+				slog.Error("error when trying to create tables with suffix", "err", err)
+				return
+			}
+			err = v.ImportFromDiff(utils.Ptr("_diff"))
+			if err != nil {
+				slog.Error("error when trying to import with diff files", "err", err)
+				return
+			}
+			err = vulndb.ExportDiffs("_diff")
 			if err != nil {
 				return
 			}

@@ -62,7 +62,7 @@ jobs:
       if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
       run: |
         # import the latest vulndb version, diff flage copies the database for comparison later
-        go run ./cmd/devguard-cli/main.go vulndb import diff || true
+        go run ./cmd/devguard-cli/main.go vulndb import || true
     - name: Build the database (this takes some time)
       run: |
         # will fetch the latest build database from ghcr.io
