@@ -581,10 +581,14 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		slog.Error("failed to convert groupID to int", "err", err)
 		return nil, nil, errors.Wrap(err, "failed to convert groupID to int")
 	}
-	// get the projects in the group
-	projects, _, err := gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
-		WithShared:     gitlab.Ptr(false),
-		MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
+
+	projects, err := FetchPaginatedData(func(page int) ([]*gitlab.Project, *gitlab.Response, error) {
+		// get the projects in the group
+		return gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
+			WithShared:     gitlab.Ptr(false),
+			MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
+			ListOptions:    gitlab.ListOptions{Page: page, PerPage: 100},
+		})
 	})
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
