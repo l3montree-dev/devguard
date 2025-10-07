@@ -49,7 +49,7 @@ func (h *releaseController) List(c core.Context) error {
 
 // SBOMJSON returns a merged CycloneDX BOM for a release in JSON format.
 func (h *releaseController) SBOMJSON(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")
@@ -73,7 +73,7 @@ func (h *releaseController) SBOMJSON(c core.Context) error {
 
 // SBOMXML returns a merged CycloneDX BOM for a release in XML format.
 func (h *releaseController) SBOMXML(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")
@@ -97,7 +97,7 @@ func (h *releaseController) SBOMXML(c core.Context) error {
 
 // VEXJSON currently returns the merged CycloneDX BOM as JSON for compatibility.
 func (h *releaseController) VEXJSON(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")
@@ -121,7 +121,7 @@ func (h *releaseController) VEXJSON(c core.Context) error {
 
 // VEXXML currently returns the merged CycloneDX BOM as XML for compatibility.
 func (h *releaseController) VEXXML(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")
@@ -239,7 +239,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 }
 
 func (h *releaseController) Read(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")
@@ -270,7 +270,7 @@ func (h *releaseController) Create(c core.Context) error {
 }
 
 func (h *releaseController) Update(c core.Context) error {
-	idParam := core.GetParam(c, "releaseId")
+	idParam := core.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid release id")

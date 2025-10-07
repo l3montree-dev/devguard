@@ -730,7 +730,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.GET("/releases/", releaseController.List, projectScopedRBAC(core.ObjectProject, core.ActionRead))
 	projectRouter.POST("/releases/", releaseController.Create, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read, projectScopedRBAC(core.ObjectProject, core.ActionRead))
-	projectRouter.PUT("/releases/:releaseID/", releaseController.Update, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.PATCH("/releases/:releaseID/", releaseController.Update, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/releases/:releaseID/", releaseController.Delete, projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 	// release-scoped statistics
 	projectRouter.GET("/releases/:releaseID/stats/risk-history/", statisticsController.GetReleaseRiskHistory, projectScopedRBAC(core.ObjectProject, core.ActionRead))
