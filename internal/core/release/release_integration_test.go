@@ -113,7 +113,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 		// inject route params expected by controller
 		ctx.SetPath("/projects/:projectSlug/releases/:releaseId/sbom.json")
-		ctx.SetParamNames("projectSlug", "releaseId")
+		ctx.SetParamNames("projectSlug", "releaseID")
 		ctx.SetParamValues(project.Slug, rel.ID.String())
 
 		// attach required objects into echo.Context using core.Set helpers (core.Context is alias to echo.Context)
