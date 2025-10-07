@@ -526,8 +526,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactService := artifact.NewService(artifactRepository)
 	artifactController := artifact.NewController(artifactService)
 
-	csafController := csaf.NewCSAFController(db, dependencyVulnRepository, vulnEventRepository, assetVersionRepository)
-
 	// release module
 	// release repository will be created later when project router is available
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
@@ -565,6 +563,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	patService := pat.NewPatService(patRepository)
 
 	vulndbController := vulndb.NewHTTPController(cveRepository)
+	csafController := csaf.NewCSAFController(db, dependencyVulnRepository, vulnEventRepository, assetVersionRepository, statisticsRepository)
 
 	server := echohttp.Server()
 
@@ -685,7 +684,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
-	organizationRouter.GET("/csaf/", csafController.GenerateCSAFReport)
+
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
@@ -762,10 +761,18 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
+
 	assetRouter.GET("/csaf.json/", csafController.GenerateCSAFReport)
 	assetRouter.GET("/csaf/", csafController.GetIndexHTML)
+
+	assetRouter.GET("/csaf/white/", csafController.GetYearFolders)
+	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYear)
+	assetRouter.GET("/csaf/white/:year/:version/", csafController.GenerateCSAFReport)
+
 	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGP)
 	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
+
+	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadata)
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 

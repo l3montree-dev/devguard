@@ -1,13 +1,10 @@
 package csaf
 
 import (
-	"bytes"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"slices"
@@ -18,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"gorm.io/gorm"
 )
 
 type csaf_controller struct {
@@ -25,6 +23,7 @@ type csaf_controller struct {
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
 	AssetVersionRepository   core.AssetVersionRepository
+	statisticsRepository     core.StatisticsRepository
 }
 
 // root struct of the document
@@ -251,12 +250,13 @@ type version = string
 
 type productID = string
 
-func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository) *csaf_controller {
+func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csaf_controller {
 	return &csaf_controller{
 		DB:                       db,
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
 		AssetVersionRepository:   assetVersionRepository,
+		statisticsRepository:     statisticsRepository,
 	}
 }
 
@@ -284,6 +284,80 @@ func (controller *csaf_controller) GetOpenPGP(ctx core.Context) error {
 	</pre><hr>
 	</body>
 	</html>`
+	return ctx.HTML(200, html)
+}
+
+func (controller *csaf_controller) GetYearFolders(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	vulns, err := controller.DependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	if err != nil {
+		return err
+	}
+
+	allYears := []int{}
+	for _, vuln := range vulns {
+		events, err := controller.VulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
+		if err != nil {
+			return err
+		}
+		for _, event := range events {
+			if !slices.Contains(allYears, event.CreatedAt.Year()) {
+				allYears = append(allYears, event.CreatedAt.Year())
+			}
+		}
+	}
+	slices.Sort(allYears)
+
+	html := `<html>
+	<head><title>Index of /csaf/white/</title></head>
+	<body cz-shortcut-listen="true">
+	<h1>Index of /csaf/white/</h1><hr><pre>`
+	for _, year := range allYears {
+		html += fmt.Sprintf(`
+		<a href="%d/">%d/</a>`, year, year)
+	}
+	html += `</pre><hr>
+	</body>
+		</html>`
+	slog.Info(html)
+	return ctx.HTML(200, html)
+}
+
+func (controller *csaf_controller) GetReportsByYear(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	year := strings.TrimRight(ctx.Param("year"), "/")
+	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	if err != nil {
+		return err
+	}
+	entriesForYear := make([]revisionReplacement, 0)
+	yearNumber, err := strconv.Atoi(year)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range tracking.RevisionHistory {
+		date, err := time.Parse(time.RFC3339, entry.Date)
+		if err != nil {
+			return err
+		}
+		if date.Year() == yearNumber {
+			entriesForYear = append(entriesForYear, entry)
+		}
+	}
+
+	html := fmt.Sprintf(`<html>
+	<head><title>Index of /csaf/white/%s/</title></head>
+	<body cz-shortcut-listen="true">
+	<h1>Index of /csaf/white/%s/</h1><hr><pre>`, year, year)
+	for _, entry := range entriesForYear {
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
+		html += fmt.Sprintf(`
+		<a href="%s">%s</a>`, fileName, fileName)
+	}
+	html += `</pre><hr>
+	</body>
+		</html>`
 	return ctx.HTML(200, html)
 }
 
@@ -319,8 +393,24 @@ func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
 	return fmt.Errorf("invalid resource: %s", file)
 }
 
+func extractVersionFromDocumentID(id string) (int, error) {
+	slog.Info("Received id", "id", id)
+	fields := strings.Split(id, "_")
+	if len(fields) <= 2 {
+		return 0, fmt.Errorf("invalid csaf document ID")
+	}
+	version := fields[len(fields)-1]
+	version = strings.TrimRight(version, ".json/")
+	return strconv.Atoi(version)
+}
+
 func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 	slog.Info("start generating CSAF Document")
+	version, err := extractVersionFromDocumentID(ctx.Param("version"))
+	if err != nil {
+		return err
+	}
+	slog.Info("returned id", "id", version)
 
 	csafDoc := csaf{}
 	org := core.GetOrg(ctx)
@@ -345,7 +435,7 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 			},
 		},
 	}
-	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, version)
 	if err != nil {
 		return err
 	}
@@ -355,52 +445,54 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 		return err
 	}
 	csafDoc.ProductTree = &tree
-
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	lastRevisionTimestamp, err := time.Parse(time.RFC3339, tracking.RevisionHistory[len(tracking.RevisionHistory)-1].Date)
+	if err != nil {
+		return err
+	}
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository)
 	if err != nil {
 		return err
 	}
 	csafDoc.Vulnerabilities = vulnerabilities
-	buf := bytes.Buffer{}
-
-	encoder := json.NewEncoder(&buf)
-	err = encoder.Encode(csafDoc)
-	if err != nil {
-		return err
-	}
-	hash := sha512.Sum512(buf.Bytes())
-
-	fdCSAF, err := os.Create(csafDoc.Document.Tracking.ID + ".json")
-	if err != nil {
-		return err
-	}
-	defer fdCSAF.Close()
-	_, err = io.Copy(fdCSAF, &buf)
-	if err != nil {
-		return err
-	}
-
-	hashString := hex.EncodeToString(hash[:])
-
-	fdHash, err := os.Create(csafDoc.Document.Tracking.ID + ".json.sha512")
-	if err != nil {
-		return err
-	}
-	defer fdHash.Close()
-
-	_, err = fdHash.WriteString(hashString)
-	if err != nil {
-		return err
-	}
-
-	err = generateProviderMetadataFile()
 
 	slog.Info("successfully generated CSAF Document")
-	return nil
+	return ctx.JSON(200, csafDoc)
 }
 
-func generateProviderMetadataFile() error {
-	return nil
+type ProviderMetadata struct {
+	URL                     string               `json:"canonical_url"`
+	LastUpdated             string               `json:"last_updated"`
+	ListOnCSAFAggregators   bool                 `json:"list_on_CSAF_aggregators"`
+	MetadataVersion         string               `json:"metadata_version"`
+	MirrorOnCSAFAggregators bool                 `json:"mirror_on_CSAF_aggregators"`
+	PublicOpenpgpKeys       []PGPKey             `json:"public_openpgp_keys"`
+	Publisher               publisherReplacement `json:"publisher"`
+	Role                    string               `json:"role"`
+}
+
+type PGPKey struct {
+	Fingerprint *string `json:"fingerprint"`
+	URL         string  `json:"url"`
+}
+
+func (controller *csaf_controller) GetProviderMetadata(ctx core.Context) error {
+	metadata := ProviderMetadata{
+		URL:                     ctx.Path(),
+		LastUpdated:             time.Now().Format(time.RFC3339),
+		ListOnCSAFAggregators:   true,
+		MirrorOnCSAFAggregators: true,
+		Role:                    "csaf_trusted_provider",
+		MetadataVersion:         "2.0",
+		Publisher: publisherReplacement{
+			Category:       "vendor",
+			ContactDetails: "info@l3montree.com",
+			Name:           "L3montree GmbH",
+			Namespace:      "https://l3montree.com/",
+		},
+		PublicOpenpgpKeys: []PGPKey{{URL: strings.TrimRight(ctx.Path(), "provider-metadata.json") + "openpgp/public_key.asc"}},
+	}
+
+	return ctx.JSON(200, metadata)
 }
 
 func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository) (productTree, error) {
@@ -425,12 +517,28 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 	return tree, nil
 }
 
-func generateVulnerabilitiesObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
+func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, statisticsRepository core.StatisticsRepository) ([]vulnerability, error) {
+	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	vulnerabilites := []vulnerability{}
 	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID, []models.VulnState{models.VulnStateFixed})
 	if err != nil {
 		return nil, err
 	}
+
+	filteredVulns := make([]models.DependencyVuln, 0, len(vulns))
+	for i, vuln := range vulns {
+		lastEvent, err := vulnEventRepository.GetLastEventBeforeTimestamp(nil, vuln.ID, timeStamp)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				//this vulnerability did not exist before this timestamp
+				continue
+			}
+			return nil, err
+		}
+		lastEvent.Apply(&vulns[i])
+		filteredVulns = append(filteredVulns, vulns[i])
+	}
+
 	// maps a cve ID to a set of asset versions where it is present
 	cveGroups := make(map[string][]models.DependencyVuln)
 	for _, vuln := range vulns {
@@ -488,7 +596,7 @@ func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 	return []note{vulnDetails}
 }
 
-func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) (trackingObject, error) {
+func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (trackingObject, error) {
 	tracking := trackingObject{}
 	// first get all dependency vulns for an asset
 	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
@@ -513,7 +621,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	tracking.InitialReleaseDate = allEvents[0].CreatedAt.Format(time.RFC3339)
 	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(allEvents)
+	revisions, err := buildRevisionHistory(allEvents, documentVersion)
 	if err != nil {
 		return tracking, err
 	}
@@ -525,12 +633,17 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	return tracking, nil
 }
 
-func buildRevisionHistory(events []models.VulnEvent) ([]revisionReplacement, error) {
+func convertTimeToDateHourMinute(t time.Time) time.Time {
+	return t.Add(time.Second * time.Duration(60-t.Second()))
+}
+
+func buildRevisionHistory(events []models.VulnEvent, documentVersion int) ([]revisionReplacement, error) {
 	var revisions []revisionReplacement
 	// we want to group all events based on their creation time to reduce entries and improve readability
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
 	for _, event := range events {
-		timeBuckets[event.CreatedAt.Format(time.DateTime)] = append(timeBuckets[event.CreatedAt.Format(time.DateTime)], event)
+		timeStamp := convertTimeToDateHourMinute(event.CreatedAt).Format(time.DateTime)
+		timeBuckets[timeStamp] = append(timeBuckets[timeStamp], event)
 	}
 
 	// since maps are unordered data structures we need to convert it to a ordered one using slices
@@ -547,6 +660,9 @@ func buildRevisionHistory(events []models.VulnEvent) ([]revisionReplacement, err
 
 	// then just create a revision entry for every event group
 	for i, eventGroup := range eventGroups {
+		if i >= documentVersion {
+			break
+		}
 		revisionObject := revisionReplacement{
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
@@ -580,19 +696,39 @@ func generateSummaryForEvents(events []models.VulnEvent) string {
 	}
 	summary := ""
 	if len(detectedVulns) > 0 {
-		summary += fmt.Sprintf("Detected %d new vulnerabilities,", len(detectedVulns))
+		if len(detectedVulns) == 1 {
+			summary += fmt.Sprintf("Detected %d new vulnerability,", len(detectedVulns))
+		} else {
+			summary += fmt.Sprintf("Detected %d new vulnerabilities,", len(detectedVulns))
+		}
 	}
 	if len(reopenedVulns) > 0 {
-		summary += fmt.Sprintf(" Reopened %d old vulnerabilities,", len(reopenedVulns))
+		if len(reopenedVulns) == 1 {
+			summary += fmt.Sprintf(" Reopened %d old vulnerability,", len(reopenedVulns))
+		} else {
+			summary += fmt.Sprintf(" Reopened %d old vulnerabilities,", len(reopenedVulns))
+		}
 	}
 	if len(fixedVulns) > 0 {
-		summary += fmt.Sprintf(" Fixed %d existing vulnerabilities,", len(fixedVulns))
+		if len(fixedVulns) == 1 {
+			summary += fmt.Sprintf(" Fixed %d existing vulnerability,", len(fixedVulns))
+		} else {
+			summary += fmt.Sprintf(" Fixed %d existing vulnerabilities,", len(fixedVulns))
+		}
 	}
 	if len(acceptedVulns) > 0 {
-		summary += fmt.Sprintf(" Accepted %d existing vulnerabilities,", len(acceptedVulns))
+		if len(acceptedVulns) == 1 {
+			summary += fmt.Sprintf(" Accepted %d existing vulnerability,", len(acceptedVulns))
+		} else {
+			summary += fmt.Sprintf(" Accepted %d existing vulnerabilities,", len(acceptedVulns))
+		}
 	}
 	if len(falsePositiveVulns) > 0 {
-		summary += fmt.Sprintf(" Marked %d existing vulnerabilities as false positives", len(falsePositiveVulns))
+		if len(falsePositiveVulns) == 1 {
+			summary += fmt.Sprintf(" Marked %d existing vulnerability as false positives", len(falsePositiveVulns))
+		} else {
+			summary += fmt.Sprintf(" Marked %d existing vulnerabilities as false positives", len(falsePositiveVulns))
+		}
 	}
 	summary = strings.TrimLeft(summary, " ")
 	summary = strings.TrimRight(summary, ",")
