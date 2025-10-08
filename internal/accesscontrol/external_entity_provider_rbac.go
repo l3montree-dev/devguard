@@ -63,12 +63,22 @@ func (e *externalEntityProviderRBAC) RevokeRoleInProject(subject string, role co
 func (e *externalEntityProviderRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role, project string) error {
 	return e.rootAccessControl.InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
 }
+
+func (e *externalEntityProviderRBAC) InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role, asset string) error {
+	return e.rootAccessControl.InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
+}
+
 func (e *externalEntityProviderRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions core.ProjectRole) error {
 	return e.rootAccessControl.InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 func (e *externalEntityProviderRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions core.Role, project string) error {
 	return e.rootAccessControl.LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
 }
+
+func (e *externalEntityProviderRBAC) LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions core.Role, project, asset string) error {
+	return e.rootAccessControl.LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
+}
+
 func (e *externalEntityProviderRBAC) AllowRole(role core.Role, object core.Object, action []core.Action) error {
 	return e.rootAccessControl.AllowRole(role, object, action)
 }

@@ -264,7 +264,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string
-	CreateAsset(asset models.Asset) (*models.Asset, error)
+	CreateAsset(rbac AccessControl, asset models.Asset) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -471,10 +471,12 @@ type AccessControl interface {
 
 	RevokeAllRolesInProjectForUser(user string, project string) error
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
+	InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
 	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
+	LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(role Role, object Object, action []Action) error
 	IsAllowed(subject string, object Object, action Action) (bool, error)

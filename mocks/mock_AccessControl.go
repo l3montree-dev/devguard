@@ -938,6 +938,69 @@ func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(subject string) (b
 	return _c
 }
 
+// InheritAssetRole provides a mock function for the type AccessControl
+func (_mock *AccessControl) InheritAssetRole(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string) error {
+	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InheritAssetRole")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string) error); ok {
+		r0 = returnFunc(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_InheritAssetRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InheritAssetRole'
+type AccessControl_InheritAssetRole_Call struct {
+	*mock.Call
+}
+
+// InheritAssetRole is a helper method to define mock.On call
+//   - roleWhichGetsPermissions core.Role
+//   - roleWhichProvidesPermissions core.Role
+//   - asset string
+func (_e *AccessControl_Expecter) InheritAssetRole(roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}, asset interface{}) *AccessControl_InheritAssetRole_Call {
+	return &AccessControl_InheritAssetRole_Call{Call: _e.mock.On("InheritAssetRole", roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)}
+}
+
+func (_c *AccessControl_InheritAssetRole_Call) Run(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string)) *AccessControl_InheritAssetRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Role
+		if args[0] != nil {
+			arg0 = args[0].(core.Role)
+		}
+		var arg1 core.Role
+		if args[1] != nil {
+			arg1 = args[1].(core.Role)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_InheritAssetRole_Call) Return(err error) *AccessControl_InheritAssetRole_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_InheritAssetRole_Call) RunAndReturn(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string) error) *AccessControl_InheritAssetRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InheritProjectRole provides a mock function for the type AccessControl
 func (_mock *AccessControl) InheritProjectRole(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, project string) error {
 	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
@@ -1402,6 +1465,75 @@ func (_c *AccessControl_LinkDomainAndProjectRole_Call) Return(err error) *Access
 }
 
 func (_c *AccessControl_LinkDomainAndProjectRole_Call) RunAndReturn(run func(domainRoleWhichGetsPermission core.Role, projectRoleWhichProvidesPermissions core.Role, project string) error) *AccessControl_LinkDomainAndProjectRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LinkProjectAndAssetRole provides a mock function for the type AccessControl
+func (_mock *AccessControl) LinkProjectAndAssetRole(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string) error {
+	ret := _mock.Called(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LinkProjectAndAssetRole")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string, string) error); ok {
+		r0 = returnFunc(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_LinkProjectAndAssetRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LinkProjectAndAssetRole'
+type AccessControl_LinkProjectAndAssetRole_Call struct {
+	*mock.Call
+}
+
+// LinkProjectAndAssetRole is a helper method to define mock.On call
+//   - projectRoleWhichGetsPermission core.Role
+//   - assetRoleWhichProvidesPermissions core.Role
+//   - project string
+//   - asset string
+func (_e *AccessControl_Expecter) LinkProjectAndAssetRole(projectRoleWhichGetsPermission interface{}, assetRoleWhichProvidesPermissions interface{}, project interface{}, asset interface{}) *AccessControl_LinkProjectAndAssetRole_Call {
+	return &AccessControl_LinkProjectAndAssetRole_Call{Call: _e.mock.On("LinkProjectAndAssetRole", projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)}
+}
+
+func (_c *AccessControl_LinkProjectAndAssetRole_Call) Run(run func(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string)) *AccessControl_LinkProjectAndAssetRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Role
+		if args[0] != nil {
+			arg0 = args[0].(core.Role)
+		}
+		var arg1 core.Role
+		if args[1] != nil {
+			arg1 = args[1].(core.Role)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_LinkProjectAndAssetRole_Call) Return(err error) *AccessControl_LinkProjectAndAssetRole_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_LinkProjectAndAssetRole_Call) RunAndReturn(run func(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string) error) *AccessControl_LinkProjectAndAssetRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
