@@ -464,7 +464,11 @@ type AccessControl interface {
 	RevokeRole(subject string, role Role) error
 
 	GrantRoleInProject(subject string, role Role, project string) error
+	GrantRoleInAsset(subject string, role Role, asset string) error
+
 	RevokeRoleInProject(subject string, role Role, project string) error
+	RevokeRoleInAsset(subject string, role Role, asset string) error
+
 	RevokeAllRolesInProjectForUser(user string, project string) error
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 
@@ -476,7 +480,10 @@ type AccessControl interface {
 	IsAllowed(subject string, object Object, action Action) (bool, error)
 
 	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
+	IsAllowedInAsset(asset *models.Asset, user string, object Object, action Action) (bool, error)
+
 	AllowRoleInProject(project string, role Role, object Object, action []Action) error
+	AllowRoleInAsset(asset string, role Role, object Object, action []Action) error
 
 	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
 

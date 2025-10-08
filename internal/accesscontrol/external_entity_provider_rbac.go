@@ -128,3 +128,27 @@ func (e *externalEntityProviderRBAC) GetDomainRole(user string) (core.Role, erro
 func (e *externalEntityProviderRBAC) GetProjectRole(user string, project string) (core.Role, error) {
 	return e.rootAccessControl.GetProjectRole(user, project)
 }
+
+func (e *externalEntityProviderRBAC) GrantRoleInAsset(subject string, role core.Role, asset string) error {
+	return e.rootAccessControl.GrantRoleInAsset(subject, role, asset)
+}
+
+func (e *externalEntityProviderRBAC) RevokeRoleInAsset(subject string, role core.Role, asset string) error {
+	return e.rootAccessControl.RevokeRoleInAsset(subject, role, asset)
+}
+
+func (e *externalEntityProviderRBAC) IsAllowedInAsset(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error) {
+	// check for external entity provider ids
+	if asset.ExternalEntityProviderID == nil || asset.ExternalEntityID == nil {
+		return false, nil
+	}
+	if e.adminToken != nil && user == *e.adminToken && action == core.ActionRead {
+		return true, nil
+	}
+
+	return e.rootAccessControl.IsAllowedInAsset(asset, user, object, action)
+}
+
+func (e *externalEntityProviderRBAC) AllowRoleInAsset(asset string, role core.Role, object core.Object, action []core.Action) error {
+	return e.rootAccessControl.AllowRoleInAsset(asset, role, object, action)
+}

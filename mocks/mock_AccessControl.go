@@ -100,6 +100,75 @@ func (_c *AccessControl_AllowRole_Call) RunAndReturn(run func(role core.Role, ob
 	return _c
 }
 
+// AllowRoleInAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) AllowRoleInAsset(asset string, role core.Role, object core.Object, action []core.Action) error {
+	ret := _mock.Called(asset, role, object, action)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AllowRoleInAsset")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, core.Role, core.Object, []core.Action) error); ok {
+		r0 = returnFunc(asset, role, object, action)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_AllowRoleInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AllowRoleInAsset'
+type AccessControl_AllowRoleInAsset_Call struct {
+	*mock.Call
+}
+
+// AllowRoleInAsset is a helper method to define mock.On call
+//   - asset string
+//   - role core.Role
+//   - object core.Object
+//   - action []core.Action
+func (_e *AccessControl_Expecter) AllowRoleInAsset(asset interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRoleInAsset_Call {
+	return &AccessControl_AllowRoleInAsset_Call{Call: _e.mock.On("AllowRoleInAsset", asset, role, object, action)}
+}
+
+func (_c *AccessControl_AllowRoleInAsset_Call) Run(run func(asset string, role core.Role, object core.Object, action []core.Action)) *AccessControl_AllowRoleInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 core.Role
+		if args[1] != nil {
+			arg1 = args[1].(core.Role)
+		}
+		var arg2 core.Object
+		if args[2] != nil {
+			arg2 = args[2].(core.Object)
+		}
+		var arg3 []core.Action
+		if args[3] != nil {
+			arg3 = args[3].([]core.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_AllowRoleInAsset_Call) Return(err error) *AccessControl_AllowRoleInAsset_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_AllowRoleInAsset_Call) RunAndReturn(run func(asset string, role core.Role, object core.Object, action []core.Action) error) *AccessControl_AllowRoleInAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AllowRoleInProject provides a mock function for the type AccessControl
 func (_mock *AccessControl) AllowRoleInProject(project string, role core.Role, object core.Object, action []core.Action) error {
 	ret := _mock.Called(project, role, object, action)
@@ -683,6 +752,69 @@ func (_c *AccessControl_GrantRole_Call) RunAndReturn(run func(subject string, ro
 	return _c
 }
 
+// GrantRoleInAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) GrantRoleInAsset(subject string, role core.Role, asset string) error {
+	ret := _mock.Called(subject, role, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrantRoleInAsset")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+		r0 = returnFunc(subject, role, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_GrantRoleInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrantRoleInAsset'
+type AccessControl_GrantRoleInAsset_Call struct {
+	*mock.Call
+}
+
+// GrantRoleInAsset is a helper method to define mock.On call
+//   - subject string
+//   - role core.Role
+//   - asset string
+func (_e *AccessControl_Expecter) GrantRoleInAsset(subject interface{}, role interface{}, asset interface{}) *AccessControl_GrantRoleInAsset_Call {
+	return &AccessControl_GrantRoleInAsset_Call{Call: _e.mock.On("GrantRoleInAsset", subject, role, asset)}
+}
+
+func (_c *AccessControl_GrantRoleInAsset_Call) Run(run func(subject string, role core.Role, asset string)) *AccessControl_GrantRoleInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 core.Role
+		if args[1] != nil {
+			arg1 = args[1].(core.Role)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_GrantRoleInAsset_Call) Return(err error) *AccessControl_GrantRoleInAsset_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_GrantRoleInAsset_Call) RunAndReturn(run func(subject string, role core.Role, asset string) error) *AccessControl_GrantRoleInAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GrantRoleInProject provides a mock function for the type AccessControl
 func (_mock *AccessControl) GrantRoleInProject(subject string, role core.Role, project string) error {
 	ret := _mock.Called(subject, role, project)
@@ -1055,6 +1187,84 @@ func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(subject string, ob
 	return _c
 }
 
+// IsAllowedInAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error) {
+	ret := _mock.Called(asset, user, object, action)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAllowedInAsset")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, core.Object, core.Action) (bool, error)); ok {
+		return returnFunc(asset, user, object, action)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, core.Object, core.Action) bool); ok {
+		r0 = returnFunc(asset, user, object, action)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*models.Asset, string, core.Object, core.Action) error); ok {
+		r1 = returnFunc(asset, user, object, action)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AccessControl_IsAllowedInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowedInAsset'
+type AccessControl_IsAllowedInAsset_Call struct {
+	*mock.Call
+}
+
+// IsAllowedInAsset is a helper method to define mock.On call
+//   - asset *models.Asset
+//   - user string
+//   - object core.Object
+//   - action core.Action
+func (_e *AccessControl_Expecter) IsAllowedInAsset(asset interface{}, user interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInAsset_Call {
+	return &AccessControl_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", asset, user, object, action)}
+}
+
+func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset, user string, object core.Object, action core.Action)) *AccessControl_IsAllowedInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Asset
+		if args[0] != nil {
+			arg0 = args[0].(*models.Asset)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 core.Object
+		if args[2] != nil {
+			arg2 = args[2].(core.Object)
+		}
+		var arg3 core.Action
+		if args[3] != nil {
+			arg3 = args[3].(core.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_IsAllowedInAsset_Call) Return(b bool, err error) *AccessControl_IsAllowedInAsset_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *AccessControl_IsAllowedInAsset_Call) RunAndReturn(run func(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error)) *AccessControl_IsAllowedInAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsAllowedInProject provides a mock function for the type AccessControl
 func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user string, object core.Object, action core.Action) (bool, error) {
 	ret := _mock.Called(project, user, object, action)
@@ -1306,6 +1516,69 @@ func (_c *AccessControl_RevokeRole_Call) Return(err error) *AccessControl_Revoke
 }
 
 func (_c *AccessControl_RevokeRole_Call) RunAndReturn(run func(subject string, role core.Role) error) *AccessControl_RevokeRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeRoleInAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) RevokeRoleInAsset(subject string, role core.Role, asset string) error {
+	ret := _mock.Called(subject, role, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeRoleInAsset")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+		r0 = returnFunc(subject, role, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_RevokeRoleInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeRoleInAsset'
+type AccessControl_RevokeRoleInAsset_Call struct {
+	*mock.Call
+}
+
+// RevokeRoleInAsset is a helper method to define mock.On call
+//   - subject string
+//   - role core.Role
+//   - asset string
+func (_e *AccessControl_Expecter) RevokeRoleInAsset(subject interface{}, role interface{}, asset interface{}) *AccessControl_RevokeRoleInAsset_Call {
+	return &AccessControl_RevokeRoleInAsset_Call{Call: _e.mock.On("RevokeRoleInAsset", subject, role, asset)}
+}
+
+func (_c *AccessControl_RevokeRoleInAsset_Call) Run(run func(subject string, role core.Role, asset string)) *AccessControl_RevokeRoleInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 core.Role
+		if args[1] != nil {
+			arg1 = args[1].(core.Role)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_RevokeRoleInAsset_Call) Return(err error) *AccessControl_RevokeRoleInAsset_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_RevokeRoleInAsset_Call) RunAndReturn(run func(subject string, role core.Role, asset string) error) *AccessControl_RevokeRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
