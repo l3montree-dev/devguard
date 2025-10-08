@@ -135,6 +135,7 @@ func init() {
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),
+		NewVEXCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
