@@ -2,6 +2,7 @@ package vuln
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -191,6 +192,8 @@ func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error
 		return packageNameIndexMap[a.PackageName] - packageNameIndexMap[b.PackageName]
 	})
 
+	fmt.Println(values)
+
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
@@ -299,7 +302,7 @@ func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) err
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name)
+	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name, 0)
 	if err != nil {
 		return err
 	}
@@ -369,6 +372,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 				AssetVersionName:        getAssetVersionName(dependencyVuln.Vulnerability, ev),
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
+				Upstream:                ev.Upstream,
 			}
 		}),
 	}

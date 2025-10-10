@@ -74,7 +74,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 		// First run: detect risk for artifact-1
-		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName)
+		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, 0)
 		assert.NoError(t, err)
 
 		// Verify license risk exists and is associated with artifact-1
@@ -85,7 +85,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
 
 		// Second run: process same component for artifact-2 and ensure association is created
-		err = licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName)
+		err = licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName, 0)
 		assert.NoError(t, err)
 
 		// Verify the license risk is now associated with both artifacts

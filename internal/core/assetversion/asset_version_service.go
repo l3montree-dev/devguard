@@ -517,7 +517,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, 0); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -533,7 +533,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, 0)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -578,7 +578,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream int) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
@@ -688,7 +688,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the license information in the background
 	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false, upstream)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

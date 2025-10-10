@@ -196,7 +196,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream int) ([]models.Component, error) {
 	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
@@ -258,13 +258,13 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName, upstream)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName, upstream)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}

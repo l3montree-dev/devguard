@@ -26,6 +26,7 @@ type VulnEventDTO struct {
 	VulnerabilityName string `json:"vulnerabilityName"`
 	PackageName       string `json:"packageName"`
 	URI               string `json:"uri"`
+	Upstream          int    `json:"upstream"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {
@@ -38,5 +39,6 @@ func (dto VulnEventDTO) ToModel() models.VulnEvent {
 		UserID:        userID,
 		Justification: dto.Justification,
 		VulnType:      dto.VulnType,
+		Upstream:      dto.Upstream,
 	}
 }

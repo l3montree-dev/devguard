@@ -35,7 +35,7 @@ func getContainerFile(ctx context.Context, path string) ([]byte, error) {
 	if file, err = os.ReadFile(containerFilePath); err == nil {
 		return file, nil
 	}
-	return nil, fmt.Errorf("no Dockerfile or Container file found in path: %s", path, err)
+	return nil, fmt.Errorf("no Dockerfile or Container file found in path: %s", path)
 }
 
 func getImageFromContainerFile(containerFile []byte) (string, error) {
@@ -104,6 +104,29 @@ func getVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
 			if err != nil {
 				panic(err)
 			}
+
+			//save the vex to a file
+			filename := "vex-" + strings.ReplaceAll(imageRef, "/", "_") + ".json"
+			file, err := os.Create(filename)
+			if err != nil {
+				slog.Error("could not create vex file", "err", err)
+				continue
+			}
+			defer file.Close()
+
+			vexBytes, err := json.MarshalIndent(vex, "", "  ")
+			if err != nil {
+				slog.Error("could not marshal vex", "err", err)
+				continue
+			}
+
+			_, err = file.Write(vexBytes)
+			if err != nil {
+				slog.Error("could not write vex to file", "err", err)
+				continue
+			}
+
+			slog.Info("wrote vex to file", "file", file.Name())
 		}
 	}
 
@@ -136,7 +159,7 @@ func vexCommand(cmd *cobra.Command, args []string) error {
 	if vex != nil {
 		vexBuff := &bytes.Buffer{}
 		// marshal the bom back to json
-		err = cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).Encode(vex)
+		err := cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).Encode(vex)
 		if err != nil {
 			return err
 		}
@@ -154,7 +177,7 @@ func vexCommand(cmd *cobra.Command, args []string) error {
 			}
 		}
 	} else {
-		slog.Info("no vex document found for image", "image", imagePath)
+		slog.Info("no vex document found for image") //, "image") //imagePath)
 	}
 
 	slog.Info("vex called", "file", vex)
