@@ -197,7 +197,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 
-	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
+	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService)

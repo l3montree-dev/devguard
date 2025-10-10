@@ -69,6 +69,7 @@ type PolicyRepository interface {
 
 type AssetRepository interface {
 	common.Repository[uuid.UUID, models.Asset, DB]
+	GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
@@ -265,6 +266,7 @@ type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string
 	CreateAsset(rbac AccessControl, asset models.Asset) (*models.Asset, error)
+	BootstrapAsset(rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -470,6 +472,8 @@ type AccessControl interface {
 	RevokeRoleInAsset(subject string, role Role, asset string) error
 
 	RevokeAllRolesInProjectForUser(user string, project string) error
+	RevokeAllRolesInAssetForUser(user string, asset string) error
+
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 	InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
 
@@ -487,7 +491,8 @@ type AccessControl interface {
 	AllowRoleInProject(project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(asset string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
+	GetAllProjectsForUser(user string) ([]string, error)
+	GetAllAssetsForUser(user string) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
 
@@ -497,6 +502,7 @@ type AccessControl interface {
 
 	GetDomainRole(user string) (Role, error)
 	GetProjectRole(user string, project string) (Role, error)
+	GetAssetRole(user string, asset string) (Role, error)
 
 	GetExternalEntityProviderID() *string
 }

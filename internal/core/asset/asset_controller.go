@@ -74,8 +74,13 @@ func (a *httpController) HandleLookup(ctx core.Context) error {
 func (a *httpController) List(ctx core.Context) error {
 
 	project := core.GetProject(ctx)
+	rbac := core.GetRBAC(ctx)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+	}
 
-	apps, err := a.assetRepository.GetByProjectID(project.GetID())
+	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.GetID())
 	if err != nil {
 		return err
 	}

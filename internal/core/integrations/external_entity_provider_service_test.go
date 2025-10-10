@@ -54,7 +54,6 @@ func TestTriggerSync(t *testing.T) {
 			projectRepo := mocks.NewProjectRepository(t)
 			rbacProvider := mocks.NewRBACProvider(t)
 			orgRepo := mocks.NewOrganizationRepository(t)
-
 			service := NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider, orgRepo)
 
 			// Create echo context

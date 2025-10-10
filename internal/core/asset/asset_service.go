@@ -54,7 +54,7 @@ func (s *service) CreateAsset(rbac core.AccessControl, asset models.Asset) (*mod
 	}
 
 	// bootstrap the asset in the rbac system
-	if err := s.bootstrapAsset(rbac, &newAsset); err != nil {
+	if err := s.BootstrapAsset(rbac, &newAsset); err != nil {
 		slog.Error("error bootstrapping asset in rbac", "err", err)
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (s *service) CreateAsset(rbac core.AccessControl, asset models.Asset) (*mod
 	return &newAsset, nil
 }
 
-func (s *service) bootstrapAsset(rbac core.AccessControl, asset *models.Asset) error {
+func (s *service) BootstrapAsset(rbac core.AccessControl, asset *models.Asset) error {
 	// make sure and project admin is an asset admin - Always
 	if err := rbac.LinkProjectAndAssetRole(core.RoleAdmin, core.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
 		return err

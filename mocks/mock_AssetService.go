@@ -37,6 +37,63 @@ func (_m *AssetService) EXPECT() *AssetService_Expecter {
 	return &AssetService_Expecter{mock: &_m.Mock}
 }
 
+// BootstrapAsset provides a mock function for the type AssetService
+func (_mock *AssetService) BootstrapAsset(rbac core.AccessControl, asset *models.Asset) error {
+	ret := _mock.Called(rbac, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BootstrapAsset")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, *models.Asset) error); ok {
+		r0 = returnFunc(rbac, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetService_BootstrapAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BootstrapAsset'
+type AssetService_BootstrapAsset_Call struct {
+	*mock.Call
+}
+
+// BootstrapAsset is a helper method to define mock.On call
+//   - rbac core.AccessControl
+//   - asset *models.Asset
+func (_e *AssetService_Expecter) BootstrapAsset(rbac interface{}, asset interface{}) *AssetService_BootstrapAsset_Call {
+	return &AssetService_BootstrapAsset_Call{Call: _e.mock.On("BootstrapAsset", rbac, asset)}
+}
+
+func (_c *AssetService_BootstrapAsset_Call) Run(run func(rbac core.AccessControl, asset *models.Asset)) *AssetService_BootstrapAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.AccessControl
+		if args[0] != nil {
+			arg0 = args[0].(core.AccessControl)
+		}
+		var arg1 *models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(*models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetService_BootstrapAsset_Call) Return(err error) *AssetService_BootstrapAsset_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetService_BootstrapAsset_Call) RunAndReturn(run func(rbac core.AccessControl, asset *models.Asset) error) *AssetService_BootstrapAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateAsset provides a mock function for the type AssetService
 func (_mock *AssetService) CreateAsset(rbac core.AccessControl, asset models.Asset) (*models.Asset, error) {
 	ret := _mock.Called(rbac, asset)

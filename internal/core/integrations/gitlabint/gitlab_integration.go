@@ -375,6 +375,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 
 	groups, err := FetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
 		// get the groups for this user
+		// this WONT list public groups - user is really a member - or at least member of a subproject
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
 		})
@@ -395,48 +396,46 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 
 	for _, group := range groups {
 		errgroup.Go(func() ([]*groupWithAccessLevel, error) {
+
+			var accessLevel gitlab.AccessLevelValue
 			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
 			if err != nil {
-				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
-					return nil, nil
-				} else {
+				// the user is not really part of the group but part of a subproject
+				accessLevel = gitlab.GuestPermissions
+			} else {
+				accessLevel = member.AccessLevel
+			}
+
+			// check if we can fetch the avatar
+			var avatarBase64 *string
+			if group.AvatarURL != "" {
+				avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+				if err != nil {
+					slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
 					return nil, err
 				}
+				avatarBase64 = &avatar
 			}
-			if member.AccessLevel >= gitlab.ReporterPermissions {
-				// check if we can fetch the avatar
-				var avatarBase64 *string
-				if group.AvatarURL != "" {
-					avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
-					if err != nil {
-						slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
-						return nil, err
-					}
-					avatarBase64 = &avatar
-				}
 
-				// get all parent groups
-				parentGroups := getAllParentGroups(idMap, group)
-				res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
-				// add the current group
+			// get all parent groups
+			parentGroups := getAllParentGroups(idMap, group)
+			res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
+			// add the current group
+			res = append(res, &groupWithAccessLevel{
+				group:        group,
+				avatarBase64: avatarBase64,
+				accessLevel:  accessLevel,
+			})
+
+			// add all parent groups
+			for _, parentGroup := range parentGroups {
 				res = append(res, &groupWithAccessLevel{
-					group:        group,
-					avatarBase64: avatarBase64,
-					accessLevel:  member.AccessLevel,
+					group:        parentGroup,
+					avatarBase64: nil,
+					accessLevel:  accessLevel,
 				})
-
-				// add all parent groups
-				for _, parentGroup := range parentGroups {
-					res = append(res, &groupWithAccessLevel{
-						group:        parentGroup,
-						avatarBase64: nil,
-						accessLevel:  member.AccessLevel,
-					})
-				}
-				return res, nil
-
 			}
-			return nil, nil
+			return res, nil
 		})
 	}
 

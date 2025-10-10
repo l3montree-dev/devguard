@@ -30,6 +30,14 @@ func (e *externalEntityProviderRBAC) GetExternalEntityProviderID() *string {
 	return &e.externalEntityProviderID
 }
 
+func (e *externalEntityProviderRBAC) GetAllAssetsForUser(user string) ([]string, error) {
+	return e.rootAccessControl.GetAllAssetsForUser(user)
+}
+
+func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(user string, asset string) error {
+	return e.rootAccessControl.RevokeAllRolesInAssetForUser(user, asset)
+}
+
 func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
 	if e.adminToken != nil && userID == *e.adminToken {
 		return true, nil
@@ -43,6 +51,10 @@ func (e *externalEntityProviderRBAC) RevokeAllRolesInProjectForUser(user string,
 
 func (e *externalEntityProviderRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role) error {
 	return e.rootAccessControl.InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
+}
+
+func (e *externalEntityProviderRBAC) GetAssetRole(user string, asset string) (core.Role, error) {
+	return e.rootAccessControl.GetAssetRole(user, asset)
 }
 
 func (e *externalEntityProviderRBAC) GetAllRoles(user string) []string {
