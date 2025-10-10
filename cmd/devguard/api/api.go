@@ -762,10 +762,11 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
 
-	assetRouter.GET("/csaf.json/", csafController.GenerateCSAFReport)
 	assetRouter.GET("/csaf/", csafController.GetIndexHTML)
+	assetRouter.GET("/csaf/white/index.txt/", csafController.GenerateIndexFile)
+	assetRouter.GET("/csaf/white/changes.csv/", csafController.GetChangesCSVFile)
 
-	assetRouter.GET("/csaf/white/", csafController.GetYearFolders)
+	assetRouter.GET("/csaf/white/", csafController.GetTLPWhiteEntries)
 	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYear)
 	assetRouter.GET("/csaf/white/:year/:version/", csafController.GenerateCSAFReport)
 

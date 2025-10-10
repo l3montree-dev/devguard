@@ -260,6 +260,44 @@ func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnR
 	}
 }
 
+func (controller *csaf_controller) GenerateIndexFile(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	if err != nil {
+		return err
+	}
+	index := ""
+	for _, entry := range tracking.RevisionHistory {
+		year := entry.Date[:4]
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
+		index += fmt.Sprintf("%s/%s\n", year, fileName)
+	}
+	return ctx.String(200, index)
+}
+
+func (controller *csaf_controller) GetChangesCSVFile(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	if err != nil {
+		return err
+	}
+
+	csvContents := ""
+	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 revisionReplacement) int {
+		time1, _ := time.Parse(time.RFC3339, revision1.Date) //nolint:all
+		time2, _ := time.Parse(time.RFC3339, revision2.Date) //nolint:all
+		return time1.Compare(time2) * -1
+	})
+
+	for _, entry := range tracking.RevisionHistory {
+		year := entry.Date[:4]
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
+		csvContents += fmt.Sprintf("\"%s/%s\",\"%s\"\n", year, fileName, entry.Date)
+	}
+
+	return ctx.String(200, csvContents)
+}
+
 func (controller *csaf_controller) GetIndexHTML(ctx core.Context) error {
 	html := `<html>
 	<head><title>Index of /csaf/</title></head>
@@ -287,18 +325,17 @@ func (controller *csaf_controller) GetOpenPGP(ctx core.Context) error {
 	return ctx.HTML(200, html)
 }
 
-func (controller *csaf_controller) GetYearFolders(ctx core.Context) error {
-	asset := core.GetAsset(ctx)
-	vulns, err := controller.DependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]int, error) {
+	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	allYears := []int{}
 	for _, vuln := range vulns {
-		events, err := controller.VulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
+		events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, event := range events {
 			if !slices.Contains(allYears, event.CreatedAt.Year()) {
@@ -307,6 +344,16 @@ func (controller *csaf_controller) GetYearFolders(ctx core.Context) error {
 		}
 	}
 	slices.Sort(allYears)
+	return allYears, nil
+}
+
+func (controller *csaf_controller) GetTLPWhiteEntries(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	allYears, err := getAllYears(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	if err != nil {
+		return err
+	}
 
 	html := `<html>
 	<head><title>Index of /csaf/white/</title></head>
@@ -316,10 +363,17 @@ func (controller *csaf_controller) GetYearFolders(ctx core.Context) error {
 		html += fmt.Sprintf(`
 		<a href="%d/">%d/</a>`, year, year)
 	}
+
+	html += `
+	<a href="index.txt/">index.txt/</a>`
+
+	html += `
+	<a href="changes.csv/">changes.csv/</a>`
+
 	html += `</pre><hr>
 	</body>
 		</html>`
-	slog.Info(html)
+
 	return ctx.HTML(200, html)
 }
 
