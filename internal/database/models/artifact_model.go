@@ -18,10 +18,16 @@ type Artifact struct {
 	LastHistoryUpdate *time.Time   `json:"lastHistoryUpdate,omitempty"`
 	AssetVersion      AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
+	UpstreamURLs          []ArtifactUpstreamURL `json:"upstreamUrls" gorm:"many2many:artifact_upstream_urls;constraint:OnDelete:CASCADE;"`
 	DependencyVuln        []DependencyVuln      `json:"dependencyVulns" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE;"`
 	ComponentDependencies []ComponentDependency `json:"componentDependencies" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE;"`
 	LicenseRisks          []LicenseRisk         `json:"licenseRisks" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE;"`
 	RiskHistories         []ArtifactRiskHistory `json:"riskHistories" gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;references:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
+}
+
+type ArtifactUpstreamURL struct {
+	ArtifactName string `json:"artifactName" gorm:"primaryKey;not null;type:text;"`
+	UpstreamURL  string `json:"upstreamUrl" gorm:"primaryKey;not null;type:text;"`
 }
 
 func (a Artifact) TableName() string {

@@ -60,8 +60,7 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 	fmt.Println("lastFrom", lastFrom)
 
 	//split the line by spaces
-	fromParts := []string{}
-	fromParts = strings.Split(lastFrom, " ")
+	fromParts := strings.Split(lastFrom, " ")
 	//check if there are at least 2 parts
 	if len(fromParts) < 2 {
 		return "", fmt.Errorf("no image found in FROM statement")
