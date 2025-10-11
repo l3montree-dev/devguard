@@ -150,7 +150,7 @@ func (a *httpController) Create(ctx core.Context) error {
 	newAsset := req.toModel(project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(core.GetRBAC(ctx), newAsset)
+	asset, err := a.assetService.CreateAsset(core.GetRBAC(ctx), core.GetSession(ctx).GetUserID(), newAsset)
 	if err != nil {
 		return err
 	}

@@ -265,7 +265,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string
-	CreateAsset(rbac AccessControl, asset models.Asset) (*models.Asset, error)
+	CreateAsset(rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {

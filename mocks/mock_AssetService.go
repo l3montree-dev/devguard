@@ -95,8 +95,8 @@ func (_c *AssetService_BootstrapAsset_Call) RunAndReturn(run func(rbac core.Acce
 }
 
 // CreateAsset provides a mock function for the type AssetService
-func (_mock *AssetService) CreateAsset(rbac core.AccessControl, asset models.Asset) (*models.Asset, error) {
-	ret := _mock.Called(rbac, asset)
+func (_mock *AssetService) CreateAsset(rbac core.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error) {
+	ret := _mock.Called(rbac, currentUserID, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAsset")
@@ -104,18 +104,18 @@ func (_mock *AssetService) CreateAsset(rbac core.AccessControl, asset models.Ass
 
 	var r0 *models.Asset
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, models.Asset) (*models.Asset, error)); ok {
-		return returnFunc(rbac, asset)
+	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, string, models.Asset) (*models.Asset, error)); ok {
+		return returnFunc(rbac, currentUserID, asset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, models.Asset) *models.Asset); ok {
-		r0 = returnFunc(rbac, asset)
+	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, string, models.Asset) *models.Asset); ok {
+		r0 = returnFunc(rbac, currentUserID, asset)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.AccessControl, models.Asset) error); ok {
-		r1 = returnFunc(rbac, asset)
+	if returnFunc, ok := ret.Get(1).(func(core.AccessControl, string, models.Asset) error); ok {
+		r1 = returnFunc(rbac, currentUserID, asset)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,24 +129,30 @@ type AssetService_CreateAsset_Call struct {
 
 // CreateAsset is a helper method to define mock.On call
 //   - rbac core.AccessControl
+//   - currentUserID string
 //   - asset models.Asset
-func (_e *AssetService_Expecter) CreateAsset(rbac interface{}, asset interface{}) *AssetService_CreateAsset_Call {
-	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", rbac, asset)}
+func (_e *AssetService_Expecter) CreateAsset(rbac interface{}, currentUserID interface{}, asset interface{}) *AssetService_CreateAsset_Call {
+	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", rbac, currentUserID, asset)}
 }
 
-func (_c *AssetService_CreateAsset_Call) Run(run func(rbac core.AccessControl, asset models.Asset)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) Run(run func(rbac core.AccessControl, currentUserID string, asset models.Asset)) *AssetService_CreateAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.AccessControl
 		if args[0] != nil {
 			arg0 = args[0].(core.AccessControl)
 		}
-		var arg1 models.Asset
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(models.Asset)
+			arg1 = args[1].(string)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -157,7 +163,7 @@ func (_c *AssetService_CreateAsset_Call) Return(asset1 *models.Asset, err error)
 	return _c
 }
 
-func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(rbac core.AccessControl, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(rbac core.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -42,7 +42,7 @@ func NewService(assetRepository core.AssetRepository, dependencyVulnRepository c
 	}
 }
 
-func (s *service) CreateAsset(rbac core.AccessControl, asset models.Asset) (*models.Asset, error) {
+func (s *service) CreateAsset(rbac core.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
@@ -56,6 +56,12 @@ func (s *service) CreateAsset(rbac core.AccessControl, asset models.Asset) (*mod
 	// bootstrap the asset in the rbac system
 	if err := s.BootstrapAsset(rbac, &newAsset); err != nil {
 		slog.Error("error bootstrapping asset in rbac", "err", err)
+		return nil, err
+	}
+
+	// make the current user the admin of the asset
+	if err := rbac.GrantRoleInAsset(currentUser, core.RoleAdmin, newAsset.GetID().String()); err != nil {
+		slog.Error("error assigning current user as asset admin", "err", err)
 		return nil, err
 	}
 
