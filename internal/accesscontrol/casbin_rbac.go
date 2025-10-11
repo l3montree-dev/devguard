@@ -338,7 +338,7 @@ func (c *casbinRBAC) RevokeRoleInProject(user string, role core.Role, project st
 }
 
 func (c *casbinRBAC) RevokeRoleInAsset(user string, role core.Role, project string) error {
-	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
+	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "asset::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
