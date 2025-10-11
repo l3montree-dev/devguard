@@ -564,16 +564,16 @@ func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(org m
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
-	ret := _mock.Called(org, project, asset, assetVersion, artifactName, sbom)
+func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream int) error {
+	ret := _mock.Called(org, project, asset, assetVersion, artifactName, sbom, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, normalize.SBOM) error); ok {
-		r0 = returnFunc(org, project, asset, assetVersion, artifactName, sbom)
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, normalize.SBOM, int) error); ok {
+		r0 = returnFunc(org, project, asset, assetVersion, artifactName, sbom, upstream)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -592,11 +592,12 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName string
 //   - sbom normalize.SBOM
-func (_e *AssetVersionService_Expecter) UpdateSBOM(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
-	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", org, project, asset, assetVersion, artifactName, sbom)}
+//   - upstream int
+func (_e *AssetVersionService_Expecter) UpdateSBOM(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}, upstream interface{}) *AssetVersionService_UpdateSBOM_Call {
+	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", org, project, asset, assetVersion, artifactName, sbom, upstream)}
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream int)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.Org
 		if args[0] != nil {
@@ -622,6 +623,10 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, proj
 		if args[5] != nil {
 			arg5 = args[5].(normalize.SBOM)
 		}
+		var arg6 int
+		if args[6] != nil {
+			arg6 = args[6].(int)
+		}
 		run(
 			arg0,
 			arg1,
@@ -629,6 +634,7 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, proj
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -639,7 +645,7 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Return(err error) *AssetVersionSe
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream int) error) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
