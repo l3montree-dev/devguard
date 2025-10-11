@@ -156,6 +156,15 @@ func (repository *assetRepository) FindByName(name string) (models.Asset, error)
 	return app, nil
 }
 
+func (repository *assetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
+	err := repository.db.Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}
+
 func (repository *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
 	err := repository.db.Where("project_id = ?", projectID).Find(&apps).Error

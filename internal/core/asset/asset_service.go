@@ -42,24 +42,53 @@ func NewService(assetRepository core.AssetRepository, dependencyVulnRepository c
 	}
 }
 
-func (s *service) CreateAsset(asset models.Asset) (*models.Asset, error) {
-
+func (s *service) CreateAsset(rbac core.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
-
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
 	err := s.assetRepository.Create(nil, &newAsset)
 
 	if err != nil {
-
 		return nil, echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+	}
 
+	// bootstrap the asset in the rbac system
+	if err := s.BootstrapAsset(rbac, &newAsset); err != nil {
+		slog.Error("error bootstrapping asset in rbac", "err", err)
+		return nil, err
+	}
+
+	// make the current user the admin of the asset
+	if err := rbac.GrantRoleInAsset(currentUser, core.RoleAdmin, newAsset.GetID().String()); err != nil {
+		slog.Error("error assigning current user as asset admin", "err", err)
+		return nil, err
 	}
 
 	return &newAsset, nil
-
 }
+
+func (s *service) BootstrapAsset(rbac core.AccessControl, asset *models.Asset) error {
+	// make sure and project admin is an asset admin - Always
+	if err := rbac.LinkProjectAndAssetRole(core.RoleAdmin, core.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
+		return err
+	}
+
+	// give the admin of an asset all the permissions of a member
+	if err := rbac.InheritAssetRole(core.RoleAdmin, core.RoleMember, asset.GetID().String()); err != nil {
+		return err
+	}
+
+	if err := rbac.AllowRoleInAsset(asset.GetID().String(), core.RoleMember, core.ObjectAsset, []core.Action{core.ActionRead}); err != nil {
+		return err
+	}
+	if err := rbac.AllowRoleInAsset(asset.GetID().String(), core.RoleAdmin, core.ObjectAsset, []core.Action{core.ActionRead, core.ActionUpdate, core.ActionDelete}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *service) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
 	return s.assetRepository.Read(assetID)
 }

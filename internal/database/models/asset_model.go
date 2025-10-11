@@ -65,6 +65,7 @@ type Asset struct {
 	ExternalEntityProviderID *string        `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 	RepositoryProvider       *string        `json:"repositoryProvider" gorm:"type:text;"`
 	Metadata                 database.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
+	IsPublic                 bool           `json:"isPublic" gorm:"default:false;not null;"`
 }
 
 func (m Asset) TableName() string {

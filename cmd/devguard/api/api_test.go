@@ -163,7 +163,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -197,7 +197,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -233,7 +233,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -267,7 +267,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {

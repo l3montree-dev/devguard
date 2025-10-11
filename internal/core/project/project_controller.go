@@ -18,6 +18,7 @@ package project
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -232,11 +233,19 @@ func (projectController *controller) Delete(c core.Context) error {
 func (projectController *controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
-
-	// lets fetch the assets related to this project
-	assets, err := projectController.assetRepository.GetByProjectID(project.ID)
+	rbac := core.GetRBAC(c)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(core.GetSession(c).GetUserID())
 	if err != nil {
 		return err
+	}
+	// lets fetch the assets related to this project
+	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, asset := range assets {
+		slog.Debug("asset in project", "assetID", asset.ID.String(), "assetName", asset.Name)
 	}
 
 	project.Assets = assets
@@ -318,8 +327,12 @@ func (projectController *controller) Update(c core.Context) error {
 			return fmt.Errorf("could not update project: %w", err)
 		}
 	}
+	// get rbac
+	rbac := core.GetRBAC(c)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(core.GetSession(c).GetUserID())
+
 	// lets fetch the assets related to this project
-	assets, err := projectController.assetRepository.GetByProjectID(project.ID)
+	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}

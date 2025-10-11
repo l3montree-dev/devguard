@@ -135,7 +135,7 @@ func (b *PostgreSQLBroker) Publish(ctx context.Context, message Message) error {
 			return fmt.Errorf("failed to marshal message: %w", err)
 		}
 
-		var messageMap map[string]interface{}
+		var messageMap map[string]any
 		if err := json.Unmarshal(messageBytes, &messageMap); err != nil {
 			return fmt.Errorf("failed to unmarshal message to map: %w", err)
 		}
@@ -163,7 +163,7 @@ func (b *PostgreSQLBroker) Subscribe(topic Channel) (<-chan map[string]interface
 	defer b.subscribeMux.Unlock()
 
 	// Create a buffered channel for this subscriber
-	ch := make(chan map[string]interface{}, 100)
+	ch := make(chan map[string]any, 100)
 
 	// Add channel to subscribers list
 	if _, exists := b.subscribers[topic]; !exists {
