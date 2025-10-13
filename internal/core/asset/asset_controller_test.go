@@ -340,7 +340,7 @@ func TestHTTPControllerMembers(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var users []core.User
-		json.Unmarshal(rec.Body.Bytes(), &users)
+		json.Unmarshal(rec.Body.Bytes(), &users) // nolint:errcheck
 		assert.Len(t, users, 1)
 		assert.Equal(t, "Test User", users[0].Name)
 	})

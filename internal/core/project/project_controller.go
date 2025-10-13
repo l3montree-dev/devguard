@@ -334,6 +334,9 @@ func (projectController *controller) Update(c core.Context) error {
 	// get rbac
 	rbac := core.GetRBAC(c)
 	allowedAssetIDs, err := rbac.GetAllAssetsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return err
+	}
 
 	// lets fetch the assets related to this project
 	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
