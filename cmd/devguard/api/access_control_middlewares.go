@@ -48,8 +48,8 @@ func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.
 					core.SetIsPublicRequest(ctx)
 				} else {
 					slog.Error("access denied in accessControlMiddleware", "user", user, "object", obj, "action", act)
-					ctx.Response().WriteHeader(403)
-					return echo.NewHTTPError(403, "forbidden")
+					ctx.Response().WriteHeader(404)
+					return echo.NewHTTPError(404, "could not find organization")
 				}
 			}
 

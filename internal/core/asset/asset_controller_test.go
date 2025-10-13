@@ -377,7 +377,9 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		core.SetAsset(ctx, asset)
 		core.SetRBAC(ctx, mockRBAC)
-
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user-123")
+		core.SetSession(ctx, session)
 		controller := &httpController{}
 		err := controller.InviteMembers(ctx)
 
@@ -405,8 +407,12 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		mockRBAC := mocks.NewAccessControl(t)
 		mockRBAC.On("GetAllMembersOfProject", projectID.String()).Return([]string{"user-789"}, nil)
 
+		session := mocks.NewAuthSession(t)
+		// 	session.On("GetUserID").Return("user-000")
+
 		core.SetAsset(ctx, asset)
 		core.SetRBAC(ctx, mockRBAC)
+		core.SetSession(ctx, session)
 
 		controller := &httpController{}
 		err := controller.InviteMembers(ctx)
@@ -415,7 +421,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
 		assert.Equal(t, http.StatusBadRequest, httpErr.Code)
-		assert.Contains(t, httpErr.Message, "not a member of the organization")
+		assert.Contains(t, httpErr.Message, "not a member of the asset")
 	})
 
 	t.Run("returns error when RBAC fails", func(t *testing.T) {
@@ -467,6 +473,9 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		mockRBAC.On("RevokeRoleInAsset", "user-123", core.RoleAdmin, assetID.String()).Return(nil)
 		mockRBAC.On("RevokeRoleInAsset", "user-123", core.RoleMember, assetID.String()).Return(nil)
 
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user-123")
+		core.SetSession(ctx, session)
 		core.SetAsset(ctx, asset)
 		core.SetRBAC(ctx, mockRBAC)
 
@@ -517,6 +526,9 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		mockRBAC.On("RevokeRoleInAsset", "user-123", core.RoleAdmin, assetID.String()).Return(errors.New("not an admin"))
 		mockRBAC.On("RevokeRoleInAsset", "user-123", core.RoleMember, assetID.String()).Return(errors.New("not a member"))
 
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user-123")
+		core.SetSession(ctx, session)
 		core.SetAsset(ctx, asset)
 		core.SetRBAC(ctx, mockRBAC)
 

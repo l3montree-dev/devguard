@@ -87,7 +87,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 		mockRBAC.AssertExpectations(t)
 	})
 
@@ -365,7 +365,7 @@ func TestAssetAccessControl(t *testing.T) {
 		assert.Error(t, err)
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
 		mockRBAC.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
