@@ -126,7 +126,7 @@ func (client gitlabClient) CreateNewLabel(ctx context.Context, projectID int, la
 }
 
 func (client gitlabClient) GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error) {
-	return client.GroupMembers.GetInheritedGroupMember(groupID, userID, nil, gitlab.WithContext(ctx))
+	return client.GroupMembers.GetInheritedGroupMember(groupID, userID, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error) {

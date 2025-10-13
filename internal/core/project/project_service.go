@@ -134,17 +134,6 @@ func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Proj
 		}); err != nil {
 			return err
 		}
-
-		// make a parent project member a member of the child project
-		if err := rbac.InheritProjectRolesAcrossProjects(core.ProjectRole{
-			Role:    core.RoleMember,
-			Project: (*project.ParentID).String(),
-		}, core.ProjectRole{
-			Role:    core.RoleMember,
-			Project: project.ID.String(),
-		}); err != nil {
-			return err
-		}
 	}
 
 	return nil

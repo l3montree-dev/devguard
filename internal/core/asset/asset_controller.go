@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/ory/client-go"
 )
 
 type httpController struct {
@@ -72,10 +73,14 @@ func (a *httpController) HandleLookup(ctx core.Context) error {
 }
 
 func (a *httpController) List(ctx core.Context) error {
-
 	project := core.GetProject(ctx)
+	rbac := core.GetRBAC(ctx)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+	}
 
-	apps, err := a.assetRepository.GetByProjectID(project.GetID())
+	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.GetID())
 	if err != nil {
 		return err
 	}
@@ -145,7 +150,7 @@ func (a *httpController) Create(ctx core.Context) error {
 	newAsset := req.toModel(project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(newAsset)
+	asset, err := a.assetService.CreateAsset(core.GetRBAC(ctx), core.GetSession(ctx).GetUserID(), newAsset)
 	if err != nil {
 		return err
 	}
@@ -155,8 +160,13 @@ func (a *httpController) Create(ctx core.Context) error {
 
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
+	// fetch the members of the asset
+	members, err := FetchMembersOfAsset(ctx)
+	if err != nil {
+		return err
+	}
 
-	return ctx.JSON(200, ToDTO(app))
+	return ctx.JSON(200, ToDetailsDTO(app, members))
 }
 
 func (a *httpController) Update(ctx core.Context) error {
@@ -360,4 +370,177 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 	ctx.Response().Header().Set(echo.HeaderCacheControl, "no-cache, no-store")
 
 	return ctx.String(200, svg)
+}
+
+func FetchMembersOfAsset(ctx core.Context) ([]core.User, error) {
+	asset := core.GetAsset(ctx)
+	// get rbac
+	rbac := core.GetRBAC(ctx)
+
+	members, err := rbac.GetAllMembersOfAsset(asset.ID.String())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
+	}
+
+	// get the auth admin client from the context
+	authAdminClient := core.GetAuthAdminClient(ctx)
+	// fetch the users from the auth service
+	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
+	}
+
+	users := utils.Map(m, func(i client.Identity) core.User {
+		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+		var name string
+		if nameMap != nil {
+			if nameMap["first"] != nil {
+				name += nameMap["first"].(string)
+			}
+			if nameMap["last"] != nil {
+				name += " " + nameMap["last"].(string)
+			}
+		}
+		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
+		if err != nil {
+			return core.User{
+				ID:   i.Id,
+				Name: name,
+			}
+		}
+		return core.User{
+			ID:   i.Id,
+			Name: name,
+			Role: string(role),
+		}
+	})
+
+	return users, nil
+}
+
+func (a *httpController) Members(c core.Context) error {
+	members, err := FetchMembersOfAsset(c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, members)
+}
+
+func (a *httpController) InviteMembers(c core.Context) error {
+	asset := core.GetAsset(c)
+
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	var req inviteToAssetRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	members, err := rbac.GetAllMembersOfProject(asset.ProjectID.String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of asset").WithInternal(err)
+	}
+
+	for _, newMemberID := range req.Ids {
+		if !utils.Contains(members, newMemberID) {
+			return echo.NewHTTPError(400, "user is not a member of the asset")
+		}
+
+		// log the invitation for audit
+		slog.Info("adding member to asset",
+			"addedBy", core.GetSession(c).GetUserID(),
+			"addedUser", newMemberID,
+			"assetID", asset.ID.String())
+
+		if err := rbac.GrantRoleInAsset(newMemberID, core.RoleMember, asset.ID.String()); err != nil {
+			return err
+		}
+	}
+	return c.NoContent(200)
+}
+
+func (a *httpController) RemoveMember(c core.Context) error {
+	asset := core.GetAsset(c)
+
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
+	}
+	// Log the removal for audit
+	slog.Info("removing member from asset",
+		"removedBy", core.GetSession(c).GetUserID(),
+		"removedUser", userID,
+		"assetID", asset.ID.String())
+
+	// revoke admin and member role
+	rbac.RevokeRoleInAsset(userID, core.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(userID, core.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+
+	return c.NoContent(200)
+}
+
+func (a *httpController) ChangeRole(c core.Context) error {
+	asset := core.GetAsset(c)
+
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	var req changeRoleRequest
+
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
+	}
+
+	if userID == core.GetSession(c).GetUserID() {
+		return echo.NewHTTPError(400, "cannot change your own role")
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// check if role is valid
+	if role := req.Role; role != "admin" && role != "member" {
+		return echo.NewHTTPError(400, "invalid role")
+	}
+
+	members, err := rbac.GetAllMembersOfProject(asset.ProjectID.String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
+	}
+
+	if !utils.Contains(members, userID) {
+		return echo.NewHTTPError(400, "user is not a member of the project")
+	}
+
+	// log for audit
+	slog.Info("changing role of member in asset",
+		"changedBy", core.GetSession(c).GetUserID(),
+		"changedUser", userID,
+		"assetID", asset.ID.String(),
+		"newRole", req.Role)
+
+	rbac.RevokeRoleInAsset(userID, core.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(userID, core.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+
+	if err := rbac.GrantRoleInAsset(userID, core.Role(req.Role), asset.ID.String()); err != nil {
+		return err
+	}
+
+	return c.NoContent(200)
 }

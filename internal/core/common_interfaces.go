@@ -69,6 +69,7 @@ type PolicyRepository interface {
 
 type AssetRepository interface {
 	common.Repository[uuid.UUID, models.Asset, DB]
+	GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
@@ -264,7 +265,8 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string
-	CreateAsset(asset models.Asset) (*models.Asset, error)
+	CreateAsset(rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
+	BootstrapAsset(rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -464,30 +466,44 @@ type AccessControl interface {
 	RevokeRole(subject string, role Role) error
 
 	GrantRoleInProject(subject string, role Role, project string) error
+	GrantRoleInAsset(subject string, role Role, asset string) error
+
 	RevokeRoleInProject(subject string, role Role, project string) error
+	RevokeRoleInAsset(subject string, role Role, asset string) error
+
 	RevokeAllRolesInProjectForUser(user string, project string) error
+	RevokeAllRolesInAssetForUser(user string, asset string) error
+
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
+	InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
 	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
+	LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(role Role, object Object, action []Action) error
 	IsAllowed(subject string, object Object, action Action) (bool, error)
 
 	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	AllowRoleInProject(project string, role Role, object Object, action []Action) error
+	IsAllowedInAsset(asset *models.Asset, user string, object Object, action Action) (bool, error)
 
-	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
+	AllowRoleInProject(project string, role Role, object Object, action []Action) error
+	AllowRoleInAsset(asset string, role Role, object Object, action []Action) error
+
+	GetAllProjectsForUser(user string) ([]string, error)
+	GetAllAssetsForUser(user string) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
 
 	GetAllMembersOfOrganization() ([]string, error)
 
 	GetAllMembersOfProject(projectID string) ([]string, error)
+	GetAllMembersOfAsset(projectID string) ([]string, error)
 
 	GetDomainRole(user string) (Role, error)
 	GetProjectRole(user string, project string) (Role, error)
+	GetAssetRole(user string, asset string) (Role, error)
 
 	GetExternalEntityProviderID() *string
 }

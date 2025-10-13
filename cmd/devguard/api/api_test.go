@@ -40,7 +40,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", auth.NoSession)
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
+		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -77,7 +77,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", session)
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
+		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -85,7 +85,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 		mockOrgService.AssertExpectations(t)
 		mockRBACProvider.AssertExpectations(t)
 		mockRBAC.AssertExpectations(t)
@@ -101,7 +101,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
+		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -128,7 +128,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
+		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -163,7 +163,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -197,7 +197,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -205,7 +205,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 		assert.Error(t, err)
 		mockRBAC.AssertExpectations(t)
 	})
@@ -233,7 +233,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -267,7 +267,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := accessControlMiddleware(obj, act)
+		middleware := organizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
