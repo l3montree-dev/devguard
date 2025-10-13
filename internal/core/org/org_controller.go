@@ -234,6 +234,10 @@ func (controller *httpController) ChangeRole(ctx core.Context) error {
 	if userID == "" {
 		return echo.NewHTTPError(400, "userID is required")
 	}
+	currentUserID := core.GetSession(ctx).GetUserID()
+	if userID == currentUserID {
+		return echo.NewHTTPError(400, "you cannot change your own role")
+	}
 
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)

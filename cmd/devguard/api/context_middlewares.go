@@ -109,14 +109,16 @@ func assetVersionMiddleware(repository core.AssetVersionRepository) func(next ec
 			core.SetAssetVersion(ctx, assetVersion)
 
 			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			go func() {
-				now := time.Now()
-				assetVersion.LastAccessedAt = now
-				// Use nil for tx to use the default database connection
-				if err := repository.Save(nil, &assetVersion); err != nil {
-					slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
-				}
-			}()
+			if !core.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
+				go func() {
+					now := time.Now()
+					assetVersion.LastAccessedAt = now
+					// Use nil for tx to use the default database connection
+					if err := repository.Save(nil, &assetVersion); err != nil {
+						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
+					}
+				}()
+			}
 
 			return next(ctx)
 		}

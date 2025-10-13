@@ -186,6 +186,10 @@ func (projectController *controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
+	if userID == core.GetSession(c).GetUserID() {
+		return echo.NewHTTPError(400, "cannot change your own role")
+	}
+
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}

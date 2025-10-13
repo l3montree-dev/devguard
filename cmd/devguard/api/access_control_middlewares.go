@@ -113,7 +113,7 @@ func assetAccessControlFactory(assetRepository core.AssetRepository) core.RBACMi
 						core.SetIsPublicRequest(ctx)
 					} else {
 						slog.Warn("access denied in AssetAccess", "user", user, "object", obj, "action", act, "assetSlug", assetSlug)
-						return echo.NewHTTPError(403, "forbidden")
+						return echo.NewHTTPError(404, "could not find asset")
 					}
 				}
 				core.SetAsset(ctx, asset)
@@ -149,7 +149,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 				}
 
 				if err != nil {
-					return echo.NewHTTPError(404, "could not get project")
+					return echo.NewHTTPError(404, "could not find project")
 				}
 
 				allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
@@ -165,7 +165,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 						core.SetIsPublicRequest(ctx)
 					} else {
 						slog.Warn("access denied in ProjectAccess", "user", user, "object", obj, "action", act, "projectSlug", projectSlug)
-						return echo.NewHTTPError(403, "forbidden")
+						return echo.NewHTTPError(404, "could not find project")
 					}
 				}
 
@@ -177,7 +177,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
+func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 			// get the organization from the provided context

@@ -277,7 +277,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	fastAccessRoutes := sessionRouter.Group("", neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	fastAccessRoutes := sessionRouter.Group("", neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	fastAccessRoutes.POST("/scan/", scanController.ScanDependencyVulnFromProject)
 	fastAccessRoutes.POST("/vex/", scanController.UploadVEX)
@@ -306,7 +306,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	Organization scoped router
 	All routes below this line are scoped to a specific organization.
 	*/
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 

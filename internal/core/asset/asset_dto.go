@@ -40,23 +40,17 @@ type AssetDTO struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	LastSecretScan    *time.Time `json:"lastSecretScan"`
-	LastSastScan      *time.Time `json:"lastSastScan"`
-	LastScaScan       *time.Time `json:"lastScaScan"`
-	LastIacScan       *time.Time `json:"lastIacScan"`
-	LastContainerScan *time.Time `json:"lastContainerScan"`
-	LastDastScan      *time.Time `json:"lastDastScan"`
-
-	SigningPubKey *string `json:"signingPubKey"`
-
-	EnableTicketRange            bool     `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-
-	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
-
-	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
-	WebhookSecret *uuid.UUID `json:"webhookSecret"`
+	LastSecretScan               *time.Time `json:"lastSecretScan"`
+	LastSastScan                 *time.Time `json:"lastSastScan"`
+	LastScaScan                  *time.Time `json:"lastScaScan"`
+	LastIacScan                  *time.Time `json:"lastIacScan"`
+	LastContainerScan            *time.Time `json:"lastContainerScan"`
+	LastDastScan                 *time.Time `json:"lastDastScan"`
+	SigningPubKey                *string    `json:"signingPubKey"`
+	EnableTicketRange            bool       `json:"enableTicketRange"`
+	CVSSAutomaticTicketThreshold *float64   `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64   `json:"riskAutomaticTicketThreshold"`
+	VulnAutoReopenAfterDays      *int       `json:"vulnAutoReopenAfterDays"`
 
 	AssetVersions []models.AssetVersion `json:"refs"`
 
@@ -64,6 +58,12 @@ type AssetDTO struct {
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
+}
+
+type AssetWithSecretsDTO struct {
+	AssetDTO
+	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
+	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 }
 
 type AssetDetailsDTO struct {
@@ -118,12 +118,12 @@ func ToDTO(asset models.Asset) AssetDTO {
 	}
 }
 
-func toDTOWithSecrets(asset models.Asset) AssetDTO {
-	assetDTO := ToDTO(asset)
-	assetDTO.BadgeSecret = asset.BadgeSecret
-	assetDTO.WebhookSecret = asset.WebhookSecret
-
-	return assetDTO
+func toDTOWithSecrets(asset models.Asset) AssetWithSecretsDTO {
+	return AssetWithSecretsDTO{
+		AssetDTO:      ToDTO(asset),
+		BadgeSecret:   asset.BadgeSecret,
+		WebhookSecret: asset.WebhookSecret,
+	}
 }
 
 type createRequest struct {
