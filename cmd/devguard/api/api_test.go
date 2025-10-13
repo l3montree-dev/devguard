@@ -329,7 +329,7 @@ func TestNeededScope(t *testing.T) {
 		// should be an echo.HTTPError
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusNotFound, httpErr.Code)
+		assert.Equal(t, http.StatusForbidden, httpErr.Code)
 	})
 
 	t.Run("it should deny access if user has no scopes", func(t *testing.T) {
@@ -355,7 +355,7 @@ func TestNeededScope(t *testing.T) {
 		// should be an echo.HTTPError
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusNotFound, httpErr.Code)
+		assert.Equal(t, http.StatusForbidden, httpErr.Code)
 	})
 
 	t.Run("it should allow access if no scopes are required", func(t *testing.T) {

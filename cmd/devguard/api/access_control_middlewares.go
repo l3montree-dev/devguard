@@ -225,7 +225,7 @@ func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizatio
 				} else {
 					// not allowed and not a public organization
 					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
-					return ctx.JSON(403, map[string]string{"error": "access denied"})
+					return ctx.JSON(404, map[string]string{"error": "could not find organization"})
 				}
 			}
 
