@@ -85,7 +85,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 		mockOrgService.AssertExpectations(t)
 		mockRBACProvider.AssertExpectations(t)
 		mockRBAC.AssertExpectations(t)
@@ -205,7 +205,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 		assert.Error(t, err)
 		mockRBAC.AssertExpectations(t)
 	})
@@ -329,7 +329,7 @@ func TestNeededScope(t *testing.T) {
 		// should be an echo.HTTPError
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
 	})
 
 	t.Run("it should deny access if user has no scopes", func(t *testing.T) {
@@ -355,7 +355,7 @@ func TestNeededScope(t *testing.T) {
 		// should be an echo.HTTPError
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
 	})
 
 	t.Run("it should allow access if no scopes are required", func(t *testing.T) {
