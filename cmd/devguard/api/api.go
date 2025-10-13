@@ -389,7 +389,12 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 			// get the organization from the provided context
-			organization := core.GetParam(ctx, "organization")
+			organization, err := core.GetURLDecodedParam(ctx, "organization")
+			if err != nil {
+				slog.Error("could not get organization from url", "err", err)
+				return echo.NewHTTPError(400, "invalid organization")
+			}
+
 			if organization == "" {
 				// if no organization is provided, we can't continue
 				slog.Error("no organization provided")
