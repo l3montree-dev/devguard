@@ -20,18 +20,18 @@
 -- For each asset, create permissions for member and admin roles
 
 -- Asset Member can READ assets
-INSERT INTO casbin_rule (ptype, v0, v1, v2, v3)
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2, v3)
 SELECT DISTINCT 
     'p',
     'asset::' || a.id::text || '|role::member',
     'domain::' || o.id::text,
     'asset::' || a.id::text || '|obj::asset',
     'act::read'
-FROM assets a
-JOIN projects p ON a.project_id = p.id
-JOIN organizations o ON p.organization_id = o.id
+FROM public.assets a
+JOIN public.projects p ON a.project_id = p.id
+JOIN public.organizations o ON p.organization_id = o.id
 WHERE NOT EXISTS (
-    SELECT 1 FROM casbin_rule cr
+    SELECT 1 FROM public.casbin_rule cr
     WHERE cr.ptype = 'p'
     AND cr.v0 = 'asset::' || a.id::text || '|role::member'
     AND cr.v1 = 'domain::' || o.id::text
@@ -40,19 +40,19 @@ WHERE NOT EXISTS (
 );
 
 -- Asset Admin can READ, UPDATE, DELETE assets
-INSERT INTO casbin_rule (ptype, v0, v1, v2, v3)
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2, v3)
 SELECT DISTINCT 
     'p',
     'asset::' || a.id::text || '|role::admin',
     'domain::' || o.id::text,
     'asset::' || a.id::text || '|obj::asset',
     action
-FROM assets a
-JOIN projects p ON a.project_id = p.id
-JOIN organizations o ON p.organization_id = o.id
+FROM public.assets a
+JOIN public.projects p ON a.project_id = p.id
+JOIN public.organizations o ON p.organization_id = o.id
 CROSS JOIN (VALUES ('act::read'), ('act::update'), ('act::delete')) AS actions(action)
 WHERE NOT EXISTS (
-    SELECT 1 FROM casbin_rule cr
+    SELECT 1 FROM public.casbin_rule cr
     WHERE cr.ptype = 'p'
     AND cr.v0 = 'asset::' || a.id::text || '|role::admin'
     AND cr.v1 = 'domain::' || o.id::text
@@ -62,17 +62,17 @@ WHERE NOT EXISTS (
 
 -- Step 2: Make asset admin inherit from asset member
 -- This gives asset admins all permissions that members have
-INSERT INTO casbin_rule (ptype, v0, v1, v2)
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2)
 SELECT DISTINCT
     'g',
     'asset::' || a.id::text || '|role::admin',
     'asset::' || a.id::text || '|role::member',
     'domain::' || o.id::text
-FROM assets a
-JOIN projects p ON a.project_id = p.id
-JOIN organizations o ON p.organization_id = o.id
+FROM public.assets a
+JOIN public.projects p ON a.project_id = p.id
+JOIN public.organizations o ON p.organization_id = o.id
 WHERE NOT EXISTS (
-    SELECT 1 FROM casbin_rule cr
+    SELECT 1 FROM public.casbin_rule cr
     WHERE cr.ptype = 'g'
     AND cr.v0 = 'asset::' || a.id::text || '|role::admin'
     AND cr.v1 = 'asset::' || a.id::text || '|role::member'
@@ -81,17 +81,17 @@ WHERE NOT EXISTS (
 
 -- Step 3: Link project admin role to asset admin role
 -- This makes project admins automatically asset admins
-INSERT INTO casbin_rule (ptype, v0, v1, v2)
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2)
 SELECT DISTINCT
     'g',
     'project::' || p.id::text || '|role::admin',
     'asset::' || a.id::text || '|role::admin',
     'domain::' || o.id::text
-FROM assets a
-JOIN projects p ON a.project_id = p.id
-JOIN organizations o ON p.organization_id = o.id
+FROM public.assets a
+JOIN public.projects p ON a.project_id = p.id
+JOIN public.organizations o ON p.organization_id = o.id
 WHERE NOT EXISTS (
-    SELECT 1 FROM casbin_rule cr
+    SELECT 1 FROM public.casbin_rule cr
     WHERE cr.ptype = 'g'
     AND cr.v0 = 'project::' || p.id::text || '|role::admin'
     AND cr.v1 = 'asset::' || a.id::text || '|role::admin'
@@ -101,25 +101,56 @@ WHERE NOT EXISTS (
 -- Step 4: Grant asset member role to all current project members
 -- This gives existing project members direct asset member roles
 -- Note: This does NOT create automatic inheritance - future project members won't automatically get asset access
-INSERT INTO casbin_rule (ptype, v0, v1, v2)
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2)
 SELECT DISTINCT
     'g',
     user_role.v0,  -- user::<user-id>
     'asset::' || a.id::text || '|role::member',
     'domain::' || o.id::text
-FROM assets a
-JOIN projects p ON a.project_id = p.id
-JOIN organizations o ON p.organization_id = o.id
-JOIN casbin_rule user_role ON 
+FROM public.assets a
+JOIN public.projects p ON a.project_id = p.id
+JOIN public.organizations o ON p.organization_id = o.id
+JOIN public.casbin_rule user_role ON 
     user_role.ptype = 'g'
     AND user_role.v1 = 'project::' || p.id::text || '|role::member'
     AND user_role.v2 = 'domain::' || o.id::text
     AND user_role.v0 LIKE 'user::%'
 WHERE NOT EXISTS (
-    SELECT 1 FROM casbin_rule cr
+    SELECT 1 FROM public.casbin_rule cr
     WHERE cr.ptype = 'g'
     AND cr.v0 = user_role.v0
     AND cr.v1 = 'asset::' || a.id::text || '|role::member'
     AND cr.v2 = 'domain::' || o.id::text
 );
 
+-- Step 5: Migrate users who inherit project membership through parent roles to direct members
+-- This ensures users don't lose access when we remove the project role inheritance
+-- In Casbin, v0 inherits from v1, so users assigned to v0 get permissions from v1
+-- When deleting "project::A|role::member inherits from project::B|role::member",
+-- we need to give users directly assigned to project::A also direct access to project::B
+INSERT INTO public.casbin_rule (ptype, v0, v1, v2)
+SELECT DISTINCT
+    'g',
+    cr_user.v0,  -- user::<user-id>
+    cr_inherit.v1,  -- The parent role that v0 was inheriting from (project::<parent-project-id>|role::member)
+    cr_inherit.v2  -- domain::<org-id>
+FROM public.casbin_rule cr_inherit
+JOIN public.casbin_rule cr_user ON 
+    cr_user.ptype = 'g'
+    AND cr_user.v1 = cr_inherit.v0  -- User is assigned to the child role (v0 of inheritance rule)
+    AND cr_user.v2 = cr_inherit.v2  -- Same domain
+    AND cr_user.v0 LIKE 'user::%'    -- Only actual users
+WHERE cr_inherit.ptype = 'g'
+    AND cr_inherit.v0 LIKE 'project::%|role::member'
+    AND cr_inherit.v1 LIKE 'project::%|role::member'
+    -- Don't create duplicates
+    AND NOT EXISTS (
+        SELECT 1 FROM public.casbin_rule cr_existing
+        WHERE cr_existing.ptype = 'g'
+        AND cr_existing.v0 = cr_user.v0
+        AND cr_existing.v1 = cr_inherit.v1  -- Check against the parent role
+        AND cr_existing.v2 = cr_inherit.v2
+    );
+
+-- Now safe to delete the project role inheritance rules
+DELETE from public.casbin_rule where ptype = 'g' AND v0 LIKE 'project::%|role::member' AND v1 LIKE 'project::%|role::member';

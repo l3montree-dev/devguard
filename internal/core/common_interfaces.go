@@ -499,6 +499,7 @@ type AccessControl interface {
 	GetAllMembersOfOrganization() ([]string, error)
 
 	GetAllMembersOfProject(projectID string) ([]string, error)
+	GetAllMembersOfAsset(projectID string) ([]string, error)
 
 	GetDomainRole(user string) (Role, error)
 	GetProjectRole(user string, project string) (Role, error)

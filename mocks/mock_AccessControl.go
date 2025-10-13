@@ -300,6 +300,68 @@ func (_c *AccessControl_GetAllAssetsForUser_Call) RunAndReturn(run func(user str
 	return _c
 }
 
+// GetAllMembersOfAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) GetAllMembersOfAsset(projectID string) ([]string, error) {
+	ret := _mock.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllMembersOfAsset")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
+		return returnFunc(projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
+		r0 = returnFunc(projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AccessControl_GetAllMembersOfAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllMembersOfAsset'
+type AccessControl_GetAllMembersOfAsset_Call struct {
+	*mock.Call
+}
+
+// GetAllMembersOfAsset is a helper method to define mock.On call
+//   - projectID string
+func (_e *AccessControl_Expecter) GetAllMembersOfAsset(projectID interface{}) *AccessControl_GetAllMembersOfAsset_Call {
+	return &AccessControl_GetAllMembersOfAsset_Call{Call: _e.mock.On("GetAllMembersOfAsset", projectID)}
+}
+
+func (_c *AccessControl_GetAllMembersOfAsset_Call) Run(run func(projectID string)) *AccessControl_GetAllMembersOfAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_GetAllMembersOfAsset_Call) Return(strings []string, err error) *AccessControl_GetAllMembersOfAsset_Call {
+	_c.Call.Return(strings, err)
+	return _c
+}
+
+func (_c *AccessControl_GetAllMembersOfAsset_Call) RunAndReturn(run func(projectID string) ([]string, error)) *AccessControl_GetAllMembersOfAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllMembersOfOrganization provides a mock function for the type AccessControl
 func (_mock *AccessControl) GetAllMembersOfOrganization() ([]string, error) {
 	ret := _mock.Called()

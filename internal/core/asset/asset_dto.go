@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -13,6 +14,14 @@ type LookupResponse struct {
 	Project string `json:"project"`
 	Asset   string `json:"asset"`
 	Link    string `json:"link"`
+}
+
+type changeRoleRequest struct {
+	Role string `json:"role" validate:"required,oneof=member admin"`
+}
+
+type inviteToAssetRequest struct {
+	Ids []string `json:"ids" validate:"required"`
 }
 
 type AssetDTO struct {
@@ -57,12 +66,24 @@ type AssetDTO struct {
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
 }
 
+type AssetDetailsDTO struct {
+	AssetDTO
+	Members []core.User `json:"members"`
+}
+
 func ToDTOs(assets []models.Asset) []AssetDTO {
 	assetDTOs := make([]AssetDTO, len(assets))
 	for i, asset := range assets {
 		assetDTOs[i] = ToDTO(asset)
 	}
 	return assetDTOs
+}
+
+func ToDetailsDTO(asset models.Asset, members []core.User) AssetDetailsDTO {
+	return AssetDetailsDTO{
+		AssetDTO: ToDTO(asset),
+		Members:  members,
+	}
 }
 
 func ToDTO(asset models.Asset) AssetDTO {

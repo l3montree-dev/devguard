@@ -403,6 +403,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
+	assetRouter.GET("/members/", assetController.Members)
 
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
@@ -412,9 +413,11 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetUpdateAccessControlRequired := assetRouter.Group("", neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
-	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-
+	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
+	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
+	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 

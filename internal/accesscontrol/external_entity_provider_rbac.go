@@ -143,6 +143,10 @@ func (e *externalEntityProviderRBAC) GetAllMembersOfProject(projectID string) ([
 	return e.rootAccessControl.GetAllMembersOfProject(projectID)
 }
 
+func (e *externalEntityProviderRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
+	return e.rootAccessControl.GetAllMembersOfAsset(assetID)
+}
+
 func (e *externalEntityProviderRBAC) GetDomainRole(user string) (core.Role, error) {
 	return e.rootAccessControl.GetDomainRole(user)
 }

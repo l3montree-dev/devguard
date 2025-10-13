@@ -148,7 +148,7 @@ func (projectController *controller) InviteMembers(c core.Context) error {
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(newMemberID, "member", project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(newMemberID, core.RoleMember, project.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -167,8 +167,8 @@ func (projectController *controller) RemoveMember(c core.Context) error {
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(userID, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, core.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, core.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -208,9 +208,9 @@ func (projectController *controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(userID, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, core.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, core.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	if err := rbac.GrantRoleInProject(userID, core.Role(req.Role), project.ID.String()); err != nil {
 		return err
