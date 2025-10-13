@@ -799,6 +799,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
 
+	artifactRouter.PUT("/", artifactController.UpdateArtifact, neededScope([]string{"manage"}))
+
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 

@@ -95,6 +95,8 @@ type ArtifactRepository interface {
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
+	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 }
 
 type ReleaseRepository interface {
@@ -272,6 +274,9 @@ type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
+	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
+	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 }
 
 type DependencyVulnService interface {

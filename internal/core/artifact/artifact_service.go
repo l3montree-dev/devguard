@@ -32,3 +32,15 @@ func (s *service) SaveArtifact(artifact *models.Artifact) error {
 func (s *service) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
 	return s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
 }
+
+func (s *service) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	return s.artifactRepository.AddUpstreamURLs(artifact, upstreamURLs)
+}
+
+func (s *service) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	return s.artifactRepository.RemoveUpstreamURLs(artifact, upstreamURLs)
+}
+
+func (s *service) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
+}
