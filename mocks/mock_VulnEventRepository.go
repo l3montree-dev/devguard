@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -36,6 +38,78 @@ type VulnEventRepository_Expecter struct {
 
 func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
+}
+
+// GetLastEventBeforeTimestamp provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID string, time1 time.Time) (models.VulnEvent, error) {
+	ret := _mock.Called(tx, vulnID, time1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLastEventBeforeTimestamp")
+	}
+
+	var r0 models.VulnEvent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, time.Time) (models.VulnEvent, error)); ok {
+		return returnFunc(tx, vulnID, time1)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, time.Time) models.VulnEvent); ok {
+		r0 = returnFunc(tx, vulnID, time1)
+	} else {
+		r0 = ret.Get(0).(models.VulnEvent)
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, time.Time) error); ok {
+		r1 = returnFunc(tx, vulnID, time1)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_GetLastEventBeforeTimestamp_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLastEventBeforeTimestamp'
+type VulnEventRepository_GetLastEventBeforeTimestamp_Call struct {
+	*mock.Call
+}
+
+// GetLastEventBeforeTimestamp is a helper method to define mock.On call
+//   - tx core.DB
+//   - vulnID string
+//   - time1 time.Time
+func (_e *VulnEventRepository_Expecter) GetLastEventBeforeTimestamp(tx interface{}, vulnID interface{}, time1 interface{}) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+	return &VulnEventRepository_GetLastEventBeforeTimestamp_Call{Call: _e.mock.On("GetLastEventBeforeTimestamp", tx, vulnID, time1)}
+}
+
+func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) Run(run func(tx core.DB, vulnID string, time1 time.Time)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) Return(vulnEvent models.VulnEvent, err error) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+	_c.Call.Return(vulnEvent, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) RunAndReturn(run func(tx core.DB, vulnID string, time1 time.Time) (models.VulnEvent, error)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetSecurityRelevantEventsForVulnID provides a mock function for the type VulnEventRepository
