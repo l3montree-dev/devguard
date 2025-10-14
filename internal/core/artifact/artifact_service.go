@@ -231,7 +231,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 			rootComponentPurl = artifact.ArtifactName
 		}
 
-		for purl, _ := range components {
+		for purl := range components {
 			componentDependency := models.ComponentDependency{
 				DependencyPurl: purl,
 				ComponentPurl:  &rootComponentPurl,
