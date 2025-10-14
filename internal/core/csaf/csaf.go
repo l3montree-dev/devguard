@@ -512,11 +512,11 @@ func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	if extension == ".asc" {
+	switch extension {
+	case ".asc":
 		// just return the public key
 		return ctx.String(200, string(publicKeyData))
-	} else if extension == ".sha512" {
+	case ".sha512":
 		// else hash the public key and return the result
 		hash := sha512.Sum512(publicKeyData)
 		hashString := hex.EncodeToString(hash[:])
@@ -610,7 +610,10 @@ func (controller *csaf_controller) ServeCSAFReportRequest(ctx core.Context) erro
 		// return the signature of the json encoding of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
-		encoder.Encode(csafReport)
+		err = encoder.Encode(csafReport)
+		if err != nil {
+			return err
+		}
 		signature, err := signCSAFReport(buf.Bytes())
 		if err != nil {
 			return err
@@ -620,7 +623,10 @@ func (controller *csaf_controller) ServeCSAFReportRequest(ctx core.Context) erro
 		// return the hash of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
-		encoder.Encode(csafReport)
+		err = encoder.Encode(csafReport)
+		if err != nil {
+			return err
+		}
 		hash := sha512.Sum512(buf.Bytes())
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
@@ -722,8 +728,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 		return nil, err
 	}
 
-	// then get time travel each vuln to the state at timeStamp
-	filteredVulns := make([]models.DependencyVuln, 0, len(vulns))
+	// then time travel each vuln to the state at timeStamp using the latest events
 	for i, vuln := range vulns {
 		lastEvent, err := vulnEventRepository.GetLastEventBeforeTimestamp(nil, vuln.ID, timeStamp)
 		if err != nil {
@@ -734,7 +739,6 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			return nil, err
 		}
 		lastEvent.Apply(&vulns[i])
-		filteredVulns = append(filteredVulns, vulns[i])
 	}
 
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
