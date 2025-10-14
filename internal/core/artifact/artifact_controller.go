@@ -4,7 +4,8 @@
 package artifact
 
 import (
-	cdx "github.com/CycloneDX/cyclonedx-go"
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
@@ -65,7 +66,7 @@ func (c *controller) Create(ctx core.Context) error {
 	}
 	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
-		return err
+		slog.Error("could not sync vex reports", "err", err)
 	}
 
 	artifact.UpstreamURLs = body.UpstreamURL
@@ -170,19 +171,11 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 
 	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
-		return err
+		slog.Error("could not sync vex reports", "err", err)
 	}
 
 	artifact.UpstreamURLs = body.UpstreamURL
 
 	return ctx.JSON(200, artifact)
 
-}
-
-func (c *controller) SyncVexReports(boms []cdx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
-	err := c.artifactService.SyncVexReports(boms, org, project, asset, assetVersion, artifact, userID)
-	if err != nil {
-		return err
-	}
-	return nil
 }
