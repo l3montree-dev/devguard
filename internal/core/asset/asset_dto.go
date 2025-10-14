@@ -58,6 +58,7 @@ type AssetDTO struct {
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
+	IsPublic           bool    `json:"isPublic"`
 }
 
 type AssetWithSecretsDTO struct {
@@ -68,6 +69,11 @@ type AssetWithSecretsDTO struct {
 
 type AssetDetailsDTO struct {
 	AssetDTO
+	Members []core.User `json:"members"`
+}
+
+type AssetDetailsWithSecretsDTO struct {
+	AssetWithSecretsDTO
 	Members []core.User `json:"members"`
 }
 
@@ -83,6 +89,13 @@ func ToDetailsDTO(asset models.Asset, members []core.User) AssetDetailsDTO {
 	return AssetDetailsDTO{
 		AssetDTO: ToDTO(asset),
 		Members:  members,
+	}
+}
+
+func ToDetailsDTOWithSecrets(asset models.Asset, members []core.User) AssetDetailsWithSecretsDTO {
+	return AssetDetailsWithSecretsDTO{
+		AssetWithSecretsDTO: toDTOWithSecrets(asset),
+		Members:             members,
 	}
 }
 
@@ -115,6 +128,7 @@ func ToDTO(asset models.Asset) AssetDTO {
 		ExternalEntityProviderID: asset.ExternalEntityProviderID,
 		ExternalEntityID:         asset.ExternalEntityID,
 		RepositoryProvider:       asset.RepositoryProvider,
+		IsPublic:                 asset.IsPublic,
 	}
 }
 
@@ -206,6 +220,7 @@ type PatchRequest struct {
 	BadgeSecret   *string `json:"badgeSecret"`
 
 	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
+	IsPublic           *bool   `json:"isPublic"`
 }
 
 func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
@@ -294,6 +309,11 @@ func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 		} else {
 			asset.RepositoryProvider = assetPatch.RepositoryProvider
 		}
+	}
+
+	if assetPatch.IsPublic != nil {
+		updated = true
+		asset.IsPublic = *assetPatch.IsPublic
 	}
 
 	return updated

@@ -296,7 +296,12 @@ func (a *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	return ctx.JSON(200, toDTOWithSecrets(asset))
+	members, err := FetchMembersOfAsset(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, ToDetailsDTOWithSecrets(asset, members))
 }
 
 func (a *httpController) GetConfigFile(ctx core.Context) error {
