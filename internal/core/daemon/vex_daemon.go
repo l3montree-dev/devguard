@@ -1,3 +1,6 @@
+// Copyright 2025 l3montree GmbH.
+// SPDX-License-Identifier: 	AGPL-3.0-or-later
+
 package daemon
 
 import (
@@ -13,17 +16,15 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
+func SyncVexReports(db core.DB, rbacProvider core.RBACProvider) error {
+
 	start := time.Now()
 	defer func() {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
@@ -39,8 +40,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	assetRepository := repositories.NewAssetRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	assetRiskHistoryRepository := repositories.NewArtifactRiskHistoryRepository(db)
+
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
@@ -48,10 +48,8 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-
 	webhookIntegration := webhook.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
-
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -67,10 +65,8 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
-	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
 
-	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
 	orgs, err := orgRepository.All()
 	if err != nil {
@@ -98,49 +94,32 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 					slog.Error("failed to load asset versions for asset", "assetID", asset.ID, "error", err)
 					continue
 				}
-
-				monitoring.AssetVersionScanAmount.Inc()
-
 				for i := range assetVersions {
-
 					artifacts, err := artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersions[i].AssetID, assetVersions[i].Name)
 					if err != nil {
 						slog.Error("failed to get artifacts for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 						continue
 					}
-
 					for _, artifact := range artifacts {
+						// Convert []models.ArtifactUpstreamURL to []string
+						upstreamURLs := make([]string, len(artifact.UpstreamURLs))
+						for i, u := range artifact.UpstreamURLs {
+							upstreamURLs[i] = u.UpstreamURL
+						}
+						vexReports, _, _ := artifactService.CheckVexURLs(upstreamURLs)
 
-						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, &artifact.ArtifactName)
+						err := artifactService.SyncVexReports(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {
-							slog.Error("failed to load components", "error", err)
+							slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "0.0.0", "", components)
-						if err != nil {
-							slog.Error("error when building SBOM")
-							continue
-						}
-						normalizedBOM := normalize.FromCdxBom(bom, false)
-						if len(components) <= 0 {
-							continue
-						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, normalizedBOM, "system")
-						}
-
-						if err != nil {
-							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-							continue
-						}
-
-						monitoring.AssetVersionScanSuccess.Inc()
-						slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 					}
 				}
 			}
 		}
+
 	}
-	monitoring.ScanDaemonAmount.Inc()
+
 	return nil
 }

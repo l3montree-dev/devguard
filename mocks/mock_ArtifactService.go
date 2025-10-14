@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
@@ -35,6 +36,135 @@ type ArtifactService_Expecter struct {
 
 func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 	return &ArtifactService_Expecter{mock: &_m.Mock}
+}
+
+// AddUpstreamURLs provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	ret := _mock.Called(artifact, upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddUpstreamURLs")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
+		r0 = returnFunc(artifact, upstreamURLs)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactService_AddUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddUpstreamURLs'
+type ArtifactService_AddUpstreamURLs_Call struct {
+	*mock.Call
+}
+
+// AddUpstreamURLs is a helper method to define mock.On call
+//   - artifact *models.Artifact
+//   - upstreamURLs []string
+func (_e *ArtifactService_Expecter) AddUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactService_AddUpstreamURLs_Call {
+	return &ArtifactService_AddUpstreamURLs_Call{Call: _e.mock.On("AddUpstreamURLs", artifact, upstreamURLs)}
+}
+
+func (_c *ArtifactService_AddUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactService_AddUpstreamURLs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_AddUpstreamURLs_Call) Return(err error) *ArtifactService_AddUpstreamURLs_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactService_AddUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactService_AddUpstreamURLs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckVexURLs provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) CheckVexURLs(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string) {
+	ret := _mock.Called(upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckVexURLs")
+	}
+
+	var r0 []cyclonedx.BOM
+	var r1 []string
+	var r2 []string
+	if returnFunc, ok := ret.Get(0).(func([]string) ([]cyclonedx.BOM, []string, []string)); ok {
+		return returnFunc(upstreamURLs)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]string) []cyclonedx.BOM); ok {
+		r0 = returnFunc(upstreamURLs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]cyclonedx.BOM)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func([]string) []string); ok {
+		r1 = returnFunc(upstreamURLs)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func([]string) []string); ok {
+		r2 = returnFunc(upstreamURLs)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]string)
+		}
+	}
+	return r0, r1, r2
+}
+
+// ArtifactService_CheckVexURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckVexURLs'
+type ArtifactService_CheckVexURLs_Call struct {
+	*mock.Call
+}
+
+// CheckVexURLs is a helper method to define mock.On call
+//   - upstreamURLs []string
+func (_e *ArtifactService_Expecter) CheckVexURLs(upstreamURLs interface{}) *ArtifactService_CheckVexURLs_Call {
+	return &ArtifactService_CheckVexURLs_Call{Call: _e.mock.On("CheckVexURLs", upstreamURLs)}
+}
+
+func (_c *ArtifactService_CheckVexURLs_Call) Run(run func(upstreamURLs []string)) *ArtifactService_CheckVexURLs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_CheckVexURLs_Call) Return(bOMs []cyclonedx.BOM, strings []string, strings1 []string) *ArtifactService_CheckVexURLs_Call {
+	_c.Call.Return(bOMs, strings, strings1)
+	return _c
+}
+
+func (_c *ArtifactService_CheckVexURLs_Call) RunAndReturn(run func(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string)) *ArtifactService_CheckVexURLs_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // DeleteArtifact provides a mock function for the type ArtifactService
@@ -168,6 +298,135 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 	return _c
 }
 
+// ReadArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	ret := _mock.Called(name, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadArtifact")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (models.Artifact, error)); ok {
+		return returnFunc(name, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) models.Artifact); ok {
+		r0 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
+type ArtifactService_ReadArtifact_Call struct {
+	*mock.Call
+}
+
+// ReadArtifact is a helper method to define mock.On call
+//   - name string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *ArtifactService_Expecter) ReadArtifact(name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactService_ReadArtifact_Call {
+	return &ArtifactService_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", name, assetVersionName, assetID)}
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Run(run func(name string, assetVersionName string, assetID uuid.UUID)) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveUpstreamURLs provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	ret := _mock.Called(artifact, upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveUpstreamURLs")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
+		r0 = returnFunc(artifact, upstreamURLs)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactService_RemoveUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveUpstreamURLs'
+type ArtifactService_RemoveUpstreamURLs_Call struct {
+	*mock.Call
+}
+
+// RemoveUpstreamURLs is a helper method to define mock.On call
+//   - artifact *models.Artifact
+//   - upstreamURLs []string
+func (_e *ArtifactService_Expecter) RemoveUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactService_RemoveUpstreamURLs_Call {
+	return &ArtifactService_RemoveUpstreamURLs_Call{Call: _e.mock.On("RemoveUpstreamURLs", artifact, upstreamURLs)}
+}
+
+func (_c *ArtifactService_RemoveUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactService_RemoveUpstreamURLs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_RemoveUpstreamURLs_Call) Return(err error) *ArtifactService_RemoveUpstreamURLs_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactService_RemoveUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactService_RemoveUpstreamURLs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveArtifact provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 	ret := _mock.Called(artifact)
@@ -215,6 +474,93 @@ func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_
 }
 
 func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SyncVexReports provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+	ret := _mock.Called(boms, org, project, asset, assetVersion, artifact, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncVexReports")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func([]cyclonedx.BOM, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
+		r0 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactService_SyncVexReports_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncVexReports'
+type ArtifactService_SyncVexReports_Call struct {
+	*mock.Call
+}
+
+// SyncVexReports is a helper method to define mock.On call
+//   - boms []cyclonedx.BOM
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - artifact models.Artifact
+//   - userID string
+func (_e *ArtifactService_Expecter) SyncVexReports(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncVexReports_Call {
+	return &ArtifactService_SyncVexReports_Call{Call: _e.mock.On("SyncVexReports", boms, org, project, asset, assetVersion, artifact, userID)}
+}
+
+func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncVexReports_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []cyclonedx.BOM
+		if args[0] != nil {
+			arg0 = args[0].([]cyclonedx.BOM)
+		}
+		var arg1 models.Org
+		if args[1] != nil {
+			arg1 = args[1].(models.Org)
+		}
+		var arg2 models.Project
+		if args[2] != nil {
+			arg2 = args[2].(models.Project)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 models.Artifact
+		if args[5] != nil {
+			arg5 = args[5].(models.Artifact)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_SyncVexReports_Call) Return(err error) *ArtifactService_SyncVexReports_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactService_SyncVexReports_Call) RunAndReturn(run func(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error) *ArtifactService_SyncVexReports_Call {
 	_c.Call.Return(run)
 	return _c
 }

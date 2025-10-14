@@ -522,12 +522,12 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
-	artifactService := artifact.NewService(artifactRepository)
-	artifactController := artifact.NewController(artifactService)
-
 	// release module
 	// release repository will be created later when project router is available
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	invitationRepository := repositories.NewInvitationRepository(db)
 
@@ -538,6 +538,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
+
+	artifactController := artifact.NewController(artifactRepository, artifactService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
@@ -826,6 +828,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
 	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
+	assetVersionRouter.POST("/artifacts/", artifactController.Create, neededScope([]string{"manage"}))
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)

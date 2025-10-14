@@ -16,9 +16,7 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -101,6 +99,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
 	tag := ctx.Request().Header.Get("X-Tag")
 
 	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
@@ -128,190 +127,12 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	// load existing dependency vulns for this asset version
-	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersionName, assetVersion.AssetID, nil)
+	err = s.artifactService.SyncVexReports([]cdx.BOM{bom}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
-		slog.Error("could not load dependency vulns", "err", err)
-		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+		slog.Error("could not scan vex", "err", err)
+		return err
 	}
-
-	// index by CVE id
-	vulnsByCVE := make(map[string][]models.DependencyVuln)
-	for _, v := range existing {
-		if v.CVE != nil && v.CVE.CVE != "" {
-			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
-		} else if v.CVEID != nil && *v.CVEID != "" {
-			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
-		}
-	}
-
-	updated := 0
-	notFound := 0
-
-	// helper to extract cve id from CycloneDX vulnerability id or source url
-	extractCVE := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		s = strings.TrimSpace(s)
-		if strings.HasPrefix(s, "http") {
-			parts := strings.Split(s, "/")
-			return parts[len(parts)-1]
-		}
-		return s
-	}
-
-	notExistingVulnsList := []models.DependencyVuln{}
-	notExistingVulnsState := map[int]string{}
-
-	components := make(map[string]models.Component)
-	dependencies := make([]models.ComponentDependency, 0)
-
-	// iterate vulnerabilities in the CycloneDX BOM
-	if bom.Vulnerabilities != nil {
-		for _, vuln := range *bom.Vulnerabilities {
-			cveID := extractCVE(vuln.ID)
-			if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
-				cveID = extractCVE(vuln.Source.URL)
-			}
-			if cveID == "" {
-				notFound++
-				continue
-			}
-
-			cveID = strings.ToUpper(strings.TrimSpace(cveID))
-			cve, err := s.cveRepository.FindCVE(nil, cveID)
-			if err != nil {
-				slog.Error("could not load cve", "err", err, "cve", cveID)
-				notFound++
-				continue
-			}
-
-			statusType := normalize.MapCDXToStatus(vuln.Analysis)
-
-			vulnsList, ok := vulnsByCVE[cveID]
-			if !ok || len(vulnsList) == 0 {
-				var componentPurl *string
-				if vuln.Affects != nil && len(*vuln.Affects) > 0 && (*vuln.Affects)[0].Ref != "" {
-					ref := (*vuln.Affects)[0].Ref
-					componentPurl = &ref
-					if _, ok := components[ref]; !ok {
-						c := models.Component{
-							Purl: ref,
-						}
-						components[ref] = c
-					}
-
-				}
-				dependencyVuln := models.DependencyVuln{
-					Vulnerability: models.Vulnerability{
-						AssetVersionName: assetVersionName,
-						AssetID:          asset.ID,
-					},
-					Artifacts: []models.Artifact{
-						{
-							ArtifactName:     artifactName,
-							AssetVersionName: assetVersionName,
-							AssetID:          asset.ID,
-						},
-					},
-					CVEID:                 &cveID,
-					ComponentPurl:         componentPurl,
-					ComponentFixedVersion: nil,
-					ComponentDepth:        utils.Ptr(0), //TODO: it's unknown
-					CVE:                   &cve,
-				}
-
-				notExistingVulnsList = append(notExistingVulnsList, dependencyVuln)
-				notExistingVulnsState[len(notExistingVulnsList)-1] = statusType
-
-				notFound++
-				continue
-			}
-
-			if statusType == "" {
-				// skip unknown/unspecified statuses
-				continue
-			}
-
-			justification := "[VEX-Upload]"
-			if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
-				justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
-			}
-
-			for i := range vulnsList {
-				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vulnsList[i], statusType, justification, models.MechanicalJustificationType(""), assetVersionName, 1) // mechanical justification is not part of cyclonedx spec.
-				if err != nil {
-					slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
-					continue
-				}
-				updated++
-			}
-		}
-	}
-
-	fmt.Println("updated", updated, "notFound", notFound)
-
-	// create missing component and dependencies
-	if len(components) > 0 {
-		rootComponentPurl, err := s.componentRepository.GetRootComponentPurl(nil, artifactName, assetVersionName, asset.ID)
-		if err != nil {
-			slog.Error("could not determine root component purl", "err", err, "artifact", artifactName, "assetVersion", assetVersionName, "assetID", asset.ID)
-			return echo.NewHTTPError(500, "could not determine root component purl").WithInternal(err)
-		}
-
-		if rootComponentPurl == "" {
-			rootComponentPurl = artifactName
-		}
-
-		for purl, _ := range components {
-			componentDependency := models.ComponentDependency{
-				DependencyPurl: purl,
-				ComponentPurl:  &rootComponentPurl,
-			}
-			dependencies = append(dependencies, componentDependency)
-		}
-	}
-
-	//build a sbom
-	sbom, err := s.assetVersionService.BuildSBOM(assetVersion, artifactName, "vex-upload", org.Name, dependencies)
-	if err != nil {
-		slog.Error("could not build sbom", "err", err)
-		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
-	}
-
-	err = s.assetVersionService.UpdateSBOM(org, core.GetProject(ctx), asset, assetVersion, artifactName, normalize.FromCdxBom(sbom, false), 1)
-	if err != nil {
-		slog.Error("could not update sbom", "err", err)
-		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
-	}
-
-	if len(notExistingVulnsList) > 0 {
-
-		assetVersion, err := s.assetVersionRepository.Read(assetVersionName, asset.ID)
-		if err != nil {
-			slog.Error("could not find asset version", "err", err, "assetVersion", assetVersionName, "assetID", asset.ID)
-			return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
-		}
-
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifactName, notExistingVulnsList, assetVersion, asset, 1)
-		if err != nil {
-			slog.Error("could not create dependency vulns", "err", err)
-			return echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)
-		}
-
-		//update the stats for dependency vulns
-		for i, v := range notExistingVulnsList {
-			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i], "[VEX-Upload] Created from VEX upload", models.MechanicalJustificationType(""), assetVersionName, 1)
-			if err != nil {
-				slog.Error("could not update dependency vuln state", "err", err, "cve", v.CVEID)
-				continue
-			}
-
-		}
-	}
-
-	return ctx.JSON(200, map[string]int{"updated": updated, "notFound": notFound})
+	return ctx.JSON(200, nil)
 }
 
 func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {

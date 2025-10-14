@@ -4,18 +4,74 @@
 package artifact
 
 import (
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type controller struct {
-	artifactService core.ArtifactService
+	artifactRepository core.ArtifactRepository
+	artifactService    core.ArtifactService
 }
 
-func NewController(artifactService core.ArtifactService) *controller {
+func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService) *controller {
 	return &controller{
-		artifactService: artifactService,
+		artifactRepository: artifactRepository,
+		artifactService:    artifactService,
 	}
+}
+
+func (c *controller) Create(ctx core.Context) error {
+
+	asset := core.GetAsset(ctx)
+
+	assetVersion := core.GetAssetVersion(ctx)
+
+	type requestBody struct {
+		ArtifactName string                       `json:"artifactName"`
+		UpstreamURL  []models.ArtifactUpstreamURL `json:"upstreamURLs"`
+	}
+
+	var body requestBody
+
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+
+	artifact := models.Artifact{
+		ArtifactName:     body.ArtifactName,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+
+	//save the artifact
+	err := c.artifactRepository.Create(nil, &artifact)
+	if err != nil {
+		return err
+	}
+
+	toAddURLs := []string{}
+	for _, url := range body.UpstreamURL {
+		toAddURLs = append(toAddURLs, url.UpstreamURL)
+	}
+	//check if the upstream urls are valid urls
+	boms, _, _ := c.artifactService.CheckVexURLs(toAddURLs)
+	if len(body.UpstreamURL) > 0 {
+
+		err := c.artifactService.AddUpstreamURLs(&artifact, toAddURLs)
+		if err != nil {
+			return err
+		}
+	}
+	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	if err != nil {
+		return err
+	}
+
+	artifact.UpstreamURLs = body.UpstreamURL
+
+	return ctx.JSON(201, artifact)
+
 }
 
 func (c *controller) DeleteArtifact(ctx core.Context) error {
@@ -62,13 +118,6 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		return err
 	}
 
-	updateArtifact := false
-	//sync changes
-	if body.ArtifactName != "" && body.ArtifactName != artifact.ArtifactName {
-		artifact.ArtifactName = body.ArtifactName
-		updateArtifact = true
-	}
-
 	oldUpdateURLs := artifact.UpstreamURLs
 	newUpdateURLs := body.UpstreamURL
 
@@ -109,6 +158,9 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		}
 	}
 
+	//check if the upstream urls are valid urls
+	//TODO: send the invalid urls back to the user
+	boms, _, _ := c.artifactService.CheckVexURLs(toAddURLs)
 	if len(toAddURLs) > 0 {
 		err := c.artifactService.AddUpstreamURLs(&artifact, toAddURLs)
 		if err != nil {
@@ -116,14 +168,21 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		}
 	}
 
-	artifact.UpstreamURLs = body.UpstreamURL
-	if updateArtifact {
-		err = c.artifactService.SaveArtifact(&artifact)
-		if err != nil {
-			return err
-		}
+	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	if err != nil {
+		return err
 	}
+
+	artifact.UpstreamURLs = body.UpstreamURL
 
 	return ctx.JSON(200, artifact)
 
+}
+
+func (c *controller) SyncVexReports(boms []cdx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+	err := c.artifactService.SyncVexReports(boms, org, project, asset, assetVersion, artifact, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

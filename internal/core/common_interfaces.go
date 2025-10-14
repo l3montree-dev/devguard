@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -277,6 +278,8 @@ type ArtifactService interface {
 	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	CheckVexURLs(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string)
+	SyncVexReports(boms []cdx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error
 }
 
 type DependencyVulnService interface {

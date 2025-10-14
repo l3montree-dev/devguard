@@ -44,11 +44,10 @@ type service struct {
 	httpClient               *http.Client
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	licenseRiskRepository    core.LicenseRiskRepository
-	artifactService          core.ArtifactService
 	core.FireAndForgetSynchronizer
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository, artifactService core.ArtifactService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository) *service {
 	return &service{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
@@ -64,7 +63,6 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		licenseRiskRepository:     licenseRiskRepository,
-		artifactService:           artifactService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
