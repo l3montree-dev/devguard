@@ -21,8 +21,6 @@ func getContainerFile(ctx context.Context, path string) ([]byte, error) {
 	dockerFilePath := path + "/Dockerfile"
 	containerFilePath := path + "/Containerfile"
 
-	fmt.Println("dockerFilePath", dockerFilePath)
-
 	var file []byte
 	var err error
 
@@ -57,7 +55,6 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 
 	//get the last FROM statement
 	lastFrom := lineArr[len(lineArr)-1]
-	fmt.Println("lastFrom", lastFrom)
 
 	//split the line by spaces
 	fromParts := strings.Split(lastFrom, " ")
@@ -67,7 +64,7 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 	}
 
 	image := fromParts[1]
-	fmt.Println("image", image)
+
 	//return the image
 
 	return image, nil

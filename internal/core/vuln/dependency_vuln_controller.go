@@ -2,7 +2,6 @@ package vuln
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -191,8 +190,6 @@ func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error
 	slices.SortFunc(values, func(a, b dependencyVulnsByPackage) int {
 		return packageNameIndexMap[a.PackageName] - packageNameIndexMap[b.PackageName]
 	})
-
-	fmt.Println(values)
 
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
