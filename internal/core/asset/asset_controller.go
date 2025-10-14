@@ -386,6 +386,9 @@ func FetchMembersOfAsset(ctx core.Context) ([]core.User, error) {
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
+	if len(members) == 0 {
+		return []core.User{}, nil
+	}
 
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)

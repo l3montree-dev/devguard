@@ -115,9 +115,13 @@ func TestAssetUpdate(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("PATCH", "/api/v1/organizations/"+org.Slug+"/projects/"+project.Slug+"/assets/"+asset1.Slug, bytes.NewBuffer(updateRequestBytes))
 		ctx := app.NewContext(req, rec)
+		rbac := mocks.NewAccessControl(t)
+		rbac.On("GetAllMembersOfAsset", asset1.ID.String()).Return(nil, nil)
+
 		core.SetOrg(ctx, org)
 		core.SetProject(ctx, project)
 		core.SetAsset(ctx, asset1)
+		core.SetRBAC(ctx, rbac)
 
 		err = controller.Update(ctx)
 		assert.Nil(t, err)
