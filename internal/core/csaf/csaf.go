@@ -2,6 +2,7 @@ package csaf
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -272,7 +273,7 @@ func signCSAFReport(csafJSON []byte) ([]byte, error) {
 	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())
 
 	// read private key and parse to opnepgp key struct
-	privateKeyData, err := os.ReadFile("csaf_openpgp_private_key.asc")
+	privateKeyData, err := os.ReadFile("csaf-openpgp-private-key.asc")
 	if err != nil {
 		return nil, err
 	}
@@ -367,15 +368,21 @@ func (controller *csaf_controller) GetCSAFIndexHTML(ctx core.Context) error {
 
 // return the html used to display all openpgp related keys and hashes
 func (controller *csaf_controller) GetOpenPGPHTML(ctx core.Context) error {
-	html := `<html>
+	fingerprint, err := getPublicKeyFingerprint()
+	if err != nil {
+		return err
+	}
+
+	html := fmt.Sprintf(`<html>
 	<head><title>Index of /csaf/openpgp/</title></head>
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/openpgp</h1><hr><pre>
-	<a href="public_key.asc">public_key.asc</a>
-	<a href="public_key.sha512">public_key.asc.sha512</a>
+	<a href="../">../</a>
+	<a href="%s.asc">%s.asc</a>
+	<a href="%s.asc.sha512">%s.asc.sha512</a>
 	</pre><hr>
 	</body>
-	</html>`
+	</html>`, fingerprint, fingerprint, fingerprint, fingerprint)
 	return ctx.HTML(200, html)
 }
 
@@ -417,17 +424,20 @@ func (controller *csaf_controller) GetTLPWhiteEntriesHTML(ctx core.Context) erro
 	<head><title>Index of /csaf/white/</title></head>
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/white/</h1><hr><pre>`
+	html += "\n"
+	html += `	<a href="../">../</a>`
+
 	for _, year := range allYears {
-		html += fmt.Sprintf(`
-		<a href="%d/">%d/</a>`, year, year)
+		html += "\n"
+		html += fmt.Sprintf(`	<a href="%d/">%d/</a>`, year, year)
 	}
 
 	// then append the index.txt as well as the changes.csv file
-	html += `
-	<a href="index.txt/">index.txt/</a>`
+	html += "\n"
+	html += `	<a href="index.txt/">index.txt</a>`
 
-	html += `
-	<a href="changes.csv/">changes.csv/</a>`
+	html += "\n"
+	html += `	<a href="changes.csv/">changes.csv</a>`
 
 	html += `</pre><hr>
 	</body>
@@ -468,12 +478,15 @@ func (controller *csaf_controller) GetReportsByYearHTML(ctx core.Context) error 
 	<head><title>Index of /csaf/white/%s/</title></head>
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/white/%s/</h1><hr><pre>`, year, year)
+	html += "\n"
+	html += `	<a href="../">../</a>`
+
 	for _, entry := range entriesForYear {
 		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
 		html += fmt.Sprintf(`
-		<a href="%s">%s</a>
-		<a href="%s.asc">%s.asc</a>
-		<a href="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName)
+	<a href="%s">%s</a>
+	<a href="%s.asc">%s.asc</a>
+	<a href="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName)
 	}
 	html += `</pre><hr>
 	</body>
@@ -495,7 +508,7 @@ func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
 		return fmt.Errorf("invalid resource: %s", file)
 	}
 
-	publicKeyData, err := os.ReadFile("csaf_openpgp_public_key.asc")
+	publicKeyData, err := os.ReadFile("csaf-openpgp-public-key.asc")
 	if err != nil {
 		return err
 	}
@@ -530,8 +543,22 @@ type PGPKey struct {
 
 // returns the provider metadata file
 func (controller *csaf_controller) GetProviderMetadata(ctx core.Context) error {
+	organization := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
+	asset := core.GetAsset(ctx)
+	hostURL := os.Getenv("API_URL")
+	if hostURL == "" {
+		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
+	}
+	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/", hostURL, organization.Slug, project.Slug, asset.Slug)
+
+	fingerprint, err := getPublicKeyFingerprint()
+	if err != nil {
+		return err
+	}
+
 	metadata := ProviderMetadata{
-		URL:                     ctx.Path(),
+		URL:                     csafURL + "provider-metadata.json",
 		LastUpdated:             time.Now().Format(time.RFC3339),
 		ListOnCSAFAggregators:   true,
 		MirrorOnCSAFAggregators: true,
@@ -543,9 +570,19 @@ func (controller *csaf_controller) GetProviderMetadata(ctx core.Context) error {
 			Name:           "L3montree GmbH",
 			Namespace:      "https://l3montree.com/",
 		},
-		PublicOpenpgpKeys: []PGPKey{{URL: strings.TrimRight(ctx.Path(), "provider-metadata.json") + "openpgp/public_key.asc"}},
+		PublicOpenpgpKeys: []PGPKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
 	}
 	return ctx.JSON(200, metadata)
+}
+
+func getPublicKeyFingerprint() (string, error) {
+	publicKeyMaterial, err := os.ReadFile("csaf-openpgp-public-key.asc")
+	if err != nil {
+		return "", err
+	}
+	hash := sha1.Sum(publicKeyMaterial)
+	hashString := hex.EncodeToString(hash[:])
+	return hashString, nil
 }
 
 // from here on: code that handles the creation of csaf reports them self
