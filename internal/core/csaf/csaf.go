@@ -23,7 +23,7 @@ import (
 
 // definition of all necessary structs used in a csaf document
 
-type csaf_controller struct {
+type csafController struct {
 	DB                       core.DB
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
@@ -257,8 +257,8 @@ type productID = string
 
 // from here on: code that builds the human navigable html web interface
 
-func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csaf_controller {
-	return &csaf_controller{
+func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csafController {
+	return &csafController{
 		DB:                       db,
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
@@ -306,7 +306,7 @@ func signCSAFReport(csafJSON []byte) ([]byte, error) {
 }
 
 // builds and returns the index.txt file, listing all csaf reports currently available
-func (controller *csaf_controller) GetIndexFile(ctx core.Context) error {
+func (controller *csafController) GetIndexFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
 	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
@@ -325,7 +325,7 @@ func (controller *csaf_controller) GetIndexFile(ctx core.Context) error {
 }
 
 // builds and returns the changes.csv file, containing all reports ordered by release dates
-func (controller *csaf_controller) GetChangesCSVFile(ctx core.Context) error {
+func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
 	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
@@ -352,7 +352,7 @@ func (controller *csaf_controller) GetChangesCSVFile(ctx core.Context) error {
 }
 
 // returns the html to display each subdirectory present under the csaf url
-func (controller *csaf_controller) GetCSAFIndexHTML(ctx core.Context) error {
+func (controller *csafController) GetCSAFIndexHTML(ctx core.Context) error {
 	html := `<html>
 	<head><title>Index of /csaf/</title></head>
 	<body cz-shortcut-listen="true">
@@ -367,7 +367,7 @@ func (controller *csaf_controller) GetCSAFIndexHTML(ctx core.Context) error {
 }
 
 // return the html used to display all openpgp related keys and hashes
-func (controller *csaf_controller) GetOpenPGPHTML(ctx core.Context) error {
+func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 	fingerprint, err := getPublicKeyFingerprint()
 	if err != nil {
 		return err
@@ -412,7 +412,7 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 }
 
 // builds and returns the html used to display every directory in the tlp white folder
-func (controller *csaf_controller) GetTLPWhiteEntriesHTML(ctx core.Context) error {
+func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	// get all years where csaf version were published and make a directory for each of these
@@ -447,7 +447,7 @@ func (controller *csaf_controller) GetTLPWhiteEntriesHTML(ctx core.Context) erro
 }
 
 // builds and returns the html to display every csaf version of a given year as well as the signature and hash
-func (controller *csaf_controller) GetReportsByYearHTML(ctx core.Context) error {
+func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
@@ -495,7 +495,7 @@ func (controller *csaf_controller) GetReportsByYearHTML(ctx core.Context) error 
 }
 
 // handles request to files placed in the openpgp directory (currently public key and the respective sha512 hash)
-func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
+func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 	// determine which type of file is requested
 	file := ctx.Param("file")
 	file = file[:len(file)-1]
@@ -542,7 +542,7 @@ type PGPKey struct {
 }
 
 // returns the provider metadata file
-func (controller *csaf_controller) GetProviderMetadata(ctx core.Context) error {
+func (controller *csafController) GetProviderMetadata(ctx core.Context) error {
 	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	asset := core.GetAsset(ctx)
@@ -588,7 +588,7 @@ func getPublicKeyFingerprint() (string, error) {
 // from here on: code that handles the creation of csaf reports them self
 
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
-func (controller *csaf_controller) ServeCSAFReportRequest(ctx core.Context) error {
+func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
 	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository, controller.AssetVersionRepository)
 	if err != nil {
