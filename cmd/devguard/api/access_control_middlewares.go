@@ -16,6 +16,7 @@
 package api
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -39,7 +40,7 @@ func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.
 			allowed, err := rbac.IsAllowed(user, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
-				return echo.NewHTTPError(500, "could not determine if the user has access")
+				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 
 			// check if the user has the required role
@@ -66,7 +67,7 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 			ok := utils.ContainsAll(userScopes, neededScopes)
 			if !ok {
 				slog.Error("user does not have the required scopes", "neededScopes", neededScopes, "userScopes", userScopes)
-				return echo.NewHTTPError(403, "your personal access token does not have the required scope, needed scopes: "+strings.Join(neededScopes, ", "))
+				return echo.NewHTTPError(403, fmt.Sprintf("your personal access token does not have the required scope, needed scopes: %s", strings.Join(neededScopes, ", ")))
 			}
 
 			return next(c)

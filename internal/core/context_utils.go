@@ -302,6 +302,14 @@ func GetProject(ctx Context) models.Project {
 	return ctx.Get("project").(models.Project)
 }
 
+func MaybeGetProject(ctx Context) (models.Project, error) {
+	project, ok := ctx.Get("project").(models.Project)
+	if !ok {
+		return models.Project{}, fmt.Errorf("could not get project")
+	}
+	return project, nil
+}
+
 func GetAttestation(ctx Context) models.Attestation {
 	return ctx.Get("attestation").(models.Attestation)
 }

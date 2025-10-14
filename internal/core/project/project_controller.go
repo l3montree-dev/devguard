@@ -51,7 +51,7 @@ func (projectController *controller) Create(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	newProject := req.ToModel()
@@ -135,7 +135,7 @@ func (projectController *controller) InviteMembers(c core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	members, err := rbac.GetAllMembersOfOrganization()
@@ -195,7 +195,7 @@ func (projectController *controller) ChangeRole(c core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// check if role is valid

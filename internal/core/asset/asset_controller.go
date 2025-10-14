@@ -142,7 +142,7 @@ func (a *httpController) Create(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	project := core.GetProject(ctx)
@@ -445,7 +445,7 @@ func (a *httpController) InviteMembers(c core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	members, err := rbac.GetAllMembersOfProject(asset.ProjectID.String())
@@ -516,7 +516,7 @@ func (a *httpController) ChangeRole(c core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// check if role is valid

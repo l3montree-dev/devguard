@@ -3,6 +3,7 @@ package vuln
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -45,7 +46,7 @@ func (controller LicenseRiskController) Create(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(newLicenseRisk); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	if newLicenseRisk.FinalLicenseDecision == "" {
 		return echo.NewHTTPError(400, "license id must not be empty")
@@ -80,7 +81,7 @@ func (controller LicenseRiskController) Create(ctx core.Context) error {
 
 	err = controller.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not create license risk").WithInternal(err)
 	}
 	return ctx.JSON(200, licenseRisk)
 }
