@@ -1,9 +1,10 @@
 package csaf
 
 import (
+	"bytes"
 	"crypto/sha512"
-	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	pgpCrypto "github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/profile"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -260,6 +263,42 @@ func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnR
 	}
 }
 
+func signCSAFReport(csafJSON []byte) ([]byte, error) {
+	defer slog.Error("error")
+	slog.Info("start testing signatures")
+	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())
+
+	// Read private key
+	privateKeyData, err := os.ReadFile("csaf_openpgp_private_key.asc")
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to string for pgpCrypto
+	privateKeyArmored := string(privateKeyData)
+
+	// Parse keys
+	privateKey, err := pgpCrypto.NewKeyFromArmored(privateKeyArmored)
+	if err != nil {
+		return nil, err
+	}
+
+	password := os.Getenv("CSAF_PASSWORD")
+	unlockedKey, err := privateKey.Unlock([]byte(password))
+
+	signer, err := pgp.Sign().SigningKey(unlockedKey).Detached().New()
+	if err != nil {
+		return nil, err
+	}
+	signature, err := signer.Sign(csafJSON, pgpCrypto.Armor)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Info("successfully generated Signature")
+	return signature, nil
+}
+
 func (controller *csaf_controller) GenerateIndexFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
@@ -407,7 +446,9 @@ func (controller *csaf_controller) GetReportsByYear(ctx core.Context) error {
 	for _, entry := range entriesForYear {
 		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
 		html += fmt.Sprintf(`
-		<a href="%s">%s</a>`, fileName, fileName)
+		<a href="%s">%s</a>
+		<a href="%s.asc">%s.asc</a>
+		<a href="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName)
 	}
 	html += `</pre><hr>
 	</body>
@@ -426,21 +467,14 @@ func (controller *csaf_controller) GetOpenPGPFile(ctx core.Context) error {
 	if extension != ".asc" && extension != ".sha512" {
 		return fmt.Errorf("invalid resource: %s", file)
 	}
-	publicKey := os.Getenv("CSAF_PUBLIC_KEY")
-	if publicKey == "" {
-		return fmt.Errorf("could read public key from env variables, make sure the variable <CSAF_PUBLIC_KEY> is set in the .env file of your project")
-	}
-	decodedPublicKey, err := base64.StdEncoding.DecodeString(publicKey)
+	publicKeyData, err := os.ReadFile("csaf_openpgp_public_key.asc")
 	if err != nil {
 		return err
 	}
-	pem := []byte("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n")
-	pem = append(pem, decodedPublicKey...)
-	pem = append(pem, []byte("\n-----END PGP PUBLIC KEY BLOCK-----")...)
 	if extension == ".asc" {
-		return ctx.String(200, string(pem))
+		return ctx.String(200, string(publicKeyData))
 	} else if extension == ".sha512" {
-		hash := sha512.Sum512(pem)
+		hash := sha512.Sum512(publicKeyData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
 	}
@@ -454,19 +488,60 @@ func extractVersionFromDocumentID(id string) (int, error) {
 		return 0, fmt.Errorf("invalid csaf document ID")
 	}
 	version := fields[len(fields)-1]
-	version = strings.TrimRight(version, ".json/")
+	index := strings.Index(version, ".")
+	if index == -1 {
+		return 0, fmt.Errorf("invalid file name syntax")
+	}
+	version = version[:index]
+	slog.Info(version)
 	return strconv.Atoi(version)
 }
 
-func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
-	slog.Info("start generating CSAF Document")
-	version, err := extractVersionFromDocumentID(ctx.Param("version"))
+func (controller *csaf_controller) ServeCSAFReportRequest(ctx core.Context) error {
+	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository, controller.AssetVersionRepository)
 	if err != nil {
 		return err
 	}
+	fileName := strings.TrimRight(ctx.Param("version"), "/")
+	index := strings.LastIndex(fileName, ".")
+	if index == -1 {
+		return fmt.Errorf("invalid file name syntax")
+	}
+	mode := fileName[index+1:]
+	switch mode {
+	case "json":
+		return ctx.JSON(200, csafReport)
+	case "asc":
+		buf := bytes.Buffer{}
+		encoder := json.NewEncoder(&buf)
+		encoder.Encode(csafReport)
+		signature, err := signCSAFReport(buf.Bytes())
+		if err != nil {
+			return err
+		}
+		return ctx.String(200, string(signature))
+
+	case "sha512":
+		buf := bytes.Buffer{}
+		encoder := json.NewEncoder(&buf)
+		encoder.Encode(csafReport)
+		hash := sha512.Sum512(buf.Bytes())
+		hashString := hex.EncodeToString(hash[:])
+		return ctx.String(200, hashString)
+	default:
+		return fmt.Errorf("invalid file extension")
+	}
+}
+
+func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, statisticsRepository core.StatisticsRepository, assetVersionRepository core.AssetVersionRepository) (csaf, error) {
+	slog.Info("start generating CSAF Document")
+	csafDoc := csaf{}
+	version, err := extractVersionFromDocumentID(ctx.Param("version"))
+	if err != nil {
+		return csafDoc, err
+	}
 	slog.Info("returned id", "id", version)
 
-	csafDoc := csaf{}
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
 	csafDoc.Document = documentObject{
@@ -489,28 +564,28 @@ func (controller *csaf_controller) GenerateCSAFReport(ctx core.Context) error {
 			},
 		},
 	}
-	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, version)
+	tracking, err := generateTrackingObject(asset, dependencyVulnRepository, vulnEventRepository, version)
 	if err != nil {
-		return err
+		return csafDoc, err
 	}
 	csafDoc.Document.Tracking = tracking
-	tree, err := generateProductTree(asset, controller.AssetVersionRepository)
+	tree, err := generateProductTree(asset, assetVersionRepository)
 	if err != nil {
-		return err
+		return csafDoc, err
 	}
 	csafDoc.ProductTree = &tree
 	lastRevisionTimestamp, err := time.Parse(time.RFC3339, tracking.RevisionHistory[len(tracking.RevisionHistory)-1].Date)
 	if err != nil {
-		return err
+		return csafDoc, err
 	}
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository)
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, statisticsRepository)
 	if err != nil {
-		return err
+		return csafDoc, err
 	}
 	csafDoc.Vulnerabilities = vulnerabilities
 
 	slog.Info("successfully generated CSAF Document")
-	return ctx.JSON(200, csafDoc)
+	return csafDoc, nil
 }
 
 type ProviderMetadata struct {
@@ -635,11 +710,11 @@ func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 		for _, vuln := range versionVulns {
 			switch vuln.State {
 			case models.VulnStateOpen:
-				summary += "Unhandled for purl " + *vuln.ComponentPurl + ", "
+				summary += "unhandled for purl " + *vuln.ComponentPurl + ", "
 			case models.VulnStateAccepted:
-				summary += "Accepted for purl " + *vuln.ComponentPurl + ", "
+				summary += "accepted for purl " + *vuln.ComponentPurl + ", "
 			case models.VulnStateFalsePositive:
-				summary += "Marked as false positive for purl " + *vuln.ComponentPurl + ", "
+				summary += "marked as false positive for purl " + *vuln.ComponentPurl + ", "
 			}
 		}
 		summary = strings.TrimRight(summary, ", ")

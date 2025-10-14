@@ -768,12 +768,13 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	assetRouter.GET("/csaf/white/", csafController.GetTLPWhiteEntries)
 	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYear)
-	assetRouter.GET("/csaf/white/:year/:version/", csafController.GenerateCSAFReport)
+	assetRouter.GET("/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest)
 
 	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGP)
 	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
 
 	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadata)
+
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
