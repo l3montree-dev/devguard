@@ -762,15 +762,15 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
 
-	assetRouter.GET("/csaf/", csafController.GetIndexHTML)
-	assetRouter.GET("/csaf/white/index.txt/", csafController.GenerateIndexFile)
+	assetRouter.GET("/csaf/", csafController.GetCSAFIndexHTML)
+	assetRouter.GET("/csaf/white/index.txt/", csafController.GetIndexFile)
 	assetRouter.GET("/csaf/white/changes.csv/", csafController.GetChangesCSVFile)
 
-	assetRouter.GET("/csaf/white/", csafController.GetTLPWhiteEntries)
-	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYear)
+	assetRouter.GET("/csaf/white/", csafController.GetTLPWhiteEntriesHTML)
+	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYearHTML)
 	assetRouter.GET("/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest)
 
-	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGP)
+	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGPHTML)
 	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
 
 	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadata)
