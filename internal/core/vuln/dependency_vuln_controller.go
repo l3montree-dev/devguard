@@ -99,6 +99,28 @@ func (controller dependencyVulnHTTPController) ListByProjectPaged(ctx core.Conte
 	}))
 }
 
+func (controller dependencyVulnHTTPController) ListByAssetIDWithoutHandledExternalEventsPaged(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+
+	pagedResp, err := controller.dependencyVulnRepository.ListByAssetIDWithoutHandledExternalEvents(
+		asset.ID,
+		assetVersion.Name,
+		core.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+		core.GetFilterQuery(ctx),
+		core.GetSortQuery(ctx),
+	)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
+		return convertToDetailedDTO(dependencyVuln)
+	}))
+}
+
 func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)

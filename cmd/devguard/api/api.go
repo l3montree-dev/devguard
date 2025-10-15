@@ -832,6 +832,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
+	dependencyVulnRouter.GET("/sync/", dependencyVulnController.ListByAssetIDWithoutHandledExternalEventsPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

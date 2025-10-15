@@ -2,7 +2,6 @@ package artifact
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -133,7 +132,11 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 	}
 
 	notExistingVulnsList := []models.DependencyVuln{}
-	notExistingVulnsState := map[int]string{}
+	type VulnState struct {
+		state         string
+		justification string
+	}
+	notExistingVulnsState := make(map[int]VulnState)
 
 	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
@@ -160,6 +163,10 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 				}
 
 				statusType := normalize.MapCDXToStatus(vuln.Analysis)
+				justification := ""
+				if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
+					justification = vuln.Analysis.Detail
+				}
 
 				vulnsList, ok := vulnsByCVE[cveID]
 				if !ok || len(vulnsList) == 0 {
@@ -191,7 +198,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 					}
 
 					notExistingVulnsList = append(notExistingVulnsList, dependencyVuln)
-					notExistingVulnsState[len(notExistingVulnsList)-1] = statusType
+					notExistingVulnsState[len(notExistingVulnsList)-1] = VulnState{state: statusType, justification: justification}
 
 					notFound++
 					continue
@@ -200,11 +207,6 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 				if statusType == "" {
 					// skip unknown/unspecified statuses
 					continue
-				}
-
-				justification := "[VEX-Upload]"
-				if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
-					justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
 				}
 
 				for i := range vulnsList {
@@ -269,7 +271,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 
 		//update the stats for dependency vulns
 		for i, v := range notExistingVulnsList {
-			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i], "[VEX-Upload] Created from VEX upload", models.MechanicalJustificationType(""), assetVersion.Name, 1)
+			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i].state, notExistingVulnsState[i].justification, models.MechanicalJustificationType(""), assetVersion.Name, 1)
 			if err != nil {
 				slog.Error("could not update dependency vuln state", "err", err, "cve", v.CVEID)
 				continue
