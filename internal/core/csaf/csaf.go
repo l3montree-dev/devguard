@@ -24,7 +24,6 @@ import (
 // definition of all necessary structs used in a csaf document
 
 type csafController struct {
-	DB                       core.DB
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
 	AssetVersionRepository   core.AssetVersionRepository
@@ -257,9 +256,8 @@ type productID = string
 
 // from here on: code that builds the human navigable html web interface
 
-func NewCSAFController(db core.DB, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csafController {
+func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csafController {
 	return &csafController{
-		DB:                       db,
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
 		AssetVersionRepository:   assetVersionRepository,
@@ -359,7 +357,7 @@ func (controller *csafController) GetCSAFIndexHTML(ctx core.Context) error {
 	<h1>Index of /csaf/</h1><hr><pre>
 	<a href="openpgp/">openpgp/</a>
 	<a href="white/">white/</a>
-	<a href="provider-metadata.json">provider-metadata.json</a>
+	<a href="provider-metadata.json"download="provider-metadata.json">provider-metadata.json</a>
 	</pre><hr>
 	</body>
 	</html>`
@@ -378,11 +376,11 @@ func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/openpgp</h1><hr><pre>
 	<a href="../">../</a>
-	<a href="%s.asc">%s.asc</a>
-	<a href="%s.asc.sha512">%s.asc.sha512</a>
+	<a href="%s.asc"download="%s.asc">%s.asc</a>
+	<a href="%s.asc.sha512"download="%s.asc.sha512">%s.asc.sha512</a>
 	</pre><hr>
 	</body>
-	</html>`, fingerprint, fingerprint, fingerprint, fingerprint)
+	</html>`, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint)
 	return ctx.HTML(200, html)
 }
 
@@ -434,10 +432,10 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 
 	// then append the index.txt as well as the changes.csv file
 	html += "\n"
-	html += `	<a href="index.txt/">index.txt</a>`
+	html += `	<a href="index.txt/"download="index.txt">index.txt</a>`
 
 	html += "\n"
-	html += `	<a href="changes.csv/">changes.csv</a>`
+	html += `	<a href="changes.csv/"download="changes.csv">changes.csv</a>`
 
 	html += `</pre><hr>
 	</body>
@@ -484,9 +482,9 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	for _, entry := range entriesForYear {
 		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
 		html += fmt.Sprintf(`
-	<a href="%s">%s</a>
-	<a href="%s.asc">%s.asc</a>
-	<a href="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName)
+	<a href="%s"download="%s">%s</a>
+	<a href="%s.asc"download="%s.asc">%s.asc</a>
+	<a href="%s.sha512"download="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName)
 	}
 	html += `</pre><hr>
 	</body>
@@ -572,7 +570,8 @@ func (controller *csafController) GetProviderMetadata(ctx core.Context) error {
 		},
 		PublicOpenpgpKeys: []PGPKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
 	}
-	return ctx.JSON(200, metadata)
+
+	return ctx.JSONPretty(200, metadata, "    ")
 }
 
 func getPublicKeyFingerprint() (string, error) {
@@ -605,7 +604,7 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 	switch mode {
 	case "json":
 		// just return the csaf report
-		return ctx.JSON(200, csafReport)
+		return ctx.JSONPretty(200, csafReport, "    ")
 	case "asc":
 		// return the signature of the json encoding of the report
 		buf := bytes.Buffer{}
@@ -657,14 +656,16 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 		},
 		Title:    fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
 		Language: utils.Ptr("en-US"),
-		Distribution: &distributionReplacement{
-			TLP: struct {
-				Label string "json:\"label,omitempty\""
-				URL   string "json:\"url,omitempty\""
-			}{
-				Label: "WHITE",
-				URL:   "https://first.org/tlp",
-			},
+	}
+
+	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
+	csafDoc.Document.Distribution = &distributionReplacement{
+		TLP: struct {
+			Label string "json:\"label,omitempty\""
+			URL   string "json:\"url,omitempty\""
+		}{
+			Label: "WHITE",
+			URL:   "https://first.org/tlp",
 		},
 	}
 
@@ -755,6 +756,18 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 		}
 		uniqueVersionsAffected := make([]string, 0, len(vulns))
 		for _, vuln := range vulns {
+			// determine the discovery date
+			if vulnObject.DiscoveryDate == "" {
+				vulnObject.DiscoveryDate = vulns[0].CreatedAt.Format(time.RFC3339)
+			} else {
+				currentDiscoveryDate, err := time.Parse(vulnObject.DiscoveryDate, time.RFC3339)
+				if err == nil {
+					if currentDiscoveryDate.After(vuln.CreatedAt) {
+						vulnObject.DiscoveryDate = vuln.CreatedAt.Format(time.RFC3339)
+					}
+				}
+			}
+
 			if !slices.Contains(uniqueVersionsAffected, vuln.AssetVersionName) {
 				uniqueVersionsAffected = append(uniqueVersionsAffected, vuln.AssetVersionName)
 			}
