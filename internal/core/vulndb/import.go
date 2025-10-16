@@ -638,13 +638,13 @@ func copyCSVFromRemoteToLocal(ctx context.Context, repo *remote.Repository, tag 
 }
 
 func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
-	slog.Info(fmt.Sprintf("start inserting for table=%s", tableName))
 
 	entries, err := utils.ReadCsvFile(filePath)
 	if err != nil {
 		slog.Error("error when reading csv file", "err", err)
 		return err
 	}
+	slog.Info("start inserting", "table", tableName, "entries", len(entries))
 
 	if len(entries) == 0 {
 		slog.Info("nothing to insert", "table", tableName)
@@ -704,7 +704,6 @@ func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 }
 
 func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
-	slog.Info(fmt.Sprintf("start deleting for table=%s", tableName))
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -715,6 +714,7 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 	if err != nil {
 		slog.Error("error when reading csv file", "err", err)
 	}
+	slog.Info("start deleting", "table", tableName, "entries", len(entries))
 
 	if len(entries) == 0 {
 		slog.Info("nothing to delete", "table", tableName)
@@ -762,12 +762,13 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 }
 
 func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
-	slog.Info(fmt.Sprintf("start updating for table=%s", tableName))
+	slog.Info("start updating", "table", tableName)
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer fd.Close() //nolint
+	// count the number of lines in the file
 
 	csvReader := csv.NewReader(fd)
 	record, err := csvReader.Read() // read all the column names from the header row

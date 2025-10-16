@@ -211,12 +211,17 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 	}
 
 	packageNameQuery := repository.GetDB(tx).Table("components").
-		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, MAX(c.cvss) as max_cvss, COUNT(f.id) as dependency_vuln_count, components.purl as package_name").
-		Joins("INNER JOIN dependency_vulns f ON components.purl = f.component_purl").
-		Joins("INNER JOIN cves c ON f.cve_id = c.cve").
-		Where("f.asset_version_name = ?", assetVersionName).
-		Where("f.asset_id = ?", assetID).
+		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(c.cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.purl as package_name").
+		Joins("INNER JOIN dependency_vulns ON components.purl = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
+		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
+		Joins("INNER JOIN cves c ON dependency_vulns.cve_id = c.cve").
+		Where("dependency_vulns.asset_version_name = ?", assetVersionName).
+		Where("dependency_vulns.asset_id = ?", assetID).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
+	// apply the same filters to the packageNameQuery
+	for _, f := range filter {
+		packageNameQuery = packageNameQuery.Where(f.SQL(), f.Value())
+	}
 
 	// apply sorting
 	if len(sort) > 0 {
@@ -228,7 +233,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 	}
 
 	res := []riskStats{}
-	if err := packageNameQuery.Scan(&res).Error; err != nil {
+	if err := packageNameQuery.Debug().Scan(&res).Error; err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
@@ -236,7 +241,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 		return repository.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
+	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Debug().Find(&dependencyVulns).Error
 
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err

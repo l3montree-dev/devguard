@@ -83,12 +83,14 @@ func SessionMiddleware(oryAPIClient core.AdminClient, verifier core.Verifier) ec
 			} else {
 				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
-					if strings.EqualFold(err.Error(), "could not verify request") {
+					if strings.EqualFold(err.Error(), "could not verify request") || strings.EqualFold(err.Error(), "no fingerprint provided") {
 						ctx.Set("session", NoSession)
 						return next(ctx)
+					} else if strings.Contains(err.Error(), "could not get public key using fingerprint") {
+						return echo.NewHTTPError(401, "token provided but not found in database").SetInternal(err)
 					}
 					sentry.CurrentHub().CaptureException(err)
-					return echo.NewHTTPError(500)
+					return echo.NewHTTPError(500, "unexpected error").WithInternal(err)
 				}
 				scopesArray := strings.Fields(scopes)
 				ctx.Set("session", NewSession(userID, scopesArray))

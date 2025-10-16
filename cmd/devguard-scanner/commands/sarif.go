@@ -219,28 +219,39 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 }
 
 func obfuscateString(str string) string {
+	// split into lines so we preserve newlines exactly
+	lines := strings.Split(str, "\n")
 
-	// create regex to split string at whitespace and new line chars
-	reg := regexp.MustCompile(`[\n]+`)
-	// split the string into words
-	els := reg.Split(str, -1)
+	for li, line := range lines {
+		if line == "" {
+			continue
+		}
 
-	for i, el := range els {
-		words := strings.Fields(el)
-		// split at whitespace
-		for i, word := range words {
-			// 5 is a magic number!
-			entropy := utils.ShannonEntropy(word)
+		// We want to obfuscate high-entropy tokens but preserve all original
+		// intra-line whitespace (including tabs). To do this, split the line
+		// into tokens while keeping the separators using a regexp.
+		// This regexp matches sequences of non-whitespace characters (tokens)
+		// or sequences of whitespace characters (separators).
+		reg := regexp.MustCompile(`([^\t\s]+|[\t ]+)`)
+		parts := reg.FindAllString(line, -1)
+
+		for pi, part := range parts {
+			// only consider non-whitespace tokens for obfuscation
+			if strings.TrimSpace(part) == "" {
+				continue
+			}
+
+			entropy := utils.ShannonEntropy(part)
 			if entropy > 4 {
-				words[i] = word[:1+len(word)/2] + strings.Repeat("*", len(word)/2)
+				// keep first half + 1 char, obfuscate the rest with asterisks
+				parts[pi] = part[:1+len(part)/2] + strings.Repeat("*", len(part)/2)
 			}
 		}
 
-		// join the words back together
-		els[i] = strings.Join(words, " ")
+		lines[li] = strings.Join(parts, "")
 	}
 
-	return strings.Join(els, "\n")
+	return strings.Join(lines, "\n")
 }
 
 // add obfuscation function for snippet
@@ -338,7 +349,13 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("could not scan file: %s", resp.Status)
+			// read the body
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return errors.Wrap(err, "could not scan file")
+			}
+
+			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 		}
 
 		// read and parse the body - it should be an array of dependencyVulns

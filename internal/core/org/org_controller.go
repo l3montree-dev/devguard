@@ -55,7 +55,7 @@ func (controller *httpController) Create(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	organization := req.toModel()
@@ -150,7 +150,7 @@ func (controller *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	code := req.Code
@@ -205,7 +205,7 @@ func (controller *httpController) InviteMember(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// get the organization from the context
@@ -234,13 +234,17 @@ func (controller *httpController) ChangeRole(ctx core.Context) error {
 	if userID == "" {
 		return echo.NewHTTPError(400, "userID is required")
 	}
+	currentUserID := core.GetSession(ctx).GetUserID()
+	if userID == currentUserID {
+		return echo.NewHTTPError(400, "you cannot change your own role")
+	}
 
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// get the rbac from the context

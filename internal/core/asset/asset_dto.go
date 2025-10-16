@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -13,6 +14,14 @@ type LookupResponse struct {
 	Project string `json:"project"`
 	Asset   string `json:"asset"`
 	Link    string `json:"link"`
+}
+
+type changeRoleRequest struct {
+	Role string `json:"role" validate:"required,oneof=member admin"`
+}
+
+type inviteToAssetRequest struct {
+	Ids []string `json:"ids" validate:"required"`
 }
 
 type AssetDTO struct {
@@ -31,23 +40,17 @@ type AssetDTO struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	LastSecretScan    *time.Time `json:"lastSecretScan"`
-	LastSastScan      *time.Time `json:"lastSastScan"`
-	LastScaScan       *time.Time `json:"lastScaScan"`
-	LastIacScan       *time.Time `json:"lastIacScan"`
-	LastContainerScan *time.Time `json:"lastContainerScan"`
-	LastDastScan      *time.Time `json:"lastDastScan"`
-
-	SigningPubKey *string `json:"signingPubKey"`
-
-	EnableTicketRange            bool     `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-
-	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
-
-	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
-	WebhookSecret *uuid.UUID `json:"webhookSecret"`
+	LastSecretScan               *time.Time `json:"lastSecretScan"`
+	LastSastScan                 *time.Time `json:"lastSastScan"`
+	LastScaScan                  *time.Time `json:"lastScaScan"`
+	LastIacScan                  *time.Time `json:"lastIacScan"`
+	LastContainerScan            *time.Time `json:"lastContainerScan"`
+	LastDastScan                 *time.Time `json:"lastDastScan"`
+	SigningPubKey                *string    `json:"signingPubKey"`
+	EnableTicketRange            bool       `json:"enableTicketRange"`
+	CVSSAutomaticTicketThreshold *float64   `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64   `json:"riskAutomaticTicketThreshold"`
+	VulnAutoReopenAfterDays      *int       `json:"vulnAutoReopenAfterDays"`
 
 	AssetVersions []models.AssetVersion `json:"refs"`
 
@@ -55,6 +58,23 @@ type AssetDTO struct {
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
+	IsPublic           bool    `json:"isPublic"`
+}
+
+type AssetWithSecretsDTO struct {
+	AssetDTO
+	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
+	WebhookSecret *uuid.UUID `json:"webhookSecret"`
+}
+
+type AssetDetailsDTO struct {
+	AssetDTO
+	Members []core.User `json:"members"`
+}
+
+type AssetDetailsWithSecretsDTO struct {
+	AssetWithSecretsDTO
+	Members []core.User `json:"members"`
 }
 
 func ToDTOs(assets []models.Asset) []AssetDTO {
@@ -63,6 +83,20 @@ func ToDTOs(assets []models.Asset) []AssetDTO {
 		assetDTOs[i] = ToDTO(asset)
 	}
 	return assetDTOs
+}
+
+func ToDetailsDTO(asset models.Asset, members []core.User) AssetDetailsDTO {
+	return AssetDetailsDTO{
+		AssetDTO: ToDTO(asset),
+		Members:  members,
+	}
+}
+
+func ToDetailsDTOWithSecrets(asset models.Asset, members []core.User) AssetDetailsWithSecretsDTO {
+	return AssetDetailsWithSecretsDTO{
+		AssetWithSecretsDTO: toDTOWithSecrets(asset),
+		Members:             members,
+	}
 }
 
 func ToDTO(asset models.Asset) AssetDTO {
@@ -94,15 +128,16 @@ func ToDTO(asset models.Asset) AssetDTO {
 		ExternalEntityProviderID: asset.ExternalEntityProviderID,
 		ExternalEntityID:         asset.ExternalEntityID,
 		RepositoryProvider:       asset.RepositoryProvider,
+		IsPublic:                 asset.IsPublic,
 	}
 }
 
-func toDTOWithSecrets(asset models.Asset) AssetDTO {
-	assetDTO := ToDTO(asset)
-	assetDTO.BadgeSecret = asset.BadgeSecret
-	assetDTO.WebhookSecret = asset.WebhookSecret
-
-	return assetDTO
+func toDTOWithSecrets(asset models.Asset) AssetWithSecretsDTO {
+	return AssetWithSecretsDTO{
+		AssetDTO:      ToDTO(asset),
+		BadgeSecret:   asset.BadgeSecret,
+		WebhookSecret: asset.WebhookSecret,
+	}
 }
 
 type createRequest struct {
@@ -185,6 +220,7 @@ type PatchRequest struct {
 	BadgeSecret   *string `json:"badgeSecret"`
 
 	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
+	IsPublic           *bool   `json:"isPublic"`
 }
 
 func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
@@ -273,6 +309,11 @@ func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 		} else {
 			asset.RepositoryProvider = assetPatch.RepositoryProvider
 		}
+	}
+
+	if assetPatch.IsPublic != nil {
+		updated = true
+		asset.IsPublic = *assetPatch.IsPublic
 	}
 
 	return updated

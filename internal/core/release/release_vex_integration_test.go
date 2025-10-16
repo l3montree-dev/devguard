@@ -95,7 +95,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 	req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)
 	rec := httptest.NewRecorder()
 	ctx := r.NewContext(req, rec)
-	ctx.SetPath("/projects/:projectSlug/releases/:releaseId/vex.json")
+	ctx.SetPath("/projects/:projectSlug/releases/:releaseID/vex.json")
 	ctx.SetParamNames("projectSlug", "releaseID")
 	ctx.SetParamValues(project.Slug, rel.ID.String())
 
