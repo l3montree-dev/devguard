@@ -247,6 +247,13 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 		if strings.HasPrefix(files[j].Name(), "cve_affected_component") {
 			return true
 		}
+		// Move exploits to the end
+		if strings.HasPrefix(files[i].Name(), "exploits") {
+			return false
+		}
+		if strings.HasPrefix(files[j].Name(), "exploits") {
+			return true
+		}
 		return strings.Compare(files[i].Name(), files[j].Name()) < 0
 	})
 
