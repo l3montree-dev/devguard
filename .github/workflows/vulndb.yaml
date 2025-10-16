@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       run_import:
-        description: 'Run import job'
+        description: "Run import job"
         required: false
-        default: 'true'
+        default: "true"
       run_generate_snapshot:
-        description: 'Run generate snapshot job'
+        description: "Run generate snapshot job"
         required: false
-        default: 'false'
+        default: "false"
   schedule:
-    - cron: '0 */6 * * *' # every hour
+    - cron: "0 */6 * * *" # every hour
 
 permissions:
   contents: read
@@ -23,8 +23,7 @@ env:
   POSTGRES_USER: devguard
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
-  DATE : $(date +%s)
-
+  DATE: $(date +%s)
 
 jobs:
   build:
@@ -38,99 +37,98 @@ jobs:
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
         ports:
-        - 5432:5432
-        options: "--health-cmd=\"pg_isready -U devguard\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
+          - 5432:5432
+        options: '--health-cmd="pg_isready -U devguard"  --health-interval=10s  --health-timeout=5s  --health-retries=5 '
     steps:
-    - name: Install postgresql client
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-        echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client-16
-    - name: Create semver extension
-      run: |
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "CREATE EXTENSION IF NOT EXISTS semver;"
-    - name: Checkout code
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
-    - name: Install Golang
-      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
-      with:
-        go-version: 1.25
-    - name: Import the last database version (this takes some time)
-      if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
-      run: |
-        # import the latest vulndb version, diff flage copies the database for comparison later
-        go run ./cmd/devguard-cli/main.go vulndb import || true
-    - name: Build the database (this takes some time)
-      run: |
-        # will fetch the latest build database from ghcr.io
-        go run ./cmd/devguard-cli/main.go vulndb sync
+      - name: Install postgresql client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+      - name: Create semver extension
+        run: |
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "CREATE EXTENSION IF NOT EXISTS semver;"
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
+      - name: Install Golang
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
+        with:
+          go-version: 1.25
+      - name: Import the last database version (this takes some time)
+        if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
+        run: |
+          # import the latest vulndb version, diff flage copies the database for comparison later
+          go run ./cmd/devguard-cli/main.go vulndb import || true
+      - name: Build the database (this takes some time)
+        run: |
+          # will fetch the latest build database from ghcr.io
+          go run ./cmd/devguard-cli/main.go vulndb sync
 
-    - name: Dump the PostgreSQL database
-      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
-      # skip:checkov:CKV_SECRET_6
-      run: |
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_components.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_affected_component.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cves.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cwes) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cwes.csv 
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM exploits) TO STDOUT WITH DELIMITER ',' CSV HEADER" > exploits.csv 
-        # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
+      - name: Dump the PostgreSQL database
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        # skip:checkov:CKV_SECRET_6
+        run: |
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_components.csv 
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_affected_component.csv 
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cves.csv 
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cwes) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cwes.csv 
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM exploits) TO STDOUT WITH DELIMITER ',' CSV HEADER" > exploits.csv 
+          # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
 
+      - name: Export the diff csv files (this does not take some time)
+        if: ${{ github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: |
+          # writes the difference from the db before and after the sync into csv files
+          go run ./cmd/devguard-cli/main.go vulndb export
 
-    - name: Export the diff csv files (this does not take some time)
-      if : ${{ github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}  
-      run: |
-        # writes the difference from the db before and after the sync into csv files
-        go run ./cmd/devguard-cli/main.go vulndb export
+      - name: install zip
+        run: sudo apt-get install zip
 
-    - name: install zip
-      run: sudo apt-get install zip
+      - name: Zip the CSV files
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv
+      - name: Zip the CSV files
+        if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: zip -r vulndb.zip diffs-tmp
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
 
-    - name: Zip the CSV files
-      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
-      run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv
-    - name: Zip the CSV files
-      if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
-      run: zip -r vulndb.zip diffs-tmp 
-    - name: Install Cosign 
-      uses: sigstore/cosign-installer@main
+      - name: Write signing key to disk
+        run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
 
-    - name: Write signing key to disk
-      run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+      - name: Sign the database zip file
+        env:
+          COSIGN_PASSWORD: ""
+        run: cosign import-key-pair --key cosign.key && cosign sign-blob --yes --key import-cosign.key --bundle vulndb.zip.bundle vulndb.zip > vulndb.zip.sig
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup oras cli
+        uses: oras-project/setup-oras@v1
 
-    - name: Sign the database zip file  
-      env:
-        COSIGN_PASSWORD: ""
-      run: cosign import-key-pair --key cosign.key && cosign sign-blob --yes --key import-cosign.key vulndb.zip > vulndb.zip.sig
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Setup oras cli
-      uses: oras-project/setup-oras@v1
+      - name: set the date
+        run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
 
-    - name: set the date
-      run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
+      - name: Push the database ZIP file to GitHub Container Registry (diff)
+        if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date vulndb.zip
 
-    - name: Push the database ZIP file to GitHub Container Registry (diff)
-      if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
-      run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date vulndb.zip
-
-    - name: Push the database ZIP file to GitHub Container Registry (snapshot)
-      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
-      run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot vulndb.zip
-    - name: Push the signatures to the GitHub Container Registry  
-      if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
-      run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date.sig vulndb.zip.sig
-    - name: Push the signatures to the GitHub Container Registry (snapshot)  
-      if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
-      run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot.sig vulndb.zip.sig
+      - name: Push the database ZIP file to GitHub Container Registry (snapshot)
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot vulndb.zip
+      - name: Push the signatures to the GitHub Container Registry
+        if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date.sig vulndb.zip.sig
+      - name: Push the signatures to the GitHub Container Registry (snapshot)
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot.sig vulndb.zip.sig
