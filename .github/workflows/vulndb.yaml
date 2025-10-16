@@ -114,3 +114,21 @@ jobs:
 
       - name: set the date
         run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
+
+      - name: Push the database ZIP file to GitHub Container Registry (diff)
+        if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date vulndb.zip
+
+      - name: Push the database ZIP file to GitHub Container Registry (snapshot)
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot vulndb.zip
+      - name: Push the signatures to the GitHub Container Registry
+        if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date.sig vulndb.zip.sig
+      - name: Push the signatures to the GitHub Container Registry (snapshot)
+        if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
+        run: |
+          oras push ghcr.io/l3montree-dev/devguard/vulndb-diff:$date-snapshot.sig vulndb.zip.sig
