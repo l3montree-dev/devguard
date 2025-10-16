@@ -40,8 +40,9 @@ func (repository *dependencyVulnRepository) ApplyAndSave(tx core.DB, dependencyV
 
 func (repository *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	ev.Apply(dependencyVuln)
-
+	if ev.Upstream != 1 {
+		ev.Apply(dependencyVuln)
+	}
 	// run the updates in the transaction to keep a valid state
 	err := repository.Save(tx, dependencyVuln)
 	if err != nil {
@@ -106,7 +107,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVers
 func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	// Get all dependency vulns that have events with upstream=1 but no events with upstream=2
+	// Get all dependency vulns that have events with upstream=2 but no events with upstream=1
 	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
 		Preload("Artifacts").
 		Preload("Events").
@@ -116,11 +117,11 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 		Where(`asset_id = ? AND asset_version_name = ? AND EXISTS (
 			SELECT 1 FROM vuln_events ve1 
 			WHERE ve1.vuln_id = dependency_vulns.id 
-			AND ve1.upstream = 1
+			AND ve1.upstream = 2
 		) AND NOT EXISTS (
 			SELECT 1 FROM vuln_events ve2 
 			WHERE ve2.vuln_id = dependency_vulns.id 
-			AND ve2.upstream = 2
+			AND ve2.upstream = 1
 		)`, assetID, assetVersionName)
 
 	// apply filters

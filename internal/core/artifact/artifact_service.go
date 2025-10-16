@@ -115,6 +115,11 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 		}
 	}
 
+	upstream := 1
+	if asset.ParanoiaMode {
+		upstream = 2
+	}
+
 	updated := 0
 	notFound := 0
 
@@ -210,7 +215,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 				}
 
 				for i := range vulnsList {
-					_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vulnsList[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name, 1) // mechanical justification is not part of cyclonedx spec.
+					_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vulnsList[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream) // mechanical justification is not part of cyclonedx spec.
 					if err != nil {
 						slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
 						continue
@@ -249,7 +254,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.FromCdxBom(sbom, false), 1)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.FromCdxBom(sbom, false), upstream)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
@@ -263,7 +268,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 			return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, 1)
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream)
 		if err != nil {
 			slog.Error("could not create dependency vulns", "err", err)
 			return echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)
@@ -271,7 +276,7 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 
 		//update the stats for dependency vulns
 		for i, v := range notExistingVulnsList {
-			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i].state, notExistingVulnsState[i].justification, models.MechanicalJustificationType(""), assetVersion.Name, 1)
+			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i].state, notExistingVulnsState[i].justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
 			if err != nil {
 				slog.Error("could not update dependency vuln state", "err", err, "cve", v.CVEID)
 				continue

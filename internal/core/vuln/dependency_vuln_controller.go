@@ -33,6 +33,7 @@ type dependencyVulnHTTPController struct {
 	dependencyVulnService    core.DependencyVulnService
 	projectService           core.ProjectService
 	statisticsService        core.StatisticsService
+	vulnEventRepository      core.VulnEventRepository
 }
 
 type DependencyVulnStatus struct {
@@ -41,12 +42,13 @@ type DependencyVulnStatus struct {
 	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService) *dependencyVulnHTTPController {
+func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService, vulnEventRepository core.VulnEventRepository) *dependencyVulnHTTPController {
 	return &dependencyVulnHTTPController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		projectService:           projectService,
 		statisticsService:        statisticsService,
+		vulnEventRepository:      vulnEventRepository,
 	}
 }
 
@@ -290,6 +292,56 @@ func (controller dependencyVulnHTTPController) Hints(ctx core.Context) error {
 		return err
 	}
 	return ctx.JSON(200, hints)
+}
+
+func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Context) error {
+	/* 	asset := core.GetAsset(ctx)
+	   	assetVersion := core.GetAssetVersion(ctx)
+	   	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	   	userID := core.GetSession(ctx).GetUserID() */
+
+	type vulnReq struct {
+		VulnID string              `json:"vulnID"`
+		Event  events.VulnEventDTO `json:"event"`
+	}
+
+	type requestBody struct {
+		VulnsReq []vulnReq `json:"vulnsReq"`
+	}
+
+	var requestData requestBody
+
+	err := json.NewDecoder(ctx.Request().Body).Decode(&requestData)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	for _, r := range requestData.VulnsReq {
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(r.VulnID)
+		if err != nil {
+			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
+			continue
+		}
+		events := dependencyVuln.Events
+		for _, ev := range events {
+			if ev.Upstream != 2 {
+				continue
+			}
+			ev.Upstream = 1
+		}
+
+		dependencyVuln.Events = events
+		events[len(events)-1].Apply(&dependencyVuln)
+
+		//update the dependencyVuln
+		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return ctx.JSON(200, map[string]any{"message": "sync completed"})
 }
 
 func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) error {
