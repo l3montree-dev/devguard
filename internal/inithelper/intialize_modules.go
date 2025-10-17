@@ -71,6 +71,13 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 func CreateArtifactService(db core.DB) core.ArtifactService {
 	return artifact.NewService(
 		repositories.NewArtifactRepository(db),
+		repositories.NewCVERepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, nil, nil, nil, nil),
+		CreateDependencyVulnService(db, nil, nil, nil),
 	)
 }
 
@@ -90,7 +97,6 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		CreateComponentService(db, openSourceInsightsService),
 		thirdPartyIntegration,
 		repositories.NewLicenseRiskRepository(db),
-		CreateArtifactService(db),
 	)
 	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return s

@@ -192,7 +192,7 @@ func TestScanning(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Len(t, vulns, 1)
 		// create an accepted event inside the database
-		acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability")
+		acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &vulns[0], &acceptedEvent)
 		assert.Nil(t, err)
 		// now scan a different branch with the same vulnerability
@@ -296,7 +296,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
 		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
 
-		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing state management")
+		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing state management", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
 		assert.Nil(t, err)
 
@@ -490,7 +490,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
 		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
 
-		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management")
+		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
 		assert.Nil(t, err)
 
@@ -630,7 +630,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchDVuln := vulns[0]
 
-		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-artifact-fp")
+		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-artifact-fp", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
 		assert.Nil(t, err)
 
@@ -723,7 +723,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
 		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
 
-		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing")
+		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing", 0)
 		err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
 		assert.Nil(t, err)
 

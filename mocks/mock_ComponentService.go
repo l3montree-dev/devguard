@@ -37,8 +37,8 @@ func (_m *ComponentService) EXPECT() *ComponentService_Expecter {
 }
 
 // GetAndSaveLicenseInformation provides a mock function for the type ComponentService
-func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	ret := _mock.Called(assetVersion, artifactName, forceRefresh)
+func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream int) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, artifactName, forceRefresh, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -46,18 +46,18 @@ func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.
 
 	var r0 []models.Component
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) ([]models.Component, error)); ok {
-		return returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool, int) ([]models.Component, error)); ok {
+		return returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) []models.Component); ok {
-		r0 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool, int) []models.Component); ok {
+		r0 = returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, *string, bool) error); ok {
-		r1 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, *string, bool, int) error); ok {
+		r1 = returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,11 +73,12 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
-	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName, forceRefresh)}
+//   - upstream int
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}, forceRefresh interface{}, upstream interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName, forceRefresh, upstream)}
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream int)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.AssetVersion
 		if args[0] != nil {
@@ -91,10 +92,15 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(asset
 		if args[2] != nil {
 			arg2 = args[2].(bool)
 		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -105,7 +111,7 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 	return _c
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream int) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }

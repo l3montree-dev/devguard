@@ -16,9 +16,7 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -99,93 +97,42 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	userID := core.GetSession(ctx).GetUserID()
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
+	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
+	tag := ctx.Request().Header.Get("X-Tag")
+
+	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
 
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, asset.ID)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
-		slog.Error("could not find asset version", "err", err, "assetVersion", assetVersionName, "assetID", asset.ID)
-		return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
+		slog.Error("could not find or create asset version", "err", err)
+		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
 	}
-	// load existing dependency vulns for this asset version
-	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
+
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersionName,
+		AssetID:          asset.ID,
+	}
+
+	// save the artifact to the database
+	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+		slog.Error("could not save artifact", "err", err)
+		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
+	}
+
+	err = s.artifactService.SyncVexReports([]cdx.BOM{bom}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
-		slog.Error("could not load dependency vulns", "err", err)
-		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+		slog.Error("could not scan vex", "err", err)
+		return err
 	}
-
-	// index by CVE id
-	vulnsByCVE := make(map[string][]models.DependencyVuln)
-	for _, v := range existing {
-		if v.CVE != nil && v.CVE.CVE != "" {
-			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
-		} else if v.CVEID != nil && *v.CVEID != "" {
-			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
-		}
-	}
-
-	updated := 0
-	notFound := 0
-
-	// helper to extract cve id from CycloneDX vulnerability id or source url
-	extractCVE := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		s = strings.TrimSpace(s)
-		if strings.HasPrefix(s, "http") {
-			parts := strings.Split(s, "/")
-			return parts[len(parts)-1]
-		}
-		return s
-	}
-
-	// iterate vulnerabilities in the CycloneDX BOM
-	if bom.Vulnerabilities != nil {
-		for _, vuln := range *bom.Vulnerabilities {
-			cveID := extractCVE(vuln.ID)
-			if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
-				cveID = extractCVE(vuln.Source.URL)
-			}
-			if cveID == "" {
-				notFound++
-				continue
-			}
-
-			cveID = strings.ToUpper(strings.TrimSpace(cveID))
-
-			vlist, ok := vulnsByCVE[cveID]
-			if !ok || len(vlist) == 0 {
-				notFound++
-				continue
-			}
-
-			statusType := normalize.MapCDXToStatus(vuln.Analysis)
-			if statusType == "" {
-				// skip unknown/unspecified statuses
-				continue
-			}
-
-			justification := "[VEX-Upload]"
-			if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
-				justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
-			}
-
-			for i := range vlist {
-				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vlist[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name) // mechanical justification is not part of cyclonedx spec.
-				if err != nil {
-					slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
-					continue
-				}
-				updated++
-			}
-		}
-	}
-
-	return ctx.JSON(200, map[string]int{"updated": updated, "notFound": notFound})
+	return ctx.JSON(200, nil)
 }
 
 func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
@@ -234,7 +181,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom, 0)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}

@@ -258,8 +258,8 @@ func (_c *DependencyVulnService_SyncIssues_Call) RunAndReturn(run func(org model
 }
 
 // UpdateDependencyVulnState provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
-	ret := _mock.Called(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName)
+func (_mock *DependencyVulnService) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream int) (models.VulnEvent, error) {
+	ret := _mock.Called(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateDependencyVulnState")
@@ -267,16 +267,16 @@ func (_mock *DependencyVulnService) UpdateDependencyVulnState(tx core.DB, assetI
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string) (models.VulnEvent, error)); ok {
-		return returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string, int) (models.VulnEvent, error)); ok {
+		return returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName, upstream)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string) models.VulnEvent); ok {
-		r0 = returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string, int) models.VulnEvent); ok {
+		r0 = returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName, upstream)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string) error); ok {
-		r1 = returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, string, *models.DependencyVuln, string, string, models.MechanicalJustificationType, string, int) error); ok {
+		r1 = returnFunc(tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName, upstream)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -297,11 +297,12 @@ type DependencyVulnService_UpdateDependencyVulnState_Call struct {
 //   - justification string
 //   - mechanicalJustification models.MechanicalJustificationType
 //   - assetVersionName string
-func (_e *DependencyVulnService_Expecter) UpdateDependencyVulnState(tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}) *DependencyVulnService_UpdateDependencyVulnState_Call {
-	return &DependencyVulnService_UpdateDependencyVulnState_Call{Call: _e.mock.On("UpdateDependencyVulnState", tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName)}
+//   - upstream int
+func (_e *DependencyVulnService_Expecter) UpdateDependencyVulnState(tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}, upstream interface{}) *DependencyVulnService_UpdateDependencyVulnState_Call {
+	return &DependencyVulnService_UpdateDependencyVulnState_Call{Call: _e.mock.On("UpdateDependencyVulnState", tx, assetID, userID, dependencyVuln, statusType, justification, mechanicalJustification, assetVersionName, upstream)}
 }
 
-func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) Run(run func(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string)) *DependencyVulnService_UpdateDependencyVulnState_Call {
+func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) Run(run func(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream int)) *DependencyVulnService_UpdateDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -335,6 +336,10 @@ func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) Run(run func(tx 
 		if args[7] != nil {
 			arg7 = args[7].(string)
 		}
+		var arg8 int
+		if args[8] != nil {
+			arg8 = args[8].(int)
+		}
 		run(
 			arg0,
 			arg1,
@@ -344,6 +349,7 @@ func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) Run(run func(tx 
 			arg5,
 			arg6,
 			arg7,
+			arg8,
 		)
 	})
 	return _c
@@ -354,7 +360,7 @@ func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) Return(vulnEvent
 	return _c
 }
 
-func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)) *DependencyVulnService_UpdateDependencyVulnState_Call {
+func (_c *DependencyVulnService_UpdateDependencyVulnState_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream int) (models.VulnEvent, error)) *DependencyVulnService_UpdateDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -423,16 +429,16 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call
 }
 
 // UserDetectedDependencyVulns provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
-	ret := _mock.Called(tx, artifactName, dependencyVulns, assetVersion, asset)
+func (_mock *DependencyVulnService) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int) error {
+	ret := _mock.Called(tx, artifactName, dependencyVulns, assetVersion, asset, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedDependencyVulns")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error); ok {
-		r0 = returnFunc(tx, artifactName, dependencyVulns, assetVersion, asset)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, int) error); ok {
+		r0 = returnFunc(tx, artifactName, dependencyVulns, assetVersion, asset, upstream)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -450,11 +456,12 @@ type DependencyVulnService_UserDetectedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
-	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, artifactName, dependencyVulns, assetVersion, asset)}
+//   - upstream int
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, upstream interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, artifactName, dependencyVulns, assetVersion, asset, upstream)}
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -476,12 +483,17 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(t
 		if args[4] != nil {
 			arg4 = args[4].(models.Asset)
 		}
+		var arg5 int
+		if args[5] != nil {
+			arg5 = args[5].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -492,7 +504,7 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Return(err err
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -642,16 +654,16 @@ func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_
 }
 
 // UserFixedDependencyVulns provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
-	ret := _mock.Called(tx, userID, dependencyVulns, assetVersion, asset)
+func (_mock *DependencyVulnService) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int) error {
+	ret := _mock.Called(tx, userID, dependencyVulns, assetVersion, asset, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserFixedDependencyVulns")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error); ok {
-		r0 = returnFunc(tx, userID, dependencyVulns, assetVersion, asset)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, int) error); ok {
+		r0 = returnFunc(tx, userID, dependencyVulns, assetVersion, asset, upstream)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -669,11 +681,12 @@ type DependencyVulnService_UserFixedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(tx interface{}, userID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserFixedDependencyVulns_Call {
-	return &DependencyVulnService_UserFixedDependencyVulns_Call{Call: _e.mock.On("UserFixedDependencyVulns", tx, userID, dependencyVulns, assetVersion, asset)}
+//   - upstream int
+func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(tx interface{}, userID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, upstream interface{}) *DependencyVulnService_UserFixedDependencyVulns_Call {
+	return &DependencyVulnService_UserFixedDependencyVulns_Call{Call: _e.mock.On("UserFixedDependencyVulns", tx, userID, dependencyVulns, assetVersion, asset, upstream)}
 }
 
-func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Run(run func(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserFixedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Run(run func(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int)) *DependencyVulnService_UserFixedDependencyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -695,12 +708,17 @@ func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Run(run func(tx c
 		if args[4] != nil {
 			arg4 = args[4].(models.Asset)
 		}
+		var arg5 int
+		if args[5] != nil {
+			arg5 = args[5].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -711,7 +729,7 @@ func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Return(err error)
 	return _c
 }
 
-func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserFixedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int) error) *DependencyVulnService_UserFixedDependencyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
