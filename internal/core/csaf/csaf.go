@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -590,7 +589,6 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
-	slog.Info("Result", "org", ctx.Param("organization"), "project", ctx.Param("project"), "asset", ctx.Param("asset"))
 	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository, controller.AssetVersionRepository)
 	if err != nil {
 		return err
@@ -994,7 +992,6 @@ func generateSummaryForEvents(events []models.VulnEvent) string {
 
 // small helper function to extract the version from the file name of a csaf report
 func extractVersionFromDocumentID(id string) (int, error) {
-	slog.Info(id)
 	fields := strings.Split(id, "_")
 	if len(fields) <= 2 {
 		return 0, fmt.Errorf("invalid csaf document ID")
