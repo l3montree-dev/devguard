@@ -160,10 +160,9 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	//TODO: send the invalid urls back to the user
-	boms, _, _ := c.artifactService.CheckVexURLs(toAddURLs)
+	boms, validURLs, invalidURLs := c.artifactService.CheckVexURLs(toAddURLs)
 	if len(toAddURLs) > 0 {
-		err := c.artifactService.AddUpstreamURLs(&artifact, toAddURLs)
+		err := c.artifactService.AddUpstreamURLs(&artifact, validURLs)
 		if err != nil {
 			return err
 		}
@@ -176,6 +175,14 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 
 	artifact.UpstreamURLs = body.UpstreamURL
 
-	return ctx.JSON(200, artifact)
+	type responseBody struct {
+		Artifact    models.Artifact `json:"artifact"`
+		InvalidURLs []string        `json:"invalidURLs"`
+	}
+	response := responseBody{
+		Artifact:    artifact,
+		InvalidURLs: invalidURLs,
+	}
+	return ctx.JSON(200, response)
 
 }
