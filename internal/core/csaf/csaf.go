@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -32,7 +33,7 @@ type csafController struct {
 
 // root struct of the document
 type csaf struct {
-	Document        documentObject  `json:"document,omitempty"`
+	Document        documentObject  `json:"document"`
 	ProductTree     *productTree    `json:"product_tree,omitempty"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities,omitempty"`
 }
@@ -589,6 +590,7 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
+	slog.Info("Result", "org", ctx.Param("organization"), "project", ctx.Param("project"), "asset", ctx.Param("asset"))
 	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository, controller.AssetVersionRepository)
 	if err != nil {
 		return err
@@ -647,7 +649,6 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 
 	// build trivial parts of the document field
 	csafDoc.Document = documentObject{
-		Category:    "csaf_security_advisory",
 		CSAFVersion: "2.0",
 		Publisher: publisherReplacement{
 			Category:  "vendor",
@@ -692,6 +693,13 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	}
 	csafDoc.Vulnerabilities = vulnerabilities
 
+	// if we do not have any vulnerabilities we do not comply with the security framework anymore so we need to switch the category to the base profile
+	if len(vulnerabilities) == 0 {
+		csafDoc.Document.Category = "csaf_base"
+	} else {
+		csafDoc.Document.Category = "csaf_security_advisory"
+	}
+
 	return csafDoc, nil
 }
 
@@ -728,9 +736,18 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 	if err != nil {
 		return nil, err
 	}
+	filteredVulns := make([]models.DependencyVuln, 0, len(vulns))
+	for _, vuln := range vulns {
+		if vuln.CreatedAt.Before(timeStamp) {
+			filteredVulns = append(filteredVulns, vuln)
+		}
+	}
+	if len(filteredVulns) == 0 {
+		return vulnerabilites, nil
+	}
 
 	// then time travel each vuln to the state at timeStamp using the latest events
-	for i, vuln := range vulns {
+	for i, vuln := range filteredVulns {
 		lastEvent, err := vulnEventRepository.GetLastEventBeforeTimestamp(nil, vuln.ID, timeStamp)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -739,26 +756,26 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			}
 			return nil, err
 		}
-		lastEvent.Apply(&vulns[i])
+		lastEvent.Apply(&filteredVulns[i])
 	}
 
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
 	cveGroups := make(map[string][]models.DependencyVuln)
-	for _, vuln := range vulns {
+	for _, vuln := range filteredVulns {
 		cveGroups[*vuln.CVEID] = append(cveGroups[*vuln.CVEID], vuln)
 	}
 
 	// then make a vulnerability object for every cve and list the asset version in the product status property
-	for cve, vulns := range cveGroups {
+	for cve, vulnsInGroup := range cveGroups {
 		vulnObject := vulnerability{
 			CVE:   cve,
 			Title: cve,
 		}
-		uniqueVersionsAffected := make([]string, 0, len(vulns))
-		for _, vuln := range vulns {
+		uniqueVersionsAffected := make([]string, 0, len(vulnsInGroup))
+		for _, vuln := range vulnsInGroup {
 			// determine the discovery date
 			if vulnObject.DiscoveryDate == "" {
-				vulnObject.DiscoveryDate = vulns[0].CreatedAt.Format(time.RFC3339)
+				vulnObject.DiscoveryDate = vulnsInGroup[0].CreatedAt.Format(time.RFC3339)
 			} else {
 				currentDiscoveryDate, err := time.Parse(vulnObject.DiscoveryDate, time.RFC3339)
 				if err == nil {
@@ -776,7 +793,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			KnownAffected: uniqueVersionsAffected,
 		}
 
-		vulnObject.Notes = generateNoteForVulnerabilityObject(vulns)
+		vulnObject.Notes = generateNoteForVulnerabilityObject(vulnsInGroup)
 		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
 	return vulnerabilites, nil
@@ -840,11 +857,16 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	})
 
 	// now we can extract the first release and current release timestamp that being the first and last event
-	tracking.InitialReleaseDate = allEvents[0].CreatedAt.Format(time.RFC3339)
-	tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
+
+	tracking.InitialReleaseDate = asset.CreatedAt.Format(time.RFC3339)
+	if len(allEvents) != 0 {
+		tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
+	} else {
+		tracking.CurrentReleaseDate = tracking.InitialReleaseDate
+	}
 
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(allEvents, documentVersion)
+	revisions, err := buildRevisionHistory(asset, allEvents, documentVersion)
 	if err != nil {
 		return tracking, err
 	}
@@ -859,7 +881,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(events []models.VulnEvent, documentVersion int) ([]revisionReplacement, error) {
+func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int) ([]revisionReplacement, error) {
 	var revisions []revisionReplacement
 	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
@@ -880,15 +902,22 @@ func buildRevisionHistory(events []models.VulnEvent, documentVersion int) ([]rev
 		return events1[0].CreatedAt.Compare(events2[0].CreatedAt)
 	})
 
+	// initial release entry with no vulnerabilities
+	revisions = append(revisions, revisionReplacement{
+		Date:    asset.CreatedAt.Format(time.RFC3339),
+		Number:  "1",
+		Summary: "Asset created, no vulnerabilities found",
+	})
+
 	// then just create a revision entry for every event group
 	for i, eventGroup := range eventGroups {
-		if i >= documentVersion {
+		if i+1 >= documentVersion {
 			break
 		}
 		revisionObject := revisionReplacement{
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
-		revisionObject.Number = strconv.Itoa(i + 1)
+		revisionObject.Number = strconv.Itoa(i + 2)
 		revisionObject.Summary = generateSummaryForEvents(eventGroup)
 		revisions = append(revisions, revisionObject)
 	}
@@ -965,6 +994,7 @@ func generateSummaryForEvents(events []models.VulnEvent) string {
 
 // small helper function to extract the version from the file name of a csaf report
 func extractVersionFromDocumentID(id string) (int, error) {
+	slog.Info(id)
 	fields := strings.Split(id, "_")
 	if len(fields) <= 2 {
 		return 0, fmt.Errorf("invalid csaf document ID")
