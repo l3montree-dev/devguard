@@ -2,6 +2,7 @@ package vuln
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -323,20 +324,27 @@ func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Cont
 			continue
 		}
 		events := dependencyVuln.Events
-		for _, ev := range events {
-			if ev.Upstream != 2 {
+		for i := range events {
+			if events[i].Upstream != 2 {
 				continue
 			}
-			ev.Upstream = 1
+			fmt.Println("event id", events[i].ID)
+			events[i].Upstream = 1
 		}
 
 		dependencyVuln.Events = events
 		events[len(events)-1].Apply(&dependencyVuln)
 
-		//update the dependencyVuln
+		//update the dependencyVuln and its events
 		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)
 		if err != nil {
 			return err
+		}
+
+		for _, event := range events {
+			if err := controller.vulnEventRepository.Save(nil, &event); err != nil {
+				return err
+			}
 		}
 
 	}

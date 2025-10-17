@@ -215,6 +215,23 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 				}
 
 				for i := range vulnsList {
+
+					//check if we should update the state
+					events := vulnsList[i].Events
+					var lastState string
+
+					for j := len(events) - 1; j >= 0; j-- {
+						if events[j].Upstream == upstream {
+							justificationValue := ""
+							if events[j].Justification != nil {
+								justificationValue = *events[j].Justification
+							}
+							if lastState == string(events[j].Type) && justification == justificationValue {
+								continue
+							}
+
+						}
+					}
 					_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vulnsList[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream) // mechanical justification is not part of cyclonedx spec.
 					if err != nil {
 						slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)

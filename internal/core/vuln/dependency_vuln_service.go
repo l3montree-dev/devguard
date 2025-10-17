@@ -334,6 +334,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	}
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
+
 	return ev, err
 }
 
