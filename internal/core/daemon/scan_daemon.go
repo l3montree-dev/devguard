@@ -71,6 +71,20 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
 
 	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	// THIS IS MANDATORY - WE RESET THE SYNCHRONIZER.
+	// if we wont do that, the daemon would sync the issues in a goroutine without waiting for them to finish
+	// this might infer with the ticket daemon which runs next
+	/*
+		ScanArtifacts --> Create Ticket ----------------> Completed
+		              Ticket Daemon starts ----> Create Ticket ----> Completed
+
+		If the ticket daemon starts creating tickets before the scan artifacts daemon has finished creating tickets, there might be duplicate tickets created for the same vulnerability.
+
+		Ref: https://github.com/l3montree-dev/devguard/issues/1284
+		Ref: https://github.com/l3montree-dev/devguard/issues/1285
+	*/
+
+	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 
 	orgs, err := orgRepository.All()
 	if err != nil {

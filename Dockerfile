@@ -24,7 +24,7 @@ ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:cdf4daaf154e3e27cfffc799c16f343a384228f38646928a1513d925f473cb46
+FROM registry.opencode.de/open-code/oci/static@sha256:b481afaee512f57a7d8f9edb907c0374cb4df76e94923c107b5cbb9ec9e13677
 
 USER 53111
 
