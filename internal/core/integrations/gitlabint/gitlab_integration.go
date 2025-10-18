@@ -589,7 +589,6 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 			ListOptions:    gitlab.ListOptions{Page: page, PerPage: 100},
 		})
 	})
-
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
 		return nil, nil, err

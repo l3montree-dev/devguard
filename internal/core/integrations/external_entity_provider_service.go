@@ -105,7 +105,6 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, 
 }
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
-	return nil
 
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
