@@ -2,6 +2,7 @@ package risk
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -61,12 +62,22 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 	case "POC", "P":
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
+		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+			return strings.Compare(a.SourceURL, b.SourceURL)
+		})
+
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
 	case "F":
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
+		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+			return strings.Compare(a.SourceURL, b.SourceURL)
+		})
+
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}

@@ -16,6 +16,7 @@
 package risk
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -612,4 +613,38 @@ func TestExplanationMarkdown(t *testing.T) {
 		assert.Contains(t, result, "<summary>See more details...</summary>")
 		assert.Contains(t, result, "</details>")
 	})
+}
+
+func TestExploitMessage(t *testing.T) {
+	for _, exploitType := range []string{"P", "POC", "F"} {
+		t.Run(fmt.Sprintf("should be deterministic: %s", exploitType), func(t *testing.T) {
+			v := models.DependencyVuln{
+				CVE: &models.CVE{
+					Exploits: []*models.Exploit{
+						{SourceURL: "http://exploit1.com"},
+						{SourceURL: "http://exploit2.com"},
+					},
+				},
+			}
+			short1, long1 := exploitMessage(v, map[string]string{
+				"E": exploitType,
+			})
+
+			// create another instance with exploits in different order
+			v2 := models.DependencyVuln{
+				CVE: &models.CVE{
+					Exploits: []*models.Exploit{
+						{SourceURL: "http://exploit2.com"},
+						{SourceURL: "http://exploit1.com"},
+					},
+				},
+			}
+			short2, long2 := exploitMessage(v2, map[string]string{
+				"E": exploitType,
+			})
+
+			assert.Equal(t, short1, short2)
+			assert.Equal(t, long1, long2)
+		})
+	}
 }
