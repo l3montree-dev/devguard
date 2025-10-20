@@ -54,7 +54,9 @@ func runMergeSBOMs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var config MergeSBOMsConfigFile
-	json.Unmarshal(fileContent, &config)
+	if err := json.Unmarshal(fileContent, &config); err != nil {
+		return err
+	}
 
 	return mergeSBOMs(cmd.Context(), config.Purl, config.SBOMs)
 }
