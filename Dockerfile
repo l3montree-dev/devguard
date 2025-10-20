@@ -24,7 +24,7 @@ ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM registry.opencode.de/open-code/oci/static@sha256:b481afaee512f57a7d8f9edb907c0374cb4df76e94923c107b5cbb9ec9e13677
+FROM registry.opencode.de/open-code/oci/static@sha256:cc86818ae87c2f8f3f5e0b90e174bfb32925217bed017b71bd29d31e1808b9ef
 
 USER 53111
 
