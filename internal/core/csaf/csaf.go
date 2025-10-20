@@ -149,7 +149,7 @@ type vulnerability struct { //security advisory
 			Details  string `json:"details,omitempty"`
 		} `json:"restart_required,omitempty"`
 		URL string `json:"url,omitempty"`
-	} `json:"remediatons,omitempty"`
+	} `json:"remediations,omitempty"`
 	Scores []struct {
 		CVSSV2   string   `json:"cvss_v2,omitempty"`
 		CVSSV3   string   `json:"cvss_v3,omitempty"`
@@ -357,7 +357,7 @@ func (controller *csafController) GetCSAFIndexHTML(ctx core.Context) error {
 	<h1>Index of /csaf/</h1><hr><pre>
 	<a href="openpgp/">openpgp/</a>
 	<a href="white/">white/</a>
-	<a href="provider-metadata.json"download="provider-metadata.json">provider-metadata.json</a>
+	<a href="provider-metadata.json" download="provider-metadata.json">provider-metadata.json</a>
 	</pre><hr>
 	</body>
 	</html>`
@@ -376,8 +376,8 @@ func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/openpgp</h1><hr><pre>
 	<a href="../">../</a>
-	<a href="%s.asc"download="%s.asc">%s.asc</a>
-	<a href="%s.asc.sha512"download="%s.asc.sha512">%s.asc.sha512</a>
+	<a href="%s.asc" download="%s.asc">%s.asc</a>
+	<a href="%s.asc.sha512" download="%s.asc.sha512">%s.asc.sha512</a>
 	</pre><hr>
 	</body>
 	</html>`, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint)
@@ -432,10 +432,10 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 
 	// then append the index.txt as well as the changes.csv file
 	html += "\n"
-	html += `	<a href="index.txt/"download="index.txt">index.txt</a>`
+	html += `	<a href="index.txt/" download="index.txt">index.txt</a>`
 
 	html += "\n"
-	html += `	<a href="changes.csv/"download="changes.csv">changes.csv</a>`
+	html += `	<a href="changes.csv/" download="changes.csv">changes.csv</a>`
 
 	html += `</pre><hr>
 	</body>
@@ -482,9 +482,9 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	for _, entry := range entriesForYear {
 		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
 		html += fmt.Sprintf(`
-	<a href="%s"download="%s">%s</a>
-	<a href="%s.asc"download="%s.asc">%s.asc</a>
-	<a href="%s.sha512"download="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName)
+	<a href="%s" download="%s">%s</a>
+	<a href="%s.asc" download="%s.asc">%s.asc</a>
+	<a href="%s.sha512" download="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName)
 	}
 	html += `</pre><hr>
 	</body>
@@ -496,7 +496,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 	// determine which type of file is requested
 	file := ctx.Param("file")
-	file = file[:len(file)-1]
+	file = strings.TrimSuffix(file, "/")
 	index := strings.LastIndex(file, ".")
 	if index == -1 {
 		return fmt.Errorf("invalid resource: %s", file)
@@ -660,8 +660,8 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
 	csafDoc.Document.Distribution = &distributionReplacement{
 		TLP: struct {
-			Label string "json:\"label,omitempty\""
-			URL   string "json:\"url,omitempty\""
+			Label string `json:"label,omitempty"`
+			URL   string `json:"url,omitempty"`
 		}{
 			Label: "WHITE",
 			URL:   "https://first.org/tlp",
@@ -697,6 +697,8 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	} else {
 		csafDoc.Document.Category = "csaf_security_advisory"
 	}
+
+	csafDoc.Document.Tracking.CurrentReleaseDate = csafDoc.Document.Tracking.RevisionHistory[len(csafDoc.Document.Tracking.RevisionHistory)-1].Date
 
 	return csafDoc, nil
 }
@@ -794,6 +796,10 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 		vulnObject.Notes = generateNoteForVulnerabilityObject(vulnsInGroup)
 		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
+
+	slices.SortFunc(vulnerabilites, func(vuln1, vuln2 vulnerability) int {
+		return -strings.Compare(vuln1.CVE, vuln2.CVE)
+	})
 	return vulnerabilites, nil
 }
 
@@ -925,6 +931,7 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documen
 
 // generate a human readable summary to describe the changes of a revision entry
 func generateSummaryForEvents(events []models.VulnEvent) string {
+	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int { return event1.CreatedAt.Compare(event2.CreatedAt) })
 	acceptedVulns := []models.VulnEvent{}
 	detectedVulns := []models.VulnEvent{}
 	falsePositiveVulns := []models.VulnEvent{}
@@ -979,7 +986,7 @@ func generateSummaryForEvents(events []models.VulnEvent) string {
 	}
 	if len(falsePositiveVulns) > 0 {
 		if len(falsePositiveVulns) == 1 {
-			summary += fmt.Sprintf(" Marked %d existing vulnerability as false positives", len(falsePositiveVulns))
+			summary += fmt.Sprintf(" Marked %d existing vulnerability as false positive", len(falsePositiveVulns))
 		} else {
 			summary += fmt.Sprintf(" Marked %d existing vulnerabilities as false positives", len(falsePositiveVulns))
 		}

@@ -141,7 +141,7 @@ func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
 
 func (r *eventRepository) GetSecurityRelevantEventsForVulnID(tx core.DB, vulnID string) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
-	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id = ? AND type IN ('detected','accepted','fixed','reopened') ORDER BY created_at ASC;", vulnID).Find(&events).Error
+	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id = ? AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnID).Find(&events).Error
 	if err != nil {
 		return nil, err
 	}
