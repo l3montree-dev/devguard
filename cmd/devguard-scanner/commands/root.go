@@ -135,6 +135,7 @@ func init() {
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),
+		NewMergeSBOMSCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
