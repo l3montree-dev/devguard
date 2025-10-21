@@ -1,0 +1,102 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.6",
+    "version": 1,
+    "metadata": {
+        "timestamp": "2025-10-21T09:55:10Z",
+        "component": {
+            "bom-ref": "pkg:devguard/org/pro/repo",
+            "type": "application",
+            "author": "org",
+            "publisher": "github.com/l3montree-dev/devguard",
+            "name": "pkg:devguard/org/pro/repo",
+            "version": "main"
+        }
+    },
+    "vulnerabilities": [
+        {
+            "id": "CVE-2020-27813",
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-27813"
+            },
+            "ratings": [
+                {
+                    "score": 7.5,
+                    "severity": "high",
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+                },
+                {
+                    "score": 3.45,
+                    "severity": "low",
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00177,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "exploitable",
+                "response": [
+                    "will_not_fix"
+                ],
+                "detail": "ffff",
+                "firstIssued": "2025-10-21T09:45:14Z",
+                "lastUpdated": "2025-10-21T09:55:01Z"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:golang/github.com/gorilla/websocket@v1.4.0"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "firstResponded",
+                    "value": "2025-10-21T09:45:46Z"
+                }
+            ]
+        },
+        {
+            "id": "CVE-2020-26160",
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-26160"
+            },
+            "ratings": [
+                {
+                    "score": 7.5,
+                    "severity": "high",
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+                },
+                {
+                    "score": 3.45,
+                    "severity": "low",
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00066,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "false_positive",
+                "response": [
+                    "will_not_fix"
+                ],
+                "detail": "für testing!!",
+                "firstIssued": "2025-10-21T09:45:14Z",
+                "lastUpdated": "2025-10-21T09:45:32Z"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0+incompatible"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "firstResponded",
+                    "value": "2025-10-21T09:45:32Z"
+                }
+            ]
+        }
+    ]
+}
