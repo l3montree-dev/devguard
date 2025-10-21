@@ -9,6 +9,9 @@ import (
 )
 
 func TestFromCdxBom(t *testing.T) {
+	artifactName := "test-artifact"
+	origin := "test-origin"
+
 	t.Run("basic component without properties", func(t *testing.T) {
 		bom := &cdx.BOM{
 			Components: &[]cdx.Component{{
@@ -19,7 +22,7 @@ func TestFromCdxBom(t *testing.T) {
 			}},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		result := normalize.FromCdxBom(bom, artifactName, origin, false)
 		component := (*result.GetComponents())[0]
 
 		assert.Equal(t, "test-component", component.Name)
@@ -65,7 +68,7 @@ func TestFromCdxBom(t *testing.T) {
 					}},
 				}
 
-				result := normalize.FromCdxBom(bom, false)
+				result := normalize.FromCdxBom(bom, artifactName, origin, false)
 				component := (*result.GetComponents())[0]
 
 				assert.Contains(t, component.PackageURL, tc.expectContains)
@@ -96,7 +99,7 @@ func TestFromCdxBom(t *testing.T) {
 					}},
 				}
 
-				result := normalize.FromCdxBom(bom, tc.convertComponentType)
+				result := normalize.FromCdxBom(bom, artifactName, origin, tc.convertComponentType)
 				component := (*result.GetComponents())[0]
 
 				assert.Equal(t, tc.expectedType, component.Type)
@@ -132,7 +135,7 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		result := normalize.FromCdxBom(bom, artifactName, origin, false)
 		components := *result.GetComponents()
 
 		assert.Len(t, components, 3)
@@ -144,13 +147,13 @@ func TestFromCdxBom(t *testing.T) {
 	t.Run("edge cases", func(t *testing.T) {
 		t.Run("empty components", func(t *testing.T) {
 			bom := &cdx.BOM{Components: &[]cdx.Component{}}
-			result := normalize.FromCdxBom(bom, false)
+			result := normalize.FromCdxBom(bom, artifactName, origin, false)
 			assert.Len(t, *result.GetComponents(), 0)
 		})
 
 		t.Run("nil components panics", func(t *testing.T) {
 			bom := &cdx.BOM{Components: nil}
-			assert.Panics(t, func() { normalize.FromCdxBom(bom, false) })
+			assert.Panics(t, func() { normalize.FromCdxBom(bom, artifactName, origin, false) })
 		})
 	})
 
@@ -169,7 +172,7 @@ func TestFromCdxBom(t *testing.T) {
 			}},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		result := normalize.FromCdxBom(bom, artifactName, origin, false)
 		component := (*result.GetComponents())[0]
 
 		assert.Contains(t, component.PackageURL, "actual-source-name@2.1.0")
@@ -178,6 +181,9 @@ func TestFromCdxBom(t *testing.T) {
 }
 
 func TestCdxBomMethods(t *testing.T) {
+	artifactName := "test-artifact"
+	origin := "test-origin"
+
 	t.Run("getter methods", func(t *testing.T) {
 		dependencies := []cdx.Dependency{{Ref: "test-ref"}}
 		metadata := &cdx.Metadata{Component: &cdx.Component{Name: "test-metadata-component"}}
@@ -189,7 +195,7 @@ func TestCdxBomMethods(t *testing.T) {
 			Metadata:     metadata,
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		result := normalize.FromCdxBom(bom, artifactName, origin, false)
 
 		assert.Equal(t, &dependencies, result.GetDependencies())
 		assert.Equal(t, metadata, result.GetMetadata())
@@ -401,13 +407,13 @@ func TestMergeCdxBoms(t *testing.T) {
 		explicitMetadata := &cdx.Metadata{
 			Component: &cdx.Component{Name: "explicit-metadata"},
 		}
-		
+
 		result := normalize.MergeCdxBoms(explicitMetadata, bom1, bom2, bom3)
 
 		// Should use the explicitly passed metadata
 		assert.NotNil(t, result.Metadata)
 		assert.Equal(t, "explicit-metadata", result.Metadata.Component.Name)
-		
+
 		// Test with nil metadata parameter - should use first BOM's metadata
 		result2 := normalize.MergeCdxBoms(nil, bom1, bom2, bom3)
 		assert.NotNil(t, result2.Metadata)
