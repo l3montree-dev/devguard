@@ -68,7 +68,7 @@ func (service importService) Import(tx core.DB, tag string) error {
 		return fmt.Errorf("could not connect to remote repository: %w", err)
 	}
 
-	outpath := "./vulndb-tmp-" + tag
+	outpath := "./vulndb-tmp/" + tag
 	_, err = downloadAndSaveZipToTemp(repo, tag, outpath)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 	for i, tag := range tags {
 		slog.Info("updating vulndb", "step", tag, "number", i+1, "of", len(tags))
 
-		outpath := "./vulndb-tmp-" + tag
+		outpath := "./vulndb-tmp/" + tag
 		// if the directory already exists we skip the download and verification
 		if _, err := os.Stat(outpath); err != nil {
 			_, err := downloadAndSaveZipToTemp(repo, tag, outpath)
