@@ -803,6 +803,11 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 	return vulnerabilites, nil
 }
 
+type versionVulns struct {
+	Version string
+	Vulns   []models.DependencyVuln
+}
+
 // generate the textual summary for a vulnerability object
 func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 	vulnDetails := note{
@@ -810,15 +815,27 @@ func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 		Title:    "state of the vulnerability in the product",
 	}
 
+	// a map would be faster but we need an ordered set to make the output deterministic
+	versions := make([]versionVulns, 0, len(vulns))
+	for _, vuln := range vulns {
+		found := false
+		for i := range versions {
+			if versions[i].Version == vuln.AssetVersionName {
+				versions[i].Vulns = append(versions[i].Vulns, vuln)
+				found = true
+				break
+			}
+		}
+		if !found {
+			versions = append(versions, versionVulns{Version: vuln.AssetVersionName, Vulns: []models.DependencyVuln{vuln}})
+		}
+	}
+
 	// for each vuln in this object list the respective purl and the current state
 	summary := ""
-	versionsToVulns := make(map[string][]models.DependencyVuln, len(vulns))
-	for _, vuln := range vulns {
-		versionsToVulns[vuln.AssetVersionName] = append(versionsToVulns[vuln.AssetVersionName], vuln)
-	}
-	for version, versionVulns := range versionsToVulns {
-		summary += fmt.Sprintf("Version %s: ", version)
-		for _, vuln := range versionVulns {
+	for _, version := range versions {
+		summary += fmt.Sprintf("Version %s: ", version.Version)
+		for _, vuln := range version.Vulns {
 			switch vuln.State {
 			case models.VulnStateOpen:
 				summary += "unhandled for purl " + *vuln.ComponentPurl + ", "
