@@ -573,6 +573,7 @@ func uploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
+	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -634,5 +635,8 @@ func NewSCACommand() *cobra.Command {
 	}
 
 	addDependencyVulnsScanFlags(scaCommand)
+	// set default scanner type
+	scaCommand.PersistentFlags().String("origin", "source-scanner", "The type of the scanner. Can be 'source-scanner' or 'container-scan'. Defaults to 'source-scanner'.")
+
 	return scaCommand
 }

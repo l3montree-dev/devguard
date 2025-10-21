@@ -68,14 +68,19 @@ func (s *service) ReadArtifact(name string, assetVersionName string, assetID uui
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *service) CheckVexURLs(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string) {
-	var boms []cyclonedx.BOM
+func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string) {
+	var boms []normalize.BomWithOrigin
 
 	var validURLs []string
 	var invalidURLs []string
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
+		//check if the file is a valid url
+		if url == "" || !strings.HasPrefix(url, "http") {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
 		var bom cyclonedx.BOM
 		// download the url and check if it is a valid vex file
 		file, err := os.ReadFile(url)
@@ -90,13 +95,16 @@ func (s *service) CheckVexURLs(upstreamURLs []string) ([]cyclonedx.BOM, []string
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, bom)
+		boms = append(boms, normalize.BomWithOrigin{
+			BOM:    bom,
+			Origin: url,
+		})
 	}
 
 	return boms, validURLs, invalidURLs
 }
 
-func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+func (s *service) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
 
 	// load existing dependency vulns for this asset version
 	existingVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
@@ -143,11 +151,32 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 	}
 	notExistingVulnsState := make(map[int]VulnState)
 
-	components := make(map[string]models.Component)
-	dependencies := make([]models.ComponentDependency, 0)
-
 	// iterate vulnerabilities in the CycloneDX BOM
 	for _, bom := range boms {
+		linkSbom := cyclonedx.BOM{}
+		linkSbom.Metadata = &cyclonedx.Metadata{
+			Component: &cyclonedx.Component{
+				BOMRef: artifact.ArtifactName,
+				Name:   artifact.ArtifactName,
+				Type:   cyclonedx.ComponentTypeApplication,
+			}}
+		linkSbom.Components = &[]cyclonedx.Component{}
+		linkSbom.Dependencies = &[]cyclonedx.Dependency{}
+		// create artificial ROOT -> Origin -> Components structure
+		linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
+			BOMRef: artifact.ArtifactName,
+			Name:   artifact.ArtifactName,
+			Type:   cyclonedx.ComponentTypeApplication,
+		}, cyclonedx.Component{
+			BOMRef: bom.Origin,
+			Name:   bom.Origin,
+		}))
+		linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, cyclonedx.Dependency{
+			Ref:          linkSbom.Metadata.Component.BOMRef,
+			Dependencies: &[]string{bom.Origin},
+		}))
+		originDependencies := []string{}
+
 		if bom.Vulnerabilities != nil {
 			for _, vuln := range *bom.Vulnerabilities {
 				cveID := extractCVE(vuln.ID)
@@ -173,20 +202,25 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 					justification = vuln.Analysis.Detail
 				}
 
+				if !(vuln.Affects != nil && len(*vuln.Affects) > 0 && (*vuln.Affects)[0].Ref != "") {
+					continue
+				}
+				ref := (*vuln.Affects)[0].Ref
+
+				linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
+					BOMRef:     ref,
+					PackageURL: ref,
+					Name:       ref,
+				}))
+
+				originDependencies = append(originDependencies, ref)
+
 				vulnsList, ok := vulnsByCVE[cveID]
 				if !ok || len(vulnsList) == 0 {
 					var componentPurl *string
-					if vuln.Affects != nil && len(*vuln.Affects) > 0 && (*vuln.Affects)[0].Ref != "" {
-						ref := (*vuln.Affects)[0].Ref
-						componentPurl = &ref
-						if _, ok := components[ref]; !ok {
-							c := models.Component{
-								Purl: ref,
-							}
-							components[ref] = c
-						}
 
-					}
+					componentPurl = &ref
+
 					dependencyVuln := models.DependencyVuln{
 						Vulnerability: models.Vulnerability{
 							AssetVersionName: assetVersion.Name,
@@ -245,51 +279,22 @@ func (s *service) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project m
 				}
 			}
 		}
-	}
 
-	// create missing component and dependencies
-	if len(components) > 0 {
-		rootComponentPurl, err := s.componentRepository.GetRootComponentPurl(nil, artifact.ArtifactName, assetVersion.Name, asset.ID)
+		// set origin dependencies
+		linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, cyclonedx.Dependency{
+			Ref:          bom.Origin,
+			Dependencies: &originDependencies,
+		}))
+
+		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.CdxBom(&linkSbom), bom.Origin, upstream)
 		if err != nil {
-			slog.Error("could not determine root component purl", "err", err, "artifact", artifact.ArtifactName, "assetVersion", assetVersion.Name, "assetID", asset.ID)
-			return echo.NewHTTPError(500, "could not determine root component purl").WithInternal(err)
+			slog.Error("could not update sbom", "err", err)
+			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
-
-		if rootComponentPurl == "" {
-			rootComponentPurl = artifact.ArtifactName
-		}
-
-		for purl := range components {
-			componentDependency := models.ComponentDependency{
-				DependencyPurl: purl,
-				ComponentPurl:  &rootComponentPurl,
-			}
-			dependencies = append(dependencies, componentDependency)
-		}
-	}
-
-	//build a sbom
-	sbom, err := s.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, "vex-upload", org.Name, dependencies)
-	if err != nil {
-		slog.Error("could not build sbom", "err", err)
-		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
-	}
-
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.FromCdxBom(sbom, false), upstream)
-	if err != nil {
-		slog.Error("could not update sbom", "err", err)
-		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
 
 	if len(notExistingVulnsList) > 0 {
-
-		assetVersion, err := s.assetVersionRepository.Read(assetVersion.Name, asset.ID)
-		if err != nil {
-			slog.Error("could not find asset version", "err", err, "assetVersion", assetVersion.Name, "assetID", asset.ID)
-			return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
-		}
-
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream)
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream, true)
 		if err != nil {
 			slog.Error("could not create dependency vulns", "err", err)
 			return echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)

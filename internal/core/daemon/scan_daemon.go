@@ -122,7 +122,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							slog.Error("error when building SBOM")
 							continue
 						}
-						normalizedBOM := normalize.FromCdxBom(bom, false)
+						normalizedBOM := normalize.CdxBom(bom)
 						if len(components) <= 0 {
 							continue
 						} else {

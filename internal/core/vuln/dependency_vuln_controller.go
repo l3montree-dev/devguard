@@ -2,7 +2,6 @@ package vuln
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -328,7 +327,6 @@ func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Cont
 			if events[i].Upstream != 2 {
 				continue
 			}
-			fmt.Println("event id", events[i].ID)
 			events[i].Upstream = 1
 		}
 

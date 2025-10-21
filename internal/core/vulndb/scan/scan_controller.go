@@ -84,7 +84,6 @@ type FirstPartyScanResponse struct {
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
 // It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
 func (s HTTPController) UploadVEX(ctx core.Context) error {
-
 	var bom cdx.BOM
 	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
 	if err := dec.Decode(&bom); err != nil {
@@ -127,7 +126,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	err = s.artifactService.SyncVexReports([]cdx.BOM{bom}, org, project, asset, assetVersion, artifact, userID)
+	err = s.artifactService.SyncVexReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
@@ -158,6 +157,8 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		assetVersionName = "main"
 	}
 
+	origin := c.Request().Header.Get("X-Origin")
+
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
@@ -181,7 +182,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom, 0)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom, origin, 0)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
@@ -314,7 +315,11 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	// get origin from header
+	origin := c.Request().Header.Get("X-Origin")
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, artifactName, origin, true))
 	if err != nil {
 		return err
 	}
@@ -342,7 +347,9 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, artifactName, "sbom-upload", true))
 	if err != nil {
 		return err
 	}

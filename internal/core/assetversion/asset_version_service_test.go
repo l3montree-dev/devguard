@@ -10,6 +10,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -198,11 +199,12 @@ func TestDiffScanResults(t *testing.T) {
 			}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
 		assert.Empty(t, fixedOnAll)
 		assert.Empty(t, fixedOnThisArtifactName)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName))
 	})
 
@@ -218,9 +220,10 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Equal(t, 1, len(fixedOnAll))
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Empty(t, fixedOnThisArtifactName)
@@ -237,10 +240,11 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
 		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Equal(t, 1, len(fixedOnThisArtifactName))
 	})
@@ -255,10 +259,11 @@ func TestDiffScanResults(t *testing.T) {
 
 		existingDependencyVulns := []models.DependencyVuln{}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Equal(t, 2, len(firstDetected))
 		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Empty(t, fixedOnThisArtifactName)
 	})
@@ -277,8 +282,9 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Empty(t, firstDetected, "Should be empty - this is a new detection by current artifact")
 		assert.Empty(t, fixedOnAll, "Should be empty - no vulnerabilities are fixed")
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName), "Should detect that current artifact found existing vulnerability for first time")
@@ -713,4 +719,192 @@ func TestBuildVeX(t *testing.T) {
 		assert.Equal(t, justification, vuln.Analysis.Detail)
 	})
 
+}
+
+func TestReplaceSubtree(t *testing.T) {
+	artifactName := "test-artifact"
+
+	t.Run("should add the subtree if it does not exist", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref:          "root",
+					Dependencies: &[]string{},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "subtree",
+				},
+			},
+			Components:   &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{},
+		}
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		found1 := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "root" {
+				found = true
+				assert.Contains(t, *comp.Dependencies, "origin")
+			}
+			if comp.Ref == "origin" {
+				found1 = true
+				assert.Contains(t, *comp.Dependencies, "subtree")
+			}
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+		assert.True(t, found1, "Origin component should exist in updated SBOM")
+	})
+
+	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "root",
+					Dependencies: &[]string{
+						"origin",
+					},
+				},
+				{
+					Ref: "origin",
+					Dependencies: &[]string{
+						"subtree",
+					},
+				},
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"old-component",
+					},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "subtree",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"new-component",
+					},
+				},
+			},
+		}
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "root" {
+				found = true
+				assert.Contains(t, *comp.Dependencies, "origin")
+			}
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+
+		// check that subtree now has NO dependency to old-component and has dependency to new-component
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "subtree" {
+				assert.NotContains(t, *comp.Dependencies, "old-component")
+				assert.Contains(t, *comp.Dependencies, "new-component")
+			}
+		}
+	})
+	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "root",
+					Dependencies: &[]string{
+						"origin",
+						"other-origin",
+					},
+				},
+				{
+					Ref: "other-origin",
+					Dependencies: &[]string{
+						"other-component",
+					},
+				},
+				{
+					Ref: "origin",
+					Dependencies: &[]string{
+						"subtree",
+					},
+				},
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"old-component",
+					},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "subtree",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"new-component",
+					},
+				},
+			},
+		}
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "root" {
+				found = true
+				assert.Contains(t, *comp.Dependencies, "origin")
+			}
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+
+		// check that subtree now has NO dependency to old-component and has dependency to new-component
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "subtree" {
+				assert.NotContains(t, *comp.Dependencies, "old-component")
+				assert.Contains(t, *comp.Dependencies, "new-component")
+			}
+		}
+	})
 }
