@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"os"
 	"slices"
 	"strconv"
@@ -371,17 +372,31 @@ func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 		return err
 	}
 
-	html := fmt.Sprintf(`<html>
+	type pageData struct {
+		Fingerprint string
+	}
+	data := pageData{Fingerprint: fingerprint}
+
+	htmlTemplate := `<html>
 	<head><title>Index of /csaf/openpgp/</title></head>
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/openpgp</h1><hr><pre>
 	<a href="../">../</a>
-	<a href="%s.asc" download="%s.asc">%s.asc</a>
-	<a href="%s.asc.sha512" download="%s.asc.sha512">%s.asc.sha512</a>
+	<a href="{{ .Fingerprint }}.asc" download="{{ .Fingerprint }}.asc">{{ .Fingerprint }}.asc</a>
+	<a href="{{ .Fingerprint }}.asc.sha512" download="{{ .Fingerprint }}.asc.sha512">{{ .Fingerprint }}.asc.sha512</a>
 	</pre><hr>
 	</body>
-	</html>`, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint, fingerprint)
-	return ctx.HTML(200, html)
+	</html>`
+
+	tmpl := template.Must(template.New("fingerprint").Parse(htmlTemplate))
+	buf := bytes.Buffer{}
+
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	return ctx.HTML(200, buf.String())
 }
 
 // returns the set of all years where new csaf versions where published
@@ -418,30 +433,41 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 	if err != nil {
 		return err
 	}
-	html := `<html>
+
+	type pageData struct {
+		Years []int
+	}
+	data := pageData{Years: allYears}
+	htmlTemplate := `<html>
 	<head><title>Index of /csaf/white/</title></head>
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/white/</h1><hr><pre>`
-	html += "\n"
-	html += `	<a href="../">../</a>`
 
-	for _, year := range allYears {
-		html += "\n"
-		html += fmt.Sprintf(`	<a href="%d/">%d/</a>`, year, year)
-	}
+	htmlTemplate += "\n"
+	htmlTemplate += `	<a href="../">../</a>`
+	htmlTemplate += "\n"
+	htmlTemplate += `{{ range .Years }}`
+	htmlTemplate += `	<a href="{{ . }}/">{{ . }}/</a>`
+	htmlTemplate += `{{ end }}`
 
-	// then append the index.txt as well as the changes.csv file
-	html += "\n"
-	html += `	<a href="index.txt/" download="index.txt">index.txt</a>`
+	htmlTemplate += "\n"
+	htmlTemplate += `	<a href="index.txt/" download="index.txt">index.txt</a>`
+	htmlTemplate += "\n"
+	htmlTemplate += `	<a href="changes.csv/" download="changes.csv">changes.csv</a>`
 
-	html += "\n"
-	html += `	<a href="changes.csv/" download="changes.csv">changes.csv</a>`
-
-	html += `</pre><hr>
+	htmlTemplate += `</pre><hr>
 	</body>
 		</html>`
 
-	return ctx.HTML(200, html)
+	tmpl := template.Must(template.New("years").Parse(htmlTemplate))
+
+	buf := bytes.Buffer{}
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	return ctx.HTML(200, buf.String())
 }
 
 // builds and returns the html to display every csaf version of a given year as well as the signature and hash
@@ -471,25 +497,41 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 		}
 	}
 
-	// finally generate the html for each version as well as the signature and hash
-	html := fmt.Sprintf(`<html>
-	<head><title>Index of /csaf/white/%s/</title></head>
-	<body cz-shortcut-listen="true">
-	<h1>Index of /csaf/white/%s/</h1><hr><pre>`, year, year)
-	html += "\n"
-	html += `	<a href="../">../</a>`
-
-	for _, entry := range entriesForYear {
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
-		html += fmt.Sprintf(`
-	<a href="%s" download="%s">%s</a>
-	<a href="%s.asc" download="%s.asc">%s.asc</a>
-	<a href="%s.sha512" download="%s.sha512">%s.sha512</a>`, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName, fileName)
+	type pageData struct {
+		Year      int
+		Filenames []string
 	}
-	html += `</pre><hr>
+	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(entriesForYear))}
+	for _, entry := range entriesForYear {
+		data.Filenames = append(data.Filenames, fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number)))
+	}
+
+	// generate the htmlTemplate for each version as well as the signature and hash
+	htmlTemplate := `<html>
+	<head><title>Index of /csaf/white/{{ .Year }}/</title></head>
+	<body cz-shortcut-listen="true">
+	<h1>Index of /csaf/white/{{ .Year }}/</h1><hr><pre>`
+	htmlTemplate += "\n"
+	htmlTemplate += `	<a href="../">../</a>`
+	htmlTemplate += `{{ range .Filenames }}`
+	htmlTemplate += `
+	<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
+	<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
+	<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>`
+	htmlTemplate += `{{ end }}`
+	htmlTemplate += `</pre><hr>
 	</body>
 		</html>`
-	return ctx.HTML(200, html)
+
+	tmpl := template.Must(template.New("entries").Parse(htmlTemplate))
+
+	buf := bytes.Buffer{}
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	return ctx.HTML(200, buf.String())
 }
 
 // handles request to files placed in the openpgp directory (currently public key and the respective sha512 hash)
