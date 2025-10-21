@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -96,24 +96,24 @@ func (_c *ArtifactService_AddUpstreamURLs_Call) RunAndReturn(run func(artifact *
 }
 
 // CheckVexURLs provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) CheckVexURLs(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string) {
+func (_mock *ArtifactService) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string) {
 	ret := _mock.Called(upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CheckVexURLs")
 	}
 
-	var r0 []cyclonedx.BOM
+	var r0 []normalize.BomWithOrigin
 	var r1 []string
 	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]cyclonedx.BOM, []string, []string)); ok {
+	if returnFunc, ok := ret.Get(0).(func([]string) ([]normalize.BomWithOrigin, []string, []string)); ok {
 		return returnFunc(upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []cyclonedx.BOM); ok {
+	if returnFunc, ok := ret.Get(0).(func([]string) []normalize.BomWithOrigin); ok {
 		r0 = returnFunc(upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]cyclonedx.BOM)
+			r0 = ret.Get(0).([]normalize.BomWithOrigin)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func([]string) []string); ok {
@@ -157,12 +157,12 @@ func (_c *ArtifactService_CheckVexURLs_Call) Run(run func(upstreamURLs []string)
 	return _c
 }
 
-func (_c *ArtifactService_CheckVexURLs_Call) Return(bOMs []cyclonedx.BOM, strings []string, strings1 []string) *ArtifactService_CheckVexURLs_Call {
-	_c.Call.Return(bOMs, strings, strings1)
+func (_c *ArtifactService_CheckVexURLs_Call) Return(bomWithOrigins []normalize.BomWithOrigin, strings []string, strings1 []string) *ArtifactService_CheckVexURLs_Call {
+	_c.Call.Return(bomWithOrigins, strings, strings1)
 	return _c
 }
 
-func (_c *ArtifactService_CheckVexURLs_Call) RunAndReturn(run func(upstreamURLs []string) ([]cyclonedx.BOM, []string, []string)) *ArtifactService_CheckVexURLs_Call {
+func (_c *ArtifactService_CheckVexURLs_Call) RunAndReturn(run func(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string)) *ArtifactService_CheckVexURLs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -479,7 +479,7 @@ func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *mod
 }
 
 // SyncVexReports provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SyncVexReports(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+func (_mock *ArtifactService) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
 	ret := _mock.Called(boms, org, project, asset, assetVersion, artifact, userID)
 
 	if len(ret) == 0 {
@@ -487,7 +487,7 @@ func (_mock *ArtifactService) SyncVexReports(boms []cyclonedx.BOM, org models.Or
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func([]cyclonedx.BOM, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func([]normalize.BomWithOrigin, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
 		r0 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
 	} else {
 		r0 = ret.Error(0)
@@ -501,7 +501,7 @@ type ArtifactService_SyncVexReports_Call struct {
 }
 
 // SyncVexReports is a helper method to define mock.On call
-//   - boms []cyclonedx.BOM
+//   - boms []normalize.BomWithOrigin
 //   - org models.Org
 //   - project models.Project
 //   - asset models.Asset
@@ -512,11 +512,11 @@ func (_e *ArtifactService_Expecter) SyncVexReports(boms interface{}, org interfa
 	return &ArtifactService_SyncVexReports_Call{Call: _e.mock.On("SyncVexReports", boms, org, project, asset, assetVersion, artifact, userID)}
 }
 
-func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncVexReports_Call {
+func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncVexReports_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []cyclonedx.BOM
+		var arg0 []normalize.BomWithOrigin
 		if args[0] != nil {
-			arg0 = args[0].([]cyclonedx.BOM)
+			arg0 = args[0].([]normalize.BomWithOrigin)
 		}
 		var arg1 models.Org
 		if args[1] != nil {
@@ -560,7 +560,7 @@ func (_c *ArtifactService_SyncVexReports_Call) Return(err error) *ArtifactServic
 	return _c
 }
 
-func (_c *ArtifactService_SyncVexReports_Call) RunAndReturn(run func(boms []cyclonedx.BOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error) *ArtifactService_SyncVexReports_Call {
+func (_c *ArtifactService_SyncVexReports_Call) RunAndReturn(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error) *ArtifactService_SyncVexReports_Call {
 	_c.Call.Return(run)
 	return _c
 }
