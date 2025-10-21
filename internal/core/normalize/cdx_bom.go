@@ -3,7 +3,6 @@ package normalize
 import (
 	"strings"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
@@ -32,7 +31,7 @@ func CdxBom(bom *cdx.BOM) *cdxBom {
 }
 
 type BomWithOrigin struct {
-	cyclonedx.BOM
+	cdx.BOM
 	Origin string
 }
 
