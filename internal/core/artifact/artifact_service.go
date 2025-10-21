@@ -202,7 +202,7 @@ func (s *service) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org,
 					justification = vuln.Analysis.Detail
 				}
 
-				if !(vuln.Affects != nil && len(*vuln.Affects) > 0 && (*vuln.Affects)[0].Ref != "") {
+				if vuln.Affects == nil || len(*vuln.Affects) == 0 || (*vuln.Affects)[0].Ref == "" {
 					continue
 				}
 				ref := (*vuln.Affects)[0].Ref
@@ -217,9 +217,8 @@ func (s *service) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org,
 
 				vulnsList, ok := vulnsByCVE[cveID]
 				if !ok || len(vulnsList) == 0 {
-					var componentPurl *string
 
-					componentPurl = &ref
+					componentPurl := &ref
 
 					dependencyVuln := models.DependencyVuln{
 						Vulnerability: models.Vulnerability{
