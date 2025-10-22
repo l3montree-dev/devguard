@@ -53,7 +53,6 @@ func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 	// if there are no commits after the tag, we are on a clean tag
 	version, commitAfterTag, err := getCurrentVersion(path)
 	if err != nil {
-		slog.Error("could not get current version", "err", err)
 		return GitVersionInfo{}, errors.New("could not get current version")
 	}
 
@@ -226,7 +225,6 @@ func getCurrentVersion(path string) (string, int, error) {
 	// get tags from the git repository
 	tags, err := GitLister.GetTags(path)
 	if err != nil {
-		slog.Debug("could not get tags", "err", err, "path", getDirFromPath(path), "msg", err.Error())
 		return "", 0, err
 	}
 
