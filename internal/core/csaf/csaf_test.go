@@ -242,6 +242,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		// test the tracking object / revision history
 
 		revHistory := csafDoc.Document.Tracking.RevisionHistory
+		var date time.Time
 
 		assert.Equal(t, 4, len(revHistory)) // version 4 of the document should result in 4 entries
 		assert.Equal(t, strings.TrimRight(id, ".json"), csafDoc.Document.Tracking.ID)
@@ -251,36 +252,68 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, "4", csafDoc.Document.Tracking.Version)
 
 		assert.Equal(t, "1", revHistory[0].Number)
-		assert.Equal(t, asset.CreatedAt.Format(time.RFC3339), revHistory[0].Date)
+		date, err = time.Parse(time.RFC3339, revHistory[0].Date)
+		if err != nil {
+			t.Fail()
+		}
+		assetCreatedAt, err := time.Parse(time.RFC3339, asset.CreatedAt.Format(time.RFC3339))
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, assetCreatedAt.Equal(date))
 		assert.Equal(t, "Asset created, no vulnerabilities found", revHistory[0].Summary)
 
 		assert.Equal(t, "2", revHistory[1].Number)
-		assert.Equal(t, timeStamp.Format(time.RFC3339), revHistory[1].Date)
+		date, err = time.Parse(time.RFC3339, revHistory[1].Date)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Add(0*time.Minute).Equal(date))
 		assert.Equal(t, "Detected 6 new vulnerabilities.", revHistory[1].Summary)
 
 		assert.Equal(t, "3", revHistory[2].Number)
-		assert.Equal(t, timeStamp.Add(2*time.Minute).Format(time.RFC3339), revHistory[2].Date)
+		date, err = time.Parse(time.RFC3339, revHistory[2].Date)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Add(2*time.Minute).Equal(date))
 		assert.Equal(t, "Accepted 3 existing vulnerabilities, Marked 1 existing vulnerability as false positive.", revHistory[2].Summary)
 
 		assert.Equal(t, "4", revHistory[3].Number)
-		assert.Equal(t, timeStamp.Add(4*time.Minute).Format(time.RFC3339), revHistory[3].Date)
+		date, err = time.Parse(time.RFC3339, revHistory[3].Date)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Add(4*time.Minute).Equal(date))
 		assert.Equal(t, "Fixed 1 existing vulnerability.", revHistory[3].Summary)
 
 		// test the vulnerabilities Object
 		assert.Equal(t, 3, len(csafDoc.Vulnerabilities)) // 3 CVEs should result in 3 Vulnerability Groups
 
 		assert.Equal(t, "CVE-2025-50181", csafDoc.Vulnerabilities[0].CVE, csafDoc.Vulnerabilities[0].Title)
-		assert.Equal(t, timeStamp.Format(time.RFC3339), csafDoc.Vulnerabilities[0].DiscoveryDate)
+		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[0].DiscoveryDate)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "Version main: unhandled for purl pkg:golang/stdlib@v1.24.4, unhandled for purl pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
 		assert.Equal(t, "main", csafDoc.Vulnerabilities[0].ProductStatus.KnownAffected[0])
 
 		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
-		assert.Equal(t, timeStamp.Format(time.RFC3339), csafDoc.Vulnerabilities[1].DiscoveryDate)
+		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[1].DiscoveryDate)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "Version main: accepted for purl pkg:golang/helm.sh/helm/v3@v3.18.4", csafDoc.Vulnerabilities[1].Notes[0].Text)
 		assert.Equal(t, "main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
 
 		assert.Equal(t, "CVE-2025-22777", csafDoc.Vulnerabilities[2].CVE, csafDoc.Vulnerabilities[2].Title)
-		assert.Equal(t, timeStamp.Format(time.RFC3339), csafDoc.Vulnerabilities[1].DiscoveryDate)
+		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[2].DiscoveryDate)
+		if err != nil {
+			t.Fail()
+		}
+		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "Version v1: unhandled for purl pkg:golang/github.com/ulikunitz/xz@v0.5.12| Version v2: accepted for purl pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
 		assert.Equal(t, "v1", csafDoc.Vulnerabilities[2].ProductStatus.KnownAffected[0])
 		assert.Equal(t, "v2", csafDoc.Vulnerabilities[2].ProductStatus.KnownAffected[1])
