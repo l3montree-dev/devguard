@@ -18,5 +18,3 @@ ALTER TABLE ONLY public.artifact_upstream_url
     ADD CONSTRAINT artifact_name_url_fkey FOREIGN KEY (artifact_artifact_name, artifact_asset_id, artifact_asset_version_name) REFERENCES public.artifacts(artifact_name, asset_id, asset_version_name) ON DELETE CASCADE;
 
 
-ALTER TABLE ONLY public.assets 
-    ADD COLUMN IF NOT EXISTS paranoia_mode boolean DEFAULT false NOT NULL;   

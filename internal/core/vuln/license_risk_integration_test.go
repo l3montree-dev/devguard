@@ -128,7 +128,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	artifactName := "lifecycle-artifact"
+	artifactName := "main"
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 

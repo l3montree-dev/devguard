@@ -54,7 +54,7 @@ SELECT
     ad.asset_id,
     ad.id
 FROM (
-SELECT artifact_name, artifacts.asset_id, artifacts.asset_version_name, id from component_dependencies
+SELECT artifact_name, artifacts.asset_id, artifacts.asset_version_name, id from public.component_dependencies
     left join public.artifacts ON artifacts.asset_id = component_dependencies.asset_id AND artifacts.asset_version_name = component_dependencies.asset_version_name
     WHERE component_purl IS NULL
     AND dependency_purl = 'DEFAULT'

@@ -158,7 +158,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 	}
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
-	normalized := normalize.FromCdxBom(bom, artifactName, origin, true)
+	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), true)
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
