@@ -215,7 +215,7 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, 0)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

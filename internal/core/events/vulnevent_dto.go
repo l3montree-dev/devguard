@@ -21,12 +21,12 @@ type VulnEventDTO struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 
-	AssetVersionName  string `json:"assetVersionName"`
-	AssetVersionSlug  string `json:"assetVersionSlug"`
-	VulnerabilityName string `json:"vulnerabilityName"`
-	PackageName       string `json:"packageName"`
-	URI               string `json:"uri"`
-	Upstream          int    `json:"upstream"`
+	AssetVersionName  string               `json:"assetVersionName"`
+	AssetVersionSlug  string               `json:"assetVersionSlug"`
+	VulnerabilityName string               `json:"vulnerabilityName"`
+	PackageName       string               `json:"packageName"`
+	URI               string               `json:"uri"`
+	Upstream          models.UpstreamState `json:"upstream"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {

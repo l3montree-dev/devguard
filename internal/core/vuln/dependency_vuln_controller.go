@@ -379,7 +379,7 @@ func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) err
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name, 0)
+	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

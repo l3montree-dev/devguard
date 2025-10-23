@@ -67,6 +67,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("X-Artifact-Name", "artifact-1")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+		req.Header.Set("X-Origin", "test-origin")        // set the origin header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -94,6 +95,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Artifact-Name", "artifact-2")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Origin", "test-origin")        // set the origin header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -124,6 +126,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Artifact-Name", "artifact-3")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Origin", "test-origin")        // set the origin header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -149,6 +152,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Artifact-Name", "artifact-1")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Origin", "test-origin")        // set the origin header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)

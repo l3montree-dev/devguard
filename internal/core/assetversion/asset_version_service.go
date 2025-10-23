@@ -529,7 +529,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, 0, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, models.UpstreamStateInternal, true); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -545,12 +545,12 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, 0, false)
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, models.UpstreamStateInternal, false)
 		if err != nil {
 			slog.Error("error when trying to add events for vulnerability with just upstream events")
 			return err
 		}
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, 0)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, models.UpstreamStateInternal)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -650,7 +650,7 @@ func replaceSubtree(completeSBOM normalize.SBOM, origin string, subTree normaliz
 	return normalize.CdxBom(result)
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, origin string, upstream int) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, origin string, upstream models.UpstreamState) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {

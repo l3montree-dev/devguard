@@ -123,9 +123,9 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 		}
 	}
 
-	upstream := 1
+	upstream := models.UpstreamStateExternalAccepted
 	if asset.ParanoiaMode {
-		upstream = 2
+		upstream = models.UpstreamStateExternal
 	}
 
 	updated := 0

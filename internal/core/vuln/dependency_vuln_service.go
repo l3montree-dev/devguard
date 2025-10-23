@@ -56,7 +56,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 	}
 }
 
-func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int) error {
+func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -118,7 +118,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream int, stateApply bool) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState, stateApply bool) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -308,7 +308,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 	return nil
 }
 
-func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream int) (models.VulnEvent, error) {
+func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream models.UpstreamState) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
@@ -322,7 +322,7 @@ func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userI
 	return s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification, mechanicalJustification, upstream)
 }
 
-func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream int) (models.VulnEvent, error) {
+func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:

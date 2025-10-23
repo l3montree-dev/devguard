@@ -40,9 +40,8 @@ func (repository *dependencyVulnRepository) ApplyAndSave(tx core.DB, dependencyV
 
 func (repository *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	if ev.Upstream != 2 && ev.Upstream != 1 && ev.Type != models.EventTypeAccepted {
-		ev.Apply(dependencyVuln)
-	}
+	ev.Apply(dependencyVuln)
+
 	// run the updates in the transaction to keep a valid state
 	err := repository.Save(tx, dependencyVuln)
 	if err != nil {

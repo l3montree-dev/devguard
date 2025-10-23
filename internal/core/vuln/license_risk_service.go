@@ -32,7 +32,7 @@ type licenseRiskWithNewLicense struct {
 	NewFinalLicense string
 }
 
-func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream int) error {
+func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream models.UpstreamState) error {
 	// get all license risks for the assetVersion (across artifacts) so we can deduplicate
 	existingLicenseRisks, err := s.licenseRiskRepository.GetAllLicenseRisksForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 }
 
 // the license risks were fixes BY REMOVING the component
-func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, licenseRisks []models.LicenseRisk, upstream int) error {
+func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, licenseRisks []models.LicenseRisk, upstream models.UpstreamState) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -200,7 +200,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, li
 }
 
 // Helper: create detected events for newly opened license risks and save them
-func (s *LicenseRiskService) UserDetectedLicenseRisks(tx core.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk, upstream int) error {
+func (s *LicenseRiskService) UserDetectedLicenseRisks(tx core.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk, upstream models.UpstreamState) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -347,7 +347,7 @@ func (s *LicenseRiskService) UserDidNotDetectLicenseRiskInArtifactAnymore(tx cor
 	return nil
 }
 
-func (s *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream int) (models.VulnEvent, error) {
+func (s *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
@@ -361,7 +361,7 @@ func (s *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, l
 	return s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 }
 
-func (s *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream int) (models.VulnEvent, error) {
+func (s *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
