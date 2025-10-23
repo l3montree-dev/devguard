@@ -358,7 +358,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	if search != "" {
 		query = query.Where("dependency_purl ILIKE ?", "pkg:%"+search+"%")
 	} else {
-		query = query.Where("dependency_purl ILIKE ?", "pkg:%")
+		//query = query.Where("dependency_purl ILIKE ?", "pkg:%")
 	}
 
 	var total int64

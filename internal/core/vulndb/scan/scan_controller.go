@@ -126,7 +126,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	err = s.artifactService.SyncVexReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
+	err = s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
@@ -134,7 +134,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	return ctx.JSON(200, nil)
 }
 
-func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
+func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -142,7 +142,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}()
 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-	normalizedBom := bom
+
 	asset := core.GetAsset(c)
 	org := core.GetOrg(c)
 	project := core.GetProject(c)
@@ -156,8 +156,9 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
-
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
+	normalized := normalize.FromCdxBom(bom, artifactName, origin, true)
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
@@ -165,7 +166,6 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	if artifactName == "" {
 		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
@@ -182,12 +182,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom, origin, 0)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, origin, 0)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalized, userID)
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
@@ -315,11 +315,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 
-	// get origin from header
-	origin := c.Request().Header.Get("X-Origin")
-	artifactName := c.Request().Header.Get("X-Artifact-Name")
-
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, artifactName, origin, true))
+	scanResults, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		return err
 	}
@@ -347,9 +343,14 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	// if no origin is provided via header set it ourselves
+	origin := c.Request().Header.Get("X-Origin")
+	if origin == "" {
+		origin = "sbom-file-upload-1"
+		c.Request().Header.Set("X-Origin", origin)
+	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, artifactName, "sbom-upload", true))
+	scanResults, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		return err
 	}

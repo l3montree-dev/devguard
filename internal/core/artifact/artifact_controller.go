@@ -64,7 +64,7 @@ func (c *controller) Create(ctx core.Context) error {
 			return err
 		}
 	}
-	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	err = c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
 	}
@@ -168,7 +168,7 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		}
 	}
 
-	err = c.artifactService.SyncVexReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	err = c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
 	}

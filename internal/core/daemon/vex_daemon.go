@@ -23,7 +23,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func SyncVexReports(db core.DB, rbacProvider core.RBACProvider) error {
+func SyncReports(db core.DB, rbacProvider core.RBACProvider) error {
 
 	start := time.Now()
 	defer func() {
@@ -108,7 +108,7 @@ func SyncVexReports(db core.DB, rbacProvider core.RBACProvider) error {
 						}
 						vexReports, _, _ := artifactService.CheckVexURLs(upstreamURLs)
 
-						err := artifactService.SyncVexReports(vexReports, org, project, asset, assetVersions[i], artifact, "system")
+						err := artifactService.SyncReports(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {
 							slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 							continue

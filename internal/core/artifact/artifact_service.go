@@ -97,14 +97,14 @@ func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin
 		validURLs = append(validURLs, url)
 		boms = append(boms, normalize.BomWithOrigin{
 			BOM:    bom,
-			Origin: url,
+			Origin: "upstream:" + url,
 		})
 	}
 
 	return boms, validURLs, invalidURLs
 }
 
-func (s *service) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
 
 	// load existing dependency vulns for this asset version
 	existingVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
@@ -176,6 +176,19 @@ func (s *service) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org,
 			Dependencies: &[]string{bom.Origin},
 		}))
 		originDependencies := []string{}
+		if bom.Components != nil {
+			linkSbom.Components = utils.Ptr(append(*linkSbom.Components, *bom.Components...))
+			ref := bom.Metadata.Component.BOMRef
+			linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
+				BOMRef:     ref,
+				PackageURL: ref,
+				Name:       ref,
+			}))
+			originDependencies = append(originDependencies, ref)
+		}
+		if bom.Dependencies != nil {
+			linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, *bom.Dependencies...))
+		}
 
 		if bom.Vulnerabilities != nil {
 			for _, vuln := range *bom.Vulnerabilities {

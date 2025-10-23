@@ -138,7 +138,7 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 	if shouldMirror(configService, "vulndb.vexReports") {
 		start = time.Now()
 		// update the vex reports
-		if err := SyncVexReports(db, casbinRBACProvider); err != nil {
+		if err := SyncReports(db, casbinRBACProvider); err != nil {
 			slog.Error("could not update vex reports", "err", err)
 			return nil
 		}

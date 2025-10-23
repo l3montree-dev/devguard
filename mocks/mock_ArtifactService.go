@@ -478,12 +478,12 @@ func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *mod
 	return _c
 }
 
-// SyncVexReports provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SyncVexReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+// SyncReports provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
 	ret := _mock.Called(boms, org, project, asset, assetVersion, artifact, userID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SyncVexReports")
+		panic("no return value specified for SyncReports")
 	}
 
 	var r0 error
@@ -495,12 +495,12 @@ func (_mock *ArtifactService) SyncVexReports(boms []normalize.BomWithOrigin, org
 	return r0
 }
 
-// ArtifactService_SyncVexReports_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncVexReports'
+// ArtifactService_SyncVexReports_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncReports'
 type ArtifactService_SyncVexReports_Call struct {
 	*mock.Call
 }
 
-// SyncVexReports is a helper method to define mock.On call
+// SyncReports is a helper method to define mock.On call
 //   - boms []normalize.BomWithOrigin
 //   - org models.Org
 //   - project models.Project
@@ -508,8 +508,8 @@ type ArtifactService_SyncVexReports_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
 //   - userID string
-func (_e *ArtifactService_Expecter) SyncVexReports(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncVexReports_Call {
-	return &ArtifactService_SyncVexReports_Call{Call: _e.mock.On("SyncVexReports", boms, org, project, asset, assetVersion, artifact, userID)}
+func (_e *ArtifactService_Expecter) SyncReports(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncVexReports_Call {
+	return &ArtifactService_SyncVexReports_Call{Call: _e.mock.On("SyncReports", boms, org, project, asset, assetVersion, artifact, userID)}
 }
 
 func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncVexReports_Call {
