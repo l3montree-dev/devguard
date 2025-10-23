@@ -201,7 +201,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	// init all http controllers using the repositories
 
-	artifactController := artifact.NewController(artifactRepository, artifactService)
+	artifactController := artifact.NewController(artifactRepository, artifactService, dependencyVulnService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)

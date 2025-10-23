@@ -104,13 +104,15 @@ func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin
 	return boms, validURLs, invalidURLs
 }
 
-func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error {
+func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+
+	allVulns := []models.DependencyVuln{}
 
 	// load existing dependency vulns for this asset version
 	existingVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
 	if err != nil {
 		slog.Error("could not load dependency vulns", "err", err)
-		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+		return allVulns, echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
 	}
 
 	// index by CVE id
@@ -289,8 +291,12 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 					}
 					updated++
 				}
+
+				allVulns = append(allVulns, vulnsList...)
 			}
 		}
+
+		allVulns = append(allVulns, notExistingVulnsList...)
 
 		// set origin dependencies
 		linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, cyclonedx.Dependency{
@@ -301,7 +307,7 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.CdxBom(&linkSbom), bom.Origin, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
-			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+			return allVulns, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 	}
 
@@ -309,7 +315,7 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream, true)
 		if err != nil {
 			slog.Error("could not create dependency vulns", "err", err)
-			return echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)
+			return allVulns, echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)
 		}
 
 		//update the stats for dependency vulns
@@ -323,5 +329,5 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 		}
 	}
 
-	return nil
+	return allVulns, nil
 }

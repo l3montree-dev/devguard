@@ -34,6 +34,8 @@ type dependencyVulnHTTPController struct {
 	projectService           core.ProjectService
 	statisticsService        core.StatisticsService
 	vulnEventRepository      core.VulnEventRepository
+	// mark public to let it be overridden in tests
+	core.FireAndForgetSynchronizer
 }
 
 type DependencyVulnStatus struct {
@@ -44,11 +46,12 @@ type DependencyVulnStatus struct {
 
 func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService, vulnEventRepository core.VulnEventRepository) *dependencyVulnHTTPController {
 	return &dependencyVulnHTTPController{
-		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVulnService,
-		projectService:           projectService,
-		statisticsService:        statisticsService,
-		vulnEventRepository:      vulnEventRepository,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		dependencyVulnService:     dependencyVulnService,
+		projectService:            projectService,
+		statisticsService:         statisticsService,
+		vulnEventRepository:       vulnEventRepository,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -295,10 +298,10 @@ func (controller dependencyVulnHTTPController) Hints(ctx core.Context) error {
 }
 
 func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Context) error {
-	/* 	asset := core.GetAsset(ctx)
-	   	assetVersion := core.GetAssetVersion(ctx)
-	   	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	   	userID := core.GetSession(ctx).GetUserID() */
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
 
 	type vulnReq struct {
 		VulnID string              `json:"vulnID"`
@@ -316,12 +319,15 @@ func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Cont
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
+	vulns := make([]models.DependencyVuln, 0, len(requestData.VulnsReq))
+
 	for _, r := range requestData.VulnsReq {
 		dependencyVuln, err := controller.dependencyVulnRepository.Read(r.VulnID)
 		if err != nil {
 			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
 			continue
 		}
+		vulns = append(vulns, dependencyVuln)
 		events := dependencyVuln.Events
 		for i := range events {
 			if events[i].Upstream != 2 {
@@ -344,8 +350,14 @@ func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Cont
 				return err
 			}
 		}
-
 	}
+
+	controller.FireAndForget(func() {
+		err := controller.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	return ctx.JSON(200, map[string]any{"message": "sync completed"})
 }

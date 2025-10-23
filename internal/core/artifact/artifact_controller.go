@@ -8,17 +8,23 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type controller struct {
-	artifactRepository core.ArtifactRepository
-	artifactService    core.ArtifactService
+	artifactRepository    core.ArtifactRepository
+	artifactService       core.ArtifactService
+	dependencyVulnService core.DependencyVulnService
+	// mark public to let it be overridden in tests
+	core.FireAndForgetSynchronizer
 }
 
-func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService) *controller {
+func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService, dependencyVulnService core.DependencyVulnService) *controller {
 	return &controller{
-		artifactRepository: artifactRepository,
-		artifactService:    artifactService,
+		artifactRepository:        artifactRepository,
+		artifactService:           artifactService,
+		dependencyVulnService:     dependencyVulnService,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -27,6 +33,9 @@ func (c *controller) Create(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	assetVersion := core.GetAssetVersion(ctx)
+	org := core.GetOrg(ctx)
+
+	project := core.GetProject(ctx)
 
 	type requestBody struct {
 		ArtifactName string                       `json:"artifactName"`
@@ -64,10 +73,16 @@ func (c *controller) Create(ctx core.Context) error {
 			return err
 		}
 	}
-	err = c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	vulns, err := c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
 	}
+	c.FireAndForget(func() {
+		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	artifact.UpstreamURLs = body.UpstreamURL
 
@@ -97,6 +112,10 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	assetVersion := core.GetAssetVersion(ctx)
+
+	org := core.GetOrg(ctx)
+
+	project := core.GetProject(ctx)
 
 	artifactName, err := core.GetArtifactName(ctx)
 	if err != nil {
@@ -168,10 +187,17 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		}
 	}
 
-	err = c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+	vulns, err := c.artifactService.SyncReports(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
 	}
+
+	c.FireAndForget(func() {
+		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	artifact.UpstreamURLs = body.UpstreamURL
 

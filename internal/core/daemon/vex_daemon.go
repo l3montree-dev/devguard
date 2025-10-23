@@ -108,7 +108,7 @@ func SyncReports(db core.DB, rbacProvider core.RBACProvider) error {
 						}
 						vexReports, _, _ := artifactService.CheckVexURLs(upstreamURLs)
 
-						err := artifactService.SyncReports(vexReports, org, project, asset, assetVersions[i], artifact, "system")
+						_, err := artifactService.SyncReports(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {
 							slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 							continue

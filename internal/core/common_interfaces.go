@@ -281,7 +281,7 @@ type ArtifactService interface {
 	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string)
-	SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error
+	SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {

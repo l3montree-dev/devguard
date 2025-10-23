@@ -126,11 +126,19 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	err = s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
+	vulns, err := s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
 	}
+
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
 	return ctx.JSON(200, nil)
 }
 
