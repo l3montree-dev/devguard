@@ -154,11 +154,9 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 		}
 
 		// if the directory already exists we skip the download and verification
-		if _, err := os.Stat(outpath); err != nil {
-			_, err := downloadAndSaveZipToTemp(repo, tag, outpath)
-			if err != nil {
-				return err
-			}
+		_, err = downloadAndSaveZipToTemp(repo, tag, outpath)
+		if err != nil {
+			return err
 		}
 		defer os.RemoveAll(outpath) //nolint
 
@@ -193,7 +191,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 
 		err = processDiffCSVs(ctx, dirPath, tx)
 		if err != nil {
-			slog.Error("error when trying to update from diff files", "tag", tag)
+			slog.Error("error when trying to update from diff files", "tag", tag, "err", err)
 			return err
 		}
 		err = tx.Commit(ctx)
