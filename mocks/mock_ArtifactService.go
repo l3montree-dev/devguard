@@ -495,8 +495,8 @@ func (_mock *ArtifactService) SyncReports(boms []normalize.BomWithOrigin, org mo
 	return r0
 }
 
-// ArtifactService_SyncVexReports_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncReports'
-type ArtifactService_SyncVexReports_Call struct {
+// ArtifactService_SyncReports_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncReports'
+type ArtifactService_SyncReports_Call struct {
 	*mock.Call
 }
 
@@ -508,11 +508,11 @@ type ArtifactService_SyncVexReports_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
 //   - userID string
-func (_e *ArtifactService_Expecter) SyncReports(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncVexReports_Call {
-	return &ArtifactService_SyncVexReports_Call{Call: _e.mock.On("SyncReports", boms, org, project, asset, assetVersion, artifact, userID)}
+func (_e *ArtifactService_Expecter) SyncReports(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncReports_Call {
+	return &ArtifactService_SyncReports_Call{Call: _e.mock.On("SyncReports", boms, org, project, asset, assetVersion, artifact, userID)}
 }
 
-func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncVexReports_Call {
+func (_c *ArtifactService_SyncReports_Call) Run(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncReports_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []normalize.BomWithOrigin
 		if args[0] != nil {
@@ -555,12 +555,12 @@ func (_c *ArtifactService_SyncVexReports_Call) Run(run func(boms []normalize.Bom
 	return _c
 }
 
-func (_c *ArtifactService_SyncVexReports_Call) Return(err error) *ArtifactService_SyncVexReports_Call {
+func (_c *ArtifactService_SyncReports_Call) Return(err error) *ArtifactService_SyncReports_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ArtifactService_SyncVexReports_Call) RunAndReturn(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error) *ArtifactService_SyncVexReports_Call {
+func (_c *ArtifactService_SyncReports_Call) RunAndReturn(run func(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) error) *ArtifactService_SyncReports_Call {
 	_c.Call.Return(run)
 	return _c
 }
