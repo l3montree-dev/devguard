@@ -28,7 +28,9 @@ type csafController struct {
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
 	AssetVersionRepository   core.AssetVersionRepository
-	statisticsRepository     core.StatisticsRepository
+	AssetRepository          core.AssetRepository
+	ProjectRepository        core.ProjectRepository
+	OrganizationRepository   core.OrganizationRepository
 }
 
 // root struct of the document
@@ -257,12 +259,14 @@ type productID = string
 
 // from here on: code that builds the human navigable html web interface
 
-func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, statisticsRepository core.StatisticsRepository) *csafController {
+func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository) *csafController {
 	return &csafController{
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
 		AssetVersionRepository:   assetVersionRepository,
-		statisticsRepository:     statisticsRepository,
+		AssetRepository:          assetRepository,
+		ProjectRepository:        projectRepository,
+		OrganizationRepository:   organizationRepository,
 	}
 }
 
@@ -566,23 +570,185 @@ func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 }
 
 type ProviderMetadata struct {
-	URL                     string               `json:"canonical_url"`
-	LastUpdated             string               `json:"last_updated"`
-	ListOnCSAFAggregators   bool                 `json:"list_on_CSAF_aggregators"`
-	MetadataVersion         string               `json:"metadata_version"`
-	MirrorOnCSAFAggregators bool                 `json:"mirror_on_CSAF_aggregators"`
-	PublicOpenpgpKeys       []PGPKey             `json:"public_openpgp_keys"`
-	Publisher               publisherReplacement `json:"publisher"`
-	Role                    string               `json:"role"`
+	URL                     string                         `json:"canonical_url,omitempty"`
+	Distribution            []distributionProviderMetadata `json:"distribution,omitempty"`
+	LastUpdated             string                         `json:"last_updated,omitempty"`
+	ListOnCSAFAggregators   bool                           `json:"list_on_CSAF_aggregators,omitempty"`
+	MetadataVersion         string                         `json:"metadata_version,omitempty"`
+	MirrorOnCSAFAggregators bool                           `json:"mirror_on_CSAF_aggregators,omitempty"`
+	PublicOpenpgpKeys       []pgpKey                       `json:"public_openpgp_keys,omitempty"`
+	Publisher               publisherReplacement           `json:"publisher,omitempty"`
+	Role                    string                         `json:"role,omitempty"`
 }
 
-type PGPKey struct {
+type distributionProviderMetadata struct {
+	Summary  string `json:"summary"`
+	TLPLabel string `json:"tlp_label"`
+	URL      string `json:"url"`
+}
+type Aggregator struct {
+	AggregatorObject  aggregatorObject `json:"aggregator,omitempty"`
+	AggregatorVersion string           `json:"aggregator_version,omitempty"`
+	CanonicalURL      string           `json:"canonical_url,omitempty"`
+	CsafProviders     []struct {
+		Metadata aggregatorMetadata `json:"metadata,omitempty"`
+	} `json:"csaf_providers,omitempty"`
+	CsafPublishers []struct {
+		Metadata       publisherMetadata `json:"csaf_publishers,omitempty"`
+		Mirrors        []string          `json:"mirrors,omitempty"`
+		UpdateInterval string            `json:"update_interval,omitempty"`
+	} `json:"csaf_publishers,omitempty"`
+	LastUpdated string `json:"last_updated,omitempty"`
+}
+
+type aggregatorObject struct {
+	Category         string `json:"category"`
+	ContactDetails   string `json:"contact_details"`
+	IssuingAuthority string `json:"issuing_authority"`
+	Name             string `json:"name"`
+	Namespace        string `json:"namespace"`
+}
+
+type aggregatorMetadata struct {
+	LastUpdated string `json:"last_updated"`
+	Publisher   struct {
+		Category  string `json:"category"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"publisher"`
+	Role string `json:"role"`
+	URL  string `json:"url"`
+}
+
+type publisherMetadata struct {
+	LastUpdated string `json:"last_updated"`
+	Publisher   struct {
+		Category  string `json:"category"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"publisher"`
+	Role string `json:"role"`
+	URL  string `json:"url"`
+}
+
+type pgpKey struct {
 	Fingerprint *string `json:"fingerprint"`
 	URL         string  `json:"url"`
 }
 
-// returns the provider metadata file
-func (controller *csafController) GetProviderMetadata(ctx core.Context) error {
+// returns the aggregator file which points to all public organizations provider-metadata files
+func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
+	aggregatorObject := aggregatorObject{
+		Category:       "lister",
+		ContactDetails: "info@l3montree.com",
+		Name:           "L3montree GmbH",
+		Namespace:      "L3montree.com",
+	}
+
+	hostURL := os.Getenv("API_URL")
+	if hostURL == "" {
+		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
+	}
+	csafAggregatorURL := fmt.Sprintf("%s/api/v1/.well-known/csaf-aggregator/", hostURL)
+	aggregator := Aggregator{
+		AggregatorObject:  aggregatorObject,
+		AggregatorVersion: "2.0",
+		CanonicalURL:      csafAggregatorURL + "aggregator.json",
+		LastUpdated:       time.Now().Format(time.RFC3339),
+	}
+
+	orgs, err := controller.OrganizationRepository.All()
+	if err != nil {
+		return err
+	}
+
+	// for every org build an entry if they have the csaf report publicly available
+	providers := make([]aggregatorMetadata, 0)
+	for _, org := range orgs {
+		// if org.PublishCSAF == true {}...
+		orgCSAFURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/provider-metadata.json/", hostURL, org.Slug)
+		metadata := aggregatorMetadata{
+			Publisher: struct {
+				Category  string `json:"category"`
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+			}{
+				Category:  "vendor",
+				Name:      org.Slug,
+				Namespace: "TODO",
+			},
+			Role:        "csaf_trusted_provider",
+			URL:         orgCSAFURL,
+			LastUpdated: time.Now().Format(time.RFC3339),
+		}
+		providers = append(providers, metadata)
+	}
+
+	// then append each metadata as provider object to the aggregator provider list
+	for _, entry := range providers {
+		aggregator.CsafProviders = append(aggregator.CsafProviders, struct {
+			Metadata aggregatorMetadata `json:"metadata,omitempty"`
+		}{entry})
+	}
+
+	return ctx.JSONPretty(200, aggregator, "    ")
+}
+
+// returns the provider-metadata file for an organization which points to each assets provider-metadata
+func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Context) error {
+	org := core.GetOrg(ctx)
+	hostURL := os.Getenv("API_URL")
+	if hostURL == "" {
+		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
+	}
+	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/", hostURL, org.Slug)
+
+	fingerprint, err := getPublicKeyFingerprint()
+	if err != nil {
+		return err
+	}
+
+	metadata := ProviderMetadata{
+		URL:                     csafURL + "provider-metadata.json",
+		LastUpdated:             time.Now().Format(time.RFC3339),
+		ListOnCSAFAggregators:   true, // TODO check if reports are published
+		MirrorOnCSAFAggregators: true, // TODO check if reports are published
+		MetadataVersion:         "2.0",
+		PublicOpenpgpKeys:       []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
+		Role:                    "csaf_trusted_provider",
+		Publisher: publisherReplacement{
+			Category:       "vendor",
+			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
+			Name:           org.Slug,
+			Namespace:      "TODO ", // TODO add option to add namespace to an org
+		},
+	}
+	assets, err := controller.AssetRepository.GetByOrgID(org.ID)
+	if err != nil {
+		return err
+	}
+
+	distributions := make([]distributionProviderMetadata, 0)
+	for _, asset := range assets {
+		project, err := controller.ProjectRepository.GetProjectByAssetID(asset.ID)
+		if err != nil {
+			// maybe swallow error and publish incomplete set
+			return err
+		}
+		distribution := distributionProviderMetadata{
+			Summary:  "location of provider-metadata.json for asset: " + asset.Slug,
+			TLPLabel: "WHITE",
+			URL:      fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, project.Slug, asset.Slug),
+		}
+		distributions = append(distributions, distribution)
+	}
+	metadata.Distribution = distributions
+
+	return ctx.JSONPretty(200, metadata, "    ")
+}
+
+// returns the provider metadata file for a given asset which points to the location of the tlp white csaf reports
+func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) error {
 	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	asset := core.GetAsset(ctx)
@@ -610,7 +776,13 @@ func (controller *csafController) GetProviderMetadata(ctx core.Context) error {
 			Name:           "L3montree GmbH",
 			Namespace:      "https://l3montree.com/",
 		},
-		PublicOpenpgpKeys: []PGPKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
+		PublicOpenpgpKeys: []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
+		Distribution: []distributionProviderMetadata{
+			{
+				TLPLabel: "WHITE",
+				URL:      csafURL + "white/",
+			},
+		},
 	}
 
 	return ctx.JSONPretty(200, metadata, "    ")
@@ -631,7 +803,7 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
-	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.statisticsRepository, controller.AssetVersionRepository)
+	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository)
 	if err != nil {
 		return err
 	}
@@ -677,7 +849,7 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 }
 
 // generate a specific csaf report version
-func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, statisticsRepository core.StatisticsRepository, assetVersionRepository core.AssetVersionRepository) (csaf, error) {
+func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository) (csaf, error) {
 	csafDoc := csaf{}
 	// extract context information
 	version, err := extractVersionFromDocumentID(ctx.Param("version"))
@@ -727,7 +899,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if err != nil {
 		return csafDoc, err
 	}
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, statisticsRepository)
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -770,7 +942,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, statisticsRepository core.StatisticsRepository) ([]vulnerability, error) {
+func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
 	vulnerabilites := []vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns

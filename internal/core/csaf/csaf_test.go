@@ -28,11 +28,10 @@ func TestServeCSAFReportRequest(t *testing.T) {
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
 
 	// Create test organization, project, asset, and asset version
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	csafController := NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, statisticsRepository)
+	csafController := NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, repositories.NewAssetRepository(db), repositories.NewProjectRepository(db), repositories.NewOrgRepository(db))
 	// Setup echo app
 	app := echo.New()
 

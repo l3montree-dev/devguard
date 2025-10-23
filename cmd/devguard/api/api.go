@@ -563,7 +563,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	patService := pat.NewPatService(patRepository)
 
 	vulndbController := vulndb.NewHTTPController(cveRepository)
-	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, statisticsRepository)
+	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, assetRepository, projectRepository, orgRepository)
 
 	server := echohttp.Server()
 
@@ -597,6 +597,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
 
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
+	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
@@ -684,6 +685,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadataForOrganization)
 
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
@@ -773,7 +775,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGPHTML)
 	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
 
-	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadata)
+	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadataForAsset)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
