@@ -33,7 +33,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 	dependencyVulnService := mocks.NewDependencyVulnService(t)
 
 	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-	controller := artifact.NewController(artifactRepository, artifactService)
+	controller := artifact.NewController(artifactRepository, artifactService, nil)
 
 	// Create test organization, project, asset, and asset version
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -178,7 +178,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 		failingRepository := repositories.NewArtifactRepository(failingDB)
 		failingService := artifact.NewService(failingRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-		failingController := artifact.NewController(failingRepository, failingService)
+		failingController := artifact.NewController(failingRepository, failingService, nil)
 
 		// Setup HTTP request and response
 		recorder := httptest.NewRecorder()
