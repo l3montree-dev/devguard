@@ -320,7 +320,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
 	if err := decoder.Decode(bom); err != nil {
-		return err
+		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
 	}
 
 	scanResults, err := s.DependencyVulnScan(c, bom)
@@ -348,7 +348,7 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {
-		return err
+		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
 	}
 
 	// if no origin is provided via header set it ourselves

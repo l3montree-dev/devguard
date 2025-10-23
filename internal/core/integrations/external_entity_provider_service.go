@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/org"
@@ -162,11 +161,6 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 func (s externalEntityProviderService) fetchExternalProjects(ctx core.Context, user, providerID string) ([]models.Project, []core.Role, error) {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	projects, roles, err := thirdPartyIntegration.ListGroups(context.TODO(), user, providerID)
-	for _, p := range projects {
-		if strings.Contains(p.Name, "test-group-with-long-name") {
-			slog.Warn("found project with long name", "name", p.Name, "id", p.ID)
-		}
-	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not list projects for user %s: %w", user, err)
 	}

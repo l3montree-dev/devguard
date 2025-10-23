@@ -256,7 +256,7 @@ func (c *casbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, pro
 func (c *casbinRBAC) LinkProjectAndAssetRole(
 	projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions core.Role, project string, asset string,
 ) error {
-	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(projectRoleWhichGetsPermission, project), c.getAssetRoleName(assetRoleWhichProvidesPermissions, project), "domain::"+c.domain)
+	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(projectRoleWhichGetsPermission, project), c.getAssetRoleName(assetRoleWhichProvidesPermissions, asset), "domain::"+c.domain)
 	return err
 }
 

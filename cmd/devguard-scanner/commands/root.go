@@ -135,6 +135,7 @@ func init() {
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),
+		NewMergeSBOMSCommand(),
 		NewVEXCommand(),
 	)
 
