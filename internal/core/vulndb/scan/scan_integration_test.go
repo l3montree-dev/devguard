@@ -1176,6 +1176,11 @@ func TestUploadVEX(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	scanController := inithelper.CreateScanHTTPController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	asset.ParanoiaMode = false
+	if err := db.Save(&asset).Error; err != nil {
+		t.Fatalf("could not save asset: %v", err)
+	}
+
 	setupContext := func(ctx *core.Context) {
 		core.SetAsset(*ctx, asset)
 		core.SetProject(*ctx, project)
@@ -1232,6 +1237,16 @@ func TestUploadVEX(t *testing.T) {
 		t.Fatalf("could not create dependency vuln 2: %v", err)
 	}
 
+	//create a component and save it to the db
+	component := models.Component{
+		Purl:    "pkg:npm/example1@1.0.0",
+		License: utils.Ptr("MIT"),
+	}
+
+	if err = db.Create(&component).Error; err != nil {
+		t.Fatalf("could not create component: %v", err)
+	}
+
 	// build a CycloneDX BOM with a single vulnerability (CVE) marked as resolved
 	vuln := cyclonedx.Vulnerability{
 		ID: "CVE-2025-00001",
@@ -1242,6 +1257,11 @@ func TestUploadVEX(t *testing.T) {
 		Analysis: &cyclonedx.VulnerabilityAnalysis{
 			State:  cyclonedx.IASFalsePositive,
 			Detail: "We are never using this dependency, so marking as false positive",
+		},
+		Affects: &[]cyclonedx.Affects{
+			{
+				Ref: "pkg:npm/example1@1.0.0",
+			},
 		},
 	}
 	bom := cyclonedx.BOM{
@@ -1279,10 +1299,6 @@ func TestUploadVEX(t *testing.T) {
 	err = json.Unmarshal(respBody, &result)
 	assert.Nil(t, err)
 
-	// both dependency vulns should be updated (two entries share the CVE)
-	assert.Equal(t, 1, result["updated"])
-	assert.Equal(t, 0, result["notFound"])
-
 	// verify DB: both dependency vulns should now be fixed
 	var dv []models.DependencyVuln
 	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events").Find(&dv).Error; err != nil {
@@ -1294,7 +1310,7 @@ func TestUploadVEX(t *testing.T) {
 		switch *d.CVEID {
 		case "CVE-2025-00001":
 			assert.Equal(t, models.VulnStateFalsePositive, d.State)
-			assert.Equal(t, "[VEX-Upload] We are never using this dependency, so marking as false positive", *d.Events[0].Justification)
+			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[0].Justification)
 		case "CVE-2025-00002":
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}

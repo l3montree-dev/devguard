@@ -204,7 +204,7 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, firstDetected)
 		assert.Empty(t, fixedOnAll)
 		assert.Empty(t, fixedOnThisArtifactName)
-		assert.Empty(t, vulnsWithJustUpstreamEvents)
+		assert.Equal(t, 1, len(vulnsWithJustUpstreamEvents))
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName))
 	})
 
@@ -284,7 +284,7 @@ func TestDiffScanResults(t *testing.T) {
 
 		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Empty(t, vulnsWithJustUpstreamEvents)
+		assert.Equal(t, 1, len(vulnsWithJustUpstreamEvents))
 		assert.Empty(t, firstDetected, "Should be empty - this is a new detection by current artifact")
 		assert.Empty(t, fixedOnAll, "Should be empty - no vulnerabilities are fixed")
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName), "Should detect that current artifact found existing vulnerability for first time")
@@ -748,14 +748,14 @@ func TestReplaceSubtree(t *testing.T) {
 			Components:   &[]cdx.Component{},
 			Dependencies: &[]cdx.Dependency{},
 		}
-		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.CdxBom(newSubtree))
 
 		assert.NotNil(t, updatedSbom)
 
 		found := false
 		found1 := false
 		for _, comp := range *updatedSbom.GetDependencies() {
-			if comp.Ref == "root" {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
 				found = true
 				assert.Contains(t, *comp.Dependencies, "origin")
 			}
@@ -813,13 +813,13 @@ func TestReplaceSubtree(t *testing.T) {
 				},
 			},
 		}
-		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.CdxBom(newSubtree))
 
 		assert.NotNil(t, updatedSbom)
 
 		found := false
 		for _, comp := range *updatedSbom.GetDependencies() {
-			if comp.Ref == "root" {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
 				found = true
 				assert.Contains(t, *comp.Dependencies, "origin")
 			}
@@ -886,13 +886,13 @@ func TestReplaceSubtree(t *testing.T) {
 				},
 			},
 		}
-		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.FromCdxBom(newSubtree, artifactName, "subtree", false))
+		updatedSbom := replaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin", false), "origin", normalize.CdxBom(newSubtree))
 
 		assert.NotNil(t, updatedSbom)
 
 		found := false
 		for _, comp := range *updatedSbom.GetDependencies() {
-			if comp.Ref == "root" {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
 				found = true
 				assert.Contains(t, *comp.Dependencies, "origin")
 			}

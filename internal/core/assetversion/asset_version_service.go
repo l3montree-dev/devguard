@@ -600,24 +600,32 @@ func replaceSubtree(completeSBOM normalize.SBOM, origin string, subTree normaliz
 	result.Metadata = completeSBOM.GetMetadata()
 	result.Components = utils.Ptr(append(*completeSBOM.GetComponents(), *subTree.GetComponents()...))
 	result.Dependencies = &[]cdx.Dependency{}
-	// make sure we have a origin pointing to the subtree root
+
+	// Copy all dependencies from completeSBOM except the origin (we'll replace it)
 	for _, d := range *completeSBOM.GetDependencies() {
 		if d.Ref == origin {
-			// we do not want the edge from
+			// skip the original origin dependency, we'll replace it
 			continue
 		}
 		result.Dependencies = utils.Ptr(append(*result.Dependencies, d))
 	}
 
-	// now add the whole dependency tree of the subtree
+	// Add all dependencies from the subtree
 	for _, d := range *subTree.GetDependencies() {
-		// do not add the root dependency again
-		// we already added that from the completeSBOM
+		// do not add the root dependency again if it's the same as completeSBOM root
 		if d.Ref == result.Metadata.Component.BOMRef {
 			continue
 		}
 		result.Dependencies = utils.Ptr(append(*result.Dependencies, d))
 	}
+
+	// Create origin dependency that points to the subtree root
+	subtreeRoot := subTree.GetMetadata().Component.BOMRef
+	originDependency := cdx.Dependency{
+		Ref:          origin,
+		Dependencies: utils.Ptr([]string{subtreeRoot}),
+	}
+	result.Dependencies = utils.Ptr(append(*result.Dependencies, originDependency))
 
 	// make sure root depends on origin
 	root := result.Metadata.Component.BOMRef
