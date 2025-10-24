@@ -32,6 +32,7 @@ type csafController struct {
 	ProjectRepository        core.ProjectRepository
 	OrganizationRepository   core.OrganizationRepository
 	CVERepository            core.CveRepository
+	ArtifactRepository       core.ArtifactRepository
 }
 
 // root struct of the document
@@ -260,7 +261,7 @@ type productID = string
 
 // from here on: code that builds the human navigable html web interface
 
-func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository, cveRepository core.CveRepository) *csafController {
+func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) *csafController {
 	return &csafController{
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
@@ -269,6 +270,7 @@ func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, v
 		ProjectRepository:        projectRepository,
 		OrganizationRepository:   organizationRepository,
 		CVERepository:            cveRepository,
+		ArtifactRepository:       artifactRepository,
 	}
 }
 
@@ -810,7 +812,7 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
-	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository, controller.CVERepository)
+	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository, controller.CVERepository, controller.ArtifactRepository)
 	if err != nil {
 		return err
 	}
@@ -856,7 +858,7 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 }
 
 // generate a specific csaf report version
-func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository) (csaf, error) {
+func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) (csaf, error) {
 	csafDoc := csaf{}
 	// extract context information
 	version, err := extractVersionFromDocumentID(ctx.Param("version"))
@@ -895,7 +897,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	}
 	csafDoc.Document.Tracking = tracking
 
-	tree, err := generateProductTree(asset, assetVersionRepository)
+	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -906,7 +908,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if err != nil {
 		return csafDoc, err
 	}
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, cveRepository)
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, cveRepository, artifactRepository)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -925,7 +927,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository) (productTree, error) {
+func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) (productTree, error) {
 	tree := productTree{}
 	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
 	if err != nil {
@@ -934,22 +936,29 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 
 	// append each relevant asset version
 	for _, version := range assetVersions {
-		branch := branches{
-			Category: "product_version",
-			Name:     version.Name,
-			Product: &fullProductName{
-				Name:      version.Name,
-				ProductID: version.Name,
-			},
+		artifacts, err := artifactRepository.GetByAssetIDAndAssetVersionName(asset.ID, version.Name)
+		if err != nil {
+			return tree, err
 		}
-		tree.Branches = append(tree.Branches, branch)
+		for _, artifact := range artifacts {
+			branch := branches{
+				Category: "product_version",
+				Name:     artifact.ArtifactName + "@" + version.Name,
+				Product: &fullProductName{
+					Name:      artifact.ArtifactName + "@" + version.Name,
+					ProductID: artifact.ArtifactName + "@" + version.Name,
+				},
+			}
+			tree.Branches = append(tree.Branches, branch)
+		}
+
 	}
 
 	return tree, nil
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository) ([]vulnerability, error) {
+func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]vulnerability, error) {
 	vulnerabilites := []vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns
@@ -1006,15 +1015,25 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 				}
 			}
 
-			if !slices.Contains(uniqueVersionsAffected, vuln.AssetVersionName) {
-				uniqueVersionsAffected = append(uniqueVersionsAffected, vuln.AssetVersionName)
+			artifacts, err := artifactRepository.GetAllArtifactAffectedByDependencyVuln(nil, vuln.ID)
+			if err != nil {
+				return nil, err
+			}
+			for _, artifact := range artifacts {
+				if !slices.Contains(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)) {
+					uniqueVersionsAffected = append(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
+				}
 			}
 		}
 		vulnObject.ProductStatus = productStatusReplacement{
 			KnownAffected: uniqueVersionsAffected,
 		}
 
-		vulnObject.Notes = generateNotesForVulnerabilityObject(vulnsInGroup, cveRepository)
+		notes, err := generateNotesForVulnerabilityObject(vulnsInGroup, cveRepository, artifactRepository)
+		if err != nil {
+			return nil, err
+		}
+		vulnObject.Notes = notes
 		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
 
@@ -1024,15 +1043,15 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 	return vulnerabilites, nil
 }
 
-type versionVulns struct {
-	Version string
-	Vulns   []models.DependencyVuln
+type artifactVulns struct {
+	Artifact string
+	Vulns    []models.DependencyVuln
 }
 
 // generate the textual summary for a vulnerability object
-func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepository core.CveRepository) []note {
+func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]note, error) {
 	if len(vulns) == 0 {
-		return nil
+		return nil, nil
 	}
 	vulnDetails := note{
 		Category: "details",
@@ -1041,7 +1060,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 
 	cve, err := cveRepository.FindByID(*vulns[0].CVEID)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	cveDescription := note{
@@ -1051,25 +1070,31 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 	}
 
 	// a map would be faster but we need an ordered set to make the output deterministic
-	versions := make([]versionVulns, 0, len(vulns))
+	allArtfactsToVulns := make([]artifactVulns, 0, len(vulns))
 	for _, vuln := range vulns {
-		found := false
-		for i := range versions {
-			if versions[i].Version == vuln.AssetVersionName {
-				versions[i].Vulns = append(versions[i].Vulns, vuln)
-				found = true
-				break
-			}
+		artifacts, err := artifactRepository.GetAllArtifactAffectedByDependencyVuln(nil, vuln.ID)
+		if err != nil {
+			return nil, err
 		}
-		if !found {
-			versions = append(versions, versionVulns{Version: vuln.AssetVersionName, Vulns: []models.DependencyVuln{vuln}})
+		for _, artifact := range artifacts {
+			found := false
+			for i := range allArtfactsToVulns {
+				if allArtfactsToVulns[i].Artifact == fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName) {
+					allArtfactsToVulns[i].Vulns = append(allArtfactsToVulns[i].Vulns, vuln)
+					found = true
+					break
+				}
+			}
+			if !found {
+				allArtfactsToVulns = append(allArtfactsToVulns, artifactVulns{Artifact: fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName), Vulns: []models.DependencyVuln{vuln}})
+			}
 		}
 	}
 
 	// for each vuln in this object list the respective purl and the current state
 	summary := ""
-	for _, version := range versions {
-		summary += fmt.Sprintf("ProductID %s: ", version.Version)
+	for _, version := range allArtfactsToVulns {
+		summary += fmt.Sprintf("ProductID %s: ", version.Artifact)
 		for _, vuln := range version.Vulns {
 			switch vuln.State {
 			case models.VulnStateOpen:
@@ -1086,7 +1111,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 	summary = strings.TrimRight(summary, "| ")
 	vulnDetails.Text = summary
 
-	return []note{vulnDetails, cveDescription}
+	return []note{vulnDetails, cveDescription}, nil
 }
 
 // generate the tracking object used by the document object
