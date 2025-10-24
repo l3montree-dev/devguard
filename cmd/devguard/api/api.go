@@ -563,7 +563,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	patService := pat.NewPatService(patRepository)
 
 	vulndbController := vulndb.NewHTTPController(cveRepository)
-	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, assetRepository, projectRepository, orgRepository)
+	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, assetRepository, projectRepository, orgRepository, cveRepository)
 
 	server := echohttp.Server()
 

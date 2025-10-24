@@ -31,6 +31,7 @@ type csafController struct {
 	AssetRepository          core.AssetRepository
 	ProjectRepository        core.ProjectRepository
 	OrganizationRepository   core.OrganizationRepository
+	CVERepository            core.CveRepository
 }
 
 // root struct of the document
@@ -259,7 +260,7 @@ type productID = string
 
 // from here on: code that builds the human navigable html web interface
 
-func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository) *csafController {
+func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository, cveRepository core.CveRepository) *csafController {
 	return &csafController{
 		DependencyVulnRepository: dependencyVulnRepository,
 		VulnEventRepository:      vulnEventRepository,
@@ -267,6 +268,7 @@ func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, v
 		AssetRepository:          assetRepository,
 		ProjectRepository:        projectRepository,
 		OrganizationRepository:   organizationRepository,
+		CVERepository:            cveRepository,
 	}
 }
 
@@ -422,6 +424,11 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 				allYears = append(allYears, event.CreatedAt.Year())
 			}
 		}
+	}
+
+	// append the initial report to the list of years
+	if !slices.Contains(allYears, asset.CreatedAt.Year()) {
+		allYears = append(allYears, asset.CreatedAt.Year())
 	}
 
 	slices.Sort(allYears)
@@ -719,7 +726,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 		Publisher: publisherReplacement{
 			Category:       "vendor",
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
-			Name:           org.Slug,
+			Name:           org.Name,
 			Namespace:      "TODO ", // TODO add option to add namespace to an org
 		},
 	}
@@ -736,7 +743,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 			return err
 		}
 		distribution := distributionProviderMetadata{
-			Summary:  "location of provider-metadata.json for asset: " + asset.Slug,
+			Summary:  "location of provider-metadata.json for asset: " + asset.Name,
 			TLPLabel: "WHITE",
 			URL:      fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, project.Slug, asset.Slug),
 		}
@@ -803,7 +810,7 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
-	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository)
+	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository, controller.CVERepository)
 	if err != nil {
 		return err
 	}
@@ -849,7 +856,7 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 }
 
 // generate a specific csaf report version
-func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository) (csaf, error) {
+func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository) (csaf, error) {
 	csafDoc := csaf{}
 	// extract context information
 	version, err := extractVersionFromDocumentID(ctx.Param("version"))
@@ -864,7 +871,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 		CSAFVersion: "2.0",
 		Publisher: publisherReplacement{
 			Category:  "vendor",
-			Name:      org.Slug,
+			Name:      org.Name,
 			Namespace: "https://devguard.org",
 		},
 		Title:    fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
@@ -899,7 +906,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if err != nil {
 		return csafDoc, err
 	}
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository)
+	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, cveRepository)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -942,7 +949,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository) ([]vulnerability, error) {
+func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository) ([]vulnerability, error) {
 	vulnerabilites := []vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns
@@ -1007,7 +1014,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			KnownAffected: uniqueVersionsAffected,
 		}
 
-		vulnObject.Notes = generateNoteForVulnerabilityObject(vulnsInGroup)
+		vulnObject.Notes = generateNotesForVulnerabilityObject(vulnsInGroup, cveRepository)
 		vulnerabilites = append(vulnerabilites, vulnObject)
 	}
 
@@ -1023,10 +1030,24 @@ type versionVulns struct {
 }
 
 // generate the textual summary for a vulnerability object
-func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
+func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepository core.CveRepository) []note {
+	if len(vulns) == 0 {
+		return nil
+	}
 	vulnDetails := note{
 		Category: "details",
 		Title:    "state of the vulnerability in the product",
+	}
+
+	cve, err := cveRepository.FindByID(*vulns[0].CVEID)
+	if err != nil {
+		return nil
+	}
+
+	cveDescription := note{
+		Category: "description",
+		Title:    "textual description of CVE",
+		Text:     cve.Description,
 	}
 
 	// a map would be faster but we need an ordered set to make the output deterministic
@@ -1048,15 +1069,15 @@ func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 	// for each vuln in this object list the respective purl and the current state
 	summary := ""
 	for _, version := range versions {
-		summary += fmt.Sprintf("Version %s: ", version.Version)
+		summary += fmt.Sprintf("ProductID %s: ", version.Version)
 		for _, vuln := range version.Vulns {
 			switch vuln.State {
 			case models.VulnStateOpen:
-				summary += "unhandled for purl " + *vuln.ComponentPurl + ", "
+				summary += "unhandled for package " + *vuln.ComponentPurl + ", "
 			case models.VulnStateAccepted:
-				summary += "accepted for purl " + *vuln.ComponentPurl + ", "
+				summary += "accepted for package " + *vuln.ComponentPurl + ", "
 			case models.VulnStateFalsePositive:
-				summary += "marked as false positive for purl " + *vuln.ComponentPurl + ", "
+				summary += "marked as false positive for package " + *vuln.ComponentPurl + ", "
 			}
 		}
 		summary = strings.TrimRight(summary, ", ")
@@ -1064,7 +1085,8 @@ func generateNoteForVulnerabilityObject(vulns []models.DependencyVuln) []note {
 	}
 	summary = strings.TrimRight(summary, "| ")
 	vulnDetails.Text = summary
-	return []note{vulnDetails}
+
+	return []note{vulnDetails, cveDescription}
 }
 
 // generate the tracking object used by the document object
@@ -1101,7 +1123,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	}
 
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(asset, allEvents, documentVersion)
+	revisions, err := buildRevisionHistory(asset, allEvents, documentVersion, dependencyVulnRepository)
 	if err != nil {
 		return tracking, err
 	}
@@ -1116,7 +1138,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int) ([]revisionReplacement, error) {
+func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revisionReplacement, error) {
 	var revisions []revisionReplacement
 	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
@@ -1153,35 +1175,48 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documen
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
 		revisionObject.Number = strconv.Itoa(i + 2)
-		revisionObject.Summary = generateSummaryForEvents(eventGroup)
+		summary, err := generateSummaryForEvents(eventGroup, dependencyVulnRepository)
+		if err != nil {
+			return nil, err
+		}
+		revisionObject.Summary = summary
 		revisions = append(revisions, revisionObject)
 	}
 
 	return revisions, nil
 }
 
+type vulnEventWithCVEID struct {
+	Event models.VulnEvent
+	CVEID string
+}
+
 // generate a human readable summary to describe the changes of a revision entry
-func generateSummaryForEvents(events []models.VulnEvent) string {
+func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepository core.DependencyVulnRepository) (string, error) {
 	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int { return event1.CreatedAt.Compare(event2.CreatedAt) })
-	acceptedVulns := []models.VulnEvent{}
-	detectedVulns := []models.VulnEvent{}
-	falsePositiveVulns := []models.VulnEvent{}
-	fixedVulns := []models.VulnEvent{}
-	reopenedVulns := []models.VulnEvent{}
+	acceptedVulns := []vulnEventWithCVEID{}
+	detectedVulns := []vulnEventWithCVEID{}
+	falsePositiveVulns := []vulnEventWithCVEID{}
+	fixedVulns := []vulnEventWithCVEID{}
+	reopenedVulns := []vulnEventWithCVEID{}
 
 	// put every event in their respective vuln type set
 	for _, event := range events {
+		vuln, err := dependencyVulnRepository.Read(event.VulnID)
+		if err != nil {
+			return "", err
+		}
 		switch event.Type {
 		case models.EventTypeAccepted:
-			acceptedVulns = append(acceptedVulns, event)
+			acceptedVulns = append(acceptedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		case models.EventTypeDetected:
-			detectedVulns = append(detectedVulns, event)
+			detectedVulns = append(detectedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		case models.EventTypeFalsePositive:
-			falsePositiveVulns = append(falsePositiveVulns, event)
+			falsePositiveVulns = append(falsePositiveVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		case models.EventTypeFixed:
-			fixedVulns = append(fixedVulns, event)
+			fixedVulns = append(fixedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		case models.EventTypeReopened:
-			reopenedVulns = append(reopenedVulns, event)
+			reopenedVulns = append(reopenedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		}
 	}
 
@@ -1189,43 +1224,63 @@ func generateSummaryForEvents(events []models.VulnEvent) string {
 	summary := ""
 	if len(detectedVulns) > 0 {
 		if len(detectedVulns) == 1 {
-			summary += fmt.Sprintf("Detected %d new vulnerability,", len(detectedVulns))
+			summary += fmt.Sprintf("Detected %d new vulnerability (%s),", len(detectedVulns), detectedVulns[0].CVEID)
 		} else {
-			summary += fmt.Sprintf("Detected %d new vulnerabilities,", len(detectedVulns))
+			summary += fmt.Sprintf("Detected %d new vulnerabilities (%s", len(detectedVulns), detectedVulns[0].CVEID)
+			for _, event := range detectedVulns {
+				summary += fmt.Sprintf(", %s", event.CVEID)
+			}
+			summary += ")"
 		}
 	}
 	if len(reopenedVulns) > 0 {
 		if len(reopenedVulns) == 1 {
-			summary += fmt.Sprintf(" Reopened %d old vulnerability,", len(reopenedVulns))
+			summary += fmt.Sprintf("| Reopened %d old vulnerability (%s),", len(reopenedVulns), reopenedVulns[0].CVEID)
 		} else {
-			summary += fmt.Sprintf(" Reopened %d old vulnerabilities,", len(reopenedVulns))
+			summary += fmt.Sprintf("| Reopened %d old vulnerabilities (%s", len(reopenedVulns), reopenedVulns[0].CVEID)
+			for _, event := range reopenedVulns {
+				summary += fmt.Sprintf(", %s", event.CVEID)
+			}
+			summary += ")"
 		}
 	}
 	if len(fixedVulns) > 0 {
 		if len(fixedVulns) == 1 {
-			summary += fmt.Sprintf(" Fixed %d existing vulnerability,", len(fixedVulns))
+			summary += fmt.Sprintf("| Fixed %d existing vulnerability (%s),", len(fixedVulns), fixedVulns[0].CVEID)
 		} else {
-			summary += fmt.Sprintf(" Fixed %d existing vulnerabilities,", len(fixedVulns))
+			summary += fmt.Sprintf("| Fixed %d existing vulnerabilities (%s", len(fixedVulns), fixedVulns[0].CVEID)
+			for _, event := range fixedVulns {
+				summary += fmt.Sprintf(", %s", event.CVEID)
+			}
+			summary += ")"
 		}
 	}
 	if len(acceptedVulns) > 0 {
 		if len(acceptedVulns) == 1 {
-			summary += fmt.Sprintf(" Accepted %d existing vulnerability,", len(acceptedVulns))
+			summary += fmt.Sprintf("| Accepted %d existing vulnerability (%s),", len(acceptedVulns), acceptedVulns[0].CVEID)
 		} else {
-			summary += fmt.Sprintf(" Accepted %d existing vulnerabilities,", len(acceptedVulns))
+			summary += fmt.Sprintf("| Accepted %d existing vulnerabilities (%s", len(acceptedVulns), acceptedVulns[0].CVEID)
+			for _, event := range acceptedVulns {
+				summary += fmt.Sprintf(", %s", event.CVEID)
+			}
+			summary += ")"
 		}
 	}
 	if len(falsePositiveVulns) > 0 {
 		if len(falsePositiveVulns) == 1 {
-			summary += fmt.Sprintf(" Marked %d existing vulnerability as false positive", len(falsePositiveVulns))
+			summary += fmt.Sprintf("| Marked %d existing vulnerability as false positive (%s)", len(falsePositiveVulns), falsePositiveVulns[0].CVEID)
 		} else {
-			summary += fmt.Sprintf(" Marked %d existing vulnerabilities as false positives", len(falsePositiveVulns))
+			summary += fmt.Sprintf("| Marked %d existing vulnerabilities as false positives (%s", len(falsePositiveVulns), falsePositiveVulns[0].CVEID)
+			for _, event := range falsePositiveVulns {
+				summary += fmt.Sprintf(", %s", event.CVEID)
+			}
+			summary += ")"
 		}
 	}
-	summary = strings.TrimLeft(summary, " ")
+	summary = strings.TrimLeft(summary, " |")
 	summary = strings.TrimRight(summary, ",")
 	summary += "."
-	return summary
+	return summary, nil
 }
 
 // small helper function to extract the version from the file name of a csaf report
