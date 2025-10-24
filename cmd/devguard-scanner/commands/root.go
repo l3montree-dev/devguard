@@ -136,7 +136,7 @@ func init() {
 		NewGetCommand(),
 		NewCurlCommand(),
 		NewMergeSBOMSCommand(),
-		NewVEXCommand(),
+		NewDiscoverBaseImageAttestationsCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

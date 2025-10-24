@@ -498,7 +498,8 @@ func scanExternalImage() error {
 		}
 
 		// upload the vex
-		vexResp, err := uploadVEX(vexBuff)
+		// but it is not from upstream - it is the image we are currently looking at.
+		vexResp, err := uploadVEX(vexBuff, false)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -535,7 +536,7 @@ func scanExternalImage() error {
 	return nil
 }
 
-func uploadVEX(vex io.Reader) (*http.Response, error) {
+func uploadVEX(vex io.Reader, isFromUpstream bool) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

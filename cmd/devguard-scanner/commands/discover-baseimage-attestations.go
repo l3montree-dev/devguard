@@ -8,10 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
 
@@ -38,40 +38,25 @@ func getContainerFile(ctx context.Context, path string) ([]byte, error) {
 
 func getImageFromContainerFile(containerFile []byte) (string, error) {
 	//split the file by lines
+	regex := regexp.MustCompile(`FROM\s+(.+)`)
+
 	lines := strings.Split(string(containerFile), "\n")
-	lineArr := []string{}
+	var imagePath string
 	for _, line := range lines {
-		// delete all spaces from the line
-		line = strings.TrimSpace(line)
-		// check if the line starts with FROM
-		if len(line) > 4 && line[:4] == "FROM" {
-			lineArr = append(lineArr, line)
+		matches := regex.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			imagePath = matches[1]
 		}
 	}
 
-	if len(lineArr) == 0 {
+	if imagePath == "" {
 		return "", fmt.Errorf("no FROM statement found in container file")
 	}
 
-	//get the last FROM statement
-	lastFrom := lineArr[len(lineArr)-1]
-
-	//split the line by spaces
-	fromParts := strings.Split(lastFrom, " ")
-	//check if there are at least 2 parts
-	if len(fromParts) < 2 {
-		return "", fmt.Errorf("no image found in FROM statement")
-	}
-
-	image := fromParts[1]
-
-	//return the image
-
-	return image, nil
+	return imagePath, nil
 }
 
 func getVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
-
 	var vex *cyclonedx.BOM
 
 	attestations, err := getAttestations(imageRef)
@@ -81,60 +66,32 @@ func getVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
 
 	for _, attestation := range attestations {
 		if strings.HasPrefix(attestation["predicateType"].(string), "https://cyclonedx.org/vex") {
-
-			if vex != nil {
-				panic("multiple vex documents found for image")
-			}
-
 			predicate, ok := attestation["predicate"].(map[string]any)
 			if !ok {
-				panic("could not parse predicate")
+				continue
 			}
 
 			// marshal the predicate back to json
 			predicateBytes, err := json.Marshal(predicate)
 			if err != nil {
-				panic(err)
+				continue
 			}
 			vex, err = bomFromBytes(predicateBytes)
 			if err != nil {
-				panic(err)
-			}
-
-			//save the vex to a file
-			filename := "vex-" + strings.ReplaceAll(imageRef, "/", "_") + ".json"
-			file, err := os.Create(filename)
-			if err != nil {
-				slog.Error("could not create vex file", "err", err)
 				continue
 			}
-			defer file.Close()
-
-			vexBytes, err := json.MarshalIndent(vex, "", "  ")
-			if err != nil {
-				slog.Error("could not marshal vex", "err", err)
-				continue
-			}
-
-			_, err = file.Write(vexBytes)
-			if err != nil {
-				slog.Error("could not write vex to file", "err", err)
-				continue
-			}
-
-			slog.Info("wrote vex to file", "file", file.Name())
+			return vex, nil
 		}
 	}
 
-	return vex, nil
+	return nil, fmt.Errorf("no vex document found for image")
 }
 
-func vexCommand(cmd *cobra.Command, args []string) error {
-
+func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// check if the is a container file or a dockerfile
-	containerFile, err := getContainerFile(ctx, config.RuntimeBaseConfig.Path)
+	containerFile, err := getContainerFile(ctx, args[0])
 	if err != nil {
 		return err
 	}
@@ -161,7 +118,7 @@ func vexCommand(cmd *cobra.Command, args []string) error {
 		}
 
 		// upload the vex
-		vexResp, err := uploadVEX(vexBuff)
+		vexResp, err := uploadVEX(vexBuff, true)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -181,17 +138,16 @@ func vexCommand(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func NewVEXCommand() *cobra.Command {
-	vexCommand := &cobra.Command{
-		Use:   "vex",
-		Short: "Commands for working with VEX documents",
-		Args:  cobra.ExactArgs(0),
-		RunE:  vexCommand,
+func NewDiscoverBaseImageAttestationsCommand() *cobra.Command {
+	discoverBaseImageAttestationsCmd := &cobra.Command{
+		Use:   "discover-baseimage-attestations",
+		Short: "Discover base image attestations from container files",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runDiscoverBaseImageAttestations,
 	}
 
-	addDefaultFlags(vexCommand)
-	addAssetRefFlags(vexCommand)
-	vexCommand.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
+	addDefaultFlags(discoverBaseImageAttestationsCmd)
+	addAssetRefFlags(discoverBaseImageAttestationsCmd)
 
-	return vexCommand
+	return discoverBaseImageAttestationsCmd
 }
