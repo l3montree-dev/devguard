@@ -16,52 +16,37 @@ limitations under the License.
 package commands
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
 func NewLoginCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login [flags] <registry>",
+		Args:  cobra.ExactArgs(1),
 		Short: "Log in to a remote registry",
-		Long:  `Log in to a remote registry`,
-		RunE:  runLogin,
+		Long: `Log in to a remote registry using username and password.
+
+Provide the registry URL as a positional argument. Both --username and --password
+are required by this command. Credentials will be used to authenticate with the
+registry (for example to pull/push images) and may be cached per the underlying
+container runtime configuration.
+
+Example:
+  devguard-scanner login -u myuser -p mypass ghcr.io
+`,
+		RunE: runLogin,
 	}
 
-	cmd.Flags().StringP("username", "u", "", "username")
-	cmd.Flags().StringP("password", "p", "", "password")
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (required)")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (required)")
 	// mark both flags as required
 	cmd.MarkFlagRequired("username") // nolint:errcheck
 	cmd.MarkFlagRequired("password") // nolint:errcheck
 	return cmd
-}
-
-func login(ctx context.Context, username, password, registryURL string) error {
-	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
-		AllowPlaintextPut:        true,
-		DetectDefaultNativeStore: true,
-	})
-	if err != nil {
-		return err
-	}
-
-	return credentials.Login(ctx, store, &remote.Registry{
-		RepositoryOptions: remote.RepositoryOptions{
-			Reference: registry.Reference{
-				Registry: registryURL,
-			},
-		},
-	}, auth.Credential{
-		Username: username,
-		Password: password,
-	})
 }
 
 func runLogin(cmd *cobra.Command, args []string) error {
@@ -69,7 +54,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	registryURL := args[0]
 
-	err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryURL)
+	err := scanner.Login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryURL)
 	if err != nil {
 		slog.Error("login failed", "err", err)
 	}

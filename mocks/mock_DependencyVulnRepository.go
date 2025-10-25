@@ -1656,6 +1656,96 @@ func (_c *DependencyVulnRepository_ListByAssetAndAssetVersion_Call) RunAndReturn
 	return _c
 }
 
+// ListByAssetIDWithoutHandledExternalEvents provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error) {
+	ret := _mock.Called(assetID, assetVersionName, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByAssetIDWithoutHandledExternalEvents")
+	}
+
+	var r0 core.Paged[models.DependencyVuln]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVuln], error)); ok {
+		return returnFunc(assetID, assetVersionName, pageInfo, search, filter, sort)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.DependencyVuln]); ok {
+		r0 = returnFunc(assetID, assetVersionName, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.DependencyVuln])
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = returnFunc(assetID, assetVersionName, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByAssetIDWithoutHandledExternalEvents'
+type DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call struct {
+	*mock.Call
+}
+
+// ListByAssetIDWithoutHandledExternalEvents is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *DependencyVulnRepository_Expecter) ListByAssetIDWithoutHandledExternalEvents(assetID interface{}, assetVersionName interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call {
+	return &DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call{Call: _e.mock.On("ListByAssetIDWithoutHandledExternalEvents", assetID, assetVersionName, pageInfo, search, filter, sort)}
+}
+
+func (_c *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call) Run(run func(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 core.PageInfo
+		if args[2] != nil {
+			arg2 = args[2].(core.PageInfo)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 []core.FilterQuery
+		if args[4] != nil {
+			arg4 = args[4].([]core.FilterQuery)
+		}
+		var arg5 []core.SortQuery
+		if args[5] != nil {
+			arg5 = args[5].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call) Return(paged core.Paged[models.DependencyVuln], err error) *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error)) *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUnfixedByAssetAndAssetVersion provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(assetVersionName, assetID, artifactName)

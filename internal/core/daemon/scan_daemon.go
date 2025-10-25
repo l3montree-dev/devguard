@@ -51,7 +51,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 	webhookIntegration := webhook.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
-	artifactService := artifact.NewService(artifactRepository)
+
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -66,8 +66,8 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
-
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
 
 	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
@@ -136,7 +136,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							slog.Error("error when building SBOM")
 							continue
 						}
-						normalizedBOM := normalize.FromCdxBom(bom, false)
+						normalizedBOM := normalize.CdxBom(bom)
 						if len(components) <= 0 {
 							continue
 						} else {

@@ -48,6 +48,14 @@ const (
 	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
 )
 
+type UpstreamState int
+
+const (
+	UpstreamStateInternal         UpstreamState = 0
+	UpstreamStateExternalAccepted UpstreamState = 1
+	UpstreamStateExternal         UpstreamState = 2
+)
+
 type VulnEvent struct {
 	Model
 	Type                     VulnEventType               `json:"type" gorm:"type:text"`
@@ -58,7 +66,8 @@ type VulnEvent struct {
 	MechanicalJustification  MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 	ArbitraryJSONData        string                      `json:"arbitraryJSONData" gorm:"type:text;"`
 	arbitraryJSONData        map[string]any
-	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	OriginalAssetVersionName *string       `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	Upstream                 UpstreamState `json:"upstream" gorm:"default:0;not null;"`
 }
 
 type VulnEventDetail struct {
@@ -100,6 +109,14 @@ func (event VulnEvent) TableName() string {
 }
 
 func (event VulnEvent) Apply(vuln Vuln) {
+	if event.Upstream == UpstreamStateExternal {
+		// external event that should not modify state
+		return
+	}
+	if event.Upstream == UpstreamStateExternalAccepted && event.Type == EventTypeAccepted {
+		// its an external accepted event that should not modify state
+		return
+	}
 	switch event.Type {
 	case EventTypeLicenseDecision:
 		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
@@ -143,7 +160,7 @@ func (event VulnEvent) Apply(vuln Vuln) {
 
 }
 
-func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
+func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string, upstream UpstreamState) VulnEvent {
 
 	return VulnEvent{
 		Type:          EventTypeAccepted,
@@ -151,16 +168,18 @@ func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification st
 		UserID:        userID,
 		VulnType:      vulnType,
 		Justification: &justification,
+		Upstream:      upstream,
 	}
 }
 
-func NewReopenedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
+func NewReopenedEvent(vulnID string, vulnType VulnType, userID, justification string, upstream UpstreamState) VulnEvent {
 	return VulnEvent{
 		Type:          EventTypeReopened,
 		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
 		Justification: &justification,
+		Upstream:      upstream,
 	}
 }
 
@@ -174,7 +193,7 @@ func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification str
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, artifactName string) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, artifactName string, upstream UpstreamState) VulnEvent {
 	ev := VulnEvent{
 		Type:                    EventTypeFalsePositive,
 		VulnID:                  vulnID,
@@ -182,17 +201,19 @@ func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justificati
 		UserID:                  userID,
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
+		Upstream:                upstream,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewFixedEvent(vulnID string, vulnType VulnType, userID string, artifactName string) VulnEvent {
+func NewFixedEvent(vulnID string, vulnType VulnType, userID string, artifactName string, upstream UpstreamState) VulnEvent {
 	ev := VulnEvent{
 		Type:     EventTypeFixed,
 		VulnType: vulnType,
 		VulnID:   vulnID,
 		UserID:   userID,
+		Upstream: upstream,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
@@ -210,12 +231,13 @@ func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, ju
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string) VulnEvent {
+func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string, upstream UpstreamState) VulnEvent {
 	ev := VulnEvent{
 		Type:     EventTypeDetected,
 		VulnType: vulnType,
 		VulnID:   vulnID,
 		UserID:   userID,
+		Upstream: upstream,
 	}
 
 	m := riskCalculationReport.Map()

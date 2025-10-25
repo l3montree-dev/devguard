@@ -54,6 +54,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		VulnerabilityName: event.CVEID,
 		PackageName:       event.ComponentPurl,
 		URI:               event.URI,
+		Upstream:          event.Upstream,
 	}
 }
 
@@ -78,6 +79,7 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 			AssetVersionSlug:        e.Slug,
 			PackageName:             e.ComponentPurl,
 			URI:                     e.URI,
+			Upstream:                e.Upstream,
 		})
 
 	}

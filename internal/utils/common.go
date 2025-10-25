@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -219,4 +220,18 @@ func BeautifyPURL(pURL string) (string, error) {
 	} else {
 		return p.Namespace + "/" + p.Name, nil
 	}
+}
+
+func GetDirFromPath(path string) string {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return path
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		return path
+	case mode.IsRegular():
+		return filepath.Dir(path)
+	}
+	return path
 }

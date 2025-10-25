@@ -33,6 +33,9 @@ type dependencyVulnHTTPController struct {
 	dependencyVulnService    core.DependencyVulnService
 	projectService           core.ProjectService
 	statisticsService        core.StatisticsService
+	vulnEventRepository      core.VulnEventRepository
+	// mark public to let it be overridden in tests
+	core.FireAndForgetSynchronizer
 }
 
 type DependencyVulnStatus struct {
@@ -41,12 +44,14 @@ type DependencyVulnStatus struct {
 	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService) *dependencyVulnHTTPController {
+func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService, statisticsService core.StatisticsService, vulnEventRepository core.VulnEventRepository) *dependencyVulnHTTPController {
 	return &dependencyVulnHTTPController{
-		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVulnService,
-		projectService:           projectService,
-		statisticsService:        statisticsService,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		dependencyVulnService:     dependencyVulnService,
+		projectService:            projectService,
+		statisticsService:         statisticsService,
+		vulnEventRepository:       vulnEventRepository,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -84,6 +89,28 @@ func (controller dependencyVulnHTTPController) ListByProjectPaged(ctx core.Conte
 		nil,
 		project.ID,
 
+		core.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+		core.GetFilterQuery(ctx),
+		core.GetSortQuery(ctx),
+	)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
+		return convertToDetailedDTO(dependencyVuln)
+	}))
+}
+
+func (controller dependencyVulnHTTPController) ListByAssetIDWithoutHandledExternalEventsPaged(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+
+	pagedResp, err := controller.dependencyVulnRepository.ListByAssetIDWithoutHandledExternalEvents(
+		asset.ID,
+		assetVersion.Name,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),
@@ -270,6 +297,71 @@ func (controller dependencyVulnHTTPController) Hints(ctx core.Context) error {
 	return ctx.JSON(200, hints)
 }
 
+func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
+
+	type vulnReq struct {
+		VulnID string              `json:"vulnId"`
+		Event  events.VulnEventDTO `json:"event"`
+	}
+
+	type requestBody struct {
+		VulnsReq []vulnReq `json:"vulnsReq"`
+	}
+
+	var requestData requestBody
+
+	err := json.NewDecoder(ctx.Request().Body).Decode(&requestData)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	vulns := make([]models.DependencyVuln, 0, len(requestData.VulnsReq))
+
+	for _, r := range requestData.VulnsReq {
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(r.VulnID)
+		if err != nil {
+			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
+			continue
+		}
+		vulns = append(vulns, dependencyVuln)
+		events := dependencyVuln.Events
+		for i := range events {
+			if events[i].Upstream != 2 {
+				continue
+			}
+			events[i].Upstream = 1
+		}
+
+		dependencyVuln.Events = events
+		events[len(events)-1].Apply(&dependencyVuln)
+
+		//update the dependencyVuln and its events
+		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)
+		if err != nil {
+			return err
+		}
+
+		for _, event := range events {
+			if err := controller.vulnEventRepository.Save(nil, &event); err != nil {
+				return err
+			}
+		}
+	}
+
+	controller.FireAndForget(func() {
+		err := controller.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	return ctx.JSON(200, map[string]any{"message": "sync completed"})
+}
+
 func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
@@ -299,7 +391,7 @@ func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) err
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name)
+	ev, err := controller.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
@@ -369,6 +461,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 				AssetVersionName:        getAssetVersionName(dependencyVuln.Vulnerability, ev),
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
+				Upstream:                ev.Upstream,
 			}
 		}),
 	}

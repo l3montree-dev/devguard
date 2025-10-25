@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -61,15 +62,18 @@ func iacScan(p string) (*common.SarifResult, error) {
 
 func NewIaCCommand() *cobra.Command {
 	iacCommand := &cobra.Command{
-		Use:   "iac",
-		Short: "Launch an infrastructure as code scan",
-		Long:  `Launch an infrastructure as code scan. A IaC scan runs predefined rules against your source code`,
+		Use:   "iac [path]",
+		Short: "Run an Infrastructure-as-Code (IaC) scan",
+		Long: `Run an Infrastructure-as-Code scan (e.g. checkov) against a repository or path and upload SARIF results to DevGuard.
 
+Example:
+  devguard-scanner iac --path ./terraform
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return sarifCommandFactory("iac")(cmd, args)
 		},
 	}
 
-	addFirstPartyVulnsScanFlags(iacCommand)
+	scanner.AddFirstPartyVulnsScanFlags(iacCommand)
 	return iacCommand
 }
