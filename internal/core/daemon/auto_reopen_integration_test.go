@@ -199,7 +199,7 @@ func createTestVulnerability(t *testing.T, db core.DB, asset models.Asset, asset
 // acceptVulnerability creates an accepted event for a vulnerability
 func acceptVulnerability(t *testing.T, db core.DB, vulnerability *models.DependencyVuln, timeAgo time.Duration) {
 	// Create an accepted event using the model constructor
-	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), models.VulnTypeDependencyVuln, "test-user", "Accepted for testing", 0)
+	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), models.VulnTypeDependencyVuln, "test-user", "Accepted for testing", models.UpstreamStateInternal)
 
 	// Manually set the creation time for testing
 	acceptEvent.CreatedAt = time.Now().Add(-timeAgo)

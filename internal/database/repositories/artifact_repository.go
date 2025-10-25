@@ -25,17 +25,19 @@ func NewArtifactRepository(db core.DB) *artifactRepository {
 }
 
 func (r *artifactRepository) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	for _, upstreamURL := range upstreamURLs {
-		err := r.db.Where("artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ? AND upstream_url = ?", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, upstreamURL).Delete(&models.ArtifactUpstreamURL{}).Error
-		if err != nil {
-			return err
-		}
+	if len(upstreamURLs) == 0 {
+		return nil
+	}
+	err := r.db.Where("artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ? AND upstream_url IN ?", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, upstreamURLs).Delete(&models.ArtifactUpstreamURL{}).Error
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (r *artifactRepository) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	m := []models.ArtifactUpstreamURL{}
 	for _, upstreamURL := range upstreamURLs {
 		artifactUpstreamURL := models.ArtifactUpstreamURL{
 			ArtifactArtifactName:     artifact.ArtifactName,
@@ -43,19 +45,18 @@ func (r *artifactRepository) AddUpstreamURLs(artifact *models.Artifact, upstream
 			ArtifactAssetID:          artifact.AssetID,
 			UpstreamURL:              upstreamURL,
 		}
-
-		err := r.db.Create(&artifactUpstreamURL).Error
-		if err != nil {
-			return err
-		}
+		m = append(m, artifactUpstreamURL)
 	}
-
+	err := r.db.Create(&m).Error
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
-	err := r.db.Preload("UpstreamURLs").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Debug().Find(&artifacts).Error
+	err := r.db.Preload("UpstreamURLs").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
 	if err != nil {
 		return nil, err
 	}

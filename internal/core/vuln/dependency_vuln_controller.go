@@ -304,7 +304,7 @@ func (controller dependencyVulnHTTPController) SyncDependencyVulns(ctx core.Cont
 	project := core.GetProject(ctx)
 
 	type vulnReq struct {
-		VulnID string              `json:"vulnID"`
+		VulnID string              `json:"vulnId"`
 		Event  events.VulnEventDTO `json:"event"`
 	}
 

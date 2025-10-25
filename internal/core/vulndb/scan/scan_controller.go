@@ -207,7 +207,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, origin, 0)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, origin, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
@@ -371,7 +371,7 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	// if no origin is provided via header set it ourselves
 	origin := c.Request().Header.Get("X-Origin")
 	if origin == "" {
-		origin = "sbom-file-upload-1"
+		origin = "sbom-file-upload"
 		c.Request().Header.Set("X-Origin", origin)
 	}
 

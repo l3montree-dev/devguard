@@ -37,5 +37,5 @@ func (a Artifact) TableName() string {
 }
 
 func (a ArtifactUpstreamURL) TableName() string {
-	return "artifact_upstream_url"
+	return "artifact_upstream_urls"
 }

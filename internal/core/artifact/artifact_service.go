@@ -334,7 +334,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Or
 	}
 
 	if len(notExistingVulnsList) > 0 {
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream, true)
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream)
 		if err != nil {
 			slog.Error("could not create dependency vulns", "err", err)
 			return allVulns, echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)

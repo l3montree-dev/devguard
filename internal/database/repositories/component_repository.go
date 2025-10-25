@@ -48,19 +48,6 @@ func (c *componentRepository) FindAllWithoutLicense() ([]models.Component, error
 	return components, err
 }
 
-func (c *componentRepository) GetRootComponentPurl(tx core.DB, artifactName string, assetVersionName string, assetID uuid.UUID) (string, error) {
-	var rootComponentPurl string
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
-		Select("component_purl").
-		Joins("JOIN artifact_component_dependencies acd ON acd.component_dependency_id = component_dependencies.id").
-		Where("acd.artifact_artifact_name = ? AND acd.artifact_asset_version_name = ? AND acd.artifact_asset_id = ?", artifactName, assetVersionName, assetID).
-		Where("component_purl IS NOT NULL").
-		Limit(1).
-		Scan(&rootComponentPurl).Error
-
-	return rootComponentPurl, err
-}
-
 func (c *componentRepository) CreateComponents(tx core.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil

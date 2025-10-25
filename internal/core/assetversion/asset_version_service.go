@@ -524,12 +524,19 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		// make sure to first create a user detected event for vulnerabilities with just upstream events
+		// this way we preserve the event history
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, models.UpstreamStateInternal)
+		if err != nil {
+			slog.Error("error when trying to add events for vulnerability with just upstream events")
+			return err
+		}
 		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, models.UpstreamStateInternal, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, models.UpstreamStateInternal); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -545,11 +552,6 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, models.UpstreamStateInternal, false)
-		if err != nil {
-			slog.Error("error when trying to add events for vulnerability with just upstream events")
-			return err
-		}
 		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, models.UpstreamStateInternal)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)

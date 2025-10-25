@@ -429,16 +429,16 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call
 }
 
 // UserDetectedDependencyVulns provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState, stateApply bool) error {
-	ret := _mock.Called(tx, artifactName, dependencyVulns, assetVersion, asset, upstream, stateApply)
+func (_mock *DependencyVulnService) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error {
+	ret := _mock.Called(tx, artifactName, dependencyVulns, assetVersion, asset, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedDependencyVulns")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, models.UpstreamState, bool) error); ok {
-		r0 = returnFunc(tx, artifactName, dependencyVulns, assetVersion, asset, upstream, stateApply)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, models.UpstreamState) error); ok {
+		r0 = returnFunc(tx, artifactName, dependencyVulns, assetVersion, asset, upstream)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -457,12 +457,11 @@ type DependencyVulnService_UserDetectedDependencyVulns_Call struct {
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
 //   - upstream models.UpstreamState
-//   - stateApply bool
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, upstream interface{}, stateApply interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
-	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, artifactName, dependencyVulns, assetVersion, asset, upstream, stateApply)}
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, upstream interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, artifactName, dependencyVulns, assetVersion, asset, upstream)}
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState, stateApply bool)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -488,10 +487,6 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(t
 		if args[5] != nil {
 			arg5 = args[5].(models.UpstreamState)
 		}
-		var arg6 bool
-		if args[6] != nil {
-			arg6 = args[6].(bool)
-		}
 		run(
 			arg0,
 			arg1,
@@ -499,7 +494,6 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(t
 			arg3,
 			arg4,
 			arg5,
-			arg6,
 		)
 	})
 	return _c
@@ -510,7 +504,7 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Return(err err
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState, stateApply bool) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -118,7 +118,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState, stateApply bool) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -135,9 +135,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, d
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
 		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, artifactName, upstream)
 		// apply the event on the dependencyVuln
-		if stateApply {
-			ev.Apply(&dependencyVulns[i])
-		}
+		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
 	}
 
@@ -336,7 +334,6 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	}
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
-
 	return ev, err
 }
 

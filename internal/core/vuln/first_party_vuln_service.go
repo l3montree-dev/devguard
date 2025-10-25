@@ -40,7 +40,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, 0)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, models.UpstreamStateInternal)
 
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -61,7 +61,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, 
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, common.RiskCalculationReport{}, scannerID, 0)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, common.RiskCalculationReport{}, scannerID, models.UpstreamStateInternal)
 		// apply the event on the dependencyVuln
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -144,11 +144,11 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx core.DB, userID str
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, 0)
+		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, models.UpstreamStateInternal)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, 0)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, models.UpstreamStateInternal)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, 0)
+		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, models.UpstreamStateInternal)
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification)
 	}
