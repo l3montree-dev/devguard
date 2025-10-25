@@ -36,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -114,7 +115,7 @@ func NewSarifCommand() *cobra.Command {
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
-	addFirstPartyVulnsScanFlags(cmd)
+	scanner.AddFirstPartyVulnsScanFlags(cmd)
 	return cmd
 }
 

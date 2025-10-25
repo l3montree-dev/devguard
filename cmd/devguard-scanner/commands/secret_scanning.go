@@ -13,6 +13,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,7 @@ func NewSecretScanningCommand() *cobra.Command {
 		RunE:  sarifCommandFactory("secret-scanning"),
 	}
 
-	addFirstPartyVulnsScanFlags(secretScanningCommand)
+	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)
 	return secretScanningCommand
 }
 

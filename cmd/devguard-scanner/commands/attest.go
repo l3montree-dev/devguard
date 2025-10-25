@@ -27,6 +27,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -149,8 +150,8 @@ func NewAttestCommand() *cobra.Command {
 		},
 	}
 
-	addDefaultFlags(cmd)
-	addAssetRefFlags(cmd)
+	scanner.AddDefaultFlags(cmd)
+	scanner.AddAssetRefFlags(cmd)
 	cmd.Flags().StringP("predicateType", "a", "", "The type of the attestation")
 	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
 

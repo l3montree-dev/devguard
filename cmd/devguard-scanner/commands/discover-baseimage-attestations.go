@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +60,7 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 func getVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
 	var vex *cyclonedx.BOM
 
-	attestations, err := getAttestations(imageRef)
+	attestations, err := scanner.DiscoverAttestations(imageRef)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +119,7 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 		}
 
 		// upload the vex
-		vexResp, err := uploadVEX(vexBuff, true)
+		vexResp, err := scanner.UploadVEX(vexBuff, true)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -146,8 +147,9 @@ func NewDiscoverBaseImageAttestationsCommand() *cobra.Command {
 		RunE:  runDiscoverBaseImageAttestations,
 	}
 
-	addDefaultFlags(discoverBaseImageAttestationsCmd)
-	addAssetRefFlags(discoverBaseImageAttestationsCmd)
+	scanner.AddDefaultFlags(discoverBaseImageAttestationsCmd)
+	scanner.AddAssetRefFlags(discoverBaseImageAttestationsCmd)
+	discoverBaseImageAttestationsCmd.PersistentFlags().String("origin", "base-image", "The origin of the attestations being discovered. E.g. 'base-image' or 'container-scanning")
 
 	return discoverBaseImageAttestationsCmd
 }

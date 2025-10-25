@@ -16,10 +16,7 @@
 package commands
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -29,22 +26,12 @@ func NewContainerScanningCommand() *cobra.Command {
 		Short: "Software composition analysis of a container image",
 		Long:  `Scan a container image for vulnerabilities. The image must either be a tar file (--path) or available for download via a container registry (--image).`,
 		// Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if config.RuntimeBaseConfig.Image != "" {
-				return scaCommand(cmd, args)
-			} else {
-				hasTarSuffix := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar")
-				if !hasTarSuffix {
-					return fmt.Errorf("path must be a tar file")
-				}
-				return scaCommand(cmd, args)
-			}
-		},
+		RunE: scaCommand,
 	}
 
-	addDependencyVulnsScanFlags(containerScanningCommand)
+	scanner.AddDependencyVulnsScanFlags(containerScanningCommand)
 	containerScanningCommand.Flags().String("image", "", "The oci image to scan.")
-	containerScanningCommand.Flags().String("origin", "container-scanning", "The type of the scanner. Can be 'origin' or 'container-scan'. Defaults to 'container-scan'.")
+	containerScanningCommand.Flags().String("origin", "container-scanning", "The origin of the SBOM. How it was generated. E.g. 'source-scanning' or 'container-scanning', 'base-image'.")
 
 	return containerScanningCommand
 }

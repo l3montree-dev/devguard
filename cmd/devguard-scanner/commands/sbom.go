@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -104,6 +105,6 @@ func NewSbomCommand() *cobra.Command {
 		RunE:  sbomCmd,
 	}
 
-	addDependencyVulnsScanFlags(cmd)
+	scanner.AddDependencyVulnsScanFlags(cmd)
 	return cmd
 }

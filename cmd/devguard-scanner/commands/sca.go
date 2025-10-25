@@ -18,11 +18,9 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,26 +28,20 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-type AttestationFileLine struct {
-	PayloadType string `json:"payloadType"`
-	Payload     string `json:"payload"` // base64 encoded AttestationPayload
-}
 
 // extract filename from path or return directory if path points to a directory
 // second return argument is true if it's a directory and false is it's a file
@@ -93,7 +85,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	if isImage {
 		workDir = "./"
 	} else {
-		workDir = getDirFromPath(pathOrImage)
+		workDir = utils.GetDirFromPath(pathOrImage)
 	}
 	sbomFile := filepath.Join(workDir, filename)
 
@@ -265,133 +257,12 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 	return nil
 }
 
-func addDefaultFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
-	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.org", "The url of the API to send the scan request to")
-}
-
-func addAssetRefFlags(cmd *cobra.Command) {
-	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
-	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
-	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
-}
-
-func addDependencyVulnsScanFlags(cmd *cobra.Command) {
-	addDefaultFlags(cmd)
-	addAssetRefFlags(cmd)
-
-	err := cmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-
-	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
-	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will default to the empty artifact name ''.")
-
-}
-func addFirstPartyVulnsScanFlags(cmd *cobra.Command) {
-	addDefaultFlags(cmd)
-	addAssetRefFlags(cmd)
-
-	err := cmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-
-	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
-
-}
-
-func getDirFromPath(path string) string {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return path
-	}
-	switch mode := fi.Mode(); {
-	case mode.IsDir():
-		return path
-	case mode.IsRegular():
-		return filepath.Dir(path)
-	}
-	return path
-}
-
-func getAttestations(image string) ([]map[string]any, error) {
-	// cosign download attestation image
-	cosignCmd := exec.Command("cosign", "download", "attestation", image)
-
-	stderrBuf := &bytes.Buffer{}
-	stdoutBuf := &bytes.Buffer{}
-
-	// get the output
-	cosignCmd.Stderr = stderrBuf
-	cosignCmd.Stdout = stdoutBuf
-
-	err := cosignCmd.Run()
-	if err != nil {
-		return nil, errors.Wrap(err, stderrBuf.String())
-	}
-
-	stdoutStr := stdoutBuf.String()
-	jsonLines := strings.Split(stdoutStr, "\n")
-	if len(jsonLines) > 0 {
-		// remove last element (empty line)
-		jsonLines = jsonLines[:len(jsonLines)-1]
-	}
-
-	attestations := []map[string]any{}
-	// go through each line (attestation) of the .jsonlines file
-	for _, jsonLine := range jsonLines {
-		var line AttestationFileLine
-		err = json.Unmarshal([]byte(jsonLine), &line)
-		if err != nil {
-			return nil, err
-		}
-
-		// Extract base64 encoded payload
-		data, err := base64.StdEncoding.DecodeString(line.Payload)
-		if err != nil {
-			log.Fatal("error:", err)
-		}
-
-		// Parse payload as attestation
-		var attestation map[string]any
-		err = json.Unmarshal([]byte(data), &attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		attestations = append(attestations, attestation)
-	}
-
-	return attestations, nil
-}
-
-func scanExternalImage() error {
+func scanExternalImage(ctx context.Context) error {
 	// download and extract release attestation BOMs first
-	attestations, err := getAttestations(config.RuntimeBaseConfig.Image)
+	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image)
 	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
 		return err
 	}
-
-	ctx := context.Background()
 
 	// generate SBOM using Trivy
 	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Image, true)
@@ -480,7 +351,7 @@ func scanExternalImage() error {
 	}
 
 	// upload the bom to the scan endpoint
-	resp, cancel, err := uploadBOM(buff)
+	resp, cancel, err := scanner.UploadBOM(buff)
 
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
@@ -499,7 +370,7 @@ func scanExternalImage() error {
 
 		// upload the vex
 		// but it is not from upstream - it is the image we are currently looking at.
-		vexResp, err := uploadVEX(vexBuff, false)
+		vexResp, err := scanner.UploadVEX(vexBuff, false)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -536,59 +407,7 @@ func scanExternalImage() error {
 	return nil
 }
 
-func uploadVEX(vex io.Reader, isFromUpstream bool) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
-	}
-
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not sign request")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	config.SetXAssetHeaders(req)
-
-	return http.DefaultClient.Do(req)
-}
-
-func uploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
-	if err != nil {
-		return nil, cancel, errors.Wrap(err, "could not create request")
-	}
-
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return nil, cancel, errors.Wrap(err, "could not sign request")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
-	config.SetXAssetHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	return resp, cancel, err
-}
-
-func scaCommand(cmd *cobra.Command, args []string) error {
-
-	ctx := cmd.Context()
-
-	// in case it's a docker image we need to scan the image and try to download attestations
-	if config.RuntimeBaseConfig.Image != "" {
-		return scanExternalImage()
-	}
+func scanLocalFilePath(ctx context.Context) error {
 
 	// read the sbom file and post it to the scan endpoint
 	// get the dependencyVulns and print them to the console
@@ -597,7 +416,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not open file")
 	}
 
-	resp, cancel, err := uploadBOM(bytes.NewBuffer(file))
+	resp, cancel, err := scanner.UploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
@@ -626,6 +445,24 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
+func scaCommand(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+
+	// in case it's a docker image we need to scan the image and try to download attestations
+	if config.RuntimeBaseConfig.Image != "" {
+		return scanExternalImage(ctx)
+	} else if config.RuntimeBaseConfig.Path != "" {
+		return scanLocalFilePath(ctx)
+	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
+		config.RuntimeBaseConfig.Image = args[0]
+		return scanExternalImage(ctx)
+	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
+		config.RuntimeBaseConfig.Path = args[0]
+		return scanLocalFilePath(ctx)
+	}
+	return fmt.Errorf("either --image or --path must be specified, or passed as an argument")
+}
+
 func NewSCACommand() *cobra.Command {
 	scaCommand := &cobra.Command{
 		Use:   "sca",
@@ -635,9 +472,9 @@ func NewSCACommand() *cobra.Command {
 		RunE: scaCommand,
 	}
 
-	addDependencyVulnsScanFlags(scaCommand)
+	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	// set default scanner type
-	scaCommand.PersistentFlags().String("origin", "source-scanner", "The type of the scanner. Can be 'source-scanner' or 'container-scan'. Defaults to 'source-scanner'.")
+	scaCommand.PersistentFlags().String("origin", "source-scanning", "The origin of the SBOM. How it was generated. E.g. 'source-scanning' or 'container-scanning', 'base-image'.")
 
 	return scaCommand
 }

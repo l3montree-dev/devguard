@@ -10,6 +10,7 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -70,6 +71,6 @@ func NewIaCCommand() *cobra.Command {
 		},
 	}
 
-	addFirstPartyVulnsScanFlags(iacCommand)
+	scanner.AddFirstPartyVulnsScanFlags(iacCommand)
 	return iacCommand
 }

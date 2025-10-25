@@ -102,6 +102,10 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	tag := ctx.Request().Header.Get("X-Tag")
 
 	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
+	origin := ctx.Request().Header.Get("X-Origin")
+	if origin == "" {
+		origin = "vex-upload"
+	}
 
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
@@ -126,7 +130,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	vulns, err := s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: "vex-upload"}}, org, project, asset, assetVersion, artifact, userID)
+	vulns, err := s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: origin}}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err

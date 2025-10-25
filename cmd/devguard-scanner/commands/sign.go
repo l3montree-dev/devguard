@@ -33,6 +33,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/spf13/cobra"
 )
@@ -214,7 +215,7 @@ func NewSignCommand() *cobra.Command {
 		RunE:  signCmd,
 	}
 
-	addDefaultFlags(cmd)
+	scanner.AddDefaultFlags(cmd)
 
 	// allow username, password and registry to be provided as well as flags
 	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")

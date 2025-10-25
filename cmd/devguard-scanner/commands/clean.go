@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -87,7 +88,7 @@ func NewCleanCommand() *cobra.Command {
 		},
 	}
 
-	addDefaultFlags(cmd)
+	scanner.AddDefaultFlags(cmd)
 	// allow username, password and registry to be provided as well as flags (same as attest)
 	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
 	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
