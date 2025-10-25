@@ -59,7 +59,7 @@ type AssetDTO struct {
 
 	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
 	IsPublic           bool    `json:"isPublic"`
-	ParanoiaMode       bool    `json:"paranoidMode"`
+	ParanoidMode       bool    `json:"paranoidMode"`
 }
 
 type AssetWithSecretsDTO struct {
@@ -130,7 +130,7 @@ func ToDTO(asset models.Asset) AssetDTO {
 		ExternalEntityID:         asset.ExternalEntityID,
 		RepositoryProvider:       asset.RepositoryProvider,
 		IsPublic:                 asset.IsPublic,
-		ParanoiaMode:             asset.ParanoidMode,
+		ParanoidMode:             asset.ParanoidMode,
 	}
 }
 
@@ -223,7 +223,7 @@ type PatchRequest struct {
 
 	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 	IsPublic           *bool   `json:"isPublic"`
-	ParanoiaMode       *bool   `json:"paranoidMode"`
+	ParanoidMode       *bool   `json:"paranoidMode"`
 }
 
 func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
@@ -319,9 +319,9 @@ func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 		asset.IsPublic = *assetPatch.IsPublic
 	}
 
-	if assetPatch.ParanoiaMode != nil {
+	if assetPatch.ParanoidMode != nil {
 		updated = true
-		asset.ParanoidMode = *assetPatch.ParanoiaMode
+		asset.ParanoidMode = *assetPatch.ParanoidMode
 	}
 
 	return updated
