@@ -414,14 +414,3 @@ docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
   --path="/app/image.tar"
 ```
 
-
-
-
-
-
-
-
-
-
-
-go run ./cmd/devguard-scanner/main.go sca \                 --assetName="org/projects/pro/assets/repo" \--apiUrl="http://localhost:8080" \                                          --token="f2c1a61bbbd383975c6f3fcfe51033b020b28454ebc6edcb4bf1c310fcce8f97" --path="../my-project-local"
