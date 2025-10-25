@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/internal/scanner"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -57,37 +56,6 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 	return imagePath, nil
 }
 
-func getVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
-	var vex *cyclonedx.BOM
-
-	attestations, err := scanner.DiscoverAttestations(imageRef)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, attestation := range attestations {
-		if strings.HasPrefix(attestation["predicateType"].(string), "https://cyclonedx.org/vex") {
-			predicate, ok := attestation["predicate"].(map[string]any)
-			if !ok {
-				continue
-			}
-
-			// marshal the predicate back to json
-			predicateBytes, err := json.Marshal(predicate)
-			if err != nil {
-				continue
-			}
-			vex, err = bomFromBytes(predicateBytes)
-			if err != nil {
-				continue
-			}
-			return vex, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no vex document found for image")
-}
-
 func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
@@ -104,7 +72,7 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	}
 
 	//check if there is a vex file for the image
-	vex, err := getVEX(ctx, imagePath)
+	vex, err := scanner.GetVEX(ctx, imagePath)
 	if err != nil {
 		return err
 	}

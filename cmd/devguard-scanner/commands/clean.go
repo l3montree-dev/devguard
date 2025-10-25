@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/scanner"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -23,14 +23,8 @@ func NewCleanCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 			// if credentials are provided, login to the registry first (same behavior as attest)
-			if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
-				err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
-				if err != nil {
-					slog.Error("login failed", "err", err)
-					return err
-				}
-
-				slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+			if err := scanner.MaybeLoginIntoOciRegistry(cmd.Context()); err != nil {
+				return err
 			}
 
 			var out bytes.Buffer

@@ -17,13 +17,10 @@ package commands
 
 import (
 	"bytes"
-	"context"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -32,47 +29,10 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/scanner"
-	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/spf13/cobra"
 )
-
-func uploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetName string) error {
-	devGuardClient := devguard.NewHTTPClient(token, apiURL)
-
-	var body = make(map[string]string)
-
-	// read the public key from file
-	publicKey, err := os.ReadFile(publicKeyPath)
-	if err != nil {
-		return err
-	}
-
-	body["publicKey"] = string(publicKey)
-	// marshal
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/organizations/"+assetName+"/signing-key", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	if err != nil {
-		return err
-	}
-
-	resp, err := devGuardClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("could not upload public key: %s", resp.Status)
-	}
-
-	return nil
-}
 
 func tokenToKey(token string) (string, string, error) {
 	// transform the hex private key to an ecdsa private key
@@ -136,15 +96,8 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	// check if the argument is a file, which does exist
 	fileOrImageName := args[0]
 
-	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
-		// login to the registry
-		err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
-		if err != nil {
-			slog.Error("login failed", "err", err)
-			return err
-		}
-
-		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+	if err := scanner.MaybeLoginIntoOciRegistry(cmd.Context()); err != nil {
+		return err
 	}
 
 	// transform the hex private key to an ecdsa private key
@@ -161,7 +114,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	if !config.RuntimeBaseConfig.Offline {
 		slog.Info("uploading public key to devguard")
 		// upload the public key to the backend
-		err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
+		err = scanner.UploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
 		if err != nil {
 			slog.Error("could not upload public key", "err", err)
 			return err

@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -93,7 +93,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse response")
 	}
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func NewSbomCommand() *cobra.Command {

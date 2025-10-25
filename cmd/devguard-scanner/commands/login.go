@@ -16,15 +16,11 @@ limitations under the License.
 package commands
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
 func NewLoginCommand() *cobra.Command {
@@ -43,33 +39,12 @@ func NewLoginCommand() *cobra.Command {
 	return cmd
 }
 
-func login(ctx context.Context, username, password, registryURL string) error {
-	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
-		AllowPlaintextPut:        true,
-		DetectDefaultNativeStore: true,
-	})
-	if err != nil {
-		return err
-	}
-
-	return credentials.Login(ctx, store, &remote.Registry{
-		RepositoryOptions: remote.RepositoryOptions{
-			Reference: registry.Reference{
-				Registry: registryURL,
-			},
-		},
-	}, auth.Credential{
-		Username: username,
-		Password: password,
-	})
-}
-
 func runLogin(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	registryURL := args[0]
 
-	err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryURL)
+	err := scanner.Login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryURL)
 	if err != nil {
 		slog.Error("login failed", "err", err)
 	}

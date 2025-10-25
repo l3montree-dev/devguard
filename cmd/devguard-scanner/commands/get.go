@@ -13,7 +13,7 @@ func NewGetCommand() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Args:  cobra.ExactArgs(1),
-		Short: "Do a simple authenticated GET request",
+		Short: "Do a simple authenticated GET request. Deprecated in favor of 'curl' command.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// just use this command to disable the default root persistent pre-run
 			return nil

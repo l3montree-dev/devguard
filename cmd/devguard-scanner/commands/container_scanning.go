@@ -16,7 +16,7 @@
 package commands
 
 import (
-	"github.com/l3montree-dev/devguard/internal/scanner"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 

@@ -31,11 +31,9 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/scanner"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -93,7 +91,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	if isImage {
 		image := pathOrImage
 		// login in to docker registry first before we try to run trivy
-		err := maybeLoginIntoOciRegistry(ctx)
+		err := scanner.MaybeLoginIntoOciRegistry(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -137,126 +135,6 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	return content, nil
 }
 
-// Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
-	var cvss float32 = 0.0
-	if v.CVE != nil {
-		cvss = v.CVE.CVSS
-	}
-
-	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
-	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
-	}
-}
-
-// can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
-	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
-
-	if len(scanResponse.DependencyVulns) == 0 {
-		return nil
-	}
-
-	// order the vulns by their risk
-	slices.SortFunc(scanResponse.DependencyVulns, func(a, b vuln.DependencyVulnDTO) int {
-		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
-	})
-
-	// get the max risk of open!!! dependencyVulns
-	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
-		return f.State == "open"
-	}), func(f vuln.DependencyVulnDTO) float64 {
-		return utils.OrDefault(f.RawRiskAssessment, 0)
-	})
-
-	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
-		return f.State == "open" && f.CVE != nil
-	}), func(f vuln.DependencyVulnDTO) float32 {
-		return f.CVE.CVSS
-	})
-
-	maxRisk := 0.
-	for _, risk := range openRisks {
-		if risk > maxRisk {
-			maxRisk = risk
-		}
-	}
-
-	var maxCVSS float32
-	for _, v := range openCVSS {
-		if v > maxCVSS {
-			maxCVSS = v
-		}
-	}
-
-	tw := table.NewWriter()
-	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
-	tw.AppendRows(utils.Map(
-		scanResponse.DependencyVulns,
-		func(v vuln.DependencyVulnDTO) table.Row {
-			// extract package name and version from purl
-			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(*v.ComponentPurl)
-			if err != nil {
-				slog.Error("could not parse purl", "err", err)
-			}
-
-			return dependencyVulnToTableRow(pURL, v)
-		},
-	))
-
-	fmt.Println(tw.Render())
-	if len(scanResponse.DependencyVulns) > 0 {
-		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
-		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
-	}
-
-	switch failOnRisk {
-	case "low":
-		if maxRisk > 0.1 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-	case "medium":
-		if maxRisk >= 4 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
-	case "high":
-		if maxRisk >= 7 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
-	case "critical":
-		if maxRisk >= 9 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-	}
-
-	switch failOnCVSS {
-	case "low":
-		if maxCVSS > 0.1 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "medium":
-		if maxCVSS >= 4 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "high":
-		if maxCVSS >= 7 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "critical":
-		if maxCVSS >= 9 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	}
-
-	return nil
-}
-
 func scanExternalImage(ctx context.Context) error {
 	// download and extract release attestation BOMs first
 	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image)
@@ -271,7 +149,7 @@ func scanExternalImage(ctx context.Context) error {
 	}
 
 	// load sbom that was generated in the line above
-	bom, err := bomFromBytes(file)
+	bom, err := scanner.BomFromBytes(file)
 	if err != nil {
 		return err
 	}
@@ -291,7 +169,7 @@ func scanExternalImage(ctx context.Context) error {
 			if err != nil {
 				panic(err)
 			}
-			vex, err = bomFromBytes(predicateBytes)
+			vex, err = scanner.BomFromBytes(predicateBytes)
 			if err != nil {
 				panic(err)
 			}
@@ -400,7 +278,7 @@ func scanExternalImage(ctx context.Context) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	err = printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	err = scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 	if err != nil {
 		return err
 	}
@@ -442,7 +320,7 @@ func scanLocalFilePath(ctx context.Context) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {

@@ -17,22 +17,18 @@ package commands
 
 import (
 	"bytes"
-	"context"
-	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/scanner"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+
 	"github.com/spf13/cobra"
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-	err := maybeLoginIntoOciRegistry(cmd.Context())
+	err := scanner.MaybeLoginIntoOciRegistry(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -88,52 +84,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// upload the attestation to the backend
-	return uploadAttestation(cmd.Context(), predicate)
-}
-
-func uploadAttestation(ctx context.Context, predicate string) error {
-	// read the file
-	file, err := os.ReadFile(predicate)
-	if err != nil {
-		slog.Error("could not read file", "err", err)
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
-	if err != nil {
-		slog.Error("could not create request", "err", err)
-		return err
-	}
-
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("X-Predicate-Type", config.RuntimeAttestationConfig.PredicateType)
-	// set the headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	config.SetXAssetHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		slog.Error("could not upload attestation", "err", err)
-		return err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		// read the body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
-		}
-		return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
-	}
-
-	slog.Info("attestation uploaded successfully", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType)
-	return nil
+	return scanner.UploadAttestation(cmd.Context(), predicate)
 }
 
 func NewAttestCommand() *cobra.Command {
