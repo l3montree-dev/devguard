@@ -34,7 +34,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, _, err := tokenToKey(config.RuntimeBaseConfig.Token)
+	keyPath, _, err := scanner.TokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
@@ -56,15 +56,16 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 
 	// check if the file does exist
 	predicate := args[0]
+	if _, err := os.Stat(predicate); os.IsNotExist(err) {
+		// print an error message if the file does not exist
+		slog.Error("file does not exist", "file", predicate)
+		return err
+	}
+
 	// check if an image name is provided
 	if len(args) == 2 {
 		slog.Info("attesting image", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType, "image", args[1])
 		imageName := args[1]
-		if _, err := os.Stat(predicate); os.IsNotExist(err) {
-			// print an error message if the file does not exist
-			slog.Error("file does not exist", "file", predicate)
-			return err
-		}
 
 		// use the cosign cli to sign the file
 		attestCmd := exec.Command("cosign", "attest", "--type", config.RuntimeAttestationConfig.PredicateType, "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
@@ -90,9 +91,21 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 func NewAttestCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attest <predicate> [container-image]",
-		Short: "Add a new attestation to an image",
-		Long:  `Add a new attestation to an image`,
-		Args:  cobra.MinimumNArgs(1),
+		Short: "Create and upload an attestation for an image or artifact",
+		Long: `Create and upload an attestation for an OCI image or a local predicate file.
+
+The first argument is a path to a local predicate JSON file that will be used as
+the attestation payload. Optionally provide a container image reference as the
+second argument to attach the attestation to that image.
+
+Examples:
+	devguard-scanner attest predicate.json ghcr.io/org/image:tag
+	devguard-scanner attest predicate.json
+
+This command validates the predicate file exists, signs the upload using the
+configured token, and sends it to the DevGuard backend. The HTTP header
+X-Predicate-Type is populated from the --predicateType flag (required).`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestCmd(cmd, args)
 		},
@@ -103,14 +116,15 @@ func NewAttestCommand() *cobra.Command {
 
 	scanner.AddDefaultFlags(cmd)
 	scanner.AddAssetRefFlags(cmd)
-	cmd.Flags().StringP("predicateType", "a", "", "The type of the attestation")
+	cmd.Flags().StringP("predicateType", "a", "", "The predicate type (URI) for the attestation, e.g. https://slsa.dev/provenance/v1 or https://cyclonedx.org/vex/1.0")
 	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
+	cmd.MarkFlagRequired("token")         //nolint:errcheck
 
 	// allow username, password and registry to be provided as well as flags
-	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
-	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
-	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
-	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will generate a name based on the asset name.")
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to (optional)")
+	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If empty, a name will be generated from the asset name.")
 
 	return cmd
 }

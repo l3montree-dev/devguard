@@ -102,11 +102,16 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 func NewSarifCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sarif",
-		Short: "Usage: <sarif.json>. Scan a static application security test result file.",
-		Long:  `Usage: <sarif.json>. Scan a static application security test result file. This will upload the file to DevGuard and return the results.`,
-		Args:  cobra.ExactArgs(1),
-		RunE:  sarifCmd,
+		Use:   "sarif <sarif.json>",
+		Short: "Scan a SARIF report and upload results to DevGuard",
+		Long: `Upload a SARIF-formatted static analysis report to DevGuard for processing and result comparison.
+
+Example:
+  devguard-scanner sarif results.sarif.json
+
+The command signs the request using the configured token and returns scan results.`,
+		Args: cobra.ExactArgs(1),
+		RunE: sarifCmd,
 	}
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
@@ -217,6 +222,16 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// allow passing path or image as the first positional argument (like sca)
+		if len(args) > 0 && args[0] != "" {
+			// if it looks like an OCI image (contains ':'), set Image, if it's a tar file set Path, otherwise treat as Path
+			if strings.Contains(args[0], ":") {
+				config.RuntimeBaseConfig.Image = args[0]
+			} else {
+				config.RuntimeBaseConfig.Path = args[0]
+			}
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 

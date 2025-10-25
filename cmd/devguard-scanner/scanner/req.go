@@ -102,10 +102,11 @@ func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetNam
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/organizations/"+assetName+"/signing-key", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
+
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := devGuardClient.Do(req)
 	if err != nil {

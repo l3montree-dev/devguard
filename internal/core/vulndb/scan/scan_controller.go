@@ -130,7 +130,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	vulns, err := s.artifactService.SyncReports([]normalize.BomWithOrigin{{BOM: bom, Origin: origin}}, org, project, asset, assetVersion, artifact, userID)
+	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.BomWithOrigin{{BOM: bom, Origin: origin}}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
@@ -140,6 +140,19 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+
+		}
+
+		// save the asset
+		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
 		}
 	})
 

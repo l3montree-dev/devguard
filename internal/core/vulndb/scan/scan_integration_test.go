@@ -1176,7 +1176,7 @@ func TestUploadVEX(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	scanController := inithelper.CreateScanHTTPController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	asset.ParanoiaMode = false
+	asset.ParanoidMode = false
 	if err := db.Save(&asset).Error; err != nil {
 		t.Fatalf("could not save asset: %v", err)
 	}

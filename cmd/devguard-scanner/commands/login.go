@@ -26,13 +26,23 @@ import (
 func NewLoginCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login [flags] <registry>",
+		Args:  cobra.ExactArgs(1),
 		Short: "Log in to a remote registry",
-		Long:  `Log in to a remote registry`,
-		RunE:  runLogin,
+		Long: `Log in to a remote registry using username and password.
+
+Provide the registry URL as a positional argument. Both --username and --password
+are required by this command. Credentials will be used to authenticate with the
+registry (for example to pull/push images) and may be cached per the underlying
+container runtime configuration.
+
+Example:
+  devguard-scanner login -u myuser -p mypass ghcr.io
+`,
+		RunE: runLogin,
 	}
 
-	cmd.Flags().StringP("username", "u", "", "username")
-	cmd.Flags().StringP("password", "p", "", "password")
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (required)")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (required)")
 	// mark both flags as required
 	cmd.MarkFlagRequired("username") // nolint:errcheck
 	cmd.MarkFlagRequired("password") // nolint:errcheck

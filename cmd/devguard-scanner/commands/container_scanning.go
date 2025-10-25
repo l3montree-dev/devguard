@@ -24,14 +24,22 @@ func NewContainerScanningCommand() *cobra.Command {
 	containerScanningCommand := &cobra.Command{
 		Use:   "container-scanning",
 		Short: "Software composition analysis of a container image",
-		Long:  `Scan a container image for vulnerabilities. The image must either be a tar file (--path) or available for download via a container registry (--image).`,
+		Long: `Scan a container image for vulnerabilities. The image must either be a tar file (--path)
+or be available for download via a container registry (--image). The command generates or
+uploads an SBOM which is then analyzed by DevGuard. The request is signed using the
+configured token before upload.
+
+Example:
+  devguard-scanner container-scanning --image ghcr.io/org/image:tag
+  devguard-scanner container-scanning --path image.tar
+`,
 		// Args:  cobra.ExactArgs(0),
 		RunE: scaCommand,
 	}
 
 	scanner.AddDependencyVulnsScanFlags(containerScanningCommand)
-	containerScanningCommand.Flags().String("image", "", "The oci image to scan.")
-	containerScanningCommand.Flags().String("origin", "container-scanning", "The origin of the SBOM. How it was generated. E.g. 'source-scanning' or 'container-scanning', 'base-image'.")
+	containerScanningCommand.Flags().String("image", "", "OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path may be used to provide a tar or local files.")
+	containerScanningCommand.Flags().String("origin", "container-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
 
 	return containerScanningCommand
 }

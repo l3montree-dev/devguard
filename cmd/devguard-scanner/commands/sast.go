@@ -63,10 +63,23 @@ func sastScan(p string) (*common.SarifResult, error) {
 
 func NewSastCommand() *cobra.Command {
 	sastCommand := &cobra.Command{
-		Use:   "sast",
-		Short: "Launch a static application security test.",
-		Long:  "Launch a static application security test. A SAST test runs predefined rules against your source code",
+		Use:   "sast [path]",
+		Short: "Run a static application security test (SAST)",
+		Long: `Run a static application security test using the configured SAST tool.
 
+This command executes the configured SAST scanner (semgrep) against the project
+path provided via flags or configuration, obfuscates sensitive snippets, and
+uploads the SARIF results to DevGuard. The request is signed using the configured
+token before upload.
+
+You may pass the target as the first positional argument instead of using
+--path.
+
+Examples:
+	devguard-scanner sast --path ./my-repo
+	devguard-scanner sast ./my-repo
+	devguard-scanner sast ghcr.io/org/image:tag
+`,
 		RunE: sarifCommandFactory("sast"),
 	}
 

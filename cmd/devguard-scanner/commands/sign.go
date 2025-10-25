@@ -17,8 +17,6 @@ package commands
 
 import (
 	"bytes"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,71 +24,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/uuid"
-
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/spf13/cobra"
 )
-
-func tokenToKey(token string) (string, string, error) {
-	// transform the hex private key to an ecdsa private key
-	privKey, _, err := pat.HexTokenToECDSA(token)
-	if err != nil {
-		slog.Error("could not convert hex token to ecdsa private key", "err", err)
-		os.Exit(1)
-	}
-
-	// encode the private key to PEM
-	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
-	if err != nil {
-		slog.Error("could not marshal private key", "err", err)
-		return "", "", err
-	}
-	// create a new temporary file to store the private key - the file needs to have minimum permissions
-	tempDir := path.Join(os.TempDir(), uuid.New().String())
-	err = os.Mkdir(
-		tempDir,
-		0700,
-	)
-	if err != nil {
-		slog.Error("could not create temp dir", "err", err)
-		return "", "", err
-	}
-
-	file, err := os.OpenFile(path.Join(tempDir, "ecdsa.pem"), os.O_CREATE|os.O_WRONLY, 0600)
-
-	if err != nil {
-		slog.Error("could not create file", "err", err)
-		return "", "", err
-	}
-
-	// encode the private key to PEM
-	err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
-	if err != nil {
-		slog.Error("could not encode private key to PEM", "err", err)
-		return "", "", err
-	}
-
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-
-	// import the cosign key
-	importCmd := exec.Command("cosign", "import-key-pair", "--output-key-prefix", "cosign", "--key", "ecdsa.pem")
-	importCmd.Dir = tempDir
-	importCmd.Stdout = &out
-	importCmd.Stderr = &errOut
-	importCmd.Env = []string{"COSIGN_PASSWORD="}
-
-	err = importCmd.Run()
-	if err != nil {
-		slog.Error("could not import key", "err", err, "out", out.String(), "errOut", errOut.String())
-		return "", "", err
-	}
-
-	return path.Join(tempDir, "cosign.key"), path.Join(tempDir, "cosign.pub"), nil
-}
 
 func signCmd(cmd *cobra.Command, args []string) error {
 	// check if the argument is a file, which does exist
@@ -101,7 +38,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, publicKeyPath, err := tokenToKey(config.RuntimeBaseConfig.Token)
+	keyPath, publicKeyPath, err := scanner.TokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
@@ -163,17 +100,26 @@ func NewSignCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <file | image>",
 		Short: "Sign a file or image",
-		Long:  `Sign a file or image`,
-		Args:  cobra.ExactArgs(1),
-		RunE:  signCmd,
+		Long: `Sign a file or OCI image using cosign.
+
+When not run with --offline the command will upload the public key to DevGuard
+before creating the signature. The public key upload is signed using the
+configured token. The actual signing is performed by the cosign CLI.
+
+Examples:
+  devguard-scanner sign ./artifact.bin
+  devguard-scanner sign ghcr.io/org/image:tag
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: signCmd,
 	}
 
 	scanner.AddDefaultFlags(cmd)
 
 	// allow username, password and registry to be provided as well as flags
-	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
-	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
-	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to (optional)")
 
 	cmd.Flags().BoolP("offline", "o", false, "If set, the scanner will not attempt to upload the signing key to devguard")
 	return cmd

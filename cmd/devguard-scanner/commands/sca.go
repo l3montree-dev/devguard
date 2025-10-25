@@ -286,12 +286,21 @@ func scanExternalImage(ctx context.Context) error {
 }
 
 func scanLocalFilePath(ctx context.Context) error {
-
-	// read the sbom file and post it to the scan endpoint
-	// get the dependencyVulns and print them to the console
-	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
-	if err != nil {
-		return errors.Wrap(err, "could not open file")
+	// check if sbom file or need to generate sbom
+	var file []byte
+	var err error
+	if strings.HasSuffix(config.RuntimeBaseConfig.Path, ".json") {
+		// read the sbom file and post it to the scan endpoint
+		file, err = os.ReadFile(config.RuntimeBaseConfig.Path)
+		if err != nil {
+			return errors.Wrap(err, "could not read file")
+		}
+	} else {
+		// generate SBOM using Trivy
+		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
+		if err != nil {
+			return errors.Wrap(err, "could not open file")
+		}
 	}
 
 	resp, cancel, err := scanner.UploadBOM(bytes.NewBuffer(file))
@@ -325,17 +334,16 @@ func scanLocalFilePath(ctx context.Context) error {
 
 func scaCommand(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
+		config.RuntimeBaseConfig.Image = args[0]
+	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
+		config.RuntimeBaseConfig.Path = args[0]
+	}
 
 	// in case it's a docker image we need to scan the image and try to download attestations
 	if config.RuntimeBaseConfig.Image != "" {
 		return scanExternalImage(ctx)
 	} else if config.RuntimeBaseConfig.Path != "" {
-		return scanLocalFilePath(ctx)
-	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
-		config.RuntimeBaseConfig.Image = args[0]
-		return scanExternalImage(ctx)
-	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
-		config.RuntimeBaseConfig.Path = args[0]
 		return scanLocalFilePath(ctx)
 	}
 	return fmt.Errorf("either --image or --path must be specified, or passed as an argument")
@@ -343,16 +351,26 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 func NewSCACommand() *cobra.Command {
 	scaCommand := &cobra.Command{
-		Use:   "sca",
-		Short: "Start a Software composition analysis",
-		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
+		Use:   "sca [image|path]",
+		Short: "Run Software Composition Analysis (SCA)",
+		Long: `Run a Software Composition Analysis (SCA) for a project or container image.
+
+This command can accept either an OCI image reference (e.g. ghcr.io/org/image:tag) via
+--image or as the first positional argument, or a local path/tar file via --path or as
+the first positional argument. The command will generate or accept an SBOM, upload it to
+DevGuard and return vulnerability results.
+
+Examples:
+  devguard-scanner sca --image ghcr.io/org/image:tag
+  devguard-scanner sca ./path/to/project
+`,
 		// Args:  cobra.ExactArgs(0),
 		RunE: scaCommand,
 	}
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	// set default scanner type
-	scaCommand.PersistentFlags().String("origin", "source-scanning", "The origin of the SBOM. How it was generated. E.g. 'source-scanning' or 'container-scanning', 'base-image'.")
+	scaCommand.PersistentFlags().String("origin", "source-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
 
 	return scaCommand
 }

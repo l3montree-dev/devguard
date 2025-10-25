@@ -115,7 +115,7 @@ Examples:
 	cmd.Flags().BoolVarP(&opts.insecure, "insecure", "k", false, "Allow insecure server connections")
 
 	// DevGuard specific flags
-	cmd.Flags().StringVar(&opts.token, "token", "", "DevGuard Personal Access Token (can also be set via DEVGUARD_TOKEN env var)")
+	cmd.Flags().StringVar(&opts.token, "token", "", "DevGuard Personal Access Token (can also be set via DEVGUARD_TOKEN env var). Used to sign requests.")
 
 	return cmd
 }

@@ -1,10 +1,13 @@
 package artifact
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
-	"os"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -68,11 +71,13 @@ func (s *service) ReadArtifact(name string, assetVersionName string, assetID uui
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string) {
+func (s *service) FetchBomsFromUpstream(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string) {
 	var boms []normalize.BomWithOrigin
 
 	var validURLs []string
 	var invalidURLs []string
+
+	client := &http.Client{}
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -82,8 +87,25 @@ func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin
 			continue
 		}
 		var bom cyclonedx.BOM
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
+		// fetch the file from the url
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode != 200 {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+		defer resp.Body.Close()
+
 		// download the url and check if it is a valid vex file
-		file, err := os.ReadFile(url)
+		file, err := io.ReadAll(resp.Body)
 		if err != nil {
 			invalidURLs = append(invalidURLs, url)
 			continue
@@ -97,14 +119,27 @@ func (s *service) CheckVexURLs(upstreamURLs []string) ([]normalize.BomWithOrigin
 		validURLs = append(validURLs, url)
 		boms = append(boms, normalize.BomWithOrigin{
 			BOM:    bom,
-			Origin: "upstream:" + url,
+			Origin: url,
 		})
 	}
 
 	return boms, validURLs, invalidURLs
 }
 
-func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+// helper to extract cve id from CycloneDX vulnerability id or source url
+func extractCVE(s string) string {
+	if s == "" {
+		return ""
+	}
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "http") {
+		parts := strings.Split(s, "/")
+		return parts[len(parts)-1]
+	}
+	return s
+}
+
+func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
 	allVulns := []models.DependencyVuln{}
 
@@ -126,25 +161,12 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 	}
 
 	upstream := models.UpstreamStateExternalAccepted
-	if asset.ParanoiaMode {
+	if asset.ParanoidMode {
 		upstream = models.UpstreamStateExternal
 	}
 
 	updated := 0
 	notFound := 0
-
-	// helper to extract cve id from CycloneDX vulnerability id or source url
-	extractCVE := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		s = strings.TrimSpace(s)
-		if strings.HasPrefix(s, "http") {
-			parts := strings.Split(s, "/")
-			return parts[len(parts)-1]
-		}
-		return s
-	}
 
 	notExistingVulnsList := []models.DependencyVuln{}
 	type VulnState struct {
@@ -212,6 +234,11 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 				}
 
 				statusType := normalize.MapCDXToStatus(vuln.Analysis)
+				if statusType == "" {
+					// skip unknown/unspecified statuses
+					continue
+				}
+
 				justification := ""
 				if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
 					justification = vuln.Analysis.Detail
@@ -254,11 +281,6 @@ func (s *service) SyncReports(boms []normalize.BomWithOrigin, org models.Org, pr
 					notExistingVulnsState[len(notExistingVulnsList)-1] = VulnState{state: statusType, justification: justification}
 
 					notFound++
-					continue
-				}
-
-				if statusType == "" {
-					// skip unknown/unspecified statuses
 					continue
 				}
 

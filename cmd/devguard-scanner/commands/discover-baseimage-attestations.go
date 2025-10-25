@@ -109,15 +109,24 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 
 func NewDiscoverBaseImageAttestationsCommand() *cobra.Command {
 	discoverBaseImageAttestationsCmd := &cobra.Command{
-		Use:   "discover-baseimage-attestations",
+		Use:   "discover-baseimage-attestations <path>",
 		Short: "Discover base image attestations from container files",
-		Args:  cobra.ExactArgs(1),
-		RunE:  runDiscoverBaseImageAttestations,
+		Long: `Scan a directory for Dockerfile/Containerfile, extract the base image FROM line and
+attempt to discover and upload any VEX/attestation documents for the base image.
+
+The command signs uploads using the configured token. Provide a path to a directory
+containing a Dockerfile or Containerfile.
+
+Example:
+  devguard-scanner discover-baseimage-attestations ./path/to/project
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: runDiscoverBaseImageAttestations,
 	}
 
 	scanner.AddDefaultFlags(discoverBaseImageAttestationsCmd)
 	scanner.AddAssetRefFlags(discoverBaseImageAttestationsCmd)
-	discoverBaseImageAttestationsCmd.PersistentFlags().String("origin", "base-image", "The origin of the attestations being discovered. E.g. 'base-image' or 'container-scanning")
+	discoverBaseImageAttestationsCmd.PersistentFlags().String("origin", "base-image", "The origin of the attestations being discovered. Examples: 'base-image', 'container-scanning'. Default: 'base-image'.")
 
 	return discoverBaseImageAttestationsCmd
 }

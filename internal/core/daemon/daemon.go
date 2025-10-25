@@ -135,15 +135,15 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 		slog.Info("scan updated", "duration", time.Since(start))
 	}
 
-	if shouldMirror(configService, "vulndb.vexReports") {
+	if shouldMirror(configService, "vulndb.upstream") {
 		start = time.Now()
 		// update the vex reports
-		if err := SyncReports(db, casbinRBACProvider); err != nil {
+		if err := SyncUpstream(db, casbinRBACProvider); err != nil {
 			slog.Error("could not update vex reports", "err", err)
 			return nil
 		}
-		if err := markMirrored(configService, "vulndb.vexReports"); err != nil {
-			slog.Error("could not mark vulndb.vexReports as mirrored", "err", err)
+		if err := markMirrored(configService, "vulndb.upstream"); err != nil {
+			slog.Error("could not mark vulndb.upstream as mirrored", "err", err)
 		}
 		slog.Info("vex reports updated", "duration", time.Since(start))
 	}
