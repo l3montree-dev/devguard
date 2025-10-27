@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"slices"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -57,7 +58,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string, convertComponentType 
 			srcVersion := ""
 
 			// will be exactly the string we need to replace inside the purl
-			// please do not ask me why
+			// src version differs in debian cases for some packages like "libc6" and openssl
 			pkgID := ""
 			for _, property := range *component.Properties {
 				if property.Name == "aquasecurity:trivy:SrcName" {
@@ -122,11 +123,8 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string, convertComponentType 
 				}
 
 				if checkIfPointsToIncomingEdgesExist.Dependencies != nil {
-					for _, dep := range *checkIfPointsToIncomingEdgesExist.Dependencies {
-						if dep == doIncomingEdgesExists.Ref {
-							hasIncomingEdges = true
-							break
-						}
+					if slices.Contains(*checkIfPointsToIncomingEdgesExist.Dependencies, doIncomingEdgesExists.Ref) {
+						hasIncomingEdges = true
 					}
 				}
 			}

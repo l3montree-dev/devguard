@@ -682,7 +682,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
 	// first we need to replace the subtree.
 	if origin != "" {
-		wholeAssetSBOM, err := s.BuildSBOM(assetVersion, artifactName, assetVersion.Name, org.Name, assetComponents)
+		wholeAssetSBOM, err := s.BuildSBOM(assetVersion, artifactName, org.Name, assetComponents, true)
 		if err != nil {
 			return errors.Wrap(err, "could not build whole asset sbom")
 		}
@@ -811,11 +811,15 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+// keepSubtrees decides whether we remove artificial components that were only added to represent subtrees
+// in the SBOM or not. In most cases, we want to keep them when using the cdx.BOM structure further on internally.
+// Nevertheless, when exporting the SBOM to the user, we want to remove those artificial components again.
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency, keepSubtrees bool) (*cdx.BOM, error) {
 	var err error
 
 	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
+	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
 	bom := cdx.BOM{
 		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
 		BOMFormat:   "CycloneDX",
@@ -824,7 +828,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    artifactName,
+				BOMRef:    rootPurl,
 				Type:      cdx.ComponentTypeApplication,
 				Name:      artifactName,
 				Version:   assetVersion.Name,
@@ -852,6 +856,17 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 
 	for _, component := range components {
 		purl := component.DependencyPurl
+		// check if valid
+		if !keepSubtrees && !strings.HasPrefix(purl, "pkg:") {
+			slog.Debug("skipping artificial subtree component", "purl", purl)
+			continue
+		}
+
+		if purl == rootPurl {
+			// skip the root component - we add it later on	again.
+			continue
+		}
+
 		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
 			continue
 		}
@@ -918,17 +933,10 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
 		if c.ComponentPurl == nil {
-			if _, ok := dependencyMap[bom.Metadata.Component.BOMRef]; !ok {
-				dependencyMap[bom.Metadata.Component.BOMRef] = []string{c.DependencyPurl}
-				continue
-			}
-			dependencyMap[bom.Metadata.Component.BOMRef] = append(dependencyMap[bom.Metadata.Component.BOMRef], c.DependencyPurl)
-			continue
+			dependencyMap[bom.Metadata.Component.BOMRef] = getDependencies(nil, components, !keepSubtrees)
+		} else if strings.HasPrefix(*c.ComponentPurl, "pkg:") {
+			dependencyMap[*c.ComponentPurl] = getDependencies(c.ComponentPurl, components, !keepSubtrees)
 		}
-		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
-			dependencyMap[*c.ComponentPurl] = make([]string, 0)
-		}
-		dependencyMap[*c.ComponentPurl] = append(dependencyMap[*c.ComponentPurl], c.DependencyPurl)
 	}
 
 	// build up the dependencies
@@ -945,6 +953,28 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 	return &bom, nil
+}
+
+func getDependencies(componentPurl *string, componentDependencies []models.ComponentDependency, skipArtificial bool) []string {
+	// find direct dependencies
+	deps := utils.Map(utils.Filter(componentDependencies, func(dep models.ComponentDependency) bool {
+		if componentPurl == nil {
+			return dep.ComponentPurl == nil
+		}
+		return dep.ComponentPurl != nil && *dep.ComponentPurl == *componentPurl
+	}), func(dep models.ComponentDependency) string {
+		return dep.DependencyPurl
+	})
+	if !skipArtificial {
+		return deps
+	}
+
+	return utils.Flat(utils.Map(deps, func(d string) []string {
+		if !strings.HasPrefix(d, "pkg:") {
+			return getDependencies(&d, componentDependencies, skipArtificial)
+		}
+		return []string{d}
+	}))
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {

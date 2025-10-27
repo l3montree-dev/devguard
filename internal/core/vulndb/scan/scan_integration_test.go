@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
@@ -1315,4 +1316,106 @@ func TestUploadVEX(t *testing.T) {
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
 	}
+}
+
+func TestIdempotency(t *testing.T) {
+	// 1. scan a sbom
+	// 2. Download the sbom from devguard
+	// 3. Scan that sbom
+	// 4. Download it
+	// 5. compare 2 and 4
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	controller, _ := initHTTPController(t, db, true)
+
+	app := echo.New()
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	openSourceInsightsService := mocks.OpenSourceInsightService{}
+	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
+
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.AuthSession{}
+
+		authSession.On("GetUserID").Return("test-user")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, &authSession)
+		core.SetAssetVersion(ctx, assetVersion)
+	}
+
+	t.Run("scanning the same sbom multiple times should yield the same result", func(t *testing.T) {
+		openSourceInsightsService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{}, fmt.Errorf("")).Times(1000)
+
+		recorder := httptest.NewRecorder()
+		sbomFile, err := os.Open("testdata/small-sbom.json")
+		assert.Nil(t, err)
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "idempotency-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// now download the sbom
+		recorder = httptest.NewRecorder()
+		req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = assetVersionController.SBOMJSON(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+		firstDownload := recorder.Body.String()
+
+		// scan the downloaded sbom again
+		recorder = httptest.NewRecorder()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", bytes.NewReader([]byte(firstDownload)))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "idempotency-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// download again
+		recorder = httptest.NewRecorder()
+		req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+		err = assetVersionController.SBOMJSON(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+		secondDownload := recorder.Body.String()
+		// parse both jsons and compare them by properties
+		// there are arrays in the sbom, so direct string comparison might fail due to different ordering
+		var firstSBOM, secondSBOM cyclonedx.BOM
+		err = cyclonedx.NewBOMDecoder(strings.NewReader(firstDownload), cyclonedx.BOMFileFormatJSON).Decode(&firstSBOM)
+		assert.Nil(t, err)
+		err = cyclonedx.NewBOMDecoder(strings.NewReader(secondDownload), cyclonedx.BOMFileFormatJSON).Decode(&secondSBOM)
+		assert.Nil(t, err)
+
+		// compare the root component
+		assert.Equal(t, firstSBOM.Metadata.Component.BOMRef, firstSBOM.Metadata.Component.BOMRef)
+		// sort the components slice by purl before comparing
+		sort.SliceStable(*firstSBOM.Components, func(i, j int) bool {
+			return (*firstSBOM.Components)[i].PackageURL < (*firstSBOM.Components)[j].PackageURL
+		})
+		// sort the dependencies
+		sort.SliceStable(*firstSBOM.Dependencies, func(i, j int) bool {
+			return (*firstSBOM.Dependencies)[i].Ref < (*firstSBOM.Dependencies)[j].Ref
+		})
+
+		assert.Equal(t, firstSBOM, secondSBOM)
+	})
+
 }

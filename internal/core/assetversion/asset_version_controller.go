@@ -16,7 +16,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -205,17 +204,6 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	// check for version query param
-	version := ctx.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	// get artifact from path
 	artifact, err := core.MaybeGetArtifact(ctx)
@@ -243,7 +231,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, version, org.Name, components.Data)
+	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, org.Name, components.Data, false)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {

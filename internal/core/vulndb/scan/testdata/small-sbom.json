@@ -1,0 +1,204 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:8c6cdfdd-b041-412f-9664-6efbd3b93e06",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-10-25T18:04:42+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "manufacturer": {
+            "name": "Aqua Security Software Ltd."
+          },
+          "group": "aquasecurity",
+          "name": "trivy",
+          "version": "0.67.1"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "fcbb3674-0268-4afd-9b9f-aa3a1f031d67",
+      "type": "application",
+      "name": ".",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:SchemaVersion",
+          "value": "2"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "7f16fa59-4a26-4a92-8ef0-02ceeb02dbb9",
+      "type": "application",
+      "name": "go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/example",
+      "type": "library",
+      "name": "example",
+      "purl": "pkg:golang/example",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "example"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+      "type": "library",
+      "name": "github.com/jinzhu/inflection",
+      "version": "v1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/jinzhu/inflection@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+      "type": "library",
+      "name": "github.com/jinzhu/now",
+      "version": "v1.1.5",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/jinzhu/now@v1.1.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/golang.org/x/text@v0.20.0",
+      "type": "library",
+      "name": "golang.org/x/text",
+      "version": "v0.20.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/text@v0.20.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/text@v0.20.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/gorm.io/gorm@v1.31.0",
+      "type": "library",
+      "name": "gorm.io/gorm",
+      "version": "v1.31.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/gorm.io/gorm@v1.31.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gorm.io/gorm@v1.31.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "7f16fa59-4a26-4a92-8ef0-02ceeb02dbb9",
+      "dependsOn": [
+        "pkg:golang/example"
+      ]
+    },
+    {
+      "ref": "fcbb3674-0268-4afd-9b9f-aa3a1f031d67",
+      "dependsOn": [
+        "7f16fa59-4a26-4a92-8ef0-02ceeb02dbb9"
+      ]
+    },
+    {
+      "ref": "pkg:golang/example",
+      "dependsOn": [
+        "pkg:golang/gorm.io/gorm@v1.31.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/text@v0.20.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/gorm.io/gorm@v1.31.0",
+      "dependsOn": [
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/golang.org/x/text@v0.20.0"
+      ]
+    }
+  ],
+  "vulnerabilities": []
+}

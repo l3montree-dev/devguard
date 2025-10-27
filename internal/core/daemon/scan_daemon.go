@@ -131,7 +131,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "0.0.0", "", components)
+						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "", components, true)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue

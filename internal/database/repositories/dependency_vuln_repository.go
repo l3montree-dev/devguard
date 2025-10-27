@@ -233,7 +233,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 	}
 
 	res := []riskStats{}
-	if err := packageNameQuery.Debug().Scan(&res).Error; err != nil {
+	if err := packageNameQuery.Scan(&res).Error; err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
@@ -241,7 +241,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 		return repository.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Debug().Find(&dependencyVulns).Error
+	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
