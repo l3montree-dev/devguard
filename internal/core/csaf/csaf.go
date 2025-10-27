@@ -1015,11 +1015,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 				}
 			}
 
-			artifacts, err := artifactRepository.GetAllArtifactAffectedByDependencyVuln(nil, vuln.ID)
-			if err != nil {
-				return nil, err
-			}
-			for _, artifact := range artifacts {
+			for _, artifact := range vuln.Artifacts {
 				if !slices.Contains(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)) {
 					uniqueVersionsAffected = append(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
 				}
@@ -1072,11 +1068,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 	// a map would be faster but we need an ordered set to make the output deterministic
 	allArtfactsToVulns := make([]artifactVulns, 0, len(vulns))
 	for _, vuln := range vulns {
-		artifacts, err := artifactRepository.GetAllArtifactAffectedByDependencyVuln(nil, vuln.ID)
-		if err != nil {
-			return nil, err
-		}
-		for _, artifact := range artifacts {
+		for _, artifact := range vuln.Artifacts {
 			found := false
 			for i := range allArtfactsToVulns {
 				if allArtfactsToVulns[i].Artifact == fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName) {
