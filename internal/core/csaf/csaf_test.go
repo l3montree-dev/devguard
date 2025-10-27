@@ -90,14 +90,14 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		AssetVersionName: "v1",
 		AssetID:          asset.ID,
 		AssetVersion:     tag1,
-		DependencyVulns:  []models.DependencyVuln{},
+		DependencyVuln:   []models.DependencyVuln{},
 	}
 	artifactv2 := models.Artifact{
 		ArtifactName:     "pkg:devguard/bizzareorganization/jojoasset/adventurerepo",
 		AssetVersionName: "v2",
 		AssetID:          asset.ID,
 		AssetVersion:     tag2,
-		DependencyVulns:  []models.DependencyVuln{},
+		DependencyVuln:   []models.DependencyVuln{},
 	}
 	t.Run("should fail if we do not provide a (valid) documentID", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -256,7 +256,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 			AssetVersionName: "main",
 			AssetID:          asset.ID,
 			AssetVersion:     assetVersion,
-			DependencyVulns:  []models.DependencyVuln{vuln1, vuln2, vuln3, vuln4, vuln5, vulnExtra},
+			DependencyVuln:   []models.DependencyVuln{vuln1, vuln2, vuln3, vuln4, vuln5, vulnExtra},
 		}
 		err = repositories.NewArtifactRepository(db).Save(nil, &artifactMain)
 		if err != nil {
