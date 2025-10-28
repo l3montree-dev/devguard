@@ -133,8 +133,7 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		// event type detected will always be applied!
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
-			return
+			f = 0.
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())

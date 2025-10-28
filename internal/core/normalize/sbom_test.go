@@ -16,7 +16,7 @@ func TestMapCDXToStatus(t *testing.T) {
 		{name: "nil analysis", analysis: nil, want: ""},
 		{name: "resolved", analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASResolved}, want: "fixed"},
 		{name: "false positive", analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASFalsePositive}, want: "falsePositive"},
-		{name: "exploitable", analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable}, want: "accepted"},
+		{name: "exploitable", analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable}, want: "detected"},
 		{name: "in triage", analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASInTriage}, want: "detected"},
 		{name: "response update fallback", analysis: &cdx.VulnerabilityAnalysis{State: "", Response: &[]cdx.ImpactAnalysisResponse{cdx.IARUpdate}}, want: "fixed"},
 		{name: "response will not fix fallback", analysis: &cdx.VulnerabilityAnalysis{State: "", Response: &[]cdx.ImpactAnalysisResponse{cdx.IARWillNotFix}}, want: "accepted"},
