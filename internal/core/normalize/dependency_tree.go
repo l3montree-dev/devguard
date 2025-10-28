@@ -138,7 +138,7 @@ type DependencyTree interface {
 
 func buildDependencyTree[T DependencyTree](elements []T, root string) Tree {
 
-	treeName := "root"
+	treeName := root
 
 	// create a new tree
 	tree := Tree{
@@ -150,10 +150,6 @@ func buildDependencyTree[T DependencyTree](elements []T, root string) Tree {
 
 	for _, element := range elements {
 		ref := element.GetRef()
-		if ref == root {
-			ref = treeName
-		}
-
 		for _, d := range element.GetDeps() {
 			tree.addNode(ref, d)
 		}

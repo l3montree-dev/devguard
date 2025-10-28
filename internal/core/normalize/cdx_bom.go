@@ -348,10 +348,11 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 		}
 	}
 
+	dependencies = uniqueDependencies(dependencies)
 	bom.Dependencies = &dependencies
 	bom.Components = &components
 
-	return &cdxBom{bom: bom, origin: origin}
+	return &cdxBom{bom: removeUnvisitable(bom), origin: origin}
 }
 
 func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
