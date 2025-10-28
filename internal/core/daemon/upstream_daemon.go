@@ -106,7 +106,7 @@ func SyncUpstream(db core.DB, rbacProvider core.RBACProvider) error {
 						for i, u := range artifact.UpstreamURLs {
 							upstreamURLs[i] = u.UpstreamURL
 						}
-						vexReports, _, _ := artifactService.FetchBomsFromUpstream(upstreamURLs)
+						vexReports, _, _ := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, upstreamURLs)
 
 						_, err := artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {

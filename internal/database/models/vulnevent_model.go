@@ -109,10 +109,6 @@ func (event VulnEvent) TableName() string {
 }
 
 func (event VulnEvent) Apply(vuln Vuln) {
-	if event.Upstream == UpstreamStateExternal {
-		// external event that should not modify state
-		return
-	}
 	if event.Upstream == UpstreamStateExternalAccepted && event.Type == EventTypeAccepted {
 		// its an external accepted event that should not modify state
 		return
@@ -134,7 +130,7 @@ func (event VulnEvent) Apply(vuln Vuln) {
 	case EventTypeReopened:
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
-		vuln.SetState(VulnStateOpen)
+		// event type detected will always be applied!
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
 			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
@@ -142,9 +138,13 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
+		vuln.SetState(VulnStateOpen)
 	case EventTypeAccepted:
 		vuln.SetState(VulnStateAccepted)
 	case EventTypeFalsePositive:
+		if event.Upstream == UpstreamStateExternal {
+			return
+		}
 		vuln.SetState(VulnStateFalsePositive)
 	case EventTypeMarkedForTransfer:
 		vuln.SetState(VulnStateMarkedForTransfer)
@@ -232,6 +232,10 @@ func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, ju
 }
 
 func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string, upstream UpstreamState) VulnEvent {
+	if upstream == UpstreamStateExternal {
+		// detected events can ONLY be accepted!
+		upstream = UpstreamStateExternalAccepted
+	}
 	ev := VulnEvent{
 		Type:     EventTypeDetected,
 		VulnType: vulnType,

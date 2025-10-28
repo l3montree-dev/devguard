@@ -69,6 +69,13 @@ type Asset struct {
 	ParanoidMode             bool           `json:"paranoidMode" gorm:"default:false;not null;"`
 }
 
+func (m *Asset) UpstreamState() UpstreamState {
+	if m.ParanoidMode {
+		return UpstreamStateExternal
+	}
+	return UpstreamStateExternalAccepted
+}
+
 func (m Asset) TableName() string {
 	return "assets"
 }

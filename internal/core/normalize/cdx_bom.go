@@ -8,11 +8,16 @@ import (
 )
 
 type cdxBom struct {
-	bom *cdx.BOM
+	bom    *cdx.BOM
+	origin string
 }
 
 func (b *cdxBom) GetComponents() *[]cdx.Component {
 	return b.bom.Components
+}
+
+func (b *cdxBom) GetOrigin() string {
+	return b.origin
 }
 
 func (b *cdxBom) GetDependencies() *[]cdx.Dependency {
@@ -27,28 +32,124 @@ func (b *cdxBom) GetCdxBom() *cdx.BOM {
 	return b.bom
 }
 
+func (b *cdxBom) GetVulnerabilities() *[]cdx.Vulnerability {
+	return b.bom.Vulnerabilities
+}
+
+type cdxDependency struct {
+	cdx.Dependency
+}
+
+func (d cdxDependency) GetRef() string {
+	return d.Ref
+}
+
+func (d cdxDependency) GetDeps() []string {
+	return *d.Dependencies
+}
+
+func cdxDependencies(deps []cdx.Dependency) []cdxDependency {
+	result := make([]cdxDependency, 0, len(deps))
+	for _, d := range deps {
+		result = append(result, cdxDependency{d})
+	}
+	return result
+}
+
 func CdxBom(bom *cdx.BOM) *cdxBom {
-	return &cdxBom{bom: bom}
-}
+	// only remove dependencies and components which are not possible to visit from root
+	tree := buildDependencyTree(cdxDependencies(*bom.Dependencies), bom.Metadata.Component.BOMRef)
+	_, unvisitable := tree.Visitable()
+	// remove from components and dependencies all unvisitable ones
+	filteredComponents := make([]cdx.Component, 0)
+	for _, comp := range *bom.Components {
+		if slices.Contains(unvisitable, comp.BOMRef) {
+			continue
+		}
+		filteredComponents = append(filteredComponents, comp)
+	}
+	bom.Components = &filteredComponents
 
-type BomWithOrigin struct {
-	cdx.BOM
-	Origin string
-}
-
-// if the second parameter is set to true, the component type will be converted to the correct type
-// THIS SHOULD ONLY be done, if the component type wasnt set by us.
-// if the component type was set by us, we shouldnt change it
-func FromCdxBom(bom *cdx.BOM, artifactName, origin string, convertComponentType bool) *cdxBom {
-	components := []cdx.Component{}
-
-	for _, c := range *bom.Components {
-		component := c
-		// check if version key exists - if not, its not a valid purl
-		if component.Version == "" {
+	filteredDependencies := make([]cdx.Dependency, 0)
+	for _, dep := range *bom.Dependencies {
+		if slices.Contains(unvisitable, dep.Ref) {
 			continue
 		}
 
+		// check for the deps
+		newDeps := make([]string, 0)
+		for _, d := range *dep.Dependencies {
+			if !slices.Contains(unvisitable, d) {
+				newDeps = append(newDeps, d)
+			}
+		}
+		dep.Dependencies = &newDeps
+		filteredDependencies = append(filteredDependencies, dep)
+	}
+	bom.Dependencies = &filteredDependencies
+
+	return &cdxBom{bom: bom}
+}
+
+func removeUnvisitable(bom *cdx.BOM) *cdx.BOM {
+	// only remove dependencies and components which are not possible to visit from root
+	tree := buildDependencyTree(cdxDependencies(*bom.Dependencies), bom.Metadata.Component.BOMRef)
+	_, unvisitable := tree.Visitable()
+	// remove from components and dependencies all unvisitable ones
+	filteredComponents := make([]cdx.Component, 0)
+	for _, comp := range *bom.Components {
+		if slices.Contains(unvisitable, comp.BOMRef) {
+			continue
+		}
+		filteredComponents = append(filteredComponents, comp)
+	}
+	bom.Components = &filteredComponents
+
+	filteredDependencies := make([]cdx.Dependency, 0)
+	for _, dep := range *bom.Dependencies {
+		if slices.Contains(unvisitable, dep.Ref) {
+			continue
+		}
+
+		// check for the deps
+		newDeps := make([]string, 0)
+		for _, d := range *dep.Dependencies {
+			if !slices.Contains(unvisitable, d) {
+				newDeps = append(newDeps, d)
+			}
+		}
+		dep.Dependencies = &newDeps
+		filteredDependencies = append(filteredDependencies, dep)
+	}
+	bom.Dependencies = &filteredDependencies
+	return bom
+}
+
+func (b cdxBom) Eject() *cdx.BOM {
+	// copy bom
+	bom := b.bom
+
+	// remove all dependencies and rewrite those to SKIP invalid purls
+	dependencies := []cdx.Dependency{}
+	if bom.Dependencies != nil {
+		for _, dependency := range *bom.Dependencies {
+			d := getShortCircuitDependencies(dependency.Ref, *bom.Dependencies)
+			dependencies = append(dependencies, cdx.Dependency{
+				Ref:          dependency.Ref,
+				Dependencies: &d,
+			})
+		}
+	}
+	bom.Dependencies = &dependencies
+
+	bom = removeUnvisitable(bom)
+
+	return bom
+}
+
+func replaceTrivyProperties(components []cdx.Component) []cdx.Component {
+	updatedCompoents := make([]cdx.Component, 0, len(components))
+	for _, component := range components {
 		// check if the component is a library
 		// we can detect that, if the component has a "properties" object - as long as we are using trivy for sbom generation
 		if component.Properties != nil {
@@ -80,111 +181,177 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string, convertComponentType 
 				component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgID, srcName+"@"+srcVersion)
 			}
 		}
+		updatedCompoents = append(updatedCompoents, component)
+	}
+	return updatedCompoents
+}
 
-		purl, componentType := normalizePurl(component.PackageURL)
-		if convertComponentType {
-			component.Type = componentType
-		}
+func normalizePurls(components []cdx.Component) []cdx.Component {
+	normalizedComponents := make([]cdx.Component, 0, len(components))
+	for _, component := range components {
+		purl := normalizePurl(component.PackageURL)
 		component.PackageURL = purl
-		components = append(components, component)
+		normalizedComponents = append(normalizedComponents, component)
+	}
+	return normalizedComponents
+}
+
+func flat(deps [][]string) []string {
+	result := []string{}
+	for _, depList := range deps {
+		result = append(result, depList...)
+	}
+	return result
+}
+
+func getShortCircuitDependencies(ref string, allDeps []cdx.Dependency) []string {
+	// Build a map once instead of linear search each time
+	depMap := make(map[string]*cdx.Dependency)
+	for i := range allDeps {
+		depMap[allDeps[i].Ref] = &allDeps[i]
+	}
+	return resolveValidPurls(ref, depMap)
+}
+
+func resolveValidPurls(ref string, depMap map[string]*cdx.Dependency) []string {
+	dep, ok := depMap[ref]
+	if !ok || dep.Dependencies == nil {
+		return []string{}
 	}
 
-	componentsMap := make(map[string]cdx.Component)
-	for _, comp := range components {
-		componentsMap[comp.BOMRef] = comp
-	}
-
-	// we removed everything which is not a valid purl from the components slice
-	// we need to make sure that we change the dependencies as well
-	// Root --> A (invalid purl) --> B (invalid purl) --> C (valid purl)
-	// should become
-	// Root --> C
-	withoutIncomingEdges := []cdx.Dependency{}
-	if bom.Dependencies != nil {
-		for _, doIncomingEdgesExists := range *bom.Dependencies {
-			// if this is not part of components, we skip it
-			_, exists := componentsMap[doIncomingEdgesExists.Ref]
-			if !exists {
-				continue
-			}
-			// we can identify components without incoming edges, if NO component depends on them - therefore we need to check all dependencies
-			hasIncomingEdges := false
-			for _, checkIfPointsToIncomingEdgesExist := range *bom.Dependencies {
-				if checkIfPointsToIncomingEdgesExist.Ref == doIncomingEdgesExists.Ref {
-					// check is NOT the dependency we are checking if
-					continue
-				}
-
-				// check if part of the components slice - if not, we skip it as well
-				if _, ok := componentsMap[checkIfPointsToIncomingEdgesExist.Ref]; !ok {
-					// we just removed this from the component slice
-					// therefore we can skip it
-					continue
-				}
-
-				if checkIfPointsToIncomingEdgesExist.Dependencies != nil {
-					if slices.Contains(*checkIfPointsToIncomingEdgesExist.Dependencies, doIncomingEdgesExists.Ref) {
-						hasIncomingEdges = true
-					}
-				}
-			}
-			if !hasIncomingEdges {
-				withoutIncomingEdges = append(withoutIncomingEdges, doIncomingEdgesExists)
-			}
+	var result []string
+	for _, subRef := range *dep.Dependencies {
+		if strings.HasPrefix(subRef, "pkg:") {
+			result = append(result, subRef)
+		} else {
+			result = append(result, resolveValidPurls(subRef, depMap)...)
 		}
 	}
+	return result
+}
+
+// if the second parameter is set to true, the component type will be converted to the correct type
+// THIS SHOULD ONLY be done, if the component type wasnt set by us.
+// if the component type was set by us, we shouldnt change it
+func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
+	components := []cdx.Component{}
+	if bom.Components != nil {
+		components = *bom.Components
+		// first replace trivy properties - if any
+		components = replaceTrivyProperties(components)
+		// then normalize purls
+		components = normalizePurls(components)
+	}
+
+	var originalRef string
+	// replace the root component with the artifact name
+	if bom.Metadata != nil && bom.Metadata.Component != nil {
+		originalRef = bom.Metadata.Component.BOMRef
+		bom.Metadata.Component.BOMRef = artifactName
+		bom.Metadata.Component.Name = artifactName
+		bom.Metadata.Component.PackageURL = artifactName
+		// remove the version string
+		bom.Metadata.Component.Version = ""
+
+		// make sure this component is part of the components slice
+		found := false
+		for i, comp := range components {
+			if comp.BOMRef == originalRef {
+				components[i] = *bom.Metadata.Component
+				found = true
+				break
+			}
+		}
+		if !found {
+			components = append(components, *bom.Metadata.Component)
+		}
+	}
+	// add origin to components
+	components = append(components, cdx.Component{
+		Name:   origin,
+		BOMRef: origin,
+	})
+
+	// remove all dependencies and rewrite those to SKIP invalid purls
+	// this means A --> B (invalid purl) --> C (valid purl)
+	// becomes A --> C
+	dependencies := []cdx.Dependency{}
+	if bom.Dependencies != nil {
+		for _, dependency := range *bom.Dependencies {
+			d := getShortCircuitDependencies(dependency.Ref, *bom.Dependencies)
+			dependencies = append(dependencies, cdx.Dependency{
+				Ref:          dependency.Ref,
+				Dependencies: &d,
+			})
+		}
+	}
+
 	// create an artificial ROOT component which points to origin
 	// which then points to all components which have no incoming edges
 	artificialRoot := cdx.Dependency{
 		Ref:          artifactName,
 		Dependencies: &[]string{origin},
 	}
-
-	withoutIncomingEdgesRefs := []string{}
-	for _, e := range withoutIncomingEdges {
-		withoutIncomingEdgesRefs = append(withoutIncomingEdgesRefs, e.Ref)
-	}
-
-	originDependency := cdx.Dependency{
-		Ref:          origin,
-		Dependencies: &withoutIncomingEdgesRefs,
-	}
-
-	dependencies := []cdx.Dependency{}
-	for _, dependency := range *bom.Dependencies {
-		// check if exists in components map
-		_, exists := componentsMap[dependency.Ref]
-		if !exists {
-			continue
-		}
-		dependencies = append(dependencies, dependency)
-	}
-
-	// last but not least change the metadata to artificial root
-	if bom.Metadata != nil {
-		bom.Metadata.Component = &cdx.Component{
-			BOMRef: artifactName,
-			Name:   artifactName,
-			Type:   cdx.ComponentTypeApplication,
+	dependencies = append(dependencies, artificialRoot)
+	// add another dependency from origin to all components which were required by root
+	for _, d := range dependencies {
+		if d.Ref == originalRef {
+			dependencies = append(dependencies, cdx.Dependency{
+				Ref:          origin,
+				Dependencies: d.Dependencies,
+			})
+			break
 		}
 	}
 
-	// and add both to the components slice
-	components = append(components, cdx.Component{
-		BOMRef: artifactName,
-		Name:   artifactName,
-		Type:   cdx.ComponentTypeApplication,
-	}, cdx.Component{
-		BOMRef: origin,
-		Name:   origin,
-		Type:   cdx.ComponentTypeApplication,
-	})
+	vulns := bom.Vulnerabilities
+	if vulns != nil {
+		// add those components to the bom as well
+		for _, v := range *vulns {
+			if v.Affects != nil {
+				for _, affect := range *v.Affects {
+					found := false
+					for _, comp := range components {
+						if comp.BOMRef == affect.Ref {
+							found = true
+							break
+						}
+					}
+					if !found {
+						// add a new component with just the ref
+						newComp := cdx.Component{
+							BOMRef:     affect.Ref,
+							PackageURL: affect.Ref,
+							Name:       affect.Ref,
+						}
+						components = append(components, newComp)
+					}
+					// add a dependency from origin to this component
+					foundDep := false
+					for _, d := range dependencies {
+						if d.Ref == origin {
+							// check if affect.Ref is already part of dependencies
+							if slices.Contains(*d.Dependencies, affect.Ref) {
+								foundDep = true
+								break
+							}
+						}
+					}
+					if !foundDep {
+						dependencies = append(dependencies, cdx.Dependency{
+							Ref:          origin,
+							Dependencies: &[]string{affect.Ref},
+						})
+					}
+				}
+			}
+		}
+	}
 
-	dependencies = append(dependencies, artificialRoot, originDependency)
 	bom.Dependencies = &dependencies
 	bom.Components = &components
 
-	return &cdxBom{bom: bom}
+	return &cdxBom{bom: bom, origin: origin}
 }
 
 func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
@@ -249,4 +416,93 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*cdx.BOM) *cdx.BOM {
 	merged.Vulnerabilities = &vulns
 
 	return merged
+}
+
+func ptr[T any](s T) *T {
+	return &s
+}
+
+func ReplaceSubtree(completeSBOM SBOM, subTree SBOM) SBOM {
+	result := cdx.NewBOM()
+	result.Metadata = completeSBOM.GetMetadata()
+	result.Components = ptr(append(*completeSBOM.GetComponents(), *subTree.GetComponents()...))
+	result.Dependencies = &[]cdx.Dependency{}
+
+	// Copy all dependencies from completeSBOM except the origin (we'll replace it)
+	for _, d := range *completeSBOM.GetDependencies() {
+		if d.Ref == subTree.GetOrigin() {
+			// skip the original origin dependency, we'll replace it
+			continue
+		}
+		result.Dependencies = ptr(append(*result.Dependencies, d))
+	}
+
+	// Add all dependencies from the subtree
+	for _, d := range *subTree.GetDependencies() {
+		// do not add the root dependency. Since we are working with normalized boms
+		// this dependency is root --> Origin
+		// BUT we have a new root we just created from the complete sbom.
+		// we are adding this later
+		if d.Ref == subTree.GetMetadata().Component.BOMRef {
+			continue
+		}
+		result.Dependencies = ptr(append(*result.Dependencies, d))
+	}
+
+	// make sure root depends on origin
+	root := result.Metadata.Component.BOMRef
+	// find the dependencies slice for this root
+	found := false
+	for i, d := range *result.Dependencies {
+		if d.Ref == root {
+			// add origin as dependency if not already present
+			if !slices.Contains(*d.Dependencies, subTree.GetOrigin()) {
+				(*result.Dependencies)[i].Dependencies = ptr(append(*d.Dependencies, subTree.GetOrigin()))
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		// create a new dependency slice
+		newDependency := cdx.Dependency{
+			Ref:          root,
+			Dependencies: ptr([]string{subTree.GetOrigin()}),
+		}
+		result.Dependencies = ptr(append(*result.Dependencies, newDependency))
+	}
+
+	componentsSlice := *result.Components
+	componentsSlice = append(componentsSlice, *subTree.GetMetadata().Component)
+	componentsSlice = append(componentsSlice, *completeSBOM.GetMetadata().Component)
+	result.Components = &componentsSlice
+	// unique dependencies
+	result.Dependencies = ptr(uniqueDependencies(*result.Dependencies))
+
+	return CdxBom(result)
+}
+
+func uniqueDependencies(dependencies []cdx.Dependency) []cdx.Dependency {
+	// unique the dependencies based on the ref
+	uniqueDependencies := make(map[string]cdx.Dependency)
+	for _, d := range dependencies {
+		if existing, ok := uniqueDependencies[d.Ref]; ok {
+			// merge dependencies
+			existingDeps := *existing.Dependencies
+			for _, dep := range *d.Dependencies {
+				if !slices.Contains(existingDeps, dep) {
+					existingDeps = append(existingDeps, dep)
+				}
+			}
+			existing.Dependencies = &existingDeps
+			uniqueDependencies[d.Ref] = existing
+		} else {
+			uniqueDependencies[d.Ref] = d
+		}
+	}
+	result := []cdx.Dependency{}
+	for _, d := range uniqueDependencies {
+		result = append(result, d)
+	}
+	return result
 }

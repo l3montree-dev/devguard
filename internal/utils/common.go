@@ -24,8 +24,6 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
-
-	"github.com/package-url/packageurl-go"
 )
 
 // we use Set 1 of ISO 639 language codes to identify languages based on 2 letters
@@ -206,20 +204,6 @@ func ShannonEntropy(str string) float64 {
 // supported languages are declared in `supportedLanguageCodes` at the start of this file
 func CheckForValidLanguageCode(languageCode string) bool {
 	return slices.Contains(supportedLanguageCodes, languageCode)
-}
-
-// function to make purl look more visually appealing
-func BeautifyPURL(pURL string) (string, error) {
-	p, err := packageurl.FromString(pURL)
-	if err != nil {
-		return pURL, err
-	}
-	//if the namespace is empty we don't want any leading slashes
-	if p.Namespace == "" {
-		return p.Name, nil
-	} else {
-		return p.Namespace + "/" + p.Name, nil
-	}
 }
 
 func GetDirFromPath(path string) string {

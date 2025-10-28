@@ -73,13 +73,6 @@ func TestSemverFix(t *testing.T) {
 	})
 }
 
-func ptr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 func TestFixFixedVersion(t *testing.T) {
 	tests := []struct {
 		name         string

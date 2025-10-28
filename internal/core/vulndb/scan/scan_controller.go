@@ -130,7 +130,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.BomWithOrigin{{BOM: bom, Origin: origin}}, org, project, asset, assetVersion, artifact, userID)
+	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
@@ -169,6 +169,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 
 	asset := core.GetAsset(c)
+
 	org := core.GetOrg(c)
 	project := core.GetProject(c)
 
@@ -183,7 +184,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 	}
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
-	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), true)
+	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
@@ -207,7 +208,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, origin, models.UpstreamStateInternal)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
@@ -225,7 +226,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err

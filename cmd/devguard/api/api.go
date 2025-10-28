@@ -422,6 +422,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
+	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
@@ -454,6 +455,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}))
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", artifactMiddleware(artifactRepository))
 

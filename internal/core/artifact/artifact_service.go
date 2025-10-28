@@ -14,7 +14,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -71,8 +70,8 @@ func (s *service) ReadArtifact(name string, assetVersionName string, assetID uui
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *service) FetchBomsFromUpstream(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string) {
-	var boms []normalize.BomWithOrigin
+func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string) {
+	var boms []normalize.SBOM
 
 	var validURLs []string
 	var invalidURLs []string
@@ -117,10 +116,8 @@ func (s *service) FetchBomsFromUpstream(upstreamURLs []string) ([]normalize.BomW
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, normalize.BomWithOrigin{
-			BOM:    bom,
-			Origin: url,
-		})
+		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, url))
+
 	}
 
 	return boms, validURLs, invalidURLs
@@ -139,7 +136,7 @@ func extractCVE(s string) string {
 	return s
 }
 
-func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
 	allVulns := []models.DependencyVuln{}
 
@@ -165,57 +162,24 @@ func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Or
 		upstream = models.UpstreamStateExternal
 	}
 
-	updated := 0
 	notFound := 0
 
-	notExistingVulnsList := []models.DependencyVuln{}
 	type VulnState struct {
 		state         string
+		purl          string
 		justification string
 	}
-	notExistingVulnsState := make(map[int]VulnState)
+
+	// keyed by CVE-ID
+	expectedVulnState := make(map[string]VulnState)
 
 	// iterate vulnerabilities in the CycloneDX BOM
-	for _, bom := range boms {
-		linkSbom := cyclonedx.BOM{}
-		linkSbom.Metadata = &cyclonedx.Metadata{
-			Component: &cyclonedx.Component{
-				BOMRef: artifact.ArtifactName,
-				Name:   artifact.ArtifactName,
-				Type:   cyclonedx.ComponentTypeApplication,
-			}}
-		linkSbom.Components = &[]cyclonedx.Component{}
-		linkSbom.Dependencies = &[]cyclonedx.Dependency{}
-		// create artificial ROOT -> Origin -> Components structure
-		linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
-			BOMRef: artifact.ArtifactName,
-			Name:   artifact.ArtifactName,
-			Type:   cyclonedx.ComponentTypeApplication,
-		}, cyclonedx.Component{
-			BOMRef: bom.Origin,
-			Name:   bom.Origin,
-		}))
-		linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, cyclonedx.Dependency{
-			Ref:          linkSbom.Metadata.Component.BOMRef,
-			Dependencies: &[]string{bom.Origin},
-		}))
-		originDependencies := []string{}
-		if bom.Components != nil {
-			linkSbom.Components = utils.Ptr(append(*linkSbom.Components, *bom.Components...))
-			ref := bom.Metadata.Component.BOMRef
-			linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
-				BOMRef:     ref,
-				PackageURL: ref,
-				Name:       ref,
-			}))
-			originDependencies = append(originDependencies, ref)
-		}
-		if bom.Dependencies != nil {
-			linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, *bom.Dependencies...))
-		}
+	cveIDs := make([]string, 0)
 
-		if bom.Vulnerabilities != nil {
-			for _, vuln := range *bom.Vulnerabilities {
+	for _, bom := range boms {
+		vulns := bom.GetVulnerabilities()
+		if vulns != nil {
+			for _, vuln := range *vulns {
 				cveID := extractCVE(vuln.ID)
 				if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
 					cveID = extractCVE(vuln.Source.URL)
@@ -226,12 +190,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Or
 				}
 
 				cveID = strings.ToUpper(strings.TrimSpace(cveID))
-				cve, err := s.cveRepository.FindCVE(nil, cveID)
-				if err != nil {
-					slog.Error("could not load cve", "err", err, "cve", cveID)
-					notFound++
-					continue
-				}
+				cveIDs = append(cveIDs, cveID)
 
 				statusType := normalize.MapCDXToStatus(vuln.Analysis)
 				if statusType == "" {
@@ -249,106 +208,84 @@ func (s *service) SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Or
 				}
 				ref := (*vuln.Affects)[0].Ref
 
-				linkSbom.Components = utils.Ptr(append(*linkSbom.Components, cyclonedx.Component{
-					BOMRef:     ref,
-					PackageURL: ref,
-					Name:       ref,
-				}))
+				componentPurl := ref
 
-				originDependencies = append(originDependencies, ref)
+				expectedVulnState[cveID] = VulnState{state: statusType, justification: justification,
+					purl: componentPurl}
+			}
 
-				vulnsList, ok := vulnsByCVE[cveID]
-				if !ok || len(vulnsList) == 0 {
+		}
 
-					componentPurl := &ref
+		cves, err := s.cveRepository.FindCVEs(nil, cveIDs)
+		// convert to map
+		if err != nil {
+			slog.Error("could not load cves", "err", err)
+			return allVulns, echo.NewHTTPError(500, "could not load cves").WithInternal(err)
+		}
+		cvesMap := make(map[string]models.CVE)
+		for _, cve := range cves {
+			cvesMap[cve.CVE] = cve
+		}
 
-					dependencyVuln := models.DependencyVuln{
-						Vulnerability: models.Vulnerability{
-							AssetVersionName: assetVersion.Name,
-							AssetID:          asset.ID,
-						},
-						Artifacts: []models.Artifact{
-							artifact,
-						},
-						CVEID:                 &cveID,
-						ComponentPurl:         componentPurl,
-						ComponentFixedVersion: nil,
-						ComponentDepth:        utils.Ptr(0), //TODO: it's unknown
-						CVE:                   &cve,
-					}
-
-					notExistingVulnsList = append(notExistingVulnsList, dependencyVuln)
-					notExistingVulnsState[len(notExistingVulnsList)-1] = VulnState{state: statusType, justification: justification}
-
-					notFound++
-					continue
+		// convert the expected vuln state into vuln in package to reuse the handle scan result function
+		vulnsInPackage := []models.VulnInPackage{}
+		for cveID, state := range expectedVulnState {
+			if cve, exists := cvesMap[cveID]; exists {
+				// skip CVEs that do not exist in the database
+				vulnInPackage := models.VulnInPackage{
+					CVE:   cve,
+					Purl:  state.purl,
+					CVEID: cveID,
 				}
-
-				for i := range vulnsList {
-
-					//check if we should update the state
-					events := vulnsList[i].Events
-					update := true
-					for j := len(events) - 1; j >= 0; j-- {
-
-						if events[j].Upstream == upstream {
-							justificationValue := ""
-							if events[j].Justification != nil {
-								justificationValue = *events[j].Justification
-							}
-							if statusType == string(events[j].Type) && justification == justificationValue {
-								update = false
-								break
-							}
-
-						}
-					}
-					if !update {
-						continue
-					}
-					_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vulnsList[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream) // mechanical justification is not part of cyclonedx spec.
-					if err != nil {
-						slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
-						continue
-					}
-					updated++
-				}
-
-				allVulns = append(allVulns, vulnsList...)
+				vulnsInPackage = append(vulnsInPackage, vulnInPackage)
 			}
 		}
 
-		allVulns = append(allVulns, notExistingVulnsList...)
+		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
+		if err != nil {
+			slog.Error("could not handle scan result", "err", err)
+			return allVulns, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
+		}
 
-		// set origin dependencies
-		linkSbom.Dependencies = utils.Ptr(append(*linkSbom.Dependencies, cyclonedx.Dependency{
-			Ref:          bom.Origin,
-			Dependencies: &originDependencies,
-		}))
+		// add the expected upstream even ONLY to the opened vulns
 
-		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, normalize.CdxBom(&linkSbom), bom.Origin, upstream)
+		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return allVulns, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
-	}
 
-	if len(notExistingVulnsList) > 0 {
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(nil, artifact.ArtifactName, notExistingVulnsList, assetVersion, asset, upstream)
-		if err != nil {
-			slog.Error("could not create dependency vulns", "err", err)
-			return allVulns, echo.NewHTTPError(500, "could not create dependency vulns").WithInternal(err)
-		}
+	outer:
+		for i := range newState {
+			if expectedState, ok := expectedVulnState[*newState[i].CVEID]; ok {
+				// check if state changing event
+				if newState[i].State == models.VulnState(expectedState.state) {
+					continue
+				}
 
-		//update the stats for dependency vulns
-		for i, v := range notExistingVulnsList {
-			_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &v, notExistingVulnsState[i].state, notExistingVulnsState[i].justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
-			if err != nil {
-				slog.Error("could not update dependency vuln state", "err", err, "cve", v.CVEID)
-				continue
+				// check if we already have seen this event from upstream
+				for j := len(newState[i].Events) - 1; j >= 0; j-- {
+					event := newState[i].Events[j]
+					if event.Upstream != models.UpstreamStateInternal {
+						// the last event
+						if (models.VulnState(event.Type)) == models.VulnState(expectedState.state) && event.Justification != nil && *event.Justification == expectedState.justification {
+							// we already have seen this event
+							continue outer
+						} else {
+							// we need todo it
+							break
+						}
+					}
+				}
+
+				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &newState[i], expectedState.state, expectedState.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				if err != nil {
+					slog.Error("could not update dependency vuln state", "err", err, "cve", *newState[i].CVEID)
+					continue
+				}
 			}
-
 		}
+
 	}
 
 	return allVulns, nil

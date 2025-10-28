@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -131,16 +130,15 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "", components, true)
+						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue
 						}
-						normalizedBOM := normalize.CdxBom(bom)
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, normalizedBOM, "system")
+							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, bom, "system")
 						}
 
 						if err != nil {

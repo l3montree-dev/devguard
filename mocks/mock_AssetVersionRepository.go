@@ -721,3 +721,60 @@ func (_c *AssetVersionRepository_Save_Call) RunAndReturn(run func(tx core.DB, as
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateAssetDefaultBranch provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
+	ret := _mock.Called(assetID, defaultBranch)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAssetDefaultBranch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) error); ok {
+		r0 = returnFunc(assetID, defaultBranch)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetVersionRepository_UpdateAssetDefaultBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAssetDefaultBranch'
+type AssetVersionRepository_UpdateAssetDefaultBranch_Call struct {
+	*mock.Call
+}
+
+// UpdateAssetDefaultBranch is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - defaultBranch string
+func (_e *AssetVersionRepository_Expecter) UpdateAssetDefaultBranch(assetID interface{}, defaultBranch interface{}) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
+	return &AssetVersionRepository_UpdateAssetDefaultBranch_Call{Call: _e.mock.On("UpdateAssetDefaultBranch", assetID, defaultBranch)}
+}
+
+func (_c *AssetVersionRepository_UpdateAssetDefaultBranch_Call) Run(run func(assetID uuid.UUID, defaultBranch string)) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_UpdateAssetDefaultBranch_Call) Return(err error) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_UpdateAssetDefaultBranch_Call) RunAndReturn(run func(assetID uuid.UUID, defaultBranch string) error) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
+	_c.Call.Return(run)
+	return _c
+}

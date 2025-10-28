@@ -18,7 +18,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -219,7 +220,7 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 		return "", err
 	}
 
-	tree := assetversion.BuildDependencyTree(components)
+	tree := normalize.BuildDependencyTree(components, "root")
 	return tree.RenderToMermaid(), nil
 }
 

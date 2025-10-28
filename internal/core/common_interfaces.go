@@ -279,8 +279,8 @@ type ArtifactService interface {
 	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	FetchBomsFromUpstream(upstreamURLs []string) ([]normalize.BomWithOrigin, []string, []string)
-	SyncUpstreamBoms(boms []normalize.BomWithOrigin, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
+	FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string)
+	SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -302,12 +302,12 @@ type FireAndForgetSynchronizer interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency, keepSubtrees bool) (*cdx.BOM, error)
+	BuildSBOM(assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (normalize.SBOM, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, origin string, upstream models.UpstreamState) error
-	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream models.UpstreamState) error
+	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
 
@@ -323,6 +323,7 @@ type AssetVersionRepository interface {
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
+	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
 }
 
 type FirstPartyVulnService interface {

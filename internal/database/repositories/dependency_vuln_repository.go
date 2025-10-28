@@ -116,12 +116,16 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 		Where(`asset_id = ? AND asset_version_name = ? AND EXISTS (
 			SELECT 1 FROM vuln_events ve1 
 			WHERE ve1.vuln_id = dependency_vulns.id 
-			AND ve1.upstream = 2
-		) AND NOT EXISTS (
-			SELECT 1 FROM vuln_events ve2 
-			WHERE ve2.vuln_id = dependency_vulns.id 
-			AND ve2.upstream = 1
-		)`, assetID, assetVersionName)
+			AND ve1.upstream = 2 AND NOT EXISTS (
+				SELECT 1 FROM vuln_events ve2 
+				WHERE ve2.vuln_id = dependency_vulns.id 
+				AND ve2.created_at > ve1.created_at
+				AND (ve2.upstream = 1 OR (ve2.upstream = 0 AND ve2.type IN ?))
+			)
+		)`, assetID, assetVersionName, []string{
+			string(models.EventTypeAccepted),
+			string(models.EventTypeFalsePositive),
+		})
 
 	// apply filters
 	for _, f := range filter {

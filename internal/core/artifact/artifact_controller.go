@@ -68,7 +68,7 @@ func (c *controller) Create(ctx core.Context) error {
 		toAddURLs = append(toAddURLs, url.UpstreamURL)
 	}
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(toAddURLs)
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, toAddURLs)
 	if len(body.UpstreamURL) > 0 {
 		err := c.artifactService.AddUpstreamURLs(&artifact, toAddURLs)
 		if err != nil {
@@ -194,7 +194,7 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, validURLs, invalidURLs := c.artifactService.FetchBomsFromUpstream(toAddURLs)
+	boms, validURLs, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, toAddURLs)
 	if len(toAddURLs) > 0 {
 		err := c.artifactService.AddUpstreamURLs(&artifact, validURLs)
 		if err != nil {
