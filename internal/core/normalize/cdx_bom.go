@@ -196,14 +196,6 @@ func normalizePurls(components []cdx.Component) []cdx.Component {
 	return normalizedComponents
 }
 
-func flat(deps [][]string) []string {
-	result := []string{}
-	for _, depList := range deps {
-		result = append(result, depList...)
-	}
-	return result
-}
-
 func getShortCircuitDependencies(ref string, allDeps []cdx.Dependency) []string {
 	// Build a map once instead of linear search each time
 	depMap := make(map[string]*cdx.Dependency)
