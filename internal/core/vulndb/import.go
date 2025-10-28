@@ -163,7 +163,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 		// if it is a snapshot tag we load the full state
 		if strings.Contains(tag, "snapshot") {
 			if i != 0 {
-				slog.Warn("snapshot tag in between incremental tags, skipping", "tag", tag)
+				slog.Warn("snapshot tag in between incremental tags, skipping", "tag", tag) //there is no skipping?
 			}
 			slog.Info("no version detected start loading latest vulndb state")
 			err = service.copyCSVToDB(outpath, extraTableNameSuffix)
@@ -189,7 +189,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 
 		dirPath := fmt.Sprintf("%s/diffs-tmp", outpath)
 
-		err = processDiffCSVs(ctx, dirPath, tx)
+		err = processDiffCSVs(ctx, dirPath, tx, extraTableNameSuffix)
 		if err != nil {
 			slog.Error("error when trying to update from diff files", "tag", tag, "err", err)
 			return err
@@ -238,7 +238,7 @@ func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
+func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix *string) error {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
@@ -270,6 +270,11 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 		mode := fields[len(fields)-1] // insert, delete, update
 		table := strings.Replace(strings.Join(fields[:len(fields)-1], "_"), "_diff", "", 1)
 
+		// append the suffix to the tablename
+		if tableSuffix != nil {
+			table = fmt.Sprintf("%s%s", table, *tableSuffix)
+		}
+
 		// could be run concurrent but probably won't yield a lot of performance improvement
 		switch mode {
 		case "insert":
@@ -280,14 +285,14 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx) error {
 				return err
 			}
 		case "delete":
-			err = processDeleteDiff(ctx, tx, dirPath+"/"+name+".csv", table)
+			err = processDeleteDiff(ctx, tx, dirPath+"/"+name+".csv", table, tableSuffix)
 			if err != nil {
 				slog.Error("could not process delete diff, continuing...", "table", table, "err", err)
 				tx.Rollback(ctx) //nolint
 				return err
 			}
 		case "update":
-			err = processUpdateDiff(ctx, tx, dirPath+"/"+name+".csv", table)
+			err = processUpdateDiff(ctx, tx, dirPath+"/"+name+".csv", table, tableSuffix)
 			if err != nil {
 				slog.Error("could not process update diff, continuing...", "table", table, "err", err)
 				tx.Rollback(ctx) //nolint
@@ -715,7 +720,7 @@ func processInsertDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 	return nil
 }
 
-func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
+func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string, extraTableNameSuffix *string) error {
 	fd, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -733,7 +738,7 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 		return nil
 	}
 
-	primaryKeys := primaryKeysFromTables[tableName]
+	primaryKeys := primaryKeysFromTables[strings.TrimSuffix(tableName, utils.SafeDereference(extraTableNameSuffix))]
 	if len(primaryKeys) == 0 {
 		slog.Error("could not determine primary key(s)", "table", tableName)
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)
@@ -773,7 +778,7 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 	return nil
 }
 
-func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string) error {
+func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableName string, extraTableNameSuffix *string) error {
 	slog.Info("start updating", "table", tableName)
 	fd, err := os.Open(filePath)
 	if err != nil {
@@ -788,7 +793,7 @@ func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 		return err
 	}
 
-	primaryKeys := primaryKeysFromTables[tableName]
+	primaryKeys := primaryKeysFromTables[strings.TrimSuffix(tableName, utils.SafeDereference(extraTableNameSuffix))]
 	if len(primaryKeys) == 0 {
 		slog.Error("could not determine primary key(s)", "table", tableName)
 		return fmt.Errorf("could not determine primary key(s) for table: %s", tableName)

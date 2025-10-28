@@ -21,6 +21,8 @@ webwml-master
 repo.zip
 vulndb-tmp
 coverage.out
+csaf-openpgp-private-key.asc
+csaf-openpgp-public-key.asc
 
 !**/testfiles/**
 vulndb-tmp-*
