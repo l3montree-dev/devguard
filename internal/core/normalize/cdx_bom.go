@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -222,11 +223,27 @@ func resolveValidPurls(ref string, depMap map[string]*cdx.Dependency) []string {
 	return result
 }
 
+type BomType string
+
+const (
+	BomTypeSBOM BomType = "sbom"
+	BomTypeVEX  BomType = "vex"
+)
+
 // if the second parameter is set to true, the component type will be converted to the correct type
 // THIS SHOULD ONLY be done, if the component type wasnt set by us.
 // if the component type was set by us, we shouldnt change it
 func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 	components := []cdx.Component{}
+	bomType := BomTypeSBOM
+	if bom.Dependencies == nil || len(*bom.Dependencies) == 0 {
+		bomType = BomTypeVEX
+	}
+	// check if the prefix already exists
+	if !strings.HasPrefix(origin, fmt.Sprintf("%s:", bomType)) {
+		origin = fmt.Sprintf("%s:%s", bomType, origin)
+	}
+
 	if bom.Components != nil {
 		components = *bom.Components
 		// first replace trivy properties - if any

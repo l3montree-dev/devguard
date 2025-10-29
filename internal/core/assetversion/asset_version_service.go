@@ -323,6 +323,12 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	for _, vuln := range vulns {
 		v := vuln
 		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
+		// check if we could calculate a depth for this component
+		if _, ok := depthMap[v.Purl]; !ok {
+			// if not, set it to 1 (direct dependency)
+			depthMap[v.Purl] = 1
+		}
+
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -362,6 +368,11 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	}
 
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+
+	if err := s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "", asset); err != nil {
+		slog.Error("could not recalculate raw risk assessment", "err", err)
+		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")
+	}
 
 	if len(opened) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
 		s.FireAndForget(func() {
@@ -499,7 +510,6 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 }
 
 func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)

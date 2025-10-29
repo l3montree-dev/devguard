@@ -127,6 +127,9 @@ func CalculateDepth(node *TreeNode, currentDepth int, depthMap map[string]int) {
 		depthMap[node.Name] = currentDepth
 	}
 	for _, child := range node.Children {
+		if strings.HasPrefix(child.Name, fmt.Sprintf("%s:", BomTypeVEX)) {
+			continue
+		}
 		CalculateDepth(child, currentDepth, depthMap)
 	}
 }
@@ -216,15 +219,6 @@ func (tree *Tree) RenderToMermaid() string {
 	renderPaths(tree.Root)
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
-}
-
-func GetComponentDepth[T DependencyTree](elements []T, root string) map[string]int {
-	tree := BuildDependencyTree(elements, root)
-	// calculate the depth for each node
-	depthMap := make(map[string]int)
-	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
-	// so the application itself will be at depth 0, the first dependency at depth 1, and so on.
-	return depthMap
 }
 
 func BuildDependencyTree[T DependencyTree](elements []T, root string) Tree {
