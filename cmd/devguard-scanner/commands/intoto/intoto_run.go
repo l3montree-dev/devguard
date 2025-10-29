@@ -126,19 +126,20 @@ func NewInTotoRunCommand() *cobra.Command {
 			}
 
 			if config.RuntimeInTotoConfig.GenerateSlsaProvenance {
-				provenanceEnvelope, err := generateSlsaProvenance(link)
+				provenance, err := generateSlsaProvenance(link)
 				if err != nil {
-					return errors.Wrap(err, "failed to generate slsa provenance")
+					return err
 				}
 
-				err = provenanceEnvelope.Sign(config.RuntimeInTotoConfig.Key)
+				// save to file
+				b, err := json.Marshal(provenance)
 				if err != nil {
-					return errors.Wrap(err, "failed to sign envelope")
+					return err
 				}
 
-				err = provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step))
+				err = os.WriteFile(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step), b, 0644)
 				if err != nil {
-					return errors.Wrap(err, "failed to dump envelope")
+					return err
 				}
 
 				slog.Info("successfully generated provenance", "step", config.RuntimeInTotoConfig.Step)
@@ -155,6 +156,7 @@ func NewInTotoRunCommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "failed to dump metadata")
 			}
+			return nil
 
 			err = readAndUploadMetadata(cmd, config.RuntimeInTotoConfig.SupplyChainID, config.RuntimeInTotoConfig.Step, filename)
 			if err != nil {

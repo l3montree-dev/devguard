@@ -16,6 +16,7 @@
 package intotocmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -88,19 +89,21 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 			return errors.New("failed to cast metadata to link")
 		}
 
-		provenanceEnvelope, err := generateSlsaProvenance(link)
+		provenance, err := generateSlsaProvenance(link)
 		if err != nil {
 			return err
 		}
 
-		if err := provenanceEnvelope.Sign(config.RuntimeInTotoConfig.Key); err != nil {
+		// save to file
+		b, err := json.Marshal(provenance)
+		if err != nil {
 			return err
 		}
 
-		if err := provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step)); err != nil {
+		err = os.WriteFile(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step), b, 0644)
+		if err != nil {
 			return err
 		}
-
 		slog.Debug("successfully generated provenance", "step", config.RuntimeInTotoConfig.Step)
 	}
 
