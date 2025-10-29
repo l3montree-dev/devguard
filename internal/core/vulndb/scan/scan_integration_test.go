@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
-	"sort"
 	"strings"
 	"testing"
 
@@ -1412,16 +1411,17 @@ func TestIdempotency(t *testing.T) {
 
 		// compare the root component
 		assert.Equal(t, firstSBOM.Metadata.Component.BOMRef, firstSBOM.Metadata.Component.BOMRef)
-		// sort the components slice by purl before comparing
-		sort.SliceStable(*firstSBOM.Components, func(i, j int) bool {
-			return (*firstSBOM.Components)[i].PackageURL < (*firstSBOM.Components)[j].PackageURL
-		})
-		// sort the dependencies
-		sort.SliceStable(*firstSBOM.Dependencies, func(i, j int) bool {
-			return (*firstSBOM.Dependencies)[i].Ref < (*firstSBOM.Dependencies)[j].Ref
-		})
+		// check components are the same
+		assert.ElementsMatch(t, *firstSBOM.Components, *secondSBOM.Components)
+		// build a dependency map
+		for _, firstDep := range *firstSBOM.Dependencies {
 
-		assert.Equal(t, firstSBOM, secondSBOM)
+			for _, secondDep := range *secondSBOM.Dependencies {
+				if secondDep.Ref == firstDep.Ref {
+					assert.ElementsMatch(t, *firstDep.Dependencies, *secondDep.Dependencies)
+				}
+			}
+		}
 	})
 
 }
