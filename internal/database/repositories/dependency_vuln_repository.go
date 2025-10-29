@@ -103,9 +103,68 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVers
 	return dependencyVulns, nil
 }
 
+func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error) {
+	var dependencyVulns = []models.DependencyVuln{}
+
+	// Get all dependency vulns that have events with upstream=2 but no events with upstream=1
+	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
+		Preload("Artifacts").
+		Preload("Events").
+		Preload("CVE").
+		Preload("CVE.Exploits").
+		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
+		Where(`asset_id = ? AND asset_version_name = ? AND EXISTS (
+			SELECT 1 FROM vuln_events ve1 
+			WHERE ve1.vuln_id = dependency_vulns.id 
+			AND ve1.upstream = 2 AND NOT EXISTS (
+				SELECT 1 FROM vuln_events ve2 
+				WHERE ve2.vuln_id = dependency_vulns.id 
+				AND ve2.created_at > ve1.created_at
+				AND (ve2.upstream = 1 OR (ve2.upstream = 0 AND ve2.type IN ?))
+			)
+		)`, assetID, assetVersionName, []string{
+			string(models.EventTypeAccepted),
+			string(models.EventTypeFalsePositive),
+		})
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// apply search
+	if search != "" && len(search) > 2 {
+		q = q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
+	} else {
+		q = q.Order("dependency_vulns.cve_id DESC")
+	}
+
+	// count total results
+	var count int64
+	err := q.Count(&count).Error
+	if err != nil {
+		return core.Paged[models.DependencyVuln]{}, err
+	}
+
+	// apply pagination
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&dependencyVulns).Error
+	if err != nil {
+		return core.Paged[models.DependencyVuln]{}, err
+	}
+
+	return core.NewPaged(pageInfo, count, dependencyVulns), nil
+}
+
 func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+	if err := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Preload("Events").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
@@ -178,7 +237,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 	}
 
 	res := []riskStats{}
-	if err := packageNameQuery.Debug().Scan(&res).Error; err != nil {
+	if err := packageNameQuery.Scan(&res).Error; err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
@@ -186,7 +245,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 		return repository.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Debug().Find(&dependencyVulns).Error
+	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err

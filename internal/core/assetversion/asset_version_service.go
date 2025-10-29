@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"log/slog"
+	"maps"
 	"math"
 	"net/http"
 	"slices"
@@ -44,11 +45,10 @@ type service struct {
 	httpClient               *http.Client
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	licenseRiskRepository    core.LicenseRiskRepository
-	artifactService          core.ArtifactService
 	core.FireAndForgetSynchronizer
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository, artifactService core.ArtifactService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository) *service {
 	return &service{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
@@ -64,7 +64,6 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		licenseRiskRepository:     licenseRiskRepository,
-		artifactService:           artifactService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
@@ -303,7 +302,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
-func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -314,12 +313,12 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
-	tree := BuildDependencyTree(assetComponents)
+	tree := normalize.BuildDependencyTree(assetComponents, "root")
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
 	// first node will be the package name itself
-	CalculateDepth(tree.Root, -1, depthMap)
+	normalize.CalculateDepth(tree.Root, -1, depthMap)
 
 	for _, vuln := range vulns {
 		v := vuln
@@ -353,7 +352,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, dependencyVulns, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -384,12 +383,14 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	return opened, closed, newState, nil
 }
 
-func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
+func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
 
 	var firstDetected []models.DependencyVuln
 	var fixedOnAll []models.DependencyVuln
 	var firstDetectedOnThisArtifactName []models.DependencyVuln
 	var fixedOnThisArtifactName []models.DependencyVuln
+
+	var vulnsWithJustUpstreamEvents []models.DependencyVuln
 
 	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range foundVulnerabilities {
@@ -421,6 +422,7 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 
 		if existingVuln, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
 			firstDetected = append(firstDetected, foundVuln)
+
 		} else {
 			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
 			alreadyDetectedOnThisArtifactName := false
@@ -433,10 +435,21 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 			if !alreadyDetectedOnThisArtifactName {
 				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, existingVuln)
 			}
+
+			justUpstreamEvents := true
+			for _, ev := range existingVuln.GetEvents() {
+				if ev.Upstream != 2 {
+					justUpstreamEvents = false
+					break
+				}
+			}
+			if justUpstreamEvents {
+				vulnsWithJustUpstreamEvents = append(vulnsWithJustUpstreamEvents, foundVuln)
+			}
 		}
 	}
 
-	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName
+	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents
 
 }
 
@@ -485,7 +498,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -507,17 +520,24 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		// make sure to first create a user detected event for vulnerabilities with just upstream events
+		// this way we preserve the event history
+		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, upstream)
+		if err != nil {
+			slog.Error("error when trying to add events for vulnerability with just upstream events")
+			return err
+		}
 		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset, upstream); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -533,7 +553,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -556,9 +576,7 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 
 	for _, component := range *component.Components {
 		res[component.BOMRef] = component
-		for k, v := range recursiveBuildBomRefMap(component) {
-			res[k] = v
-		}
+		maps.Copy(res, recursiveBuildBomRefMap(component))
 	}
 	return res
 }
@@ -571,14 +589,12 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 	for _, component := range *bom.GetComponents() {
 		res[component.BOMRef] = component
-		for k, v := range recursiveBuildBomRefMap(component) {
-			res[k] = v
-		}
+		maps.Copy(res, recursiveBuildBomRefMap(component))
 	}
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream models.UpstreamState) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
@@ -596,6 +612,16 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
 	existingDependencies := make(map[string]struct{}, len(dependencies))
+
+	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
+	// first we need to replace the subtree.
+
+	wholeAssetSBOM, err := s.BuildSBOM(assetVersion, artifactName, org.Name, assetComponents)
+	if err != nil {
+		return errors.Wrap(err, "could not build whole asset sbom")
+	}
+
+	sbom = normalize.ReplaceSubtree(wholeAssetSBOM, sbom)
 
 	// build a map of all components
 	bomRefMap := buildBomRefMap(sbom)
@@ -631,26 +657,25 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		}
 	}
 
+	sbomDependencies := *sbom.GetDependencies()
 	// find all dependencies from this component
-	for _, c := range *sbom.GetDependencies() {
+	for _, c := range sbomDependencies {
+		if c.Ref == root {
+			continue // already processed
+		}
 		comp := bomRefMap[c.Ref]
 		compPackageURL := normalize.Purl(comp)
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
 			depPurlOrName := normalize.Purl(dep)
-			_, exists := existingDependencies[depPurlOrName]
-			if exists {
-				continue
-			}
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:  utils.EmptyThenNil(compPackageURL),
+					ComponentPurl:  utils.Ptr(compPackageURL),
 					DependencyPurl: depPurlOrName,
 				},
 			)
-			existingDependencies[depPurlOrName] = struct{}{}
 
 			if _, ok := existingComponentPurls[depPurlOrName]; !ok {
 				components[depPurlOrName] = models.Component{
@@ -688,7 +713,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the license information in the background
 	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false, upstream)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -718,12 +743,61 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
-	var pURL packageurl.PackageURL
+func resolveLicense(component models.ComponentDependency, componentLicenseOverwrites map[string]string) cdx.Licenses {
+	licenses := cdx.Licenses{}
+	//first check if the license is overwritten by a license risk#
+	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
+	if exists && overwrite != "" {
+		// TO-DO: check if the license provided by the user is a valid license or not
+		licenses = append(licenses, cdx.LicenseChoice{
+			License: &cdx.License{
+				ID: overwrite,
+			},
+		})
+
+	} else if component.Dependency.License != nil && *component.Dependency.License != "" {
+		if *component.Dependency.License != "non-standard" {
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: *component.Dependency.License,
+				},
+			})
+		} else {
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: "non-standard",
+				},
+			})
+		}
+
+	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+		// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
+		if component.Dependency.ComponentProject.License != "non-standard" {
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: component.Dependency.ComponentProject.License,
+				},
+			})
+		} else {
+			licenses = append(licenses, cdx.LicenseChoice{
+				License: &cdx.License{
+					ID: "non-standard",
+				},
+			})
+		}
+	}
+	return licenses
+}
+
+// keepSubtrees decides whether we remove artificial components that were only added to represent subtrees
+// in the SBOM or not. In most cases, we want to keep them when using the cdx.BOM structure further on internally.
+// Nevertheless, when exporting the SBOM to the user, we want to remove those artificial components again.
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (normalize.SBOM, error) {
 	var err error
 
 	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
 
+	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
 	bom := cdx.BOM{
 		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
 		BOMFormat:   "CycloneDX",
@@ -732,7 +806,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    artifactName,
+				BOMRef:    rootPurl,
 				Type:      cdx.ComponentTypeApplication,
 				Name:      artifactName,
 				Version:   assetVersion.Name,
@@ -753,67 +827,17 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 		}
 	}
 
-	bomComponents := make([]cdx.Component, 0, len(components))
+	// add all components AND the root
+	bomComponents := make([]cdx.Component, 0, len(components)+1)
 	processedComponents := make(map[string]struct{}, len(components))
+	bomComponents = append(bomComponents, *bom.Metadata.Component)
 
 	for _, component := range components {
-		pURL, err = packageurl.FromString(component.DependencyPurl)
-		if err != nil {
-			//swallow error and move on to the next component
-			continue
-		}
 		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
 			continue
 		}
-
 		processedComponents[component.DependencyPurl] = struct{}{}
-		licenses := cdx.Licenses{}
-
-		//first check if the license is overwritten by a license risk#
-		overwrite, exists := componentLicenseOverwrites[pURL.String()]
-		if exists && overwrite != "" {
-			// TO-DO: check if the license provided by the user is a valid license or not
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					ID: overwrite,
-				},
-			})
-
-		} else if component.Dependency.License != nil && *component.Dependency.License != "" {
-			if *component.Dependency.License != "non-standard" {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: *component.Dependency.License,
-					},
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: "non-standard",
-					},
-				})
-			}
-
-		} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-			// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-			if component.Dependency.ComponentProject.License != "non-standard" {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: component.Dependency.ComponentProject.License,
-					},
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: "non-standard",
-					},
-				})
-			}
-		}
-		if component.DependencyPurl == "" {
-			slog.Info("skipping component with empty purl", "component", component)
-		}
-
+		licenses := resolveLicense(component, componentLicenseOverwrites)
 		bomComponents = append(bomComponents, cdx.Component{
 			Licenses:   &licenses,
 			BOMRef:     component.DependencyPurl,
@@ -822,40 +846,39 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 			Version:    component.Dependency.Version,
 			Name:       component.DependencyPurl,
 		})
-
 	}
 
-	// build up the dependency map
+	// just add all dependencies
+	// the sbom will be normalized afterwards
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
+		var purl string
 		if c.ComponentPurl == nil {
-			if _, ok := dependencyMap[assetVersion.Slug]; !ok {
-				dependencyMap[assetVersion.Slug] = []string{c.DependencyPurl}
-				continue
-			}
-			dependencyMap[assetVersion.Slug] = append(dependencyMap[assetVersion.Slug], c.DependencyPurl)
-			continue
+			purl = rootPurl
+		} else {
+			purl = *c.ComponentPurl
 		}
-		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
-			dependencyMap[*c.ComponentPurl] = make([]string, 0)
-		}
-		dependencyMap[*c.ComponentPurl] = append(dependencyMap[*c.ComponentPurl], c.DependencyPurl)
+		dependencyMap[purl] = append(dependencyMap[purl], c.DependencyPurl)
 	}
 
 	// build up the dependencies
-	bomDependencies := make([]cdx.Dependency, len(dependencyMap))
-	i := 0
+	bomDependencies := make([]cdx.Dependency, 0, len(dependencyMap))
 	for k, v := range dependencyMap {
 		vtmp := v
-		bomDependencies[i] = cdx.Dependency{
+
+		bomDependencies = append(bomDependencies, cdx.Dependency{
 			Ref:          k,
 			Dependencies: &vtmp,
-		}
-		i++
+		})
 	}
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
-	return &bom, nil
+
+	// convert to normalized sbom
+	// THIS IS THE ONLY FUNCTION ALLOWED TO CALL THIS.
+	normalizedSBOM := normalize.CdxBom(&bom)
+
+	return normalizedSBOM, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {

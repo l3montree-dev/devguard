@@ -67,7 +67,7 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 					}*/
 					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
-						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
+						slog.Warn("could not get cves", "purl", component.PackageURL)
 					}
 
 					vulns = append(vulns, res...)

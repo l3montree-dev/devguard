@@ -24,9 +24,39 @@ func NewArtifactRepository(db core.DB) *artifactRepository {
 	}
 }
 
+func (r *artifactRepository) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	if len(upstreamURLs) == 0 {
+		return nil
+	}
+	err := r.db.Where("artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ? AND upstream_url IN ?", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, upstreamURLs).Delete(&models.ArtifactUpstreamURL{}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *artifactRepository) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
+	m := []models.ArtifactUpstreamURL{}
+	for _, upstreamURL := range upstreamURLs {
+		artifactUpstreamURL := models.ArtifactUpstreamURL{
+			ArtifactArtifactName:     artifact.ArtifactName,
+			ArtifactAssetVersionName: artifact.AssetVersionName,
+			ArtifactAssetID:          artifact.AssetID,
+			UpstreamURL:              upstreamURL,
+		}
+		m = append(m, artifactUpstreamURL)
+	}
+	err := r.db.Create(&m).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
-	err := r.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
+	err := r.db.Preload("UpstreamURLs").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +66,7 @@ func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, 
 
 func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	var artifact models.Artifact
-	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
+	err := r.db.Preload("UpstreamURLs").Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
 	return artifact, err
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -51,7 +50,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 	webhookIntegration := webhook.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
-	artifactService := artifact.NewService(artifactRepository)
+
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -66,8 +65,8 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
-
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
 
 	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
@@ -131,16 +130,15 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "0.0.0", "", components)
+						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue
 						}
-						normalizedBOM := normalize.FromCdxBom(bom, false)
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, normalizedBOM, "system")
+							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, bom, "system")
 						}
 
 						if err != nil {

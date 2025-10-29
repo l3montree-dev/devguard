@@ -1,12 +1,19 @@
 package normalize
 
-import cdx "github.com/CycloneDX/cyclonedx-go"
+import (
+	"slices"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
+)
 
 type SBOM interface {
 	GetComponents() *[]cdx.Component
 	GetDependencies() *[]cdx.Dependency
 	GetMetadata() *cdx.Metadata
 	GetCdxBom() *cdx.BOM
+	GetOrigin() string
+	GetVulnerabilities() *[]cdx.Vulnerability
+	Eject() *cdx.BOM
 }
 
 // map CycloneDX Analysis State / Response to internal status strings used by UpdateDependencyVulnState
@@ -20,7 +27,13 @@ func MapCDXToStatus(a *cdx.VulnerabilityAnalysis) string {
 	case cdx.IASFalsePositive:
 		return "falsePositive"
 	case cdx.IASExploitable:
-		return "accepted"
+		// check if wont fix
+		if a.Response != nil {
+			if slices.Contains(*a.Response, cdx.IARWillNotFix) {
+				return "accepted"
+			}
+		}
+		return "detected"
 	case cdx.IASInTriage:
 		return "detected"
 	default:

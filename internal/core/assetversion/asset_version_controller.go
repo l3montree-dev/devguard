@@ -70,6 +70,32 @@ func (a *AssetVersionController) Read(ctx core.Context) error {
 	return ctx.JSON(200, assetVersion)
 }
 
+func (a *AssetVersionController) Create(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	type requestBody struct {
+		Name          string `json:"name"`
+		Tag           bool   `json:"tag"`
+		DefaultBranch bool   `json:"defaultBranch"`
+	}
+
+	var body requestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+
+	var defaultBranch *string
+	if body.DefaultBranch {
+		defaultBranch = &body.Name
+	}
+
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(body.Name, asset.ID, body.Tag, defaultBranch)
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(201, assetVersion)
+}
+
 // Function to delete provided asset version
 func (a *AssetVersionController) Delete(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)                  //Get the asset provided in the context / URL
@@ -128,9 +154,9 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
+	tree := normalize.BuildDependencyTree(components, models.Root)
 	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*treeNode, 0)
+		tree.Root.Children = make([]*normalize.TreeNode, 0)
 	}
 
 	return ctx.JSON(200, tree)
@@ -149,9 +175,9 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
+	tree := normalize.BuildDependencyTree(components, models.Root)
 	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*treeNode, 0)
+		tree.Root.Children = make([]*normalize.TreeNode, 0)
 	}
 
 	return ctx.JSON(200, tree)
@@ -162,7 +188,7 @@ func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.Eject())
 }
 
 func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
@@ -171,7 +197,7 @@ func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.Eject())
 }
 
 func (a *AssetVersionController) VEXXML(ctx core.Context) error {
@@ -201,21 +227,10 @@ func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
+func (a *AssetVersionController) buildSBOM(ctx core.Context) (normalize.SBOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	// check for version query param
-	version := ctx.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	// get artifact from path
 	artifact, err := core.MaybeGetArtifact(ctx)
@@ -243,7 +258,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, version, org.Name, components.Data)
+	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
@@ -366,7 +381,7 @@ func (a *AssetVersionController) RefetchLicenses(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
-	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true)
+	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
@@ -631,7 +646,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = markdownTableFromSBOM(&markdownFile, bom)
+	err = markdownTableFromSBOM(&markdownFile, bom.Eject())
 	if err != nil {
 		return err
 	}
@@ -851,4 +866,15 @@ func (a *AssetVersionController) ListArtifacts(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, artifacts)
+}
+
+func (a *AssetVersionController) MakeDefault(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+
+	err := a.assetVersionRepository.UpdateAssetDefaultBranch(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return err
+	}
+	assetVersion.DefaultBranch = true
+	return ctx.JSON(200, assetVersion)
 }

@@ -32,7 +32,7 @@ type licenseRiskWithNewLicense struct {
 	NewFinalLicense string
 }
 
-func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
+func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream models.UpstreamState) error {
 	// get all license risks for the assetVersion (across artifacts) so we can deduplicate
 	existingLicenseRisks, err := s.licenseRiskRepository.GetAllLicenseRisksForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
@@ -149,13 +149,13 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 
 		// Process new license risks that don't exist on other branches
 		if len(newDetectedRisksNotOnOtherBranch) > 0 {
-			if err := s.UserDetectedLicenseRisks(db, assetVersion.AssetID, assetVersion.Name, artifactName, newDetectedRisksNotOnOtherBranch); err != nil {
+			if err := s.UserDetectedLicenseRisks(db, assetVersion.AssetID, assetVersion.Name, artifactName, newDetectedRisksNotOnOtherBranch, upstream); err != nil {
 				return err
 			}
 		}
 
 		if len(finallyFixed) > 0 {
-			if err := s.UserFixedLicenseRisks(db, "system", finallyFixed); err != nil {
+			if err := s.UserFixedLicenseRisks(db, "system", finallyFixed, upstream); err != nil {
 				return err
 			}
 		}
@@ -183,13 +183,13 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 }
 
 // the license risks were fixes BY REMOVING the component
-func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, licenseRisks []models.LicenseRisk) error {
+func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, licenseRisks []models.LicenseRisk, upstream models.UpstreamState) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
 	events := make([]models.VulnEvent, len(licenseRisks))
 	for i := range licenseRisks {
-		ev := models.NewFixedEvent(licenseRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, userID, "")
+		ev := models.NewFixedEvent(licenseRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, userID, "", upstream)
 		ev.Apply(&licenseRisks[i])
 		events[i] = ev
 	}
@@ -200,7 +200,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisks(tx core.DB, userID string, li
 }
 
 // Helper: create detected events for newly opened license risks and save them
-func (s *LicenseRiskService) UserDetectedLicenseRisks(tx core.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk) error {
+func (s *LicenseRiskService) UserDetectedLicenseRisks(tx core.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk, upstream models.UpstreamState) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -208,7 +208,7 @@ func (s *LicenseRiskService) UserDetectedLicenseRisks(tx core.DB, assetID uuid.U
 	for i := range licenseRisks {
 		// ensure artifact association exists in the object
 		licenseRisks[i].Artifacts = append(licenseRisks[i].Artifacts, models.Artifact{ArtifactName: artifactName, AssetID: assetID, AssetVersionName: assetVersionName})
-		ev := models.NewDetectedEvent(licenseRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
+		ev := models.NewDetectedEvent(licenseRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName, upstream)
 		ev.Apply(&licenseRisks[i])
 		events[i] = ev
 	}
@@ -347,29 +347,29 @@ func (s *LicenseRiskService) UserDidNotDetectLicenseRiskInArtifactAnymore(tx cor
 	return nil
 }
 
-func (s *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.licenseRiskRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+			ev, err = s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+	return s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 }
 
-func (s *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
+		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, upstream)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames())
+		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames(), upstream)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
+		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, upstream)
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
 	}

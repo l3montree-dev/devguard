@@ -91,6 +91,19 @@ type ComponentDependency struct {
 	Depth int `json:"depth" gorm:"column:depth"`
 }
 
+const Root string = "root"
+
+func (c ComponentDependency) GetRef() string {
+	if c.ComponentPurl == nil {
+		return Root
+	}
+	return *c.ComponentPurl
+}
+
+func (c ComponentDependency) GetDeps() []string {
+	return []string{c.DependencyPurl}
+}
+
 const NoVersion = "0.0.0"
 
 func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {

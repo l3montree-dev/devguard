@@ -16,9 +16,7 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -86,7 +84,6 @@ type FirstPartyScanResponse struct {
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
 // It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
 func (s HTTPController) UploadVEX(ctx core.Context) error {
-
 	var bom cdx.BOM
 	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
 	if err := dec.Decode(&bom); err != nil {
@@ -99,96 +96,70 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	userID := core.GetSession(ctx).GetUserID()
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
+	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
+	tag := ctx.Request().Header.Get("X-Tag")
+
+	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
+	origin := ctx.Request().Header.Get("X-Origin")
+	if origin == "" {
+		origin = "vex-upload"
+	}
 
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, asset.ID)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
-		slog.Error("could not find asset version", "err", err, "assetVersion", assetVersionName, "assetID", asset.ID)
-		return echo.NewHTTPError(404, "could not find asset version").WithInternal(err)
+		slog.Error("could not find or create asset version", "err", err)
+		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
 	}
-	// load existing dependency vulns for this asset version
-	existing, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
+
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersionName,
+		AssetID:          asset.ID,
+	}
+
+	// save the artifact to the database
+	if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+		slog.Error("could not save artifact", "err", err)
+		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
+	}
+
+	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
-		slog.Error("could not load dependency vulns", "err", err)
-		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+		slog.Error("could not scan vex", "err", err)
+		return err
 	}
 
-	// index by CVE id
-	vulnsByCVE := make(map[string][]models.DependencyVuln)
-	for _, v := range existing {
-		if v.CVE != nil && v.CVE.CVE != "" {
-			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
-		} else if v.CVEID != nil && *v.CVEID != "" {
-			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
-	}
+	})
 
-	updated := 0
-	notFound := 0
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
 
-	// helper to extract cve id from CycloneDX vulnerability id or source url
-	extractCVE := func(s string) string {
-		if s == "" {
-			return ""
 		}
-		s = strings.TrimSpace(s)
-		if strings.HasPrefix(s, "http") {
-			parts := strings.Split(s, "/")
-			return parts[len(parts)-1]
+
+		// save the asset
+		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
 		}
-		return s
-	}
+	})
 
-	// iterate vulnerabilities in the CycloneDX BOM
-	if bom.Vulnerabilities != nil {
-		for _, vuln := range *bom.Vulnerabilities {
-			cveID := extractCVE(vuln.ID)
-			if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
-				cveID = extractCVE(vuln.Source.URL)
-			}
-			if cveID == "" {
-				notFound++
-				continue
-			}
-
-			cveID = strings.ToUpper(strings.TrimSpace(cveID))
-
-			vlist, ok := vulnsByCVE[cveID]
-			if !ok || len(vlist) == 0 {
-				notFound++
-				continue
-			}
-
-			statusType := normalize.MapCDXToStatus(vuln.Analysis)
-			if statusType == "" {
-				// skip unknown/unspecified statuses
-				continue
-			}
-
-			justification := "[VEX-Upload]"
-			if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
-				justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
-			}
-
-			for i := range vlist {
-				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vlist[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name) // mechanical justification is not part of cyclonedx spec.
-				if err != nil {
-					slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
-					continue
-				}
-				updated++
-			}
-		}
-	}
-
-	return ctx.JSON(200, map[string]int{"updated": updated, "notFound": notFound})
+	return ctx.JSON(200, nil)
 }
 
-func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
+func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -196,8 +167,9 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}()
 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-	normalizedBom := bom
+
 	asset := core.GetAsset(c)
+
 	org := core.GetOrg(c)
 	project := core.GetProject(c)
 
@@ -210,6 +182,9 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	origin := c.Request().Header.Get("X-Origin")
+	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
@@ -217,7 +192,6 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	if artifactName == "" {
 		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
@@ -234,12 +208,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalized, userID)
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
@@ -252,7 +226,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -367,7 +341,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
 	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	scanResults, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		return err
 	}
@@ -395,7 +369,14 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
 	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	// if no origin is provided via header set it ourselves
+	origin := c.Request().Header.Get("X-Origin")
+	if origin == "" {
+		origin = "sbom-file-upload"
+		c.Request().Header.Set("X-Origin", origin)
+	}
+
+	scanResults, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -17,26 +18,29 @@ func NewCleanCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clean <image | signature-file>",
 		Short: "Remove attestations or signatures using cosign",
-		Long:  `Run cosign remove on an image or signature object to clean attestations/signatures. Pass --key to specify a key reference. Use --yes to skip confirmation.`,
-		Args:  cobra.ExactArgs(1),
+		Long: `Run cosign remove on an image or signature object to clean attestations/signatures.
+
+This command wraps the cosign CLI. If registry credentials are provided they will
+be used for authentication. The command converts your configured token into a key
+and uses it where appropriate. Use --type to limit the cleanup to signatures,
+attestations, SBOMs, or all.
+
+Example:
+	devguard-scanner clean ghcr.io/org/image:tag
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 			// if credentials are provided, login to the registry first (same behavior as attest)
-			if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
-				err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
-				if err != nil {
-					slog.Error("login failed", "err", err)
-					return err
-				}
-
-				slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+			if err := scanner.MaybeLoginIntoOciRegistry(cmd.Context()); err != nil {
+				return err
 			}
 
 			var out bytes.Buffer
 			var errOut bytes.Buffer
 
 			// get key from token using existing helper
-			keyPath, _, err := tokenToKey(config.RuntimeBaseConfig.Token)
+			keyPath, _, err := scanner.TokenToKey(config.RuntimeBaseConfig.Token)
 			if err != nil {
 				slog.Error("could not convert token to key", "err", err)
 				return err
@@ -87,11 +91,11 @@ func NewCleanCommand() *cobra.Command {
 		},
 	}
 
-	addDefaultFlags(cmd)
+	scanner.AddDefaultFlags(cmd)
 	// allow username, password and registry to be provided as well as flags (same as attest)
-	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
-	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
-	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (if required)")
+	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to (optional)")
 
 	cmd.Flags().String("type", "all", "Type of clean to perform: signature|attestation|sbom|all")
 

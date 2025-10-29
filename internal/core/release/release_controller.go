@@ -163,12 +163,12 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 		// build sbom for this artifact via assetVersionService
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
-		bom, err := h.assetVersionService.BuildSBOM(av, *item.ArtifactName, models.NoVersion, orgName, compsPage.Data)
+		bom, err := h.assetVersionService.BuildSBOM(av, *item.ArtifactName, orgName, compsPage.Data)
 		if err != nil {
 			return nil, err
 		}
 		if bom != nil {
-			boms = append(boms, bom)
+			boms = append(boms, bom.Eject())
 		}
 	}
 

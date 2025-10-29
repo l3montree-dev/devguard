@@ -16,10 +16,7 @@
 package commands
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -27,23 +24,22 @@ func NewContainerScanningCommand() *cobra.Command {
 	containerScanningCommand := &cobra.Command{
 		Use:   "container-scanning",
 		Short: "Software composition analysis of a container image",
-		Long:  `Scan a container image for vulnerabilities. The image must either be a tar file (--path) or available for download via a container registry (--image).`,
+		Long: `Scan a container image for vulnerabilities. The image must either be a tar file (--path)
+or be available for download via a container registry (--image). The command generates or
+uploads an SBOM which is then analyzed by DevGuard. The request is signed using the
+configured token before upload.
+
+Example:
+  devguard-scanner container-scanning --image ghcr.io/org/image:tag
+  devguard-scanner container-scanning --path image.tar
+`,
 		// Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if config.RuntimeBaseConfig.Image != "" {
-				return scaCommand(cmd, args)
-			} else {
-				hasTarSuffix := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar")
-				if !hasTarSuffix {
-					return fmt.Errorf("path must be a tar file")
-				}
-				return scaCommand(cmd, args)
-			}
-		},
+		RunE: scaCommand,
 	}
 
-	addDependencyVulnsScanFlags(containerScanningCommand)
-	containerScanningCommand.Flags().String("image", "", "The oci image to scan.")
+	scanner.AddDependencyVulnsScanFlags(containerScanningCommand)
+	containerScanningCommand.Flags().String("image", "", "OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path may be used to provide a tar or local files.")
+	containerScanningCommand.Flags().String("origin", "container-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
 
 	return containerScanningCommand
 }

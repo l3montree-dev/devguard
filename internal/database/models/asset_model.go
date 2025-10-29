@@ -66,6 +66,14 @@ type Asset struct {
 	RepositoryProvider       *string        `json:"repositoryProvider" gorm:"type:text;"`
 	Metadata                 database.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
 	IsPublic                 bool           `json:"isPublic" gorm:"default:false;not null;"`
+	ParanoidMode             bool           `json:"paranoidMode" gorm:"default:false;not null;"`
+}
+
+func (m *Asset) UpstreamState() UpstreamState {
+	if m.ParanoidMode {
+		return UpstreamStateExternal
+	}
+	return UpstreamStateExternalAccepted
 }
 
 func (m Asset) TableName() string {
