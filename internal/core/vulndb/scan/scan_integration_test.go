@@ -1266,9 +1266,14 @@ func TestUploadVEX(t *testing.T) {
 		},
 	}
 	bom := cyclonedx.BOM{
-		BOMFormat:       "CycloneDX",
-		SpecVersion:     cyclonedx.SpecVersion1_6,
-		Version:         1,
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cyclonedx.SpecVersion1_6,
+		Version:     1,
+		Metadata: &cyclonedx.Metadata{
+			Component: &cyclonedx.Component{
+				BOMRef: "root",
+			},
+		},
 		Vulnerabilities: &[]cyclonedx.Vulnerability{vuln},
 	}
 
@@ -1311,7 +1316,8 @@ func TestUploadVEX(t *testing.T) {
 		switch *d.CVEID {
 		case "CVE-2025-00001":
 			assert.Equal(t, models.VulnStateFalsePositive, d.State)
-			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[0].Justification)
+			assert.Equal(t, models.EventTypeDetected, d.Events[0].Type)
+			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
 		case "CVE-2025-00002":
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
