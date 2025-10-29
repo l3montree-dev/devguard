@@ -17,15 +17,11 @@ package scanner
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os/exec"
 	"strings"
-
-	"github.com/CycloneDX/cyclonedx-go"
 
 	"github.com/pkg/errors"
 )
@@ -35,9 +31,14 @@ type AttestationFileLine struct {
 	Payload     string `json:"payload"` // base64 encoded AttestationPayload
 }
 
-func DiscoverAttestations(image string) ([]map[string]any, error) {
+func DiscoverAttestations(image string, predicateType string) ([]map[string]any, error) {
 	// cosign download attestation image
-	cosignCmd := exec.Command("cosign", "download", "attestation", image)
+
+	options := []string{"download", "attestation", image}
+	if predicateType != "" {
+		options = append(options, "--predicate-type", predicateType)
+	}
+	cosignCmd := exec.Command("cosign", options...)
 
 	stderrBuf := &bytes.Buffer{}
 	stdoutBuf := &bytes.Buffer{}
@@ -84,35 +85,4 @@ func DiscoverAttestations(image string) ([]map[string]any, error) {
 	}
 
 	return attestations, nil
-}
-
-func GetVEX(ctx context.Context, imageRef string) (*cyclonedx.BOM, error) {
-	var vex *cyclonedx.BOM
-
-	attestations, err := DiscoverAttestations(imageRef)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, attestation := range attestations {
-		if strings.HasPrefix(attestation["predicateType"].(string), "https://cyclonedx.org/vex") {
-			predicate, ok := attestation["predicate"].(map[string]any)
-			if !ok {
-				continue
-			}
-
-			// marshal the predicate back to json
-			predicateBytes, err := json.Marshal(predicate)
-			if err != nil {
-				continue
-			}
-			vex, err = BomFromBytes(predicateBytes)
-			if err != nil {
-				continue
-			}
-			return vex, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no vex document found for image")
 }

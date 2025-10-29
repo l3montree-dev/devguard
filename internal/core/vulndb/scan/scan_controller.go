@@ -130,6 +130,22 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
+	externalURLs := []string{}
+	// check if vex url is present in the bom metadata
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			if ref.Type == cdx.ERTypeExploitabilityStatement {
+				externalURLs = append(externalURLs, ref.URL)
+			}
+		}
+	}
+
+	if len(externalURLs) > 0 {
+		s.artifactService.AddUpstreamURLs(
+			&artifact, externalURLs,
+		)
+	}
+
 	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)

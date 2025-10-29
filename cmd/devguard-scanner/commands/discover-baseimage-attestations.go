@@ -1,44 +1,20 @@
 package commands
 
 import (
-	"bytes"
-	"context"
+	"encoding/json"
 	"fmt"
-	"log/slog"
-	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/spf13/cobra"
 )
 
-func getContainerFile(ctx context.Context, path string) ([]byte, error) {
-
-	//check if in workdir a Dockerfile or Container file exists
-	dockerFilePath := path + "/Dockerfile"
-	containerFilePath := path + "/Containerfile"
-
-	var file []byte
-	var err error
-
-	//check if a Dockerfile exists
-	if file, err = os.ReadFile(dockerFilePath); err == nil {
-		return file, nil
-	}
-
-	//check if a Container file exists
-	if file, err = os.ReadFile(containerFilePath); err == nil {
-		return file, nil
-	}
-	return nil, fmt.Errorf("no Dockerfile or Container file found in path: %s", path)
-}
-
 func getImageFromContainerFile(containerFile []byte) (string, error) {
 	//split the file by lines
-	regex := regexp.MustCompile(`FROM\s+(.+)`)
+	regex := regexp.MustCompile(`(?i)^ *FROM +(.*)`)
 
 	lines := strings.Split(string(containerFile), "\n")
 	var imagePath string
@@ -57,12 +33,14 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 }
 
 func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+	path := args[0]
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("file does not exist: %s", path)
+	}
 
-	// check if the is a container file or a dockerfile
-	containerFile, err := getContainerFile(ctx, args[0])
+	containerFile, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read file: %w", err)
 	}
 
 	//get the last from statement from the container file
@@ -70,63 +48,51 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	//check if there is a vex file for the image
-	vex, err := scanner.GetVEX(ctx, imagePath)
+	predicateType, _ := cmd.Flags().GetString("predicateType")
+	output, _ := cmd.Flags().GetString("output")
+	attestations, err := scanner.DiscoverAttestations(imagePath, predicateType)
+	// save the attestations to files
 	if err != nil {
-		return err
+		return fmt.Errorf("could not discover attestations: %w", err)
 	}
 
-	//upload the vex file
-	if vex != nil {
-		vexBuff := &bytes.Buffer{}
-		// marshal the bom back to json
-		err := cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).Encode(vex)
+	for i, attestation := range attestations {
+		attestationFileName := filepath.Join(output, fmt.Sprintf("attestation-%d.json", i+1))
+		attestationFile, err := os.Create(attestationFileName)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create attestation file: %w", err)
 		}
+		defer attestationFile.Close()
 
-		// upload the vex
-		vexResp, err := scanner.UploadVEX(vexBuff, true)
+		attestationBytes, err := json.MarshalIndent(attestation, "", "  ")
 		if err != nil {
-			slog.Error("could not upload vex", "err", err)
-		} else {
-			defer vexResp.Body.Close()
-			if vexResp.StatusCode != http.StatusOK {
-				slog.Error("could not upload vex", "status", vexResp.Status)
-			} else {
-				slog.Info("uploaded vex successfully")
-			}
+			return fmt.Errorf("could not marshal attestation: %w", err)
 		}
-	} else {
-		slog.Info("no vex document found for image") //, "image") //imagePath)
+		_, err = attestationFile.Write(attestationBytes)
+		if err != nil {
+			return fmt.Errorf("could not write attestation file: %w", err)
+		}
+		fmt.Printf("Attestation saved to %s\n", attestationFileName)
 	}
-
-	slog.Info("vex called", "file", vex)
 
 	return nil
 }
 
 func NewDiscoverBaseImageAttestationsCommand() *cobra.Command {
 	discoverBaseImageAttestationsCmd := &cobra.Command{
-		Use:   "discover-baseimage-attestations <path>",
+		Use:   "discover-baseimage-attestations <path to containerfile>",
 		Short: "Discover base image attestations from container files",
 		Long: `Scan a directory for Dockerfile/Containerfile, extract the base image FROM line and
-attempt to discover and upload any VEX/attestation documents for the base image.
-
-The command signs uploads using the configured token. Provide a path to a directory
-containing a Dockerfile or Containerfile.
+attempt to discover any attestation documents for the base image. It will save the attestations to the output path as separate files.
 
 Example:
-  devguard-scanner discover-baseimage-attestations ./path/to/project
+  devguard-scanner discover-baseimage-attestations ./path/to/project/Containerfile
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: runDiscoverBaseImageAttestations,
 	}
 
-	scanner.AddDefaultFlags(discoverBaseImageAttestationsCmd)
-	scanner.AddAssetRefFlags(discoverBaseImageAttestationsCmd)
-	discoverBaseImageAttestationsCmd.PersistentFlags().String("origin", "base-image", "The origin of the attestations being discovered. Examples: 'base-image', 'container-scanning'. Default: 'base-image'.")
-
+	discoverBaseImageAttestationsCmd.Flags().String("predicateType", "", "Predicate type to filter attestations (e.g. 'https://cyclonedx.org/vex'). If empty, all predicate types are retrieved.")
+	discoverBaseImageAttestationsCmd.Flags().String("output", ".", "Output directory to save the discovered attestations.")
 	return discoverBaseImageAttestationsCmd
 }

@@ -38,8 +38,9 @@ Example:
 	}
 
 	scanner.AddDependencyVulnsScanFlags(containerScanningCommand)
-	containerScanningCommand.Flags().String("image", "", "OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path may be used to provide a tar or local files.")
+	containerScanningCommand.Flags().String("image", "", "OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path or the first argument may be used to provide a tar or local files.")
 	containerScanningCommand.Flags().String("origin", "container-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
+	containerScanningCommand.Flags().String("path", "", "Path to a tar file or directory containing the container image to scan. If empty, --image must be provided or an argument.")
 
 	return containerScanningCommand
 }

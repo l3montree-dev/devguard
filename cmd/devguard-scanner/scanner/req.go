@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func UploadVEX(vex io.Reader, isFromUpstream bool) (*http.Response, error) {
+func UploadVEX(vex io.Reader) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -46,15 +46,9 @@ func UploadVEX(vex io.Reader, isFromUpstream bool) (*http.Response, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin+"-vex")
+	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 
-	isFromUpstreamStr := "0"
-	if isFromUpstream {
-		isFromUpstreamStr = "1"
-	}
-
-	req.Header.Set("X-Is-Upstream", isFromUpstreamStr)
 	config.SetXAssetHeaders(req)
 
 	return http.DefaultClient.Do(req)

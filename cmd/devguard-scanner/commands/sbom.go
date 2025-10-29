@@ -111,5 +111,6 @@ Only CycloneDX-formatted SBOMs are supported. The command signs the request usin
 	}
 
 	scanner.AddDependencyVulnsScanFlags(cmd)
+	cmd.Flags().String("origin", "sbom", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
 	return cmd
 }

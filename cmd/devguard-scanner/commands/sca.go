@@ -137,7 +137,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 
 func scanExternalImage(ctx context.Context) error {
 	// download and extract release attestation BOMs first
-	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image)
+	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
 	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
 		return err
 	}
@@ -248,7 +248,7 @@ func scanExternalImage(ctx context.Context) error {
 
 		// upload the vex
 		// but it is not from upstream - it is the image we are currently looking at.
-		vexResp, err := scanner.UploadVEX(vexBuff, false)
+		vexResp, err := scanner.UploadVEX(vexBuff)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -370,7 +370,7 @@ Examples:
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	// set default scanner type
-	scaCommand.PersistentFlags().String("origin", "source-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
-
+	scaCommand.Flags().String("origin", "source-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
+	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
 	return scaCommand
 }
