@@ -156,7 +156,6 @@ func NewInTotoRunCommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "failed to dump metadata")
 			}
-			return nil
 
 			err = readAndUploadMetadata(cmd, config.RuntimeInTotoConfig.SupplyChainID, config.RuntimeInTotoConfig.Step, filename)
 			if err != nil {
