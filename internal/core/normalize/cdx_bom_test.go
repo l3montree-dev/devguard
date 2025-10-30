@@ -666,15 +666,15 @@ func TestReplaceSubtree(t *testing.T) {
 		for _, comp := range *updatedSbom.GetDependencies() {
 			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
 				found = true
-				assert.Contains(t, *comp.Dependencies, "origin")
-				assert.Contains(t, *comp.Dependencies, "other-origin")
+				assert.Contains(t, *comp.Dependencies, "sbom:origin")
+				assert.Contains(t, *comp.Dependencies, "sbom:other-origin")
 			}
 		}
 		assert.True(t, found, "Root component should exist in updated SBOM")
 
 		// check that subtree now has NO dependency to old-component and has dependency to new-component
 		for _, comp := range *updatedSbom.GetDependencies() {
-			if comp.Ref == "other-origin" {
+			if comp.Ref == "sbom:other-origin" {
 				assert.NotContains(t, *comp.Dependencies, "pkg:old-component")
 				assert.Contains(t, *comp.Dependencies, "pkg:new-component")
 			}

@@ -69,6 +69,33 @@ func (tree *Tree) Visitable() ([]string, []string) {
 	return visitable, unvisitable
 }
 
+func (tree *Tree) WithMultipleIncomingEdges() []string {
+	visited := make(map[string]int)
+
+	var visit func(node *TreeNode)
+	visit = func(node *TreeNode) {
+		if node == nil {
+			return
+		}
+		visited[node.Name] += 1
+		for _, child := range node.Children {
+			visit(child)
+		}
+	}
+
+	visit(tree.Root)
+
+	multipleEdges := []string{}
+
+	for visited, edgeCount := range visited {
+		if edgeCount > 1 {
+			multipleEdges = append(multipleEdges, visited)
+		}
+	}
+
+	return multipleEdges
+}
+
 func (tree *Tree) addNode(source string, dep string) {
 	// check if source does exist
 	if _, ok := tree.cursors[source]; !ok {
