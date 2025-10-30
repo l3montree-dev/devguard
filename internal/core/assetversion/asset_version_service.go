@@ -303,7 +303,6 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 }
 
 func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
-
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
@@ -358,7 +357,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, tree.WithMultipleIncomingEdges(), dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, tree.ReachableThroughMultipleRoots(), dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -494,7 +493,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, purlsWithMoreThanASinglePath []string, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, purlsReachableThroughMultipleRoots []string, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -522,7 +521,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		if dv.ComponentPurl == nil {
 			return true
 		}
-		return !slices.Contains(purlsWithMoreThanASinglePath, *dv.ComponentPurl)
+		return !slices.Contains(purlsReachableThroughMultipleRoots, *dv.ComponentPurl)
 	}
 	fixedVulns = utils.Filter(fixedVulns, filterPredicate)
 	fixedOnThisArtifactName = utils.Filter(fixedOnThisArtifactName, filterPredicate)
@@ -558,28 +557,28 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		var valueClauses []string
-		for _, dv := range nothingChanged {
-			hash := dv.CalculateHash()
-			depth := utils.OrDefault(dv.ComponentDepth, 1)
-			valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
+		if len(nothingChanged) > 0 {
+			var valueClauses []string
+			for _, dv := range nothingChanged {
+				hash := dv.CalculateHash()
+				depth := utils.OrDefault(dv.ComponentDepth, 1)
+				valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
+			}
+			// Join the value clauses with commas
+			values := strings.Join(valueClauses, ",")
+			// Construct the SQL query
+			query := fmt.Sprintf(`
+				UPDATE dependency_vulns
+				SET component_depth = data.component_depth
+				FROM (VALUES %s) AS data(id, component_depth)
+				WHERE dependency_vulns.asset_id = $1
+				AND dependency_vulns.asset_version_name = $2
+				AND dependency_vulns.id = data.id
+			`, values)
+			// update just the component depth for nothingChanged vulns
+			return s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
 		}
-
-		// Join the value clauses with commas
-		values := strings.Join(valueClauses, ",")
-
-		// Construct the SQL query
-		query := fmt.Sprintf(`
-			UPDATE dependency_vulns
-			SET component_depth = data.component_depth
-			FROM (VALUES %s) AS data(hash, component_depth)
-			WHERE dependency_vulns.asset_id = $1
-			AND dependency_vulns.asset_version_name = $2
-			AND dependency_vulns.hash = data.hash
-		`, values)
-
-		// update just the component depth for nothingChanged vulns
-		return s.dependencyVulnRepository.GetDB(tx).Exec(query).Error
+		return nil
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err

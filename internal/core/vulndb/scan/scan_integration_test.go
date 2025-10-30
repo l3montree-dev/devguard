@@ -173,6 +173,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Artifact-Name", "artifact-2")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Origin", "test-origin")        // set the origin header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		recorder = httptest.NewRecorder()
 		ctx = app.NewContext(req, recorder)

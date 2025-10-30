@@ -69,31 +69,36 @@ func (tree *Tree) Visitable() ([]string, []string) {
 	return visitable, unvisitable
 }
 
-func (tree *Tree) WithMultipleIncomingEdges() []string {
-	visited := make(map[string]int)
+func (tree *Tree) ReachableThroughMultipleRoots() []string {
+	reachablePurls := make(map[string]map[string]bool)
 
-	var visit func(node *TreeNode)
-	visit = func(node *TreeNode) {
+	var visit func(node *TreeNode, root string)
+	visit = func(node *TreeNode, root string) {
 		if node == nil {
 			return
 		}
-		visited[node.Name] += 1
+		if _, ok := reachablePurls[node.Name]; !ok {
+			reachablePurls[node.Name] = make(map[string]bool)
+		}
+		reachablePurls[node.Name][root] = true
 		for _, child := range node.Children {
-			visit(child)
+			visit(child, root)
 		}
 	}
 
-	visit(tree.Root)
+	// start from all root nodes (children of the main root)
+	for _, child := range tree.Root.Children {
+		visit(child, child.Name)
+	}
 
-	multipleEdges := []string{}
-
-	for visited, edgeCount := range visited {
-		if edgeCount > 1 {
-			multipleEdges = append(multipleEdges, visited)
+	multipleRoots := []string{}
+	for name, roots := range reachablePurls {
+		if len(roots) > 1 {
+			multipleRoots = append(multipleRoots, name)
 		}
 	}
 
-	return multipleEdges
+	return multipleRoots
 }
 
 func (tree *Tree) addNode(source string, dep string) {
