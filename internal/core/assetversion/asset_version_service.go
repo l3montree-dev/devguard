@@ -369,7 +369,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	if err := s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "", asset); err != nil {
+	if err := s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", newState, "", asset); err != nil {
 		slog.Error("could not recalculate raw risk assessment", "err", err)
 		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")
 	}
