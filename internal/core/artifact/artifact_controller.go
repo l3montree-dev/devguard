@@ -186,7 +186,9 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		// make sure that we at least update the sbom once if there were deletions
 		// updating with nil, will just renormalize the sbom and remove all components which are not
 		// reachable anymore from the root nodes - we might have removed some root nodes above
-		c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal)
+		if err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal); err != nil {
+			slog.Error("could not update sbom after root node deletion", "err", err)
+		}
 	}
 
 	c.FireAndForget(func() {

@@ -146,7 +146,20 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return ctx.JSON(200, nil)
 	}
 
-	vulns, err := s.artifactService.SyncUpstreamBoms([]normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}, org, project, asset, assetVersion, artifact, userID)
+	upstreamBOMS := []normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}
+
+	for _, url := range externalURLs {
+		slog.Info("found VEX external reference", "url", url)
+		boms, _, invalid := s.artifactService.FetchBomsFromUpstream(artifactName, externalURLs)
+		if len(invalid) > 0 {
+			slog.Warn("some VEX external references are invalid", "invalid", invalid)
+		}
+		if len(boms) > 0 {
+			upstreamBOMS = append(upstreamBOMS, boms...)
+		}
+	}
+
+	vulns, err := s.artifactService.SyncUpstreamBoms(upstreamBOMS, org, project, asset, assetVersion, artifact, userID)
 	if err != nil {
 		slog.Error("could not scan vex", "err", err)
 		return err
