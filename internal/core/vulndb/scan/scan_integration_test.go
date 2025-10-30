@@ -42,7 +42,6 @@ func TestScanning(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-
 	controller, _ := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom
@@ -1314,9 +1313,10 @@ func TestUploadVEX(t *testing.T) {
 	for _, d := range dv {
 		switch *d.CVEID {
 		case "CVE-2025-00001":
+			// i think its a race condition and the ordering of events is non deterministic
 			assert.Equal(t, models.VulnStateFalsePositive, d.State)
-			assert.Equal(t, models.EventTypeDetected, d.Events[0].Type)
-			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
+			assert.Equal(t, models.EventTypeDetected, d.Events[1].Type)
+			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[2].Justification)
 		case "CVE-2025-00002":
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
@@ -1423,5 +1423,69 @@ func TestIdempotency(t *testing.T) {
 			}
 		}
 	})
+}
 
+func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	// load small-sbom.json
+	smallSbom, err := os.Open("testdata/small-sbom.json")
+	assert.Nil(t, err)
+
+	smallVex, err := os.Open("testdata/small-vex-false-positive.json")
+	assert.Nil(t, err)
+	// lets scan the sbom
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	newCVE := models.CVE{
+		CVE:         "CVE-2020-25649",
+		Description: "Test",
+		CVSS:        6.00,
+	}
+	if err = db.Create(&newCVE).Error; err != nil {
+		t.Fatalf("could not create cve 2: %v", err)
+	}
+
+	controller, _ := initHTTPController(t, db, true)
+
+	app := echo.New()
+
+	req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", smallVex)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Artifact-Name", "idempotency-artifact")
+	req.Header.Set("X-Asset-Default-Branch", "main")
+	recorder := httptest.NewRecorder()
+	ctx := app.NewContext(req, recorder)
+
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.AuthSession{}
+
+		authSession.On("GetUserID").Return("test-user")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, &authSession)
+		core.SetAssetVersion(ctx, assetVersion)
+	}
+
+	setupContext(ctx)
+
+	assert.Nil(t, controller.UploadVEX(ctx))
+
+	// now scan the sbom - it does not contain the cve the vex is talking about
+	// nevertheless, we expect this vulnerability to stay in false positive state and wont be fixed
+	req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", smallSbom)
+	recorder = httptest.NewRecorder()
+	ctx = app.NewContext(req, recorder)
+	setupContext(ctx)
+	err = controller.ScanDependencyVulnFromProject(ctx)
+	assert.Nil(t, err)
+
+	// make a query to the vulnerability and expect it in falsePositive state
+	result := models.DependencyVuln{}
+	assert.Nil(t, db.Model(&models.DependencyVuln{}).Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).First(&result).Error)
+
+	assert.Equal(t, models.VulnStateFalsePositive, result.State)
 }

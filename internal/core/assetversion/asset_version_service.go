@@ -358,7 +358,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, tree.WithMultipleIncomingEdges(), dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -509,7 +509,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, purlsWithMoreThanASinglePath []string, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -531,6 +531,16 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 	})
 
 	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
+	// this means, that another source is still saying, its part of this artifact
+	filterPredicate := func(dv models.DependencyVuln) bool {
+		if dv.ComponentPurl == nil {
+			return true
+		}
+		return !slices.Contains(purlsWithMoreThanASinglePath, *dv.ComponentPurl)
+	}
+	fixedVulns = utils.Filter(fixedVulns, filterPredicate)
+	fixedOnThisArtifactName = utils.Filter(fixedOnThisArtifactName, filterPredicate)
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 

@@ -197,6 +197,22 @@ func normalizePurls(components []cdx.Component) []cdx.Component {
 	return normalizedComponents
 }
 
+func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {
+	if vulns == nil {
+		return vulns
+	}
+	for i, v := range *vulns {
+		affects := v.Affects
+		if affects == nil {
+			continue
+		}
+		for j, affected := range *affects {
+			(*(*vulns)[i].Affects)[j].Ref = normalizePurl(affected.Ref)
+		}
+	}
+	return vulns
+}
+
 func getShortCircuitDependencies(ref string, allDeps []cdx.Dependency) []string {
 	// Build a map once instead of linear search each time
 	depMap := make(map[string]*cdx.Dependency)
@@ -313,7 +329,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 		}
 	}
 
-	vulns := bom.Vulnerabilities
+	vulns := normalizeVulnerabilities(bom.Vulnerabilities)
 	if vulns != nil {
 		// add those components to the bom as well
 		for _, v := range *vulns {
@@ -360,6 +376,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 	dependencies = uniqueDependencies(dependencies)
 	bom.Dependencies = &dependencies
 	bom.Components = &components
+	bom.Vulnerabilities = vulns
 
 	return &cdxBom{bom: removeUnvisitable(bom), origin: origin}
 }
