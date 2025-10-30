@@ -369,7 +369,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	if err := s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "", asset); err != nil {
+	if err := s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", newState, "", asset); err != nil {
 		slog.Error("could not recalculate raw risk assessment", "err", err)
 		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")
 	}
@@ -492,7 +492,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 			for _, existingVuln := range existingVulns {
 
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return ev.OriginalAssetVersionName == nil
+					return ev.OriginalAssetVersionName == nil && ev.Type != models.EventTypeRawRiskAssessmentUpdated
 				})
 
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
