@@ -449,7 +449,7 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 
 			justUpstreamEvents := true
 			for _, ev := range existingVuln.GetEvents() {
-				if ev.Upstream != 2 {
+				if ev.Upstream == 0 {
 					justUpstreamEvents = false
 					break
 				}
