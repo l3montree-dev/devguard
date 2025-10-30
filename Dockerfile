@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM golang:1.25.1-trixie@sha256:715a1cb919c605b94859d2691bc11cad74e6245b94c70e7d6cddafb01ae44b14 as build
+FROM golang:1.25.1-trixie@sha256:b08c20ae3aa771d333b1e2ad77986b42b1ded17362bbfdd452977bfc2b107295
 ARG GITHUB_REF_NAME
 
 WORKDIR /go/src/app
