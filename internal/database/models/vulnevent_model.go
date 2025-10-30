@@ -109,7 +109,7 @@ func (event VulnEvent) TableName() string {
 }
 
 func (event VulnEvent) Apply(vuln Vuln) {
-	if event.Upstream == UpstreamStateExternalAccepted && event.Type == EventTypeAccepted {
+	if event.Upstream != UpstreamStateInternal && event.Type == EventTypeAccepted {
 		// its an external accepted event that should not modify state
 		return
 	}
