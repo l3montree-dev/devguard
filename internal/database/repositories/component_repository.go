@@ -170,6 +170,7 @@ SELECT * FROM target_path;
 	FROM component_dependencies co
 	INNER JOIN components_cte cte
 		ON co.dependency_purl = cte.component_purl
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
