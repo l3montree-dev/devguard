@@ -44,12 +44,25 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("file does not exist: %s", filePath)
 	}
 
+	outputPath, err := cmd.Flags().GetString("outputPath")
+	if err != nil {
+		return errors.Wrap(err, "could not get outputPath flag")
+	}
+
 	// read the file
 	file, err := os.ReadFile(filePath)
 	// check for errors
 	if err != nil {
 		slog.Error("could not read file", "err", err)
 		return err
+	}
+
+	if outputPath != "" {
+		err = os.WriteFile(outputPath, file, 0644)
+		if err != nil {
+			return errors.Wrap(err, "could not write sarif file to output path")
+		}
+		slog.Info("SARIF report saved", "path", outputPath)
 	}
 
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
@@ -108,6 +121,7 @@ func NewSarifCommand() *cobra.Command {
 
 Example:
   devguard-scanner sarif results.sarif.json
+  devguard-scanner sarif results.sarif.json --outputPath uploaded-results.sarif.json
 
 The command signs the request using the configured token and returns scan results.`,
 		Args: cobra.ExactArgs(1),
@@ -115,6 +129,7 @@ The command signs the request using the configured token and returns scan result
 	}
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
+	cmd.Flags().String("outputPath", "", "Path to save a copy of the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
 
 	scanner.AddFirstPartyVulnsScanFlags(cmd)
 	return cmd
@@ -232,10 +247,15 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			}
 		}
 
+		outputPath, err := cmd.Flags().GetString("outputPath")
+		if err != nil {
+			return errors.Wrap(err, "could not get outputPath flag")
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path)
+		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, outputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -247,6 +267,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		b, err := json.Marshal(sarifResult)
 		if err != nil {
 			return errors.Wrap(err, "could not marshal sarif result")
+		}
+
+		if outputPath != "" {
+			err = os.WriteFile(outputPath, b, 0644)
+			if err != nil {
+				return errors.Wrap(err, "could not write sarif file to output path")
+			}
+			slog.Info("SARIF report saved", "path", outputPath)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
@@ -291,14 +319,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
-		return secretScan(path)
+		return secretScan(path, outputPath)
 	case "sast":
-		return sastScan(path)
+		return sastScan(path, outputPath)
 	case "iac":
-		return iacScan(path)
+		return iacScan(path, outputPath)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
 	}
