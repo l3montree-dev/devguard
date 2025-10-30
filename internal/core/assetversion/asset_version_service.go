@@ -492,7 +492,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 			for _, existingVuln := range existingVulns {
 
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return ev.OriginalAssetVersionName == nil
+					return ev.OriginalAssetVersionName == nil && ev.Type != models.EventTypeRawRiskAssessmentUpdated
 				})
 
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
