@@ -111,7 +111,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	FROM component_dependencies cd
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
 	WHERE
-		cd.component_purl IS NULL AND
+		cd.dependency_purl = @pURL AND
 		cd.asset_id = @assetID AND
 		cd.asset_version_name = @assetVersionName AND
 		acd.artifact_asset_version_name = @assetVersionName AND
@@ -124,35 +124,20 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 		co.dependency_purl,
 		co.asset_id,
 		cte.depth + 1,
-		cte.path || co.dependency_purl
+		co.dependency_purl || cte.path
 	FROM component_dependencies co
 	INNER JOIN components_cte cte
-		ON co.component_purl = cte.dependency_purl
-	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+		ON co.dependency_purl = cte.component_purl
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
-		acd.artifact_asset_version_name = @assetVersionName AND
-		acd.artifact_asset_id = @assetID AND
-		NOT co.dependency_purl = ANY(cte.path)
+		NOT co.dependency_purl = ANY(cte.path) AND cte.depth < 100
 ),
 target_path AS (
 	SELECT * FROM components_cte
-	WHERE dependency_purl = @pURL
-	ORDER BY depth ASC
-),
-path_edges AS (
-	SELECT
-		DISTINCT
-		component_purl,
-		dependency_purl,
-		asset_id,
-		depth
-	FROM components_cte
-	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+	ORDER BY depth DESC
 )
-SELECT * FROM path_edges
-ORDER BY depth;
+SELECT * FROM target_path;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
 			sql.Named("assetVersionName", assetVersionName))
 	} else {
@@ -167,7 +152,7 @@ ORDER BY depth;
 	FROM component_dependencies cd
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
 	WHERE
-		cd.component_purl IS NULL AND
+		cd.dependency_purl = @pURL AND
 		cd.asset_id = @assetID AND
 		cd.asset_version_name = @assetVersionName AND
 		acd.artifact_artifact_name = @artifactName AND
@@ -181,36 +166,21 @@ ORDER BY depth;
 		co.dependency_purl,
 		co.asset_id,
 		cte.depth + 1,
-		cte.path || co.dependency_purl
+		co.dependency_purl || cte.path
 	FROM component_dependencies co
 	INNER JOIN components_cte cte
-		ON co.component_purl = cte.dependency_purl
-	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+		ON co.dependency_purl = cte.component_purl
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
 		acd.artifact_artifact_name = @artifactName AND
-		acd.artifact_asset_version_name = @assetVersionName AND
-		acd.artifact_asset_id = @assetID AND
-		NOT co.dependency_purl = ANY(cte.path)
+		NOT co.dependency_purl = ANY(cte.path) AND cte.depth < 100
 ),
 target_path AS (
 	SELECT * FROM components_cte
-	WHERE dependency_purl = @pURL
-	ORDER BY depth ASC
-),
-path_edges AS (
-	SELECT
-		DISTINCT
-		component_purl,
-		dependency_purl,
-		asset_id,
-		depth
-	FROM components_cte
-	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+	ORDER BY depth DESC
 )
-SELECT * FROM path_edges
-ORDER BY depth;
+SELECT * FROM target_path;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
 			sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
 	}
