@@ -1316,8 +1316,8 @@ func TestUploadVEX(t *testing.T) {
 		case "CVE-2025-00001":
 			// i think its a race condition and the ordering of events is non deterministic
 			assert.Equal(t, models.VulnStateFalsePositive, d.State)
-			assert.Equal(t, models.EventTypeDetected, d.Events[1].Type)
-			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[2].Justification)
+			assert.Equal(t, models.EventTypeFalsePositive, d.Events[1].Type)
+			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
 		case "CVE-2025-00002":
 			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
