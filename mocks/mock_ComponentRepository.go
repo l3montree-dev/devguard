@@ -482,6 +482,68 @@ func (_c *ComponentRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB
 	return _c
 }
 
+// FetchRootNodes provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(artifact)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchRootNodes")
+	}
+
+	var r0 []models.ComponentDependency
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) ([]models.ComponentDependency, error)); ok {
+		return returnFunc(artifact)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) []models.ComponentDependency); ok {
+		r0 = returnFunc(artifact)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentDependency)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*models.Artifact) error); ok {
+		r1 = returnFunc(artifact)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentRepository_FetchRootNodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchRootNodes'
+type ComponentRepository_FetchRootNodes_Call struct {
+	*mock.Call
+}
+
+// FetchRootNodes is a helper method to define mock.On call
+//   - artifact *models.Artifact
+func (_e *ComponentRepository_Expecter) FetchRootNodes(artifact interface{}) *ComponentRepository_FetchRootNodes_Call {
+	return &ComponentRepository_FetchRootNodes_Call{Call: _e.mock.On("FetchRootNodes", artifact)}
+}
+
+func (_c *ComponentRepository_FetchRootNodes_Call) Run(run func(artifact *models.Artifact)) *ComponentRepository_FetchRootNodes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentRepository_FetchRootNodes_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_FetchRootNodes_Call {
+	_c.Call.Return(componentDependencys, err)
+	return _c
+}
+
+func (_c *ComponentRepository_FetchRootNodes_Call) RunAndReturn(run func(artifact *models.Artifact) ([]models.ComponentDependency, error)) *ComponentRepository_FetchRootNodes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByPurl provides a mock function for the type ComponentRepository
 func (_mock *ComponentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
 	ret := _mock.Called(tx, purl)
@@ -1157,6 +1219,63 @@ func (_c *ComponentRepository_Read_Call) Return(component models.Component, err 
 }
 
 func (_c *ComponentRepository_Read_Call) RunAndReturn(run func(id string) (models.Component, error)) *ComponentRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveRootNodes provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error {
+	ret := _mock.Called(artifact, rootNodePurls)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveRootNodes")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
+		r0 = returnFunc(artifact, rootNodePurls)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ComponentRepository_RemoveRootNodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveRootNodes'
+type ComponentRepository_RemoveRootNodes_Call struct {
+	*mock.Call
+}
+
+// RemoveRootNodes is a helper method to define mock.On call
+//   - artifact *models.Artifact
+//   - rootNodePurls []string
+func (_e *ComponentRepository_Expecter) RemoveRootNodes(artifact interface{}, rootNodePurls interface{}) *ComponentRepository_RemoveRootNodes_Call {
+	return &ComponentRepository_RemoveRootNodes_Call{Call: _e.mock.On("RemoveRootNodes", artifact, rootNodePurls)}
+}
+
+func (_c *ComponentRepository_RemoveRootNodes_Call) Run(run func(artifact *models.Artifact, rootNodePurls []string)) *ComponentRepository_RemoveRootNodes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentRepository_RemoveRootNodes_Call) Return(err error) *ComponentRepository_RemoveRootNodes_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ComponentRepository_RemoveRootNodes_Call) RunAndReturn(run func(artifact *models.Artifact, rootNodePurls []string) error) *ComponentRepository_RemoveRootNodes_Call {
 	_c.Call.Return(run)
 	return _c
 }

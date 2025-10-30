@@ -96,63 +96,6 @@ func (_c *ArtifactRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id
 	return _c
 }
 
-// AddUpstreamURLs provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	ret := _mock.Called(artifact, upstreamURLs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AddUpstreamURLs")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
-		r0 = returnFunc(artifact, upstreamURLs)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_AddUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddUpstreamURLs'
-type ArtifactRepository_AddUpstreamURLs_Call struct {
-	*mock.Call
-}
-
-// AddUpstreamURLs is a helper method to define mock.On call
-//   - artifact *models.Artifact
-//   - upstreamURLs []string
-func (_e *ArtifactRepository_Expecter) AddUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactRepository_AddUpstreamURLs_Call {
-	return &ArtifactRepository_AddUpstreamURLs_Call{Call: _e.mock.On("AddUpstreamURLs", artifact, upstreamURLs)}
-}
-
-func (_c *ArtifactRepository_AddUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactRepository_AddUpstreamURLs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Artifact
-		if args[0] != nil {
-			arg0 = args[0].(*models.Artifact)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_AddUpstreamURLs_Call) Return(err error) *ArtifactRepository_AddUpstreamURLs_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_AddUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactRepository_AddUpstreamURLs_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // All provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) All() ([]models.Artifact, error) {
 	ret := _mock.Called()
@@ -856,63 +799,6 @@ func (_c *ArtifactRepository_ReadArtifact_Call) Return(artifact models.Artifact,
 }
 
 func (_c *ArtifactRepository_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactRepository_ReadArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RemoveUpstreamURLs provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	ret := _mock.Called(artifact, upstreamURLs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RemoveUpstreamURLs")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
-		r0 = returnFunc(artifact, upstreamURLs)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_RemoveUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveUpstreamURLs'
-type ArtifactRepository_RemoveUpstreamURLs_Call struct {
-	*mock.Call
-}
-
-// RemoveUpstreamURLs is a helper method to define mock.On call
-//   - artifact *models.Artifact
-//   - upstreamURLs []string
-func (_e *ArtifactRepository_Expecter) RemoveUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactRepository_RemoveUpstreamURLs_Call {
-	return &ArtifactRepository_RemoveUpstreamURLs_Call{Call: _e.mock.On("RemoveUpstreamURLs", artifact, upstreamURLs)}
-}
-
-func (_c *ArtifactRepository_RemoveUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactRepository_RemoveUpstreamURLs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Artifact
-		if args[0] != nil {
-			arg0 = args[0].(*models.Artifact)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_RemoveUpstreamURLs_Call) Return(err error) *ArtifactRepository_RemoveUpstreamURLs_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_RemoveUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactRepository_RemoveUpstreamURLs_Call {
 	_c.Call.Return(run)
 	return _c
 }

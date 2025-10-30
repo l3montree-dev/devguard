@@ -38,63 +38,6 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 	return &ArtifactService_Expecter{mock: &_m.Mock}
 }
 
-// AddUpstreamURLs provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	ret := _mock.Called(artifact, upstreamURLs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AddUpstreamURLs")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
-		r0 = returnFunc(artifact, upstreamURLs)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactService_AddUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddUpstreamURLs'
-type ArtifactService_AddUpstreamURLs_Call struct {
-	*mock.Call
-}
-
-// AddUpstreamURLs is a helper method to define mock.On call
-//   - artifact *models.Artifact
-//   - upstreamURLs []string
-func (_e *ArtifactService_Expecter) AddUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactService_AddUpstreamURLs_Call {
-	return &ArtifactService_AddUpstreamURLs_Call{Call: _e.mock.On("AddUpstreamURLs", artifact, upstreamURLs)}
-}
-
-func (_c *ArtifactService_AddUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactService_AddUpstreamURLs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Artifact
-		if args[0] != nil {
-			arg0 = args[0].(*models.Artifact)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_AddUpstreamURLs_Call) Return(err error) *ArtifactService_AddUpstreamURLs_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactService_AddUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactService_AddUpstreamURLs_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // DeleteArtifact provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
 	ret := _mock.Called(assetID, assetVersionName, artifactName)
@@ -372,63 +315,6 @@ func (_c *ArtifactService_ReadArtifact_Call) Return(artifact models.Artifact, er
 }
 
 func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactService_ReadArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RemoveUpstreamURLs provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	ret := _mock.Called(artifact, upstreamURLs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RemoveUpstreamURLs")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
-		r0 = returnFunc(artifact, upstreamURLs)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactService_RemoveUpstreamURLs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveUpstreamURLs'
-type ArtifactService_RemoveUpstreamURLs_Call struct {
-	*mock.Call
-}
-
-// RemoveUpstreamURLs is a helper method to define mock.On call
-//   - artifact *models.Artifact
-//   - upstreamURLs []string
-func (_e *ArtifactService_Expecter) RemoveUpstreamURLs(artifact interface{}, upstreamURLs interface{}) *ArtifactService_RemoveUpstreamURLs_Call {
-	return &ArtifactService_RemoveUpstreamURLs_Call{Call: _e.mock.On("RemoveUpstreamURLs", artifact, upstreamURLs)}
-}
-
-func (_c *ArtifactService_RemoveUpstreamURLs_Call) Run(run func(artifact *models.Artifact, upstreamURLs []string)) *ArtifactService_RemoveUpstreamURLs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Artifact
-		if args[0] != nil {
-			arg0 = args[0].(*models.Artifact)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_RemoveUpstreamURLs_Call) Return(err error) *ArtifactService_RemoveUpstreamURLs_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactService_RemoveUpstreamURLs_Call) RunAndReturn(run func(artifact *models.Artifact, upstreamURLs []string) error) *ArtifactService_RemoveUpstreamURLs_Call {
 	_c.Call.Return(run)
 	return _c
 }

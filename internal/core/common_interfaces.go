@@ -96,8 +96,6 @@ type ArtifactRepository interface {
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
-	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
-	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 }
 
 type ReleaseRepository interface {
@@ -151,6 +149,8 @@ type ComponentRepository interface {
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
 	CreateComponents(tx DB, components []models.ComponentDependency) error
+	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type DependencyVulnRepository interface {
@@ -276,8 +276,6 @@ type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
-	AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
-	RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string)
 	SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
@@ -457,6 +455,8 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type LicenseRiskService interface {

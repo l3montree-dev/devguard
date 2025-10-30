@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -877,4 +878,43 @@ func (a *AssetVersionController) MakeDefault(ctx core.Context) error {
 	}
 	assetVersion.DefaultBranch = true
 	return ctx.JSON(200, assetVersion)
+}
+
+func (a *AssetVersionController) ReadRootNodes(ctx core.Context) error {
+	// get all artifacts from the asset version
+	assetVersion := core.GetAssetVersion(ctx)
+	// get the artifacts for this asset version
+	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
+	}
+	// fetch all root nodes
+	errgroup := utils.ErrGroup[map[string][]string](10)
+	for _, artifact := range artifacts {
+		errgroup.Go(func() (map[string][]string, error) {
+			rootNodes, err := a.componentService.FetchRootNodes(&artifact)
+			if err != nil {
+				return nil, err
+			}
+			return map[string][]string{
+				artifact.ArtifactName: utils.Map(rootNodes, func(
+					el models.ComponentDependency,
+				) string {
+					return el.DependencyPurl
+				}),
+			}, nil
+		})
+	}
+	results, err := errgroup.WaitAndCollect()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch root nodes of artifacts").WithInternal(err)
+	}
+
+	result := make(map[string][]string)
+	// merge the maps
+	for _, r := range results {
+		maps.Copy(result, r)
+	}
+
+	return ctx.JSON(200, result)
 }

@@ -5,6 +5,7 @@ package daemon
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -16,8 +17,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -100,15 +103,24 @@ func SyncUpstream(db core.DB, rbacProvider core.RBACProvider) error {
 						slog.Error("failed to get artifacts for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 						continue
 					}
+
 					for _, artifact := range artifacts {
-						// Convert []models.ArtifactUpstreamURL to []string
-						upstreamURLs := make([]string, len(artifact.UpstreamURLs))
-						for i, u := range artifact.UpstreamURLs {
-							upstreamURLs[i] = u.UpstreamURL
+						rootNodes, err := componentService.FetchRootNodes(&artifact)
+						if err != nil {
+							slog.Error("failed to fetch root nodes for artifact", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+							continue
 						}
+
+						upstreamURLs := utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
+							_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
+							return origin
+						}), func(el string) bool {
+							return strings.HasPrefix(el, "http")
+						})
+
 						vexReports, _, _ := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, upstreamURLs)
 
-						_, err := artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
+						_, err = artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {
 							slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 							continue

@@ -140,15 +140,6 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		}
 	}
 
-	if len(externalURLs) > 0 {
-		err := s.artifactService.AddUpstreamURLs(
-			&artifact, externalURLs,
-		)
-		if err != nil {
-			slog.Error("could not add upstream urls to artifact", "err", err)
-			return echo.NewHTTPError(500, "could not add upstream urls to artifact").WithInternal(err)
-		}
-	}
 	// check if there are components or vulnerabilities in the bom
 	if (bom.Components == nil || len(*bom.Components) == 0) && (bom.Vulnerabilities == nil || len(*bom.Vulnerabilities) == 0) {
 		slog.Warn("no components or vulnerabilities found in VEX document")

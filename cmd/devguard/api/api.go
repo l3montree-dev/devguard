@@ -201,7 +201,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	// init all http controllers using the repositories
 
-	artifactController := artifact.NewController(artifactRepository, artifactService, dependencyVulnService, statisticsService)
+	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
@@ -450,6 +450,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
+	assetVersionRouter.GET("/artifact-root-nodes/", assetVersionController.ReadRootNodes)
 
 	assetVersionRouter.POST("/artifacts/", artifactController.Create, neededScope([]string{"manage"}))
 

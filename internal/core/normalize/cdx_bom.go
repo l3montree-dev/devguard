@@ -246,6 +246,15 @@ const (
 	BomTypeVEX  BomType = "vex"
 )
 
+func RemoveOriginTypePrefixIfExists(origin string) (BomType, string) {
+	if strings.HasPrefix(origin, fmt.Sprintf("%s:", BomTypeSBOM)) {
+		return BomTypeSBOM, strings.TrimPrefix(origin, fmt.Sprintf("%s:", BomTypeSBOM))
+	} else if strings.HasPrefix(origin, fmt.Sprintf("%s:", BomTypeVEX)) {
+		return BomTypeVEX, strings.TrimPrefix(origin, fmt.Sprintf("%s:", BomTypeVEX))
+	}
+	return "", origin
+}
+
 // if the second parameter is set to true, the component type will be converted to the correct type
 // THIS SHOULD ONLY be done, if the component type wasnt set by us.
 // if the component type was set by us, we shouldnt change it
@@ -450,6 +459,9 @@ func ptr[T any](s T) *T {
 }
 
 func ReplaceSubtree(completeSBOM SBOM, subTree SBOM) SBOM {
+	if subTree == nil {
+		return completeSBOM
+	}
 	result := cdx.NewBOM()
 	result.Metadata = completeSBOM.GetMetadata()
 	result.Components = ptr(append(*completeSBOM.GetComponents(), *subTree.GetComponents()...))

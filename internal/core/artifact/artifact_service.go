@@ -58,14 +58,6 @@ func (s *service) DeleteArtifact(assetID uuid.UUID, assetVersionName string, art
 	return s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
 }
 
-func (s *service) AddUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	return s.artifactRepository.AddUpstreamURLs(artifact, upstreamURLs)
-}
-
-func (s *service) RemoveUpstreamURLs(artifact *models.Artifact, upstreamURLs []string) error {
-	return s.artifactRepository.RemoveUpstreamURLs(artifact, upstreamURLs)
-}
-
 func (s *service) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
@@ -228,8 +220,6 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 			slog.Error("could not handle scan result", "err", err)
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
-
-		// add the expected upstream even ONLY to the opened vulns
 
 		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {

@@ -400,27 +400,26 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	var fixedOnAll []models.DependencyVuln
 	var firstDetectedOnThisArtifactName []models.DependencyVuln
 	var fixedOnThisArtifactName []models.DependencyVuln
-
-	var vulnsWithJustUpstreamEvents []models.DependencyVuln
+	var nothingChanged []models.DependencyVuln
 
 	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range foundVulnerabilities {
-
 		if _, ok := foundVulnsMappedByID[vuln.CalculateHash()]; !ok {
 			foundVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 
 	for _, existingVulns := range existingDependencyVulns {
-
 		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
 			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
 				fixedOnAll = append(fixedOnAll, existingVulns)
 			} else {
 				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVulns)
 			}
+		} else {
+			// still exists and nothing changed
+			nothingChanged = append(nothingChanged, existingVulns)
 		}
-
 	}
 	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range existingDependencyVulns {
@@ -430,10 +429,8 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	}
 
 	for _, foundVuln := range foundVulnerabilities {
-
 		if existingVuln, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
 			firstDetected = append(firstDetected, foundVuln)
-
 		} else {
 			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
 			alreadyDetectedOnThisArtifactName := false
@@ -446,22 +443,10 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 			if !alreadyDetectedOnThisArtifactName {
 				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, existingVuln)
 			}
-
-			justUpstreamEvents := true
-			for _, ev := range existingVuln.GetEvents() {
-				if ev.Upstream != 2 {
-					justUpstreamEvents = false
-					break
-				}
-			}
-			if justUpstreamEvents {
-				vulnsWithJustUpstreamEvents = append(vulnsWithJustUpstreamEvents, foundVuln)
-			}
 		}
 	}
 
-	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents
-
+	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
 }
 
 type Diffable interface {
@@ -530,7 +515,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	filterPredicate := func(dv models.DependencyVuln) bool {
@@ -547,11 +532,6 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// make sure to first create a user detected event for vulnerabilities with just upstream events
 		// this way we preserve the event history
-		err = s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, vulnsWithJustUpstreamEvents, *assetVersion, asset, upstream)
-		if err != nil {
-			slog.Error("error when trying to add events for vulnerability with just upstream events")
-			return err
-		}
 		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
@@ -573,7 +553,33 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err
 		}
 
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream)
+		if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
+			slog.Error("error when trying to add fix event")
+			return err
+		}
+
+		var valueClauses []string
+		for _, dv := range nothingChanged {
+			hash := dv.CalculateHash()
+			depth := utils.OrDefault(dv.ComponentDepth, 1)
+			valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
+		}
+
+		// Join the value clauses with commas
+		values := strings.Join(valueClauses, ",")
+
+		// Construct the SQL query
+		query := fmt.Sprintf(`
+			UPDATE dependency_vulns
+			SET component_depth = data.component_depth
+			FROM (VALUES %s) AS data(hash, component_depth)
+			WHERE dependency_vulns.asset_id = $1
+			AND dependency_vulns.asset_version_name = $2
+			AND dependency_vulns.hash = data.hash
+		`, values)
+
+		// update just the component depth for nothingChanged vulns
+		return s.dependencyVulnRepository.GetDB(tx).Exec(query).Error
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err

@@ -340,3 +340,11 @@ func getAlpineLicense(pURL packageurl.PackageURL, fallbackVersion string) string
 	}
 	return ""
 }
+
+func (s *service) FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	return s.componentRepository.FetchRootNodes(artifact)
+}
+
+func (s *service) RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error {
+	return s.componentRepository.RemoveRootNodes(artifact, rootNodePurls)
+}

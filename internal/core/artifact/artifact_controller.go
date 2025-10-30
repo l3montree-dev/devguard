@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type controller struct {
@@ -17,22 +18,25 @@ type controller struct {
 	artifactService       core.ArtifactService
 	dependencyVulnService core.DependencyVulnService
 	statisticsService     core.StatisticsService
+	componentService      core.ComponentService
+	assetVersionService   core.AssetVersionService
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
 }
 
-func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService) *controller {
+func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService, componentService core.ComponentService) *controller {
 	return &controller{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
 		dependencyVulnService:     dependencyVulnService,
 		statisticsService:         statisticsService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		componentService:          componentService,
+		assetVersionService:       assetVersionService,
 	}
 }
 
 func (c *controller) Create(ctx core.Context) error {
-
 	asset := core.GetAsset(ctx)
 
 	assetVersion := core.GetAssetVersion(ctx)
@@ -41,8 +45,8 @@ func (c *controller) Create(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
 	type requestBody struct {
-		ArtifactName string                       `json:"artifactName"`
-		UpstreamURL  []models.ArtifactUpstreamURL `json:"upstreamUrls"`
+		ArtifactName       string   `json:"artifactName"`
+		InformationSources []string `json:"informationSources"`
 	}
 
 	var body requestBody
@@ -63,18 +67,8 @@ func (c *controller) Create(ctx core.Context) error {
 		return err
 	}
 
-	toAddURLs := []string{}
-	for _, url := range body.UpstreamURL {
-		toAddURLs = append(toAddURLs, url.UpstreamURL)
-	}
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, toAddURLs)
-	if len(body.UpstreamURL) > 0 {
-		err := c.artifactService.AddUpstreamURLs(&artifact, toAddURLs)
-		if err != nil {
-			return err
-		}
-	}
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, body.InformationSources)
 	vulns, err := c.artifactService.SyncUpstreamBoms(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
@@ -99,10 +93,19 @@ func (c *controller) Create(ctx core.Context) error {
 		}
 	})
 
-	artifact.UpstreamURLs = body.UpstreamURL
-
 	return ctx.JSON(201, artifact)
 
+}
+
+func (c *controller) FetchRootNodes(ctx core.Context) error {
+	// get all root nodes from the component_dependencies table
+	artifact := core.GetArtifact(ctx)
+	result, err := c.componentService.FetchRootNodes(&artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch root nodes").WithInternal(err)
+	}
+
+	return ctx.JSON(200, result)
 }
 
 func (c *controller) DeleteArtifact(ctx core.Context) error {
@@ -143,8 +146,8 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	}
 
 	type requestBody struct {
-		ArtifactName string                       `json:"artifactName"`
-		UpstreamURL  []models.ArtifactUpstreamURL `json:"upstreamUrls"`
+		ArtifactName       string   `json:"artifactName"`
+		InformationSources []string `json:"informationSources"`
 	}
 
 	var body requestBody
@@ -153,58 +156,37 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		return err
 	}
 
-	oldUpstreamURLs := artifact.UpstreamURLs
-	newUpstreamURLs := body.UpstreamURL
-
-	toDeleteURLs := []string{}
-	toAddURLs := []string{}
-
-	// Remove URLs that are not in the new list
-	for _, oldURL := range oldUpstreamURLs {
-		found := false
-		for _, newURL := range newUpstreamURLs {
-			if newURL.UpstreamURL == oldURL.UpstreamURL {
-				found = true
-				break
-			}
-		}
-		if !found {
-			toDeleteURLs = append(toDeleteURLs, oldURL.UpstreamURL)
-		}
+	oldSources, err := c.componentService.FetchRootNodes(&artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
-	// Add URLs that are in the new list but not in the old list
-	for _, newURL := range newUpstreamURLs {
-		found := false
-		for _, oldURL := range oldUpstreamURLs {
-			if oldURL.UpstreamURL == newURL.UpstreamURL {
-				found = true
-				break
-			}
-		}
-		if !found {
-			toAddURLs = append(toAddURLs, newURL.UpstreamURL)
-		}
-	}
+	newSources := body.InformationSources
 
-	if len(toDeleteURLs) > 0 {
-		err := c.artifactService.RemoveUpstreamURLs(&artifact, toDeleteURLs)
-		if err != nil {
-			return err
-		}
+	comparison := utils.CompareSlices(newSources, utils.Map(oldSources, func(el models.ComponentDependency) string {
+		return el.DependencyPurl
+	}), func(e string) string { return e })
+
+	toAdd := comparison.OnlyInA
+	toDelete := comparison.OnlyInB
+
+	// we just need to remove those root nodes.
+	if err := c.componentService.RemoveRootNodes(&artifact, toDelete); err != nil {
+		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
 	}
 
 	//check if the upstream urls are valid urls
-	boms, validURLs, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, toAddURLs)
-	if len(toAddURLs) > 0 {
-		err := c.artifactService.AddUpstreamURLs(&artifact, validURLs)
+	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, toAdd)
+	var vulns []models.DependencyVuln
+	if len(boms) > 0 {
+		vulns, err = c.artifactService.SyncUpstreamBoms(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 		if err != nil {
-			return err
+			slog.Error("could not sync vex reports", "err", err)
 		}
-	}
-
-	vulns, err := c.artifactService.SyncUpstreamBoms(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
-	if err != nil {
-		slog.Error("could not sync vex reports", "err", err)
+	} else if len(toDelete) > 0 {
+		// make sure that we at least update the sbom once if there were deletions
+		// updating with nil, will just renormalize the sbom and remove all components which are not
+		// reachable anymore from the root nodes - we might have removed some root nodes above
+		c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal)
 	}
 
 	c.FireAndForget(func() {
@@ -226,8 +208,6 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 			slog.Error("could not save artifact", "err", err)
 		}
 	})
-
-	artifact.UpstreamURLs = body.UpstreamURL
 
 	type responseBody struct {
 		Artifact    models.Artifact `json:"artifact"`
