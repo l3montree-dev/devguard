@@ -241,7 +241,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 		for i := range newState {
 			if expectedState, ok := expectedVulnState[*newState[i].CVEID]; ok {
 				// check if state changing event
-				if newState[i].State == models.VulnState(expectedState.state) {
+				if newState[i].State == models.VulnState(expectedState.state) || models.VulnState(expectedState.state) == models.VulnState(models.EventTypeDetected) {
 					continue
 				}
 
