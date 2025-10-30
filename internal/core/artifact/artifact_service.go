@@ -166,7 +166,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 				cveID = strings.ToUpper(strings.TrimSpace(cveID))
 				cveIDs = append(cveIDs, cveID)
 
-				statusType := normalize.MapCDXToStatus(vuln.Analysis)
+				statusType := normalize.MapCDXToVulnStatus(vuln.Analysis)
 				if statusType == "" {
 					// skip unknown/unspecified statuses
 					continue
