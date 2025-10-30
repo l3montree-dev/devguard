@@ -125,7 +125,12 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &license
 	default:
-		resp, err := s.openSourceInsightsService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
+		resp, err := s.openSourceInsightsService.GetVersion(
+			context.Background(),
+			validatedPURL.Type,
+			combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name),
+			validatedPURL.Version,
+		)
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)

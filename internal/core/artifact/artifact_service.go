@@ -138,25 +138,6 @@ func extractCVE(s string) string {
 
 func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
-	allVulns := []models.DependencyVuln{}
-
-	// load existing dependency vulns for this asset version
-	existingVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
-	if err != nil {
-		slog.Error("could not load dependency vulns", "err", err)
-		return allVulns, echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
-	}
-
-	// index by CVE id
-	vulnsByCVE := make(map[string][]models.DependencyVuln)
-	for _, v := range existingVulns {
-		if v.CVE != nil && v.CVE.CVE != "" {
-			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
-		} else if v.CVEID != nil && *v.CVEID != "" {
-			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
-		}
-	}
-
 	upstream := models.UpstreamStateExternalAccepted
 	if asset.ParanoidMode {
 		upstream = models.UpstreamStateExternal
@@ -176,6 +157,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 	// iterate vulnerabilities in the CycloneDX BOM
 	cveIDs := make([]string, 0)
 
+	allVulns := make([]models.DependencyVuln, 0)
 	for _, bom := range boms {
 		vulns := bom.GetVulnerabilities()
 		if vulns != nil {
@@ -220,7 +202,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 		// convert to map
 		if err != nil {
 			slog.Error("could not load cves", "err", err)
-			return allVulns, echo.NewHTTPError(500, "could not load cves").WithInternal(err)
+			return nil, echo.NewHTTPError(500, "could not load cves").WithInternal(err)
 		}
 		cvesMap := make(map[string]models.CVE)
 		for _, cve := range cves {
@@ -244,7 +226,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
 		if err != nil {
 			slog.Error("could not handle scan result", "err", err)
-			return allVulns, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
+			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
 
 		// add the expected upstream even ONLY to the opened vulns
@@ -252,7 +234,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
-			return allVulns, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
 	outer:
@@ -286,6 +268,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 			}
 		}
 
+		allVulns = append(allVulns, newState...)
 	}
 
 	return allVulns, nil
