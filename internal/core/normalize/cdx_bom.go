@@ -315,8 +315,10 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 	})
 
 	depMap := make(map[string]*cdx.Dependency)
-	for _, d := range *bom.Dependencies {
-		depMap[d.Ref] = &d
+	if bom.Dependencies != nil {
+		for _, d := range *bom.Dependencies {
+			depMap[d.Ref] = &d
+		}
 	}
 
 	componentMap := make(map[string]*cdx.Component)
