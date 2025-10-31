@@ -68,9 +68,16 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 	)
 }
 
-func CreateArtifactService(db core.DB) core.ArtifactService {
+func CreateArtifactService(db core.DB, openSourceInsightsService core.OpenSourceInsightService) core.ArtifactService {
 	return artifact.NewService(
 		repositories.NewArtifactRepository(db),
+		repositories.NewCVERepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, nil, nil, nil, openSourceInsightsService),
+		CreateDependencyVulnService(db, nil, nil, nil),
 	)
 }
 
@@ -90,7 +97,6 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		CreateComponentService(db, openSourceInsightsService),
 		thirdPartyIntegration,
 		repositories.NewLicenseRiskRepository(db),
-		CreateArtifactService(db),
 	)
 	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return s
@@ -123,7 +129,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 			repositories.NewProjectRepository(db),
 			repositories.NewReleaseRepository(db),
 		),
-		CreateArtifactService(db),
+		CreateArtifactService(db, openSourceInsightsService),
 	)
 }
 
@@ -142,7 +148,7 @@ func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOau
 			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
 			githubint.NewGithubIntegration(db),
 		)),
-		CreateArtifactService(db),
+		CreateArtifactService(db, openSourceInsightsService),
 		repositories.NewDependencyVulnRepository(db),
 	)
 }

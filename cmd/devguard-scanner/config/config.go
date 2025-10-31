@@ -52,6 +52,7 @@ type baseConfig struct {
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
+	Origin        string `json:"origin" mapstructure:"origin"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 }

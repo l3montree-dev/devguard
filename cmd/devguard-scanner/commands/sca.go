@@ -18,11 +18,9 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,14 +28,11 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
@@ -45,11 +40,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-type AttestationFileLine struct {
-	PayloadType string `json:"payloadType"`
-	Payload     string `json:"payload"` // base64 encoded AttestationPayload
-}
 
 // extract filename from path or return directory if path points to a directory
 // second return argument is true if it's a directory and false is it's a file
@@ -93,7 +83,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	if isImage {
 		workDir = "./"
 	} else {
-		workDir = getDirFromPath(pathOrImage)
+		workDir = utils.GetDirFromPath(pathOrImage)
 	}
 	sbomFile := filepath.Join(workDir, filename)
 
@@ -101,7 +91,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	if isImage {
 		image := pathOrImage
 		// login in to docker registry first before we try to run trivy
-		err := maybeLoginIntoOciRegistry(ctx)
+		err := scanner.MaybeLoginIntoOciRegistry(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -145,253 +135,12 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	return content, nil
 }
 
-// Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
-	var cvss float32 = 0.0
-	if v.CVE != nil {
-		cvss = v.CVE.CVSS
-	}
-
-	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
-	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
-	}
-}
-
-// can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
-	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
-
-	if len(scanResponse.DependencyVulns) == 0 {
-		return nil
-	}
-
-	// order the vulns by their risk
-	slices.SortFunc(scanResponse.DependencyVulns, func(a, b vuln.DependencyVulnDTO) int {
-		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
-	})
-
-	// get the max risk of open!!! dependencyVulns
-	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
-		return f.State == "open"
-	}), func(f vuln.DependencyVulnDTO) float64 {
-		return utils.OrDefault(f.RawRiskAssessment, 0)
-	})
-
-	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
-		return f.State == "open" && f.CVE != nil
-	}), func(f vuln.DependencyVulnDTO) float32 {
-		return f.CVE.CVSS
-	})
-
-	maxRisk := 0.
-	for _, risk := range openRisks {
-		if risk > maxRisk {
-			maxRisk = risk
-		}
-	}
-
-	var maxCVSS float32
-	for _, v := range openCVSS {
-		if v > maxCVSS {
-			maxCVSS = v
-		}
-	}
-
-	tw := table.NewWriter()
-	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
-	tw.AppendRows(utils.Map(
-		scanResponse.DependencyVulns,
-		func(v vuln.DependencyVulnDTO) table.Row {
-			// extract package name and version from purl
-			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(*v.ComponentPurl)
-			if err != nil {
-				slog.Error("could not parse purl", "err", err)
-			}
-
-			return dependencyVulnToTableRow(pURL, v)
-		},
-	))
-
-	fmt.Println(tw.Render())
-	if len(scanResponse.DependencyVulns) > 0 {
-		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
-		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
-	}
-
-	switch failOnRisk {
-	case "low":
-		if maxRisk > 0.1 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-	case "medium":
-		if maxRisk >= 4 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
-	case "high":
-		if maxRisk >= 7 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
-	case "critical":
-		if maxRisk >= 9 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-	}
-
-	switch failOnCVSS {
-	case "low":
-		if maxCVSS > 0.1 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "medium":
-		if maxCVSS >= 4 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "high":
-		if maxCVSS >= 7 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	case "critical":
-		if maxCVSS >= 9 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
-	}
-
-	return nil
-}
-
-func addDefaultFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
-	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.org", "The url of the API to send the scan request to")
-}
-
-func addAssetRefFlags(cmd *cobra.Command) {
-	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
-	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
-	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
-}
-
-func addDependencyVulnsScanFlags(cmd *cobra.Command) {
-	addDefaultFlags(cmd)
-	addAssetRefFlags(cmd)
-
-	err := cmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-
-	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
-	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will default to the empty artifact name ''.")
-
-}
-func addFirstPartyVulnsScanFlags(cmd *cobra.Command) {
-	addDefaultFlags(cmd)
-	addAssetRefFlags(cmd)
-
-	err := cmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-
-	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
-	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
-
-}
-
-func getDirFromPath(path string) string {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return path
-	}
-	switch mode := fi.Mode(); {
-	case mode.IsDir():
-		return path
-	case mode.IsRegular():
-		return filepath.Dir(path)
-	}
-	return path
-}
-
-func getAttestations(image string) ([]map[string]any, error) {
-	// cosign download attestation image
-	cosignCmd := exec.Command("cosign", "download", "attestation", image)
-
-	stderrBuf := &bytes.Buffer{}
-	stdoutBuf := &bytes.Buffer{}
-
-	// get the output
-	cosignCmd.Stderr = stderrBuf
-	cosignCmd.Stdout = stdoutBuf
-
-	err := cosignCmd.Run()
-	if err != nil {
-		return nil, errors.Wrap(err, stderrBuf.String())
-	}
-
-	stdoutStr := stdoutBuf.String()
-	jsonLines := strings.Split(stdoutStr, "\n")
-	if len(jsonLines) > 0 {
-		// remove last element (empty line)
-		jsonLines = jsonLines[:len(jsonLines)-1]
-	}
-
-	attestations := []map[string]any{}
-	// go through each line (attestation) of the .jsonlines file
-	for _, jsonLine := range jsonLines {
-		var line AttestationFileLine
-		err = json.Unmarshal([]byte(jsonLine), &line)
-		if err != nil {
-			return nil, err
-		}
-
-		// Extract base64 encoded payload
-		data, err := base64.StdEncoding.DecodeString(line.Payload)
-		if err != nil {
-			log.Fatal("error:", err)
-		}
-
-		// Parse payload as attestation
-		var attestation map[string]any
-		err = json.Unmarshal([]byte(data), &attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		attestations = append(attestations, attestation)
-	}
-
-	return attestations, nil
-}
-
-func scanExternalImage() error {
+func scanExternalImage(ctx context.Context) error {
 	// download and extract release attestation BOMs first
-	attestations, err := getAttestations(config.RuntimeBaseConfig.Image)
+	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
 	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
 		return err
 	}
-
-	ctx := context.Background()
 
 	// generate SBOM using Trivy
 	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Image, true)
@@ -400,7 +149,7 @@ func scanExternalImage() error {
 	}
 
 	// load sbom that was generated in the line above
-	bom, err := bomFromBytes(file)
+	bom, err := scanner.BomFromBytes(file)
 	if err != nil {
 		return err
 	}
@@ -420,7 +169,7 @@ func scanExternalImage() error {
 			if err != nil {
 				panic(err)
 			}
-			vex, err = bomFromBytes(predicateBytes)
+			vex, err = scanner.BomFromBytes(predicateBytes)
 			if err != nil {
 				panic(err)
 			}
@@ -480,7 +229,7 @@ func scanExternalImage() error {
 	}
 
 	// upload the bom to the scan endpoint
-	resp, cancel, err := uploadBOM(buff)
+	resp, cancel, err := scanner.UploadBOM(buff)
 
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
@@ -498,7 +247,8 @@ func scanExternalImage() error {
 		}
 
 		// upload the vex
-		vexResp, err := uploadVEX(vexBuff)
+		// but it is not from upstream - it is the image we are currently looking at.
+		vexResp, err := scanner.UploadVEX(vexBuff)
 		if err != nil {
 			slog.Error("could not upload vex", "err", err)
 		} else {
@@ -528,74 +278,32 @@ func scanExternalImage() error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	err = printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	err = scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func uploadVEX(vex io.Reader) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+func scanLocalFilePath(ctx context.Context) error {
+	// check if sbom file or need to generate sbom
+	var file []byte
+	var err error
+	if strings.HasSuffix(config.RuntimeBaseConfig.Path, ".json") {
+		// read the sbom file and post it to the scan endpoint
+		file, err = os.ReadFile(config.RuntimeBaseConfig.Path)
+		if err != nil {
+			return errors.Wrap(err, "could not read file")
+		}
+	} else {
+		// generate SBOM using Trivy
+		file, err = generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
+		if err != nil {
+			return errors.Wrap(err, "could not open file")
+		}
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not sign request")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	config.SetXAssetHeaders(req)
-
-	return http.DefaultClient.Do(req)
-}
-
-func uploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
-	if err != nil {
-		return nil, cancel, errors.Wrap(err, "could not create request")
-	}
-
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return nil, cancel, errors.Wrap(err, "could not sign request")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	config.SetXAssetHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	return resp, cancel, err
-}
-
-func scaCommand(cmd *cobra.Command, args []string) error {
-
-	ctx := cmd.Context()
-
-	// in case it's a docker image we need to scan the image and try to download attestations
-	if config.RuntimeBaseConfig.Image != "" {
-		return scanExternalImage()
-	}
-
-	// read the sbom file and post it to the scan endpoint
-	// get the dependencyVulns and print them to the console
-	file, err := generateSBOM(ctx, config.RuntimeBaseConfig.Path, false)
-	if err != nil {
-		return errors.Wrap(err, "could not open file")
-	}
-
-	resp, cancel, err := uploadBOM(bytes.NewBuffer(file))
+	resp, cancel, err := scanner.UploadBOM(bytes.NewBuffer(file))
 	if err != nil {
 		return errors.Wrap(err, "could not send request")
 	}
@@ -621,18 +329,48 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+}
+
+func scaCommand(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
+		config.RuntimeBaseConfig.Image = args[0]
+	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
+		config.RuntimeBaseConfig.Path = args[0]
+	}
+
+	// in case it's a docker image we need to scan the image and try to download attestations
+	if config.RuntimeBaseConfig.Image != "" {
+		return scanExternalImage(ctx)
+	} else if config.RuntimeBaseConfig.Path != "" {
+		return scanLocalFilePath(ctx)
+	}
+	return fmt.Errorf("either --image or --path must be specified, or passed as an argument")
 }
 
 func NewSCACommand() *cobra.Command {
 	scaCommand := &cobra.Command{
-		Use:   "sca",
-		Short: "Start a Software composition analysis",
-		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
+		Use:   "sca [image|path]",
+		Short: "Run Software Composition Analysis (SCA)",
+		Long: `Run a Software Composition Analysis (SCA) for a project or container image.
+
+This command can accept either an OCI image reference (e.g. ghcr.io/org/image:tag) via
+--image or as the first positional argument, or a local path/tar file via --path or as
+the first positional argument. The command will generate or accept an SBOM, upload it to
+DevGuard and return vulnerability results.
+
+Examples:
+  devguard-scanner sca --image ghcr.io/org/image:tag
+  devguard-scanner sca ./path/to/project
+`,
 		// Args:  cobra.ExactArgs(0),
 		RunE: scaCommand,
 	}
 
-	addDependencyVulnsScanFlags(scaCommand)
+	scanner.AddDependencyVulnsScanFlags(scaCommand)
+	// set default scanner type
+	scaCommand.Flags().String("origin", "source-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
+	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
 	return scaCommand
 }

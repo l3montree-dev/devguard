@@ -3,29 +3,38 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 func NewSecretScanningCommand() *cobra.Command {
 	secretScanningCommand := &cobra.Command{
-		Use:   "secret-scanning",
-		Short: "Scan your application to see if any secrets have been unintentionally leaked into the source code",
-		Long:  "Scan your application to see if any secrets have been unintentionally leaked into the source code",
-		RunE:  sarifCommandFactory("secret-scanning"),
+		Use:   "secret-scanning [path]",
+		Short: "Detect leaked secrets in source code",
+		Long: `Scan a repository or directory for accidentally committed secrets and produce a SARIF report.
+
+This command runs the configured secret-scanning tool (gitleaks) and uploads the
+SARIF results to DevGuard for analysis and issue creation. The command signs the
+request using the configured token before uploading the SARIF results.
+
+You may pass the target as the first positional argument instead of using
+--path.
+
+Example:
+	devguard-scanner secret-scanning --path ./my-repo
+	devguard-scanner secret-scanning ./my-repo
+`,
+		RunE: sarifCommandFactory("secret-scanning"),
 	}
 
-	addFirstPartyVulnsScanFlags(secretScanningCommand)
+	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)
 	return secretScanningCommand
 }
 
@@ -74,37 +83,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	}
 
 	// obfuscate founded secrets
-	obfuscateSecretAndAddFingerprint(&sarifScan)
+	scanner.ObfuscateSecretAndAddFingerprint(&sarifScan)
 
 	return &sarifScan, nil
-}
-
-func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
-	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
-
-	blue := text.FgBlue
-	green := text.FgGreen
-	for _, vuln := range firstPartyVulns {
-		raw := []table.Row{
-			{"RuleID:", vuln.RuleID},
-			{"File:", green.Sprint(vuln.URI)},
-		}
-		tw.AppendRows(raw)
-		for _, snippet := range vuln.SnippetContents {
-			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
-		}
-		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, 80)},
-
-			{"Commit:", vuln.Commit},
-			{"Author:", vuln.Author},
-			{"Email:", vuln.Email},
-			{"Date:", vuln.Date},
-			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))}}
-
-		tw.AppendRows(raw)
-		tw.AppendSeparator()
-	}
-
-	fmt.Println(tw.Render())
 }

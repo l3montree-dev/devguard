@@ -3,41 +3,16 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
-	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
-
-	blue := text.FgBlue
-	green := text.FgGreen
-	for _, vuln := range firstPartyVulns {
-		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
-		for _, snippet := range vuln.SnippetContents {
-			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
-		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 80)})
-		if vuln.URI != "" {
-			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI)})
-
-		}
-		tw.AppendSeparator()
-	}
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
-	fmt.Println(tw.Render())
-}
 
 func sastScan(p string) (*common.SarifResult, error) {
 	dir := os.TempDir()
@@ -88,13 +63,26 @@ func sastScan(p string) (*common.SarifResult, error) {
 
 func NewSastCommand() *cobra.Command {
 	sastCommand := &cobra.Command{
-		Use:   "sast",
-		Short: "Launch a static application security test.",
-		Long:  "Launch a static application security test. A SAST test runs predefined rules against your source code",
+		Use:   "sast [path]",
+		Short: "Run a static application security test (SAST)",
+		Long: `Run a static application security test using the configured SAST tool.
 
+This command executes the configured SAST scanner (semgrep) against the project
+path provided via flags or configuration, obfuscates sensitive snippets, and
+uploads the SARIF results to DevGuard. The request is signed using the configured
+token before upload.
+
+You may pass the target as the first positional argument instead of using
+--path.
+
+Examples:
+	devguard-scanner sast --path ./my-repo
+	devguard-scanner sast ./my-repo
+	devguard-scanner sast ghcr.io/org/image:tag
+`,
 		RunE: sarifCommandFactory("sast"),
 	}
 
-	addFirstPartyVulnsScanFlags(sastCommand)
+	scanner.AddFirstPartyVulnsScanFlags(sastCommand)
 	return sastCommand
 }

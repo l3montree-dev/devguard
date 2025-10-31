@@ -12,30 +12,37 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package assetversion
+package normalize
 
 import (
 	"testing"
-
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 )
+
+type testNode struct {
+	Name string
+	Dep  string
+}
+
+func (n testNode) GetRef() string {
+	return n.Name
+}
+
+func (n testNode) GetDeps() []string {
+	return []string{n.Dep}
+}
 
 func TestDependencyTree(t *testing.T) {
 	t.Run("buildDependencyTree", func(t *testing.T) {
-
-		artifact := models.Artifact{ArtifactName: "artifact1"}
-
-		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "d", Depth: 2, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "e", Depth: 2, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "f", Depth: 3, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "g", Depth: 3, Artifacts: []models.Artifact{artifact}},
+		graph := []testNode{
+			{Name: "root", Dep: "a"},
+			{Name: "a", Dep: "b"},
+			{Name: "a", Dep: "c"},
+			{Name: "b", Dep: "d"},
+			{Name: "b", Dep: "e"},
+			{Name: "c", Dep: "f"},
+			{Name: "c", Dep: "g"},
 		}
-		tree := BuildDependencyTree(graph)
+		tree := BuildDependencyTree(graph, "root")
 
 		// expect root to have one child: a
 		if len(tree.Root.Children) != 1 {
@@ -77,15 +84,14 @@ func TestDependencyTree(t *testing.T) {
 			b <---> c # here is the cycle in the tree
 		*/
 
-		artifact := models.Artifact{ArtifactName: "artifact1"}
-		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "c", Depth: 2, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "b", Depth: 2, Artifacts: []models.Artifact{artifact}},
+		graph := []testNode{
+			{Name: "root", Dep: "a"},
+			{Name: "a", Dep: "b"},
+			{Name: "a", Dep: "c"},
+			{Name: "b", Dep: "c"},
+			{Name: "c", Dep: "b"},
 		}
-		tree := BuildDependencyTree(graph)
+		tree := BuildDependencyTree(graph, "root")
 
 		// expect root to have one child: a
 		if len(tree.Root.Children) != 1 {
@@ -98,7 +104,7 @@ func TestDependencyTree(t *testing.T) {
 		}
 
 		// get b and c
-		var b, c *treeNode
+		var b, c *TreeNode
 		for _, child := range tree.Root.Children[0].Children {
 			switch child.Name {
 			case "b":
@@ -117,15 +123,15 @@ func TestDependencyTree(t *testing.T) {
 }
 func TestCalculateDepth(t *testing.T) {
 	t.Run("calculateDepth with valid tree", func(t *testing.T) {
-		root := &treeNode{Name: "root"}
-		a := &treeNode{Name: "pkg:golang/a"}
-		b := &treeNode{Name: "pkg:golang/b"}
-		c := &treeNode{Name: "pkg:golang/c"}
-		d := &treeNode{Name: "pkg:golang/d"}
+		root := &TreeNode{Name: "root"}
+		a := &TreeNode{Name: "pkg:golang/a"}
+		b := &TreeNode{Name: "pkg:golang/b"}
+		c := &TreeNode{Name: "pkg:golang/c"}
+		d := &TreeNode{Name: "pkg:golang/d"}
 
-		root.Children = []*treeNode{a}
-		a.Children = []*treeNode{b, c}
-		b.Children = []*treeNode{d}
+		root.Children = []*TreeNode{a}
+		a.Children = []*TreeNode{b, c}
+		b.Children = []*TreeNode{d}
 
 		depthMap := make(map[string]int)
 		CalculateDepth(root, 0, depthMap)
@@ -146,14 +152,14 @@ func TestCalculateDepth(t *testing.T) {
 	})
 
 	t.Run("calculateDepth with invalid PURL", func(t *testing.T) {
-		root := &treeNode{Name: "root"}
-		a := &treeNode{Name: "go.mod"}
-		b := &treeNode{Name: "tmp"}
-		c := &treeNode{Name: "pkg:golang/github.com/gorilla/websocket"}
+		root := &TreeNode{Name: "root"}
+		a := &TreeNode{Name: "go.mod"}
+		b := &TreeNode{Name: "tmp"}
+		c := &TreeNode{Name: "pkg:golang/github.com/gorilla/websocket"}
 
-		root.Children = []*treeNode{a}
-		a.Children = []*treeNode{b}
-		b.Children = []*treeNode{c}
+		root.Children = []*TreeNode{a}
+		a.Children = []*TreeNode{b}
+		b.Children = []*TreeNode{c}
 
 		depthMap := make(map[string]int)
 		CalculateDepth(root, 0, depthMap)
@@ -173,56 +179,13 @@ func TestCalculateDepth(t *testing.T) {
 	})
 
 	t.Run("calculateDepth with empty tree", func(t *testing.T) {
-		root := &treeNode{Name: "root"}
+		root := &TreeNode{Name: "root"}
 
 		depthMap := make(map[string]int)
 		CalculateDepth(root, 0, depthMap)
 
 		if len(depthMap) != 1 || depthMap["root"] != 0 {
 			t.Errorf("expected depth map to contain only root with depth 0, got %v", depthMap)
-		}
-	})
-}
-
-func TestGetComponentDepth(t *testing.T) {
-	t.Run("returns correct depth map for simple dependency graph", func(t *testing.T) {
-		artifact := models.Artifact{ArtifactName: "artifact1"}
-		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "pkg:golang/a", Depth: 0, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("pkg:golang/a"), DependencyPurl: "pkg:golang/b", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("pkg:golang/a"), DependencyPurl: "pkg:golang/c", Depth: 1, Artifacts: []models.Artifact{artifact}},
-			{ComponentPurl: utils.Ptr("pkg:golang/b"), DependencyPurl: "pkg:golang/d", Depth: 2, Artifacts: []models.Artifact{artifact}},
-		}
-		depthMap := GetComponentDepth(graph)
-		expected := map[string]int{
-			"root":         -1,
-			"pkg:golang/a": 0,
-			"pkg:golang/b": 1,
-			"pkg:golang/c": 1,
-			"pkg:golang/d": 2,
-		}
-		for k, v := range expected {
-			if depthMap[k] != v {
-				t.Errorf("expected depth of %s to be %d, got %d", k, v, depthMap[k])
-			}
-		}
-	})
-
-	t.Run("returns empty map for empty input", func(t *testing.T) {
-		depthMap := GetComponentDepth([]models.ComponentDependency{})
-		if len(depthMap) != 1 || depthMap["root"] != -1 {
-			t.Errorf("expected only root with depth -1, got %v", depthMap)
-		}
-	})
-
-	t.Run("returns correct depth for single node", func(t *testing.T) {
-		artifact := models.Artifact{ArtifactName: "artifact1"}
-		graph := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "pkg:golang/a", Depth: 0, Artifacts: []models.Artifact{artifact}},
-		}
-		depthMap := GetComponentDepth(graph)
-		if depthMap["pkg:golang/a"] != 0 {
-			t.Errorf("expected depth 0 for 'pkg:golang/a', got %d", depthMap["pkg:golang/a"])
 		}
 	})
 }

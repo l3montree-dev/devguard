@@ -125,7 +125,12 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &license
 	default:
-		resp, err := s.openSourceInsightsService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
+		resp, err := s.openSourceInsightsService.GetVersion(
+			context.Background(),
+			validatedPURL.Type,
+			combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name),
+			validatedPURL.Version,
+		)
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
@@ -196,7 +201,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error) {
 	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
@@ -258,13 +263,13 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName, upstream)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName, upstream)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}
@@ -334,4 +339,12 @@ func getAlpineLicense(pURL packageurl.PackageURL, fallbackVersion string) string
 		return license
 	}
 	return ""
+}
+
+func (s *service) FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	return s.componentRepository.FetchRootNodes(artifact)
+}
+
+func (s *service) RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error {
+	return s.componentRepository.RemoveRootNodes(artifact, rootNodePurls)
 }

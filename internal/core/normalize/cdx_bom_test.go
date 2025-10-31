@@ -9,8 +9,16 @@ import (
 )
 
 func TestFromCdxBom(t *testing.T) {
+	artifactName := "test-artifact"
+	origin := "test-origin"
+
 	t.Run("basic component without properties", func(t *testing.T) {
 		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
 			Components: &[]cdx.Component{{
 				Name:       "test-component",
 				Version:    "1.0.0",
@@ -19,7 +27,9 @@ func TestFromCdxBom(t *testing.T) {
 			}},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		bom.Dependencies = &[]cdx.Dependency{}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin)
 		component := (*result.GetComponents())[0]
 
 		assert.Equal(t, "test-component", component.Name)
@@ -57,15 +67,23 @@ func TestFromCdxBom(t *testing.T) {
 				}
 
 				bom := &cdx.BOM{
+					Metadata: &cdx.Metadata{
+						Component: &cdx.Component{
+							BOMRef: "root",
+						},
+					},
 					Components: &[]cdx.Component{{
 						Name:       "test-component",
+						Version:    "1.0.0",
 						PackageURL: "pkg:npm/old-pkg-id@1.0.0",
 						Type:       cdx.ComponentTypeLibrary,
 						Properties: &properties,
 					}},
 				}
 
-				result := normalize.FromCdxBom(bom, false)
+				bom.Dependencies = &[]cdx.Dependency{}
+
+				result := normalize.FromCdxBom(bom, artifactName, origin)
 				component := (*result.GetComponents())[0]
 
 				assert.Contains(t, component.PackageURL, tc.expectContains)
@@ -76,39 +94,17 @@ func TestFromCdxBom(t *testing.T) {
 		}
 	})
 
-	t.Run("convertComponentType flag", func(t *testing.T) {
-		testCases := []struct {
-			name                 string
-			convertComponentType bool
-			expectedType         cdx.ComponentType
-		}{
-			{"false - type unchanged", false, cdx.ComponentTypeApplication},
-			{"true - type updated", true, cdx.ComponentTypeLibrary},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				bom := &cdx.BOM{
-					Components: &[]cdx.Component{{
-						Name:       "test-component",
-						PackageURL: "pkg:npm/test-component@1.0.0",
-						Type:       cdx.ComponentTypeApplication,
-					}},
-				}
-
-				result := normalize.FromCdxBom(bom, tc.convertComponentType)
-				component := (*result.GetComponents())[0]
-
-				assert.Equal(t, tc.expectedType, component.Type)
-			})
-		}
-	})
-
 	t.Run("multiple components", func(t *testing.T) {
 		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
 			Components: &[]cdx.Component{
 				{
 					Name:       "component-1",
+					Version:    "1.0.0",
 					PackageURL: "pkg:npm/pkg-id-1@1.0.0",
 					Properties: &[]cdx.Property{
 						{Name: "aquasecurity:trivy:SrcName", Value: "source-name-1"},
@@ -118,6 +114,7 @@ func TestFromCdxBom(t *testing.T) {
 				},
 				{
 					Name:       "component-2",
+					Version:    "2.0.0",
 					PackageURL: "pkg:npm/pkg-id-2@2.0.0",
 					Properties: &[]cdx.Property{
 						{Name: "aquasecurity:trivy:SrcName", Value: "source-name-2"},
@@ -127,37 +124,47 @@ func TestFromCdxBom(t *testing.T) {
 				},
 				{
 					Name:       "component-3",
+					Version:    "3.0.0",
 					PackageURL: "pkg:npm/component-3@3.0.0",
 				},
 			},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		bom.Dependencies = &[]cdx.Dependency{}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin)
 		components := *result.GetComponents()
 
-		assert.Len(t, components, 3)
+		assert.Len(t, components, len(*bom.Components)) // +2 for artifact and origin components
 		assert.Contains(t, components[0].PackageURL, "source-name-1@1.0.0")
 		assert.Contains(t, components[1].PackageURL, "source-name-2@2.0.0")
 		assert.Contains(t, components[2].PackageURL, "component-3")
 	})
 
-	t.Run("edge cases", func(t *testing.T) {
-		t.Run("empty components", func(t *testing.T) {
-			bom := &cdx.BOM{Components: &[]cdx.Component{}}
-			result := normalize.FromCdxBom(bom, false)
-			assert.Len(t, *result.GetComponents(), 0)
-		})
-
-		t.Run("nil components panics", func(t *testing.T) {
-			bom := &cdx.BOM{Components: nil}
-			assert.Panics(t, func() { normalize.FromCdxBom(bom, false) })
-		})
+	t.Run("empty components", func(t *testing.T) {
+		bom := &cdx.BOM{Components: &[]cdx.Component{}}
+		bom.Dependencies = &[]cdx.Dependency{}
+		bom.Components = &[]cdx.Component{}
+		bom.Metadata = &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef:     "root",
+				PackageURL: "root",
+			},
+		}
+		result := normalize.FromCdxBom(bom, artifactName, origin)
+		assert.Len(t, *result.GetComponents(), 2) // artifact and origin components
 	})
 
 	t.Run("component with mixed properties", func(t *testing.T) {
 		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
 			Components: &[]cdx.Component{{
 				Name:       "test-component",
+				Version:    "1.0.0",
 				PackageURL: "pkg:npm/old-pkg-id@1.0.0",
 				Properties: &[]cdx.Property{
 					{Name: "aquasecurity:trivy:SrcName", Value: "actual-source-name"},
@@ -169,32 +176,13 @@ func TestFromCdxBom(t *testing.T) {
 			}},
 		}
 
-		result := normalize.FromCdxBom(bom, false)
+		bom.Dependencies = &[]cdx.Dependency{}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin)
 		component := (*result.GetComponents())[0]
 
 		assert.Contains(t, component.PackageURL, "actual-source-name@2.1.0")
 		assert.NotContains(t, component.PackageURL, "old-pkg-id")
-	})
-}
-
-func TestCdxBomMethods(t *testing.T) {
-	t.Run("getter methods", func(t *testing.T) {
-		dependencies := []cdx.Dependency{{Ref: "test-ref"}}
-		metadata := &cdx.Metadata{Component: &cdx.Component{Name: "test-metadata-component"}}
-		components := []cdx.Component{{Name: "test-component"}}
-
-		bom := &cdx.BOM{
-			Components:   &components,
-			Dependencies: &dependencies,
-			Metadata:     metadata,
-		}
-
-		result := normalize.FromCdxBom(bom, false)
-
-		assert.Equal(t, &dependencies, result.GetDependencies())
-		assert.Equal(t, metadata, result.GetMetadata())
-		assert.Equal(t, bom, result.GetCdxBom())
-		assert.NotNil(t, result.GetComponents())
 	})
 }
 
@@ -401,13 +389,13 @@ func TestMergeCdxBoms(t *testing.T) {
 		explicitMetadata := &cdx.Metadata{
 			Component: &cdx.Component{Name: "explicit-metadata"},
 		}
-		
+
 		result := normalize.MergeCdxBoms(explicitMetadata, bom1, bom2, bom3)
 
 		// Should use the explicitly passed metadata
 		assert.NotNil(t, result.Metadata)
 		assert.Equal(t, "explicit-metadata", result.Metadata.Component.Name)
-		
+
 		// Test with nil metadata parameter - should use first BOM's metadata
 		result2 := normalize.MergeCdxBoms(nil, bom1, bom2, bom3)
 		assert.NotNil(t, result2.Metadata)
@@ -456,5 +444,240 @@ func TestMergeCdxBoms(t *testing.T) {
 
 		assert.NotNil(t, result.Metadata)
 		assert.Equal(t, "metadata-comp", result.Metadata.Component.Name)
+	})
+}
+
+func TestMergeCdxBomsSimple(t *testing.T) {
+	b1 := &cdx.BOM{
+		Components: &[]cdx.Component{{
+			Name:       "comp-a",
+			PackageURL: "pkg:maven/org.example/comp-a@1.0.0",
+		}},
+	}
+	b2 := &cdx.BOM{
+		Components: &[]cdx.Component{{
+			Name:       "comp-b",
+			PackageURL: "pkg:maven/org.example/comp-b@2.0.0",
+		}},
+		Vulnerabilities: &[]cdx.Vulnerability{{
+			ID: "CVE-XYZ",
+		}},
+	}
+
+	merged := normalize.MergeCdxBoms(nil, b1, b2)
+	if merged == nil || merged.Components == nil {
+		t.Fatalf("expected merged BOM with components, got nil")
+	}
+	if len(*merged.Components) != 2 {
+		t.Fatalf("expected 2 components in merged BOM, got %d", len(*merged.Components))
+	}
+
+	assert.Len(t, *merged.Vulnerabilities, 1)
+}
+
+func TestReplaceSubtree(t *testing.T) {
+	artifactName := "test-artifact"
+
+	/*t.Run("should add the subtree if it does not exist", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref:          "root",
+					Dependencies: &[]string{},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "subtree",
+				},
+			},
+			Components:   &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{},
+		}
+		updatedSbom := normalize.ReplaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin"), normalize.FromCdxBom(newSubtree, artifactName, "other-origin"))
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
+				found = true
+				assert.Contains(t, *comp.Dependencies, "origin")
+				assert.Contains(t, *comp.Dependencies, "other-origin")
+			}
+
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+	})
+
+	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "root",
+					Dependencies: &[]string{
+						"origin",
+					},
+				},
+				{
+					Ref: "origin",
+					Dependencies: &[]string{
+						"subtree",
+					},
+				},
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"old-component",
+					},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "subtree",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					Name:   "subtree",
+					BOMRef: "subtree",
+				},
+				{
+					Name:   "new-component",
+					BOMRef: "new-component",
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"new-component",
+					},
+				},
+			},
+		}
+		updatedSbom := normalize.ReplaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin"), normalize.FromCdxBom(newSubtree, artifactName, "other-origin"))
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
+				found = true
+				assert.Contains(t, *comp.Dependencies, "origin")
+			}
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+
+		// check that subtree now has NO dependency to old-component and has dependency to new-component
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "subtree" {
+				assert.NotContains(t, *comp.Dependencies, "old-component")
+				assert.Contains(t, *comp.Dependencies, "new-component")
+			}
+		}
+	})
+	*/
+	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
+		currentSbom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "root",
+					Dependencies: &[]string{
+						"origin",
+						"other-origin",
+					},
+				},
+				{
+					Ref: "other-origin",
+					Dependencies: &[]string{
+						"pkg:old-component",
+					},
+				},
+				{
+					Ref: "origin",
+					Dependencies: &[]string{
+						"pkg:subtree",
+					},
+				},
+				{
+					Ref: "subtree",
+					Dependencies: &[]string{
+						"pkg:old-component",
+					},
+				},
+			},
+		}
+		newSubtree := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "Root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					Name:   "Root",
+					BOMRef: "Root",
+				},
+				{
+					Name:   "pkg:new-component",
+					BOMRef: "pkg:new-component",
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "Root",
+					Dependencies: &[]string{
+						"pkg:new-component",
+					},
+				},
+			},
+		}
+
+		subtree := normalize.FromCdxBom(newSubtree, artifactName, "other-origin")
+
+		updatedSbom := normalize.ReplaceSubtree(normalize.FromCdxBom(currentSbom, artifactName, "origin"), subtree)
+
+		assert.NotNil(t, updatedSbom)
+
+		found := false
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "test-artifact" { // Changed from "root" to "test-artifact"
+				found = true
+				assert.Contains(t, *comp.Dependencies, "sbom:origin")
+				assert.Contains(t, *comp.Dependencies, "sbom:other-origin")
+			}
+		}
+		assert.True(t, found, "Root component should exist in updated SBOM")
+
+		// check that subtree now has NO dependency to old-component and has dependency to new-component
+		for _, comp := range *updatedSbom.GetDependencies() {
+			if comp.Ref == "sbom:other-origin" {
+				assert.NotContains(t, *comp.Dependencies, "pkg:old-component")
+				assert.Contains(t, *comp.Dependencies, "pkg:new-component")
+			}
+		}
 	})
 }

@@ -148,6 +148,9 @@ type ComponentRepository interface {
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
+	CreateComponents(tx DB, components []models.ComponentDependency) error
+	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type DependencyVulnRepository interface {
@@ -167,6 +170,7 @@ type DependencyVulnRepository interface {
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 }
 
 type ComponentOccurrenceRepository interface {
@@ -276,16 +280,19 @@ type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string)
+	SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(tx DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error
-	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
-	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
+	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error
+	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error
 	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
-	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
+	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream models.UpstreamState) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }
@@ -297,12 +304,12 @@ type FireAndForgetSynchronizer interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(assetVersion models.AssetVersion, artifactName string, version, orgName string, components []models.ComponentDependency) (*cdx.BOM, error)
+	BuildSBOM(assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (normalize.SBOM, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error
-	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream models.UpstreamState) error
+	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
 
@@ -318,6 +325,7 @@ type AssetVersionRepository interface {
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
+	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
 }
 
 type FirstPartyVulnService interface {
@@ -448,14 +456,16 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)
+	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type LicenseRiskService interface {
-	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error
-	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
+	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream models.UpstreamState) error
+	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error)
 	MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error
 }
 
@@ -564,3 +574,12 @@ type ProjectRole struct {
 	Project string
 	Role    Role
 }
+
+type ScannerType string
+
+const (
+	VexReport     ScannerType = "vex-report"
+	ScaScanner    ScannerType = "source-scanner"
+	ContainerScan ScannerType = "container-scan"
+	TestScanner   ScannerType = "test-scanner"
+)

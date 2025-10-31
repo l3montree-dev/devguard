@@ -13,36 +13,95 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package assetversion
+package normalize
 
 import (
 	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 )
 
-type treeNode struct {
+type TreeNode struct {
 	Name     string      `json:"name"`
-	Children []*treeNode `json:"children"`
+	Children []*TreeNode `json:"children"`
 }
 
-type tree struct {
-	Root    *treeNode `json:"root"`
-	cursors map[string]*treeNode
+type Tree struct {
+	Root    *TreeNode `json:"root"`
+	cursors map[string]*TreeNode
 }
 
-func newNode(name string) *treeNode {
-	return &treeNode{
+func newNode(name string) *TreeNode {
+	return &TreeNode{
 		Name:     name,
-		Children: []*treeNode{},
+		Children: []*TreeNode{},
 	}
 }
 
-func (tree *tree) addNode(source string, dep string) {
+func (tree *Tree) Visitable() ([]string, []string) {
+
+	visited := make(map[string]bool)
+
+	var visit func(node *TreeNode)
+	visit = func(node *TreeNode) {
+		if node == nil {
+			return
+		}
+		visited[node.Name] = true
+		for _, child := range node.Children {
+			visit(child)
+		}
+	}
+
+	visit(tree.Root)
+	unvisitable := []string{}
+	visitable := []string{}
+	for name := range tree.cursors {
+		if !visited[name] {
+			unvisitable = append(unvisitable, name)
+		} else {
+			visitable = append(visitable, name)
+		}
+	}
+
+	return visitable, unvisitable
+}
+
+func (tree *Tree) ReachableThroughMultipleRoots() []string {
+	reachablePurls := make(map[string]map[string]bool)
+
+	var visit func(node *TreeNode, root string)
+	visit = func(node *TreeNode, root string) {
+		if node == nil {
+			return
+		}
+		if _, ok := reachablePurls[node.Name]; !ok {
+			reachablePurls[node.Name] = make(map[string]bool)
+		}
+		reachablePurls[node.Name][root] = true
+		for _, child := range node.Children {
+			visit(child, root)
+		}
+	}
+
+	// start from all root nodes (children of the main root)
+	for _, child := range tree.Root.Children {
+		visit(child, child.Name)
+	}
+
+	multipleRoots := []string{}
+	for name, roots := range reachablePurls {
+		if len(roots) > 1 {
+			multipleRoots = append(multipleRoots, name)
+		}
+	}
+
+	return multipleRoots
+}
+
+func (tree *Tree) addNode(source string, dep string) {
 	// check if source does exist
 	if _, ok := tree.cursors[source]; !ok {
 		tree.cursors[source] = newNode(source)
@@ -63,7 +122,7 @@ func (tree *tree) addNode(source string, dep string) {
 }
 
 // Helper function to detect and cut cycles
-func cutCycles(node *treeNode, visited map[*treeNode]bool) {
+func cutCycles(node *TreeNode, visited map[*TreeNode]bool) {
 	// Mark the current node as visited
 	visited[node] = true
 
@@ -86,7 +145,7 @@ func cutCycles(node *treeNode, visited map[*treeNode]bool) {
 	delete(visited, node)
 }
 
-func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
+func CalculateDepth(node *TreeNode, currentDepth int, depthMap map[string]int) {
 	// check if the child is a VALID PURL - only then increment depth
 	_, err := packageurl.FromString(node.Name)
 	if err == nil {
@@ -100,31 +159,38 @@ func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 		depthMap[node.Name] = currentDepth
 	}
 	for _, child := range node.Children {
+		if strings.HasPrefix(child.Name, fmt.Sprintf("%s:", BomTypeVEX)) {
+			continue
+		}
 		CalculateDepth(child, currentDepth, depthMap)
 	}
 }
 
-func buildDependencyTree(elements []models.ComponentDependency) tree {
+type DependencyTree interface {
+	GetRef() string
+	GetDeps() []string
+}
 
-	treeName := "root"
+func buildDependencyTree[T DependencyTree](elements []T, root string) Tree {
+
+	treeName := root
 
 	// create a new tree
-	tree := tree{
-		Root:    &treeNode{Name: treeName},
-		cursors: make(map[string]*treeNode),
+	tree := Tree{
+		Root:    &TreeNode{Name: treeName},
+		cursors: make(map[string]*TreeNode),
 	}
 
 	tree.cursors[treeName] = tree.Root
 
 	for _, element := range elements {
-		if element.ComponentPurl == nil {
-			tree.addNode(treeName, element.DependencyPurl)
-		} else {
-			tree.addNode(*element.ComponentPurl, element.DependencyPurl)
+		ref := element.GetRef()
+		for _, d := range element.GetDeps() {
+			tree.addNode(ref, d)
 		}
 	}
 
-	cutCycles(tree.Root, make(map[*treeNode]bool))
+	cutCycles(tree.Root, make(map[*TreeNode]bool))
 
 	return tree
 }
@@ -139,32 +205,32 @@ func escapeAtSign(pURL string) string {
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
-func (tree *tree) RenderToMermaid() string {
+func (tree *Tree) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
 	var builder strings.Builder
 	builder.WriteString(mermaidFlowChart)
 
-	var renderPaths func(node *treeNode)
+	var renderPaths func(node *TreeNode)
 
 	var existingPaths = make(map[string]bool)
 
-	renderPaths = func(node *treeNode) {
+	renderPaths = func(node *TreeNode) {
 		if node == nil {
 			return
 		}
 		// sort the children by name to ensure consistent rendering
-		slices.SortStableFunc(node.Children, func(a, b *treeNode) int {
+		slices.SortStableFunc(node.Children, func(a, b *TreeNode) int {
 			return strings.Compare(a.Name, b.Name)
 		})
 		for _, child := range node.Children {
 
-			fromLabel, err := utils.BeautifyPURL(node.Name)
+			fromLabel, err := BeautifyPURL(node.Name)
 			if err != nil {
 				fromLabel = node.Name
 			}
-			toLabel, err := utils.BeautifyPURL(child.Name)
+			toLabel, err := BeautifyPURL(child.Name)
 			if err != nil {
 				toLabel = child.Name
 			}
@@ -187,17 +253,8 @@ func (tree *tree) RenderToMermaid() string {
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
 }
 
-func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
-	tree := BuildDependencyTree(elements)
-	// calculate the depth for each node
-	depthMap := make(map[string]int)
-	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
-	// so the application itself will be at depth 0, the first dependency at depth 1, and so on.
-	return depthMap
-}
-
-func BuildDependencyTree(elements []models.ComponentDependency) tree {
+func BuildDependencyTree[T DependencyTree](elements []T, root string) Tree {
 	// create a new tree
-	return buildDependencyTree(elements)
+	return buildDependencyTree(elements, root)
 
 }

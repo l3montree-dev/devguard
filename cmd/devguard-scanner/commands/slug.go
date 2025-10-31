@@ -9,9 +9,15 @@ import (
 
 func NewSlugCommand() *cobra.Command {
 	slugCmd := &cobra.Command{
-		Use:   "slug",
+		Use:   "slug <text>",
 		Args:  cobra.ExactArgs(1),
-		Short: "Get the slug of a version using the slug method from the github package ",
+		Short: "Create a URL-friendly slug from text",
+		Long: `Create a URL-friendly slug from the provided text. Useful for generating
+artifact names or identifiers. The slug is printed to stdout.
+
+Example:
+	devguard-scanner slug "My Project Name"
+`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// just use this command to disable the default root persistent pre-run
 			return nil

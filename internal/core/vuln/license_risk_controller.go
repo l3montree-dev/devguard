@@ -138,6 +138,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLic
 				VulnerabilityName:       licenseRisk.ComponentPurl,
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
+				Upstream:                ev.Upstream,
 			}
 		}),
 	}
@@ -214,7 +215,7 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

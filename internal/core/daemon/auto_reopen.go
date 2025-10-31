@@ -52,7 +52,7 @@ func AutoReopenAcceptedVulnerabilities(db core.DB) error {
 
 		for _, vuln := range vulnerabilities {
 			// create a new event for the vulnerability
-			event := models.NewReopenedEvent(vuln.ID, models.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays))
+			event := models.NewReopenedEvent(vuln.ID, models.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), models.UpstreamStateInternal)
 
 			if err := dependencyVulnRepository.ApplyAndSave(nil, &vuln, &event); err != nil {
 				slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)

@@ -36,6 +36,52 @@ func (_m *SBOM) EXPECT() *SBOM_Expecter {
 	return &SBOM_Expecter{mock: &_m.Mock}
 }
 
+// Eject provides a mock function for the type SBOM
+func (_mock *SBOM) Eject() *cyclonedx.BOM {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Eject")
+	}
+
+	var r0 *cyclonedx.BOM
+	if returnFunc, ok := ret.Get(0).(func() *cyclonedx.BOM); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cyclonedx.BOM)
+		}
+	}
+	return r0
+}
+
+// SBOM_Eject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Eject'
+type SBOM_Eject_Call struct {
+	*mock.Call
+}
+
+// Eject is a helper method to define mock.On call
+func (_e *SBOM_Expecter) Eject() *SBOM_Eject_Call {
+	return &SBOM_Eject_Call{Call: _e.mock.On("Eject")}
+}
+
+func (_c *SBOM_Eject_Call) Run(run func()) *SBOM_Eject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SBOM_Eject_Call) Return(bOM *cyclonedx.BOM) *SBOM_Eject_Call {
+	_c.Call.Return(bOM)
+	return _c
+}
+
+func (_c *SBOM_Eject_Call) RunAndReturn(run func() *cyclonedx.BOM) *SBOM_Eject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCdxBom provides a mock function for the type SBOM
 func (_mock *SBOM) GetCdxBom() *cyclonedx.BOM {
 	ret := _mock.Called()
@@ -216,6 +262,96 @@ func (_c *SBOM_GetMetadata_Call) Return(metadata *cyclonedx.Metadata) *SBOM_GetM
 }
 
 func (_c *SBOM_GetMetadata_Call) RunAndReturn(run func() *cyclonedx.Metadata) *SBOM_GetMetadata_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOrigin provides a mock function for the type SBOM
+func (_mock *SBOM) GetOrigin() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrigin")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// SBOM_GetOrigin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrigin'
+type SBOM_GetOrigin_Call struct {
+	*mock.Call
+}
+
+// GetOrigin is a helper method to define mock.On call
+func (_e *SBOM_Expecter) GetOrigin() *SBOM_GetOrigin_Call {
+	return &SBOM_GetOrigin_Call{Call: _e.mock.On("GetOrigin")}
+}
+
+func (_c *SBOM_GetOrigin_Call) Run(run func()) *SBOM_GetOrigin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SBOM_GetOrigin_Call) Return(s string) *SBOM_GetOrigin_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *SBOM_GetOrigin_Call) RunAndReturn(run func() string) *SBOM_GetOrigin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetVulnerabilities provides a mock function for the type SBOM
+func (_mock *SBOM) GetVulnerabilities() *[]cyclonedx.Vulnerability {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVulnerabilities")
+	}
+
+	var r0 *[]cyclonedx.Vulnerability
+	if returnFunc, ok := ret.Get(0).(func() *[]cyclonedx.Vulnerability); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]cyclonedx.Vulnerability)
+		}
+	}
+	return r0
+}
+
+// SBOM_GetVulnerabilities_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVulnerabilities'
+type SBOM_GetVulnerabilities_Call struct {
+	*mock.Call
+}
+
+// GetVulnerabilities is a helper method to define mock.On call
+func (_e *SBOM_Expecter) GetVulnerabilities() *SBOM_GetVulnerabilities_Call {
+	return &SBOM_GetVulnerabilities_Call{Call: _e.mock.On("GetVulnerabilities")}
+}
+
+func (_c *SBOM_GetVulnerabilities_Call) Run(run func()) *SBOM_GetVulnerabilities_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SBOM_GetVulnerabilities_Call) Return(vulnerabilitys *[]cyclonedx.Vulnerability) *SBOM_GetVulnerabilities_Call {
+	_c.Call.Return(vulnerabilitys)
+	return _c
+}
+
+func (_c *SBOM_GetVulnerabilities_Call) RunAndReturn(run func() *[]cyclonedx.Vulnerability) *SBOM_GetVulnerabilities_Call {
 	_c.Call.Return(run)
 	return _c
 }

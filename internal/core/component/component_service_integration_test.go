@@ -144,7 +144,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		)
 
 		// Call the function under test
-		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
+		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false, 0)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, resultComponents)
 
@@ -274,7 +274,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		)
 
 		// Call the function under test
-		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
+		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false, 0)
 		assert.NoError(t, err)
 
 		// Verify that no duplicate license risk was created
