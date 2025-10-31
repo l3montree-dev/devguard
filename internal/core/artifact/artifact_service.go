@@ -138,7 +138,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 	notFound := 0
 
 	type VulnState struct {
-		state         string
+		state         models.VulnEventType
 		purl          string
 		justification string
 	}
@@ -166,8 +166,8 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 				cveID = strings.ToUpper(strings.TrimSpace(cveID))
 				cveIDs = append(cveIDs, cveID)
 
-				statusType := normalize.MapCDXToVulnStatus(vuln.Analysis)
-				if statusType == "" {
+				eventType := normalize.MapCDXToEventType(vuln.Analysis)
+				if eventType == "" {
 					// skip unknown/unspecified statuses
 					continue
 				}
@@ -184,7 +184,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 
 				componentPurl := ref
 
-				expectedVulnState[cveID] = VulnState{state: statusType, justification: justification,
+				expectedVulnState[cveID] = VulnState{state: models.VulnEventType(eventType), justification: justification,
 					purl: componentPurl}
 			}
 
@@ -231,7 +231,13 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 		for i := range newState {
 			if expectedState, ok := expectedVulnState[*newState[i].CVEID]; ok {
 				// check if state changing event
-				if newState[i].State == models.VulnState(expectedState.state) {
+				expectedVulnState, err := models.EventTypeToVulnState(expectedState.state)
+
+				if err != nil {
+					slog.Error("could not convert event type to vuln state", "err", err)
+					continue
+				}
+				if newState[i].State == expectedVulnState {
 					continue
 				}
 
@@ -250,7 +256,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 					}
 				}
 
-				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &newState[i], expectedState.state, expectedState.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expectedState.state, expectedState.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue

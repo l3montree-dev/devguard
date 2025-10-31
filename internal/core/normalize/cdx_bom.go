@@ -247,10 +247,10 @@ const (
 )
 
 func RemoveOriginTypePrefixIfExists(origin string) (BomType, string) {
-	if strings.HasPrefix(origin, fmt.Sprintf("%s:", BomTypeSBOM)) {
-		return BomTypeSBOM, strings.TrimPrefix(origin, fmt.Sprintf("%s:", BomTypeSBOM))
-	} else if strings.HasPrefix(origin, fmt.Sprintf("%s:", BomTypeVEX)) {
-		return BomTypeVEX, strings.TrimPrefix(origin, fmt.Sprintf("%s:", BomTypeVEX))
+	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", BomTypeSBOM)); ok {
+		return BomTypeSBOM, after
+	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", BomTypeVEX)); ok {
+		return BomTypeVEX, after
 	}
 	return "", origin
 }

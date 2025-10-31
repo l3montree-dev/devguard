@@ -288,7 +288,7 @@ type DependencyVulnService interface {
 	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
-	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream models.UpstreamState) (models.VulnEvent, error)
+	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status models.VulnEventType, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream models.UpstreamState) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }

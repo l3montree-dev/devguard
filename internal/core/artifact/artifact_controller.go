@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
@@ -123,6 +124,52 @@ func (c *controller) DeleteArtifact(ctx core.Context) error {
 	}
 
 	return ctx.NoContent(200)
+}
+
+func (c *controller) SyncExternalSources(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	artifact := core.GetArtifact(ctx)
+	org := core.GetOrg(ctx)
+	sources, err := c.componentService.FetchRootNodes(&artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
+	}
+
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.Map(sources, func(el models.ComponentDependency) string {
+		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
+		return origin
+	}))
+	var vulns []models.DependencyVuln
+
+	if len(boms) > 0 {
+		vulns, err = c.artifactService.SyncUpstreamBoms(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
+		if err != nil {
+			slog.Error("could not sync vex reports", "err", err)
+		}
+	}
+
+	c.FireAndForget(func() {
+		err := c.dependencyVulnService.SyncIssues(org, core.GetProject(ctx), asset, assetVersion, vulns)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	c.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+
+		}
+
+		// save the asset
+		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
+		}
+	})
+
+	return nil
 }
 
 func (c *controller) UpdateArtifact(ctx core.Context) error {

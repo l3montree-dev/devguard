@@ -223,7 +223,6 @@ func runDaemons(db core.DB, broker pubsub.Broker, configService config.Service) 
 func Start(db core.DB, broker pubsub.Broker) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-
 	go func() {
 		// check if the vulndb is empty
 		if err := db.Raw("SELECT 1 as count FROM cves LIMIT 1;").Scan(new(int64)).Error; err != nil {

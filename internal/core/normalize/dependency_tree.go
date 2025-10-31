@@ -101,6 +101,38 @@ func (tree *Tree) ReachableThroughMultipleRoots() []string {
 	return multipleRoots
 }
 
+func (tree *Tree) ReachableThroughRootWithPrefix(prefix string) []string {
+	reachablePurls := make(map[string]struct{})
+
+	var visit func(node *TreeNode)
+	visit = func(node *TreeNode) {
+		if node == nil {
+			return
+		} else if _, ok := reachablePurls[node.Name]; ok {
+			return
+		}
+
+		reachablePurls[node.Name] = struct{}{}
+		for _, child := range node.Children {
+			visit(child)
+		}
+	}
+
+	// start from all root nodes (children of the main root)
+	for _, child := range tree.Root.Children {
+		if !strings.HasPrefix(child.Name, prefix) {
+			continue
+		}
+		visit(child)
+	}
+
+	result := make([]string, 0, len(reachablePurls))
+	for name := range reachablePurls {
+		result = append(result, name)
+	}
+	return result
+}
+
 func (tree *Tree) addNode(source string, dep string) {
 	// check if source does exist
 	if _, ok := tree.cursors[source]; !ok {

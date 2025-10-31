@@ -257,6 +257,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
+	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	/**
 	Expose vulnerability data publicly
 	*/
@@ -469,6 +471,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, neededScope([]string{"manage"}))
+	artifactRouter.POST("/sync-external-sources/", artifactController.SyncExternalSources)
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)

@@ -357,7 +357,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, tree.ReachableThroughMultipleRoots(), dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, append(tree.ReachableThroughMultipleRoots(), tree.ReachableThroughRootWithPrefix(string(normalize.BomTypeVEX))...), dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -814,9 +814,6 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 	return licenses
 }
 
-// keepSubtrees decides whether we remove artificial components that were only added to represent subtrees
-// in the SBOM or not. In most cases, we want to keep them when using the cdx.BOM structure further on internally.
-// Nevertheless, when exporting the SBOM to the user, we want to remove those artificial components again.
 func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (normalize.SBOM, error) {
 	var err error
 
