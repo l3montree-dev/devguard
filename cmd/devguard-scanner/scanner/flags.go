@@ -70,5 +70,6 @@ func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
+	cmd.Flags().String("outputPath", "", "Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
 
 }

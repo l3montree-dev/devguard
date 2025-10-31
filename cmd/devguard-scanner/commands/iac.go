@@ -19,22 +19,18 @@ func iacScan(p, outputPath string) (*common.SarifResult, error) {
 	// run checkov
 	dir := os.TempDir()
 	dir = path.Join(dir, "iac")
-	// create new directory
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create directory")
-	}
 
 	var sarifFilePath string
 	var outputDir string
 	if outputPath != "" {
 		outputDir = path.Dir(outputPath)
 		sarifFilePath = path.Join(outputDir, "results_sarif.sarif")
-		err = os.MkdirAll(outputDir, 0755)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create output directory")
-		}
 	} else {
+		// create new directory
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create directory")
+		}
 		outputDir = dir
 		sarifFilePath = path.Join(dir, "results_sarif.sarif")
 	}
@@ -92,6 +88,5 @@ Example:
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(iacCommand)
-	iacCommand.Flags().String("outputPath", "", "Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
 	return iacCommand
 }

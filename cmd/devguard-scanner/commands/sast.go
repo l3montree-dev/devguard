@@ -18,22 +18,15 @@ func sastScan(p, outputPath string) (*common.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "sast")
 
-	// create new directory
-	err := os.MkdirAll(dir, 0755)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create temp file")
-	}
-
 	var sarifFilePath string
 	if outputPath != "" {
 		sarifFilePath = outputPath
-		outputDir := path.Dir(outputPath)
-		err = os.MkdirAll(outputDir, 0755)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create output directory")
-		}
 	} else {
+		// create new directory
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create temp file")
+		}
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
@@ -46,7 +39,7 @@ func sastScan(p, outputPath string) (*common.SarifResult, error) {
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err = scannerCmd.Run()
+	err := scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -97,6 +90,5 @@ Examples:
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(sastCommand)
-	sastCommand.Flags().String("outputPath", "", "Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
 	return sastCommand
 }
