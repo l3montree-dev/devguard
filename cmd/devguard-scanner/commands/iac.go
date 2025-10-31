@@ -67,6 +67,11 @@ func iacScan(p, outputPath string) (*common.SarifResult, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not remove file")
 		}
+	} else {
+		err = os.Rename(sarifFilePath, outputPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not move file to output path")
+		}
 	}
 
 	return &sarifScan, nil
