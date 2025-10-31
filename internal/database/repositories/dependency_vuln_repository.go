@@ -116,7 +116,7 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
 		Preload("Artifacts").
 		Preload("Events").
-		Preload("CVE").
+		Joins("CVE").
 		Preload("CVE.Exploits").
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
 		Where(`asset_id = ? AND asset_version_name = ? AND EXISTS (
