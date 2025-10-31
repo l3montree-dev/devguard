@@ -245,7 +245,7 @@ func (h *releaseController) Read(c core.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.Read(id)
+	rel, err := h.service.ReadRecursive(id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
