@@ -109,7 +109,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(pathOrImage), "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+		trivyCmd = exec.Command("trivy", "image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
 
 	stderr := &bytes.Buffer{}
