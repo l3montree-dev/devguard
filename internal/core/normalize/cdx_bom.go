@@ -132,9 +132,17 @@ func (b cdxBom) Eject() *cdx.BOM {
 
 	// remove all dependencies and rewrite those to SKIP invalid purls
 	dependencies := []cdx.Dependency{}
-	if bom.Dependencies != nil {
+	if bom.Dependencies != nil && bom.Components != nil {
+		depMap := make(map[string]*cdx.Dependency)
+		for _, d := range *bom.Dependencies {
+			depMap[d.Ref] = &d
+		}
+		componentMap := make(map[string]*cdx.Component)
+		for _, c := range *bom.Components {
+			componentMap[c.BOMRef] = &c
+		}
 		for _, dependency := range *bom.Dependencies {
-			d := getShortCircuitDependencies(dependency.Ref, *bom.Dependencies)
+			d := getShortCircuitDependencies(dependency.Ref, componentMap, depMap)
 			dependencies = append(dependencies, cdx.Dependency{
 				Ref:          dependency.Ref,
 				Dependencies: &d,
@@ -213,16 +221,11 @@ func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {
 	return vulns
 }
 
-func getShortCircuitDependencies(ref string, allDeps []cdx.Dependency) []string {
-	// Build a map once instead of linear search each time
-	depMap := make(map[string]*cdx.Dependency)
-	for i := range allDeps {
-		depMap[allDeps[i].Ref] = &allDeps[i]
-	}
-	return resolveValidPurls(ref, depMap)
+func getShortCircuitDependencies(ref string, componentMap map[string]*cdx.Component, depMap map[string]*cdx.Dependency) []string {
+	return resolveValidPurls(ref, componentMap, depMap)
 }
 
-func resolveValidPurls(ref string, depMap map[string]*cdx.Dependency) []string {
+func resolveValidPurls(ref string, componentMap map[string]*cdx.Component, depMap map[string]*cdx.Dependency) []string {
 	dep, ok := depMap[ref]
 	if !ok || dep.Dependencies == nil {
 		return []string{}
@@ -230,10 +233,15 @@ func resolveValidPurls(ref string, depMap map[string]*cdx.Dependency) []string {
 
 	var result []string
 	for _, subRef := range *dep.Dependencies {
-		if strings.HasPrefix(subRef, "pkg:") {
+		component, exists := componentMap[subRef]
+		if !exists {
+			continue
+		}
+
+		if strings.HasPrefix(component.PackageURL, "pkg:") {
 			result = append(result, subRef)
 		} else {
-			result = append(result, resolveValidPurls(subRef, depMap)...)
+			result = append(result, resolveValidPurls(subRef, componentMap, depMap)...)
 		}
 	}
 	return result
@@ -306,13 +314,23 @@ func FromCdxBom(bom *cdx.BOM, artifactName, origin string) *cdxBom {
 		BOMRef: origin,
 	})
 
+	depMap := make(map[string]*cdx.Dependency)
+	for _, d := range *bom.Dependencies {
+		depMap[d.Ref] = &d
+	}
+
+	componentMap := make(map[string]*cdx.Component)
+	for _, c := range components {
+		componentMap[c.BOMRef] = &c
+	}
+
 	// remove all dependencies and rewrite those to SKIP invalid purls
 	// this means A --> B (invalid purl) --> C (valid purl)
 	// becomes A --> C
 	dependencies := []cdx.Dependency{}
 	if bom.Dependencies != nil {
 		for _, dependency := range *bom.Dependencies {
-			d := getShortCircuitDependencies(dependency.Ref, *bom.Dependencies)
+			d := getShortCircuitDependencies(dependency.Ref, componentMap, depMap)
 			dependencies = append(dependencies, cdx.Dependency{
 				Ref:          dependency.Ref,
 				Dependencies: &d,
