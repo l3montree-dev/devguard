@@ -98,17 +98,6 @@ func (c *controller) Create(ctx core.Context) error {
 
 }
 
-func (c *controller) FetchRootNodes(ctx core.Context) error {
-	// get all root nodes from the component_dependencies table
-	artifact := core.GetArtifact(ctx)
-	result, err := c.componentService.FetchRootNodes(&artifact)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not fetch root nodes").WithInternal(err)
-	}
-
-	return ctx.JSON(200, result)
-}
-
 func (c *controller) DeleteArtifact(ctx core.Context) error {
 
 	asset := core.GetAsset(ctx)
@@ -131,14 +120,16 @@ func (c *controller) SyncExternalSources(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	artifact := core.GetArtifact(ctx)
 	org := core.GetOrg(ctx)
-	sources, err := c.componentService.FetchRootNodes(&artifact)
+	sources, err := c.componentService.FetchInformationSources(&artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
 
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.Map(sources, func(el models.ComponentDependency) string {
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
 		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
 		return origin
+	}), func(el string) string {
+		return el
 	}))
 	var vulns []models.DependencyVuln
 
@@ -203,7 +194,7 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		return err
 	}
 
-	oldSources, err := c.componentService.FetchRootNodes(&artifact)
+	oldSources, err := c.componentService.FetchInformationSources(&artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
@@ -217,7 +208,7 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	toDelete := comparison.OnlyInB
 
 	// we just need to remove those root nodes.
-	if err := c.componentService.RemoveRootNodes(&artifact, toDelete); err != nil {
+	if err := c.componentService.RemoveInformationSources(&artifact, toDelete); err != nil {
 		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
 	}
 

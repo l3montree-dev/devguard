@@ -894,15 +894,17 @@ func (a *AssetVersionController) ReadRootNodes(ctx core.Context) error {
 	errgroup := utils.ErrGroup[map[string][]string](10)
 	for _, artifact := range artifacts {
 		errgroup.Go(func() (map[string][]string, error) {
-			rootNodes, err := a.componentService.FetchRootNodes(&artifact)
+			rootNodes, err := a.componentService.FetchInformationSources(&artifact)
 			if err != nil {
 				return nil, err
 			}
 			return map[string][]string{
-				artifact.ArtifactName: utils.Map(rootNodes, func(
+				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
 					el models.ComponentDependency,
 				) string {
 					return el.DependencyPurl
+				}), func(s string) string {
+					return s
 				}),
 			}, nil
 		})

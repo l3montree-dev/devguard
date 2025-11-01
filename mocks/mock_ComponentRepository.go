@@ -482,12 +482,12 @@ func (_c *ComponentRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB
 	return _c
 }
 
-// FetchRootNodes provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+// FetchInformationSources provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	ret := _mock.Called(artifact)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FetchRootNodes")
+		panic("no return value specified for FetchInformationSources")
 	}
 
 	var r0 []models.ComponentDependency
@@ -510,18 +510,18 @@ func (_mock *ComponentRepository) FetchRootNodes(artifact *models.Artifact) ([]m
 	return r0, r1
 }
 
-// ComponentRepository_FetchRootNodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchRootNodes'
-type ComponentRepository_FetchRootNodes_Call struct {
+// ComponentRepository_FetchInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchInformationSources'
+type ComponentRepository_FetchInformationSources_Call struct {
 	*mock.Call
 }
 
-// FetchRootNodes is a helper method to define mock.On call
+// FetchInformationSources is a helper method to define mock.On call
 //   - artifact *models.Artifact
-func (_e *ComponentRepository_Expecter) FetchRootNodes(artifact interface{}) *ComponentRepository_FetchRootNodes_Call {
-	return &ComponentRepository_FetchRootNodes_Call{Call: _e.mock.On("FetchRootNodes", artifact)}
+func (_e *ComponentRepository_Expecter) FetchInformationSources(artifact interface{}) *ComponentRepository_FetchInformationSources_Call {
+	return &ComponentRepository_FetchInformationSources_Call{Call: _e.mock.On("FetchInformationSources", artifact)}
 }
 
-func (_c *ComponentRepository_FetchRootNodes_Call) Run(run func(artifact *models.Artifact)) *ComponentRepository_FetchRootNodes_Call {
+func (_c *ComponentRepository_FetchInformationSources_Call) Run(run func(artifact *models.Artifact)) *ComponentRepository_FetchInformationSources_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Artifact
 		if args[0] != nil {
@@ -534,12 +534,12 @@ func (_c *ComponentRepository_FetchRootNodes_Call) Run(run func(artifact *models
 	return _c
 }
 
-func (_c *ComponentRepository_FetchRootNodes_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_FetchRootNodes_Call {
+func (_c *ComponentRepository_FetchInformationSources_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_FetchInformationSources_Call {
 	_c.Call.Return(componentDependencys, err)
 	return _c
 }
 
-func (_c *ComponentRepository_FetchRootNodes_Call) RunAndReturn(run func(artifact *models.Artifact) ([]models.ComponentDependency, error)) *ComponentRepository_FetchRootNodes_Call {
+func (_c *ComponentRepository_FetchInformationSources_Call) RunAndReturn(run func(artifact *models.Artifact) ([]models.ComponentDependency, error)) *ComponentRepository_FetchInformationSources_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1223,12 +1223,12 @@ func (_c *ComponentRepository_Read_Call) RunAndReturn(run func(id string) (model
 	return _c
 }
 
-// RemoveRootNodes provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error {
+// RemoveInformationSources provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
 	ret := _mock.Called(artifact, rootNodePurls)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RemoveRootNodes")
+		panic("no return value specified for RemoveInformationSources")
 	}
 
 	var r0 error
@@ -1240,19 +1240,19 @@ func (_mock *ComponentRepository) RemoveRootNodes(artifact *models.Artifact, roo
 	return r0
 }
 
-// ComponentRepository_RemoveRootNodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveRootNodes'
-type ComponentRepository_RemoveRootNodes_Call struct {
+// ComponentRepository_RemoveInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveInformationSources'
+type ComponentRepository_RemoveInformationSources_Call struct {
 	*mock.Call
 }
 
-// RemoveRootNodes is a helper method to define mock.On call
+// RemoveInformationSources is a helper method to define mock.On call
 //   - artifact *models.Artifact
 //   - rootNodePurls []string
-func (_e *ComponentRepository_Expecter) RemoveRootNodes(artifact interface{}, rootNodePurls interface{}) *ComponentRepository_RemoveRootNodes_Call {
-	return &ComponentRepository_RemoveRootNodes_Call{Call: _e.mock.On("RemoveRootNodes", artifact, rootNodePurls)}
+func (_e *ComponentRepository_Expecter) RemoveInformationSources(artifact interface{}, rootNodePurls interface{}) *ComponentRepository_RemoveInformationSources_Call {
+	return &ComponentRepository_RemoveInformationSources_Call{Call: _e.mock.On("RemoveInformationSources", artifact, rootNodePurls)}
 }
 
-func (_c *ComponentRepository_RemoveRootNodes_Call) Run(run func(artifact *models.Artifact, rootNodePurls []string)) *ComponentRepository_RemoveRootNodes_Call {
+func (_c *ComponentRepository_RemoveInformationSources_Call) Run(run func(artifact *models.Artifact, rootNodePurls []string)) *ComponentRepository_RemoveInformationSources_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Artifact
 		if args[0] != nil {
@@ -1270,12 +1270,12 @@ func (_c *ComponentRepository_RemoveRootNodes_Call) Run(run func(artifact *model
 	return _c
 }
 
-func (_c *ComponentRepository_RemoveRootNodes_Call) Return(err error) *ComponentRepository_RemoveRootNodes_Call {
+func (_c *ComponentRepository_RemoveInformationSources_Call) Return(err error) *ComponentRepository_RemoveInformationSources_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ComponentRepository_RemoveRootNodes_Call) RunAndReturn(run func(artifact *models.Artifact, rootNodePurls []string) error) *ComponentRepository_RemoveRootNodes_Call {
+func (_c *ComponentRepository_RemoveInformationSources_Call) RunAndReturn(run func(artifact *models.Artifact, rootNodePurls []string) error) *ComponentRepository_RemoveInformationSources_Call {
 	_c.Call.Return(run)
 	return _c
 }

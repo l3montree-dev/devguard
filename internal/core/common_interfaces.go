@@ -148,8 +148,8 @@ type ComponentRepository interface {
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
 	CreateComponents(tx DB, components []models.ComponentDependency) error
-	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
-	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
+	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type DependencyVulnRepository interface {
@@ -454,8 +454,8 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
-	FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error)
-	RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error
+	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type LicenseRiskService interface {
