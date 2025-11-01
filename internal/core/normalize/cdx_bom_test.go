@@ -276,7 +276,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(nil), expected))
 
 	})
 
@@ -335,7 +335,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(nil), expected))
 	})
 }
 
@@ -358,7 +358,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(b1, "artifact-1", "sbom:sbom"), normalize.FromCdxBom(b2, "artifact-2", "sbom:sbom")).EjectVex()
+	merged := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(b1, "artifact-1", "sbom:sbom"), normalize.FromCdxBom(b2, "artifact-2", "sbom:sbom")).EjectVex(nil)
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -448,7 +448,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
 	})
 
 	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
@@ -525,7 +525,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
 	})
 
 	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
@@ -637,7 +637,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
 	})
 }
 

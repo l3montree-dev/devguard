@@ -16,6 +16,7 @@ import (
 	"text/template"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -183,6 +184,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
+
 	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 
@@ -190,8 +192,14 @@ func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
+
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM())
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
@@ -199,8 +207,12 @@ func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM())
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) VEXXML(ctx core.Context) error {
@@ -208,8 +220,12 @@ func (a *AssetVersionController) VEXXML(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex())
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
@@ -217,8 +233,13 @@ func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex())
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
@@ -647,9 +668,15 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = markdownTableFromSBOM(&markdownFile, bom.EjectSBOM())
+	err = markdownTableFromSBOM(&markdownFile, bom.EjectSBOM(assetID))
 	if err != nil {
 		return err
 	}
@@ -666,7 +693,6 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	// check if external entity provider
-	asset := core.GetAsset(ctx)
 	templateName := "default"
 	if asset.ExternalEntityProviderID != nil {
 		templateName = strings.ToLower(*asset.ExternalEntityProviderID)

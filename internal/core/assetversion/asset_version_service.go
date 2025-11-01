@@ -722,7 +722,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				Artifact: core.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.EjectSBOM(),
+				SBOM: sbom.EjectSBOM(nil),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {

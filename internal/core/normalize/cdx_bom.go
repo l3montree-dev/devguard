@@ -2,10 +2,12 @@ package normalize
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 )
 
 type CdxBom struct {
@@ -452,30 +454,52 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
 
-func (bom *CdxBom) EjectVex() *cdx.BOM {
+func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
+	var externalRefs *[]cdx.ExternalReference
+	if assetID != nil {
+		apiURL := os.Getenv("DEVGUARD_API_URL_PUBLIC_INTERNET")
+		externalRefs = &[]cdx.ExternalReference{{
+			URL:     fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String()),
+			Comment: "Up to date Vulnerability exploitability information.",
+			Type:    cdx.ERTypeExploitabilityStatement,
+		}}
+	}
+
 	b := cdx.BOM{
-		SpecVersion:     cdx.SpecVersion1_6,
-		BOMFormat:       "CycloneDX",
-		XMLNS:           "http://cyclonedx.org/schema/bom/1.6",
-		Version:         1,
-		Components:      bom.GetComponents(),
-		Dependencies:    bom.GetDependencies(),
-		Metadata:        bom.GetMetadata(),
-		Vulnerabilities: bom.GetVulnerabilities(),
+		SpecVersion:        cdx.SpecVersion1_6,
+		BOMFormat:          "CycloneDX",
+		XMLNS:              "http://cyclonedx.org/schema/bom/1.6",
+		Version:            1,
+		Components:         bom.GetComponents(),
+		Dependencies:       bom.GetDependencies(),
+		Metadata:           bom.GetMetadata(),
+		Vulnerabilities:    bom.GetVulnerabilities(),
+		ExternalReferences: externalRefs,
 	}
 
 	return &b
 }
 
-func (bom *CdxBom) EjectSBOM() *cdx.BOM {
+func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
+	var externalRefs *[]cdx.ExternalReference
+	if assetID != nil {
+		apiURL := os.Getenv("DEVGUARD_API_URL_PUBLIC_INTERNET")
+		externalRefs = &[]cdx.ExternalReference{{
+			URL:     fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String()),
+			Comment: "Up to date software bill of material and license information.",
+			Type:    cdx.ERTypeBOM,
+		}}
+	}
+
 	b := cdx.BOM{
-		SpecVersion:  cdx.SpecVersion1_6,
-		BOMFormat:    "CycloneDX",
-		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
-		Version:      1,
-		Components:   bom.GetComponents(),
-		Dependencies: bom.GetDependencies(),
-		Metadata:     bom.GetMetadata(),
+		SpecVersion:        cdx.SpecVersion1_6,
+		BOMFormat:          "CycloneDX",
+		XMLNS:              "http://cyclonedx.org/schema/bom/1.6",
+		Version:            1,
+		Components:         bom.GetComponents(),
+		Dependencies:       bom.GetDependencies(),
+		Metadata:           bom.GetMetadata(),
+		ExternalReferences: externalRefs,
 	}
 
 	return &b

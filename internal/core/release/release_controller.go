@@ -182,7 +182,7 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}).EjectSBOM(), nil
+		}).EjectSBOM(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -192,7 +192,7 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 		},
 	}, boms...)
 
-	return merged.EjectSBOM(), nil
+	return merged.EjectSBOM(nil), nil
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
@@ -228,7 +228,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}).EjectVex(), nil
+		}).EjectVex(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -238,7 +238,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 		},
 	}, boms...)
 
-	return merged.EjectVex(), nil
+	return merged.EjectVex(nil), nil
 }
 
 func (h *releaseController) Read(c core.Context) error {
