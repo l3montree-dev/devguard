@@ -180,6 +180,9 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 	}
 
 	sbom, err := a.assetVersionService.BuildSBOM(core.GetAsset(ctx), assetVersion, artifactName, "", components)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
+	}
 	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 

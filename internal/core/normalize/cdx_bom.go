@@ -356,19 +356,19 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	return &CdxBom{tree: tree, vulnerabilities: normalizeVulnerabilities(bom.Vulnerabilities)}
 }
 
-func (b CdxBom) Eject() *cdx.BOM {
-	bom := cdx.BOM{
+func (bom *CdxBom) Eject() *cdx.BOM {
+	b := cdx.BOM{
 		SpecVersion:     cdx.SpecVersion1_6,
 		BOMFormat:       "CycloneDX",
 		XMLNS:           "http://cyclonedx.org/schema/bom/1.6",
 		Version:         1,
-		Components:      b.GetComponents(),
-		Dependencies:    b.GetDependencies(),
-		Metadata:        b.GetMetadata(),
-		Vulnerabilities: b.GetVulnerabilities(),
+		Components:      bom.GetComponents(),
+		Dependencies:    bom.GetDependencies(),
+		Metadata:        bom.GetMetadata(),
+		Vulnerabilities: bom.GetVulnerabilities(),
 	}
 
-	return &bom
+	return &b
 }
 
 type minimalTreeNode struct {
@@ -376,7 +376,7 @@ type minimalTreeNode struct {
 	Children []*minimalTreeNode `json:"children"`
 }
 
-func (b CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
+func (bom *CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
 	var convert func(node *TreeNode[cdxBomNode]) *minimalTreeNode
 	convert = func(node *TreeNode[cdxBomNode]) *minimalTreeNode {
 		if node == nil {
@@ -394,7 +394,7 @@ func (b CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
 		}
 		return minNode
 	}
-	return convert(b.tree.Root)
+	return convert(bom.tree.Root)
 }
 
 func replaceTrivyProperties(component *cdx.Component) *cdx.Component {

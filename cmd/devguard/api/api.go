@@ -259,6 +259,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	/**
 	Expose vulnerability data publicly
 	*/
