@@ -424,14 +424,19 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	// create nodes for the vulnerabilities as well
 	vulns := normalizeVulnerabilities(bom.Vulnerabilities)
 	vulnerableRefs := make(map[string]cdxBomNode)
-	for _, v := range *vulns {
-		for _, affected := range *v.Affects {
-			vulnerableRefs[normalizePurl(affected.Ref)] = newCdxBomNode(&cdx.Component{
-				BOMRef:     normalizePurl(affected.Ref),
-				Name:       normalizePurl(affected.Ref),
-				PackageURL: normalizePurl(affected.Ref),
-			})
-			sbomNodes = append(sbomNodes, vulnerableRefs[normalizePurl(affected.Ref)])
+	if vulns != nil {
+		for _, v := range *vulns {
+			if v.Affects == nil {
+				continue
+			}
+			for _, affected := range *v.Affects {
+				vulnerableRefs[normalizePurl(affected.Ref)] = newCdxBomNode(&cdx.Component{
+					BOMRef:     normalizePurl(affected.Ref),
+					Name:       normalizePurl(affected.Ref),
+					PackageURL: normalizePurl(affected.Ref),
+				})
+				sbomNodes = append(sbomNodes, vulnerableRefs[normalizePurl(affected.Ref)])
+			}
 		}
 	}
 

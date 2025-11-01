@@ -16,16 +16,14 @@ import (
 )
 
 func iacScan(p, outputPath string) (*common.SarifResult, error) {
-	// run checkov
-	dir := os.TempDir()
-	dir = path.Join(dir, "iac")
-
 	var sarifFilePath string
 	var outputDir string
 	if outputPath != "" {
 		outputDir = path.Dir(outputPath)
 		sarifFilePath = path.Join(outputDir, "results_sarif.sarif")
 	} else {
+		dir := os.TempDir()
+		dir = path.Join(dir, "iac")
 		// create new directory
 		err := os.MkdirAll(dir, 0755)
 		if err != nil {
