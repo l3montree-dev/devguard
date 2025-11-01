@@ -101,7 +101,7 @@ func BuildDepMap(deps []ComponentDependency) map[string][]string {
 	depMap := make(map[string][]string)
 	for _, dep := range deps {
 		if _, ok := depMap[utils.SafeDereference(dep.ComponentPurl)]; !ok {
-			depMap[*dep.ComponentPurl] = []string{}
+			depMap[utils.SafeDereference(dep.ComponentPurl)] = []string{}
 		}
 		depMap[utils.SafeDereference(dep.ComponentPurl)] = append(depMap[utils.SafeDereference(dep.ComponentPurl)], dep.DependencyPurl)
 	}
