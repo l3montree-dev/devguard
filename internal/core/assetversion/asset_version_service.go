@@ -635,6 +635,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// build a map of all components
 	bomRefMap := buildBomRefMap(wholeAssetSBOM)
 
+	depExistMap := make(map[string]bool)
 	// create all direct dependencies
 	for _, c := range *wholeAssetSBOM.GetDirectDependencies() {
 		component := bomRefMap[c.Ref]
@@ -642,6 +643,10 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		// anything like a deep nested dependency tree. Everything is a direct dependency.
 		componentPackageURL := normalize.Purl(component)
 		// create the direct dependency edge.
+		if _, ok := depExistMap["nil->"+componentPackageURL]; ok {
+			continue
+		}
+		depExistMap["nil->"+componentPackageURL] = true
 		dependencies = append(dependencies,
 			models.ComponentDependency{
 				ComponentPurl:  nil, // direct dependency - therefore set it to nil
@@ -650,14 +655,17 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		)
 	}
 
-	for _, c := range *wholeAssetSBOM.GetTransitiveDependencies() {
+	transitiveDependencies := *wholeAssetSBOM.GetTransitiveDependencies()
+	for _, c := range transitiveDependencies {
 		comp := bomRefMap[c.Ref]
 		compPackageURL := normalize.Purl(comp)
-
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
 			depPurlOrName := normalize.Purl(dep)
-
+			if _, ok := depExistMap[compPackageURL+"->"+depPurlOrName]; ok {
+				continue
+			}
+			depExistMap[compPackageURL+"->"+depPurlOrName] = true
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.Ptr(compPackageURL),
