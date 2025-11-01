@@ -62,8 +62,8 @@ func (s *service) ReadArtifact(name string, assetVersionName string, assetID uui
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string) {
-	var boms []normalize.SBOM
+func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+	var boms []*normalize.CdxBom
 
 	var validURLs []string
 	var invalidURLs []string
@@ -128,7 +128,7 @@ func extractCVE(s string) string {
 	return s
 }
 
-func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
 	upstream := models.UpstreamStateExternalAccepted
 	if asset.ParanoidMode {

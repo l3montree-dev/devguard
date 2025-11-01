@@ -20,29 +20,29 @@ import (
 
 type testNode struct {
 	Name string
-	Dep  string
 }
 
-func (n testNode) GetRef() string {
+func (n testNode) GetID() string {
 	return n.Name
-}
-
-func (n testNode) GetDeps() []string {
-	return []string{n.Dep}
 }
 
 func TestDependencyTree(t *testing.T) {
 	t.Run("buildDependencyTree", func(t *testing.T) {
-		graph := []testNode{
-			{Name: "root", Dep: "a"},
-			{Name: "a", Dep: "b"},
-			{Name: "a", Dep: "c"},
-			{Name: "b", Dep: "d"},
-			{Name: "b", Dep: "e"},
-			{Name: "c", Dep: "f"},
-			{Name: "c", Dep: "g"},
-		}
-		tree := BuildDependencyTree(graph, "root")
+		tree := BuildDependencyTree(testNode{Name: "root"}, []testNode{
+			testNode{Name: "root"},
+			testNode{Name: "a"},
+			testNode{Name: "b"},
+			testNode{Name: "c"},
+			testNode{Name: "d"},
+			testNode{Name: "e"},
+			testNode{Name: "f"},
+			testNode{Name: "g"},
+		}, map[string][]string{
+			"root": []string{"a"},
+			"a":    []string{"b", "c"},
+			"b":    []string{"d", "e"},
+			"c":    []string{"f", "g"},
+		})
 
 		// expect root to have one child: a
 		if len(tree.Root.Children) != 1 {
@@ -83,15 +83,19 @@ func TestDependencyTree(t *testing.T) {
 			|       |
 			b <---> c # here is the cycle in the tree
 		*/
-
 		graph := []testNode{
-			{Name: "root", Dep: "a"},
-			{Name: "a", Dep: "b"},
-			{Name: "a", Dep: "c"},
-			{Name: "b", Dep: "c"},
-			{Name: "c", Dep: "b"},
+			{Name: "root"},
+			{Name: "a"},
+			{Name: "a"},
+			{Name: "b"},
+			{Name: "c"},
 		}
-		tree := BuildDependencyTree(graph, "root")
+		tree := BuildDependencyTree(testNode{Name: "root"}, graph, map[string][]string{
+			"root": []string{"a"},
+			"a":    []string{"b", "c"},
+			"b":    []string{"c"},
+			"c":    []string{"b"},
+		})
 
 		// expect root to have one child: a
 		if len(tree.Root.Children) != 1 {
@@ -104,9 +108,9 @@ func TestDependencyTree(t *testing.T) {
 		}
 
 		// get b and c
-		var b, c *TreeNode
+		var b, c *TreeNode[testNode]
 		for _, child := range tree.Root.Children[0].Children {
-			switch child.Name {
+			switch child.ID {
 			case "b":
 				b = child
 			case "c":
@@ -117,75 +121,6 @@ func TestDependencyTree(t *testing.T) {
 		// expect either b or c to have no children
 		if len(b.Children) != 0 && len(c.Children) != 0 {
 			t.Fatalf("expected either b or c to have no children, got %d and %d", len(b.Children), len(c.Children))
-		}
-
-	})
-}
-func TestCalculateDepth(t *testing.T) {
-	t.Run("calculateDepth with valid tree", func(t *testing.T) {
-		root := &TreeNode{Name: "root"}
-		a := &TreeNode{Name: "pkg:golang/a"}
-		b := &TreeNode{Name: "pkg:golang/b"}
-		c := &TreeNode{Name: "pkg:golang/c"}
-		d := &TreeNode{Name: "pkg:golang/d"}
-
-		root.Children = []*TreeNode{a}
-		a.Children = []*TreeNode{b, c}
-		b.Children = []*TreeNode{d}
-
-		depthMap := make(map[string]int)
-		CalculateDepth(root, 0, depthMap)
-
-		expectedDepths := map[string]int{
-			"root":         0,
-			"pkg:golang/a": 1,
-			"pkg:golang/b": 2,
-			"pkg:golang/c": 2,
-			"pkg:golang/d": 3,
-		}
-
-		for node, expectedDepth := range expectedDepths {
-			if depthMap[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
-			}
-		}
-	})
-
-	t.Run("calculateDepth with invalid PURL", func(t *testing.T) {
-		root := &TreeNode{Name: "root"}
-		a := &TreeNode{Name: "go.mod"}
-		b := &TreeNode{Name: "tmp"}
-		c := &TreeNode{Name: "pkg:golang/github.com/gorilla/websocket"}
-
-		root.Children = []*TreeNode{a}
-		a.Children = []*TreeNode{b}
-		b.Children = []*TreeNode{c}
-
-		depthMap := make(map[string]int)
-		CalculateDepth(root, 0, depthMap)
-
-		expectedDepths := map[string]int{
-			"root":   0,
-			"go.mod": 0,
-			"tmp":    0,
-			"pkg:golang/github.com/gorilla/websocket": 1,
-		}
-
-		for node, expectedDepth := range expectedDepths {
-			if depthMap[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
-			}
-		}
-	})
-
-	t.Run("calculateDepth with empty tree", func(t *testing.T) {
-		root := &TreeNode{Name: "root"}
-
-		depthMap := make(map[string]int)
-		CalculateDepth(root, 0, depthMap)
-
-		if len(depthMap) != 1 || depthMap["root"] != 0 {
-			t.Errorf("expected depth map to contain only root with depth 0, got %v", depthMap)
 		}
 	})
 }

@@ -130,11 +130,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							continue
 						}
 
-						if artifact.ArtifactName == "pkg:devguard/@gitlab/devguard-ci-components-test-project" {
-							slog.Info("skipping scanning of devguard-ci-components-test-project artifact")
-						}
-
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "", components)
+						bom, err := assetVersionService.BuildSBOM(asset, assetVersions[i], artifact.ArtifactName, "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue

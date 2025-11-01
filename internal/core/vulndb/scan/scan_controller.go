@@ -146,7 +146,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 		return ctx.JSON(200, nil)
 	}
 
-	upstreamBOMS := []normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}
+	upstreamBOMS := []*normalize.CdxBom{normalize.FromCdxBom(&bom, artifactName, origin)}
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
@@ -245,7 +245,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalized, userID)
 }
 
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 

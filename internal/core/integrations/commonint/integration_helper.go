@@ -220,7 +220,10 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 		return "", err
 	}
 
-	tree := normalize.BuildDependencyTree(components, "root")
+	tree := normalize.BuildDependencyTree(models.ComponentDependency{
+		ComponentPurl: nil,
+	}, components, models.BuildDepMap(components))
+
 	return tree.RenderToMermaid(), nil
 }
 

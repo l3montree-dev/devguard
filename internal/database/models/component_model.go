@@ -93,15 +93,19 @@ type ComponentDependency struct {
 
 const Root string = "root"
 
-func (c ComponentDependency) GetRef() string {
-	if c.ComponentPurl == nil {
-		return Root
-	}
-	return *c.ComponentPurl
+func (c ComponentDependency) GetID() string {
+	return utils.SafeDereference(c.ComponentPurl)
 }
 
-func (c ComponentDependency) GetDeps() []string {
-	return []string{c.DependencyPurl}
+func BuildDepMap(deps []ComponentDependency) map[string][]string {
+	depMap := make(map[string][]string)
+	for _, dep := range deps {
+		if _, ok := depMap[utils.SafeDereference(dep.ComponentPurl)]; !ok {
+			depMap[*dep.ComponentPurl] = []string{}
+		}
+		depMap[utils.SafeDereference(dep.ComponentPurl)] = append(depMap[utils.SafeDereference(dep.ComponentPurl)], dep.DependencyPurl)
+	}
+	return depMap
 }
 
 const NoVersion = "0.0.0"

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"log/slog"
-	"maps"
 	"math"
 	"net/http"
 	"slices"
@@ -311,14 +310,13 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
-	// build a dependency tree
-	tree := normalize.BuildDependencyTree(assetComponents, "root")
+
 	// calculate the depth of each component
-	depthMap := make(map[string]int)
-
-	// first node will be the package name itself
-	normalize.CalculateDepth(tree.Root, -1, depthMap)
-
+	sbom, err := s.BuildSBOM(asset, *assetVersion, "", "", assetComponents)
+	if err != nil {
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
+	}
+	depthMap := sbom.CalculateDepth()
 	for _, vuln := range vulns {
 		v := vuln
 		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
@@ -357,7 +355,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, append(tree.ReachableThroughMultipleRoots(), tree.ReachableThroughRootWithPrefix(string(normalize.BomTypeVEX))...), dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom.InformationFromVexOrMultipleSBOMs(), dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -593,33 +591,19 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, v, nil
 }
 
-func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
-	res := make(map[string]cdx.Component)
-	if component.Components == nil {
-		return res
-	}
-
-	for _, component := range *component.Components {
-		res[component.BOMRef] = component
-		maps.Copy(res, recursiveBuildBomRefMap(component))
-	}
-	return res
-}
-
-func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
+func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
 	res := make(map[string]cdx.Component)
 	if bom.GetComponents() == nil {
 		return res
 	}
 
-	for _, component := range *bom.GetComponents() {
+	for _, component := range *bom.GetComponentsIncludingFakeNodes() {
 		res[component.BOMRef] = component
-		maps.Copy(res, recursiveBuildBomRefMap(component))
 	}
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream models.UpstreamState) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
@@ -641,19 +625,21 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
 	// first we need to replace the subtree.
 
-	wholeAssetSBOM, err := s.BuildSBOM(assetVersion, artifactName, org.Name, assetComponents)
+	wholeAssetSBOM, err := s.BuildSBOM(asset, assetVersion, artifactName, org.Name, assetComponents)
 	if err != nil {
 		return errors.Wrap(err, "could not build whole asset sbom")
 	}
 
-	sbom = normalize.ReplaceSubtree(wholeAssetSBOM, sbom)
+	for _, informationSource := range sbom.GetInformationSourceNodes() {
+		wholeAssetSBOM.ReplaceOrAddInformationSourceNode(informationSource)
+	}
 
 	// build a map of all components
-	bomRefMap := buildBomRefMap(sbom)
+	bomRefMap := buildBomRefMap(wholeAssetSBOM)
 
 	// create all direct dependencies
-	root := sbom.GetMetadata().Component.BOMRef
-	for _, c := range *sbom.GetDependencies() {
+	root := wholeAssetSBOM.GetMetadata().Component.BOMRef
+	for _, c := range *wholeAssetSBOM.GetDependenciesIncludingFakeNodes() {
 		if c.Ref != root {
 			continue // no direct dependency
 		}
@@ -682,9 +668,8 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		}
 	}
 
-	sbomDependencies := *sbom.GetDependencies()
 	// find all dependencies from this component
-	for _, c := range sbomDependencies {
+	for _, c := range *wholeAssetSBOM.GetDependenciesIncludingFakeNodes() {
 		if c.Ref == root {
 			continue // already processed
 		}
@@ -756,7 +741,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				Artifact: core.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.GetCdxBom(),
+				SBOM: sbom.Eject(),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
@@ -814,26 +799,20 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 	return licenses
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (normalize.SBOM, error) {
+func (s *service) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
 	var err error
 
-	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
+	var rootPurl string
+	if artifactName == "" {
+		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
+	} else {
+		rootPurl = fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+	}
 
-	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
 	bom := cdx.BOM{
-		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_6,
-		Version:     1,
 		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    rootPurl,
-				Type:      cdx.ComponentTypeApplication,
-				Name:      artifactName,
-				Version:   assetVersion.Name,
-				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/devguard",
+				BOMRef: rootPurl,
 			},
 		},
 	}
@@ -896,9 +875,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	// convert to normalized sbom
-	// THIS IS THE ONLY FUNCTION ALLOWED TO CALL THIS.
-	normalizedSBOM := normalize.CdxBom(&bom)
+	normalizedSBOM := normalize.FromNormalizedCdxBom(&bom, rootPurl)
 
 	return normalizedSBOM, nil
 }
@@ -959,23 +936,21 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
+	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+	if artifactName == "" {
+		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
+	}
+
 	bom := cdx.BOM{
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_6,
-		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    artifactName,
-				Type:      cdx.ComponentTypeApplication,
-				Name:      artifactName,
-				Version:   assetVersion.Name,
-				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/devguard",
+				BOMRef: rootPurl,
 			},
 		},
 	}
+
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
@@ -1036,7 +1011,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 	}
 	bom.Vulnerabilities = &vulnerabilities
 
-	return &bom
+	return normalize.FromNormalizedCdxBom(&bom, rootPurl)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

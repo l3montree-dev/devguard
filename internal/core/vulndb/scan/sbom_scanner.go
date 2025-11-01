@@ -42,7 +42,7 @@ func NewSBOMScanner(purlComparer comparer, cveRepository core.CveRepository) *sb
 	}
 }
 
-func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
 
 	// iterate through all components

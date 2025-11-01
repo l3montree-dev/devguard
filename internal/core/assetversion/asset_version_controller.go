@@ -147,6 +147,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
+	asset := core.GetAsset(ctx)
 
 	artifactName := ctx.QueryParam("artifactName")
 
@@ -155,12 +156,14 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 		return err
 	}
 
-	tree := normalize.BuildDependencyTree(components, models.Root)
-	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*normalize.TreeNode, 0)
+	sbom, err := a.assetVersionService.BuildSBOM(asset, app, artifactName, "", components)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
-	return ctx.JSON(200, tree)
+	minimalTree := sbom.EjectMinimalDependencyTree()
+
+	return ctx.JSON(200, minimalTree)
 }
 
 // function to return a graph of all dependencies which lead to the requested pURL
@@ -176,12 +179,8 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 		return err
 	}
 
-	tree := normalize.BuildDependencyTree(components, models.Root)
-	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*normalize.TreeNode, 0)
-	}
-
-	return ctx.JSON(200, tree)
+	sbom, err := a.assetVersionService.BuildSBOM(core.GetAsset(ctx), assetVersion, artifactName, "", components)
+	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 
 func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
@@ -207,7 +206,7 @@ func (a *AssetVersionController) VEXXML(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.Eject())
 }
 
 func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
@@ -216,7 +215,7 @@ func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.Eject())
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
@@ -228,9 +227,9 @@ func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (a *AssetVersionController) buildSBOM(ctx core.Context) (normalize.SBOM, error) {
-
+func (a *AssetVersionController) buildSBOM(ctx core.Context) (*normalize.CdxBom, error) {
 	assetVersion := core.GetAssetVersion(ctx)
+	asset := core.GetAsset(ctx)
 	org := core.GetOrg(ctx)
 
 	// get artifact from path
@@ -259,7 +258,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (normalize.SBOM, er
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, org.Name, components.Data)
+	return a.assetVersionService.BuildSBOM(asset, assetVersion, artifact.ArtifactName, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
@@ -318,7 +317,7 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	return dependencyVulns, nil
 }
 
-func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
+func (a *AssetVersionController) buildVeX(ctx core.Context) (*normalize.CdxBom, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
@@ -472,7 +471,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 				m[*dv.CVEID] = dv
 			}
 
-			for _, v := range *vex.Vulnerabilities {
+			for _, v := range *vex.GetVulnerabilities() {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue
