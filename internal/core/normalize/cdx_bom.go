@@ -534,7 +534,7 @@ func FromNormalizedCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 
 func FromCdxBom(bom *cdx.BOM, artifactName, informationSource string) *CdxBom {
 	bomType := NodeTypeSbomInformationSource
-	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) == 0 {
+	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
 		bomType = NodeTypeVexInformationSource
 	}
 	// check if the prefix already exists
