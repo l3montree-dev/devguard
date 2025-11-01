@@ -54,6 +54,10 @@ func (bom *CdxBom) GetInformationSourceNodes() []*TreeNode[cdxBomNode] {
 		}
 	}
 
+	if bom.tree.Root == nil {
+		return result
+	}
+
 	visit(bom.tree.Root)
 	return result
 }
