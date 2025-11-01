@@ -52,6 +52,14 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if config.RuntimeBaseConfig.OutputPath != "" {
+		err = os.WriteFile(config.RuntimeBaseConfig.OutputPath, file, 0644)
+		if err != nil {
+			return errors.Wrap(err, "could not write sarif file to output path")
+		}
+		slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
+	}
+
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
@@ -108,6 +116,7 @@ func NewSarifCommand() *cobra.Command {
 
 Example:
   devguard-scanner sarif results.sarif.json
+  devguard-scanner sarif results.sarif.json --outputPath uploaded-results.sarif.json
 
 The command signs the request using the configured token and returns scan results.`,
 		Args: cobra.ExactArgs(1),
@@ -235,7 +244,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path)
+		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -247,6 +256,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		b, err := json.Marshal(sarifResult)
 		if err != nil {
 			return errors.Wrap(err, "could not marshal sarif result")
+		}
+
+		if config.RuntimeBaseConfig.OutputPath != "" {
+			err = os.WriteFile(config.RuntimeBaseConfig.OutputPath, b, 0644)
+			if err != nil {
+				return errors.Wrap(err, "could not write sarif file to output path")
+			}
+			slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
@@ -291,14 +308,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
-		return secretScan(path)
+		return secretScan(path, outputPath)
 	case "sast":
-		return sastScan(path)
+		return sastScan(path, outputPath)
 	case "iac":
-		return iacScan(path)
+		return iacScan(path, outputPath)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
 	}
