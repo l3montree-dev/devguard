@@ -17,6 +17,7 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 )
@@ -232,8 +233,12 @@ func BuildDependencyTree[Element Node](root Element, elements []Element, depMap 
 			continue
 		}
 		for _, d := range depMapEntry {
-			dep := elementMap[d]
-			tree.addElement(element, dep)
+			if dep, ok := elementMap[d]; ok {
+				tree.addElement(element, dep)
+			} else {
+				// dependency not found in element map, create a placeholder node
+				slog.Info("not found")
+			}
 		}
 	}
 	cutCycles(tree.Root, make(map[*TreeNode[Element]]bool))

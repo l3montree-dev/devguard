@@ -396,11 +396,8 @@ func (d cdxBomNode) Data() *cdx.Component {
 func buildDependencyMap(dependencies []cdx.Dependency) map[string][]string {
 	depMap := make(map[string][]string)
 	for _, d := range dependencies {
-		ref := normalizePurl(d.Ref)
 		if d.Dependencies != nil {
-			for _, depRef := range *d.Dependencies {
-				depMap[ref] = append(depMap[ref], normalizePurl(depRef))
-			}
+			depMap[d.Ref] = append(depMap[d.Ref], *d.Dependencies...)
 		}
 	}
 	return depMap
