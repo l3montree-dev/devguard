@@ -773,7 +773,7 @@ func TestCalculateDepth(t *testing.T) {
 
 		actual := bom.CalculateDepth()
 
-		if len(actual) != 2 || actual["artifact"] != 1 && actual["sbom:origin"] != 1 {
+		if len(actual) != 3 || actual["artifact"] != 1 && actual["sbom:origin"] != 1 && actual["root"] != 1 {
 			t.Errorf("expected depth map to contain only artifact and origin with depth 1, got %v", actual)
 		}
 	})

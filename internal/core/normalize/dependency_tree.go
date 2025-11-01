@@ -218,8 +218,6 @@ func BuildDependencyTree[Element Node](root Element, elements []Element, depMap 
 			root.GetID(): rootNode,
 		},
 	}
-	elements = append(elements, root)
-
 	// build a data map
 	elementMap := make(map[string]Element)
 	for _, element := range elements {
@@ -227,7 +225,7 @@ func BuildDependencyTree[Element Node](root Element, elements []Element, depMap 
 	}
 	elementMap[root.GetID()] = root
 
-	for _, element := range elements {
+	for _, element := range elementMap {
 		ref := element.GetID()
 		depMapEntry, ok := depMap[ref]
 		if !ok {
@@ -243,11 +241,17 @@ func BuildDependencyTree[Element Node](root Element, elements []Element, depMap 
 }
 
 func escapeNodeID(s string) string {
+	if s == "" {
+		return "root"
+	}
 	// Creates a safe Mermaid node ID by removing special characters
 	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
 }
 
 func escapeAtSign(pURL string) string {
+	if pURL == "" {
+		return "root"
+	}
 	// escape @ sign in purl
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
@@ -292,7 +296,6 @@ func (tree *Tree[Data]) RenderToMermaid() string {
 			return strings.Compare(a.ID, b.ID)
 		})
 		for _, child := range node.Children {
-
 			fromLabel, err := BeautifyPURL(node.ID)
 			if err != nil {
 				fromLabel = node.ID

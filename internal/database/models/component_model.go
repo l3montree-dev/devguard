@@ -93,8 +93,18 @@ type ComponentDependency struct {
 
 const Root string = "root"
 
-func (c ComponentDependency) GetID() string {
-	return utils.SafeDereference(c.ComponentPurl)
+type ComponentDependencyNode struct {
+	ID string `json:"id"`
+}
+
+func (c ComponentDependencyNode) GetID() string {
+	return c.ID
+}
+
+func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
+	// a component dependency represents an edge in the dependency tree
+	// thus we can represent it as two nodes
+	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentPurl)}, ComponentDependencyNode{ID: c.DependencyPurl}}
 }
 
 func BuildDepMap(deps []ComponentDependency) map[string][]string {
