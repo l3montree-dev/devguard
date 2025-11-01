@@ -191,7 +191,7 @@ func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.Eject())
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM())
 }
 
 func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
@@ -200,7 +200,7 @@ func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.Eject())
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM())
 }
 
 func (a *AssetVersionController) VEXXML(ctx core.Context) error {
@@ -209,7 +209,7 @@ func (a *AssetVersionController) VEXXML(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.Eject())
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex())
 }
 
 func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
@@ -218,7 +218,7 @@ func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 		return err
 	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.Eject())
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex())
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
@@ -649,7 +649,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = markdownTableFromSBOM(&markdownFile, bom.Eject())
+	err = markdownTableFromSBOM(&markdownFile, bom.EjectSBOM())
 	if err != nil {
 		return err
 	}

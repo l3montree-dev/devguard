@@ -51,7 +51,7 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will default to the empty artifact name ''.")
-
+	cmd.Flags().String("origin", "DEFAULT", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
 }
 func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)

@@ -64,6 +64,5 @@ Example:
 		},
 	}
 	scanner.AddDependencyVulnsScanFlags(vexCommand)
-	vexCommand.Flags().String("origin", "vex", "Origin of the VEX (how it was generated or where it was retrieved)")
 	return vexCommand
 }

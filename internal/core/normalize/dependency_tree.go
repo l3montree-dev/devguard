@@ -252,6 +252,26 @@ func escapeAtSign(pURL string) string {
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
+func (tree *Tree[Data]) Reachable(id string) bool {
+	var found bool
+	var search func(node *TreeNode[Data])
+	search = func(node *TreeNode[Data]) {
+		if node == nil || found {
+			return
+		}
+		if node.ID == id {
+			found = true
+			return
+		}
+		for _, child := range node.Children {
+			search(child)
+		}
+	}
+
+	search(tree.Root)
+	return found
+}
+
 func (tree *Tree[Data]) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"

@@ -620,8 +620,6 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the sbom for the asset in the database.
 	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
-	existingDependencies := make(map[string]struct{}, len(dependencies))
-
 	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
 	// first we need to replace the subtree.
 
@@ -638,41 +636,21 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	bomRefMap := buildBomRefMap(wholeAssetSBOM)
 
 	// create all direct dependencies
-	root := wholeAssetSBOM.GetMetadata().Component.BOMRef
-	for _, c := range *wholeAssetSBOM.GetDependenciesIncludingFakeNodes() {
-		if c.Ref != root {
-			continue // no direct dependency
-		}
-		// we found it.
-		for _, directDependency := range *c.Dependencies {
-			component := bomRefMap[directDependency]
-			// the sbom of a container image does not contain the scope. In a container image, we do not have
-			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageURL := normalize.Purl(component)
-
-			// create the direct dependency edge.
-			dependencies = append(dependencies,
-				models.ComponentDependency{
-					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					DependencyPurl: componentPackageURL,
-				},
-			)
-			existingDependencies[componentPackageURL] = struct{}{}
-			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
-				components[componentPackageURL] = models.Component{
-					Purl:          componentPackageURL,
-					ComponentType: models.ComponentType(component.Type),
-					Version:       component.Version,
-				}
-			}
-		}
+	for _, c := range *wholeAssetSBOM.GetDirectDependencies() {
+		component := bomRefMap[c.Ref]
+		// the sbom of a container image does not contain the scope. In a container image, we do not have
+		// anything like a deep nested dependency tree. Everything is a direct dependency.
+		componentPackageURL := normalize.Purl(component)
+		// create the direct dependency edge.
+		dependencies = append(dependencies,
+			models.ComponentDependency{
+				ComponentPurl:  nil, // direct dependency - therefore set it to nil
+				DependencyPurl: componentPackageURL,
+			},
+		)
 	}
 
-	// find all dependencies from this component
-	for _, c := range *wholeAssetSBOM.GetDependenciesIncludingFakeNodes() {
-		if c.Ref == root {
-			continue // already processed
-		}
+	for _, c := range *wholeAssetSBOM.GetTransitiveDependencies() {
 		comp := bomRefMap[c.Ref]
 		compPackageURL := normalize.Purl(comp)
 
@@ -686,21 +664,16 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 					DependencyPurl: depPurlOrName,
 				},
 			)
+		}
+	}
 
-			if _, ok := existingComponentPurls[depPurlOrName]; !ok {
-				components[depPurlOrName] = models.Component{
-					Purl:          depPurlOrName,
-					ComponentType: models.ComponentType(dep.Type),
-					Version:       dep.Version,
-				}
-			}
-
-			if _, ok := existingComponentPurls[compPackageURL]; !ok {
-				components[compPackageURL] = models.Component{
-					Purl:          compPackageURL,
-					ComponentType: models.ComponentType(comp.Type),
-					Version:       comp.Version,
-				}
+	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
+		componentPackageURL := normalize.Purl(c)
+		if _, ok := existingComponentPurls[componentPackageURL]; !ok {
+			components[componentPackageURL] = models.Component{
+				Purl:          componentPackageURL,
+				ComponentType: models.ComponentType(c.Type),
+				Version:       c.Version,
 			}
 		}
 	}
@@ -741,7 +714,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				Artifact: core.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.Eject(),
+				SBOM: sbom.EjectSBOM(),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {

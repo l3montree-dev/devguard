@@ -67,19 +67,28 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 
 	var visit func(node *TreeNode[cdxBomNode], depth int)
 	visit = func(node *TreeNode[cdxBomNode], depth int) {
-		if node == nil {
+		if node == nil || node.element.nodeType == NodeTypeVexInformationSource {
+			// do not run down vex paths
 			return
 		}
 		depthMap[node.ID] = depth
 		if node.element.Type() == NodeTypeComponent {
 			depth++
 		}
+
 		for _, child := range node.Children {
 			visit(child, depth)
 		}
 	}
 
 	visit(bom.tree.Root, 1)
+	// make sure the depth map is complete.
+	// since we do not traverse vex paths - we might miss some nodes
+	for id := range bom.tree.cursors {
+		if _, exists := depthMap[id]; !exists {
+			depthMap[id] = 1
+		}
+	}
 
 	return depthMap
 }
@@ -139,6 +148,68 @@ func (bom *CdxBom) GetComponentsIncludingFakeNodes() *[]cdx.Component {
 
 	visit(bom.tree.Root)
 	return &components
+}
+
+func (bom *CdxBom) GetDirectDependencies() *[]cdx.Dependency {
+	dependencies := []cdx.Dependency{}
+	for _, child := range bom.tree.Root.Children {
+		deps := []string{}
+		for _, grandChild := range child.Children {
+			deps = append(deps, grandChild.ID)
+		}
+
+		dependencies = append(dependencies, cdx.Dependency{
+			Ref:          child.ID,
+			Dependencies: &deps,
+		})
+	}
+	return &dependencies
+}
+
+func (bom *CdxBom) GetTransitiveDependencies() *[]cdx.Dependency {
+	depMap := make(map[string][]string)
+	var visit func(node *TreeNode[cdxBomNode])
+	visit = func(node *TreeNode[cdxBomNode]) {
+		if node == nil {
+			return
+		}
+		for _, child := range node.Children {
+			depMap[node.ID] = append(depMap[node.ID], child.ID)
+			visit(child)
+		}
+	}
+
+	for _, child := range bom.tree.Root.Children {
+		visit(child)
+	}
+
+	dependencies := []cdx.Dependency{}
+	for ref, deps := range depMap {
+		dependencies = append(dependencies, cdx.Dependency{
+			Ref:          ref,
+			Dependencies: &deps,
+		})
+	}
+	return &dependencies
+}
+
+func (bom *CdxBom) GetDependenciesOfComponent(componentRef string) *cdx.Dependency {
+	node := bom.tree.cursors[componentRef]
+	if node == nil {
+		return &cdx.Dependency{
+			Ref:          componentRef,
+			Dependencies: &[]string{},
+		}
+	}
+
+	deps := []string{}
+	for _, child := range node.Children {
+		deps = append(deps, child.ID)
+	}
+	return &cdx.Dependency{
+		Ref:          node.ID,
+		Dependencies: &deps,
+	}
 }
 
 func (bom *CdxBom) GetDependenciesIncludingFakeNodes() *[]cdx.Dependency {
@@ -350,13 +421,32 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 		sbomNodes = append(sbomNodes, newCdxBomNode(&comp))
 	}
 
+	// create nodes for the vulnerabilities as well
+	vulns := normalizeVulnerabilities(bom.Vulnerabilities)
+	vulnerableRefs := make(map[string]cdxBomNode)
+	for _, v := range *vulns {
+		for _, affected := range *v.Affects {
+			vulnerableRefs[normalizePurl(affected.Ref)] = newCdxBomNode(&cdx.Component{
+				BOMRef:     normalizePurl(affected.Ref),
+				Name:       normalizePurl(affected.Ref),
+				PackageURL: normalizePurl(affected.Ref),
+			})
+			sbomNodes = append(sbomNodes, vulnerableRefs[normalizePurl(affected.Ref)])
+		}
+	}
+
 	// only remove dependencies and components which are not possible to visit from root
 	tree := BuildDependencyTree(newCdxBomNode(bom.Metadata.Component), sbomNodes, buildDependencyMap(*bom.Dependencies))
+	for ref, node := range vulnerableRefs {
+		if !tree.Reachable(ref) {
+			tree.AddChild(tree.Root, newNode(node))
+		}
+	}
 	// set the vulnerabilities after normalization
-	return &CdxBom{tree: tree, vulnerabilities: normalizeVulnerabilities(bom.Vulnerabilities)}
+	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
 
-func (bom *CdxBom) Eject() *cdx.BOM {
+func (bom *CdxBom) EjectVex() *cdx.BOM {
 	b := cdx.BOM{
 		SpecVersion:     cdx.SpecVersion1_6,
 		BOMFormat:       "CycloneDX",
@@ -366,6 +456,20 @@ func (bom *CdxBom) Eject() *cdx.BOM {
 		Dependencies:    bom.GetDependencies(),
 		Metadata:        bom.GetMetadata(),
 		Vulnerabilities: bom.GetVulnerabilities(),
+	}
+
+	return &b
+}
+
+func (bom *CdxBom) EjectSBOM() *cdx.BOM {
+	b := cdx.BOM{
+		SpecVersion:  cdx.SpecVersion1_6,
+		BOMFormat:    "CycloneDX",
+		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
+		Version:      1,
+		Components:   bom.GetComponents(),
+		Dependencies: bom.GetDependencies(),
+		Metadata:     bom.GetMetadata(),
 	}
 
 	return &b
@@ -434,7 +538,7 @@ func replaceTrivyProperties(component *cdx.Component) *cdx.Component {
 
 func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {
 	if vulns == nil {
-		return vulns
+		return &[]cdx.Vulnerability{}
 	}
 	for i, v := range *vulns {
 		affects := v.Affects
@@ -564,7 +668,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, informationSource string) *CdxBom {
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *cdx.BOM {
+func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -596,7 +700,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *cdx.BOM {
 	}
 	newBom.vulnerabilities = &vulns
 
-	return newBom.Eject()
+	return newBom
 }
 
 func ptr[T any](s T) *T {

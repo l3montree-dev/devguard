@@ -276,7 +276,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(result, expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(), expected))
 
 	})
 
@@ -335,7 +335,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(result, expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(result.EjectSBOM(), expected))
 	})
 }
 
@@ -358,7 +358,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(b1, "artifact-1", "sbom:sbom"), normalize.FromCdxBom(b2, "artifact-2", "sbom:sbom"))
+	merged := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(b1, "artifact-1", "sbom:sbom"), normalize.FromCdxBom(b2, "artifact-2", "sbom:sbom")).EjectVex()
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -448,7 +448,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.Eject(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
 	})
 
 	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
@@ -525,7 +525,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.Eject(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
 	})
 
 	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
@@ -637,7 +637,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.Eject(), expected))
+		assert.Nil(t, normalize.StructuralCompareCdxBoms(rootCdx.EjectSBOM(), expected))
 	})
 }
 
@@ -775,6 +775,87 @@ func TestCalculateDepth(t *testing.T) {
 
 		if len(actual) != 2 || actual["artifact"] != 1 && actual["sbom:origin"] != 1 {
 			t.Errorf("expected depth map to contain only artifact and origin with depth 1, got %v", actual)
+		}
+	})
+
+	t.Run("calculate depth with vex AND sbom path", func(t *testing.T) {
+		bom := normalize.FromCdxBom(&cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef: "root",
+				},
+				{
+					BOMRef: "pkg:golang/a",
+				},
+				{
+					BOMRef: "pkg:golang/b",
+				},
+				{
+					BOMRef: "pkg:golang/c",
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref: "root",
+					Dependencies: &[]string{
+						"pkg:golang/a",
+					},
+				},
+				{
+					Ref: "pkg:golang/a",
+					Dependencies: &[]string{
+						"pkg:golang/b",
+					},
+				},
+				{
+					Ref: "pkg:golang/b",
+					Dependencies: &[]string{
+						"pkg:golang/c",
+					},
+				},
+				{
+					Ref:          "pkg:golang/c",
+					Dependencies: &[]string{},
+				},
+			},
+		}, "artifact", "sbom")
+
+		// lets merge a vex that adds a false positive to golang/c
+		vex := normalize.FromCdxBom(&cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Vulnerabilities: &[]cdx.Vulnerability{
+				{
+					ID: "CVE-2021",
+					Affects: &[]cdx.Affects{
+						{
+							Ref: "pkg:golang/c",
+						},
+					},
+				},
+			},
+		}, "artifact", "vex")
+		bom = normalize.MergeCdxBoms(rootMetadata, bom, vex)
+
+		actual := bom.CalculateDepth()
+
+		expectedDepths := map[string]int{
+			// the depth should remain the same even after merging the vex
+			"pkg:golang/c": 3,
+		}
+
+		for node, expectedDepth := range expectedDepths {
+			if actual[node] != expectedDepth {
+				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, actual[node])
+			}
 		}
 	})
 }
