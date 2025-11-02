@@ -476,7 +476,7 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if assetID != nil {
-		apiURL := os.Getenv("DEVGUARD_API_URL_PUBLIC_INTERNET")
+		apiURL := os.Getenv("API_URL")
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String()),
 			Comment: "Up to date Vulnerability exploitability information.",
@@ -502,7 +502,7 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if assetID != nil {
-		apiURL := os.Getenv("DEVGUARD_API_URL_PUBLIC_INTERNET")
+		apiURL := os.Getenv("API_URL")
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String()),
 			Comment: "Up to date software bill of material and license information.",
