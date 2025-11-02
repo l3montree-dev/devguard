@@ -23,9 +23,10 @@ type controller struct {
 	assetVersionService   core.AssetVersionService
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
+	core.ScanService
 }
 
-func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService, componentService core.ComponentService) *controller {
+func NewController(artifactRepository core.ArtifactRepository, artifactService core.ArtifactService, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService, componentService core.ComponentService, scanService core.ScanService) *controller {
 	return &controller{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -34,6 +35,7 @@ func NewController(artifactRepository core.ArtifactRepository, artifactService c
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 		componentService:          componentService,
 		assetVersionService:       assetVersionService,
+		ScanService:               scanService,
 	}
 }
 
@@ -224,9 +226,19 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 		// make sure that we at least update the sbom once if there were deletions
 		// updating with nil, will just renormalize the sbom and remove all components which are not
 		// reachable anymore from the root nodes - we might have removed some root nodes above
-		if err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal); err != nil {
-			slog.Error("could not update sbom after root node deletion", "err", err)
+		sbom, err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal)
+		if err != nil {
+			slog.Error("could not update sbom", "err", err)
+			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
+		// scan the sbom
+		// issue sync is already handled in scan normalized sbom
+		_, _, vulns, err = c.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, sbom, core.GetSession(ctx).GetUserID())
+		if err != nil {
+			slog.Error("could not scan sbom after updating it", "err", err)
+			return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
+		}
+		return nil
 	}
 
 	c.FireAndForget(func() {

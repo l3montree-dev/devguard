@@ -196,12 +196,13 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
+	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
 
 	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
 
-	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService)
+	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService, scanService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
@@ -210,7 +211,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	scanController := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)

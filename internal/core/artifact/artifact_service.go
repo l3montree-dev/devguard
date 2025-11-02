@@ -221,7 +221,7 @@ func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, pro
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
 
-		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
+		_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)

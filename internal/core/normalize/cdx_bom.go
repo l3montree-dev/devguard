@@ -42,6 +42,9 @@ func (bom *CdxBom) ReplaceOrAddInformationSourceNode(subTree *TreeNode[cdxBomNod
 }
 
 func (bom *CdxBom) GetInformationSourceNodes() []*TreeNode[cdxBomNode] {
+	if bom == nil {
+		return []*TreeNode[cdxBomNode]{}
+	}
 	result := []*TreeNode[cdxBomNode]{}
 	var visit func(node *TreeNode[cdxBomNode])
 	visit = func(node *TreeNode[cdxBomNode]) {
@@ -254,6 +257,9 @@ func (bom *CdxBom) GetDependenciesIncludingFakeNodes() *[]cdx.Dependency {
 }
 
 func (bom *CdxBom) GetComponents() *[]cdx.Component {
+	if bom == nil {
+		return &[]cdx.Component{}
+	}
 	// collect the nodes REACHABLE from the root
 	components := []cdx.Component{}
 	alreadyAdded := make(map[string]bool)
@@ -280,6 +286,9 @@ func (bom *CdxBom) GetComponents() *[]cdx.Component {
 }
 
 func (bom *CdxBom) GetInformationSources() []string {
+	if bom == nil {
+		return []string{}
+	}
 	nodes := bom.GetInformationSourceNodes()
 	sources := []string{}
 	for _, node := range nodes {
@@ -289,6 +298,9 @@ func (bom *CdxBom) GetInformationSources() []string {
 }
 
 func (bom *CdxBom) GetDependencies() *[]cdx.Dependency {
+	if bom == nil {
+		return &[]cdx.Dependency{}
+	}
 	// collect the nodes reachable from the root and build dependencies
 	depMap := make(map[string][]string)
 	// Track all components (even those with no dependencies)
@@ -333,12 +345,19 @@ func (bom *CdxBom) GetDependencies() *[]cdx.Dependency {
 }
 
 func (bom *CdxBom) GetMetadata() *cdx.Metadata {
+	if bom == nil {
+		return &cdx.Metadata{}
+	}
+
 	return &cdx.Metadata{
 		Component: bom.tree.Root.element.Component,
 	}
 }
 
 func (bom *CdxBom) GetVulnerabilities() *[]cdx.Vulnerability {
+	if bom == nil {
+		return &[]cdx.Vulnerability{}
+	}
 	return bom.vulnerabilities
 }
 

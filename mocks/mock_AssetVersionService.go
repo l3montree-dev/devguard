@@ -569,20 +569,31 @@ func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(org m
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) error {
+func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) (*normalize.CdxBom, error) {
 	ret := _mock.Called(org, project, asset, assetVersion, artifactName, sbom, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.CdxBom, models.UpstreamState) error); ok {
+	var r0 *normalize.CdxBom
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.CdxBom, models.UpstreamState) (*normalize.CdxBom, error)); ok {
+		return returnFunc(org, project, asset, assetVersion, artifactName, sbom, upstream)
+	}
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.CdxBom, models.UpstreamState) *normalize.CdxBom); ok {
 		r0 = returnFunc(org, project, asset, assetVersion, artifactName, sbom, upstream)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*normalize.CdxBom)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.CdxBom, models.UpstreamState) error); ok {
+		r1 = returnFunc(org, project, asset, assetVersion, artifactName, sbom, upstream)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // AssetVersionService_UpdateSBOM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSBOM'
@@ -645,12 +656,12 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, proj
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Return(err error) *AssetVersionService_UpdateSBOM_Call {
-	_c.Call.Return(err)
+func (_c *AssetVersionService_UpdateSBOM_Call) Return(cdxBom *normalize.CdxBom, err error) *AssetVersionService_UpdateSBOM_Call {
+	_c.Call.Return(cdxBom, err)
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) error) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) (*normalize.CdxBom, error)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

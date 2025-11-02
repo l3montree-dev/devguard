@@ -312,7 +312,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	}
 
 	// calculate the depth of each component
-	sbom, err := s.BuildSBOM(asset, *assetVersion, "", "", assetComponents)
+	sbom, err := s.BuildSBOM(asset, *assetVersion, artifactName, org.Name, assetComponents)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
 	}
@@ -603,11 +603,11 @@ func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) (*normalize.CdxBom, error) {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
-		return errors.Wrap(err, "could not load asset components")
+		return nil, errors.Wrap(err, "could not load asset components")
 	}
 
 	existingComponentPurls := make(map[string]bool)
@@ -625,7 +625,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 
 	wholeAssetSBOM, err := s.BuildSBOM(asset, assetVersion, artifactName, org.Name, assetComponents)
 	if err != nil {
-		return errors.Wrap(err, "could not build whole asset sbom")
+		return nil, errors.Wrap(err, "could not build whole asset sbom")
 	}
 
 	for _, informationSource := range sbom.GetInformationSourceNodes() {
@@ -693,12 +693,12 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 
 	// make sure, that the components exist
 	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// update the license information in the background
@@ -731,7 +731,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		})
 	}
 
-	return nil
+	return wholeAssetSBOM, nil
 }
 
 func resolveLicense(component models.ComponentDependency, componentLicenseOverwrites map[string]string) cdx.Licenses {
