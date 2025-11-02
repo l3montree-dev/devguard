@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,6 +49,9 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	slog.Info("discovering attestations...", "image", imagePath)
+
 	predicateType, _ := cmd.Flags().GetString("predicateType")
 	output, _ := cmd.Flags().GetString("output")
 	attestations, err := scanner.DiscoverAttestations(imagePath, predicateType)
@@ -57,7 +61,15 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	}
 
 	for i, attestation := range attestations {
+		// try to read the predicate type from the attestation
+
 		attestationFileName := filepath.Join(output, fmt.Sprintf("attestation-%d.json", i+1))
+		if predicate, ok := attestation["predicateType"].(string); ok {
+			// get everything after the last / in the predicate type
+			predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
+			attestationFileName = filepath.Join(output, predicate)
+		}
+
 		attestationFile, err := os.Create(attestationFileName)
 		if err != nil {
 			return fmt.Errorf("could not create attestation file: %w", err)
