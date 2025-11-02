@@ -133,7 +133,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	}
 	upstreamBOMS := []*normalize.CdxBom{}
 	// check if there are components or vulnerabilities in the bom
-	if !(bom.Components == nil || len(*bom.Components) == 0) && (bom.Vulnerabilities == nil || len(*bom.Vulnerabilities) == 0) {
+	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
 		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, origin))
 	}
 
