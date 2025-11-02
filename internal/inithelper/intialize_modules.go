@@ -139,14 +139,16 @@ func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOau
 	artifactService := CreateArtifactService(db, openSourceInsightsService)
 	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
 	statisticsService := CreateStatisticsService(db)
+	scanService := scan.NewScanService(db,
+		repositories.NewCVERepository(db),
+		assetVersionService,
+		dependencyVulnService,
+		artifactService,
+		statisticsService,
+	)
+	scanService.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return scan.NewHTTPController(
-		scan.NewScanService(db,
-			repositories.NewCVERepository(db),
-			assetVersionService,
-			dependencyVulnService,
-			artifactService,
-			statisticsService,
-		),
+		scanService,
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewAssetVersionRepository(db),
