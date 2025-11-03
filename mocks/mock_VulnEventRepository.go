@@ -112,55 +112,55 @@ func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) RunAndReturn(run
 	return _c
 }
 
-// GetSecurityRelevantEventsForVulnID provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) GetSecurityRelevantEventsForVulnID(tx core.DB, vulnID string) ([]models.VulnEvent, error) {
-	ret := _mock.Called(tx, vulnID)
+// GetSecurityRelevantEventsForVulnIDs provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error) {
+	ret := _mock.Called(tx, vulnIDs)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetSecurityRelevantEventsForVulnID")
+		panic("no return value specified for GetSecurityRelevantEventsForVulnIDs")
 	}
 
 	var r0 []models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) ([]models.VulnEvent, error)); ok {
-		return returnFunc(tx, vulnID)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) ([]models.VulnEvent, error)); ok {
+		return returnFunc(tx, vulnIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) []models.VulnEvent); ok {
-		r0 = returnFunc(tx, vulnID)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) []models.VulnEvent); ok {
+		r0 = returnFunc(tx, vulnIDs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnEvent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string) error); ok {
-		r1 = returnFunc(tx, vulnID)
+	if returnFunc, ok := ret.Get(1).(func(core.DB, []string) error); ok {
+		r1 = returnFunc(tx, vulnIDs)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSecurityRelevantEventsForVulnID'
-type VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call struct {
+// VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSecurityRelevantEventsForVulnIDs'
+type VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call struct {
 	*mock.Call
 }
 
-// GetSecurityRelevantEventsForVulnID is a helper method to define mock.On call
+// GetSecurityRelevantEventsForVulnIDs is a helper method to define mock.On call
 //   - tx core.DB
-//   - vulnID string
-func (_e *VulnEventRepository_Expecter) GetSecurityRelevantEventsForVulnID(tx interface{}, vulnID interface{}) *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call {
-	return &VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call{Call: _e.mock.On("GetSecurityRelevantEventsForVulnID", tx, vulnID)}
+//   - vulnIDs []string
+func (_e *VulnEventRepository_Expecter) GetSecurityRelevantEventsForVulnIDs(tx interface{}, vulnIDs interface{}) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+	return &VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call{Call: _e.mock.On("GetSecurityRelevantEventsForVulnIDs", tx, vulnIDs)}
 }
 
-func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call) Run(run func(tx core.DB, vulnID string)) *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call {
+func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Run(run func(tx core.DB, vulnIDs []string)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
 			arg0 = args[0].(core.DB)
 		}
-		var arg1 string
+		var arg1 []string
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].([]string)
 		}
 		run(
 			arg0,
@@ -170,12 +170,12 @@ func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call) Run(run f
 	return _c
 }
 
-func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call) Return(vulnEvents []models.VulnEvent, err error) *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call {
+func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Return(vulnEvents []models.VulnEvent, err error) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	_c.Call.Return(vulnEvents, err)
 	return _c
 }
 
-func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call) RunAndReturn(run func(tx core.DB, vulnID string) ([]models.VulnEvent, error)) *VulnEventRepository_GetSecurityRelevantEventsForVulnID_Call {
+func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndReturn(run func(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
