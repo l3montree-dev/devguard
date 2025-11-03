@@ -22,8 +22,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// definition of all necessary structs used in a csaf document
-
 type csafController struct {
 	DependencyVulnRepository core.DependencyVulnRepository
 	VulnEventRepository      core.VulnEventRepository
@@ -34,232 +32,6 @@ type csafController struct {
 	CVERepository            core.CveRepository
 	ArtifactRepository       core.ArtifactRepository
 }
-
-// root struct of the document
-type csaf struct {
-	Document        documentObject  `json:"document"`
-	ProductTree     *productTree    `json:"product_tree,omitempty"`
-	Vulnerabilities []vulnerability `json:"vulnerabilities,omitempty"`
-}
-
-// ----------MAJOR CATEGORIES----------
-// only mandatory parent category
-type documentObject struct {
-	Acknowledgements  *acknowledgements `json:"acknowledgements,omitempty"`
-	AggregateSeverity *struct {
-		Namespace string `json:"namespace,omitempty"`
-		Text      string `json:"text,omitempty"`
-	} `json:"aggregate_severity,omitempty"`
-	Category       string                   `json:"category,omitempty"`     //mandatory
-	CSAFVersion    string                   `json:"csaf_version,omitempty"` //mandatory
-	Distribution   *distributionReplacement `json:"distribution,omitempty"`
-	Language       *language                `json:"lang,omitempty"`
-	Notes          []note                   `json:"notes,omitempty"`
-	Publisher      publisherReplacement     `json:"publisher,omitempty"` //mandatory
-	References     []reference              `json:"references,omitempty"`
-	SourceLanguage *language                `json:"source_lang,omitempty"`
-	Title          string                   `json:"title,omitempty"`    //mandatory
-	Tracking       trackingObject           `json:"tracking,omitempty"` //mandatory
-}
-
-type trackingObject struct {
-	Aliases            []string `json:"aliases,omitempty"`
-	CurrentReleaseDate string   `json:"current_release_date,omitempty"` //mandatory
-	Generator          *struct {
-		Date   string `json:"date,omitempty"`
-		Engine struct {
-			Name    string `json:"name,omitempty"`
-			Version string `json:"version,omitempty"`
-		} `json:"engine,omitempty"`
-	} `json:"generator,omitempty"`
-	ID                 string                `json:"id,omitempty"`                   //mandatory
-	InitialReleaseDate string                `json:"initial_release_date,omitempty"` //mandatory
-	RevisionHistory    []revisionReplacement `json:"revision_history,omitempty"`
-	Status             string                `json:"status,omitempty"`  //mandatory
-	Version            version               `json:"version,omitempty"` //mandatory
-}
-
-type distributionReplacement struct {
-	Text string `json:"text,omitempty"`
-	TLP  struct {
-		Label string `json:"label,omitempty"`
-		URL   string `json:"url,omitempty"`
-	} `json:"tlp,omitempty"`
-}
-
-type publisherReplacement struct {
-	Category         string `json:"category,omitempty"` //mandatory
-	ContactDetails   string `json:"contact_details,omitempty"`
-	IssuingAuthority string `json:"issuing_authority,omitempty"`
-	Name             string `json:"name,omitempty"`      //mandatory
-	Namespace        string `json:"namespace,omitempty"` //mandatory
-}
-
-type revisionReplacement struct {
-	Date          string  `json:"date,omitempty"` //mandatory
-	LegacyVersion string  `json:"legacy_version,omitempty"`
-	Number        version `json:"number,omitempty"`  //mandatory
-	Summary       string  `json:"summary,omitempty"` //mandatory
-}
-
-// describe the relation between products (optional)
-type productTree struct { //security advisory
-	Branches         []branches                `json:"branches,omitempty"`
-	FullProductNames []fullProductName         `json:"full_product_name,omitempty"`
-	ProductGroups    []productGroupReplacement `json:"product_groups,omitempty"`
-	Relationships    []relationshipReplacement `json:"relationships,omitempty"`
-}
-
-type productGroupReplacement struct {
-	GroupID    productGroupID `json:"group_id,omitempty"`
-	ProductIDs []productID    `json:"product_ids,omitempty"`
-	Summary    string         `json:"summary,omitempty"`
-}
-
-type relationshipReplacement struct {
-	Category                  string          `json:"category,omitempty"`
-	FullProductName           fullProductName `json:"full_product_name,omitempty"`
-	ProductReference          productID       `json:"product_reference,omitempty"`
-	RelatesToProductReference productID       `json:"relates_to_product_reference,omitempty"`
-}
-
-// describe the vulnerabilities present in products
-type vulnerability struct { //security advisory
-	Acknowledgements *acknowledgements `json:"acknowledgements,omitempty"`
-	CVE              string            `json:"cve,omitempty"`
-	CWE              *struct {
-		ID   string `json:"id,omitempty"`
-		Name string `json:"name,omitempty"`
-	} `json:"cwe,omitempty"`
-	DiscoveryDate string            `json:"discovery_date,omitempty"`
-	Flags         []flagReplacement `json:"flags,omitempty"`
-	IDs           []struct {
-		SystemName string `json:"system_name,omitempty"`
-		Text       string `json:"text,omitempty"`
-	} `json:"ids,omitempty"`
-	Involvements  []involvementReplacement `json:"involvements,omitempty"`
-	Notes         []note                   `json:"notes,omitempty"` //security advisory
-	ProductStatus productStatusReplacement `json:"product_status,omitempty"`
-	References    []reference              `json:"references,omitempty"`
-	ReleaseDate   string                   `json:"release_date,omitempty"`
-	Remediations  []struct {
-		Category        string         `json:"category,omitempty"`
-		Date            string         `json:"date,omitempty"`
-		Details         string         `json:"details,omitempty"`
-		Entitlements    []string       `json:"entitlements,omitempty"`
-		GroupIDs        []productGroup `json:"group_ids,omitempty"`
-		ProductIDs      products       `json:"product_ids,omitempty"`
-		RestartRequired struct {
-			Category string `json:"category,omitempty"`
-			Details  string `json:"details,omitempty"`
-		} `json:"restart_required,omitempty"`
-		URL string `json:"url,omitempty"`
-	} `json:"remediations,omitempty"`
-	Scores []struct {
-		CVSSV2   string   `json:"cvss_v2,omitempty"`
-		CVSSV3   string   `json:"cvss_v3,omitempty"`
-		Products products `json:"products,omitempty"`
-	} `json:"scores,omitempty"`
-	Threats []threatReplacement `json:"threats,omitempty"`
-	Title   string              `json:"title,omitempty"`
-}
-
-type flagReplacement struct {
-	Date       string         `json:"date,omitempty"`
-	GroupIDs   []productGroup `json:"group_ids,omitempty"`
-	Label      string         `json:"label,omitempty"`
-	ProductIDs products       `json:"product_ids,omitempty"`
-}
-
-type involvementReplacement struct {
-	Date    string `json:"date,omitempty"`
-	Party   string `json:"party,omitempty"`
-	Status  string `json:"status,omitempty"`
-	Summary string `json:"summary,omitempty"`
-}
-
-type productStatusReplacement struct { //security advisory
-	FirstAffected      products `json:"first_affected,omitempty"`
-	FirstFixed         products `json:"first_fixed,omitempty"`
-	Fixed              products `json:"fixed,omitempty"`
-	KnownAffected      products `json:"known_affected,omitempty"`
-	KnownNotAffected   products `json:"known_not_affected,omitempty"`
-	LastAffected       products `json:"last_affected,omitempty"`
-	Recommended        products `json:"recommended,omitempty"`
-	UnderInvestigation products `json:"under_investigation,omitempty"`
-}
-
-type threatReplacement struct {
-	Category   string         `json:"category,omitempty"`
-	Date       string         `json:"date,omitempty"`
-	Details    string         `json:"details,omitempty"`
-	GroupIDs   []productGroup `json:"group_ids,omitempty"`
-	ProductIDs products       `json:"product_ids,omitempty"`
-}
-
-// ----------TYPE DEFINITIONS----------
-type acknowledgements struct {
-	Names        []string `json:"names,omitempty"`
-	Organization string   `json:"organization,omitempty"`
-	Summary      string   `json:"summary,omitempty"`
-	URLS         []string `json:"urls,omitempty"`
-}
-
-type branches struct {
-	Branches []branches       `json:"branches,omitempty"`
-	Category string           `json:"category,omitempty"`
-	Name     string           `json:"name,omitempty"`
-	Product  *fullProductName `json:"product,omitempty"`
-}
-
-type fullProductName struct {
-	Name                        string                       `json:"name,omitempty"`
-	ProductID                   productID                    `json:"product_id,omitempty"`
-	ProductIdentificationHelper *productIdentificationHelper `json:"product_identification_helper,omitempty"`
-}
-
-type productIdentificationHelper struct {
-	CPE    string `json:"cpe,omitempty"`
-	Hashes []struct {
-		FileHashes []struct {
-			Algorithm string `json:"algorithm,omitempty"`
-			Value     string `json:"value,omitempty"`
-		} `json:"file_hashes,omitempty"`
-		FileName string `json:"filename,omitempty"`
-	} `json:"hashes,omitempty"`
-	ModelNumbers []string `json:"model_numbers,omitempty"`
-	PURL         string   `json:"purl,omitempty"`
-	SBOMURLS     []string `json:"sbom_urls,omitempty"`
-	SKUS         []string `json:"skus,omitempty"`
-	//generic uris...
-}
-
-type language = string
-
-type note struct {
-	Audience string `json:"audience,omitempty"`
-	Category string `json:"category,omitempty"`
-	Text     string `json:"text,omitempty"`
-	Title    string `json:"title,omitempty"`
-}
-
-type productGroupID = string
-
-type productGroup = []productGroupID
-
-type products = []productID
-
-type reference struct {
-	Category string `json:"category,omitempty"`
-	Summary  string `json:"summary,omitempty"`
-	URL      string `json:"url,omitempty"`
-}
-
-type version = string
-
-type productID = string
-
-// from here on: code that builds the human navigable html web interface
 
 func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) *csafController {
 	return &csafController{
@@ -341,7 +113,7 @@ func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	}
 
 	// sort resulting revision history by date in descending order
-	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 revisionReplacement) int {
+	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 revision) int {
 		time1, _ := time.Parse(time.RFC3339, revision1.Date) //nolint:all
 		time2, _ := time.Parse(time.RFC3339, revision2.Date) //nolint:all
 		return time1.Compare(time2) * -1
@@ -494,7 +266,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	}
 
 	// then filter each csaf version if they are released in the given year
-	entriesForYear := make([]revisionReplacement, 0)
+	entriesForYear := make([]revision, 0)
 	yearNumber, err := strconv.Atoi(year)
 	if err != nil {
 		return err
@@ -586,7 +358,7 @@ type ProviderMetadata struct {
 	MetadataVersion         string                         `json:"metadata_version,omitempty"`
 	MirrorOnCSAFAggregators bool                           `json:"mirror_on_CSAF_aggregators,omitempty"`
 	PublicOpenpgpKeys       []pgpKey                       `json:"public_openpgp_keys,omitempty"`
-	Publisher               publisherReplacement           `json:"publisher,omitempty"`
+	Publisher               publisher                      `json:"publisher,omitempty"`
 	Role                    string                         `json:"role,omitempty"`
 }
 
@@ -725,7 +497,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 		MetadataVersion:         "2.0",
 		PublicOpenpgpKeys:       []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
 		Role:                    "csaf_trusted_provider",
-		Publisher: publisherReplacement{
+		Publisher: publisher{
 			Category:       "vendor",
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
 			Name:           org.Name,
@@ -779,7 +551,7 @@ func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) 
 		MirrorOnCSAFAggregators: true,
 		Role:                    "csaf_trusted_provider",
 		MetadataVersion:         "2.0",
-		Publisher: publisherReplacement{
+		Publisher: publisher{
 			Category:       "vendor",
 			ContactDetails: "info@l3montree.com",
 			Name:           "L3montree GmbH",
@@ -871,7 +643,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	// build trivial parts of the document field
 	csafDoc.Document = documentObject{
 		CSAFVersion: "2.0",
-		Publisher: publisherReplacement{
+		Publisher: publisher{
 			Category:  "vendor",
 			Name:      org.Name,
 			Namespace: "https://devguard.org",
@@ -881,7 +653,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	}
 
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
-	csafDoc.Document.Distribution = &distributionReplacement{
+	csafDoc.Document.Distribution = &distribution{
 		TLP: struct {
 			Label string `json:"label,omitempty"`
 			URL   string `json:"url,omitempty"`
@@ -1021,7 +793,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 				}
 			}
 		}
-		vulnObject.ProductStatus = productStatusReplacement{
+		vulnObject.ProductStatus = productStatus{
 			KnownAffected: uniqueVersionsAffected,
 		}
 
@@ -1155,8 +927,8 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revisionReplacement, error) {
-	var revisions []revisionReplacement
+func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revision, error) {
+	var revisions []revision
 	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
 	for _, event := range events {
@@ -1177,7 +949,7 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documen
 	})
 
 	// initial release entry with no vulnerabilities
-	revisions = append(revisions, revisionReplacement{
+	revisions = append(revisions, revision{
 		Date:    asset.CreatedAt.Format(time.RFC3339),
 		Number:  "1",
 		Summary: "Asset created, no vulnerabilities found",
@@ -1188,7 +960,7 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documen
 		if i+1 >= documentVersion {
 			break
 		}
-		revisionObject := revisionReplacement{
+		revisionObject := revision{
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
 		revisionObject.Number = strconv.Itoa(i + 2)
