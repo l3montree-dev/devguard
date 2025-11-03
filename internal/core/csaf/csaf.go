@@ -915,96 +915,62 @@ type vulnEventWithCVEID struct {
 	CVEID string
 }
 
-// generate a human readable summary to describe the changes of a revision entry
 func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepository core.DependencyVulnRepository) (string, error) {
-	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int { return event1.CreatedAt.Compare(event2.CreatedAt) })
-	acceptedVulns := []vulnEventWithCVEID{}
-	detectedVulns := []vulnEventWithCVEID{}
-	falsePositiveVulns := []vulnEventWithCVEID{}
-	fixedVulns := []vulnEventWithCVEID{}
-	reopenedVulns := []vulnEventWithCVEID{}
+	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int {
+		return event1.CreatedAt.Compare(event2.CreatedAt)
+	})
 
-	// put every event in their respective vuln type set
+	// Group events by type
+	type vulnGroup struct {
+		events []vulnEventWithCVEID
+		desc   string
+	}
+	groups := map[models.VulnEventType]vulnGroup{
+		models.EventTypeDetected:      {desc: "Detected %d new vulnerabilit%s (%s)"},
+		models.EventTypeReopened:      {desc: "Reopened %d old vulnerabilit%s (%s)"},
+		models.EventTypeFixed:         {desc: "Fixed %d existing vulnerabilit%s (%s)"},
+		models.EventTypeAccepted:      {desc: "Accepted %d existing vulnerabilit%s (%s)"},
+		models.EventTypeFalsePositive: {desc: "Marked %d existing vulnerabilit%s as false positive (%s)"},
+	}
+
 	for _, event := range events {
 		vuln, err := dependencyVulnRepository.Read(event.VulnID)
 		if err != nil {
 			return "", err
 		}
-		switch event.Type {
-		case models.EventTypeAccepted:
-			acceptedVulns = append(acceptedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
-		case models.EventTypeDetected:
-			detectedVulns = append(detectedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
-		case models.EventTypeFalsePositive:
-			falsePositiveVulns = append(falsePositiveVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
-		case models.EventTypeFixed:
-			fixedVulns = append(fixedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
-		case models.EventTypeReopened:
-			reopenedVulns = append(reopenedVulns, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
+		t := groups[event.Type]
+		t.events = append(t.events, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
+		groups[event.Type] = t
+	}
+
+	// Helper to format a group's summary
+	formatGroup := func(g vulnGroup) string {
+		if len(g.events) == 0 {
+			return ""
+		}
+		cveIDs := make([]string, len(g.events))
+		for i, e := range g.events {
+			cveIDs[i] = e.CVEID
+		}
+		plural := "ies"
+		if len(g.events) == 1 {
+			plural = "y"
+		}
+		return fmt.Sprintf(g.desc, len(g.events), plural, strings.Join(cveIDs, ", "))
+	}
+
+	// sort the groups by event type for consistent output
+
+	// Build summary
+	summaryParts := []string{}
+	for _, group := range groups {
+		if part := formatGroup(group); part != "" {
+			summaryParts = append(summaryParts, part)
 		}
 	}
 
-	// then just write a textual description based on how many vulns are present from each vuln type
-	summary := ""
-	if len(detectedVulns) > 0 {
-		if len(detectedVulns) == 1 {
-			summary += fmt.Sprintf("Detected %d new vulnerability (%s),", len(detectedVulns), detectedVulns[0].CVEID)
-		} else {
-			summary += fmt.Sprintf("Detected %d new vulnerabilities (%s", len(detectedVulns), detectedVulns[0].CVEID)
-			for _, event := range detectedVulns[1:] {
-				summary += fmt.Sprintf(", %s", event.CVEID)
-			}
-			summary += ")"
-		}
-	}
-	if len(reopenedVulns) > 0 {
-		if len(reopenedVulns) == 1 {
-			summary += fmt.Sprintf("| Reopened %d old vulnerability (%s),", len(reopenedVulns), reopenedVulns[0].CVEID)
-		} else {
-			summary += fmt.Sprintf("| Reopened %d old vulnerabilities (%s", len(reopenedVulns), reopenedVulns[0].CVEID)
-			for _, event := range reopenedVulns {
-				summary += fmt.Sprintf(", %s", event.CVEID)
-			}
-			summary += ")"
-		}
-	}
-	if len(fixedVulns) > 0 {
-		if len(fixedVulns) == 1 {
-			summary += fmt.Sprintf("| Fixed %d existing vulnerability (%s),", len(fixedVulns), fixedVulns[0].CVEID)
-		} else {
-			summary += fmt.Sprintf("| Fixed %d existing vulnerabilities (%s", len(fixedVulns), fixedVulns[0].CVEID)
-			for _, event := range fixedVulns {
-				summary += fmt.Sprintf(", %s", event.CVEID)
-			}
-			summary += ")"
-		}
-	}
-	if len(acceptedVulns) > 0 {
-		if len(acceptedVulns) == 1 {
-			summary += fmt.Sprintf("| Accepted %d existing vulnerability (%s),", len(acceptedVulns), acceptedVulns[0].CVEID)
-		} else {
-			summary += fmt.Sprintf("| Accepted %d existing vulnerabilities (%s", len(acceptedVulns), acceptedVulns[0].CVEID)
-			for _, event := range acceptedVulns {
-				summary += fmt.Sprintf(", %s", event.CVEID)
-			}
-			summary += ")"
-		}
-	}
-	if len(falsePositiveVulns) > 0 {
-		if len(falsePositiveVulns) == 1 {
-			summary += fmt.Sprintf("| Marked %d existing vulnerability as false positive (%s)", len(falsePositiveVulns), falsePositiveVulns[0].CVEID)
-		} else {
-			summary += fmt.Sprintf("| Marked %d existing vulnerabilities as false positives (%s", len(falsePositiveVulns), falsePositiveVulns[0].CVEID)
-			for _, event := range falsePositiveVulns {
-				summary += fmt.Sprintf(", %s", event.CVEID)
-			}
-			summary += ")"
-		}
-	}
-	summary = strings.TrimLeft(summary, " |")
-	summary = strings.TrimRight(summary, ",")
-	summary += "."
-	return summary, nil
+	slices.Sort(summaryParts)
+	return strings.Join(summaryParts, " | ") + ".", nil
 }
 
 // small helper function to extract the version from the file name of a csaf report
