@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"text/template"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -70,6 +72,32 @@ func (a *AssetVersionController) Read(ctx core.Context) error {
 	return ctx.JSON(200, assetVersion)
 }
 
+func (a *AssetVersionController) Create(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	type requestBody struct {
+		Name          string `json:"name"`
+		Tag           bool   `json:"tag"`
+		DefaultBranch bool   `json:"defaultBranch"`
+	}
+
+	var body requestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+
+	var defaultBranch *string
+	if body.DefaultBranch {
+		defaultBranch = &body.Name
+	}
+
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(body.Name, asset.ID, body.Tag, defaultBranch)
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(201, assetVersion)
+}
+
 // Function to delete provided asset version
 func (a *AssetVersionController) Delete(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)                  //Get the asset provided in the context / URL
@@ -111,7 +139,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 		return nil, nil, err
 	}
 
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,6 +148,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
+	asset := core.GetAsset(ctx)
 
 	artifactName := ctx.QueryParam("artifactName")
 
@@ -128,12 +157,14 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
-	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*treeNode, 0)
+	sbom, err := a.assetVersionService.BuildSBOM(asset, app, artifactName, "", components)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
-	return ctx.JSON(200, tree)
+	minimalTree := sbom.EjectMinimalDependencyTree()
+
+	return ctx.JSON(200, minimalTree)
 }
 
 // function to return a graph of all dependencies which lead to the requested pURL
@@ -149,20 +180,26 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
-	if tree.Root.Children == nil {
-		tree.Root.Children = make([]*treeNode, 0)
+	sbom, err := a.assetVersionService.BuildSBOM(core.GetAsset(ctx), assetVersion, artifactName, "", components)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
-	return ctx.JSON(200, tree)
+	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 
 func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
+
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
@@ -170,8 +207,12 @@ func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) VEXXML(ctx core.Context) error {
@@ -179,8 +220,12 @@ func (a *AssetVersionController) VEXXML(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
@@ -188,8 +233,13 @@ func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
 
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
+	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
@@ -201,28 +251,17 @@ func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
-
+func (a *AssetVersionController) buildSBOM(ctx core.Context) (*normalize.CdxBom, error) {
 	assetVersion := core.GetAssetVersion(ctx)
+	asset := core.GetAsset(ctx)
 	org := core.GetOrg(ctx)
-	// check for version query param
-	version := ctx.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	// get artifact from path
-	artifact := core.GetArtifact(ctx)
+	artifact, err := core.MaybeGetArtifact(ctx)
 
 	filter := core.GetFilterQuery(ctx)
 	// set artifact name filter if artifact is set in path
-	if artifact.ArtifactName != "" {
+	if err == nil {
 		filter = append(filter, core.FilterQuery{
 			Field:      "artifacts.artifact_name",
 			Operator:   "is",
@@ -243,7 +282,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, artifact.ArtifactName, version, org.Name, components.Data)
+	return a.assetVersionService.BuildSBOM(asset, assetVersion, artifact.ArtifactName, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
@@ -251,9 +290,14 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	artifactName := ctx.QueryParam("artifactName")
+	var dependencyVulns []models.DependencyVuln
+	artifact, err := core.MaybeGetArtifact(ctx)
+	if err == nil {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	} else {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, nil)
+	}
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -297,13 +341,20 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	return dependencyVulns, nil
 }
 
-func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
+func (a *AssetVersionController) buildVeX(ctx core.Context) (*normalize.CdxBom, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifact := core.GetArtifact(ctx)
+	artifact, err := core.MaybeGetArtifact(ctx)
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifact.ArtifactName))
+	var dependencyVulns []models.DependencyVuln
+
+	if err != nil {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, nil)
+	} else {
+		dependencyVulns, err = a.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +405,7 @@ func (a *AssetVersionController) RefetchLicenses(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
-	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true)
+	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
@@ -444,7 +495,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 				m[*dv.CVEID] = dv
 			}
 
-			for _, v := range *vex.Vulnerabilities {
+			for _, v := range *vex.GetVulnerabilities() {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue
@@ -617,9 +668,15 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 
+	asset := core.GetAsset(ctx)
+	var assetID *uuid.UUID = nil
+	if asset.SharesInformation {
+		assetID = &asset.ID
+	}
+
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = markdownTableFromSBOM(&markdownFile, bom)
+	err = markdownTableFromSBOM(&markdownFile, bom.EjectSBOM(assetID))
 	if err != nil {
 		return err
 	}
@@ -636,7 +693,6 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	// check if external entity provider
-	asset := core.GetAsset(ctx)
 	templateName := "default"
 	if asset.ExternalEntityProviderID != nil {
 		templateName = strings.ToLower(*asset.ExternalEntityProviderID)
@@ -839,4 +895,56 @@ func (a *AssetVersionController) ListArtifacts(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, artifacts)
+}
+
+func (a *AssetVersionController) MakeDefault(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+
+	err := a.assetVersionRepository.UpdateAssetDefaultBranch(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return err
+	}
+	assetVersion.DefaultBranch = true
+	return ctx.JSON(200, assetVersion)
+}
+
+func (a *AssetVersionController) ReadRootNodes(ctx core.Context) error {
+	// get all artifacts from the asset version
+	assetVersion := core.GetAssetVersion(ctx)
+	// get the artifacts for this asset version
+	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
+	}
+	// fetch all root nodes
+	errgroup := utils.ErrGroup[map[string][]string](10)
+	for _, artifact := range artifacts {
+		errgroup.Go(func() (map[string][]string, error) {
+			rootNodes, err := a.componentService.FetchInformationSources(&artifact)
+			if err != nil {
+				return nil, err
+			}
+			return map[string][]string{
+				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
+					el models.ComponentDependency,
+				) string {
+					return el.DependencyPurl
+				}), func(s string) string {
+					return s
+				}),
+			}, nil
+		})
+	}
+	results, err := errgroup.WaitAndCollect()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch root nodes of artifacts").WithInternal(err)
+	}
+
+	result := make(map[string][]string)
+	// merge the maps
+	for _, r := range results {
+		maps.Copy(result, r)
+	}
+
+	return ctx.JSON(200, result)
 }

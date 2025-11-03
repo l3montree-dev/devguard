@@ -375,6 +375,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 
 	groups, err := FetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
 		// get the groups for this user
+		// this WONT list public groups - user is really a member - or at least member of a subproject
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
 		})
@@ -395,48 +396,46 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 
 	for _, group := range groups {
 		errgroup.Go(func() ([]*groupWithAccessLevel, error) {
+
+			var accessLevel gitlab.AccessLevelValue
 			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
 			if err != nil {
-				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
-					return nil, nil
-				} else {
+				// the user is not really part of the group but part of a subproject
+				accessLevel = gitlab.GuestPermissions
+			} else {
+				accessLevel = member.AccessLevel
+			}
+
+			// check if we can fetch the avatar
+			var avatarBase64 *string
+			if group.AvatarURL != "" {
+				avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+				if err != nil {
+					slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
 					return nil, err
 				}
+				avatarBase64 = &avatar
 			}
-			if member.AccessLevel >= gitlab.ReporterPermissions {
-				// check if we can fetch the avatar
-				var avatarBase64 *string
-				if group.AvatarURL != "" {
-					avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
-					if err != nil {
-						slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
-						return nil, err
-					}
-					avatarBase64 = &avatar
-				}
 
-				// get all parent groups
-				parentGroups := getAllParentGroups(idMap, group)
-				res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
-				// add the current group
+			// get all parent groups
+			parentGroups := getAllParentGroups(idMap, group)
+			res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
+			// add the current group
+			res = append(res, &groupWithAccessLevel{
+				group:        group,
+				avatarBase64: avatarBase64,
+				accessLevel:  accessLevel,
+			})
+
+			// add all parent groups
+			for _, parentGroup := range parentGroups {
 				res = append(res, &groupWithAccessLevel{
-					group:        group,
-					avatarBase64: avatarBase64,
-					accessLevel:  member.AccessLevel,
+					group:        parentGroup,
+					avatarBase64: nil,
+					accessLevel:  accessLevel,
 				})
-
-				// add all parent groups
-				for _, parentGroup := range parentGroups {
-					res = append(res, &groupWithAccessLevel{
-						group:        parentGroup,
-						avatarBase64: nil,
-						accessLevel:  member.AccessLevel,
-					})
-				}
-				return res, nil
-
 			}
-			return nil, nil
+			return res, nil
 		})
 	}
 
@@ -581,10 +580,14 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		slog.Error("failed to convert groupID to int", "err", err)
 		return nil, nil, errors.Wrap(err, "failed to convert groupID to int")
 	}
-	// get the projects in the group
-	projects, _, err := gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
-		WithShared:     gitlab.Ptr(false),
-		MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
+
+	projects, err := FetchPaginatedData(func(page int) ([]*gitlab.Project, *gitlab.Response, error) {
+		// get the projects in the group
+		return gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
+			WithShared:     gitlab.Ptr(false),
+			MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
+			ListOptions:    gitlab.ListOptions{Page: page, PerPage: 100},
+		})
 	})
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
@@ -607,15 +610,16 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 			}
 		}
 
-		// check if the project has a permissions set - otherwise it is an public project
-		if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
+		// do another fetch to get the access level of the user in this project
+		accessLevel, _, err := gitlabClient.GetMemberInProject(ctx, token.GitLabUserID, project.ID)
+		if err != nil {
+			// has to be a member of the project - otherwise we would not see it in the list
 			result = append(result, projectToAsset(avatarBase64, project, providerID))
-			accessLevels = append(accessLevels, gitlabAccessLevelToRole(project.Permissions.ProjectAccess.AccessLevel))
-		} else {
-			// if the project has no permissions set, it is a public project - but we asked for min access level of developer, so we can assume that the user has at least developer permissions
-			result = append(result, projectToAsset(avatarBase64, project, providerID))
-			accessLevels = append(accessLevels, core.RoleMember) // default to member if no higher access level is found
+			accessLevels = append(accessLevels, core.RoleMember)
+			continue
 		}
+		result = append(result, projectToAsset(avatarBase64, project, providerID))
+		accessLevels = append(accessLevels, gitlabAccessLevelToRole(accessLevel.AccessLevel))
 	}
 
 	return result, accessLevels, nil
@@ -1204,7 +1208,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		if err.Error() == "404 Not Found" {
 
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames())
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
 			// save the event
 			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {

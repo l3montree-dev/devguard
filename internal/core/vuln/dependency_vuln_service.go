@@ -56,7 +56,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 	}
 }
 
-func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -65,7 +65,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames())
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -118,7 +118,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream models.UpstreamState) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -133,7 +133,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, artifactName string, d
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, artifactName)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, artifactName, upstream)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -306,29 +306,31 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 	return nil
 }
 
-func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
+func (s *service) CreateVulnEventAndApply(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType models.VulnEventType, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string, upstream models.UpstreamState) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.dependencyVulnRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification, mechanicalJustification)
+			ev, err = s.createVulnEventAndApply(tx, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification, mechanicalJustification)
+	return s.createVulnEventAndApply(tx, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
 }
 
-func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *service) createVulnEventAndApply(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, vulnEventType models.VulnEventType, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	var ev models.VulnEvent
-	switch models.VulnEventType(statusType) {
+	switch vulnEventType {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
+		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, upstream)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames())
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
+	case models.EventTypeDetected:
+		fallthrough
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
+		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, upstream)
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	}

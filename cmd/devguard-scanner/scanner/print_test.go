@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package commands
+package scanner
 
 import (
 	"fmt"
@@ -93,7 +93,7 @@ func TestPrintScaResults(t *testing.T) {
 			AmountClosed:    0,
 		}
 
-		err := printScaResults(scanResponse, "critical", "critical", assetName, webUI)
+		err := PrintScaResults(scanResponse, "critical", "critical", assetName, webUI)
 		assert.Nil(t, err)
 	})
 
@@ -128,7 +128,7 @@ func TestPrintScaResults(t *testing.T) {
 		}
 
 		// Should pass even with low thresholds because vulnerabilities are closed/accepted
-		err := printScaResults(scanResponse, "low", "low", assetName, webUI)
+		err := PrintScaResults(scanResponse, "low", "low", assetName, webUI)
 		assert.Nil(t, err)
 	})
 
@@ -171,7 +171,7 @@ func TestPrintScaResults(t *testing.T) {
 					AmountClosed: 0,
 				}
 
-				err := printScaResults(scanResponse, tc.threshold, "critical", assetName, webUI)
+				err := PrintScaResults(scanResponse, tc.threshold, "critical", assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), tc.expectedError)
@@ -221,7 +221,7 @@ func TestPrintScaResults(t *testing.T) {
 					AmountClosed: 0,
 				}
 
-				err := printScaResults(scanResponse, "critical", tc.threshold, assetName, webUI)
+				err := PrintScaResults(scanResponse, "critical", tc.threshold, assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), tc.expectedError)
@@ -250,7 +250,7 @@ func TestPrintScaResults(t *testing.T) {
 		}
 
 		// Should fail on risk but pass on CVSS (defaults to 0.0)
-		err := printScaResults(scanResponse, "medium", "critical", assetName, webUI)
+		err := PrintScaResults(scanResponse, "medium", "critical", assetName, webUI)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "max risk exceeds threshold 5.00")
 	})
@@ -308,12 +308,12 @@ func TestPrintScaResults(t *testing.T) {
 		}
 
 		// Should fail on high risk threshold (8.5 >= 7) - only considering open vulns
-		err := printScaResults(scanResponse, "high", "critical", assetName, webUI)
+		err := PrintScaResults(scanResponse, "high", "critical", assetName, webUI)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "max risk exceeds threshold 8.50")
 
 		// Should fail on high CVSS threshold (7.8 >= 7) - only considering open vulns
-		err = printScaResults(scanResponse, "critical", "high", assetName, webUI)
+		err = PrintScaResults(scanResponse, "critical", "high", assetName, webUI)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "max CVSS exceeds threshold 7.80")
 	})
@@ -338,7 +338,7 @@ func TestPrintScaResults(t *testing.T) {
 		}
 
 		// Should pass all risk thresholds (defaults to 0)
-		err := printScaResults(scanResponse, "low", "critical", assetName, webUI)
+		err := PrintScaResults(scanResponse, "low", "critical", assetName, webUI)
 		assert.Nil(t, err)
 	})
 
@@ -362,7 +362,7 @@ func TestPrintScaResults(t *testing.T) {
 		}
 
 		// Unknown failOn values should not cause failures
-		err := printScaResults(scanResponse, "unknown", "invalid", assetName, webUI)
+		err := PrintScaResults(scanResponse, "unknown", "invalid", assetName, webUI)
 		assert.Nil(t, err)
 	})
 }

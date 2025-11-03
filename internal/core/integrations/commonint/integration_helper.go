@@ -18,7 +18,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -30,11 +31,11 @@ func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, u
 
 	switch event {
 	case models.EventTypeAccepted:
-		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification)
+		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, models.UpstreamStateInternal)
 	case models.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, models.UpstreamStateInternal)
 	case models.EventTypeReopened:
-		return models.NewReopenedEvent(vulnID, vulnType, userID, justification)
+		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, models.UpstreamStateInternal)
 	case models.EventTypeComment:
 		return models.NewCommentEvent(vulnID, vulnType, userID, comment)
 	}
@@ -219,7 +220,13 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 		return "", err
 	}
 
-	tree := assetversion.BuildDependencyTree(components)
+	tree := normalize.BuildDependencyTree(models.ComponentDependencyNode{
+		// nil will be mapped to empty string in BuildDepMap
+		ID: "",
+	}, utils.Flat(utils.Map(components, func(el models.ComponentDependency) []models.ComponentDependencyNode {
+		return el.ToNodes()
+	})), models.BuildDepMap(components))
+
 	return tree.RenderToMermaid(), nil
 }
 

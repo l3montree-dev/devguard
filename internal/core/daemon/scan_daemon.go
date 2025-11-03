@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -51,7 +50,7 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 
 	webhookIntegration := webhook.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
-	artifactService := artifact.NewService(artifactRepository)
+
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -66,11 +65,26 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
-
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
+	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
 
-	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	s := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	// THIS IS MANDATORY - WE RESET THE SYNCHRONIZER.
+	// if we wont do that, the daemon would sync the issues in a goroutine without waiting for them to finish
+	// this might infer with the ticket daemon which runs next
+	/*
+		ScanArtifacts --> Create Ticket ----------------> Completed
+		              Ticket Daemon starts ----> Create Ticket ----> Completed
+
+		If the ticket daemon starts creating tickets before the scan artifacts daemon has finished creating tickets, there might be duplicate tickets created for the same vulnerability.
+
+		Ref: https://github.com/l3montree-dev/devguard/issues/1284
+		Ref: https://github.com/l3montree-dev/devguard/issues/1285
+	*/
+
+	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 
 	orgs, err := orgRepository.All()
 	if err != nil {
@@ -117,16 +131,15 @@ func ScanArtifacts(db core.DB, rbacProvider core.RBACProvider) error {
 							continue
 						}
 
-						bom, err := assetVersionService.BuildSBOM(assetVersions[i], artifact.ArtifactName, "0.0.0", "", components)
+						bom, err := assetVersionService.BuildSBOM(asset, assetVersions[i], artifact.ArtifactName, "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
 							continue
 						}
-						normalizedBOM := normalize.FromCdxBom(bom, false)
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, normalizedBOM, "system")
+							_, _, _, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], artifact, bom, "system")
 						}
 
 						if err != nil {

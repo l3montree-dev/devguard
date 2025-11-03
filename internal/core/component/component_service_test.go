@@ -16,7 +16,6 @@ import (
 )
 
 func TestHandleComponent(t *testing.T) {
-
 	t.Run("should set the license to unknown, if there is no license information", func(t *testing.T) {
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)

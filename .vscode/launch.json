@@ -21,25 +21,7 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-                // Secret Scanning
-                // "secret-scanning",
-
-                // Image scanning (file system of path)
-                // "sca",
-                // "--path=.",
-
-                // Image scanning (image as tar archive)
-                // "sca",
-                // "--path=alpine.tar",
-
-                // Image scanning (image published in registry - including attestations)
-                "sca",
-                // "--image=alpine:3.22.1",
-                "--image=registry.opencode.de/l3montree/vexing-opendesk/redis:7.4.3-debian-12-r0",
-
-                "--assetName=david/projects/test-group/assets/secret-scanning",
-                "--apiUrl=http://localhost:8080",
-                "--token=c85b50cbab88340490e1c6a303b4abaadba653c4ea46abd26bf9c4b081d50811"
+            "sast", "--token", "8949940588e4df13516ad777ec579414031cf74a2d851bcb89a9ada25b849958", "--apiUrl", "http://localhost:8080", "--assetName", "test-orggggggg/test/new-repo",  "--path", "../feedback-server/"
             ],
         },
         {
@@ -55,5 +37,17 @@
                 "POSTGRES_PORT": "5433"
             }
         },
+        {
+            "name": "Export Diffs",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "vulndb",
+                "export",
+            ],
+        }
     ]
 }

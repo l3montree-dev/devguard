@@ -15,6 +15,12 @@
   },
   "components": [
     {
+      "bom-ref": "main",
+      "type": "application",
+      "name": "main",
+      "version": "latest"
+    },
+    {
       "bom-ref": "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2",
       "type": "library",
       "name": "pkg:golang/github.com/refoo0/sca-trnsitiv@v0.0.2",

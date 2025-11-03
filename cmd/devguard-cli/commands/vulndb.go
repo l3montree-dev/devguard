@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +28,7 @@ func NewVulndbCommand() *cobra.Command {
 	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
+	vulndbCmd.AddCommand(newExportIncrementalCommand())
 	return &vulndbCmd
 }
 
@@ -123,13 +126,12 @@ func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
 		Short: "Will import the vulnerability database",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.LoadConfig() // nolint
-
 			database, err := core.DatabaseFactory()
 			if err != nil {
-				slog.Error("could not connect to database", "err", err)
+				slog.Error("could not connect to database", "error", err)
 				return
 			}
 			migrateDB(database)
@@ -138,20 +140,19 @@ func newImportCommand() *cobra.Command {
 			cweRepository := repositories.NewCWERepository(database)
 			exploitsRepository := repositories.NewExploitRepository(database)
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-
-			tag := "latest"
-			if len(args) > 0 {
-				tag = args[0]
+			configService := config.NewService(database)
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+			for _, arg := range args {
+				slog.Info(arg)
 			}
-			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-			err = v.Import(database, tag)
+
+			err = v.ImportFromDiff(nil)
 			if err != nil {
-				slog.Error("could not import vulndb", "err", err)
-				return
+				slog.Error("error when trying to import with diff files", "err", err)
 			}
-
 		},
 	}
+
 	return importCmd
 }
 
@@ -292,4 +293,52 @@ func newSyncCommand() *cobra.Command {
 	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
 
 	return &syncCmd
+}
+
+func newExportIncrementalCommand() *cobra.Command {
+	exportCmd := cobra.Command{
+		Use:   "export",
+		Short: "Will import the new vuln db after sync and export the diff of the old and new state of the vuln db",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			// first import the new state
+			core.LoadConfig() // nolint
+			os.RemoveAll("diffs-tmp/")
+			core.LoadConfig() // nolint
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "error", err)
+				return
+			}
+			migrateDB(database)
+
+			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			exploitsRepository := repositories.NewExploitRepository(database)
+			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+			configService := config.NewService(database)
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+			for _, arg := range args {
+				slog.Info(arg)
+			}
+
+			// import the last vulndb version into some clean tables
+			// we use the _diff suffix to identify those tables
+			err = v.CreateTablesWithSuffix("_diff")
+			if err != nil {
+				slog.Error("error when trying to create tables with suffix", "err", err)
+				return
+			}
+			err = v.ImportFromDiff(utils.Ptr("_diff"))
+			if err != nil {
+				slog.Error("error when trying to import with diff files", "err", err)
+				return
+			}
+			err = vulndb.ExportDiffs("_diff")
+			if err != nil {
+				return
+			}
+		},
+	}
+	return &exportCmd
 }

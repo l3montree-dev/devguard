@@ -16,6 +16,8 @@
 package pat
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 
@@ -47,14 +49,14 @@ func (p *PatController) Create(c core.Context) error {
 
 	// validate the request
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	patStruct := req.ToModel(userID)
 
 	err := p.patRepository.Create(nil, &patStruct)
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
 	}
 
 	return c.JSON(200, map[string]string{
@@ -77,13 +79,13 @@ func (p *PatController) RevokeByPrivateKey(c core.Context) error {
 
 	// validate the request
 	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// get the pat by the fingerprint
 	err := p.service.RevokeByPrivateKey(req.PrivateKey)
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not revoke personal access token").WithInternal(err)
 	}
 
 	return c.NoContent(200)
@@ -95,7 +97,7 @@ func (p *PatController) Delete(c core.Context) error {
 	// check if the current user is allowed to delete the token
 	pat, err := p.patRepository.Read(uuid.MustParse(tokenID))
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}
 	// check the owner of the token
 	if pat.UserID.String() != core.GetSession(c).GetUserID() {
@@ -104,7 +106,7 @@ func (p *PatController) Delete(c core.Context) error {
 	err = p.patRepository.Delete(nil, uuid.MustParse(tokenID))
 
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not delete personal access token").WithInternal(err)
 	}
 	return c.NoContent(200)
 }
@@ -116,7 +118,7 @@ func (p *PatController) List(c core.Context) error {
 
 	pats, err := p.patRepository.ListByUserID(userID)
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
 	}
 
 	return c.JSON(200, pats)

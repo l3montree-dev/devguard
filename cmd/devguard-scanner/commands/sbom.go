@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/pkg/errors"
@@ -92,18 +93,23 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse response")
 	}
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func NewSbomCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sbom",
-		Short: "Usage: <sbom.json>. Scan a software bill of materials. Only CycloneDX SBOMs are supported.",
-		Long:  `Scan a software bill of materials. Only CycloneDX SBOMs are supported. This command will scan the SBOM for vulnerabilities and return the results.`,
-		Args:  cobra.ExactArgs(1),
-		RunE:  sbomCmd,
+		Use:   "sbom <sbom.json>",
+		Short: "Scan a CycloneDX SBOM for vulnerabilities",
+		Long: `Scan a CycloneDX Software Bill of Materials (SBOM) and upload it to DevGuard for vulnerability analysis.
+
+Example:
+  devguard-scanner sbom my-bom.json
+
+Only CycloneDX-formatted SBOMs are supported. The command signs the request using the configured token and returns scan results.`,
+		Args: cobra.ExactArgs(1),
+		RunE: sbomCmd,
 	}
 
-	addScanFlags(cmd)
+	scanner.AddDependencyVulnsScanFlags(cmd)
 	return cmd
 }

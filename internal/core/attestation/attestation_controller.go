@@ -2,6 +2,7 @@ package attestation
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 
@@ -78,7 +79,7 @@ func (a *attestationController) Create(ctx core.Context) error {
 
 	err = core.V.Struct(attestation)
 	if err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	attestation.Content = jsonContent
 	err = a.attestationRepository.Create(nil, &attestation)

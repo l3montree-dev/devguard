@@ -52,6 +52,8 @@ type baseConfig struct {
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
+	Origin        string `json:"origin" mapstructure:"origin"`
+	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 }
@@ -100,7 +102,7 @@ func ParseBaseConfig(runningCMD string) {
 	if RuntimeBaseConfig.Ref == "" || RuntimeBaseConfig.DefaultBranch == "" {
 		gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
 		if err != nil {
-			slog.Warn("could not get git version info")
+			slog.Debug("could not get git version info")
 		}
 		if RuntimeBaseConfig.Ref == "" {
 			// check if we have a git version info

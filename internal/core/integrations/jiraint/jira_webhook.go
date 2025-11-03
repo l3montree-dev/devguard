@@ -24,15 +24,12 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 
 	payload, err := io.ReadAll(req.Body)
 	if err != nil {
-		slog.Error("failed to read request body", "err", err)
 		return ctx.JSON(400, "Invalid request body")
 	}
 
 	defer req.Body.Close()
 	event, err := jira.ParseWebhook(payload)
 	if err != nil {
-		slog.Error("failed to parse Jira webhook event", "err", err)
-
 		return nil
 	}
 
@@ -177,7 +174,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			if vuln.GetState() != models.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username))
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), models.UpstreamStateInternal)
 
 			err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -188,7 +185,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			if vuln.GetState() == models.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username))
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), models.UpstreamStateInternal)
 
 			err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -201,7 +198,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		if vuln.GetState() == models.VulnStateFalsePositive {
 			return nil
 		}
-		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames())
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
 
 		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 		if err != nil {

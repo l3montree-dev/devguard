@@ -159,6 +159,9 @@ func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 
 func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
+	if fingerprint == "" {
+		return "", "", fmt.Errorf("no fingerprint provided")
+	}
 	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
 
 	if err != nil {

@@ -1,16 +1,13 @@
 package normalize
 
-import cdx "github.com/CycloneDX/cyclonedx-go"
+import (
+	"slices"
 
-type SBOM interface {
-	GetComponents() *[]cdx.Component
-	GetDependencies() *[]cdx.Dependency
-	GetMetadata() *cdx.Metadata
-	GetCdxBom() *cdx.BOM
-}
+	cdx "github.com/CycloneDX/cyclonedx-go"
+)
 
-// map CycloneDX Analysis State / Response to internal status strings used by UpdateDependencyVulnState
-func MapCDXToStatus(a *cdx.VulnerabilityAnalysis) string {
+// map CycloneDX Analysis State / Response to internal status strings used by CreateVulnEventAndApply
+func MapCDXToVulnStatus(a *cdx.VulnerabilityAnalysis) string {
 	if a == nil {
 		return ""
 	}
@@ -20,7 +17,49 @@ func MapCDXToStatus(a *cdx.VulnerabilityAnalysis) string {
 	case cdx.IASFalsePositive:
 		return "falsePositive"
 	case cdx.IASExploitable:
-		return "accepted"
+		// check if wont fix
+		if a.Response != nil {
+			if slices.Contains(*a.Response, cdx.IARWillNotFix) {
+				return "accepted"
+			}
+		}
+		return "open"
+	case cdx.IASInTriage:
+		return "open"
+	default:
+		// fallback to response mapping if state is empty
+		if a.Response != nil && len(*a.Response) > 0 {
+			// take first response
+			switch (*a.Response)[0] {
+			case cdx.IARUpdate:
+				return "fixed"
+			case cdx.IARWillNotFix:
+				return "accepted"
+			default:
+				return ""
+			}
+		}
+		return ""
+	}
+}
+
+func MapCDXToEventType(a *cdx.VulnerabilityAnalysis) string {
+	if a == nil {
+		return ""
+	}
+	switch a.State {
+	case cdx.IASResolved:
+		return "fixed"
+	case cdx.IASFalsePositive:
+		return "falsePositive"
+	case cdx.IASExploitable:
+		// check if wont fix
+		if a.Response != nil {
+			if slices.Contains(*a.Response, cdx.IARWillNotFix) {
+				return "accepted"
+			}
+		}
+		return "detected"
 	case cdx.IASInTriage:
 		return "detected"
 	default:

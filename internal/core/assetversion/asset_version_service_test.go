@@ -198,11 +198,12 @@ func TestDiffScanResults(t *testing.T) {
 			}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
 		assert.Empty(t, fixedOnAll)
 		assert.Empty(t, fixedOnThisArtifactName)
+		assert.Equal(t, 1, len(vulnsWithJustUpstreamEvents))
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName))
 	})
 
@@ -218,9 +219,10 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Equal(t, 1, len(fixedOnAll))
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Empty(t, fixedOnThisArtifactName)
@@ -237,10 +239,11 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, firstDetected)
 		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Equal(t, 1, len(fixedOnThisArtifactName))
 	})
@@ -255,10 +258,11 @@ func TestDiffScanResults(t *testing.T) {
 
 		existingDependencyVulns := []models.DependencyVuln{}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Equal(t, 2, len(firstDetected))
 		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, vulnsWithJustUpstreamEvents)
 		assert.Empty(t, firstDetectedOnThisArtifactName)
 		assert.Empty(t, fixedOnThisArtifactName)
 	})
@@ -277,8 +281,9 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, vulnsWithJustUpstreamEvents := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
+		assert.Equal(t, 1, len(vulnsWithJustUpstreamEvents))
 		assert.Empty(t, firstDetected, "Should be empty - this is a new detection by current artifact")
 		assert.Empty(t, fixedOnAll, "Should be empty - no vulnerabilities are fixed")
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName), "Should detect that current artifact found existing vulnerability for first time")
@@ -703,7 +708,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX(asset, assetVersion, organizationName, "test-artifact", dependencyVulns)
+		result := s.BuildVeX(asset, assetVersion, organizationName, "test-artifact", dependencyVulns).EjectVex(nil)
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)

@@ -90,6 +90,13 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 		return err
 	}
 
+	// make sure to only load valid purls
+	filter = append(filter, core.FilterQuery{
+		Field:      "purl",
+		FieldValue: "pkg:",
+		Operator:   "like",
+	})
+
 	components, err := httpController.componentRepository.LoadComponentsWithProject(nil,
 		overwrittenLicense,
 		assetVersion.Name,

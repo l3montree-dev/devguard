@@ -3,6 +3,7 @@ package vuln
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -45,7 +46,7 @@ func (controller LicenseRiskController) Create(ctx core.Context) error {
 	}
 
 	if err := core.V.Struct(newLicenseRisk); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	if newLicenseRisk.FinalLicenseDecision == "" {
 		return echo.NewHTTPError(400, "license id must not be empty")
@@ -80,7 +81,7 @@ func (controller LicenseRiskController) Create(ctx core.Context) error {
 
 	err = controller.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
+		return echo.NewHTTPError(500, "could not create license risk").WithInternal(err)
 	}
 	return ctx.JSON(200, licenseRisk)
 }
@@ -137,6 +138,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLic
 				VulnerabilityName:       licenseRisk.ComponentPurl,
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
+				Upstream:                ev.Upstream,
 			}
 		}),
 	}
@@ -213,7 +215,7 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, models.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

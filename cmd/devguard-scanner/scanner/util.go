@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package commands
+package scanner
 
 import (
 	"context"
@@ -25,10 +25,10 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
-func maybeLoginIntoOciRegistry(ctx context.Context) error {
+func MaybeLoginIntoOciRegistry(ctx context.Context) error {
 	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
 		// login to the registry
-		err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
+		err := Login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
 		if err != nil {
 			slog.Error("login failed", "err", err)
 			return err
@@ -41,7 +41,7 @@ func maybeLoginIntoOciRegistry(ctx context.Context) error {
 	return nil
 }
 
-func bomFromBytes(bomStr []byte) (*cdx.BOM, error) {
+func BomFromBytes(bomStr []byte) (*cdx.BOM, error) {
 	// Extract string encoded json as BOM
 	var bom cdx.BOM
 	err := json.Unmarshal(bomStr, &bom)

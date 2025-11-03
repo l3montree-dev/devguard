@@ -228,6 +228,14 @@ func SetArtifact(ctx Context, artifact models.Artifact) {
 	ctx.Set("artifact", artifact)
 }
 
+func MaybeGetArtifact(ctx Context) (models.Artifact, error) {
+	artifact, ok := ctx.Get("artifact").(models.Artifact)
+	if !ok {
+		return models.Artifact{}, fmt.Errorf("could not get artifact")
+	}
+	return artifact, nil
+}
+
 func GetArtifact(ctx Context) models.Artifact {
 	return ctx.Get("artifact").(models.Artifact)
 }
@@ -292,6 +300,14 @@ func SetProject(ctx Context, project models.Project) {
 
 func GetProject(ctx Context) models.Project {
 	return ctx.Get("project").(models.Project)
+}
+
+func MaybeGetProject(ctx Context) (models.Project, error) {
+	project, ok := ctx.Get("project").(models.Project)
+	if !ok {
+		return models.Project{}, fmt.Errorf("could not get project")
+	}
+	return project, nil
 }
 
 func GetAttestation(ctx Context) models.Attestation {

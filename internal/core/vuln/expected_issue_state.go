@@ -2,6 +2,7 @@ package vuln
 
 import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type ExpectedIssueState string
@@ -61,7 +62,7 @@ func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *
 
 func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln) ExpectedIssueState {
 	cvssThresholdExceeded := asset.CVSSAutomaticTicketThreshold != nil && float64(dependencyVuln.CVE.CVSS) >= *asset.CVSSAutomaticTicketThreshold
-	riskThresholdExceeded := asset.RiskAutomaticTicketThreshold != nil && *dependencyVuln.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold
+	riskThresholdExceeded := asset.RiskAutomaticTicketThreshold != nil && utils.OrDefault(dependencyVuln.RawRiskAssessment, 0) >= *asset.RiskAutomaticTicketThreshold
 
 	// keep the ticket open if the state is open AND
 	// if the CVSS/Risk Threshold is exceeded OR the ticket was manually created

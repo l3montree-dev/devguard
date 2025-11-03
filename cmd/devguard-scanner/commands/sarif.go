@@ -25,17 +25,14 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -53,6 +50,14 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		slog.Error("could not read file", "err", err)
 		return err
+	}
+
+	if config.RuntimeBaseConfig.OutputPath != "" {
+		err = os.WriteFile(config.RuntimeBaseConfig.OutputPath, file, 0644)
+		if err != nil {
+			return errors.Wrap(err, "could not write sarif file to output path")
+		}
+		slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 	}
 
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
@@ -100,21 +105,27 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ScannerID)
+	return scanner.PrintFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ScannerID)
 }
 
 func NewSarifCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sarif",
-		Short: "Usage: <sarif.json>. Scan a static application security test result file.",
-		Long:  `Usage: <sarif.json>. Scan a static application security test result file. This will upload the file to DevGuard and return the results.`,
-		Args:  cobra.ExactArgs(1),
-		RunE:  sarifCmd,
+		Use:   "sarif <sarif.json>",
+		Short: "Scan a SARIF report and upload results to DevGuard",
+		Long: `Upload a SARIF-formatted static analysis report to DevGuard for processing and result comparison.
+
+Example:
+  devguard-scanner sarif results.sarif.json
+  devguard-scanner sarif results.sarif.json --outputPath uploaded-results.sarif.json
+
+The command signs the request using the configured token and returns scan results.`,
+		Args: cobra.ExactArgs(1),
+		RunE: sarifCmd,
 	}
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
-	addScanFlags(cmd)
+	scanner.AddFirstPartyVulnsScanFlags(cmd)
 	return cmd
 }
 
@@ -153,7 +164,7 @@ func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
 				}
 
 				// obfuscate the snippet
-				obfuscateSnippet := obfuscateString(expandedSnippet)
+				obfuscateSnippet := scanner.ObfuscateString(expandedSnippet)
 
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = obfuscateSnippet
@@ -218,93 +229,22 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 	return expandedSnippet, nil
 }
 
-func obfuscateString(str string) string {
-
-	// create regex to split string at whitespace and new line chars
-	reg := regexp.MustCompile(`[\n]+`)
-	// split the string into words
-	els := reg.Split(str, -1)
-
-	for i, el := range els {
-		words := strings.Fields(el)
-		// split at whitespace
-		for i, word := range words {
-			// 5 is a magic number!
-			entropy := utils.ShannonEntropy(word)
-			if entropy > 4 {
-				words[i] = word[:1+len(word)/2] + strings.Repeat("*", len(word)/2)
-			}
-		}
-
-		// join the words back together
-		els[i] = strings.Join(words, " ")
-	}
-
-	return strings.Join(els, "\n")
-}
-
-// add obfuscation function for snippet
-func obfuscateSecretAndAddFingerprint(sarifScan *common.SarifResult) {
-	// obfuscate the snippet
-	for ru, run := range sarifScan.Runs {
-		for re, result := range run.Results {
-			if len(result.Locations) == 0 {
-				continue
-			}
-			// make sure to set the result.Fingerprints
-			if result.Fingerprints == nil {
-				result.Fingerprints = &common.Fingerprints{}
-			}
-			// obfuscate the snippet
-			for lo, location := range result.Locations {
-				snippet := location.PhysicalLocation.Region.Snippet.Text
-				snippetMax := 20
-				if len(snippet) < snippetMax {
-					snippetMax = len(snippet) / 2
-				}
-				snippet = snippet[:snippetMax] + strings.Repeat("*", len(snippet)-snippetMax)
-				// set the snippet
-				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = snippet
-			}
-
-			//set the fingerprint to the calculated fingerprint if it exists
-			result.Fingerprints.CalculatedFingerprint = result.PartialFingerprints.CommitSha + ":" + result.Locations[0].PhysicalLocation.ArtifactLocation.URI + ":" + result.RuleID + ":" + strconv.Itoa(result.Locations[0].PhysicalLocation.Region.StartLine)
-
-		}
-	}
-}
-
-func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
-
-	if len(scanResponse.FirstPartyVulns) == 0 {
-		return nil
-	}
-
-	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v vuln.FirstPartyVulnDTO) bool {
-		return v.State == models.VulnStateOpen
-	})
-
-	switch scannerID {
-	case "secret-scanning":
-		printSecretScanResults(openVulns, webUI, assetName, assetVersionName)
-	default:
-		printSastScanResults(openVulns, webUI, assetName, assetVersionName)
-	}
-
-	if len(openVulns) > 0 {
-		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
-	}
-
-	return nil
-}
-
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// allow passing path or image as the first positional argument (like sca)
+		if len(args) > 0 && args[0] != "" {
+			// if it looks like an OCI image (contains ':'), set Image, if it's a tar file set Path, otherwise treat as Path
+			if strings.Contains(args[0], ":") {
+				config.RuntimeBaseConfig.Image = args[0]
+			} else {
+				config.RuntimeBaseConfig.Path = args[0]
+			}
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path)
+		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -318,6 +258,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not marshal sarif result")
 		}
 
+		if config.RuntimeBaseConfig.OutputPath != "" {
+			err = os.WriteFile(config.RuntimeBaseConfig.OutputPath, b, 0644)
+			if err != nil {
+				return errors.Wrap(err, "could not write sarif file to output path")
+			}
+			slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
@@ -326,11 +274,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
-		}
-
-		if err != nil {
-			printGitHelp(err)
-			return errors.Wrap(err, "could not get version info")
 		}
 
 		req.Header.Set("Content-Type", "application/json")
@@ -343,7 +286,13 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("could not scan file: %s", resp.Status)
+			// read the body
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return errors.Wrap(err, "could not scan file")
+			}
+
+			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 		}
 
 		// read and parse the body - it should be an array of dependencyVulns
@@ -355,18 +304,18 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, scannerID)
+		return scanner.PrintFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, scannerID)
 	}
 }
 
-func executeCodeScan(scannerID, path string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
-		return secretScan(path)
+		return secretScan(path, outputPath)
 	case "sast":
-		return sastScan(path)
+		return sastScan(path, outputPath)
 	case "iac":
-		return iacScan(path)
+		return iacScan(path, outputPath)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
 	}

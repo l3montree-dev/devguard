@@ -67,7 +67,7 @@ func removeSecretsFromMap(m map[string]interface{}) map[string]interface{} {
 	return m
 }
 
-func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
+func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, error) {
 	subjects := make([]toto.Subject, 0, len(link.Products))
 	for productName, product := range link.Products {
 		digestSet := make(map[string]string)
@@ -104,12 +104,12 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 
 	attestationContext, err := attestation.NewContext(link.Name, attestors)
 	if err != nil {
-		return toto.Envelope{}, errors.Wrap(err, "failed to create attestation context")
+		return toto.ProvenanceStatementSLSA1{}, errors.Wrap(err, "failed to create attestation context")
 	}
 
 	err = attestationContext.RunAttestors()
 	if err != nil {
-		return toto.Envelope{}, errors.Wrap(err, "failed to run attestation context")
+		return toto.ProvenanceStatementSLSA1{}, errors.Wrap(err, "failed to run attestation context")
 	}
 
 	// combine all attestors data into a single map
@@ -138,7 +138,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 		}
 	}
 
-	provenance := toto.ProvenanceStatementSLSA1{
+	return toto.ProvenanceStatementSLSA1{
 		StatementHeader: toto.StatementHeader{
 			Type:          toto.StatementInTotoV01,
 			PredicateType: slsa1.PredicateSLSAProvenance,
@@ -155,16 +155,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 				ExternalParameters:   removeSecretsFromMap(attestorData),
 			},
 		},
-	}
-
-	// put the provenance into an envelope
-	provenanceEnvelope := toto.Envelope{}
-	err = provenanceEnvelope.SetPayload(provenance)
-	if err != nil {
-		return toto.Envelope{}, errors.Wrap(err, "failed to set payload")
-	}
-
-	return provenanceEnvelope, nil
+	}, nil
 }
 
 func downloadSupplyChainLinks(ctx context.Context, c devguard.HTTPClient, linkDir, apiURL, assetName, supplyChainID string) error {

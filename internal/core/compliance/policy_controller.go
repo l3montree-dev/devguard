@@ -36,7 +36,7 @@ func convertPolicyFsToModel(policy PolicyFS) models.Policy {
 		Description:    policy.Description,
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
-		OpaqueID:       policy.Filename,
+		OpaqueID:       &policy.Filename,
 		OrganizationID: nil,
 	}
 }
@@ -58,13 +58,13 @@ func (c *policyController) migratePolicies() error {
 	}
 
 	// compare the policies
-	comp := utils.CompareSlices(dbPolicies, policyModels, func(p models.Policy) string {
-		return p.OpaqueID
+	comp := utils.CompareSlices(policyModels, dbPolicies, func(p models.Policy) string {
+		return *p.OpaqueID
 	})
 
-	toCreate := comp.OnlyInB
+	toCreate := comp.OnlyInA
 	toUpdate := comp.InBothB // use the B elements - those are the new policies read from disk
-	toDelete := comp.OnlyInA
+	toDelete := comp.OnlyInB
 
 	// set the id for the policies to update
 	for i := range toUpdate {
@@ -97,7 +97,7 @@ func (c *policyController) migratePolicies() error {
 			wg.Add(1)
 			go func(p models.Policy) {
 				defer wg.Done()
-				err := c.policyRepository.GetDB(nil).Model(&toDelete).Association("Projects").Clear()
+				err := c.policyRepository.GetDB(nil).Model(&p).Association("Projects").Clear()
 				if err != nil {
 					slog.Warn("failed to clear projects association for policy", "policyID", p.ID, "error", err)
 					return
@@ -175,6 +175,7 @@ func (c *policyController) CreatePolicy(ctx core.Context) error {
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
 		OrganizationID: utils.Ptr(org.ID),
+		OpaqueID:       nil,
 	}
 
 	// create the policy

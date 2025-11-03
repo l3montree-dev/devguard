@@ -128,7 +128,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.
 		return fmt.Errorf("received nil response when sending SBOM")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("failed to send SBOM, status: %s", resp.Status)
 	}
 

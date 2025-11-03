@@ -52,16 +52,21 @@ var rootCmd = &cobra.Command{
 	Short:        "Secure your Software Supply Chain",
 	Version:      version,
 	Long: `Secure your Software Supply Chain
-	
-Attestation-based compliance as Code, 
-manage your CVEs seamlessly, 
-Integrate your Vulnerability Scanners,
-Security Framework Documentation made easy - 
-OWASP Incubating Project`,
+
+	DevGuard Scanner is a small CLI to help generate, sign and upload SBOMs, SARIF
+	reports and attestations to a DevGuard backend. Use commands like 'sca', 'sarif',
+	and 'attest' to interact with the platform. Configuration can be provided via a
+	./.devguard config file or environment variables (prefix DEVGUARD_).
+
+	Examples:
+		devguard-scanner sca --image ghcr.io/org/image:tag
+		devguard-scanner attest predicate.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/vex/1.0
+		devguard-scanner sarif results.sarif.json
+	`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// init the logger - get the level
-		level, err := cmd.Flags().GetString("log-level")
+		level, err := cmd.Flags().GetString("logLevel")
 		if err != nil {
 			return err
 		}
@@ -83,7 +88,7 @@ OWASP Incubating Project`,
 			slog.Debug("Running in CI")
 			err := utils.GitLister.MarkAllPathsAsSafe()
 			if err != nil {
-				slog.Error("could not mark all paths as safe", "err", err)
+				slog.Debug("could not mark all paths as safe", "err", err)
 			}
 		}
 
@@ -135,12 +140,15 @@ func init() {
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),
+		NewMergeSBOMSCommand(),
+		NewDiscoverBaseImageAttestationsCommand(),
+		NewVexCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringP("log-level", "l", "info", "Set the log level. Options are: debug, info, warn, error")
+	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", "Set the log level. Options: debug, info, warn, error")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

@@ -273,7 +273,6 @@ func ParseWebhook(payload []byte) (*WebhookEvent, error) {
 
 	var event WebhookEvent
 	if err := json.Unmarshal(payload, &event); err != nil {
-		slog.Error("Failed to parse webhook payload", "error", err)
 		return nil, fmt.Errorf("failed to parse webhook payload: %w", err)
 	}
 
