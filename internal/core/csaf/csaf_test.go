@@ -315,7 +315,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[2].DiscoveryDate)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, accepted for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: marked as false positive for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, accepted for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
 		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
 	})
 	t.Run("use an earlier version to test the time travel functionality", func(t *testing.T) {
