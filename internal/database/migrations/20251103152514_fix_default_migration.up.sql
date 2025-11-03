@@ -12,4 +12,32 @@
 -- 
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
+DROP table IF EXISTS public.artifact_upstream_urls;
 
+INSERT INTO public.components (
+    purl,
+    component_type,
+    version,
+    license,
+    published,
+    project_key,
+    is_license_overwritten
+) VALUES (
+    'sbom:DEFAULT',
+    'library',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+)
+ON CONFLICT (purl) DO NOTHING;
+
+
+UPDATE public.component_dependencies
+SET component_purl = 'sbom:DEFAULT'
+WHERE component_purl = 'DEFAULT';
+
+UPDATE public.component_dependencies
+  SET dependency_purl = 'sbom:DEFAULT'
+  WHERE dependency_purl = 'DEFAULT';
