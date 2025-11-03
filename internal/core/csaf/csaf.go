@@ -22,26 +22,26 @@ import (
 )
 
 type csafController struct {
-	DependencyVulnRepository core.DependencyVulnRepository
-	VulnEventRepository      core.VulnEventRepository
-	AssetVersionRepository   core.AssetVersionRepository
-	AssetRepository          core.AssetRepository
-	ProjectRepository        core.ProjectRepository
-	OrganizationRepository   core.OrganizationRepository
-	CVERepository            core.CveRepository
-	ArtifactRepository       core.ArtifactRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
+	assetVersionRepository   core.AssetVersionRepository
+	assetRepository          core.AssetRepository
+	projectRepository        core.ProjectRepository
+	organizationRepository   core.OrganizationRepository
+	cveRepository            core.CveRepository
+	artifactRepository       core.ArtifactRepository
 }
 
 func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, organizationRepository core.OrganizationRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) *csafController {
 	return &csafController{
-		DependencyVulnRepository: dependencyVulnRepository,
-		VulnEventRepository:      vulnEventRepository,
-		AssetVersionRepository:   assetVersionRepository,
-		AssetRepository:          assetRepository,
-		ProjectRepository:        projectRepository,
-		OrganizationRepository:   organizationRepository,
-		CVERepository:            cveRepository,
-		ArtifactRepository:       artifactRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		vulnEventRepository:      vulnEventRepository,
+		assetVersionRepository:   assetVersionRepository,
+		assetRepository:          assetRepository,
+		projectRepository:        projectRepository,
+		organizationRepository:   organizationRepository,
+		cveRepository:            cveRepository,
+		artifactRepository:       artifactRepository,
 	}
 }
 
@@ -86,7 +86,7 @@ func signCSAFReport(csafJSON []byte) ([]byte, error) {
 func (controller *csafController) GetIndexFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
-	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (controller *csafController) GetIndexFile(ctx core.Context) error {
 func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
-	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 	asset := core.GetAsset(ctx)
 
 	// get all years where csaf version were published and make a directory for each of these
-	allYears, err := getAllYears(asset, controller.DependencyVulnRepository, controller.VulnEventRepository)
+	allYears, err := getAllYears(asset, controller.dependencyVulnRepository, controller.vulnEventRepository)
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
-	tracking, err := generateTrackingObject(asset, controller.DependencyVulnRepository, controller.VulnEventRepository, int(^uint(0)>>1))
+	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
 	if err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 		LastUpdated:       time.Now().Format(time.RFC3339),
 	}
 
-	orgs, err := controller.OrganizationRepository.All()
+	orgs, err := controller.organizationRepository.All()
 	if err != nil {
 		return err
 	}
@@ -441,14 +441,14 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 			Namespace:      os.Getenv("API_URL"), // TODO add option to add namespace to an org
 		},
 	}
-	assets, err := controller.AssetRepository.GetByOrgID(org.ID)
+	assets, err := controller.assetRepository.GetByOrgID(org.ID)
 	if err != nil {
 		return err
 	}
 
 	distributions := make([]distributionProviderMetadata, 0)
 	for _, asset := range assets {
-		project, err := controller.ProjectRepository.GetProjectByAssetID(asset.ID)
+		project, err := controller.projectRepository.GetProjectByAssetID(asset.ID)
 		if err != nil {
 			// maybe swallow error and publish incomplete set
 			return err
@@ -521,7 +521,7 @@ func getPublicKeyFingerprint() (string, error) {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error {
 	// generate the report first
-	csafReport, err := generateCSAFReport(ctx, controller.DependencyVulnRepository, controller.VulnEventRepository, controller.AssetVersionRepository, controller.CVERepository, controller.ArtifactRepository)
+	csafReport, err := generateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
 	if err != nil {
 		return err
 	}
