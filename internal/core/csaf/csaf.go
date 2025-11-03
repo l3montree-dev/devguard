@@ -189,6 +189,9 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 	events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnIDs(nil, utils.Map(vulns, func(el models.DependencyVuln) string {
 		return el.ID
 	}))
+	if err != nil {
+		return nil, err
+	}
 
 	// build a map
 	allYearsMap := map[int]struct{}{
@@ -224,22 +227,22 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 	data := pageData{Years: allYears}
 	htmlTemplate := `
 <html>
-	<head><title>Index of /csaf/white/</title></head>
-	<body cz-shortcut-listen="true">
-		<h1>Index of /csaf/white/</h1>
-		<hr>
-		<pre>
-			<a href="../">../</a>
+<head><title>Index of /csaf/white/</title></head>
+<body cz-shortcut-listen="true">
+<h1>Index of /csaf/white/</h1>
+<hr>
+<pre>
+<a href="../">../</a>
 
-			{{ range .Years }}
-				<a href="{{ . }}/">{{ . }}/</a>
-			{{ end }}
+{{ range .Years }}
+<a href="{{ . }}/">{{ . }}/</a>
+{{ end }}
 
-			<a href="index.txt/" download="index.txt">index.txt</a>
-			<a href="changes.csv/" download="changes.csv">changes.csv</a>
-		</pre>
-		<hr>
-	</body>
+<a href="index.txt/" download="index.txt">index.txt</a>
+<a href="changes.csv/" download="changes.csv">changes.csv</a>
+</pre>
+<hr>
+</body>
 </html>`
 
 	tmpl := template.Must(template.New("years").Parse(htmlTemplate))
@@ -293,19 +296,19 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	htmlTemplate := `
 <html>
 <head><title>Index of /csaf/white/{{ .Year }}/</title></head>
-	<body cz-shortcut-listen="true">
-	<h1>Index of /csaf/white/{{ .Year }}/</h1>
-	<hr>
-	<pre>
-		<a href="../">../</a>
-		{{ range .Filenames }}
-			<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
-			<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
-			<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>
-		{{ end }}
-	</pre>
-	<hr>
-	</body>
+<body cz-shortcut-listen="true">
+<h1>Index of /csaf/white/{{ .Year }}/</h1>
+<hr>
+<pre>
+<a href="../">../</a>
+{{ range .Filenames }}
+<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
+<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
+<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>
+{{ end }}
+</pre>
+<hr>
+</body>
 </html>
 `
 
