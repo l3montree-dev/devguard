@@ -223,26 +223,25 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 		Years []int
 	}
 	data := pageData{Years: allYears}
-	htmlTemplate := `<html>
+	htmlTemplate := `
+<html>
 	<head><title>Index of /csaf/white/</title></head>
 	<body cz-shortcut-listen="true">
-	<h1>Index of /csaf/white/</h1><hr><pre>`
+		<h1>Index of /csaf/white/</h1>
+		<hr>
+		<pre>
+			<a href="../">../</a>
 
-	htmlTemplate += "\n"
-	htmlTemplate += `	<a href="../">../</a>`
-	htmlTemplate += "\n"
-	htmlTemplate += `{{ range .Years }}`
-	htmlTemplate += `	<a href="{{ . }}/">{{ . }}/</a>`
-	htmlTemplate += `{{ end }}`
+			{{ range .Years }}
+				<a href="{{ . }}/">{{ . }}/</a>
+			{{ end }}
 
-	htmlTemplate += "\n"
-	htmlTemplate += `	<a href="index.txt/" download="index.txt">index.txt</a>`
-	htmlTemplate += "\n"
-	htmlTemplate += `	<a href="changes.csv/" download="changes.csv">changes.csv</a>`
-
-	htmlTemplate += `</pre><hr>
+			<a href="index.txt/" download="index.txt">index.txt</a>
+			<a href="changes.csv/" download="changes.csv">changes.csv</a>
+		</pre>
+		<hr>
 	</body>
-		</html>`
+</html>`
 
 	tmpl := template.Must(template.New("years").Parse(htmlTemplate))
 
@@ -292,21 +291,24 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
-	htmlTemplate := `<html>
-	<head><title>Index of /csaf/white/{{ .Year }}/</title></head>
+	htmlTemplate := `
+<html>
+<head><title>Index of /csaf/white/{{ .Year }}/</title></head>
 	<body cz-shortcut-listen="true">
-	<h1>Index of /csaf/white/{{ .Year }}/</h1><hr><pre>`
-	htmlTemplate += "\n"
-	htmlTemplate += `	<a href="../">../</a>`
-	htmlTemplate += `{{ range .Filenames }}`
-	htmlTemplate += `
-	<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
-	<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
-	<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>`
-	htmlTemplate += `{{ end }}`
-	htmlTemplate += `</pre><hr>
+	<h1>Index of /csaf/white/{{ .Year }}/</h1>
+	<hr>
+	<pre>
+		<a href="../">../</a>
+		{{ range .Filenames }}
+			<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
+			<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
+			<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>
+		{{ end }}
+	</pre>
+	<hr>
 	</body>
-		</html>`
+</html>
+`
 
 	tmpl := template.Must(template.New("entries").Parse(htmlTemplate))
 
@@ -350,73 +352,6 @@ func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 	return fmt.Errorf("invalid resource: %s", file)
 }
 
-type ProviderMetadata struct {
-	URL                     string                         `json:"canonical_url,omitempty"`
-	Distribution            []distributionProviderMetadata `json:"distribution,omitempty"`
-	LastUpdated             string                         `json:"last_updated,omitempty"`
-	ListOnCSAFAggregators   bool                           `json:"list_on_CSAF_aggregators,omitempty"`
-	MetadataVersion         string                         `json:"metadata_version,omitempty"`
-	MirrorOnCSAFAggregators bool                           `json:"mirror_on_CSAF_aggregators,omitempty"`
-	PublicOpenpgpKeys       []pgpKey                       `json:"public_openpgp_keys,omitempty"`
-	Publisher               publisher                      `json:"publisher,omitempty"`
-	Role                    string                         `json:"role,omitempty"`
-}
-
-type distributionProviderMetadata struct {
-	Summary  string `json:"summary"`
-	TLPLabel string `json:"tlp_label"`
-	URL      string `json:"url"`
-}
-type Aggregator struct {
-	AggregatorObject  aggregatorObject `json:"aggregator,omitempty"`
-	AggregatorVersion string           `json:"aggregator_version,omitempty"`
-	CanonicalURL      string           `json:"canonical_url,omitempty"`
-	CsafProviders     []struct {
-		Metadata aggregatorMetadata `json:"metadata,omitempty"`
-	} `json:"csaf_providers,omitempty"`
-	CsafPublishers []struct {
-		Metadata       publisherMetadata `json:"csaf_publishers,omitempty"`
-		Mirrors        []string          `json:"mirrors,omitempty"`
-		UpdateInterval string            `json:"update_interval,omitempty"`
-	} `json:"csaf_publishers,omitempty"`
-	LastUpdated string `json:"last_updated,omitempty"`
-}
-
-type aggregatorObject struct {
-	Category         string `json:"category"`
-	ContactDetails   string `json:"contact_details"`
-	IssuingAuthority string `json:"issuing_authority"`
-	Name             string `json:"name"`
-	Namespace        string `json:"namespace"`
-}
-
-type aggregatorMetadata struct {
-	LastUpdated string `json:"last_updated"`
-	Publisher   struct {
-		Category  string `json:"category"`
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-	} `json:"publisher"`
-	Role string `json:"role"`
-	URL  string `json:"url"`
-}
-
-type publisherMetadata struct {
-	LastUpdated string `json:"last_updated"`
-	Publisher   struct {
-		Category  string `json:"category"`
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-	} `json:"publisher"`
-	Role string `json:"role"`
-	URL  string `json:"url"`
-}
-
-type pgpKey struct {
-	Fingerprint *string `json:"fingerprint"`
-	URL         string  `json:"url"`
-}
-
 // returns the aggregator file which points to all public organizations provider-metadata files
 func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 	aggregatorObject := aggregatorObject{
@@ -431,7 +366,7 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
 	}
 	csafAggregatorURL := fmt.Sprintf("%s/api/v1/.well-known/csaf-aggregator/", hostURL)
-	aggregator := Aggregator{
+	aggregator := aggregator{
 		AggregatorObject:  aggregatorObject,
 		AggregatorVersion: "2.0",
 		CanonicalURL:      csafAggregatorURL + "aggregator.json",
@@ -489,7 +424,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 		return err
 	}
 
-	metadata := ProviderMetadata{
+	metadata := providerMetadata{
 		URL:                     csafURL + "provider-metadata.json",
 		LastUpdated:             time.Now().Format(time.RFC3339),
 		ListOnCSAFAggregators:   true, // TODO check if reports are published
@@ -544,7 +479,7 @@ func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) 
 		return err
 	}
 
-	metadata := ProviderMetadata{
+	metadata := providerMetadata{
 		URL:                     csafURL + "provider-metadata.json",
 		LastUpdated:             time.Now().Format(time.RFC3339),
 		ListOnCSAFAggregators:   true,
@@ -1016,7 +951,7 @@ func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepositor
 			summary += fmt.Sprintf("Detected %d new vulnerability (%s),", len(detectedVulns), detectedVulns[0].CVEID)
 		} else {
 			summary += fmt.Sprintf("Detected %d new vulnerabilities (%s", len(detectedVulns), detectedVulns[0].CVEID)
-			for _, event := range detectedVulns {
+			for _, event := range detectedVulns[1:] {
 				summary += fmt.Sprintf(", %s", event.CVEID)
 			}
 			summary += ")"

@@ -224,3 +224,70 @@ type reference struct {
 	Summary  string `json:"summary,omitempty"`
 	URL      string `json:"url,omitempty"`
 }
+
+type providerMetadata struct {
+	URL                     string                         `json:"canonical_url,omitempty"`
+	Distribution            []distributionProviderMetadata `json:"distribution,omitempty"`
+	LastUpdated             string                         `json:"last_updated,omitempty"`
+	ListOnCSAFAggregators   bool                           `json:"list_on_CSAF_aggregators,omitempty"`
+	MetadataVersion         string                         `json:"metadata_version,omitempty"`
+	MirrorOnCSAFAggregators bool                           `json:"mirror_on_CSAF_aggregators,omitempty"`
+	PublicOpenpgpKeys       []pgpKey                       `json:"public_openpgp_keys,omitempty"`
+	Publisher               publisher                      `json:"publisher,omitempty"`
+	Role                    string                         `json:"role,omitempty"`
+}
+
+type distributionProviderMetadata struct {
+	Summary  string `json:"summary"`
+	TLPLabel string `json:"tlp_label"`
+	URL      string `json:"url"`
+}
+type aggregator struct {
+	AggregatorObject  aggregatorObject `json:"aggregator,omitempty"`
+	AggregatorVersion string           `json:"aggregator_version,omitempty"`
+	CanonicalURL      string           `json:"canonical_url,omitempty"`
+	CsafProviders     []struct {
+		Metadata aggregatorMetadata `json:"metadata,omitempty"`
+	} `json:"csaf_providers,omitempty"`
+	CsafPublishers []struct {
+		Metadata       publisherMetadata `json:"csaf_publishers,omitempty"`
+		Mirrors        []string          `json:"mirrors,omitempty"`
+		UpdateInterval string            `json:"update_interval,omitempty"`
+	} `json:"csaf_publishers,omitempty"`
+	LastUpdated string `json:"last_updated,omitempty"`
+}
+
+type aggregatorObject struct {
+	Category         string `json:"category"`
+	ContactDetails   string `json:"contact_details"`
+	IssuingAuthority string `json:"issuing_authority"`
+	Name             string `json:"name"`
+	Namespace        string `json:"namespace"`
+}
+
+type aggregatorMetadata struct {
+	LastUpdated string `json:"last_updated"`
+	Publisher   struct {
+		Category  string `json:"category"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"publisher"`
+	Role string `json:"role"`
+	URL  string `json:"url"`
+}
+
+type publisherMetadata struct {
+	LastUpdated string `json:"last_updated"`
+	Publisher   struct {
+		Category  string `json:"category"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"publisher"`
+	Role string `json:"role"`
+	URL  string `json:"url"`
+}
+
+type pgpKey struct {
+	Fingerprint *string `json:"fingerprint"`
+	URL         string  `json:"url"`
+}
