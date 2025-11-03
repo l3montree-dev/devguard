@@ -19,7 +19,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"gorm.io/gorm"
 )
 
 type csafController struct {
@@ -50,7 +49,6 @@ func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, v
 func signCSAFReport(csafJSON []byte) ([]byte, error) {
 	// configure pgp profile to meet the csaf standard
 	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())
-
 	// read private key and parse to opnepgp key struct
 	privateKeyData, err := os.ReadFile("csaf-openpgp-private-key.asc")
 	if err != nil {
@@ -188,21 +186,22 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 
 	// iterate over every event = version, check the release year and append if not already present
 	allYears := make([]int, 0)
-	for _, vuln := range vulns {
-		events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
-		if err != nil {
-			return nil, err
-		}
-		for _, event := range events {
-			if !slices.Contains(allYears, event.CreatedAt.Year()) {
-				allYears = append(allYears, event.CreatedAt.Year())
-			}
-		}
+	events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnIDs(nil, utils.Map(vulns, func(el models.DependencyVuln) string {
+		return el.ID
+	}))
+
+	// build a map
+	allYearsMap := map[int]struct{}{
+		asset.CreatedAt.Year(): {},
 	}
 
-	// append the initial report to the list of years
-	if !slices.Contains(allYears, asset.CreatedAt.Year()) {
-		allYears = append(allYears, asset.CreatedAt.Year())
+	for _, event := range events {
+		year := event.CreatedAt.Year()
+		allYearsMap[year] = struct{}{}
+	}
+
+	for year := range allYearsMap {
+		allYears = append(allYears, year)
 	}
 
 	slices.Sort(allYears)
@@ -685,13 +684,13 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 
 	// then time travel each vuln to the state at timeStamp using the latest events
 	for i, vuln := range filteredVulns {
-		lastEvent, err := vulnEventRepository.GetLastEventBeforeTimestamp(nil, vuln.ID, timeStamp)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				//this vulnerability did not exist before this timestamp
-				continue
+		var lastEvent models.VulnEvent
+		for i := len(vuln.Events) - 1; i >= 0; i-- {
+			event := vuln.Events[i]
+			if event.CreatedAt.Before(timeStamp) || event.CreatedAt.Equal(timeStamp) {
+				lastEvent = event
+				break
 			}
-			return nil, err
 		}
 		lastEvent.Apply(&filteredVulns[i])
 	}
@@ -699,7 +698,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
 	cveGroups := make(map[string][]models.DependencyVuln)
 	for _, vuln := range filteredVulns {
-		cveGroups[*vuln.CVEID] = append(cveGroups[*vuln.CVEID], vuln)
+		cveGroups[utils.SafeDereference(vuln.CVEID)] = append(cveGroups[utils.SafeDereference(vuln.CVEID)], vuln)
 	}
 
 	// then make a vulnerability object for every cve and list the asset version in the product status property
@@ -746,11 +745,6 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 	return vulnerabilities, nil
 }
 
-type artifactVulns struct {
-	Artifact string
-	Vulns    []models.DependencyVuln
-}
-
 // generate the textual summary for a vulnerability object
 func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]note, error) {
 	if len(vulns) == 0 {
@@ -772,45 +766,41 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 		Text:     cve.Description,
 	}
 
-	// a map would be faster but we need an ordered set to make the output deterministic
-	allArtifactsToVulns := make([]artifactVulns, 0, len(vulns))
+	// group vulnerabilities by artifact
+	artifactToVulns := map[string][]models.DependencyVuln{}
 	for _, vuln := range vulns {
 		for _, artifact := range vuln.Artifacts {
-			found := false
-			for i := range allArtifactsToVulns {
-				if allArtifactsToVulns[i].Artifact == fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName) {
-					allArtifactsToVulns[i].Vulns = append(allArtifactsToVulns[i].Vulns, vuln)
-					found = true
-					break
-				}
-			}
-			if !found {
-				allArtifactsToVulns = append(allArtifactsToVulns, artifactVulns{Artifact: fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName), Vulns: []models.DependencyVuln{vuln}})
-			}
+			key := fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)
+			artifactToVulns[key] = append(artifactToVulns[key], vuln)
 		}
 	}
 
-	// for each vuln in this object list the respective purl and the current state
-	summary := ""
-	for _, version := range allArtifactsToVulns {
-		summary += fmt.Sprintf("ProductID %s: ", version.Artifact)
-		for _, vuln := range version.Vulns {
-			switch vuln.State {
-			case models.VulnStateOpen:
-				summary += "unhandled for package " + *vuln.ComponentPurl + ", "
-			case models.VulnStateAccepted:
-				summary += "accepted for package " + *vuln.ComponentPurl + ", "
-			case models.VulnStateFalsePositive:
-				summary += "marked as false positive for package " + *vuln.ComponentPurl + ", "
-			}
+	// Generate summary for each artifact
+	var summaryParts []string
+	for artifact, vulns := range artifactToVulns {
+		var vulnStates []string
+		for _, vuln := range vulns {
+			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), *vuln.ComponentPurl))
 		}
-		summary = strings.TrimRight(summary, ", ")
-		summary += "| "
+		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(vulnStates, ", ")))
 	}
-	summary = strings.TrimRight(summary, "| ")
-	vulnDetails.Text = summary
 
+	vulnDetails.Text = strings.Join(summaryParts, " | ")
 	return []note{vulnDetails, cveDescription}, nil
+}
+
+// Helper function to map state to human-readable string
+func stateToString(state models.VulnState) string {
+	switch state {
+	case models.VulnStateOpen:
+		return "unhandled"
+	case models.VulnStateAccepted:
+		return "accepted"
+	case models.VulnStateFalsePositive:
+		return "marked as false positive"
+	default:
+		return "unknown state"
+	}
 }
 
 // generate the tracking object used by the document object
@@ -823,13 +813,11 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	}
 
 	// then collect all security relevant events
-	allEvents := make([]models.VulnEvent, 0, len(vulns))
-	for _, vuln := range vulns {
-		events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnID(nil, vuln.ID)
-		if err != nil {
-			return tracking, err
-		}
-		allEvents = append(allEvents, events...)
+	allEvents, err := vulnEventRepository.GetSecurityRelevantEventsForVulnIDs(nil, utils.Map(vulns, func(el models.DependencyVuln) string {
+		return el.ID
+	}))
+	if err != nil {
+		return tracking, err
 	}
 
 	// sort them by their creation timestamp
@@ -838,7 +826,6 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	})
 
 	// now we can extract the first release and current release timestamp that being the first and last event
-
 	tracking.InitialReleaseDate = asset.CreatedAt.Format(time.RFC3339)
 	if len(allEvents) != 0 {
 		tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
@@ -847,7 +834,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	}
 
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(asset, allEvents, documentVersion, dependencyVulnRepository)
+	revisions, err := buildRevisionHistory(asset, allEvents, vulns, documentVersion, dependencyVulnRepository)
 	if err != nil {
 		return tracking, err
 	}
@@ -862,7 +849,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revision, error) {
+func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns []models.DependencyVuln, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revision, error) {
 	var revisions []revision
 	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
@@ -899,7 +886,7 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, documen
 			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
 		}
 		revisionObject.Number = strconv.Itoa(i + 2)
-		summary, err := generateSummaryForEvents(eventGroup, dependencyVulnRepository)
+		summary, err := generateSummaryForEvents(eventGroup, vulns)
 		if err != nil {
 			return nil, err
 		}
@@ -915,10 +902,15 @@ type vulnEventWithCVEID struct {
 	CVEID string
 }
 
-func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepository core.DependencyVulnRepository) (string, error) {
+func generateSummaryForEvents(events []models.VulnEvent, vulns []models.DependencyVuln) (string, error) {
 	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int {
 		return event1.CreatedAt.Compare(event2.CreatedAt)
 	})
+
+	vulnMap := make(map[string]models.DependencyVuln)
+	for _, vuln := range vulns {
+		vulnMap[vuln.ID] = vuln
+	}
 
 	// Group events by type
 	type vulnGroup struct {
@@ -934,10 +926,7 @@ func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepositor
 	}
 
 	for _, event := range events {
-		vuln, err := dependencyVulnRepository.Read(event.VulnID)
-		if err != nil {
-			return "", err
-		}
+		vuln := vulnMap[event.VulnID]
 		t := groups[event.Type]
 		t.events = append(t.events, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
 		groups[event.Type] = t
@@ -956,6 +945,7 @@ func generateSummaryForEvents(events []models.VulnEvent, dependencyVulnRepositor
 		if len(g.events) == 1 {
 			plural = "y"
 		}
+		slices.Sort(cveIDs)
 		return fmt.Sprintf(g.desc, len(g.events), plural, strings.Join(cveIDs, ", "))
 	}
 

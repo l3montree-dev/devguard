@@ -115,7 +115,9 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 	// Get all dependency vulns that have events with upstream=2 but no events with upstream=1
 	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
 		Preload("Artifacts").
-		Preload("Events").
+		Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).
 		Joins("CVE").
 		Preload("CVE.Exploits").
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
@@ -481,11 +483,15 @@ func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchIn
 	if len(excludedStates) == 0 {
 		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
-		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Preload("Artifacts").Find(&vulns).Error
+		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).Preload("Artifacts").Find(&vulns).Error
 	} else {
 		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
-		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Preload("Artifacts").Find(&vulns).Error
+		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).Preload("Artifacts").Find(&vulns).Error
 	}
 	if err != nil {
 		return nil, err

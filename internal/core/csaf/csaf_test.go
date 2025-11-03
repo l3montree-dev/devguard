@@ -280,13 +280,13 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		date, err = time.Parse(time.RFC3339, revHistory[1].Date)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(0*time.Minute).Equal(date))
-		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-50181, CVE-2025-50181, CVE-2025-22871, CVE-2025-50181, CVE-2025-22777, CVE-2025-22777).", revHistory[1].Summary)
+		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", revHistory[1].Summary)
 
 		assert.Equal(t, "3", revHistory[2].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[2].Date)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(2*time.Minute).Equal(date))
-		assert.Equal(t, "Accepted 3 existing vulnerabilities (CVE-2025-50181, CVE-2025-22871, CVE-2025-22777) | Marked 1 existing vulnerability as false positive (CVE-2025-22777).", revHistory[2].Summary)
+		assert.Equal(t, "Accepted 3 existing vulnerabilities (CVE-2025-22777, CVE-2025-22871, CVE-2025-50181) | Marked 1 existing vulnerability as false positive (CVE-2025-22777).", revHistory[2].Summary)
 
 		assert.Equal(t, "4", revHistory[3].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[3].Date)
@@ -368,7 +368,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, "Asset created, no vulnerabilities found", revHistory[0].Summary)
 
 		assert.Equal(t, "2", revHistory[1].Number)
-		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-50181, CVE-2025-50181, CVE-2025-22871, CVE-2025-50181, CVE-2025-22777, CVE-2025-22777).", revHistory[1].Summary)
+		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", revHistory[1].Summary)
 
 		// test the vulnerabilities Object
 		assert.Equal(t, 3, len(csafDoc.Vulnerabilities)) // 3 CVEs should result in 3 Vulnerability Groups
