@@ -684,7 +684,7 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 			}{
 				Category:  "vendor",
 				Name:      org.Slug,
-				Namespace: "TODO",
+				Namespace: os.Getenv("API_URL"),
 			},
 			Role:        "csaf_trusted_provider",
 			URL:         orgCSAFURL,
@@ -729,7 +729,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 			Category:       "vendor",
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
 			Name:           org.Name,
-			Namespace:      "TODO ", // TODO add option to add namespace to an org
+			Namespace:      os.Getenv("API_URL"), // TODO add option to add namespace to an org
 		},
 	}
 	assets, err := controller.AssetRepository.GetByOrgID(org.ID)
@@ -959,7 +959,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
 func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]vulnerability, error) {
-	vulnerabilites := []vulnerability{}
+	vulnerabilities := []vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns
 	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID, []models.VulnState{models.VulnStateFixed})
@@ -973,7 +973,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 		}
 	}
 	if len(filteredVulns) == 0 {
-		return vulnerabilites, nil
+		return vulnerabilities, nil
 	}
 
 	// then time travel each vuln to the state at timeStamp using the latest events
@@ -1007,7 +1007,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			if vulnObject.DiscoveryDate == "" {
 				vulnObject.DiscoveryDate = vulnsInGroup[0].CreatedAt.Format(time.RFC3339)
 			} else {
-				currentDiscoveryDate, err := time.Parse(vulnObject.DiscoveryDate, time.RFC3339)
+				currentDiscoveryDate, err := time.Parse(time.RFC3339, vulnObject.DiscoveryDate)
 				if err == nil {
 					if currentDiscoveryDate.After(vuln.CreatedAt) {
 						vulnObject.DiscoveryDate = vuln.CreatedAt.Format(time.RFC3339)
@@ -1030,13 +1030,13 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			return nil, err
 		}
 		vulnObject.Notes = notes
-		vulnerabilites = append(vulnerabilites, vulnObject)
+		vulnerabilities = append(vulnerabilities, vulnObject)
 	}
 
-	slices.SortFunc(vulnerabilites, func(vuln1, vuln2 vulnerability) int {
+	slices.SortFunc(vulnerabilities, func(vuln1, vuln2 vulnerability) int {
 		return -strings.Compare(vuln1.CVE, vuln2.CVE)
 	})
-	return vulnerabilites, nil
+	return vulnerabilities, nil
 }
 
 type artifactVulns struct {
@@ -1066,26 +1066,26 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 	}
 
 	// a map would be faster but we need an ordered set to make the output deterministic
-	allArtfactsToVulns := make([]artifactVulns, 0, len(vulns))
+	allArtifactsToVulns := make([]artifactVulns, 0, len(vulns))
 	for _, vuln := range vulns {
 		for _, artifact := range vuln.Artifacts {
 			found := false
-			for i := range allArtfactsToVulns {
-				if allArtfactsToVulns[i].Artifact == fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName) {
-					allArtfactsToVulns[i].Vulns = append(allArtfactsToVulns[i].Vulns, vuln)
+			for i := range allArtifactsToVulns {
+				if allArtifactsToVulns[i].Artifact == fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName) {
+					allArtifactsToVulns[i].Vulns = append(allArtifactsToVulns[i].Vulns, vuln)
 					found = true
 					break
 				}
 			}
 			if !found {
-				allArtfactsToVulns = append(allArtfactsToVulns, artifactVulns{Artifact: fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName), Vulns: []models.DependencyVuln{vuln}})
+				allArtifactsToVulns = append(allArtifactsToVulns, artifactVulns{Artifact: fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName), Vulns: []models.DependencyVuln{vuln}})
 			}
 		}
 	}
 
 	// for each vuln in this object list the respective purl and the current state
 	summary := ""
-	for _, version := range allArtfactsToVulns {
+	for _, version := range allArtifactsToVulns {
 		summary += fmt.Sprintf("ProductID %s: ", version.Artifact)
 		for _, vuln := range version.Vulns {
 			switch vuln.State {

@@ -121,9 +121,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		setupContext(ctx)
 
 		err := repositories.NewArtifactRepository(db).Save(nil, &artifactMain)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = csafController.ServeCSAFReportRequest(ctx)
 		assert.NoError(t, err)
@@ -133,14 +131,10 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		defer body.Close()
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		csafDoc := csaf{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		assert.Equal(t, "csaf_base", csafDoc.Document.Category)
 		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
@@ -166,28 +160,18 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		// add more tags and asset versions to the mix
 		irrelevantAssetVersion := models.AssetVersion{AssetID: asset.ID, Name: "v1", Slug: "v1", Type: "branch", DefaultBranch: false}
 		err := assetVersionRepository.Save(nil, &irrelevantAssetVersion)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = assetVersionRepository.Save(nil, &tag1)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = assetVersionRepository.Save(nil, &tag2)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = repositories.NewArtifactRepository(db).Create(nil, &artifactv1)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		err = repositories.NewArtifactRepository(db).Create(nil, &artifactv2)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = csafController.ServeCSAFReportRequest(ctx)
 		assert.NoError(t, err)
@@ -197,14 +181,10 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		defer body.Close()
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		csafDoc := csaf{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		// only test product tree here
 		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
@@ -236,19 +216,13 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		setupContext(ctx)
 
 		err := repositories.NewCVERepository(db).SaveBatch(nil, []models.CVE{cve1, cve2, cve3})
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = repositories.NewDependencyVulnRepository(db).CreateBatch(nil, []models.DependencyVuln{vuln1, vuln2, vuln3, vuln4, vuln5, vulnExtra})
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = vulnEventRepository.CreateBatch(nil, []models.VulnEvent{event1, event2, event3, event4, event5, event6, event7, event8, event9, event10, eventExtra})
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		// relate vulns to main artifact
 		artifactMain := models.Artifact{
@@ -259,9 +233,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 			DependencyVuln:   []models.DependencyVuln{vuln1, vuln2, vuln3, vuln4, vuln5, vulnExtra},
 		}
 		err = repositories.NewArtifactRepository(db).Save(nil, &artifactMain)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		err = csafController.ServeCSAFReportRequest(ctx)
 		assert.NoError(t, err)
@@ -271,14 +243,10 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		defer body.Close()
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		csafDoc := csaf{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
 		assert.Equal(t, "csaf_security_advisory", csafDoc.Document.Category)
@@ -302,37 +270,27 @@ func TestServeCSAFReportRequest(t *testing.T) {
 
 		assert.Equal(t, "1", revHistory[0].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[0].Date)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assetCreatedAt, err := time.Parse(time.RFC3339, asset.CreatedAt.Format(time.RFC3339))
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, assetCreatedAt.Equal(date))
 		assert.Equal(t, "Asset created, no vulnerabilities found", revHistory[0].Summary)
 
 		assert.Equal(t, "2", revHistory[1].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[1].Date)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(0*time.Minute).Equal(date))
 		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-50181, CVE-2025-50181, CVE-2025-50181, CVE-2025-22871, CVE-2025-50181, CVE-2025-22777, CVE-2025-22777).", revHistory[1].Summary)
 
 		assert.Equal(t, "3", revHistory[2].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[2].Date)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(2*time.Minute).Equal(date))
 		assert.Equal(t, "Accepted 3 existing vulnerabilities (CVE-2025-50181, CVE-2025-50181, CVE-2025-22871, CVE-2025-22777)| Marked 1 existing vulnerability as false positive (CVE-2025-22777).", revHistory[2].Summary)
 
 		assert.Equal(t, "4", revHistory[3].Number)
 		date, err = time.Parse(time.RFC3339, revHistory[3].Date)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(4*time.Minute).Equal(date))
 		assert.Equal(t, "Fixed 1 existing vulnerability (CVE-2025-50181).", revHistory[3].Summary)
 
@@ -341,27 +299,21 @@ func TestServeCSAFReportRequest(t *testing.T) {
 
 		assert.Equal(t, "CVE-2025-50181", csafDoc.Vulnerabilities[0].CVE, csafDoc.Vulnerabilities[0].Title)
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[0].DiscoveryDate)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
 		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.KnownAffected[0])
 
 		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[1].DiscoveryDate)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: accepted for package pkg:golang/helm.sh/helm/v3@v3.18.4", csafDoc.Vulnerabilities[1].Notes[0].Text)
 		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
 
 		assert.Equal(t, "CVE-2025-22777", csafDoc.Vulnerabilities[2].CVE, csafDoc.Vulnerabilities[2].Title)
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[2].DiscoveryDate)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
 		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, accepted for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
 		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
@@ -387,14 +339,10 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		defer body.Close()
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		csafDoc := csaf{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
 		assert.Equal(t, "csaf_security_advisory", csafDoc.Document.Category)

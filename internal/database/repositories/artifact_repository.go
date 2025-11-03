@@ -61,7 +61,7 @@ func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx core.DB, 
 	var artifacts []models.Artifact
 	err := r.Repository.GetDB(tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 
-		AND adv.artifact_asset_version_name = adv.artifact_asset_version_name
+		AND adv.artifact_asset_version_name = a.asset_version_name
 		AND adv.artifact_asset_id = a.asset_id
 		WHERE adv.dependency_vuln_id = ?;`, vulnID).Find(&artifacts).Error
 	if err != nil {
