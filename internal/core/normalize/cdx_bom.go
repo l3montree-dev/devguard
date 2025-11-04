@@ -679,6 +679,7 @@ func FromNormalizedCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 		BOMRef:     artifactName,
 		Name:       artifactName,
 		PackageURL: artifactName,
+		Type:       "application",
 	})
 
 	cdxBom.ReplaceRoot(newRoot)
