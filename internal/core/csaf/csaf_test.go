@@ -249,7 +249,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
-		assert.Equal(t, "csaf_security_advisory", csafDoc.Document.Category)
+		assert.Equal(t, "csaf_vex", csafDoc.Document.Category)
 		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
 		assert.Equal(t, "vendor", csafDoc.Document.Publisher.Category)
 		assert.Equal(t, org.Name, csafDoc.Document.Publisher.Name)
@@ -301,8 +301,8 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[0].DiscoveryDate)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, fixed for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation[0])
 
 		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
 		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[1].DiscoveryDate)
@@ -345,7 +345,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
-		assert.Equal(t, "csaf_security_advisory", csafDoc.Document.Category)
+		assert.Equal(t, "csaf_vex", csafDoc.Document.Category)
 		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
 		assert.Equal(t, "vendor", csafDoc.Document.Publisher.Category)
 		assert.Equal(t, org.Name, csafDoc.Document.Publisher.Name)
@@ -374,15 +374,15 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, 3, len(csafDoc.Vulnerabilities)) // 3 CVEs should result in 3 Vulnerability Groups
 
 		assert.Equal(t, "CVE-2025-50181", csafDoc.Vulnerabilities[0].CVE, csafDoc.Vulnerabilities[0].Title)
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation[0])
 
 		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
 		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/helm.sh/helm/v3@v3.18.4", csafDoc.Vulnerabilities[1].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.UnderInvestigation[0])
 
 		assert.Equal(t, "CVE-2025-22777", csafDoc.Vulnerabilities[2].CVE, csafDoc.Vulnerabilities[2].Title)
 		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, unhandled for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[2].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[2].ProductStatus.UnderInvestigation[0])
 	})
 }
