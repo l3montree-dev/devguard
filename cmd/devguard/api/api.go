@@ -165,6 +165,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+	componentOccurrenceRepository := repositories.NewComponentOccurrenceRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
@@ -203,6 +204,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
+	componentOccurrenceController := vuln.NewComponentOccurrenceHTTPController(componentOccurrenceRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
@@ -319,6 +321,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.GET("/metrics/", orgController.Metrics)
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/dependency-components/", componentOccurrenceController.SearchByOrg)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
