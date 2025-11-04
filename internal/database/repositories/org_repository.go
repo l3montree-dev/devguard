@@ -124,3 +124,10 @@ func (g *orgRepository) firstFreeSlug(organizationSlug string) (string, error) {
 		}
 	}
 }
+
+func (g *orgRepository) GetOrgsWithVulnSharingAssets() ([]models.Org, error) {
+	var orgs []models.Org
+	err := g.db.Model(&models.Org{}).
+		Where("EXISTS (SELECT 1 FROM projects WHERE projects.organization_id = organizations.id AND EXISTS (SELECT 1 FROM assets WHERE assets.project_id = projects.id AND assets.shares_information = true))").Find(&orgs).Error
+	return orgs, err
+}

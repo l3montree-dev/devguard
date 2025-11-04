@@ -447,7 +447,9 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 // Override the base GetAllVulnsByAssetID method to preload artifacts
 func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
+	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 	return vulns, nil

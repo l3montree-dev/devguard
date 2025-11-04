@@ -284,3 +284,11 @@ func (repository *assetRepository) firstFreeSlug(projectID uuid.UUID, assetSlug 
 		}
 	}
 }
+
+func (repository *assetRepository) GetAssetsWithVulnSharingEnabled(orgID uuid.UUID) ([]models.Asset, error) {
+	var assets []models.Asset
+	err := repository.db.Where("shares_information = true").Where(
+		"EXISTS (SELECT 1 from projects where projects.id = assets.project_id AND projects.organization_id = ?)", orgID,
+	).Preload("Project").Find(&assets).Error
+	return assets, err
+}

@@ -34,6 +34,18 @@ func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, 
 	return artifacts, nil
 }
 
+func (r *artifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
+	var artifacts []models.Artifact
+
+	err := r.db.Where("asset_id = ? AND asset_version_name IN ?", assetID, assetVersionNames).Find(&artifacts).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return artifacts, nil
+}
+
 func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	var artifact models.Artifact
 	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error

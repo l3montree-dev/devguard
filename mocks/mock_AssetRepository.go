@@ -804,6 +804,68 @@ func (_c *AssetRepository_GetAssetIDBySlug_Call) RunAndReturn(run func(projectID
 	return _c
 }
 
+// GetAssetsWithVulnSharingEnabled provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) GetAssetsWithVulnSharingEnabled(orgID uuid.UUID) ([]models.Asset, error) {
+	ret := _mock.Called(orgID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAssetsWithVulnSharingEnabled")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Asset, error)); ok {
+		return returnFunc(orgID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Asset); ok {
+		r0 = returnFunc(orgID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = returnFunc(orgID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_GetAssetsWithVulnSharingEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetsWithVulnSharingEnabled'
+type AssetRepository_GetAssetsWithVulnSharingEnabled_Call struct {
+	*mock.Call
+}
+
+// GetAssetsWithVulnSharingEnabled is a helper method to define mock.On call
+//   - orgID uuid.UUID
+func (_e *AssetRepository_Expecter) GetAssetsWithVulnSharingEnabled(orgID interface{}) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
+	return &AssetRepository_GetAssetsWithVulnSharingEnabled_Call{Call: _e.mock.On("GetAssetsWithVulnSharingEnabled", orgID)}
+}
+
+func (_c *AssetRepository_GetAssetsWithVulnSharingEnabled_Call) Run(run func(orgID uuid.UUID)) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_GetAssetsWithVulnSharingEnabled_Call) Return(assets []models.Asset, err error) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
+	_c.Call.Return(assets, err)
+	return _c
+}
+
+func (_c *AssetRepository_GetAssetsWithVulnSharingEnabled_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.Asset, error)) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByOrgID provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error) {
 	ret := _mock.Called(organizationID)

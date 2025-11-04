@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"maps"
+	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -19,6 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type csafController struct {
@@ -86,7 +89,7 @@ func signCSAFReport(csafJSON []byte) ([]byte, error) {
 func (controller *csafController) GetIndexFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
-	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
+	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
 	if err != nil {
 		return err
 	}
@@ -105,7 +108,7 @@ func (controller *csafController) GetIndexFile(ctx core.Context) error {
 func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// build revision history first
-	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
+	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
 	if err != nil {
 		return err
 	}
@@ -183,20 +186,19 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 	if err != nil {
 		return nil, err
 	}
-
 	// iterate over every event = version, check the release year and append if not already present
 	allYears := make([]int, 0)
-	events, err := vulnEventRepository.GetSecurityRelevantEventsForVulnIDs(nil, utils.Map(vulns, func(el models.DependencyVuln) string {
-		return el.ID
-	}))
 	if err != nil {
 		return nil, err
 	}
-
 	// build a map
 	allYearsMap := map[int]struct{}{
 		asset.CreatedAt.Year(): {},
 	}
+
+	events := utils.Flat(utils.Map(vulns, func(el models.DependencyVuln) []models.VulnEvent {
+		return el.Events
+	}))
 
 	for _, event := range events {
 		year := event.CreatedAt.Year()
@@ -261,7 +263,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
-	tracking, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, int(^uint(0)>>1))
+	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
 	if err != nil {
 		return err
 	}
@@ -375,7 +377,7 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 		LastUpdated:       time.Now().Format(time.RFC3339),
 	}
 
-	orgs, err := controller.organizationRepository.All()
+	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets()
 	if err != nil {
 		return err
 	}
@@ -416,14 +418,11 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Context) error {
 	org := core.GetOrg(ctx)
 	hostURL := os.Getenv("API_URL")
-	if hostURL == "" {
-		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
-	}
 	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/", hostURL, org.Slug)
 
 	fingerprint, err := getPublicKeyFingerprint()
 	if err != nil {
-		return err
+		return echo.NewHTTPError(404, "organization not found")
 	}
 
 	metadata := providerMetadata{
@@ -441,22 +440,20 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 			Namespace:      os.Getenv("API_URL"), // TODO add option to add namespace to an org
 		},
 	}
-	assets, err := controller.assetRepository.GetByOrgID(org.ID)
+	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(org.ID)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(404, "organization not found")
+	}
+	if len(assets) == 0 {
+		return echo.NewHTTPError(404, "organization not found")
 	}
 
 	distributions := make([]distributionProviderMetadata, 0)
 	for _, asset := range assets {
-		project, err := controller.projectRepository.GetProjectByAssetID(asset.ID)
-		if err != nil {
-			// maybe swallow error and publish incomplete set
-			return err
-		}
 		distribution := distributionProviderMetadata{
 			Summary:  "location of provider-metadata.json for asset: " + asset.Name,
 			TLPLabel: "WHITE",
-			URL:      fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, project.Slug, asset.Slug),
+			URL:      fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
 		}
 		distributions = append(distributions, distribution)
 	}
@@ -600,7 +597,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 		},
 	}
 
-	tracking, err := generateTrackingObject(asset, dependencyVulnRepository, vulnEventRepository, version)
+	tracking, vulns, err := generateTrackingObject(asset, dependencyVulnRepository, vulnEventRepository, version)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -617,7 +614,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if err != nil {
 		return csafDoc, err
 	}
-	vulnerabilities, err := generateVulnerabilitiesObject(asset, lastRevisionTimestamp, dependencyVulnRepository, vulnEventRepository, cveRepository, artifactRepository)
+	vulnerabilities, err := generateVulnerabilityObjects(lastRevisionTimestamp, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -627,7 +624,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if len(vulnerabilities) == 0 {
 		csafDoc.Document.Category = "csaf_base"
 	} else {
-		csafDoc.Document.Category = "csaf_security_advisory"
+		csafDoc.Document.Category = "csaf_vex"
 	}
 
 	csafDoc.Document.Tracking.CurrentReleaseDate = csafDoc.Document.Tracking.RevisionHistory[len(csafDoc.Document.Tracking.RevisionHistory)-1].Date
@@ -643,40 +640,38 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 		return tree, err
 	}
 
-	// append each relevant asset version
-	for _, version := range assetVersions {
-		artifacts, err := artifactRepository.GetByAssetIDAndAssetVersionName(asset.ID, version.Name)
-		if err != nil {
-			return tree, err
-		}
-		for _, artifact := range artifacts {
-			branch := branches{
-				Category: "product_version",
-				Name:     artifact.ArtifactName + "@" + version.Name,
-				Product: &fullProductName{
-					Name:      artifact.ArtifactName + "@" + version.Name,
-					ProductID: artifact.ArtifactName + "@" + version.Name,
-				},
-			}
-			tree.Branches = append(tree.Branches, branch)
-		}
+	assetVersionNames := utils.Map(assetVersions, func(el models.AssetVersion) string {
+		return el.Name
+	})
 
+	artifacts, err := artifactRepository.GetByAssetVersions(asset.ID, assetVersionNames)
+	if err != nil {
+		return tree, err
+	}
+
+	// append each relevant asset version
+	for _, artifact := range artifacts {
+		branch := branches{
+			Category: "product_version",
+			Name:     artifact.ArtifactName + "@" + artifact.AssetVersionName,
+			Product: &fullProductName{
+				Name:      artifact.ArtifactName + "@" + artifact.AssetVersionName,
+				ProductID: artifact.ArtifactName + "@" + artifact.AssetVersionName,
+			},
+		}
+		tree.Branches = append(tree.Branches, branch)
 	}
 
 	return tree, nil
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]vulnerability, error) {
+func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.DependencyVuln) ([]vulnerability, error) {
 	vulnerabilities := []vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns
-	vulns, err := dependencyVulnRepository.GetAllVulnsForTagsAndDefaultBranchInAsset(nil, asset.ID, []models.VulnState{models.VulnStateFixed})
-	if err != nil {
-		return nil, err
-	}
-	filteredVulns := make([]models.DependencyVuln, 0, len(vulns))
-	for _, vuln := range vulns {
+	filteredVulns := make([]models.DependencyVuln, 0, len(allVulnsOfAsset))
+	for _, vuln := range allVulnsOfAsset {
 		if vuln.CreatedAt.Before(timeStamp) {
 			filteredVulns = append(filteredVulns, vuln)
 		}
@@ -685,6 +680,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 		return vulnerabilities, nil
 	}
 
+	lastEvents := map[string]models.VulnEvent{}
 	// then time travel each vuln to the state at timeStamp using the latest events
 	for i, vuln := range filteredVulns {
 		var lastEvent models.VulnEvent
@@ -696,6 +692,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			}
 		}
 		lastEvent.Apply(&filteredVulns[i])
+		lastEvents[vuln.ID] = lastEvent
 	}
 
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
@@ -710,7 +707,12 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 			CVE:   cve,
 			Title: cve,
 		}
-		uniqueVersionsAffected := make([]string, 0, len(vulnsInGroup))
+		affected := map[string]struct{}{}
+		notAffected := map[string]struct{}{}
+		fixed := map[string]struct{}{}
+		underInvestigation := map[string]struct{}{}
+		flags := []flag{}
+		threats := []threat{}
 		for _, vuln := range vulnsInGroup {
 			// determine the discovery date
 			if vulnObject.DiscoveryDate == "" {
@@ -724,17 +726,48 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 				}
 			}
 
-			for _, artifact := range vuln.Artifacts {
-				if !slices.Contains(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)) {
-					uniqueVersionsAffected = append(uniqueVersionsAffected, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
+			productIDs := utils.Map(vuln.Artifacts, func(v models.Artifact) string {
+				return fmt.Sprintf("%s@%s", v.ArtifactName, v.AssetVersionName)
+			})
+
+			switch vuln.State {
+			case models.VulnStateOpen:
+				for _, pid := range productIDs {
+					underInvestigation[pid] = struct{}{}
+				}
+			case models.VulnStateAccepted:
+				threats = append(threats, threat{
+					Category: "impact",
+					Details:  utils.SafeDereference(lastEvents[vuln.ID].Justification),
+				})
+				for _, pid := range productIDs {
+					affected[pid] = struct{}{}
+				}
+			case models.VulnStateFixed:
+				for _, pid := range productIDs {
+					fixed[pid] = struct{}{}
+				}
+			case models.VulnStateFalsePositive:
+				flags = append(flags, flag{
+					Label:      utils.OrDefault(utils.EmptyThenNil(string(lastEvents[vuln.ID].MechanicalJustification)), "vulnerable_code_not_in_execute_path"),
+					ProductIDs: productIDs,
+				})
+				for _, pid := range productIDs {
+					notAffected[pid] = struct{}{}
 				}
 			}
 		}
-		vulnObject.ProductStatus = productStatus{
-			KnownAffected: uniqueVersionsAffected,
-		}
 
-		notes, err := generateNotesForVulnerabilityObject(vulnsInGroup, cveRepository, artifactRepository)
+		vulnObject.ProductStatus = productStatus{
+			Fixed:              slices.Collect(maps.Keys(fixed)),
+			KnownAffected:      slices.Collect(maps.Keys(affected)),
+			KnownNotAffected:   slices.Collect(maps.Keys(notAffected)),
+			UnderInvestigation: slices.Collect(maps.Keys(underInvestigation)),
+		}
+		vulnObject.Flags = flags
+		vulnObject.Threats = threats
+
+		notes, err := generateNotesForVulnerabilityObject(vulnsInGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -749,7 +782,7 @@ func generateVulnerabilitiesObject(asset models.Asset, timeStamp time.Time, depe
 }
 
 // generate the textual summary for a vulnerability object
-func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) ([]note, error) {
+func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]note, error) {
 	if len(vulns) == 0 {
 		return nil, nil
 	}
@@ -758,11 +791,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, cveRepos
 		Title:    "state of the vulnerability in the product",
 	}
 
-	cve, err := cveRepository.FindByID(*vulns[0].CVEID)
-	if err != nil {
-		return nil, nil
-	}
-
+	cve := vulns[0].CVE
 	cveDescription := note{
 		Category: "description",
 		Title:    "textual description of CVE",
@@ -801,27 +830,32 @@ func stateToString(state models.VulnState) string {
 		return "accepted"
 	case models.VulnStateFalsePositive:
 		return "marked as false positive"
+	case models.VulnStateFixed:
+		return "fixed"
 	default:
 		return "unknown state"
 	}
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (trackingObject, error) {
+func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (trackingObject, []models.DependencyVuln, error) {
 	tracking := trackingObject{}
 	// first get all dependency vulns for an asset
 	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
-		return tracking, err
+		return tracking, vulns, err
 	}
 
-	// then collect all security relevant events
-	allEvents, err := vulnEventRepository.GetSecurityRelevantEventsForVulnIDs(nil, utils.Map(vulns, func(el models.DependencyVuln) string {
-		return el.ID
+	// gather all events - and filter them to security relevant ones
+	allEvents := utils.Flat(utils.Map(vulns, func(v models.DependencyVuln) []models.VulnEvent {
+		return utils.Filter(v.Events, func(e models.VulnEvent) bool {
+			return models.EventTypeAccepted == e.Type ||
+				models.EventTypeDetected == e.Type ||
+				models.EventTypeFixed == e.Type ||
+				models.EventTypeReopened == e.Type ||
+				models.EventTypeFalsePositive == e.Type
+		})
 	}))
-	if err != nil {
-		return tracking, err
-	}
 
 	// sort them by their creation timestamp
 	slices.SortFunc(allEvents, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
@@ -839,7 +873,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	// then we can construct the full revision history
 	revisions, err := buildRevisionHistory(asset, allEvents, vulns, documentVersion, dependencyVulnRepository)
 	if err != nil {
-		return tracking, err
+		return tracking, vulns, err
 	}
 	tracking.RevisionHistory = revisions
 
@@ -848,7 +882,7 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", strings.ToLower(asset.Slug), strings.ToLower(version))
 	tracking.Version = version
 	tracking.Status = "interim"
-	return tracking, nil
+	return tracking, vulns, nil
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset

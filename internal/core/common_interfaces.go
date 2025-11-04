@@ -82,6 +82,7 @@ type AssetRepository interface {
 	Delete(tx DB, id uuid.UUID) error
 	GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error)
 	ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error)
+	GetAssetsWithVulnSharingEnabled(orgID uuid.UUID) ([]models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -96,6 +97,7 @@ type ArtifactRepository interface {
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	GetAllArtifactAffectedByDependencyVuln(tx DB, vulnID string) ([]models.Artifact, error)
+	GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 }
 
 type ReleaseRepository interface {
@@ -232,6 +234,7 @@ type OrganizationRepository interface {
 	Update(tx DB, organization *models.Org) error
 	ContentTree(orgID uuid.UUID, projects []string) []any // returns project dtos as values - including fetched assets
 	GetOrgByID(id uuid.UUID) (models.Org, error)
+	GetOrgsWithVulnSharingAssets() ([]models.Org, error)
 }
 
 type OrgService interface {
