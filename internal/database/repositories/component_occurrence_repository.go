@@ -38,6 +38,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("JOIN organizations ON projects.organization_id = organizations.id").
+		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Where("projects.organization_id = ?", orgID).
 		Where("component_dependencies.component_purl ILIKE ?", "%"+search+"%")
 
@@ -62,10 +63,13 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
             assets.slug AS asset_slug,
             component_dependencies.asset_version_name AS asset_version_name,
             component_dependencies.component_purl AS component_purl,
-            components.version AS component_version`).
+            components.version AS component_version,
+            artifact_component_dependencies.artifact_artifact_name AS artifact_name,
+            artifact_component_dependencies.artifact_asset_version_name AS artifact_asset_version_name`).
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("JOIN organizations ON projects.organization_id = organizations.id").
+		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
 		Where("projects.organization_id = ?", orgID).
 		Where("component_dependencies.component_purl ILIKE ?", "%"+search+"%").

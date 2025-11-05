@@ -15,6 +15,8 @@ type ComponentOccurrenceDTO struct {
 	AssetVersionName      string  `json:"assetVersionName"`
 	ComponentPurl         *string `json:"componentPurl"`
 	ComponentVersion      *string `json:"componentVersion"`
+	ArtifactName          *string `json:"artifactName"`
+	ArtifactAssetVersion  *string `json:"artifactAssetVersion"`
 }
 
 func convertComponentOccurrenceToDTO(m models.ComponentOccurrence) ComponentOccurrenceDTO {
@@ -31,5 +33,7 @@ func convertComponentOccurrenceToDTO(m models.ComponentOccurrence) ComponentOccu
 		AssetVersionName:      m.AssetVersionName,
 		ComponentPurl:         m.ComponentPurl,
 		ComponentVersion:      m.ComponentVersion,
+		ArtifactName:          m.ArtifactName,
+		ArtifactAssetVersion:  m.ArtifactAssetVersion,
 	}
 }

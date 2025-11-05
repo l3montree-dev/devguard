@@ -15,4 +15,6 @@ type ComponentOccurrence struct {
 	AssetVersionName      string    `json:"assetVersionName" gorm:"column:asset_version_name"`
 	ComponentPurl         *string   `json:"componentPurl" gorm:"column:component_purl"`
 	ComponentVersion      *string   `json:"componentVersion" gorm:"column:component_version"`
+	ArtifactName          *string   `json:"artifactName" gorm:"column:artifact_name"`
+	ArtifactAssetVersion  *string   `json:"artifactAssetVersion" gorm:"column:artifact_asset_version_name"`
 }
