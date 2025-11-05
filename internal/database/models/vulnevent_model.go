@@ -148,6 +148,9 @@ func (event VulnEvent) Apply(vuln Vuln) {
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
+		if event.Upstream == UpstreamStateExternal {
+			return
+		}
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
 		// event type detected will always be applied!

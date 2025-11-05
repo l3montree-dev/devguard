@@ -230,30 +230,24 @@ func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, pro
 	outer:
 		for i := range newState {
 			if expected, ok := expectedMap[*newState[i].CVEID]; ok {
-				// check if state changing event
-				var expectedVulnState models.VulnState
-				if expected.eventType == models.EventTypeAccepted {
-					// we need to map accepted events to open manually.
-					// if upstream says, wont fix, it needs to be open.
-					expectedVulnState = models.VulnStateOpen
-				} else {
-					expectedVulnState, err = models.EventTypeToVulnState(expected.eventType)
-					if err != nil {
-						slog.Error("could not convert event type to vuln state", "err", err)
-						continue
-					}
-				}
 
-				if newState[i].State == expectedVulnState {
+				expectedEventType, err := models.EventTypeToVulnState(expected.eventType)
+				if err != nil {
+					slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue
 				}
-
 				// check if we already have seen this event from upstream
 				for j := len(newState[i].Events) - 1; j >= 0; j-- {
 					event := newState[i].Events[j]
+					eventType, err := models.EventTypeToVulnState(event.Type)
+					if err != nil {
+						slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
+						continue
+					}
+					// only consider non-internal upstream events
 					if event.Upstream != models.UpstreamStateInternal {
 						// the last event
-						if event.Type == expected.eventType && event.Justification != nil && *event.Justification == expected.justification {
+						if eventType == expectedEventType && event.Justification != nil && *event.Justification == expected.justification {
 							// we already have seen this event
 							continue outer
 						} else {

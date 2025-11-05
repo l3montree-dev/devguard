@@ -738,6 +738,7 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 	licenses := cdx.Licenses{}
 	//first check if the license is overwritten by a license risk#
 	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
+	componentLicense := utils.SafeDereference(component.Dependency.License)
 	if exists && overwrite != "" {
 		// TO-DO: check if the license provided by the user is a valid license or not
 		licenses = append(licenses, cdx.LicenseChoice{
@@ -746,33 +747,51 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 			},
 		})
 
-	} else if component.Dependency.License != nil && *component.Dependency.License != "" {
-		if *component.Dependency.License != "non-standard" {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					ID: *component.Dependency.License,
-				},
-			})
+	} else if componentLicense != "" {
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentLicense != "non-standard" && componentLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentLicense) {
+				licenses = append(licenses, cdx.LicenseChoice{
+					Expression: componentLicense,
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: componentLicense,
+					},
+				})
+			}
+
 		} else {
 			licenses = append(licenses, cdx.LicenseChoice{
 				License: &cdx.License{
-					ID: "non-standard",
+					Name: componentLicense,
 				},
 			})
 		}
 
 	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-		// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-		if component.Dependency.ComponentProject.License != "non-standard" {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					ID: component.Dependency.ComponentProject.License,
-				},
-			})
+		componentProjectLicense := component.Dependency.ComponentProject.License
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentProjectLicense != "non-standard" && componentProjectLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentProjectLicense) {
+				licenses = append(licenses, cdx.LicenseChoice{
+					Expression: componentProjectLicense,
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: componentProjectLicense,
+					},
+				})
+			}
+
 		} else {
 			licenses = append(licenses, cdx.LicenseChoice{
 				License: &cdx.License{
-					ID: "non-standard",
+					Name: componentProjectLicense,
 				},
 			})
 		}
@@ -1320,4 +1339,8 @@ func createTitles(name string) (string, string) {
 	}
 	//now we return the two titles formatted correctly for the yaml file
 	return title1, title2
+}
+
+func isLicenseExpression(license string) bool {
+	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
 }
