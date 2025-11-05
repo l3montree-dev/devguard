@@ -17,39 +17,132 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
-
-	"github.com/package-url/packageurl-go"
 )
 
-type TreeNode struct {
-	Name     string      `json:"name"`
-	Children []*TreeNode `json:"children"`
+type TreeNode[Element Node] struct {
+	element  Element
+	ID       string               `json:"name"`
+	Children []*TreeNode[Element] `json:"children"`
 }
 
-type Tree struct {
-	Root    *TreeNode `json:"root"`
-	cursors map[string]*TreeNode
+type Tree[Element Node] struct {
+	Root    *TreeNode[Element] `json:"root"`
+	cursors map[string]*TreeNode[Element]
 }
 
-func newNode(name string) *TreeNode {
-	return &TreeNode{
-		Name:     name,
-		Children: []*TreeNode{},
+func newNode[Element Node](el Element) *TreeNode[Element] {
+	return &TreeNode[Element]{
+		ID:       el.GetID(),
+		element:  el,
+		Children: []*TreeNode[Element]{},
 	}
 }
 
-func (tree *Tree) Visitable() ([]string, []string) {
+func (tree *Tree[Element]) ReplaceRoot(node Element) {
+	originalChildren := tree.Root.Children
 
-	visited := make(map[string]bool)
+	newRootNode := newNode(node)
+	newRootNode.Children = originalChildren
+	tree.cursors[node.GetID()] = newRootNode
+	tree.Root = newRootNode
+}
 
-	var visit func(node *TreeNode)
-	visit = func(node *TreeNode) {
+func (tree *Tree[Element]) AddChild(parent *TreeNode[Element], child *TreeNode[Element]) {
+	// we actually get two tree nodes here
+	// this means they might contain children
+	parent.Children = append(parent.Children, child)
+	tree.addNode(child)
+}
+
+func (tree *Tree[Element]) AddDirectChildWhichInheritsChildren(parent Element, child Element) {
+	// find parent node
+	parentNode, exists := tree.cursors[parent.GetID()]
+	if !exists {
+		return
+	}
+
+	// create new child node
+	childNode := newNode(child)
+	// inherit children from parent
+	childNode.Children = parentNode.Children
+
+	// set parent's children to only the new child
+	parentNode.Children = []*TreeNode[Element]{childNode}
+	tree.cursors[child.GetID()] = childNode
+}
+
+func (tree *Tree[Element]) AddSourceChildrenToTarget(source *TreeNode[Element], target *TreeNode[Element]) {
+	// source children are added to target children
+	// avoiding duplicates
+	existingChildren := make(map[string]bool)
+	for _, child := range target.Children {
+		existingChildren[child.ID] = true
+	}
+
+	for _, child := range source.Children {
+		if !existingChildren[child.ID] {
+			target.Children = append(target.Children, child)
+			existingChildren[child.ID] = true
+			tree.addNode(child)
+		}
+	}
+}
+
+func (tree *Tree[Element]) addNode(node *TreeNode[Element]) {
+	tree.cursors[node.ID] = node
+	// add all children recursively
+	for _, child := range node.Children {
+		tree.addNode(child)
+	}
+}
+
+func (tree *Tree[Element]) ReplaceNode(old *TreeNode[Element], new *TreeNode[Element]) {
+	// find parent of old node
+	for _, node := range tree.cursors {
+		for i, child := range node.Children {
+			if child.ID == old.ID {
+				// replace old with new
+				node.Children[i] = new
+			}
+		}
+	}
+	tree.addNode(new)
+}
+
+func (tree *Tree[Element]) ReplaceSubtree(other *TreeNode[Element]) {
+	var overlay func(node *TreeNode[Element])
+	overlay = func(node *TreeNode[Element]) {
 		if node == nil {
 			return
 		}
-		visited[node.Name] = true
+		if node.ID == other.ID {
+			// replace by other nodes children
+			node.Children = other.Children
+			// ensure all children are in the tree cursors
+			for _, child := range other.Children {
+				tree.addNode(child)
+			}
+		}
+		for _, child := range node.Children {
+			overlay(child)
+		}
+	}
+
+	overlay(tree.Root)
+}
+
+func (tree *Tree[Element]) Visitable() ([]string, []string) {
+	visited := make(map[string]bool)
+
+	var visit func(node *TreeNode[Element])
+	visit = func(node *TreeNode[Element]) {
+		if node == nil {
+			return
+		}
+		visited[node.ID] = true
 		for _, child := range node.Children {
 			visit(child)
 		}
@@ -69,60 +162,28 @@ func (tree *Tree) Visitable() ([]string, []string) {
 	return visitable, unvisitable
 }
 
-func (tree *Tree) ReachableThroughMultipleRoots() []string {
-	reachablePurls := make(map[string]map[string]bool)
-
-	var visit func(node *TreeNode, root string)
-	visit = func(node *TreeNode, root string) {
-		if node == nil {
-			return
-		}
-		if _, ok := reachablePurls[node.Name]; !ok {
-			reachablePurls[node.Name] = make(map[string]bool)
-		}
-		reachablePurls[node.Name][root] = true
-		for _, child := range node.Children {
-			visit(child, root)
-		}
-	}
-
-	// start from all root nodes (children of the main root)
-	for _, child := range tree.Root.Children {
-		visit(child, child.Name)
-	}
-
-	multipleRoots := []string{}
-	for name, roots := range reachablePurls {
-		if len(roots) > 1 {
-			multipleRoots = append(multipleRoots, name)
-		}
-	}
-
-	return multipleRoots
-}
-
-func (tree *Tree) addNode(source string, dep string) {
+func (tree *Tree[Element]) addElement(source Element, dep Element) {
 	// check if source does exist
-	if _, ok := tree.cursors[source]; !ok {
-		tree.cursors[source] = newNode(source)
+	if _, ok := tree.cursors[source.GetID()]; !ok {
+		tree.cursors[source.GetID()] = newNode(source)
 	}
 	// check if dep does already exist
-	if _, ok := tree.cursors[dep]; !ok {
-		tree.cursors[dep] = newNode(dep)
+	if _, ok := tree.cursors[dep.GetID()]; !ok {
+		tree.cursors[dep.GetID()] = newNode(dep)
 	}
 
 	// check if connection does already exist
-	for _, child := range tree.cursors[source].Children {
-		if child.Name == dep {
+	for _, child := range tree.cursors[source.GetID()].Children {
+		if child.ID == dep.GetID() {
 			return
 		}
 	}
 
-	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
+	tree.cursors[source.GetID()].Children = append(tree.cursors[source.GetID()].Children, tree.cursors[dep.GetID()])
 }
 
 // Helper function to detect and cut cycles
-func cutCycles(node *TreeNode, visited map[*TreeNode]bool) {
+func cutCycles[Element Node](node *TreeNode[Element], visited map[*TreeNode[Element]]bool) {
 	// Mark the current node as visited
 	visited[node] = true
 
@@ -145,94 +206,108 @@ func cutCycles(node *TreeNode, visited map[*TreeNode]bool) {
 	delete(visited, node)
 }
 
-func CalculateDepth(node *TreeNode, currentDepth int, depthMap map[string]int) {
-	// check if the child is a VALID PURL - only then increment depth
-	_, err := packageurl.FromString(node.Name)
-	if err == nil {
-		currentDepth++
-	}
+type Node interface {
+	GetID() string
+}
 
-	if _, ok := depthMap[node.Name]; !ok {
-		depthMap[node.Name] = currentDepth
-	} else if depthMap[node.Name] > currentDepth {
-		// use the shortest path
-		depthMap[node.Name] = currentDepth
+func BuildDependencyTree[Element Node](root Element, elements []Element, depMap map[string][]string) Tree[Element] {
+	// create a new tree
+	rootNode := newNode(root)
+	tree := Tree[Element]{
+		Root: rootNode,
+		cursors: map[string]*TreeNode[Element]{
+			root.GetID(): rootNode,
+		},
 	}
-	for _, child := range node.Children {
-		if strings.HasPrefix(child.Name, fmt.Sprintf("%s:", BomTypeVEX)) {
+	// build a data map
+	elementMap := make(map[string]Element)
+	for _, element := range elements {
+		elementMap[element.GetID()] = element
+	}
+	elementMap[root.GetID()] = root
+
+	for _, element := range elementMap {
+		ref := element.GetID()
+		depMapEntry, ok := depMap[ref]
+		if !ok {
 			continue
 		}
-		CalculateDepth(child, currentDepth, depthMap)
-	}
-}
-
-type DependencyTree interface {
-	GetRef() string
-	GetDeps() []string
-}
-
-func buildDependencyTree[T DependencyTree](elements []T, root string) Tree {
-
-	treeName := root
-
-	// create a new tree
-	tree := Tree{
-		Root:    &TreeNode{Name: treeName},
-		cursors: make(map[string]*TreeNode),
-	}
-
-	tree.cursors[treeName] = tree.Root
-
-	for _, element := range elements {
-		ref := element.GetRef()
-		for _, d := range element.GetDeps() {
-			tree.addNode(ref, d)
+		for _, d := range depMapEntry {
+			if dep, ok := elementMap[d]; ok {
+				tree.addElement(element, dep)
+			} else {
+				// dependency not found in element map, create a placeholder node
+				slog.Info("not found")
+			}
 		}
 	}
-
-	cutCycles(tree.Root, make(map[*TreeNode]bool))
-
+	cutCycles(tree.Root, make(map[*TreeNode[Element]]bool))
 	return tree
 }
 
 func escapeNodeID(s string) string {
+	if s == "" {
+		return "root"
+	}
 	// Creates a safe Mermaid node ID by removing special characters
 	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
 }
 
 func escapeAtSign(pURL string) string {
+	if pURL == "" {
+		return "root"
+	}
 	// escape @ sign in purl
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
-func (tree *Tree) RenderToMermaid() string {
+func (tree *Tree[Data]) Reachable(id string) bool {
+	var found bool
+	var search func(node *TreeNode[Data])
+	search = func(node *TreeNode[Data]) {
+		if node == nil || found {
+			return
+		}
+		if node.ID == id {
+			found = true
+			return
+		}
+		for _, child := range node.Children {
+			search(child)
+		}
+	}
+
+	search(tree.Root)
+	return found
+}
+
+func (tree *Tree[Data]) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
 	var builder strings.Builder
 	builder.WriteString(mermaidFlowChart)
 
-	var renderPaths func(node *TreeNode)
+	var renderPaths func(node *TreeNode[Data])
 
 	var existingPaths = make(map[string]bool)
 
-	renderPaths = func(node *TreeNode) {
+	renderPaths = func(node *TreeNode[Data]) {
 		if node == nil {
 			return
 		}
 		// sort the children by name to ensure consistent rendering
-		slices.SortStableFunc(node.Children, func(a, b *TreeNode) int {
-			return strings.Compare(a.Name, b.Name)
+		slices.SortStableFunc(node.Children, func(a, b *TreeNode[Data]) int {
+			return strings.Compare(a.ID, b.ID)
 		})
 		for _, child := range node.Children {
-
-			fromLabel, err := BeautifyPURL(node.Name)
+			fromLabel, err := BeautifyPURL(node.ID)
 			if err != nil {
-				fromLabel = node.Name
+				fromLabel = node.ID
 			}
-			toLabel, err := BeautifyPURL(child.Name)
+			toLabel, err := BeautifyPURL(child.ID)
 			if err != nil {
-				toLabel = child.Name
+				toLabel = child.ID
 			}
 			path := fmt.Sprintf("%s([\"%s\"]) --- %s([\"%s\"])\n",
 				escapeNodeID(fromLabel), escapeAtSign(fromLabel), escapeNodeID(toLabel), escapeAtSign(toLabel))
@@ -251,10 +326,4 @@ func (tree *Tree) RenderToMermaid() string {
 	renderPaths(tree.Root)
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
-}
-
-func BuildDependencyTree[T DependencyTree](elements []T, root string) Tree {
-	// create a new tree
-	return buildDependencyTree(elements, root)
-
 }

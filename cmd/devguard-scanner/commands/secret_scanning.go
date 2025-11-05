@@ -30,6 +30,7 @@ You may pass the target as the first positional argument instead of using
 Example:
 	devguard-scanner secret-scanning --path ./my-repo
 	devguard-scanner secret-scanning ./my-repo
+	devguard-scanner secret-scanning --path ./my-repo --outputPath secrets.sarif.json
 `,
 		RunE: sarifCommandFactory("secret-scanning"),
 	}
@@ -38,26 +39,32 @@ Example:
 	return secretScanningCommand
 }
 
-func secretScan(p string) (*common.SarifResult, error) {
+func secretScan(p, outputPath string) (*common.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "secret-scanning")
 
-	// create new directory
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create temp file")
+	var sarifFilePath string
+	if outputPath != "" {
+		sarifFilePath = outputPath
+	} else {
+		// create new directory
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create temp file")
+		}
+		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting secret scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
+	slog.Info("Starting secret scanning", "path", p, "result-path", sarifFilePath)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", path.Join(dir, "result.sarif"), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err = scannerCmd.Run()
+	err := scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -70,7 +77,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	// read AND parse the file
 	var sarifScan common.SarifResult
 	// open the file
-	file, err := os.Open(path.Join(dir, "result.sarif"))
+	file, err := os.Open(sarifFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open file")
 	}

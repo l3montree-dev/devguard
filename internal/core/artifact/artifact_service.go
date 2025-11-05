@@ -62,8 +62,8 @@ func (s *service) ReadArtifact(name string, assetVersionName string, assetID uui
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]normalize.SBOM, []string, []string) {
-	var boms []normalize.SBOM
+func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+	var boms []*normalize.CdxBom
 
 	var validURLs []string
 	var invalidURLs []string
@@ -128,7 +128,7 @@ func extractCVE(s string) string {
 	return s
 }
 
-func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
 	upstream := models.UpstreamStateExternalAccepted
 	if asset.ParanoidMode {
@@ -137,14 +137,14 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 
 	notFound := 0
 
-	type VulnState struct {
-		state         string
+	type VulnEvent struct {
+		eventType     models.VulnEventType
 		purl          string
 		justification string
 	}
 
 	// keyed by CVE-ID
-	expectedVulnState := make(map[string]VulnState)
+	expectedMap := make(map[string]VulnEvent)
 
 	// iterate vulnerabilities in the CycloneDX BOM
 	cveIDs := make([]string, 0)
@@ -166,8 +166,8 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 				cveID = strings.ToUpper(strings.TrimSpace(cveID))
 				cveIDs = append(cveIDs, cveID)
 
-				statusType := normalize.MapCDXToVulnStatus(vuln.Analysis)
-				if statusType == "" {
+				eventType := normalize.MapCDXToEventType(vuln.Analysis)
+				if eventType == "" {
 					// skip unknown/unspecified statuses
 					continue
 				}
@@ -184,7 +184,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 
 				componentPurl := ref
 
-				expectedVulnState[cveID] = VulnState{state: statusType, justification: justification,
+				expectedMap[cveID] = VulnEvent{eventType: models.VulnEventType(eventType), justification: justification,
 					purl: componentPurl}
 			}
 
@@ -203,7 +203,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 
 		// convert the expected vuln state into vuln in package to reuse the handle scan result function
 		vulnsInPackage := []models.VulnInPackage{}
-		for cveID, state := range expectedVulnState {
+		for cveID, state := range expectedMap {
 			if cve, exists := cvesMap[cveID]; exists {
 				// skip CVEs that do not exist in the database
 				vulnInPackage := models.VulnInPackage{
@@ -221,7 +221,7 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
 
-		err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
+		_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
@@ -229,18 +229,25 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 
 	outer:
 		for i := range newState {
-			if expectedState, ok := expectedVulnState[*newState[i].CVEID]; ok {
-				// check if state changing event
-				if newState[i].State == models.VulnState(expectedState.state) {
+			if expected, ok := expectedMap[*newState[i].CVEID]; ok {
+
+				expectedEventType, err := models.EventTypeToVulnState(expected.eventType)
+				if err != nil {
+					slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue
 				}
-
 				// check if we already have seen this event from upstream
 				for j := len(newState[i].Events) - 1; j >= 0; j-- {
 					event := newState[i].Events[j]
+					eventType, err := models.EventTypeToVulnState(event.Type)
+					if err != nil {
+						slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
+						continue
+					}
+					// only consider non-internal upstream events
 					if event.Upstream != models.UpstreamStateInternal {
 						// the last event
-						if (models.VulnState(event.Type)) == models.VulnState(expectedState.state) && event.Justification != nil && *event.Justification == expectedState.justification {
+						if eventType == expectedEventType && event.Justification != nil && *event.Justification == expected.justification {
 							// we already have seen this event
 							continue outer
 						} else {
@@ -250,7 +257,12 @@ func (s *service) SyncUpstreamBoms(boms []normalize.SBOM, org models.Org, projec
 					}
 				}
 
-				_, err := s.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &newState[i], expectedState.state, expectedState.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				if newState[i].State != models.VulnStateOpen && expected.eventType == models.EventTypeAccepted {
+					// map the event to a reopen event if the vuln is not open yet
+					expected.eventType = models.EventTypeReopened
+				}
+
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue

@@ -14,27 +14,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func sastScan(p string) (*common.SarifResult, error) {
+func sastScan(p, outputPath string) (*common.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "sast")
 
-	// create new directory
-	err := os.MkdirAll(dir, 0755)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create temp file")
+	var sarifFilePath string
+	if outputPath != "" {
+		sarifFilePath = outputPath
+	} else {
+		// create new directory
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create temp file")
+		}
+		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting sast scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
+	slog.Info("Starting sast scanning", "path", p, "result-path", sarifFilePath)
 
-	scannerCmd = exec.Command("semgrep", "scan", p, "--sarif", "--sarif-output", path.Join(dir, "result.sarif"), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
+	scannerCmd = exec.Command("semgrep", "scan", p, "--sarif", "--sarif-output", sarifFilePath, "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err = scannerCmd.Run()
+	err := scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -46,7 +51,7 @@ func sastScan(p string) (*common.SarifResult, error) {
 
 	// read AND parse the file
 	// open the file
-	file, err := os.Open(path.Join(dir, "result.sarif"))
+	file, err := os.Open(sarifFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open file")
 	}
@@ -79,6 +84,7 @@ Examples:
 	devguard-scanner sast --path ./my-repo
 	devguard-scanner sast ./my-repo
 	devguard-scanner sast ghcr.io/org/image:tag
+	devguard-scanner sast --path ./my-repo --outputPath results.sarif.json
 `,
 		RunE: sarifCommandFactory("sast"),
 	}

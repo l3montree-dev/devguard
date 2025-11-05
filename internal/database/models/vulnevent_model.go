@@ -80,6 +80,25 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
+func EventTypeToVulnState(eventType VulnEventType) (VulnState, error) {
+	switch eventType {
+	case EventTypeFixed:
+		return VulnStateFixed, nil
+	case EventTypeDetected:
+		fallthrough
+	case EventTypeReopened:
+		return VulnStateOpen, nil
+	case EventTypeAccepted:
+		return VulnStateAccepted, nil
+	case EventTypeFalsePositive:
+		return VulnStateFalsePositive, nil
+	case EventTypeMarkedForTransfer:
+		return VulnStateMarkedForTransfer, nil
+	default:
+		return "", fmt.Errorf("event type %s does not map to a vuln state", eventType)
+	}
+}
+
 func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
 	// parse the additional data
 	if event.ArbitraryJSONData == "" {
@@ -129,6 +148,9 @@ func (event VulnEvent) Apply(vuln Vuln) {
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
+		if event.Upstream == UpstreamStateExternal {
+			return
+		}
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
 		// event type detected will always be applied!

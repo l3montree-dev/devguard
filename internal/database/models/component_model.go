@@ -93,15 +93,29 @@ type ComponentDependency struct {
 
 const Root string = "root"
 
-func (c ComponentDependency) GetRef() string {
-	if c.ComponentPurl == nil {
-		return Root
-	}
-	return *c.ComponentPurl
+type ComponentDependencyNode struct {
+	ID string `json:"id"`
 }
 
-func (c ComponentDependency) GetDeps() []string {
-	return []string{c.DependencyPurl}
+func (c ComponentDependencyNode) GetID() string {
+	return c.ID
+}
+
+func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
+	// a component dependency represents an edge in the dependency tree
+	// thus we can represent it as two nodes
+	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentPurl)}, ComponentDependencyNode{ID: c.DependencyPurl}}
+}
+
+func BuildDepMap(deps []ComponentDependency) map[string][]string {
+	depMap := make(map[string][]string)
+	for _, dep := range deps {
+		if _, ok := depMap[utils.SafeDereference(dep.ComponentPurl)]; !ok {
+			depMap[utils.SafeDereference(dep.ComponentPurl)] = []string{}
+		}
+		depMap[utils.SafeDereference(dep.ComponentPurl)] = append(depMap[utils.SafeDereference(dep.ComponentPurl)], dep.DependencyPurl)
+	}
+	return depMap
 }
 
 const NoVersion = "0.0.0"

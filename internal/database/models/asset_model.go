@@ -67,6 +67,8 @@ type Asset struct {
 	Metadata                 database.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
 	IsPublic                 bool           `json:"isPublic" gorm:"default:false;not null;"`
 	ParanoidMode             bool           `json:"paranoidMode" gorm:"default:false;not null;"`
+
+	SharesInformation bool `json:"shareInformation" gorm:"default:false;not null;"`
 }
 
 func (m *Asset) UpstreamState() UpstreamState {

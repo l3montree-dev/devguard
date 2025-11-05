@@ -109,7 +109,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(pathOrImage), "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+		trivyCmd = exec.Command("trivy", "image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
 
 	stderr := &bytes.Buffer{}
@@ -369,8 +369,6 @@ Examples:
 	}
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
-	// set default scanner type
-	scaCommand.Flags().String("origin", "source-scanning", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'source-scanning'.")
 	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
 	return scaCommand
 }

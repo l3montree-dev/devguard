@@ -145,7 +145,7 @@ func (h *releaseController) VEXXML(c core.Context) error {
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
 func (h *releaseController) buildMergedSBOM(c core.Context, release models.Release, orgName string) (*cdx.BOM, error) {
-	var boms []*cdx.BOM
+	var boms []*normalize.CdxBom
 
 	// iterate over items and build SBOM per artifact
 	for _, item := range release.Items {
@@ -160,16 +160,19 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 		if err != nil {
 			return nil, err
 		}
-		// build sbom for this artifact via assetVersionService
-		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
-
-		bom, err := h.assetVersionService.BuildSBOM(av, *item.ArtifactName, orgName, compsPage.Data)
+		asset, err := h.assetRepository.Read(*item.AssetID)
 		if err != nil {
 			return nil, err
 		}
-		if bom != nil {
-			boms = append(boms, bom.Eject())
+		// build sbom for this artifact via assetVersionService
+		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
+
+		bom, err := h.assetVersionService.BuildSBOM(asset, av, *item.ArtifactName, orgName, compsPage.Data)
+		if err != nil {
+			return nil, err
 		}
+
+		boms = append(boms, bom)
 	}
 
 	if len(boms) == 0 {
@@ -179,7 +182,7 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}), nil
+		}).EjectSBOM(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -189,12 +192,12 @@ func (h *releaseController) buildMergedSBOM(c core.Context, release models.Relea
 		},
 	}, boms...)
 
-	return merged, nil
+	return merged.EjectSBOM(nil), nil
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
 func (h *releaseController) buildMergedVEX(c core.Context, release models.Release, orgName string) (*cdx.BOM, error) {
-	var boms []*cdx.BOM
+	var boms []*normalize.CdxBom
 
 	for _, item := range release.Items {
 		// gather dependency vulns for this artifact (empty artifactName for release-level vulns)
@@ -225,7 +228,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}), nil
+		}).EjectVex(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -235,7 +238,7 @@ func (h *releaseController) buildMergedVEX(c core.Context, release models.Releas
 		},
 	}, boms...)
 
-	return merged, nil
+	return merged.EjectVex(nil), nil
 }
 
 func (h *releaseController) Read(c core.Context) error {
@@ -245,7 +248,7 @@ func (h *releaseController) Read(c core.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.Read(id)
+	rel, err := h.service.ReadRecursive(id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}

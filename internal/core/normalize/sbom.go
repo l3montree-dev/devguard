@@ -6,17 +6,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
-type SBOM interface {
-	GetComponents() *[]cdx.Component
-	GetDependencies() *[]cdx.Dependency
-	GetMetadata() *cdx.Metadata
-	GetCdxBom() *cdx.BOM
-	GetOrigin() string
-	GetVulnerabilities() *[]cdx.Vulnerability
-	Eject() *cdx.BOM
-}
-
-// map CycloneDX Analysis State / Response to internal status strings used by UpdateDependencyVulnState
+// map CycloneDX Analysis State / Response to internal status strings used by CreateVulnEventAndApply
 func MapCDXToVulnStatus(a *cdx.VulnerabilityAnalysis) string {
 	if a == nil {
 		return ""
@@ -53,7 +43,7 @@ func MapCDXToVulnStatus(a *cdx.VulnerabilityAnalysis) string {
 	}
 }
 
-func MapCDXToEventStatus(a *cdx.VulnerabilityAnalysis) string {
+func MapCDXToEventType(a *cdx.VulnerabilityAnalysis) string {
 	if a == nil {
 		return ""
 	}

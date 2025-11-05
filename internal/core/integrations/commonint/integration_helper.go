@@ -220,7 +220,13 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 		return "", err
 	}
 
-	tree := normalize.BuildDependencyTree(components, "root")
+	tree := normalize.BuildDependencyTree(models.ComponentDependencyNode{
+		// nil will be mapped to empty string in BuildDepMap
+		ID: "",
+	}, utils.Flat(utils.Map(components, func(el models.ComponentDependency) []models.ComponentDependencyNode {
+		return el.ToNodes()
+	})), models.BuildDepMap(components))
+
 	return tree.RenderToMermaid(), nil
 }
 

@@ -31,9 +31,6 @@ import (
 )
 
 type HTTPController struct {
-	db                       core.DB
-	sbomScanner              core.SBOMScanner
-	cveRepository            core.CveRepository
 	componentRepository      core.ComponentRepository
 	assetRepository          core.AssetRepository
 	assetVersionRepository   core.AssetVersionRepository
@@ -43,19 +40,13 @@ type HTTPController struct {
 	artifactService          core.ArtifactService
 	dependencyVulnService    core.DependencyVulnService
 	firstPartyVulnService    core.FirstPartyVulnService
-
+	core.ScanService
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
-	purlComparer := NewPurlComparer(db)
-
-	scanner := NewSBOMScanner(purlComparer, cveRepository)
+func NewHTTPController(scanService core.ScanService, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
 	return &HTTPController{
-		db:                        db,
-		sbomScanner:               scanner,
-		cveRepository:             cveRepository,
 		componentRepository:       componentRepository,
 		assetVersionService:       assetVersionService,
 		assetRepository:           assetRepository,
@@ -66,6 +57,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 		artifactService:           artifactService,
 		dependencyVulnRepository:  dependencyVulnRepository,
+		ScanService:               scanService,
 	}
 }
 
@@ -139,14 +131,11 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 			}
 		}
 	}
-
+	upstreamBOMS := []*normalize.CdxBom{}
 	// check if there are components or vulnerabilities in the bom
-	if (bom.Components == nil || len(*bom.Components) == 0) && (bom.Vulnerabilities == nil || len(*bom.Vulnerabilities) == 0) {
-		slog.Warn("no components or vulnerabilities found in VEX document")
-		return ctx.JSON(200, nil)
+	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
+		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, origin))
 	}
-
-	upstreamBOMS := []normalize.SBOM{normalize.FromCdxBom(&bom, artifactName, origin)}
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
@@ -237,57 +226,22 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, models.UpstreamStateInternal)
+	_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, models.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalized, userID)
-}
-
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom normalize.SBOM, userID string) (ScanResponse, error) {
-	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-	vulns, err := s.sbomScanner.Scan(normalizedBom)
-
+	opened, closed, newState, err := s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, normalized, userID)
 	if err != nil {
-		slog.Error("could not scan file", "err", err)
+		slog.Error("could not scan normalized sbom", "err", err)
 		return scanResults, err
 	}
 
-	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, models.UpstreamStateInternal)
-	if err != nil {
-		slog.Error("could not handle scan result", "err", err)
-		return scanResults, err
-	}
-
-	//Check if we want to create an issue for this assetVersion
-
-	s.FireAndForget(func() {
-		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	s.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
-		}
-	})
-
-	scanResults.AmountOpened = len(opened) //Fill in the results
-	scanResults.AmountClosed = len(closed)
-	scanResults.DependencyVulns = utils.Map(newState, vuln.DependencyVulnToDto)
-
-	return scanResults, nil
+	return ScanResponse{
+		AmountOpened:    opened,
+		AmountClosed:    closed,
+		DependencyVulns: utils.Map(newState, vuln.DependencyVulnToDto),
+	}, nil
 }
 
 func (s *HTTPController) FirstPartyVulnScan(ctx core.Context) error {

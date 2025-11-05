@@ -105,17 +105,19 @@ func SyncUpstream(db core.DB, rbacProvider core.RBACProvider) error {
 					}
 
 					for _, artifact := range artifacts {
-						rootNodes, err := componentService.FetchRootNodes(&artifact)
+						rootNodes, err := componentService.FetchInformationSources(&artifact)
 						if err != nil {
 							slog.Error("failed to fetch root nodes for artifact", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 							continue
 						}
 
-						upstreamURLs := utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
+						upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
 							_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
 							return origin
 						}), func(el string) bool {
 							return strings.HasPrefix(el, "http")
+						}), func(el string) string {
+							return el
 						})
 
 						vexReports, _, _ := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, upstreamURLs)

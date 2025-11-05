@@ -479,7 +479,7 @@ func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName st
 	return counts, nil
 }
 
-func (c *componentRepository) FetchRootNodes(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+func (c *componentRepository) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	var result []models.ComponentDependency
 	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_purl IS NULL AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
 		return nil, err
@@ -487,6 +487,6 @@ func (c *componentRepository) FetchRootNodes(artifact *models.Artifact) ([]model
 	return result, nil
 }
 
-func (c *componentRepository) RemoveRootNodes(artifact *models.Artifact, rootNodePurls []string) error {
+func (c *componentRepository) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
 	return c.GetDB(nil).Where("component_purl IS NULL AND dependency_purl IN (?) AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", rootNodePurls, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }

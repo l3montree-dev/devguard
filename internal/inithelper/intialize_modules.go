@@ -134,21 +134,33 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 }
 
 func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) *scan.HTTPController {
-	return scan.NewHTTPController(
-		db,
+	assetVersionService := CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService)
+	dependencyVulnService := CreateDependencyVulnService(db, oauth2, rbac, clientFactory)
+	artifactService := CreateArtifactService(db, openSourceInsightsService)
+	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
+	statisticsService := CreateStatisticsService(db)
+	scanService := scan.NewScanService(db,
 		repositories.NewCVERepository(db),
+		assetVersionService,
+		dependencyVulnService,
+		artifactService,
+		statisticsService,
+	)
+	scanService.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
+	return scan.NewHTTPController(
+		scanService,
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewAssetVersionRepository(db),
-		CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService),
-		CreateStatisticsService(db),
-		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+		assetVersionService,
+		statisticsService,
+		dependencyVulnService,
 		CreateFirstPartyVulnService(db, integrations.NewThirdPartyIntegrations(
 			repositories.NewExternalUserRepository(db),
 			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
 			githubint.NewGithubIntegration(db),
 		)),
-		CreateArtifactService(db, openSourceInsightsService),
-		repositories.NewDependencyVulnRepository(db),
+		artifactService,
+		dependencyVulnRepo,
 	)
 }

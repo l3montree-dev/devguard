@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"log/slog"
-	"maps"
 	"math"
 	"net/http"
 	"slices"
@@ -311,14 +310,13 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
-	// build a dependency tree
-	tree := normalize.BuildDependencyTree(assetComponents, "root")
+
 	// calculate the depth of each component
-	depthMap := make(map[string]int)
-
-	// first node will be the package name itself
-	normalize.CalculateDepth(tree.Root, -1, depthMap)
-
+	sbom, err := s.BuildSBOM(asset, *assetVersion, artifactName, org.Name, assetComponents)
+	if err != nil {
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
+	}
+	depthMap := sbom.CalculateDepth()
 	for _, vuln := range vulns {
 		v := vuln
 		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
@@ -357,7 +355,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, tree.ReachableThroughMultipleRoots(), dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom.InformationFromVexOrMultipleSBOMs(), dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -593,37 +591,23 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, v, nil
 }
 
-func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
-	res := make(map[string]cdx.Component)
-	if component.Components == nil {
-		return res
-	}
-
-	for _, component := range *component.Components {
-		res[component.BOMRef] = component
-		maps.Copy(res, recursiveBuildBomRefMap(component))
-	}
-	return res
-}
-
-func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
+func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
 	res := make(map[string]cdx.Component)
 	if bom.GetComponents() == nil {
 		return res
 	}
 
-	for _, component := range *bom.GetComponents() {
+	for _, component := range *bom.GetComponentsIncludingFakeNodes() {
 		res[component.BOMRef] = component
-		maps.Copy(res, recursiveBuildBomRefMap(component))
 	}
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM, upstream models.UpstreamState) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) (*normalize.CdxBom, error) {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
-		return errors.Wrap(err, "could not load asset components")
+		return nil, errors.Wrap(err, "could not load asset components")
 	}
 
 	existingComponentPurls := make(map[string]bool)
@@ -636,86 +620,68 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the sbom for the asset in the database.
 	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
-	existingDependencies := make(map[string]struct{}, len(dependencies))
-
 	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
 	// first we need to replace the subtree.
 
-	wholeAssetSBOM, err := s.BuildSBOM(assetVersion, artifactName, org.Name, assetComponents)
+	wholeAssetSBOM, err := s.BuildSBOM(asset, assetVersion, artifactName, org.Name, assetComponents)
 	if err != nil {
-		return errors.Wrap(err, "could not build whole asset sbom")
+		return nil, errors.Wrap(err, "could not build whole asset sbom")
 	}
 
-	sbom = normalize.ReplaceSubtree(wholeAssetSBOM, sbom)
+	for _, informationSource := range sbom.GetInformationSourceNodes() {
+		wholeAssetSBOM.ReplaceOrAddInformationSourceNode(informationSource)
+	}
 
 	// build a map of all components
-	bomRefMap := buildBomRefMap(sbom)
+	bomRefMap := buildBomRefMap(wholeAssetSBOM)
 
+	depExistMap := make(map[string]bool)
 	// create all direct dependencies
-	root := sbom.GetMetadata().Component.BOMRef
-	for _, c := range *sbom.GetDependencies() {
-		if c.Ref != root {
-			continue // no direct dependency
+	for _, c := range *wholeAssetSBOM.GetDirectDependencies() {
+		component := bomRefMap[c.Ref]
+		// the sbom of a container image does not contain the scope. In a container image, we do not have
+		// anything like a deep nested dependency tree. Everything is a direct dependency.
+		componentPackageURL := normalize.Purl(component)
+		// create the direct dependency edge.
+		if _, ok := depExistMap["nil->"+componentPackageURL]; ok {
+			continue
 		}
-		// we found it.
-		for _, directDependency := range *c.Dependencies {
-			component := bomRefMap[directDependency]
-			// the sbom of a container image does not contain the scope. In a container image, we do not have
-			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageURL := normalize.Purl(component)
-
-			// create the direct dependency edge.
-			dependencies = append(dependencies,
-				models.ComponentDependency{
-					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					DependencyPurl: componentPackageURL,
-				},
-			)
-			existingDependencies[componentPackageURL] = struct{}{}
-			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
-				components[componentPackageURL] = models.Component{
-					Purl:          componentPackageURL,
-					ComponentType: models.ComponentType(component.Type),
-					Version:       component.Version,
-				}
-			}
-		}
+		depExistMap["nil->"+componentPackageURL] = true
+		dependencies = append(dependencies,
+			models.ComponentDependency{
+				ComponentPurl:  nil, // direct dependency - therefore set it to nil
+				DependencyPurl: componentPackageURL,
+			},
+		)
 	}
 
-	sbomDependencies := *sbom.GetDependencies()
-	// find all dependencies from this component
-	for _, c := range sbomDependencies {
-		if c.Ref == root {
-			continue // already processed
-		}
+	transitiveDependencies := *wholeAssetSBOM.GetTransitiveDependencies()
+	for _, c := range transitiveDependencies {
 		comp := bomRefMap[c.Ref]
 		compPackageURL := normalize.Purl(comp)
-
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
 			depPurlOrName := normalize.Purl(dep)
-
+			if _, ok := depExistMap[compPackageURL+"->"+depPurlOrName]; ok {
+				continue
+			}
+			depExistMap[compPackageURL+"->"+depPurlOrName] = true
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.Ptr(compPackageURL),
 					DependencyPurl: depPurlOrName,
 				},
 			)
+		}
+	}
 
-			if _, ok := existingComponentPurls[depPurlOrName]; !ok {
-				components[depPurlOrName] = models.Component{
-					Purl:          depPurlOrName,
-					ComponentType: models.ComponentType(dep.Type),
-					Version:       dep.Version,
-				}
-			}
-
-			if _, ok := existingComponentPurls[compPackageURL]; !ok {
-				components[compPackageURL] = models.Component{
-					Purl:          compPackageURL,
-					ComponentType: models.ComponentType(comp.Type),
-					Version:       comp.Version,
-				}
+	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
+		componentPackageURL := normalize.Purl(c)
+		if _, ok := existingComponentPurls[componentPackageURL]; !ok {
+			components[componentPackageURL] = models.Component{
+				Purl:          componentPackageURL,
+				ComponentType: models.ComponentType(c.Type),
+				Version:       c.Version,
 			}
 		}
 	}
@@ -727,12 +693,12 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 
 	// make sure, that the components exist
 	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// update the license information in the background
@@ -756,7 +722,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				Artifact: core.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.GetCdxBom(),
+				SBOM: sbom.EjectSBOM(nil),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
@@ -765,13 +731,14 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		})
 	}
 
-	return nil
+	return wholeAssetSBOM, nil
 }
 
 func resolveLicense(component models.ComponentDependency, componentLicenseOverwrites map[string]string) cdx.Licenses {
 	licenses := cdx.Licenses{}
 	//first check if the license is overwritten by a license risk#
 	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
+	componentLicense := utils.SafeDereference(component.Dependency.License)
 	if exists && overwrite != "" {
 		// TO-DO: check if the license provided by the user is a valid license or not
 		licenses = append(licenses, cdx.LicenseChoice{
@@ -780,33 +747,51 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 			},
 		})
 
-	} else if component.Dependency.License != nil && *component.Dependency.License != "" {
-		if *component.Dependency.License != "non-standard" {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					ID: *component.Dependency.License,
-				},
-			})
+	} else if componentLicense != "" {
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentLicense != "non-standard" && componentLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentLicense) {
+				licenses = append(licenses, cdx.LicenseChoice{
+					Expression: componentLicense,
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: componentLicense,
+					},
+				})
+			}
+
 		} else {
 			licenses = append(licenses, cdx.LicenseChoice{
 				License: &cdx.License{
-					ID: "non-standard",
+					Name: componentLicense,
 				},
 			})
 		}
 
 	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-		// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-		if component.Dependency.ComponentProject.License != "non-standard" {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					ID: component.Dependency.ComponentProject.License,
-				},
-			})
+		componentProjectLicense := component.Dependency.ComponentProject.License
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentProjectLicense != "non-standard" && componentProjectLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentProjectLicense) {
+				licenses = append(licenses, cdx.LicenseChoice{
+					Expression: componentProjectLicense,
+				})
+			} else {
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: componentProjectLicense,
+					},
+				})
+			}
+
 		} else {
 			licenses = append(licenses, cdx.LicenseChoice{
 				License: &cdx.License{
-					ID: "non-standard",
+					Name: componentProjectLicense,
 				},
 			})
 		}
@@ -814,29 +799,20 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 	return licenses
 }
 
-// keepSubtrees decides whether we remove artificial components that were only added to represent subtrees
-// in the SBOM or not. In most cases, we want to keep them when using the cdx.BOM structure further on internally.
-// Nevertheless, when exporting the SBOM to the user, we want to remove those artificial components again.
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (normalize.SBOM, error) {
+func (s *service) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
 	var err error
 
-	slog.Info("building sbom", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifact", artifactName, "components", len(components))
+	var rootPurl string
+	if artifactName == "" {
+		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
+	} else {
+		rootPurl = fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+	}
 
-	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
 	bom := cdx.BOM{
-		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_6,
-		Version:     1,
 		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    rootPurl,
-				Type:      cdx.ComponentTypeApplication,
-				Name:      artifactName,
-				Version:   assetVersion.Name,
-				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/devguard",
+				BOMRef: rootPurl,
 			},
 		},
 	}
@@ -899,9 +875,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, artifactName strin
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	// convert to normalized sbom
-	// THIS IS THE ONLY FUNCTION ALLOWED TO CALL THIS.
-	normalizedSBOM := normalize.CdxBom(&bom)
+	normalizedSBOM := normalize.FromNormalizedCdxBom(&bom, rootPurl)
 
 	return normalizedSBOM, nil
 }
@@ -962,23 +936,21 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
+	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+	if artifactName == "" {
+		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
+	}
+
 	bom := cdx.BOM{
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_6,
-		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    artifactName,
-				Type:      cdx.ComponentTypeApplication,
-				Name:      artifactName,
-				Version:   assetVersion.Name,
-				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/devguard",
+				BOMRef: rootPurl,
 			},
 		},
 	}
+
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
@@ -1039,7 +1011,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 	}
 	bom.Vulnerabilities = &vulnerabilities
 
-	return &bom
+	return normalize.FromNormalizedCdxBom(&bom, rootPurl)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
@@ -1367,4 +1339,8 @@ func createTitles(name string) (string, string) {
 	}
 	//now we return the two titles formatted correctly for the yaml file
 	return title1, title2
+}
+
+func isLicenseExpression(license string) bool {
+	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
 }
