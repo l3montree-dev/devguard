@@ -26,3 +26,5 @@ csaf-openpgp-public-key.asc
 !**/testfiles/**
 !**/testfiles/**
 vulndb-tmp-*
+cert.pem
+key.pem

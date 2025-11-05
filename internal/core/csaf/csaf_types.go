@@ -29,16 +29,16 @@ type documentObject struct {
 		Namespace string `json:"namespace,omitempty"`
 		Text      string `json:"text,omitempty"`
 	} `json:"aggregate_severity,omitempty"`
-	Category       string         `json:"category,omitempty"`    //mandatory
-	CSAFVersion    string         `json:"csaf_string,omitempty"` //mandatory
+	Category       string         `json:"category,omitempty"`     //mandatory
+	CSAFVersion    string         `json:"csaf_version,omitempty"` //mandatory
 	Distribution   *distribution  `json:"distribution,omitempty"`
 	Language       *string        `json:"lang,omitempty"`
 	Notes          []note         `json:"notes,omitempty"`
 	Publisher      publisher      `json:"publisher,omitempty"` //mandatory
 	References     []reference    `json:"references,omitempty"`
 	SourceLanguage *string        `json:"source_lang,omitempty"`
-	Title          string         `json:"title,omitempty"`    //mandatory
-	Tracking       trackingObject `json:"tracking,omitempty"` //mandatory
+	Title          string         `json:"title,omitempty"` //mandatory
+	Tracking       trackingObject `json:"tracking"`        //mandatory
 }
 
 type trackingObject struct {
@@ -49,13 +49,13 @@ type trackingObject struct {
 		Engine struct {
 			Name    string `json:"name,omitempty"`
 			Version string `json:"string,omitempty"`
-		} `json:"engine,omitempty"`
+		} `json:"engine"`
 	} `json:"generator,omitempty"`
 	ID                 string     `json:"id,omitempty"`                   //mandatory
 	InitialReleaseDate string     `json:"initial_release_date,omitempty"` //mandatory
 	RevisionHistory    []revision `json:"revision_history,omitempty"`
-	Status             string     `json:"status,omitempty"` //mandatory
-	Version            string     `json:"string,omitempty"` //mandatory
+	Status             string     `json:"status,omitempty"`  //mandatory
+	Version            string     `json:"version,omitempty"` //mandatory
 }
 
 type distribution struct {
@@ -227,7 +227,7 @@ type reference struct {
 
 type providerMetadata struct {
 	URL                     string                         `json:"canonical_url,omitempty"`
-	Distribution            []distributionProviderMetadata `json:"distribution,omitempty"`
+	Distributions           []distributionProviderMetadata `json:"distributions,omitempty"`
 	LastUpdated             string                         `json:"last_updated,omitempty"`
 	ListOnCSAFAggregators   bool                           `json:"list_on_CSAF_aggregators,omitempty"`
 	MetadataVersion         string                         `json:"metadata_version,omitempty"`
@@ -238,9 +238,9 @@ type providerMetadata struct {
 }
 
 type distributionProviderMetadata struct {
-	Summary  string `json:"summary"`
-	TLPLabel string `json:"tlp_label"`
-	URL      string `json:"url"`
+	// Summary  string `json:"summary"`
+	// TLPLabel string `json:"tlp_label"`
+	URL string `json:"directory_url"`
 }
 type aggregator struct {
 	AggregatorObject  aggregatorObject `json:"aggregator,omitempty"`

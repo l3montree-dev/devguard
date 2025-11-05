@@ -258,9 +258,22 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/health/", health)
 	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
-	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
+
+	// csaf routes
+	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/csaf/provider-metadata.json/", csafController.GetProviderMetadataForOrganization, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/", csafController.GetCSAFIndexHTML, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/index.txt/", csafController.GetIndexFile, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/changes.csv/", csafController.GetChangesCSVFile, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/", csafController.GetTLPWhiteEntriesHTML, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/", csafController.GetReportsByYearHTML, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/openpgp/", csafController.GetOpenPGPHTML, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/openpgp/:file", csafController.GetOpenPGPFile, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/provider-metadata.json/", csafController.GetProviderMetadataForAsset, csafMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+
 	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
@@ -322,7 +335,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
-	organizationRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadataForOrganization)
+
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)
 	organizationRouter.GET("/", orgController.Read)
 	organizationRouter.GET("/metrics/", orgController.Metrics)
@@ -433,16 +446,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 
-	assetRouter.GET("/csaf/", csafController.GetCSAFIndexHTML)
-	assetRouter.GET("/csaf/white/index.txt/", csafController.GetIndexFile)
-	assetRouter.GET("/csaf/white/changes.csv/", csafController.GetChangesCSVFile)
-	assetRouter.GET("/csaf/white/", csafController.GetTLPWhiteEntriesHTML)
-	assetRouter.GET("/csaf/white/:year/", csafController.GetReportsByYearHTML)
-	assetRouter.GET("/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest)
-	assetRouter.GET("/csaf/openpgp/", csafController.GetOpenPGPHTML)
-	assetRouter.GET("/csaf/openpgp/:file", csafController.GetOpenPGPFile)
-	assetRouter.GET("/csaf/provider-metadata.json/", csafController.GetProviderMetadataForAsset)
-
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
@@ -531,5 +534,5 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 }
 
 func Start(db core.DB, broker pubsub.Broker) {
-	slog.Error("failed to start server", "err", BuildRouter(db, broker).Start(":8080").Error())
+	slog.Error("failed to start server", "err", BuildRouter(db, broker).StartTLS(":8080", "cert.pem", "key.pem").Error())
 }

@@ -2,7 +2,7 @@ package csaf
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -23,6 +23,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
+
+const PRETTY_JSON_INDENT = "    "
 
 type csafController struct {
 	dependencyVulnRepository core.DependencyVulnRepository
@@ -148,10 +150,7 @@ func (controller *csafController) GetCSAFIndexHTML(ctx core.Context) error {
 
 // return the html used to display all openpgp related keys and hashes
 func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
-	fingerprint, err := getPublicKeyFingerprint()
-	if err != nil {
-		return err
-	}
+	fingerprint := getPublicKeyFingerprint()
 
 	type pageData struct {
 		Fingerprint string
@@ -172,7 +171,7 @@ func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 	tmpl := template.Must(template.New("fingerprint").Parse(htmlTemplate))
 	buf := bytes.Buffer{}
 
-	err = tmpl.Execute(&buf, data)
+	err := tmpl.Execute(&buf, data)
 	if err != nil {
 		return err
 	}
@@ -306,6 +305,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 {{ range .Filenames }}
 <a href="{{ . }}" download="{{ . }}">{{ . }}</a>
 <a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
+<a href="{{ . }}.sha256" download="{{ . }}.sha256">{{ . }}.sha256</a>
 <a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>
 {{ end }}
 </pre>
@@ -411,7 +411,7 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 		}{entry})
 	}
 
-	return ctx.JSONPretty(200, aggregator, "    ")
+	return ctx.JSONPretty(200, aggregator, PRETTY_JSON_INDENT)
 }
 
 // returns the provider-metadata file for an organization which points to each assets provider-metadata
@@ -420,10 +420,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 	hostURL := os.Getenv("API_URL")
 	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/", hostURL, org.Slug)
 
-	fingerprint, err := getPublicKeyFingerprint()
-	if err != nil {
-		return echo.NewHTTPError(404, "organization not found")
-	}
+	fingerprint := getPublicKeyFingerprint()
 
 	metadata := providerMetadata{
 		URL:                     csafURL + "provider-metadata.json",
@@ -451,15 +448,15 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 	distributions := make([]distributionProviderMetadata, 0)
 	for _, asset := range assets {
 		distribution := distributionProviderMetadata{
-			Summary:  "location of provider-metadata.json for asset: " + asset.Name,
-			TLPLabel: "WHITE",
-			URL:      fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
+			// Summary:  "location of provider-metadata.json for asset: " + asset.Name,
+			// TLPLabel: "WHITE",
+			URL: fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
 		}
 		distributions = append(distributions, distribution)
 	}
-	metadata.Distribution = distributions
+	metadata.Distributions = distributions
 
-	return ctx.JSONPretty(200, metadata, "    ")
+	return ctx.JSONPretty(200, metadata, PRETTY_JSON_INDENT)
 }
 
 // returns the provider metadata file for a given asset which points to the location of the tlp white csaf reports
@@ -473,10 +470,7 @@ func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) 
 	}
 	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/", hostURL, organization.Slug, project.Slug, asset.Slug)
 
-	fingerprint, err := getPublicKeyFingerprint()
-	if err != nil {
-		return err
-	}
+	fingerprint := getPublicKeyFingerprint()
 
 	metadata := providerMetadata{
 		URL:                     csafURL + "provider-metadata.json",
@@ -492,25 +486,19 @@ func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) 
 			Namespace:      "https://l3montree.com/",
 		},
 		PublicOpenpgpKeys: []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
-		Distribution: []distributionProviderMetadata{
+		Distributions: []distributionProviderMetadata{
 			{
-				TLPLabel: "WHITE",
-				URL:      csafURL + "white/",
+				// TLPLabel: "WHITE",
+				URL: csafURL + "white/",
 			},
 		},
 	}
 
-	return ctx.JSONPretty(200, metadata, "    ")
+	return ctx.JSONPretty(200, metadata, PRETTY_JSON_INDENT)
 }
 
-func getPublicKeyFingerprint() (string, error) {
-	publicKeyMaterial, err := os.ReadFile("csaf-openpgp-public-key.asc")
-	if err != nil {
-		return "", err
-	}
-	hash := sha1.Sum(publicKeyMaterial)
-	hashString := hex.EncodeToString(hash[:])
-	return hashString, nil
+func getPublicKeyFingerprint() string {
+	return os.Getenv("CSAF_OPENPGP_FINGERPRINT")
 }
 
 // from here on: code that handles the creation of csaf reports them self
@@ -533,11 +521,12 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 	switch mode {
 	case "json":
 		// just return the csaf report
-		return ctx.JSONPretty(200, csafReport, "    ")
+		return ctx.JSONPretty(200, csafReport, PRETTY_JSON_INDENT)
 	case "asc":
 		// return the signature of the json encoding of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
+		encoder.SetIndent("", PRETTY_JSON_INDENT)
 		err = encoder.Encode(csafReport)
 		if err != nil {
 			return err
@@ -547,10 +536,23 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 			return err
 		}
 		return ctx.String(200, string(signature))
+	case "sha256":
+		// return the hash of the report
+		buf := bytes.Buffer{}
+		encoder := json.NewEncoder(&buf)
+		encoder.SetIndent("", PRETTY_JSON_INDENT)
+		err = encoder.Encode(csafReport)
+		if err != nil {
+			return err
+		}
+		hash := sha256.Sum256(buf.Bytes())
+		hashString := hex.EncodeToString(hash[:])
+		return ctx.String(200, hashString)
 	case "sha512":
 		// return the hash of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
+		encoder.SetIndent("", PRETTY_JSON_INDENT)
 		err = encoder.Encode(csafReport)
 		if err != nil {
 			return err
