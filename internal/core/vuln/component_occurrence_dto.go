@@ -4,6 +4,7 @@ import "github.com/l3montree-dev/devguard/internal/database/models"
 
 type ComponentOccurrenceDTO struct {
 	ComponentDependencyID string  `json:"componentDependencyId"`
+	DependencyPurl        *string `json:"dependencyPurl"`
 	OrganizationID        string  `json:"organizationId"`
 	OrganizationName      string  `json:"organizationName"`
 	ProjectID             string  `json:"projectId"`
@@ -22,6 +23,7 @@ type ComponentOccurrenceDTO struct {
 func convertComponentOccurrenceToDTO(m models.ComponentOccurrence) ComponentOccurrenceDTO {
 	return ComponentOccurrenceDTO{
 		ComponentDependencyID: m.ComponentDependencyID.String(),
+		DependencyPurl:        m.DependencyPurl,
 		OrganizationID:        m.OrganizationID.String(),
 		OrganizationName:      m.OrganizationName,
 		ProjectID:             m.ProjectID.String(),

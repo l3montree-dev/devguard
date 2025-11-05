@@ -63,6 +63,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
             assets.slug AS asset_slug,
             component_dependencies.asset_version_name AS asset_version_name,
             component_dependencies.component_purl AS component_purl,
+            component_dependencies.dependency_purl AS dependency_purl,
             components.version AS component_version,
             artifact_component_dependencies.artifact_artifact_name AS artifact_name,
             artifact_component_dependencies.artifact_asset_version_name AS artifact_asset_version_name`).
@@ -72,7 +73,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
 		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
 		Where("projects.organization_id = ?", orgID).
-		Where("component_dependencies.component_purl ILIKE ?", "%"+search+"%").
+		Where("component_dependencies.dependency_purl ILIKE ?", "%"+search+"%").
 		Order("component_dependencies.component_purl ASC, component_dependencies.asset_version_name ASC")
 
 	if pageInfo.PageSize > 0 {

@@ -4,6 +4,7 @@ import "github.com/google/uuid"
 
 type ComponentOccurrence struct {
 	ComponentDependencyID uuid.UUID `json:"componentDependencyId" gorm:"column:component_dependency_id"`
+	DependencyPurl        *string   `json:"dependencyPurl" gorm:"column:dependency_purl"`
 	OrganizationID        uuid.UUID `json:"organizationId" gorm:"column:organization_id"`
 	OrganizationName      string    `json:"organizationName" gorm:"column:organization_name"`
 	ProjectID             uuid.UUID `json:"projectId" gorm:"column:project_id"`
