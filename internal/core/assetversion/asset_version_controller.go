@@ -199,6 +199,7 @@ func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
 }
 
@@ -238,7 +239,7 @@ func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
-
+	ctx.Response().Header().Set("Content-Type", "application/json")
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
 }
 
