@@ -1,12 +1,12 @@
 stages:
-  - build
   - test
-  - deploy
+  - oci-image
+  - attestation
 
 include:
   - remote: "{{ .DevGuardCiComponentBase }}/templates/full.yml"
     inputs:
-      asset_name: "$DEVGUARD_ASSET_NAME"
-      token: "$DEVGUARD_TOKEN"
-      api_url: "$DEVGUARD_API_URL"
-      web_ui: "{{ .DevGuardFrontendUrl }}"
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_token: "$DEVGUARD_TOKEN"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "{{ .DevGuardFrontendUrl }}"
