@@ -18,6 +18,7 @@ import (
 
 	pgpCrypto "github.com/ProtonMail/gopenpgp/v3/crypto"
 	"github.com/ProtonMail/gopenpgp/v3/profile"
+	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -99,8 +100,8 @@ func (controller *csafController) GetIndexFile(ctx core.Context) error {
 	// then write each revision entry version to the index string
 	index := ""
 	for _, entry := range tracking.RevisionHistory {
-		year := entry.Date[:4]
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
+		year := (*entry.Date)[:4]
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number)))
 		index += fmt.Sprintf("%s/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
@@ -116,18 +117,18 @@ func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	}
 
 	// sort resulting revision history by date in descending order
-	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 revision) int {
-		time1, _ := time.Parse(time.RFC3339, revision1.Date) //nolint:all
-		time2, _ := time.Parse(time.RFC3339, revision2.Date) //nolint:all
+	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 *gocsaf.Revision) int {
+		time1, _ := time.Parse(time.RFC3339, *revision1.Date) //nolint:all
+		time2, _ := time.Parse(time.RFC3339, *revision2.Date) //nolint:all
 		return time1.Compare(time2) * -1
 	})
 
 	// then write each entry to the csv string and return the result
 	csvContents := ""
 	for _, entry := range tracking.RevisionHistory {
-		year := entry.Date[:4]
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number))
-		csvContents += fmt.Sprintf("\"%s/%s\",\"%s\"\n", year, fileName, entry.Date)
+		year := (*entry.Date)[:4]
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number)))
+		csvContents += fmt.Sprintf("\"%s/%s\",\"%s\"\n", year, fileName, *entry.Date)
 	}
 
 	return ctx.String(200, csvContents)
@@ -268,14 +269,14 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	}
 
 	// then filter each csaf version if they are released in the given year
-	entriesForYear := make([]revision, 0)
+	entriesForYear := make([]*gocsaf.Revision, 0)
 	yearNumber, err := strconv.Atoi(year)
 	if err != nil {
 		return err
 	}
 
 	for _, entry := range tracking.RevisionHistory {
-		date, err := time.Parse(time.RFC3339, entry.Date)
+		date, err := time.Parse(time.RFC3339, *entry.Date)
 		if err != nil {
 			return err
 		}
@@ -290,7 +291,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	}
 	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(entriesForYear))}
 	for _, entry := range entriesForYear {
-		data.Filenames = append(data.Filenames, fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(entry.Number)))
+		data.Filenames = append(data.Filenames, fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number))))
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
@@ -358,8 +359,8 @@ func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 
 // returns the aggregator file which points to all public organizations provider-metadata files
 func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
-	aggregatorObject := aggregatorObject{
-		Category:       "lister",
+	aggregatorObject := gocsaf.AggregatorInfo{
+		Category:       utils.Ptr(gocsaf.AggregatorLister),
 		ContactDetails: "info@l3montree.com",
 		Name:           "L3montree GmbH",
 		Namespace:      "L3montree.com",
@@ -370,11 +371,11 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 		return fmt.Errorf("could not get api url from environment variables, check the API_URL variable in the .env file")
 	}
 	csafAggregatorURL := fmt.Sprintf("%s/api/v1/.well-known/csaf-aggregator/", hostURL)
-	aggregator := aggregator{
-		AggregatorObject:  aggregatorObject,
-		AggregatorVersion: "2.0",
-		CanonicalURL:      csafAggregatorURL + "aggregator.json",
-		LastUpdated:       time.Now().Format(time.RFC3339),
+	aggregator := gocsaf.Aggregator{
+		Aggregator:   &aggregatorObject,
+		Version:      utils.Ptr(gocsaf.AggregatorVersion20),
+		CanonicalURL: utils.Ptr(gocsaf.AggregatorURL(csafAggregatorURL + "aggregator.json")),
+		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
 	}
 
 	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets()
@@ -383,32 +384,28 @@ func (controller *csafController) GetAggregatorJSON(ctx core.Context) error {
 	}
 
 	// for every org build an entry if they have the csaf report publicly available
-	providers := make([]aggregatorMetadata, 0)
+	providers := make([]gocsaf.AggregatorCSAFProviderMetadata, 0)
 	for _, org := range orgs {
 		// if org.PublishCSAF == true {}...
 		orgCSAFURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/provider-metadata.json/", hostURL, org.Slug)
-		metadata := aggregatorMetadata{
-			Publisher: struct {
-				Category  string `json:"category"`
-				Name      string `json:"name"`
-				Namespace string `json:"namespace"`
-			}{
-				Category:  "vendor",
-				Name:      org.Slug,
-				Namespace: os.Getenv("API_URL"),
+		metadata := gocsaf.AggregatorCSAFProviderMetadata{
+			Publisher: &gocsaf.Publisher{
+				Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+				Name:      &org.Slug,
+				Namespace: utils.Ptr(os.Getenv("API_URL")),
 			},
-			Role:        "csaf_trusted_provider",
-			URL:         orgCSAFURL,
-			LastUpdated: time.Now().Format(time.RFC3339),
+			Role:        utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+			URL:         utils.Ptr(gocsaf.ProviderURL(orgCSAFURL)),
+			LastUpdated: utils.Ptr(gocsaf.TimeStamp(time.Now())),
 		}
 		providers = append(providers, metadata)
 	}
 
 	// then append each metadata as provider object to the aggregator provider list
 	for _, entry := range providers {
-		aggregator.CsafProviders = append(aggregator.CsafProviders, struct {
-			Metadata aggregatorMetadata `json:"metadata,omitempty"`
-		}{entry})
+		aggregator.CSAFProviders = append(aggregator.CSAFProviders, &gocsaf.AggregatorCSAFProvider{
+			Metadata: &entry,
+		})
 	}
 
 	return ctx.JSONPretty(200, aggregator, PRETTY_JSON_INDENT)
@@ -422,19 +419,20 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 
 	fingerprint := getPublicKeyFingerprint()
 
-	metadata := providerMetadata{
-		URL:                     csafURL + "provider-metadata.json",
-		LastUpdated:             time.Now().Format(time.RFC3339),
-		ListOnCSAFAggregators:   true, // TODO check if reports are published
-		MirrorOnCSAFAggregators: true, // TODO check if reports are published
-		MetadataVersion:         "2.0",
-		PublicOpenpgpKeys:       []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
-		Role:                    "csaf_trusted_provider",
-		Publisher: publisher{
-			Category:       "vendor",
+	metadata := gocsaf.ProviderMetadata{
+		CanonicalURL: utils.Ptr(gocsaf.ProviderURL(csafURL + "provider-metadata.json")),
+		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
+
+		ListOnCSAFAggregators:   utils.Ptr(true), // TODO check if reports are published
+		MirrorOnCSAFAggregators: utils.Ptr(true), // TODO check if reports are published
+		MetadataVersion:         utils.Ptr(gocsaf.MetadataVersion20),
+		PGPKeys:                 []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}},
+		Role:                    utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+		Publisher: &gocsaf.Publisher{
+			Category:       utils.Ptr(gocsaf.CSAFCategoryVendor),
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
-			Name:           org.Name,
-			Namespace:      os.Getenv("API_URL"), // TODO add option to add namespace to an org
+			Name:           &org.Name,
+			Namespace:      utils.Ptr(os.Getenv("API_URL")), // TODO add option to add namespace to an org
 		},
 	}
 	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(org.ID)
@@ -445,12 +443,12 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 		return echo.NewHTTPError(404, "organization not found")
 	}
 
-	distributions := make([]distributionProviderMetadata, 0)
+	distributions := make([]gocsaf.Distribution, 0)
 	for _, asset := range assets {
-		distribution := distributionProviderMetadata{
+		distribution := gocsaf.Distribution{
 			// Summary:  "location of provider-metadata.json for asset: " + asset.Name,
 			// TLPLabel: "WHITE",
-			URL: fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
+			DirectoryURL: fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/provider-metadata.json", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
 		}
 		distributions = append(distributions, distribution)
 	}
@@ -472,24 +470,24 @@ func (controller *csafController) GetProviderMetadataForAsset(ctx core.Context) 
 
 	fingerprint := getPublicKeyFingerprint()
 
-	metadata := providerMetadata{
-		URL:                     csafURL + "provider-metadata.json",
-		LastUpdated:             time.Now().Format(time.RFC3339),
-		ListOnCSAFAggregators:   true,
-		MirrorOnCSAFAggregators: true,
-		Role:                    "csaf_trusted_provider",
-		MetadataVersion:         "2.0",
-		Publisher: publisher{
-			Category:       "vendor",
+	metadata := gocsaf.ProviderMetadata{
+		CanonicalURL:            utils.Ptr(gocsaf.ProviderURL(csafURL + "provider-metadata.json")),
+		LastUpdated:             utils.Ptr(gocsaf.TimeStamp(time.Now())),
+		ListOnCSAFAggregators:   utils.Ptr(true),
+		MirrorOnCSAFAggregators: utils.Ptr(true),
+		Role:                    utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+		MetadataVersion:         utils.Ptr(gocsaf.MetadataVersion20),
+		Publisher: &gocsaf.Publisher{
+			Category:       utils.Ptr(gocsaf.CSAFCategoryVendor),
 			ContactDetails: "info@l3montree.com",
-			Name:           "L3montree GmbH",
-			Namespace:      "https://l3montree.com/",
+			Name:           utils.Ptr("L3montree GmbH"),
+			Namespace:      utils.Ptr("https://l3montree.com/"),
 		},
-		PublicOpenpgpKeys: []pgpKey{{Fingerprint: &fingerprint, URL: csafURL + "openpgp/" + fingerprint + ".asc"}},
-		Distributions: []distributionProviderMetadata{
+		PGPKeys: []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}},
+		Distributions: []gocsaf.Distribution{
 			{
 				// TLPLabel: "WHITE",
-				URL: csafURL + "white/",
+				DirectoryURL: csafURL + "white/",
 			},
 		},
 	}
@@ -566,8 +564,8 @@ func (controller *csafController) ServeCSAFReportRequest(ctx core.Context) error
 }
 
 // generate a specific csaf report version
-func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) (csaf, error) {
-	csafDoc := csaf{}
+func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) (gocsaf.Advisory, error) {
+	csafDoc := gocsaf.Advisory{}
 	// extract context information
 	version, err := extractVersionFromDocumentID(ctx.Param("version"))
 	if err != nil {
@@ -577,25 +575,22 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	asset := core.GetAsset(ctx)
 
 	// build trivial parts of the document field
-	csafDoc.Document = documentObject{
-		CSAFVersion: "2.0",
-		Publisher: publisher{
-			Category:  "vendor",
-			Name:      org.Name,
-			Namespace: "https://devguard.org",
+	csafDoc.Document = &gocsaf.Document{
+		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
+		Publisher: &gocsaf.DocumentPublisher{
+			Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+			Name:      &org.Name,
+			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title:    fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug),
-		Language: utils.Ptr("en-US"),
+		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug)),
+		SourceLang: utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
-	csafDoc.Document.Distribution = &distribution{
-		TLP: struct {
-			Label string `json:"label,omitempty"`
-			URL   string `json:"url,omitempty"`
-		}{
-			Label: "WHITE",
-			URL:   "https://first.org/tlp",
+	csafDoc.Document.Distribution = &gocsaf.DocumentDistribution{
+		TLP: &gocsaf.TLP{
+			DocumentTLPLabel: utils.Ptr(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
+			URL:              utils.Ptr("https://first.org/tlp"),
 		},
 	}
 
@@ -603,7 +598,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	if err != nil {
 		return csafDoc, err
 	}
-	csafDoc.Document.Tracking = tracking
+	csafDoc.Document.Tracking = &tracking
 
 	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository)
 	if err != nil {
@@ -612,7 +607,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 	csafDoc.ProductTree = &tree
 
 	// get the timestamp of the last revision which we need to time travel to
-	lastRevisionTimestamp, err := time.Parse(time.RFC3339, tracking.RevisionHistory[len(tracking.RevisionHistory)-1].Date)
+	lastRevisionTimestamp, err := time.Parse(time.RFC3339, *tracking.RevisionHistory[len(tracking.RevisionHistory)-1].Date)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -624,9 +619,9 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 
 	// if we do not have any vulnerabilities we do not comply with the security framework anymore so we need to switch the category to the base profile
 	if len(vulnerabilities) == 0 {
-		csafDoc.Document.Category = "csaf_base"
+		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_base"))
 	} else {
-		csafDoc.Document.Category = "csaf_vex"
+		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_vex"))
 	}
 
 	csafDoc.Document.Tracking.CurrentReleaseDate = csafDoc.Document.Tracking.RevisionHistory[len(csafDoc.Document.Tracking.RevisionHistory)-1].Date
@@ -635,8 +630,8 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) (productTree, error) {
-	tree := productTree{}
+func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) (gocsaf.ProductTree, error) {
+	tree := gocsaf.ProductTree{}
 	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
 	if err != nil {
 		return tree, err
@@ -653,23 +648,23 @@ func generateProductTree(asset models.Asset, assetVersionRepository core.AssetVe
 
 	// append each relevant asset version
 	for _, artifact := range artifacts {
-		branch := branches{
-			Category: "product_version",
-			Name:     artifact.ArtifactName + "@" + artifact.AssetVersionName,
-			Product: &fullProductName{
-				Name:      artifact.ArtifactName + "@" + artifact.AssetVersionName,
-				ProductID: artifact.ArtifactName + "@" + artifact.AssetVersionName,
+		branch := gocsaf.Branch{
+			Category: utils.Ptr(gocsaf.CSAFBranchCategoryProductVersion),
+			Name:     utils.Ptr(artifact.ArtifactName + "@" + artifact.AssetVersionName),
+			Product: &gocsaf.FullProductName{
+				Name:      utils.Ptr(artifact.ArtifactName + "@" + artifact.AssetVersionName),
+				ProductID: utils.Ptr(gocsaf.ProductID(artifact.ArtifactName + "@" + artifact.AssetVersionName)),
 			},
 		}
-		tree.Branches = append(tree.Branches, branch)
+		tree.Branches = append(tree.Branches, &branch)
 	}
 
 	return tree, nil
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.DependencyVuln) ([]vulnerability, error) {
-	vulnerabilities := []vulnerability{}
+func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.DependencyVuln) ([]*gocsaf.Vulnerability, error) {
+	vulnerabilities := []*gocsaf.Vulnerability{}
 	timeStamp = convertTimeToDateHourMinute(timeStamp)
 	// first get all vulns
 	filteredVulns := make([]models.DependencyVuln, 0, len(allVulnsOfAsset))
@@ -705,66 +700,79 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 
 	// then make a vulnerability object for every cve and list the asset version in the product status property
 	for cve, vulnsInGroup := range cveGroups {
-		vulnObject := vulnerability{
-			CVE:   cve,
-			Title: cve,
+		vulnObject := gocsaf.Vulnerability{
+			CVE:   utils.Ptr(gocsaf.CVE(cve)),
+			Title: &cve,
 		}
 		affected := map[string]struct{}{}
 		notAffected := map[string]struct{}{}
 		fixed := map[string]struct{}{}
 		underInvestigation := map[string]struct{}{}
-		flags := []flag{}
-		threats := []threat{}
+		flags := []*gocsaf.Flag{}
+		threats := []*gocsaf.Threat{}
 		for _, vuln := range vulnsInGroup {
 			// determine the discovery date
-			if vulnObject.DiscoveryDate == "" {
-				vulnObject.DiscoveryDate = vulnsInGroup[0].CreatedAt.Format(time.RFC3339)
+			if vulnObject.DiscoveryDate == nil {
+				vulnObject.DiscoveryDate = utils.Ptr(vulnsInGroup[0].CreatedAt.Format(time.RFC3339))
 			} else {
-				currentDiscoveryDate, err := time.Parse(time.RFC3339, vulnObject.DiscoveryDate)
+				currentDiscoveryDate, err := time.Parse(time.RFC3339, *vulnObject.DiscoveryDate)
 				if err == nil {
 					if currentDiscoveryDate.After(vuln.CreatedAt) {
-						vulnObject.DiscoveryDate = vuln.CreatedAt.Format(time.RFC3339)
+						vulnObject.DiscoveryDate = utils.Ptr(vuln.CreatedAt.Format(time.RFC3339))
 					}
 				}
 			}
 
-			productIDs := utils.Map(vuln.Artifacts, func(v models.Artifact) string {
-				return fmt.Sprintf("%s@%s", v.ArtifactName, v.AssetVersionName)
+			productIDs := utils.Map(vuln.Artifacts, func(v models.Artifact) *gocsaf.ProductID {
+				return utils.Ptr(gocsaf.ProductID(fmt.Sprintf("%s@%s", v.ArtifactName, v.AssetVersionName)))
 			})
 
 			switch vuln.State {
 			case models.VulnStateOpen:
 				for _, pid := range productIDs {
-					underInvestigation[pid] = struct{}{}
+					underInvestigation[string(*pid)] = struct{}{}
 				}
 			case models.VulnStateAccepted:
-				threats = append(threats, threat{
-					Category: "impact",
-					Details:  utils.SafeDereference(lastEvents[vuln.ID].Justification),
+				threats = append(threats, &gocsaf.Threat{
+					Category: utils.Ptr(gocsaf.CSAFThreatCategoryImpact),
+					Details:  lastEvents[vuln.ID].Justification,
 				})
 				for _, pid := range productIDs {
-					affected[pid] = struct{}{}
+					affected[string(*pid)] = struct{}{}
 				}
 			case models.VulnStateFixed:
 				for _, pid := range productIDs {
-					fixed[pid] = struct{}{}
+					fixed[string(*pid)] = struct{}{}
 				}
 			case models.VulnStateFalsePositive:
-				flags = append(flags, flag{
-					Label:      utils.OrDefault(utils.EmptyThenNil(string(lastEvents[vuln.ID].MechanicalJustification)), "vulnerable_code_not_in_execute_path"),
-					ProductIDs: productIDs,
+				justification := string(lastEvents[vuln.ID].MechanicalJustification)
+				if lastEvents[vuln.ID].MechanicalJustification == "" {
+					justification = string(gocsaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
+				}
+
+				flags = append(flags, &gocsaf.Flag{
+					Label:      utils.Ptr(gocsaf.FlagLabel(justification)),
+					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
 				})
 				for _, pid := range productIDs {
-					notAffected[pid] = struct{}{}
+					notAffected[string(*pid)] = struct{}{}
 				}
 			}
 		}
 
-		vulnObject.ProductStatus = productStatus{
-			Fixed:              slices.Collect(maps.Keys(fixed)),
-			KnownAffected:      slices.Collect(maps.Keys(affected)),
-			KnownNotAffected:   slices.Collect(maps.Keys(notAffected)),
-			UnderInvestigation: slices.Collect(maps.Keys(underInvestigation)),
+		vulnObject.ProductStatus = &gocsaf.ProductStatus{
+			Fixed: utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
+				return utils.Ptr(gocsaf.ProductID(el))
+			}))),
+			KnownAffected: utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(affected)), func(el string) *gocsaf.ProductID {
+				return utils.Ptr(gocsaf.ProductID(el))
+			}))),
+			KnownNotAffected: utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(notAffected)), func(el string) *gocsaf.ProductID {
+				return utils.Ptr(gocsaf.ProductID(el))
+			}))),
+			UnderInvestigation: utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(underInvestigation)), func(el string) *gocsaf.ProductID {
+				return utils.Ptr(gocsaf.ProductID(el))
+			}))),
 		}
 		vulnObject.Flags = flags
 		vulnObject.Threats = threats
@@ -774,30 +782,40 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 			return nil, err
 		}
 		vulnObject.Notes = notes
-		vulnerabilities = append(vulnerabilities, vulnObject)
+		vulnerabilities = append(vulnerabilities, &vulnObject)
 	}
 
-	slices.SortFunc(vulnerabilities, func(vuln1, vuln2 vulnerability) int {
-		return -strings.Compare(vuln1.CVE, vuln2.CVE)
+	slices.SortFunc(vulnerabilities, func(vuln1, vuln2 *gocsaf.Vulnerability) int {
+		if vuln1.CVE == nil && vuln2.CVE == nil {
+			return 0
+		}
+		if vuln1.CVE == nil {
+			return 1
+		}
+		if vuln2.CVE == nil {
+			return -1
+
+		}
+		return -strings.Compare(string(*vuln1.CVE), string(*vuln2.CVE))
 	})
 	return vulnerabilities, nil
 }
 
 // generate the textual summary for a vulnerability object
-func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]note, error) {
+func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocsaf.Note, error) {
 	if len(vulns) == 0 {
 		return nil, nil
 	}
-	vulnDetails := note{
-		Category: "details",
-		Title:    "state of the vulnerability in the product",
+	vulnDetails := gocsaf.Note{
+		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
+		Title:        utils.Ptr("state of the vulnerability in the product"),
 	}
 
 	cve := vulns[0].CVE
-	cveDescription := note{
-		Category: "description",
-		Title:    "textual description of CVE",
-		Text:     cve.Description,
+	cveDescription := gocsaf.Note{
+		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
+		Title:        utils.Ptr("textual description of CVE"),
+		Text:         &cve.Description,
 	}
 
 	// group vulnerabilities by artifact
@@ -819,8 +837,8 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]note,
 		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(vulnStates, ", ")))
 	}
 
-	vulnDetails.Text = strings.Join(summaryParts, " | ")
-	return []note{vulnDetails, cveDescription}, nil
+	vulnDetails.Text = utils.Ptr(strings.Join(summaryParts, " | "))
+	return gocsaf.Notes{&vulnDetails, &cveDescription}, nil
 }
 
 // Helper function to map state to human-readable string
@@ -840,8 +858,8 @@ func stateToString(state models.VulnState) string {
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (trackingObject, []models.DependencyVuln, error) {
-	tracking := trackingObject{}
+func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (gocsaf.Tracking, []models.DependencyVuln, error) {
+	tracking := gocsaf.Tracking{}
 	// first get all dependency vulns for an asset
 	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
@@ -865,9 +883,9 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	})
 
 	// now we can extract the first release and current release timestamp that being the first and last event
-	tracking.InitialReleaseDate = asset.CreatedAt.Format(time.RFC3339)
+	tracking.InitialReleaseDate = utils.Ptr(asset.CreatedAt.Format(time.RFC3339))
 	if len(allEvents) != 0 {
-		tracking.CurrentReleaseDate = allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339)
+		tracking.CurrentReleaseDate = utils.Ptr(allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339))
 	} else {
 		tracking.CurrentReleaseDate = tracking.InitialReleaseDate
 	}
@@ -881,15 +899,15 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = fmt.Sprintf("csaf_report_%s_%s", strings.ToLower(asset.Slug), strings.ToLower(version))
-	tracking.Version = version
-	tracking.Status = "interim"
+	tracking.ID = utils.Ptr(gocsaf.TrackingID(fmt.Sprintf("csaf_report_%s_%s", strings.ToLower(asset.Slug), strings.ToLower(version))))
+	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
+	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
 	return tracking, vulns, nil
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns []models.DependencyVuln, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]revision, error) {
-	var revisions []revision
+func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns []models.DependencyVuln, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]*gocsaf.Revision, error) {
+	var revisions []*gocsaf.Revision
 	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
 	timeBuckets := make(map[string][]models.VulnEvent, len(events))
 	for _, event := range events {
@@ -910,10 +928,10 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns [
 	})
 
 	// initial release entry with no vulnerabilities
-	revisions = append(revisions, revision{
-		Date:    asset.CreatedAt.Format(time.RFC3339),
-		Number:  "1",
-		Summary: "Asset created, no vulnerabilities found",
+	revisions = append(revisions, &gocsaf.Revision{
+		Date:    utils.Ptr(asset.CreatedAt.Format(time.RFC3339)),
+		Number:  utils.Ptr(gocsaf.RevisionNumber("1")),
+		Summary: utils.Ptr("Asset created, no vulnerabilities found"),
 	})
 
 	// then just create a revision entry for every event group
@@ -921,16 +939,16 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns [
 		if i+1 >= documentVersion {
 			break
 		}
-		revisionObject := revision{
-			Date: eventGroup[0].CreatedAt.Format(time.RFC3339),
+		revisionObject := gocsaf.Revision{
+			Date: utils.Ptr(eventGroup[0].CreatedAt.Format(time.RFC3339)),
 		}
-		revisionObject.Number = strconv.Itoa(i + 2)
+		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(i + 2)))
 		summary, err := generateSummaryForEvents(eventGroup, vulns)
 		if err != nil {
 			return nil, err
 		}
-		revisionObject.Summary = summary
-		revisions = append(revisions, revisionObject)
+		revisionObject.Summary = &summary
+		revisions = append(revisions, &revisionObject)
 	}
 
 	return revisions, nil

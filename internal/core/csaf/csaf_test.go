@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -132,21 +133,21 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
 		assert.Nil(t, err)
-		csafDoc := csaf{}
+		csafDoc := gocsaf.Advisory{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
 		assert.Nil(t, err)
 
-		assert.Equal(t, "csaf_base", csafDoc.Document.Category)
-		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
-		assert.Equal(t, "vendor", csafDoc.Document.Publisher.Category)
-		assert.Equal(t, org.Name, csafDoc.Document.Publisher.Name)
-		assert.Equal(t, "https://devguard.org", csafDoc.Document.Publisher.Namespace)
+		assert.Equal(t, gocsaf.DocumentCategory("csaf_base"), *csafDoc.Document.Category)
+		assert.Equal(t, gocsaf.Version("2.0"), *csafDoc.Document.CSAFVersion)
+		assert.Equal(t, gocsaf.Category("vendor"), *csafDoc.Document.Publisher.Category)
+		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
+		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
 
 		assert.Equal(t, 1, len(csafDoc.ProductTree.Branches))
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Name)
-		assert.Equal(t, "product_version", csafDoc.ProductTree.Branches[0].Category)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Product.Name)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Name)
+		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[0].Category)
+		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main"), *csafDoc.ProductTree.Branches[0].Product.ProductID)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Product.Name)
 	})
 	t.Run("test product_tree functionality for more complex product trees", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -182,27 +183,27 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
 		assert.Nil(t, err)
-		csafDoc := csaf{}
+		csafDoc := gocsaf.Advisory{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
 		assert.Nil(t, err)
 
 		// only test product tree here
 		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
 
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Name)
-		assert.Equal(t, "product_version", csafDoc.ProductTree.Branches[0].Category)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.ProductTree.Branches[0].Product.Name)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Name)
+		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[0].Category)
+		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main"), *csafDoc.ProductTree.Branches[0].Product.ProductID)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Product.Name)
 
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", csafDoc.ProductTree.Branches[1].Name)
-		assert.Equal(t, "product_version", csafDoc.ProductTree.Branches[1].Category)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", csafDoc.ProductTree.Branches[1].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", csafDoc.ProductTree.Branches[1].Product.Name)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", *csafDoc.ProductTree.Branches[1].Name)
+		assert.Equal(t, "product_version", string(*csafDoc.ProductTree.Branches[1].Category))
+		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1"), *csafDoc.ProductTree.Branches[1].Product.ProductID)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", *csafDoc.ProductTree.Branches[1].Product.Name)
 
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", csafDoc.ProductTree.Branches[2].Name)
-		assert.Equal(t, "product_version", csafDoc.ProductTree.Branches[2].Category)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", csafDoc.ProductTree.Branches[2].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", csafDoc.ProductTree.Branches[2].Product.Name)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", *csafDoc.ProductTree.Branches[2].Name)
+		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[2].Category)
+		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2"), *csafDoc.ProductTree.Branches[2].Product.ProductID)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", *csafDoc.ProductTree.Branches[2].Product.Name)
 	})
 	t.Run("add vulnerabilities and vuln events to simulate a vulnerability history, use latest report version", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -244,16 +245,16 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
 		assert.Nil(t, err)
-		csafDoc := csaf{}
+		csafDoc := gocsaf.Advisory{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
 		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
-		assert.Equal(t, "csaf_vex", csafDoc.Document.Category)
-		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
-		assert.Equal(t, "vendor", csafDoc.Document.Publisher.Category)
-		assert.Equal(t, org.Name, csafDoc.Document.Publisher.Name)
-		assert.Equal(t, "https://devguard.org", csafDoc.Document.Publisher.Namespace)
+		assert.Equal(t, gocsaf.DocumentCategory("csaf_vex"), *csafDoc.Document.Category)
+		assert.Equal(t, gocsaf.Version("2.0"), *csafDoc.Document.CSAFVersion)
+		assert.Equal(t, gocsaf.Category("vendor"), *csafDoc.Document.Publisher.Category)
+		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
+		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
 		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
 
 		// test the tracking object / revision history
@@ -262,61 +263,61 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		var date time.Time
 
 		assert.Equal(t, 4, len(revHistory)) // version 4 of the document should result in 4 entries
-		assert.Equal(t, strings.TrimRight(id, ".json"), csafDoc.Document.Tracking.ID)
+		assert.Equal(t, strings.TrimRight(id, ".json"), string(*csafDoc.Document.Tracking.ID))
 		assert.Equal(t, revHistory[3].Date, csafDoc.Document.Tracking.CurrentReleaseDate)
 		assert.Equal(t, revHistory[0].Date, csafDoc.Document.Tracking.InitialReleaseDate)
-		assert.Equal(t, "interim", csafDoc.Document.Tracking.Status)
-		assert.Equal(t, "4", csafDoc.Document.Tracking.Version)
+		assert.Equal(t, "interim", string(*csafDoc.Document.Tracking.Status))
+		assert.Equal(t, gocsaf.RevisionNumber("4"), *csafDoc.Document.Tracking.Version)
 
-		assert.Equal(t, "1", revHistory[0].Number)
-		date, err = time.Parse(time.RFC3339, revHistory[0].Date)
+		assert.Equal(t, gocsaf.RevisionNumber("1"), *revHistory[0].Number)
+		date, err = time.Parse(time.RFC3339, *revHistory[0].Date)
 		assert.Nil(t, err)
 		assetCreatedAt, err := time.Parse(time.RFC3339, asset.CreatedAt.Format(time.RFC3339))
 		assert.Nil(t, err)
 		assert.True(t, assetCreatedAt.Equal(date))
-		assert.Equal(t, "Asset created, no vulnerabilities found", revHistory[0].Summary)
+		assert.Equal(t, "Asset created, no vulnerabilities found", *revHistory[0].Summary)
 
-		assert.Equal(t, "2", revHistory[1].Number)
-		date, err = time.Parse(time.RFC3339, revHistory[1].Date)
+		assert.Equal(t, gocsaf.RevisionNumber("2"), *revHistory[1].Number)
+		date, err = time.Parse(time.RFC3339, *revHistory[1].Date)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(0*time.Minute).Equal(date))
-		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", revHistory[1].Summary)
+		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", *revHistory[1].Summary)
 
-		assert.Equal(t, "3", revHistory[2].Number)
-		date, err = time.Parse(time.RFC3339, revHistory[2].Date)
+		assert.Equal(t, gocsaf.RevisionNumber("3"), *revHistory[2].Number)
+		date, err = time.Parse(time.RFC3339, *revHistory[2].Date)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(2*time.Minute).Equal(date))
-		assert.Equal(t, "Accepted 3 existing vulnerabilities (CVE-2025-22777, CVE-2025-22871, CVE-2025-50181) | Marked 1 existing vulnerability as false positive (CVE-2025-22777).", revHistory[2].Summary)
+		assert.Equal(t, "Accepted 3 existing vulnerabilities (CVE-2025-22777, CVE-2025-22871, CVE-2025-50181) | Marked 1 existing vulnerability as false positive (CVE-2025-22777).", *revHistory[2].Summary)
 
-		assert.Equal(t, "4", revHistory[3].Number)
-		date, err = time.Parse(time.RFC3339, revHistory[3].Date)
+		assert.Equal(t, gocsaf.RevisionNumber("4"), *revHistory[3].Number)
+		date, err = time.Parse(time.RFC3339, *revHistory[3].Date)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Add(4*time.Minute).Equal(date))
-		assert.Equal(t, "Fixed 1 existing vulnerability (CVE-2025-50181).", revHistory[3].Summary)
+		assert.Equal(t, "Fixed 1 existing vulnerability (CVE-2025-50181).", *revHistory[3].Summary)
 
 		// test the vulnerabilities Object
 		assert.Equal(t, 3, len(csafDoc.Vulnerabilities)) // 3 CVEs should result in 3 Vulnerability Groups
 
-		assert.Equal(t, "CVE-2025-50181", csafDoc.Vulnerabilities[0].CVE, csafDoc.Vulnerabilities[0].Title)
-		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[0].DiscoveryDate)
+		assert.Equal(t, gocsaf.CVE("CVE-2025-50181"), *csafDoc.Vulnerabilities[0].CVE)
+		date, err = time.Parse(time.RFC3339, *csafDoc.Vulnerabilities[0].DiscoveryDate)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, fixed for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation[0])
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, fixed for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", *csafDoc.Vulnerabilities[0].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation)[0]))
 
-		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
-		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[1].DiscoveryDate)
+		assert.Equal(t, gocsaf.CVE("CVE-2025-22871"), *csafDoc.Vulnerabilities[1].CVE)
+		date, err = time.Parse(time.RFC3339, *csafDoc.Vulnerabilities[1].DiscoveryDate)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: accepted for package pkg:golang/helm.sh/helm/v3@v3.18.4", csafDoc.Vulnerabilities[1].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: accepted for package pkg:golang/helm.sh/helm/v3@v3.18.4", *csafDoc.Vulnerabilities[1].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected)[0]))
 
-		assert.Equal(t, "CVE-2025-22777", csafDoc.Vulnerabilities[2].CVE, csafDoc.Vulnerabilities[2].Title)
-		date, err = time.Parse(time.RFC3339, csafDoc.Vulnerabilities[2].DiscoveryDate)
+		assert.Equal(t, gocsaf.CVE("CVE-2025-22777"), *csafDoc.Vulnerabilities[2].CVE)
+		date, err = time.Parse(time.RFC3339, *csafDoc.Vulnerabilities[2].DiscoveryDate)
 		assert.Nil(t, err)
 		assert.True(t, timeStamp.Equal(date))
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: marked as false positive for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, accepted for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected[0])
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: marked as false positive for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, accepted for package pkg:golang/stdlib@v1.24.1", *csafDoc.Vulnerabilities[2].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[1].ProductStatus.KnownAffected)[0]))
 	})
 	t.Run("use an earlier version to test the time travel functionality", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -340,16 +341,16 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		buf := bytes.Buffer{}
 		_, err = io.Copy(&buf, body)
 		assert.Nil(t, err)
-		csafDoc := csaf{}
+		csafDoc := gocsaf.Advisory{}
 		err = json.Unmarshal(buf.Bytes(), &csafDoc)
 		assert.Nil(t, err)
 
 		// since we have vulnerabilities the report should be categorized as security advisory
-		assert.Equal(t, "csaf_vex", csafDoc.Document.Category)
-		assert.Equal(t, "2.0", csafDoc.Document.CSAFVersion)
-		assert.Equal(t, "vendor", csafDoc.Document.Publisher.Category)
-		assert.Equal(t, org.Name, csafDoc.Document.Publisher.Name)
-		assert.Equal(t, "https://devguard.org", csafDoc.Document.Publisher.Namespace)
+		assert.Equal(t, gocsaf.DocumentCategory("csaf_vex"), *csafDoc.Document.Category)
+		assert.Equal(t, gocsaf.Version("2.0"), *csafDoc.Document.CSAFVersion)
+		assert.Equal(t, gocsaf.Category("vendor"), *csafDoc.Document.Publisher.Category)
+		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
+		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
 		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
 
 		// test the tracking object / revision history
@@ -357,32 +358,32 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		revHistory := csafDoc.Document.Tracking.RevisionHistory
 
 		assert.Equal(t, versionInt, len(revHistory)) // version 4 of the document should result in 4 entries
-		assert.Equal(t, strings.TrimRight(id, ".json"), csafDoc.Document.Tracking.ID)
+		assert.Equal(t, strings.TrimRight(id, ".json"), string(*csafDoc.Document.Tracking.ID))
 		assert.Equal(t, revHistory[versionInt-1].Date, csafDoc.Document.Tracking.CurrentReleaseDate)
 		assert.Equal(t, revHistory[0].Date, csafDoc.Document.Tracking.InitialReleaseDate)
-		assert.Equal(t, "interim", csafDoc.Document.Tracking.Status)
-		assert.Equal(t, version, csafDoc.Document.Tracking.Version)
+		assert.Equal(t, "interim", string(*csafDoc.Document.Tracking.Status))
+		assert.Equal(t, gocsaf.RevisionNumber(version), *csafDoc.Document.Tracking.Version)
 
-		assert.Equal(t, "1", revHistory[0].Number)
-		assert.Equal(t, asset.CreatedAt.Format(time.RFC3339), revHistory[0].Date)
-		assert.Equal(t, "Asset created, no vulnerabilities found", revHistory[0].Summary)
+		assert.Equal(t, gocsaf.RevisionNumber("1"), *revHistory[0].Number)
+		assert.Equal(t, asset.CreatedAt.Format(time.RFC3339), *revHistory[0].Date)
+		assert.Equal(t, "Asset created, no vulnerabilities found", *revHistory[0].Summary)
 
-		assert.Equal(t, "2", revHistory[1].Number)
-		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", revHistory[1].Summary)
+		assert.Equal(t, gocsaf.RevisionNumber("2"), *revHistory[1].Number)
+		assert.Equal(t, "Detected 6 new vulnerabilities (CVE-2025-22777, CVE-2025-22777, CVE-2025-22871, CVE-2025-50181, CVE-2025-50181, CVE-2025-50181).", *revHistory[1].Summary)
 
 		// test the vulnerabilities Object
 		assert.Equal(t, 3, len(csafDoc.Vulnerabilities)) // 3 CVEs should result in 3 Vulnerability Groups
 
-		assert.Equal(t, "CVE-2025-50181", csafDoc.Vulnerabilities[0].CVE, csafDoc.Vulnerabilities[0].Title)
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", csafDoc.Vulnerabilities[0].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation[0])
+		assert.Equal(t, gocsaf.CVE("CVE-2025-50181"), *csafDoc.Vulnerabilities[0].CVE)
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/stdlib@v1.24.4, unhandled for package pkg:golang/github.com/hashicorp/go-getter@v1.7.8, unhandled for package pkg:golang/stdlib@v1.24.5", *csafDoc.Vulnerabilities[0].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[0].ProductStatus.UnderInvestigation)[0]))
 
-		assert.Equal(t, "CVE-2025-22871", csafDoc.Vulnerabilities[1].CVE, csafDoc.Vulnerabilities[1].Title)
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/helm.sh/helm/v3@v3.18.4", csafDoc.Vulnerabilities[1].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[1].ProductStatus.UnderInvestigation[0])
+		assert.Equal(t, gocsaf.CVE("CVE-2025-22871"), *csafDoc.Vulnerabilities[1].CVE)
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/helm.sh/helm/v3@v3.18.4", *csafDoc.Vulnerabilities[1].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[1].ProductStatus.UnderInvestigation)[0]))
 
-		assert.Equal(t, "CVE-2025-22777", csafDoc.Vulnerabilities[2].CVE, csafDoc.Vulnerabilities[2].Title)
-		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, unhandled for package pkg:golang/stdlib@v1.24.1", csafDoc.Vulnerabilities[2].Notes[0].Text)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", csafDoc.Vulnerabilities[2].ProductStatus.UnderInvestigation[0])
+		assert.Equal(t, gocsaf.CVE("CVE-2025-22777"), *csafDoc.Vulnerabilities[2].CVE)
+		assert.Equal(t, "ProductID pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main: unhandled for package pkg:golang/github.com/ulikunitz/xz@v0.5.12, unhandled for package pkg:golang/stdlib@v1.24.1", *csafDoc.Vulnerabilities[2].Notes[0].Text)
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.Vulnerabilities[2].ProductStatus.UnderInvestigation)[0]))
 	})
 }
