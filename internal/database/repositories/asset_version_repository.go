@@ -125,7 +125,7 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 	if defaultBranchName != nil {
 		assetVersion.DefaultBranch = *defaultBranchName == assetVersion.Name
 		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
-		if err := repository.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
+		if err := repository.UpdateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
 			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)
 			// just swallow the error here - we don't want to fail the whole operation if we can't set the default branch
 		}
@@ -134,7 +134,7 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 	return assetVersion, nil
 }
 
-func (repository *assetVersionRepository) updateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
+func (repository *assetVersionRepository) UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
 	return repository.db.Transaction(func(tx core.DB) error {
 		// reset the default branch for all versions of this asset
 		if err := tx.Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Update("default_branch", false).Error; err != nil {

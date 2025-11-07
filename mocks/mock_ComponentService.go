@@ -36,9 +36,71 @@ func (_m *ComponentService) EXPECT() *ComponentService_Expecter {
 	return &ComponentService_Expecter{mock: &_m.Mock}
 }
 
+// FetchInformationSources provides a mock function for the type ComponentService
+func (_mock *ComponentService) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(artifact)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchInformationSources")
+	}
+
+	var r0 []models.ComponentDependency
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) ([]models.ComponentDependency, error)); ok {
+		return returnFunc(artifact)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact) []models.ComponentDependency); ok {
+		r0 = returnFunc(artifact)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentDependency)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*models.Artifact) error); ok {
+		r1 = returnFunc(artifact)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentService_FetchInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchInformationSources'
+type ComponentService_FetchInformationSources_Call struct {
+	*mock.Call
+}
+
+// FetchInformationSources is a helper method to define mock.On call
+//   - artifact *models.Artifact
+func (_e *ComponentService_Expecter) FetchInformationSources(artifact interface{}) *ComponentService_FetchInformationSources_Call {
+	return &ComponentService_FetchInformationSources_Call{Call: _e.mock.On("FetchInformationSources", artifact)}
+}
+
+func (_c *ComponentService_FetchInformationSources_Call) Run(run func(artifact *models.Artifact)) *ComponentService_FetchInformationSources_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentService_FetchInformationSources_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentService_FetchInformationSources_Call {
+	_c.Call.Return(componentDependencys, err)
+	return _c
+}
+
+func (_c *ComponentService_FetchInformationSources_Call) RunAndReturn(run func(artifact *models.Artifact) ([]models.ComponentDependency, error)) *ComponentService_FetchInformationSources_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAndSaveLicenseInformation provides a mock function for the type ComponentService
-func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	ret := _mock.Called(assetVersion, artifactName, forceRefresh)
+func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, artifactName, forceRefresh, upstream)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -46,18 +108,18 @@ func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.
 
 	var r0 []models.Component
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) ([]models.Component, error)); ok {
-		return returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool, models.UpstreamState) ([]models.Component, error)); ok {
+		return returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) []models.Component); ok {
-		r0 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool, models.UpstreamState) []models.Component); ok {
+		r0 = returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, *string, bool) error); ok {
-		r1 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, *string, bool, models.UpstreamState) error); ok {
+		r1 = returnFunc(assetVersion, artifactName, forceRefresh, upstream)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,11 +135,12 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
-	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName, forceRefresh)}
+//   - upstream models.UpstreamState
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}, forceRefresh interface{}, upstream interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName, forceRefresh, upstream)}
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.AssetVersion
 		if args[0] != nil {
@@ -91,10 +154,15 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(asset
 		if args[2] != nil {
 			arg2 = args[2].(bool)
 		}
+		var arg3 models.UpstreamState
+		if args[3] != nil {
+			arg3 = args[3].(models.UpstreamState)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -105,7 +173,7 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 	return _c
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream models.UpstreamState) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -207,5 +275,62 @@ func (_c *ComponentService_RefreshComponentProjectInformation_Call) Return() *Co
 
 func (_c *ComponentService_RefreshComponentProjectInformation_Call) RunAndReturn(run func(project models.ComponentProject)) *ComponentService_RefreshComponentProjectInformation_Call {
 	_c.Run(run)
+	return _c
+}
+
+// RemoveInformationSources provides a mock function for the type ComponentService
+func (_mock *ComponentService) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
+	ret := _mock.Called(artifact, rootNodePurls)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveInformationSources")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Artifact, []string) error); ok {
+		r0 = returnFunc(artifact, rootNodePurls)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ComponentService_RemoveInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveInformationSources'
+type ComponentService_RemoveInformationSources_Call struct {
+	*mock.Call
+}
+
+// RemoveInformationSources is a helper method to define mock.On call
+//   - artifact *models.Artifact
+//   - rootNodePurls []string
+func (_e *ComponentService_Expecter) RemoveInformationSources(artifact interface{}, rootNodePurls interface{}) *ComponentService_RemoveInformationSources_Call {
+	return &ComponentService_RemoveInformationSources_Call{Call: _e.mock.On("RemoveInformationSources", artifact, rootNodePurls)}
+}
+
+func (_c *ComponentService_RemoveInformationSources_Call) Run(run func(artifact *models.Artifact, rootNodePurls []string)) *ComponentService_RemoveInformationSources_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Artifact
+		if args[0] != nil {
+			arg0 = args[0].(*models.Artifact)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentService_RemoveInformationSources_Call) Return(err error) *ComponentService_RemoveInformationSources_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ComponentService_RemoveInformationSources_Call) RunAndReturn(run func(artifact *models.Artifact, rootNodePurls []string) error) *ComponentService_RemoveInformationSources_Call {
+	_c.Call.Return(run)
 	return _c
 }

@@ -3,52 +3,68 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 func NewSecretScanningCommand() *cobra.Command {
 	secretScanningCommand := &cobra.Command{
-		Use:   "secret-scanning",
-		Short: "Scan your application to see if any secrets have been unintentionally leaked into the source code",
-		Long:  "Scan your application to see if any secrets have been unintentionally leaked into the source code",
-		RunE:  sarifCommandFactory("secret-scanning"),
+		Use:   "secret-scanning [path]",
+		Short: "Detect leaked secrets in source code",
+		Long: `Scan a repository or directory for accidentally committed secrets and produce a SARIF report.
+
+This command runs the configured secret-scanning tool (gitleaks) and uploads the
+SARIF results to DevGuard for analysis and issue creation. The command signs the
+request using the configured token before uploading the SARIF results.
+
+You may pass the target as the first positional argument instead of using
+--path.
+
+Example:
+	devguard-scanner secret-scanning --path ./my-repo
+	devguard-scanner secret-scanning ./my-repo
+	devguard-scanner secret-scanning --path ./my-repo --outputPath secrets.sarif.json
+`,
+		RunE: sarifCommandFactory("secret-scanning"),
 	}
 
-	addFirstPartyVulnsScanFlags(secretScanningCommand)
+	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)
 	return secretScanningCommand
 }
 
-func secretScan(p string) (*common.SarifResult, error) {
+func secretScan(p, outputPath string) (*common.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "secret-scanning")
 
-	// create new directory
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create temp file")
+	var sarifFilePath string
+	if outputPath != "" {
+		sarifFilePath = outputPath
+	} else {
+		// create new directory
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create temp file")
+		}
+		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting secret scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
+	slog.Info("Starting secret scanning", "path", p, "result-path", sarifFilePath)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", path.Join(dir, "result.sarif"), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err = scannerCmd.Run()
+	err := scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -61,7 +77,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	// read AND parse the file
 	var sarifScan common.SarifResult
 	// open the file
-	file, err := os.Open(path.Join(dir, "result.sarif"))
+	file, err := os.Open(sarifFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open file")
 	}
@@ -74,37 +90,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	}
 
 	// obfuscate founded secrets
-	obfuscateSecretAndAddFingerprint(&sarifScan)
+	scanner.ObfuscateSecretAndAddFingerprint(&sarifScan)
 
 	return &sarifScan, nil
-}
-
-func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
-	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
-
-	blue := text.FgBlue
-	green := text.FgGreen
-	for _, vuln := range firstPartyVulns {
-		raw := []table.Row{
-			{"RuleID:", vuln.RuleID},
-			{"File:", green.Sprint(vuln.URI)},
-		}
-		tw.AppendRows(raw)
-		for _, snippet := range vuln.SnippetContents {
-			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
-		}
-		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, 80)},
-
-			{"Commit:", vuln.Commit},
-			{"Author:", vuln.Author},
-			{"Email:", vuln.Email},
-			{"Date:", vuln.Date},
-			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))}}
-
-		tw.AppendRows(raw)
-		tw.AppendSeparator()
-	}
-
-	fmt.Println(tw.Render())
 }

@@ -5,33 +5,34 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/package-url/packageurl-go"
 )
 
+// function to make purl look more visually appealing
+func BeautifyPURL(pURL string) (string, error) {
+	p, err := packageurl.FromString(pURL)
+	if err != nil {
+		return pURL, err
+	}
+	//if the namespace is empty we don't want any leading slashes
+	if p.Namespace == "" {
+		return p.Name, nil
+	} else {
+		return p.Namespace + "/" + p.Name, nil
+	}
+}
+
 // returns the normalized purl AND the component type
-func normalizePurl(purl string) (string, cdx.ComponentType) {
+func normalizePurl(purl string) string {
 	// unescape the purl
 	purl, err := url.PathUnescape(purl)
 	if err != nil {
-		return purl, cdx.ComponentTypeLibrary
+		return purl
 	}
-	// get the distro query parameter
-	pURL, err := url.Parse(purl)
-	if err != nil {
-		return purl, cdx.ComponentTypeLibrary
-	}
-
-	q := pURL.Query()
-	distro := q.Get("distro")
 
 	// remove any query parameters
 	purl = strings.Split(purl, "?")[0]
-
-	if distro != "" {
-		// its an application
-		return purl, cdx.ComponentTypeApplication
-	}
-
-	return purl, cdx.ComponentTypeLibrary
+	return purl
 }
 
 func Purl(component cdx.Component) string {

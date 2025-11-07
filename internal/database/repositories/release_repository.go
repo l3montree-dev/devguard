@@ -215,7 +215,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		SELECT id FROM releases WHERE id = ?
 		UNION ALL
 		SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
-	) SELECT id FROM tree`, releaseID).Debug().Rows()
+	) SELECT id FROM tree`, releaseID).Rows()
 		if err != nil {
 			return artifacts, nil, err
 		}

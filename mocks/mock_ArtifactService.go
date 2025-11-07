@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -100,6 +101,84 @@ func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uui
 	return _c
 }
 
+// FetchBomsFromUpstream provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+	ret := _mock.Called(artifactName, upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchBomsFromUpstream")
+	}
+
+	var r0 []*normalize.CdxBom
+	var r1 []string
+	var r2 []string
+	if returnFunc, ok := ret.Get(0).(func(string, []string) ([]*normalize.CdxBom, []string, []string)); ok {
+		return returnFunc(artifactName, upstreamURLs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, []string) []*normalize.CdxBom); ok {
+		r0 = returnFunc(artifactName, upstreamURLs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*normalize.CdxBom)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, []string) []string); ok {
+		r1 = returnFunc(artifactName, upstreamURLs)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(string, []string) []string); ok {
+		r2 = returnFunc(artifactName, upstreamURLs)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]string)
+		}
+	}
+	return r0, r1, r2
+}
+
+// ArtifactService_FetchBomsFromUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchBomsFromUpstream'
+type ArtifactService_FetchBomsFromUpstream_Call struct {
+	*mock.Call
+}
+
+// FetchBomsFromUpstream is a helper method to define mock.On call
+//   - artifactName string
+//   - upstreamURLs []string
+func (_e *ArtifactService_Expecter) FetchBomsFromUpstream(artifactName interface{}, upstreamURLs interface{}) *ArtifactService_FetchBomsFromUpstream_Call {
+	return &ArtifactService_FetchBomsFromUpstream_Call{Call: _e.mock.On("FetchBomsFromUpstream", artifactName, upstreamURLs)}
+}
+
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) Run(run func(artifactName string, upstreamURLs []string)) *ArtifactService_FetchBomsFromUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) Return(cdxBoms []*normalize.CdxBom, strings []string, strings1 []string) *ArtifactService_FetchBomsFromUpstream_Call {
+	_c.Call.Return(cdxBoms, strings, strings1)
+	return _c
+}
+
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetArtifactNamesByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
@@ -168,6 +247,78 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 	return _c
 }
 
+// ReadArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	ret := _mock.Called(name, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadArtifact")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (models.Artifact, error)); ok {
+		return returnFunc(name, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) models.Artifact); ok {
+		r0 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(name, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
+type ArtifactService_ReadArtifact_Call struct {
+	*mock.Call
+}
+
+// ReadArtifact is a helper method to define mock.On call
+//   - name string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *ArtifactService_Expecter) ReadArtifact(name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactService_ReadArtifact_Call {
+	return &ArtifactService_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", name, assetVersionName, assetID)}
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Run(run func(name string, assetVersionName string, assetID uuid.UUID)) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveArtifact provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 	ret := _mock.Called(artifact)
@@ -215,6 +366,104 @@ func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_
 }
 
 func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SyncUpstreamBoms provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(boms, org, project, asset, assetVersion, artifact, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncUpstreamBoms")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
+		r1 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_SyncUpstreamBoms_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncUpstreamBoms'
+type ArtifactService_SyncUpstreamBoms_Call struct {
+	*mock.Call
+}
+
+// SyncUpstreamBoms is a helper method to define mock.On call
+//   - boms []*normalize.CdxBom
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - artifact models.Artifact
+//   - userID string
+func (_e *ArtifactService_Expecter) SyncUpstreamBoms(boms interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ArtifactService_SyncUpstreamBoms_Call {
+	return &ArtifactService_SyncUpstreamBoms_Call{Call: _e.mock.On("SyncUpstreamBoms", boms, org, project, asset, assetVersion, artifact, userID)}
+}
+
+func (_c *ArtifactService_SyncUpstreamBoms_Call) Run(run func(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncUpstreamBoms_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []*normalize.CdxBom
+		if args[0] != nil {
+			arg0 = args[0].([]*normalize.CdxBom)
+		}
+		var arg1 models.Org
+		if args[1] != nil {
+			arg1 = args[1].(models.Org)
+		}
+		var arg2 models.Project
+		if args[2] != nil {
+			arg2 = args[2].(models.Project)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 models.Artifact
+		if args[5] != nil {
+			arg5 = args[5].(models.Artifact)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_SyncUpstreamBoms_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_SyncUpstreamBoms_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *ArtifactService_SyncUpstreamBoms_Call) RunAndReturn(run func(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)) *ArtifactService_SyncUpstreamBoms_Call {
 	_c.Call.Return(run)
 	return _c
 }

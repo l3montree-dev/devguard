@@ -184,23 +184,26 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
 
-	artifactService := artifact.NewService(artifactRepository)
-	artifactController := artifact.NewController(artifactService)
-
 	// release module
 	// release repository will be created later when project router is available
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+
+	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	invitationRepository := repositories.NewInvitationRepository(db)
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
+	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
 
 	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
 
 	// init all http controllers using the repositories
-	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService)
+
+	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService, scanService)
+	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
@@ -208,7 +211,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	scanController := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)
@@ -255,6 +258,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
+	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	/**
 	Expose vulnerability data publicly
 	*/
@@ -420,6 +426,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
+	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
@@ -447,9 +454,13 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
+	assetVersionRouter.GET("/artifact-root-nodes/", assetVersionController.ReadRootNodes)
+
+	assetVersionRouter.POST("/artifacts/", artifactController.Create, neededScope([]string{"manage"}))
 
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}))
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", artifactMiddleware(artifactRepository))
 
@@ -461,13 +472,17 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, neededScope([]string{"manage"}))
+	artifactRouter.PUT("/", artifactController.UpdateArtifact, neededScope([]string{"manage"}))
+	artifactRouter.POST("/sync-external-sources/", artifactController.SyncExternalSources)
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
+	dependencyVulnRouter.GET("/sync/", dependencyVulnController.ListByAssetIDWithoutHandledExternalEventsPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
+	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, neededScope([]string{"manage"}))
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}))
 

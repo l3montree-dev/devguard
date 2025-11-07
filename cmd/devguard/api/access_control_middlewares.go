@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -234,6 +235,82 @@ func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizatio
 			core.SetRBAC(ctx, domainRBAC)
 			core.SetOrgSlug(ctx, organization)
 			// continue to the request
+			return next(ctx)
+		}
+	}
+}
+
+func shareMiddleware(orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx core.Context) error {
+			// get the assetID from the url
+			assetID, err := core.GetURLDecodedParam(ctx, "assetID")
+			if err != nil {
+				slog.Error("could not get assetID from url", "err", err)
+				return echo.NewHTTPError(400, "invalid assetID")
+			}
+
+			assetUUID, err := uuid.Parse(assetID)
+			if err != nil {
+				slog.Error("invalid assetID format", "assetID", assetID, "err", err)
+				return echo.NewHTTPError(400, "invalid assetID format")
+			}
+			// get the asset
+			asset, err := assetRepository.Read(assetUUID)
+			if err != nil {
+				slog.Error("could not find asset in shareMiddleware", "assetID", assetID, "err", err)
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+			// fetch org and project
+			project, err := projectRepository.Read(asset.ProjectID)
+			if err != nil {
+				slog.Error("could not find project in shareMiddleware", "assetID", assetID, "projectID", asset.ProjectID, "err", err)
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+			org, err := orgRepository.Read(project.OrganizationID)
+			if err != nil {
+				slog.Error("could not find organization in shareMiddleware", "assetID", assetID, "organizationID", project.OrganizationID, "err", err)
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+
+			// check if sharing is enabled
+			if !asset.SharesInformation {
+				slog.Warn("access denied in shareMiddleware - sharing not enabled", "assetID", assetID)
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+
+			var assetVersion models.AssetVersion
+			// lets check for ref and artifact name query parameters
+			if ref := ctx.QueryParam("ref"); ref != "" {
+				// find the ref
+				assetVersion, err = assetVersionRepository.ReadBySlug(asset.ID, ref)
+				if err != nil {
+					slog.Error("could not find asset version by ref in shareMiddleware", "assetID", assetID, "ref", ref, "err", err)
+					return echo.NewHTTPError(404, "could not find asset version for the provided ref")
+				}
+			} else {
+				// use the default branch
+				assetVersion, err = assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+				if err != nil {
+					slog.Error("could not find default asset version in shareMiddleware", "assetID", assetID, "err", err)
+					return echo.NewHTTPError(404, "could not find default asset version")
+				}
+			}
+
+			if artifactName := ctx.QueryParam("artifactName"); artifactName != "" {
+				artifact, err := artifactRepository.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
+				if err != nil {
+					slog.Error("could not find artifact in shareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
+					return echo.NewHTTPError(404, "could not find artifact for the provided artifact name")
+				}
+				core.SetArtifact(ctx, artifact)
+			}
+
+			core.SetOrg(ctx, org)
+			core.SetProject(ctx, project)
+			core.SetAsset(ctx, asset)
+			core.SetAssetVersion(ctx, assetVersion)
+
 			return next(ctx)
 		}
 	}

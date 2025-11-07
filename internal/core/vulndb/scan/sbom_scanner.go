@@ -42,7 +42,7 @@ func NewSBOMScanner(purlComparer comparer, cveRepository core.CveRepository) *sb
 	}
 }
 
-func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
 
 	// iterate through all components
@@ -67,7 +67,7 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 					}*/
 					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
-						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
+						slog.Warn("could not get cves", "purl", component.PackageURL)
 					}
 
 					vulns = append(vulns, res...)

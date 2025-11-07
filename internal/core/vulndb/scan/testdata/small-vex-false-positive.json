@@ -1,0 +1,44 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.6",
+    "version": 1,
+    "metadata": {
+        "timestamp": "2025-10-25T18:27:06Z",
+        "component": {
+            "bom-ref": "pkg:devguard/neu@main",
+            "type": "application",
+            "author": "Test Org",
+            "publisher": "github.com/l3montree-dev/devguard",
+            "name": "",
+            "version": "main"
+        }
+    },
+    "vulnerabilities": [
+        {
+            "id": "CVE-2020-25649",
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-25649"
+            },
+            "analysis": {
+                "state": "false_positive",
+                "justification": "code_not_reachable",
+                "detail": "Automated dataflow analysis and manual code review indicates that the vulnerable code is not reachable, either directly or indirectly. Really!"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0"
+                }
+            ],
+            "references": [
+                {
+                    "id": "SNYK-JAVA-COMFASTERXMLJACKSONCORE-1048302",
+                    "source": {
+                        "name": "SNYK",
+                        "url": "https://security.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONCORE-1048302"
+                    }
+                }
+            ]
+        }
+    ]
+}

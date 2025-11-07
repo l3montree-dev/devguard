@@ -1,4 +1,4 @@
-FROM golang:1.25.1-trixie@sha256:715a1cb919c605b94859d2691bc11cad74e6245b94c70e7d6cddafb01ae44b14 AS golang-builder
+FROM golang:1.25.2-trixie@sha256:b08c20ae3aa771d333b1e2ad77986b42b1ded17362bbfdd452977bfc2b107295 AS golang-builder
 
 # set the working directory
 WORKDIR /app

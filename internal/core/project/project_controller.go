@@ -18,7 +18,6 @@ package project
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -248,10 +247,6 @@ func (projectController *controller) Read(c core.Context) error {
 	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
-	}
-
-	for _, asset := range assets {
-		slog.Debug("asset in project", "assetID", asset.ID.String(), "assetName", asset.Name)
 	}
 
 	project.Assets = assets

@@ -1,0 +1,98 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.6",
+    "version": 1,
+    "metadata": {
+        "timestamp": "2025-10-25T18:27:06Z",
+        "component": {
+            "bom-ref": "pkg:devguard/neu@main",
+            "type": "application",
+            "author": "Test Org",
+            "publisher": "github.com/l3montree-dev/devguard",
+            "name": "",
+            "version": "main"
+        }
+    },
+    "components": [
+        {
+            "bom-ref": "pkg:devguard/neu@main",
+            "type": "application",
+            "author": "Test Org",
+            "publisher": "github.com/l3montree-dev/devguard",
+            "name": "",
+            "version": "main"
+        },
+        {
+            "bom-ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+            "type": "library",
+            "name": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+            "version": "v1.0.0",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "unknown"
+                    }
+                }
+            ],
+            "purl": "pkg:golang/github.com/jinzhu/inflection@v1.0.0"
+        },
+        {
+            "bom-ref": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+            "type": "library",
+            "name": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+            "version": "v1.1.5",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "unknown"
+                    }
+                }
+            ],
+            "purl": "pkg:golang/github.com/jinzhu/now@v1.1.5"
+        },
+        {
+            "bom-ref": "pkg:golang/golang.org/x/text@v0.20.0",
+            "type": "library",
+            "name": "pkg:golang/golang.org/x/text@v0.20.0",
+            "version": "v0.20.0",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "unknown"
+                    }
+                }
+            ],
+            "purl": "pkg:golang/golang.org/x/text@v0.20.0"
+        },
+        {
+            "bom-ref": "pkg:golang/gorm.io/gorm@v1.31.0",
+            "type": "library",
+            "name": "pkg:golang/gorm.io/gorm@v1.31.0",
+            "version": "v1.31.0",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "unknown"
+                    }
+                }
+            ],
+            "purl": "pkg:golang/gorm.io/gorm@v1.31.0"
+        }
+    ],
+    "dependencies": [
+        {
+            "ref": "pkg:devguard/neu@main",
+            "dependsOn": [
+                "pkg:golang/gorm.io/gorm@v1.31.0"
+            ]
+        },
+        {
+            "ref": "pkg:golang/gorm.io/gorm@v1.31.0",
+            "dependsOn": [
+                "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+                "pkg:golang/github.com/jinzhu/now@v1.1.5",
+                "pkg:golang/golang.org/x/text@v0.20.0"
+            ]
+        }
+    ]
+}

@@ -68,9 +68,16 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 	)
 }
 
-func CreateArtifactService(db core.DB) core.ArtifactService {
+func CreateArtifactService(db core.DB, openSourceInsightsService core.OpenSourceInsightService) core.ArtifactService {
 	return artifact.NewService(
 		repositories.NewArtifactRepository(db),
+		repositories.NewCVERepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, nil, nil, nil, openSourceInsightsService),
+		CreateDependencyVulnService(db, nil, nil, nil),
 	)
 }
 
@@ -90,7 +97,6 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		CreateComponentService(db, openSourceInsightsService),
 		thirdPartyIntegration,
 		repositories.NewLicenseRiskRepository(db),
-		CreateArtifactService(db),
 	)
 	s.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return s
@@ -123,26 +129,38 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 			repositories.NewProjectRepository(db),
 			repositories.NewReleaseRepository(db),
 		),
-		CreateArtifactService(db),
+		CreateArtifactService(db, openSourceInsightsService),
 	)
 }
 
 func CreateScanHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, openSourceInsightsService core.OpenSourceInsightService) *scan.HTTPController {
-	return scan.NewHTTPController(
-		db,
+	assetVersionService := CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService)
+	dependencyVulnService := CreateDependencyVulnService(db, oauth2, rbac, clientFactory)
+	artifactService := CreateArtifactService(db, openSourceInsightsService)
+	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
+	statisticsService := CreateStatisticsService(db)
+	scanService := scan.NewScanService(db,
 		repositories.NewCVERepository(db),
+		assetVersionService,
+		dependencyVulnService,
+		artifactService,
+		statisticsService,
+	)
+	scanService.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
+	return scan.NewHTTPController(
+		scanService,
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewAssetVersionRepository(db),
-		CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService),
-		CreateStatisticsService(db),
-		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+		assetVersionService,
+		statisticsService,
+		dependencyVulnService,
 		CreateFirstPartyVulnService(db, integrations.NewThirdPartyIntegrations(
 			repositories.NewExternalUserRepository(db),
 			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
 			githubint.NewGithubIntegration(db),
 		)),
-		CreateArtifactService(db),
-		repositories.NewDependencyVulnRepository(db),
+		artifactService,
+		dependencyVulnRepo,
 	)
 }

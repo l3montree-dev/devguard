@@ -81,7 +81,7 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.U
 		ORDER BY arh.day ASC
 	`
 
-	if err := db.Raw(query, releaseID, start, end).Debug().Scan(&assetRisk).Error; err != nil {
+	if err := db.Raw(query, releaseID, start, end).Scan(&assetRisk).Error; err != nil {
 		return nil, err
 	}
 

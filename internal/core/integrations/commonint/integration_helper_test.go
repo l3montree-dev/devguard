@@ -154,9 +154,9 @@ func TestBuildGitlabCiTemplate(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Contains(t, result, "stages:")
-		assert.Contains(t, result, "- build")
 		assert.Contains(t, result, "- test")
-		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "- oci-image")
+		assert.Contains(t, result, "- attestation")
 		assert.Contains(t, result, "include:")
 		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
 		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
@@ -204,9 +204,9 @@ func TestBuildGitlabCiTemplate(t *testing.T) {
 
 		// defaults to full
 		assert.Contains(t, result, "stages:")
-		assert.Contains(t, result, "- build")
 		assert.Contains(t, result, "- test")
-		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "- oci-image")
+		assert.Contains(t, result, "- attestation")
 		assert.Contains(t, result, "include:")
 		assert.Contains(t, result, "remote: \"https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml\"")
 		assert.Contains(t, result, "web_ui: \"app.devguard.org\"")
