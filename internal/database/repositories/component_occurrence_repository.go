@@ -36,7 +36,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
 		Joins("JOIN organizations ON projects.organization_id = organizations.id").
 		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Where("projects.organization_id = ?", orgID).
-		Where("(component_dependencies.component_purl ILIKE ? OR component_dependencies.dependency_purl ILIKE ?)", "%"+search+"%", "%"+search+"%")
+		Where("component_dependencies.dependency_purl LIKE ?", "%"+search+"%")
 
 	var total int64
 	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
@@ -69,7 +69,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
 		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
 		Where("projects.organization_id = ?", orgID).
-		Where("(component_dependencies.component_purl ILIKE ? OR component_dependencies.dependency_purl ILIKE ?)", "%"+search+"%", "%"+search+"%").
+		Where("component_dependencies.dependency_purl LIKE ?", "%"+search+"%").
 		Order("component_dependencies.component_purl ASC, component_dependencies.asset_version_name ASC")
 
 	if pageInfo.PageSize > 0 {
