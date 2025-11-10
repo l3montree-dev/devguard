@@ -299,7 +299,7 @@ func (controller *csafController) GetOpenPGPFile(ctx core.Context) error {
 		return fmt.Errorf("invalid resource: %s", file)
 	}
 
-	publicKeyPath := os.Getenv("OPENPGP_PUBLIC_KEY_PATH")
+	publicKeyPath := os.Getenv("CSAF_OPENPGP_PUBLIC_KEY_PATH")
 	if publicKeyPath == "" {
 		publicKeyPath = "csaf-openpgp-public-key.asc"
 	}

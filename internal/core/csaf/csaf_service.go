@@ -1129,7 +1129,7 @@ func convertTimeToDateHourMinute(t time.Time) time.Time {
 func signCSAFReport(csafJSON []byte) ([]byte, error) {
 	// configure pgp profile to meet the csaf standard
 	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())
-	privateKeyPath := os.Getenv("OPENPGP_PRIVATE_KEY_PATH")
+	privateKeyPath := os.Getenv("CSAF_OPENPGP_PRIVATE_KEY_PATH")
 	if privateKeyPath == "" {
 		privateKeyPath = "csaf-openpgp-private-key.asc"
 	}
@@ -1146,7 +1146,7 @@ func signCSAFReport(csafJSON []byte) ([]byte, error) {
 	}
 
 	// unlock private key using the passphrase
-	password := os.Getenv("CSAF_PASSPHRASE")
+	password := os.Getenv("CSAF_OPENPGP_PASSPHRASE")
 	if password == "" {
 		return nil, fmt.Errorf("could not read csaf passphrase from environment variables, check your CSAF_PASSPHRASE variable in your .env file")
 	}
