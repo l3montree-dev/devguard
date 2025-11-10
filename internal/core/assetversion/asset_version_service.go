@@ -298,7 +298,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		})
 	}
 
-	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
+	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		slog.Error("could not get existing first party vulns", "err", err)
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	return newDetectedVulnsNotOnOtherBranch, fixedVulns, v, nil
 }
 
 func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {

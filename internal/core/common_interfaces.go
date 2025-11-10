@@ -195,6 +195,7 @@ type FirstPartyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 	GetByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetFirstPartyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
+	ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 }
 
 type LicenseRiskRepository interface {
