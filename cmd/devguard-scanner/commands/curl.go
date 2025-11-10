@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/constants"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/spf13/cobra"
 )
@@ -176,7 +177,7 @@ func runCurl(opts *CurlOptions) error {
 	if opts.userAgent != "" {
 		req.Header.Set("User-Agent", opts.userAgent)
 	} else {
-		req.Header.Set("User-Agent", "devguard-scanner/1.0")
+		req.Header.Set("User-Agent", constants.UserAgent)
 	}
 
 	// Set Content-Type for POST data if not already set

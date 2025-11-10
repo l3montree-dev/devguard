@@ -316,11 +316,11 @@ func shareMiddleware(orgRepository core.OrganizationRepository, projectRepositor
 	}
 }
 
-func csafMiddleware(orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
+func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 			// get the assetID from the url
-			orgID, err := core.GetURLDecodedParam(ctx, "organization")
+			orgSlug, err := core.GetURLDecodedParam(ctx, "organization")
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find organization")
 			}
@@ -333,7 +333,7 @@ func csafMiddleware(orgRepository core.OrganizationRepository, projectRepository
 			// check if the orgID is in the list of organizations with vuln sharing assets
 			var orgFound *models.Org
 			for _, o := range orgs {
-				if o.Slug == orgID {
+				if o.Slug == orgSlug {
 					orgFound = &o
 					break
 				}
@@ -341,7 +341,10 @@ func csafMiddleware(orgRepository core.OrganizationRepository, projectRepository
 			if orgFound == nil {
 				return echo.NewHTTPError(404, "could not find organization")
 			}
-
+			if orgLevel {
+				core.SetOrg(ctx, *orgFound)
+				return next(ctx)
+			}
 			// check if project project is set, if so load it
 			projectSlug, err := core.GetURLDecodedParam(ctx, "projectSlug")
 			if err != nil {

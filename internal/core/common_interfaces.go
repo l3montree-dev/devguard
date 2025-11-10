@@ -31,6 +31,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type CSAFService interface {
+	GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*normalize.CdxBom, error)
+}
+
 type SBOMScanner interface {
 	Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error)
 }

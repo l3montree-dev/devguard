@@ -4,6 +4,7 @@ go 1.25.2
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.9.3
+	github.com/ProtonMail/gopenpgp/v2 v2.9.0
 	github.com/ProtonMail/gopenpgp/v3 v3.3.0
 	github.com/bradleyfalzon/ghinstallation/v2 v2.17.0
 	github.com/briandowns/spinner v1.23.2
@@ -93,6 +94,7 @@ require (
 	github.com/Intevation/jsonpath v0.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apache/arrow/go/v10 v10.0.1 // indirect
