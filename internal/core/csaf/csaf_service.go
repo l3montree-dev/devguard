@@ -38,7 +38,7 @@ import (
 	pgpv2Crypto "github.com/ProtonMail/gopenpgp/v2/crypto"
 	pgpCrypto "github.com/ProtonMail/gopenpgp/v3/crypto"
 	"github.com/ProtonMail/gopenpgp/v3/profile"
-	"github.com/gocsaf/csaf/v3/csaf"
+
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/gocsaf/csaf/v3/util"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -270,7 +270,7 @@ func isInVersionRange(purl packageurl.PackageURL, lowerBound, upperBound package
 
 func (service csafService) downloadCsafReports(domain string) ([]gocsaf.Advisory, error) {
 
-	loader := csaf.NewProviderMetadataLoader(&service.client)
+	loader := gocsaf.NewProviderMetadataLoader(&service.client)
 
 	lpmd := loader.Load(domain)
 	pmdURL, err := url.Parse(lpmd.URL)
@@ -402,7 +402,7 @@ func loadOpenPGPKeys(
 		return nil, nil
 	}
 
-	var keys []csaf.PGPKey
+	var keys []gocsaf.PGPKey
 	if err := util.ReMarshalJSON(&keys, src); err != nil {
 		return nil, err
 	}
