@@ -6,6 +6,7 @@
     "licenser.disableAutoHeaderInsertion": false,
     "go.lintTool": "golangci-lint-v2",
     "cSpell.words": [
+        "Csaf",
         "devguard",
         "ghinstallation",
         "gorm",

@@ -32,7 +32,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 	assetVersionService := mocks.NewAssetVersionService(t)
 	dependencyVulnService := mocks.NewDependencyVulnService(t)
 
-	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+	artifactService := artifact.NewService(artifactRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 	controller := artifact.NewController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
 
 	// Create test organization, project, asset, and asset version
@@ -117,7 +117,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		err = db.Create(&testCVE).Error
 		assert.NoError(t, err)
 
-		// Create a dependency vulnerability that might be linked to the artifact
+		// Create a dependency vulnerability with the artifact association atomically
+		// This prevents race condition with cleanup goroutines from other tests
 		testDepVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -126,12 +127,9 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			},
 			CVEID:         &testCVE.CVE,
 			ComponentPurl: &testComponent.Purl,
+			Artifacts:     []models.Artifact{testArtifact}, // Associate artifact immediately
 		}
 		err = db.Create(&testDepVuln).Error
-		assert.NoError(t, err)
-
-		// Associate the artifact with the dependency vulnerability (many-to-many relationship)
-		err = db.Model(&testDepVuln).Association("Artifacts").Append(&testArtifact)
 		assert.NoError(t, err)
 
 		// Verify association exists before deletion
@@ -177,7 +175,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		terminateFailingDB() // Close the database connection to simulate a failure
 
 		failingRepository := repositories.NewArtifactRepository(failingDB)
-		failingService := artifact.NewService(failingRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+		failingService := artifact.NewService(failingRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 		failingController := artifact.NewController(failingRepository, failingService, nil, nil, nil, nil, nil)
 
 		// Setup HTTP request and response

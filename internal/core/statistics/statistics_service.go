@@ -102,7 +102,7 @@ func (s *service) UpdateArtifactRiskAggregation(artifact *models.Artifact, asset
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(&artifact.ArtifactName, artifact.AssetVersionName, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(&artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}

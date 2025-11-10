@@ -12,7 +12,7 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v0.18.6
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v0.19.2
     container_name: devguard-postgres
     security_opt:
       - no-new-privileges:true 
@@ -35,6 +35,7 @@ services:
 
   kratos-migrate:
     image: oryd/kratos:v1.3.1
+    read_only: true
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -55,6 +56,7 @@ services:
   kratos:
     image: oryd/kratos:v1.3.1
     container_name: devguard-kratos
+    read_only: true
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -81,8 +83,11 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:v0.18.6
+    image: ghcr.io/l3montree-dev/devguard:v0.19.2
     container_name: devguard-api
+    read_only: true
+    tmpfs:
+      - /tmp:size=8G
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -111,8 +116,12 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v0.18.6
+    image: ghcr.io/l3montree-dev/devguard-web:v0.19.2
     container_name: devguard-web
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M
+      - /app/.next/cache:size=500M
     security_opt:
       - no-new-privileges:true
     cap_drop:

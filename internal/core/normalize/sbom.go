@@ -62,6 +62,8 @@ func MapCDXToEventType(a *cdx.VulnerabilityAnalysis) string {
 		return "detected"
 	case cdx.IASInTriage:
 		return "detected"
+	case cdx.IASNotAffected:
+		return "falsePositive"
 	default:
 		// fallback to response mapping if state is empty
 		if a.Response != nil && len(*a.Response) > 0 {

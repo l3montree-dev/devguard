@@ -212,7 +212,7 @@ func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(tx core.DB) 
 	return assets, err
 }
 
-func (repository *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAssetVersionsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
 	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
@@ -275,4 +275,13 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	return count, nil
+}
+
+func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+	var assetVersions []models.AssetVersion
+	err := repository.Repository.GetDB(tx).Raw("SELECT * FROM asset_versions WHERE asset_id = ? AND (default_branch = true OR type = 'tag')", assetID).Find(&assetVersions).Error
+	if err != nil {
+		return nil, err
+	}
+	return assetVersions, nil
 }

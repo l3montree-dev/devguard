@@ -23,6 +23,8 @@ vulndb-tmp
 coverage.out
 csaf-openpgp-private-key.asc
 csaf-openpgp-public-key.asc
-
+!**/testfiles/**
 !**/testfiles/**
 vulndb-tmp-*
+cert.pem
+key.pem

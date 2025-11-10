@@ -651,6 +651,74 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_C
 	return _c
 }
 
+// GetAllVulnsByArtifact provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllVulnsByArtifact(tx core.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, artifact)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllVulnsByArtifact")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, models.Artifact) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, artifact)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, models.Artifact) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, artifact)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, models.Artifact) error); ok {
+		r1 = returnFunc(tx, artifact)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetAllVulnsByArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllVulnsByArtifact'
+type DependencyVulnRepository_GetAllVulnsByArtifact_Call struct {
+	*mock.Call
+}
+
+// GetAllVulnsByArtifact is a helper method to define mock.On call
+//   - tx core.DB
+//   - artifact models.Artifact
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByArtifact(tx interface{}, artifact interface{}) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
+	return &DependencyVulnRepository_GetAllVulnsByArtifact_Call{Call: _e.mock.On("GetAllVulnsByArtifact", tx, artifact)}
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsByArtifact_Call) Run(run func(tx core.DB, artifact models.Artifact)) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].(models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsByArtifact_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsByArtifact_Call) RunAndReturn(run func(tx core.DB, artifact models.Artifact) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllVulnsByAssetID provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, assetID)
@@ -715,6 +783,80 @@ func (_c *DependencyVulnRepository_GetAllVulnsByAssetID_Call) Return(dependencyV
 }
 
 func (_c *DependencyVulnRepository_GetAllVulnsByAssetID_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllVulnsByAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllVulnsForTagsAndDefaultBranchInAsset provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx core.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetID, excludedStates)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllVulnsForTagsAndDefaultBranchInAsset")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, []models.VulnState) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, assetID, excludedStates)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, []models.VulnState) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, assetID, excludedStates)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, []models.VulnState) error); ok {
+		r1 = returnFunc(tx, assetID, excludedStates)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllVulnsForTagsAndDefaultBranchInAsset'
+type DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call struct {
+	*mock.Call
+}
+
+// GetAllVulnsForTagsAndDefaultBranchInAsset is a helper method to define mock.On call
+//   - tx core.DB
+//   - assetID uuid.UUID
+//   - excludedStates []models.VulnState
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsForTagsAndDefaultBranchInAsset(tx interface{}, assetID interface{}, excludedStates interface{}) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+	return &DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call{Call: _e.mock.On("GetAllVulnsForTagsAndDefaultBranchInAsset", tx, assetID, excludedStates)}
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) Run(run func(tx core.DB, assetID uuid.UUID, excludedStates []models.VulnState)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 []models.VulnState
+		if args[2] != nil {
+			arg2 = args[2].([]models.VulnState)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1052,6 +1194,80 @@ func (_c *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Cal
 }
 
 func (_c *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error)) *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDependencyVulnByCVEIDAndAssetID provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(tx core.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, cveID, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDependencyVulnByCVEIDAndAssetID")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, cveID, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, cveID, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, cveID, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnByCVEIDAndAssetID'
+type DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call struct {
+	*mock.Call
+}
+
+// GetDependencyVulnByCVEIDAndAssetID is a helper method to define mock.On call
+//   - tx core.DB
+//   - cveID string
+//   - assetID uuid.UUID
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnByCVEIDAndAssetID(tx interface{}, cveID interface{}, assetID interface{}) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	return &DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call{Call: _e.mock.On("GetDependencyVulnByCVEIDAndAssetID", tx, cveID, assetID)}
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) Run(run func(tx core.DB, cveID string, assetID uuid.UUID)) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) RunAndReturn(run func(tx core.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

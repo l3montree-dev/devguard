@@ -73,7 +73,9 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(asset
 func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events").Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
+	q := repository.Repository.GetDB(tx).Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
 
 	if err := q.Find(&licenseRisks).Error; err != nil {
 		return nil, err

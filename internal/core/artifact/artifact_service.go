@@ -3,6 +3,7 @@ package artifact
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,10 +15,13 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type service struct {
+	csafService              core.CSAFService
 	artifactRepository       core.ArtifactRepository
 	cveRepository            core.CveRepository
 	componentRepository      core.ComponentRepository
@@ -28,8 +32,11 @@ type service struct {
 	dependencyVulnService    core.DependencyVulnService
 }
 
-func NewService(artifactRepository core.ArtifactRepository, cveRepository core.CveRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService) *service {
+func NewService(artifactRepository core.ArtifactRepository,
+	csafService core.CSAFService,
+	cveRepository core.CveRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService) *service {
 	return &service{
+		csafService:              csafService,
 		artifactRepository:       artifactRepository,
 		cveRepository:            cveRepository,
 		componentRepository:      componentRepository,
@@ -72,11 +79,45 @@ func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []stri
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
+		// check if csaf provider-metadata.json is appended
+		if strings.HasSuffix(url, "/provider-metadata.json") {
+			// we need to use the csaf ingestion here.
+			// extract the purl from the url
+			// split at http or https
+			protocol := "http://"
+			purlSlice := strings.SplitN(url, "http://", 2)
+			if len(purlSlice) == 1 {
+				purlSlice = strings.SplitN(url, "https://", 2)
+				protocol = "https://"
+			}
+			if len(purlSlice) != 2 {
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			purlStr := strings.TrimSuffix(purlSlice[0], ":")
+			sanitizedURL := fmt.Sprintf("%s%s", protocol, purlSlice[1])
+
+			purl, err := packageurl.FromString(purlStr)
+			if err != nil {
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			bom, err := s.csafService.GetVexFromCsafProvider(purl, url, sanitizedURL)
+			if err != nil {
+				slog.Warn("could not download csaf from csaf provider", "err", err)
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			validURLs = append(validURLs, url)
+			boms = append(boms, bom)
+			continue
+		}
 		//check if the file is a valid url
 		if url == "" || !strings.HasPrefix(url, "http") {
 			invalidURLs = append(invalidURLs, url)
 			continue
 		}
+
 		var bom cyclonedx.BOM
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
@@ -109,7 +150,6 @@ func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []stri
 		}
 		validURLs = append(validURLs, url)
 		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, url))
-
 	}
 
 	return boms, validURLs, invalidURLs
@@ -247,7 +287,7 @@ func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, pro
 					// only consider non-internal upstream events
 					if event.Upstream != models.UpstreamStateInternal {
 						// the last event
-						if eventType == expectedEventType && event.Justification != nil && *event.Justification == expected.justification {
+						if eventType == expectedEventType && utils.SafeDereference(event.Justification) == expected.justification {
 							// we already have seen this event
 							continue outer
 						} else {

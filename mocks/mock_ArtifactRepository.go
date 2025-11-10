@@ -488,6 +488,74 @@ func (_c *ArtifactRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB,
 	return _c
 }
 
+// GetAllArtifactAffectedByDependencyVuln provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(tx core.DB, vulnID string) ([]models.Artifact, error) {
+	ret := _mock.Called(tx, vulnID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllArtifactAffectedByDependencyVuln")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string) ([]models.Artifact, error)); ok {
+		return returnFunc(tx, vulnID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string) []models.Artifact); ok {
+		r0 = returnFunc(tx, vulnID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string) error); ok {
+		r1 = returnFunc(tx, vulnID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllArtifactAffectedByDependencyVuln'
+type ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call struct {
+	*mock.Call
+}
+
+// GetAllArtifactAffectedByDependencyVuln is a helper method to define mock.On call
+//   - tx core.DB
+//   - vulnID string
+func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(tx interface{}, vulnID interface{}) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	return &ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call{Call: _e.mock.On("GetAllArtifactAffectedByDependencyVuln", tx, vulnID)}
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(run func(tx core.DB, vulnID string)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAndReturn(run func(tx core.DB, vulnID string) ([]models.Artifact, error)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByAssetIDAndAssetVersionName provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
@@ -552,6 +620,74 @@ func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Return(artifa
 }
 
 func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByAssetVersions provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
+	ret := _mock.Called(assetID, assetVersionNames)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetVersions")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) ([]models.Artifact, error)); ok {
+		return returnFunc(assetID, assetVersionNames)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) []models.Artifact); ok {
+		r0 = returnFunc(assetID, assetVersionNames)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, []string) error); ok {
+		r1 = returnFunc(assetID, assetVersionNames)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetByAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersions'
+type ArtifactRepository_GetByAssetVersions_Call struct {
+	*mock.Call
+}
+
+// GetByAssetVersions is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - assetVersionNames []string
+func (_e *ArtifactRepository_Expecter) GetByAssetVersions(assetID interface{}, assetVersionNames interface{}) *ArtifactRepository_GetByAssetVersions_Call {
+	return &ArtifactRepository_GetByAssetVersions_Call{Call: _e.mock.On("GetByAssetVersions", assetID, assetVersionNames)}
+}
+
+func (_c *ArtifactRepository_GetByAssetVersions_Call) Run(run func(assetID uuid.UUID, assetVersionNames []string)) *ArtifactRepository_GetByAssetVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetVersions_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetByAssetVersions_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetVersions_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
