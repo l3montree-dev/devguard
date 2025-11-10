@@ -5,6 +5,7 @@ package artifact
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -39,6 +40,22 @@ func NewController(artifactRepository core.ArtifactRepository, artifactService c
 	}
 }
 
+type informationSource struct {
+	URL  string  `json:"url"`
+	Purl *string `json:"purl"`
+}
+
+func informationSourceToString(source informationSource) string {
+	// detect a csaf url
+	if !strings.HasSuffix(source.URL, "provider-metadata.json") {
+		return source.URL
+	}
+	if source.Purl != nil && *source.Purl != "" {
+		return *source.Purl + ":" + source.URL
+	}
+	return source.URL
+}
+
 func (c *controller) Create(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
@@ -48,8 +65,8 @@ func (c *controller) Create(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
 	type requestBody struct {
-		ArtifactName       string   `json:"artifactName"`
-		InformationSources []string `json:"informationSources"`
+		ArtifactName       string              `json:"artifactName"`
+		InformationSources []informationSource `json:"informationSources"`
 	}
 
 	var body requestBody
@@ -71,7 +88,7 @@ func (c *controller) Create(ctx core.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, body.InformationSources)
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.Map(body.InformationSources, informationSourceToString))
 	vulns, err := c.artifactService.SyncUpstreamBoms(boms, core.GetOrg(ctx), core.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
@@ -168,13 +185,9 @@ func (c *controller) SyncExternalSources(ctx core.Context) error {
 func (c *controller) UpdateArtifact(ctx core.Context) error {
 
 	asset := core.GetAsset(ctx)
-
 	assetVersion := core.GetAssetVersion(ctx)
-
 	org := core.GetOrg(ctx)
-
 	project := core.GetProject(ctx)
-
 	artifactName, err := core.GetArtifactName(ctx)
 	if err != nil {
 		return err
@@ -186,8 +199,8 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	}
 
 	type requestBody struct {
-		ArtifactName       string   `json:"artifactName"`
-		InformationSources []string `json:"informationSources"`
+		ArtifactName       string              `json:"artifactName"`
+		InformationSources []informationSource `json:"informationSources"`
 	}
 
 	var body requestBody
@@ -200,9 +213,8 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
-	newSources := body.InformationSources
 
-	comparison := utils.CompareSlices(newSources, utils.Map(oldSources, func(el models.ComponentDependency) string {
+	comparison := utils.CompareSlices(utils.Map(body.InformationSources, informationSourceToString), utils.Map(oldSources, func(el models.ComponentDependency) string {
 		return el.DependencyPurl
 	}), func(e string) string { return e })
 

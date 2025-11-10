@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -50,18 +49,21 @@ func NewCSAFController(dependencyVulnRepository core.DependencyVulnRepository, v
 // builds and returns the index.txt file, listing all csaf reports currently available
 func (controller *csafController) GetIndexFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	// build revision history first
-	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
+	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
 		return err
 	}
 
 	// then write each revision entry version to the index string
 	index := ""
-	for _, entry := range tracking.RevisionHistory {
-		year := (*entry.Date)[:4]
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number)))
-		index += fmt.Sprintf("%s/%s\n", year, fileName)
+	for _, v := range vulns {
+		// get the created at of the first event
+		if len(v.Events) == 0 {
+			continue
+		}
+		year := v.Events[0].CreatedAt.Year()
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(utils.SafeDereference(v.CVEID)))
+		index += fmt.Sprintf("%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
 }
@@ -69,25 +71,24 @@ func (controller *csafController) GetIndexFile(ctx core.Context) error {
 // builds and returns the changes.csv file, containing all reports ordered by release dates
 func (controller *csafController) GetChangesCSVFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	// build revision history first
-	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
+	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
 		return err
 	}
 
-	// sort resulting revision history by date in descending order
-	slices.SortFunc(tracking.RevisionHistory, func(revision1, revision2 *gocsaf.Revision) int {
-		time1, _ := time.Parse(time.RFC3339, *revision1.Date) //nolint:all
-		time2, _ := time.Parse(time.RFC3339, *revision2.Date) //nolint:all
-		return time1.Compare(time2) * -1
-	})
-
-	// then write each entry to the csv string and return the result
+	// then write each revision entry version to the index string
 	csvContents := ""
-	for _, entry := range tracking.RevisionHistory {
-		year := (*entry.Date)[:4]
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number)))
-		csvContents += fmt.Sprintf("\"%s/%s\",\"%s\"\n", year, fileName, *entry.Date)
+	for _, v := range vulns {
+		// get the created at of the first event
+		if len(v.Events) == 0 {
+			continue
+		}
+		year := v.Events[0].CreatedAt.Year()
+		// get the last event
+		entry := v.Events[len(v.Events)-1]
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(utils.SafeDereference(v.CVEID)))
+		// then write each entry to the csv string and return the result
+		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
 
 	return ctx.String(200, csvContents)
@@ -101,7 +102,7 @@ func (controller *csafController) GetCSAFIndexHTML(ctx core.Context) error {
 	<h1>Index of /csaf/</h1><hr><pre>
 	<a href="openpgp/">openpgp/</a>
 	<a href="white/">white/</a>
-	<a href="provider-metadata.json" download="provider-metadata.json">provider-metadata.json</a>
+	<a href="provider-metadata.json">provider-metadata.json</a>
 	</pre><hr>
 	</body>
 	</html>`
@@ -122,8 +123,8 @@ func (controller *csafController) GetOpenPGPHTML(ctx core.Context) error {
 	<body cz-shortcut-listen="true">
 	<h1>Index of /csaf/openpgp</h1><hr><pre>
 	<a href="../">../</a>
-	<a href="{{ .Fingerprint }}.asc" download="{{ .Fingerprint }}.asc">{{ .Fingerprint }}.asc</a>
-	<a href="{{ .Fingerprint }}.asc.sha512" download="{{ .Fingerprint }}.asc.sha512">{{ .Fingerprint }}.asc.sha512</a>
+	<a href="{{ .Fingerprint }}.asc">{{ .Fingerprint }}.asc</a>
+	<a href="{{ .Fingerprint }}.asc.sha512">{{ .Fingerprint }}.asc.sha512</a>
 	</pre><hr>
 	</body>
 	</html>`
@@ -147,9 +148,6 @@ func getAllYears(asset models.Asset, dependencyVulnRepository core.DependencyVul
 	}
 	// iterate over every event = version, check the release year and append if not already present
 	allYears := make([]int, 0)
-	if err != nil {
-		return nil, err
-	}
 	// build a map
 	allYearsMap := map[int]struct{}{
 		asset.CreatedAt.Year(): {},
@@ -199,8 +197,8 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx core.Context) error
 <a href="{{ . }}/">{{ . }}/</a>
 {{ end }}
 
-<a href="index.txt/" download="index.txt">index.txt</a>
-<a href="changes.csv/" download="changes.csv">changes.csv</a>
+<a href="index.txt/">index.txt</a>
+<a href="changes.csv/">changes.csv</a>
 </pre>
 <hr>
 </body>
@@ -222,35 +220,26 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
-	tracking, _, err := generateTrackingObject(asset, controller.dependencyVulnRepository, controller.vulnEventRepository, math.MaxInt)
+	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+
 	if err != nil {
 		return err
 	}
 
-	// then filter each csaf version if they are released in the given year
-	entriesForYear := make([]*gocsaf.Revision, 0)
 	yearNumber, err := strconv.Atoi(year)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid year format")
 	}
-
-	for _, entry := range tracking.RevisionHistory {
-		date, err := time.Parse(time.RFC3339, *entry.Date)
-		if err != nil {
-			return err
-		}
-		if date.Year() == yearNumber {
-			entriesForYear = append(entriesForYear, entry)
-		}
-	}
-
+	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
+		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
+	})
 	type pageData struct {
 		Year      int
 		Filenames []string
 	}
-	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(entriesForYear))}
-	for _, entry := range entriesForYear {
-		data.Filenames = append(data.Filenames, fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(string(*entry.Number))))
+	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear))}
+	for _, entry := range vulnsOfThatYear {
+		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(utils.SafeDereference(entry.CVEID))))
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
@@ -263,10 +252,10 @@ func (controller *csafController) GetReportsByYearHTML(ctx core.Context) error {
 <pre>
 <a href="../">../</a>
 {{ range .Filenames }}
-<a href="{{ . }}" download="{{ . }}">{{ . }}</a>
-<a href="{{ . }}.asc" download="{{ . }}.asc">{{ . }}.asc</a>
-<a href="{{ . }}.sha256" download="{{ . }}.sha256">{{ . }}.sha256</a>
-<a href="{{ . }}.sha512" download="{{ . }}.sha512">{{ . }}.sha512</a>
+<a href="{{ . }}" >{{ . }}</a>
+<a href="{{ . }}.asc" >{{ . }}.asc</a>
+<a href="{{ . }}.sha256" >{{ . }}.sha256</a>
+<a href="{{ . }}.sha512">{{ . }}.sha512</a>
 {{ end }}
 </pre>
 <hr>
@@ -412,7 +401,7 @@ func (controller *csafController) GetProviderMetadataForOrganization(ctx core.Co
 		distribution := gocsaf.Distribution{
 			// Summary:  "location of provider-metadata.json for asset: " + asset.Name,
 			// TLPLabel: "WHITE",
-			DirectoryURL: fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/white", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
+			DirectoryURL: fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/csaf/white/", hostURL, org.Slug, asset.Project.Slug, asset.Slug),
 		}
 		distributions = append(distributions, distribution)
 	}

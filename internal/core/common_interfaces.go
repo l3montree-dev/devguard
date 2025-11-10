@@ -32,7 +32,7 @@ import (
 )
 
 type CSAFService interface {
-	GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*normalize.CdxBom, error)
+	GetVexFromCsafProvider(purl packageurl.PackageURL, realUrl string, domain string) (*normalize.CdxBom, error)
 }
 
 type SBOMScanner interface {
@@ -162,6 +162,7 @@ type ComponentRepository interface {
 type DependencyVulnRepository interface {
 	common.Repository[string, models.DependencyVuln, DB]
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnByCVEIDAndAssetID(tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)

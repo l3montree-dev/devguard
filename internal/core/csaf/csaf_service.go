@@ -59,7 +59,7 @@ func NewCSAFService(client http.Client) *csafService {
 	}
 }
 
-func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*normalize.CdxBom, error) {
+func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, realURL, domain string) (*normalize.CdxBom, error) {
 	// download all advisories
 	advisories, err := service.downloadCsafReports(domain)
 	if err != nil {
@@ -68,10 +68,9 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, do
 
 	cdxVulns := make([]cyclonedx.Vulnerability, 0)
 
-	// collect all purls and map to product ids
-	productIDtoPurl := map[string]packageurl.PackageURL{}
-
 	for _, advisory := range advisories {
+		// collect all purls and map to product ids
+		productIDtoPurl := map[string]packageurl.PackageURL{}
 		// get the product id for the given purl in this advisory
 		products := advisory.ProductTree.FullProductNames
 		for _, product := range *products {
@@ -188,17 +187,35 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, do
 		Vulnerabilities: &cdxVulns,
 		Metadata: &cyclonedx.Metadata{
 			Component: &cyclonedx.Component{
-				Type:       cyclonedx.ComponentTypeApplication,
-				Name:       purl.ToString(),
+				Type:   cyclonedx.ComponentTypeApplication,
+				Name:   "root",
+				BOMRef: "root",
+			},
+		},
+		Components: &[]cyclonedx.Component{
+			{
+				BOMRef: "root",
+			},
+			{
 				BOMRef:     purl.ToString(),
+				Type:       cyclonedx.ComponentTypeApplication,
 				PackageURL: purl.ToString(),
+				Name:       purl.ToString(),
+				Version:    purl.Version,
+			},
+		},
+		Dependencies: &[]cyclonedx.Dependency{
+			{
+				Ref: "root",
+				Dependencies: &[]string{
+					purl.ToString(),
+				},
 			},
 		},
 	}
 
 	// artifact name should be something without the version
-
-	return normalize.FromCdxBom(bom, purlToStringWithoutVersion(purl), domain), nil
+	return normalize.FromCdxBom(bom, purlToStringWithoutVersion(purl), realURL), nil
 }
 
 func purlToStringWithoutVersion(purl packageurl.PackageURL) string {
@@ -224,6 +241,9 @@ func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, purl packageurl.Packag
 		for _, productRef := range *flag.ProductIds {
 			if productID == *productRef {
 				justification = cyclonedx.ImpactAnalysisJustification(string(*flag.Label))
+				if remediation == "" {
+					remediation = string(*flag.Label)
+				}
 			}
 		}
 	}
@@ -285,9 +305,9 @@ func (service csafService) downloadCsafReports(domain string) ([]gocsaf.Advisory
 		pmdURL,
 	)
 
-	var f []gocsaf.AdvisoryFile
+	f := make([]gocsaf.AdvisoryFile, 0)
 	err = afp.Process(func(label gocsaf.TLPLabel, files []gocsaf.AdvisoryFile) error {
-		f = files
+		f = append(f, files...)
 		return nil
 	})
 	if err != nil {
@@ -505,7 +525,7 @@ func downloadAdvisory(
 	}
 
 	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
-		return gocsaf.Advisory{}, fmt.Errorf("unexpected content type: %s", ct)
+		return gocsaf.Advisory{}, fmt.Errorf("unexpected content type: %s, url: %s", ct, resp.Request.RequestURI)
 	}
 
 	var (
@@ -632,13 +652,28 @@ func belongsToSamePackage(purl1, purl2 packageurl.PackageURL) bool {
 func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetVersionRepository core.AssetVersionRepository, cveRepository core.CveRepository, artifactRepository core.ArtifactRepository) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
 	// extract context information
-	version, err := extractVersionFromDocumentID(ctx.Param("version"))
-	if err != nil {
-		return csafDoc, err
+	cveID := ctx.Param("version")
+	if cveID == "" {
+		return csafDoc, fmt.Errorf("version parameter is required")
 	}
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
+	// remove everything <asset-slug>_ from the beginning of the document id
+	cveID = strings.ToUpper(strings.Split(cveID, ".json")[0])
 
+	// fetch the cve from the database
+	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
+	if err != nil {
+		return csafDoc, err
+	}
+	if len(vulns) == 0 {
+		return csafDoc, fmt.Errorf("no vulnerability found for asset %s with cve id %s", asset.Slug, cveID)
+	}
+
+	// now we can start building the document
+	// just use the first vulnerability - if there are multiple, we do not currently support that
+	// TODO support multiple vulnerabilities in one csaf report?
+	vuln := vulns[0]
 	// build trivial parts of the document field
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
@@ -659,7 +694,7 @@ func generateCSAFReport(ctx core.Context, dependencyVulnRepository core.Dependen
 		},
 	}
 
-	tracking, vulns, err := generateTrackingObject(asset, dependencyVulnRepository, vulnEventRepository, version)
+	tracking, err := generateTrackingObject(asset, vuln)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -936,34 +971,18 @@ func stateToString(state models.VulnState) string {
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, documentVersion int) (gocsaf.Tracking, []models.DependencyVuln, error) {
+func generateTrackingObject(asset models.Asset, vuln models.DependencyVuln) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
-	// first get all dependency vulns for an asset
-	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
-	if err != nil {
-		return tracking, vulns, err
-	}
-
-	// gather all events - and filter them to security relevant ones
-	allEvents := utils.Flat(utils.Map(vulns, func(v models.DependencyVuln) []models.VulnEvent {
-		return utils.Filter(v.Events, func(e models.VulnEvent) bool {
-			return models.EventTypeAccepted == e.Type ||
-				models.EventTypeDetected == e.Type ||
-				models.EventTypeFixed == e.Type ||
-				models.EventTypeReopened == e.Type ||
-				models.EventTypeFalsePositive == e.Type
-		})
-	}))
 
 	// sort them by their creation timestamp
-	slices.SortFunc(allEvents, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
+	slices.SortFunc(vuln.Events, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
 		return event1.CreatedAt.Compare(event2.CreatedAt)
 	})
 
 	// now we can extract the first release and current release timestamp that being the first and last event
 	tracking.InitialReleaseDate = utils.Ptr(asset.CreatedAt.Format(time.RFC3339))
-	if len(allEvents) != 0 {
-		tracking.CurrentReleaseDate = utils.Ptr(allEvents[len(allEvents)-1].CreatedAt.Format(time.RFC3339))
+	if len(vuln.Events) != 0 {
+		tracking.CurrentReleaseDate = utils.Ptr(vuln.Events[len(vuln.Events)-1].CreatedAt.Format(time.RFC3339))
 	} else {
 		tracking.CurrentReleaseDate = tracking.InitialReleaseDate
 	}
@@ -976,61 +995,32 @@ func generateTrackingObject(asset models.Asset, dependencyVulnRepository core.De
 	}
 
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(asset, allEvents, vulns, documentVersion, dependencyVulnRepository)
+	revisions, err := buildRevisionHistory(asset, vuln)
 	if err != nil {
-		return tracking, vulns, err
+		return tracking, err
 	}
 	tracking.RevisionHistory = revisions
 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = utils.Ptr(gocsaf.TrackingID(fmt.Sprintf("csaf_report_%s_%s", strings.ToLower(asset.Slug), strings.ToLower(version))))
+	tracking.ID = utils.Ptr(gocsaf.TrackingID(strings.ToUpper(version)))
 	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
 	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
-	return tracking, vulns, nil
+	return tracking, nil
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns []models.DependencyVuln, documentVersion int, dependencyVulnRepository core.DependencyVulnRepository) ([]*gocsaf.Revision, error) {
+func buildRevisionHistory(asset models.Asset, vuln models.DependencyVuln) ([]*gocsaf.Revision, error) {
 	var revisions []*gocsaf.Revision
-	// we want to group all events based on their creation time to reduce entries and improve readability. accuracy = minutes
-	timeBuckets := make(map[string][]models.VulnEvent, len(events))
-	for _, event := range events {
-		timeStamp := convertTimeToDateHourMinute(event.CreatedAt).Format(time.DateTime)
-		timeBuckets[timeStamp] = append(timeBuckets[timeStamp], event)
-	}
-
-	// since maps are unordered data structures we need to convert it to a ordered one using slices
-	eventGroups := make([][]models.VulnEvent, 0, len(events))
-	for _, events := range timeBuckets {
-		eventGroups = append(eventGroups, events)
-	}
-
-	// now we need to order the groups based on time
-	// Disclaimer: technically this method is not 100% accurate since we make groups based on time.DateTime Format (only seconds) but then compare based on 5 digits precision seconds
-	slices.SortFunc(eventGroups, func(events1 []models.VulnEvent, events2 []models.VulnEvent) int {
-		return events1[0].CreatedAt.Compare(events2[0].CreatedAt)
-	})
-
-	// initial release entry with no vulnerabilities
-	revisions = append(revisions, &gocsaf.Revision{
-		Date:    utils.Ptr(asset.CreatedAt.Format(time.RFC3339)),
-		Number:  utils.Ptr(gocsaf.RevisionNumber("1")),
-		Summary: utils.Ptr("Asset created, no vulnerabilities found"),
-	})
-
 	// then just create a revision entry for every event group
-	for i, eventGroup := range eventGroups {
-		if i+1 >= documentVersion {
-			break
-		}
+	for i, ev := range vuln.Events {
 		revisionObject := gocsaf.Revision{
-			Date: utils.Ptr(eventGroup[0].CreatedAt.Format(time.RFC3339)),
+			Date: utils.Ptr(ev.CreatedAt.Format(time.RFC3339)),
 		}
-		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(i + 2)))
-		summary, err := generateSummaryForEvents(eventGroup, vulns)
+		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(i + 1)))
+		summary, err := generateSummaryForEvent(vuln, ev)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		revisionObject.Summary = &summary
 		revisions = append(revisions, &revisionObject)
@@ -1039,85 +1029,21 @@ func buildRevisionHistory(asset models.Asset, events []models.VulnEvent, vulns [
 	return revisions, nil
 }
 
-type vulnEventWithCVEID struct {
-	Event models.VulnEvent
-	CVEID string
-}
-
-func generateSummaryForEvents(events []models.VulnEvent, vulns []models.DependencyVuln) (string, error) {
-	slices.SortFunc(events, func(event1, event2 models.VulnEvent) int {
-		return event1.CreatedAt.Compare(event2.CreatedAt)
-	})
-
-	vulnMap := make(map[string]models.DependencyVuln)
-	for _, vuln := range vulns {
-		vulnMap[vuln.ID] = vuln
+func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
+	switch event.Type {
+	case models.EventTypeDetected:
+		return fmt.Sprintf("Detected vulnerability %s.", *vuln.CVEID), nil
+	case models.EventTypeReopened:
+		return fmt.Sprintf("Reopened vulnerability %s.", *vuln.CVEID), nil
+	case models.EventTypeFixed:
+		return fmt.Sprintf("Fixed vulnerability %s.", *vuln.CVEID), nil
+	case models.EventTypeAccepted:
+		return fmt.Sprintf("Accepted vulnerability %s.", *vuln.CVEID), nil
+	case models.EventTypeFalsePositive:
+		return fmt.Sprintf("Marked vulnerability %s as false positive.", *vuln.CVEID), nil
+	default:
+		return "", fmt.Errorf("unknown event type: %s", event.Type)
 	}
-
-	// Group events by type
-	type vulnGroup struct {
-		events []vulnEventWithCVEID
-		desc   string
-	}
-	groups := map[models.VulnEventType]vulnGroup{
-		models.EventTypeDetected:      {desc: "Detected %d new vulnerabilit%s (%s)"},
-		models.EventTypeReopened:      {desc: "Reopened %d old vulnerabilit%s (%s)"},
-		models.EventTypeFixed:         {desc: "Fixed %d existing vulnerabilit%s (%s)"},
-		models.EventTypeAccepted:      {desc: "Accepted %d existing vulnerabilit%s (%s)"},
-		models.EventTypeFalsePositive: {desc: "Marked %d existing vulnerabilit%s as false positive (%s)"},
-	}
-
-	for _, event := range events {
-		vuln := vulnMap[event.VulnID]
-		t := groups[event.Type]
-		t.events = append(t.events, vulnEventWithCVEID{Event: event, CVEID: *vuln.CVEID})
-		groups[event.Type] = t
-	}
-
-	// Helper to format a group's summary
-	formatGroup := func(g vulnGroup) string {
-		if len(g.events) == 0 {
-			return ""
-		}
-		cveIDs := make([]string, len(g.events))
-		for i, e := range g.events {
-			cveIDs[i] = e.CVEID
-		}
-		plural := "ies"
-		if len(g.events) == 1 {
-			plural = "y"
-		}
-		slices.Sort(cveIDs)
-		return fmt.Sprintf(g.desc, len(g.events), plural, strings.Join(cveIDs, ", "))
-	}
-
-	// sort the groups by event type for consistent output
-
-	// Build summary
-	summaryParts := []string{}
-	for _, group := range groups {
-		if part := formatGroup(group); part != "" {
-			summaryParts = append(summaryParts, part)
-		}
-	}
-
-	slices.Sort(summaryParts)
-	return strings.Join(summaryParts, " | ") + ".", nil
-}
-
-// small helper function to extract the version from the file name of a csaf report
-func extractVersionFromDocumentID(id string) (int, error) {
-	fields := strings.Split(id, "_")
-	if len(fields) <= 2 {
-		return 0, fmt.Errorf("invalid csaf document ID")
-	}
-	version := fields[len(fields)-1]
-	index := strings.Index(version, ".")
-	if index == -1 {
-		return 0, fmt.Errorf("invalid file name syntax")
-	}
-	version = version[:index]
-	return strconv.Atoi(version)
 }
 
 // small helper function to eliminate seconds by rounding up to the next minute

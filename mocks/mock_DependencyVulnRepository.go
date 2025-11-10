@@ -1198,6 +1198,80 @@ func (_c *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Cal
 	return _c
 }
 
+// GetDependencyVulnByCVEIDAndAssetID provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(tx core.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, cveID, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDependencyVulnByCVEIDAndAssetID")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, cveID, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, cveID, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, cveID, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnByCVEIDAndAssetID'
+type DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call struct {
+	*mock.Call
+}
+
+// GetDependencyVulnByCVEIDAndAssetID is a helper method to define mock.On call
+//   - tx core.DB
+//   - cveID string
+//   - assetID uuid.UUID
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnByCVEIDAndAssetID(tx interface{}, cveID interface{}, assetID interface{}) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	return &DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call{Call: _e.mock.On("GetDependencyVulnByCVEIDAndAssetID", tx, cveID, assetID)}
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) Run(run func(tx core.DB, cveID string, assetID uuid.UUID)) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call) RunAndReturn(run func(tx core.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDependencyVulnsByAssetVersion provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)

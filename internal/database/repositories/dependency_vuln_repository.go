@@ -500,3 +500,11 @@ func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchIn
 	}
 	return vulns, nil
 }
+
+func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(tx core.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var vuln []models.DependencyVuln
+	err := repository.Repository.GetDB(tx).Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Preload("Artifacts").Preload("CVE").Where("cve_id = ? AND asset_id = ?", cveID, assetID).Find(&vuln).Error
+	return vuln, err
+}

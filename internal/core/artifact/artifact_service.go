@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
 )
@@ -101,7 +102,7 @@ func (s *service) FetchBomsFromUpstream(artifactName string, upstreamURLs []stri
 				invalidURLs = append(invalidURLs, url)
 				continue
 			}
-			bom, err := s.csafService.GetVexFromCsafProvider(purl, sanitizedURL)
+			bom, err := s.csafService.GetVexFromCsafProvider(purl, url, sanitizedURL)
 			if err != nil {
 				slog.Warn("could not download csaf from csaf provider", "err", err)
 				invalidURLs = append(invalidURLs, url)
@@ -286,7 +287,7 @@ func (s *service) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, pro
 					// only consider non-internal upstream events
 					if event.Upstream != models.UpstreamStateInternal {
 						// the last event
-						if eventType == expectedEventType && event.Justification != nil && *event.Justification == expected.justification {
+						if eventType == expectedEventType && utils.SafeDereference(event.Justification) == expected.justification {
 							// we already have seen this event
 							continue outer
 						} else {
