@@ -299,11 +299,9 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
 		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
 
-		assert.Equal(t, 1, len(csafDoc.ProductTree.Branches))
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Name)
-		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[0].Category)
-		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main"), *csafDoc.ProductTree.Branches[0].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Product.Name)
+		assert.Equal(t, 1, len(*csafDoc.ProductTree.FullProductNames))
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.ProductTree.FullProductNames)[0].ProductID))
+		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", string(*(*csafDoc.ProductTree.FullProductNames)[0].Name))
 	})
 	t.Run("test product_tree functionality for more complex product trees", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -344,22 +342,15 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Nil(t, err)
 
 		// only test product tree here
-		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
-
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Name)
-		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[0].Category)
-		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main"), *csafDoc.ProductTree.Branches[0].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main", *csafDoc.ProductTree.Branches[0].Product.Name)
-
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", *csafDoc.ProductTree.Branches[1].Name)
-		assert.Equal(t, "product_version", string(*csafDoc.ProductTree.Branches[1].Category))
-		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1"), *csafDoc.ProductTree.Branches[1].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1", *csafDoc.ProductTree.Branches[1].Product.Name)
-
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", *csafDoc.ProductTree.Branches[2].Name)
-		assert.Equal(t, gocsaf.BranchCategory("product_version"), *csafDoc.ProductTree.Branches[2].Category)
-		assert.Equal(t, gocsaf.ProductID("pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2"), *csafDoc.ProductTree.Branches[2].Product.ProductID)
-		assert.Equal(t, "pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2", *csafDoc.ProductTree.Branches[2].Product.Name)
+		assert.Equal(t, 3, len(*csafDoc.ProductTree.FullProductNames))
+		for i, expected := range []string{
+			"pkg:devguard/bizzareorganization/jojoasset/adventurerepo@main",
+			"pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v1",
+			"pkg:devguard/bizzareorganization/jojoasset/adventurerepo@v2",
+		} {
+			assert.Equal(t, expected, string(*(*csafDoc.ProductTree.FullProductNames)[i].ProductID))
+			assert.Equal(t, expected, string(*(*csafDoc.ProductTree.FullProductNames)[i].Name))
+		}
 	})
 	t.Run("add vulnerabilities and vuln events to simulate a vulnerability history, use latest report version", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
@@ -411,7 +402,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, gocsaf.Category("vendor"), *csafDoc.Document.Publisher.Category)
 		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
 		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
-		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
+		assert.Equal(t, 3, len(*csafDoc.ProductTree.FullProductNames))
 
 		// test the tracking object / revision history
 
@@ -507,8 +498,7 @@ func TestServeCSAFReportRequest(t *testing.T) {
 		assert.Equal(t, gocsaf.Category("vendor"), *csafDoc.Document.Publisher.Category)
 		assert.Equal(t, org.Name, *csafDoc.Document.Publisher.Name)
 		assert.Equal(t, "https://devguard.org", *csafDoc.Document.Publisher.Namespace)
-		assert.Equal(t, 3, len(csafDoc.ProductTree.Branches))
-
+		assert.Equal(t, 3, len(*csafDoc.ProductTree.FullProductNames))
 		// test the tracking object / revision history
 
 		revHistory := csafDoc.Document.Tracking.RevisionHistory
