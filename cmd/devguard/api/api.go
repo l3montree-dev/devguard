@@ -536,5 +536,5 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 }
 
 func Start(db core.DB, broker pubsub.Broker) {
-	slog.Error("failed to start server", "err", BuildRouter(db, broker).StartTLS(":8080", "cert.pem", "key.pem").Error())
+	slog.Error("failed to start server", "err", BuildRouter(db, broker).Start(":8080").Error())
 }
