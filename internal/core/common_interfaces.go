@@ -32,7 +32,7 @@ import (
 )
 
 type CSAFService interface {
-	GetVexFromCsafProvider(purl packageurl.PackageURL, realUrl string, domain string) (*normalize.CdxBom, error)
+	GetVexFromCsafProvider(purl packageurl.PackageURL, realURL string, domain string) (*normalize.CdxBom, error)
 }
 
 type SBOMScanner interface {
