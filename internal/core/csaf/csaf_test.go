@@ -148,9 +148,9 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 
 		}))
 		os.Setenv("API_URL", testserver.URL)
-		os.Setenv("OPENPGP_PUBLIC_KEY_PATH", "testdata/test-openpgp-public-key.asc")
-		os.Setenv("OPENPGP_PRIVATE_KEY_PATH", "testdata/test-openpgp-private-key.asc")
-		os.Setenv("CSAF_PASSPHRASE", "Ag%cdaA&EhoM#qCHLRXqoRH%oWAg%cdaA&EhoM#qCHLRXqoRH%oW")
+		os.Setenv("CSAF_OPENPGP_PUBLIC_KEY_PATH", "testdata/test-openpgp-public-key.asc")
+		os.Setenv("CSAF_OPENPGP_PRIVATE_KEY_PATH", "testdata/test-openpgp-private-key.asc")
+		os.Setenv("CSAF_OPENPGP_PASSPHRASE", "Ag%cdaA&EhoM#qCHLRXqoRH%oWAg%cdaA&EhoM#qCHLRXqoRH%oW")
 		os.Setenv("CSAF_OPENPGP_FINGERPRINT", "A8725AE729DAFAF6B95761207D9096D47B06F5F4")
 
 		// we need to add the purl to the url
