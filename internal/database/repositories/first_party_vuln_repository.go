@@ -21,7 +21,9 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRe
 func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	var vulns = []models.FirstPartyVuln{}
 
-	query := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Preload("Events").Where("asset_version_name != ? AND asset_id = ? ", assetVersionName, assetID)
+	query := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Where("asset_version_name != ? AND asset_id = ? ", assetVersionName, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces

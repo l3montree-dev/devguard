@@ -75,7 +75,7 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 					continue
 				}
 				// get all asset versions for the asset
-				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(db, asset.ID)
+				assetVersions, err := assetVersionRepository.GetAssetVersionsByAssetID(db, asset.ID)
 				if err != nil {
 					slog.Error("failed to load asset versions for asset", "assetID", asset.ID, "error", err)
 					continue

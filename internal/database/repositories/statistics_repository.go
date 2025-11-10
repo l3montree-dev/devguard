@@ -20,18 +20,23 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
+func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
 	dependencyVulns := []models.DependencyVuln{}
 	var err error
-
-	if artifactName != nil {
+	if artifactName == nil && assetVersionName == nil {
+		err = r.db.Debug().Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+			return db.Where("created_at <= ?", time).Order("created_at ASC")
+		}).
+			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
+			Where("dependency_vulns.asset_id = ?", assetID).Where("created_at <= ?", time).
+			Find(&dependencyVulns).Error
+	} else if artifactName != nil {
 		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-			Where("adv.artifact_asset_version_name = ?", assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
+			Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
-
 	} else {
 		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")

@@ -414,7 +414,7 @@ func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndR
 }
 
 // TimeTravelDependencyVulnState provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
+func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(artifactName, assetVersionName, assetID, time1)
 
 	if len(ret) == 0 {
@@ -423,17 +423,17 @@ func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *s
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, *string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
 		return returnFunc(artifactName, assetVersionName, assetID, time1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(*string, *string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
 		r0 = returnFunc(artifactName, assetVersionName, assetID, time1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, time.Time) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*string, *string, uuid.UUID, time.Time) error); ok {
 		r1 = returnFunc(artifactName, assetVersionName, assetID, time1)
 	} else {
 		r1 = ret.Error(1)
@@ -448,22 +448,22 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
 //   - artifactName *string
-//   - assetVersionName string
+//   - assetVersionName *string
 //   - assetID uuid.UUID
 //   - time1 time.Time
 func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", artifactName, assetVersionName, assetID, time1)}
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *string
 		if args[0] != nil {
 			arg0 = args[0].(*string)
 		}
-		var arg1 string
+		var arg1 *string
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(*string)
 		}
 		var arg2 uuid.UUID
 		if args[2] != nil {
@@ -488,7 +488,7 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Return(depend
 	return _c
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

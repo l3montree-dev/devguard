@@ -115,7 +115,9 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 	// Get all dependency vulns that have events with upstream=2 but no events with upstream=1
 	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
 		Preload("Artifacts").
-		Preload("Events").
+		Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).
 		Joins("CVE").
 		Preload("CVE.Exploits").
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
@@ -445,7 +447,9 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 // Override the base GetAllVulnsByAssetID method to preload artifacts
 func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
+	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 	return vulns, nil
@@ -454,6 +458,43 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx core.DB, ass
 func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
 	err := repository.Repository.GetDB(tx).Raw("SELECT * FROM dependency_vulns WHERE asset_id = ? AND ticket_id IS NOT NULL", assetID.String()).Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
+
+func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx core.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
+	var vulns []models.DependencyVuln
+	err := repository.Repository.GetDB(tx).Raw(`
+		SELECT vulns.* FROM dependency_vulns vulns 
+		LEFT JOIN artifact_dependency_vulns adv ON vulns.id = adv.dependency_vuln_id
+		WHERE adv.artifact_artifact_name = ? 
+		AND adv.artifact_asset_version_name = ? 
+		AND adv.artifact_asset_id = ?;`, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
+
+func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx core.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error) {
+	var vulns []models.DependencyVuln
+	var err error
+	// choose which states we want to include
+	if len(excludedStates) == 0 {
+		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
+		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
+		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).Preload("Artifacts").Find(&vulns).Error
+	} else {
+		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
+		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
+		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).Preload("Artifacts").Find(&vulns).Error
+	}
 	if err != nil {
 		return nil, err
 	}

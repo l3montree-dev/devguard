@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -132,4 +134,22 @@ func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
 	}
 
 	return nil
+}
+
+func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error) {
+	var events []models.VulnEvent
+	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id IN (?) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs).Find(&events).Error
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func (r *eventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID string, time time.Time) (models.VulnEvent, error) {
+	var event models.VulnEvent
+	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id = ? AND type IN ('detected','accepted','fixed','reopened') AND created_at <= ? ORDER BY created_at DESC", vulnID, time).First(&event).Error
+	if err != nil {
+		return event, err
+	}
+	return event, nil
 }

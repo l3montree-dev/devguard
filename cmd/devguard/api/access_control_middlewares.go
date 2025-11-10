@@ -315,3 +315,63 @@ func shareMiddleware(orgRepository core.OrganizationRepository, projectRepositor
 		}
 	}
 }
+
+func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx core.Context) error {
+			// get the assetID from the url
+			orgSlug, err := core.GetURLDecodedParam(ctx, "organization")
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find organization")
+			}
+
+			orgs, err := orgRepository.GetOrgsWithVulnSharingAssets()
+			if err != nil {
+				slog.Error("could not get organizations with vuln sharing assets", "err", err)
+				return echo.NewHTTPError(500, "could not get organizations").WithInternal(err)
+			}
+			// check if the orgID is in the list of organizations with vuln sharing assets
+			var orgFound *models.Org
+			for _, o := range orgs {
+				if o.Slug == orgSlug {
+					orgFound = &o
+					break
+				}
+			}
+			if orgFound == nil {
+				return echo.NewHTTPError(404, "could not find organization")
+			}
+			if orgLevel {
+				core.SetOrg(ctx, *orgFound)
+				return next(ctx)
+			}
+			// check if project project is set, if so load it
+			projectSlug, err := core.GetURLDecodedParam(ctx, "projectSlug")
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find project")
+			}
+			project, err := projectRepository.ReadBySlug(orgFound.ID, projectSlug)
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find project")
+			}
+
+			// read the asset
+			assetSlug, err := core.GetURLDecodedParam(ctx, "assetSlug")
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+			asset, err := assetRepository.ReadBySlug(project.ID, assetSlug)
+			if err != nil {
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+			if !asset.SharesInformation {
+				return echo.NewHTTPError(404, "could not find asset")
+			}
+
+			core.SetOrg(ctx, *orgFound)
+			core.SetProject(ctx, project)
+			core.SetAsset(ctx, asset)
+			return next(ctx)
+		}
+	}
+}

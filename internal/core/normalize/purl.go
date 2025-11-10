@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -125,4 +126,22 @@ func PurlToEcosystem(purlType string) string {
 		}
 	}
 	return ""
+}
+
+func Purlify(artifactName string, assetVersionName string) string {
+	// the artifactName might contain qualifiers like pkg:oci/k8s-tools?repository_url=registry.opencode.de/open-code/oci/k8s-tool&tag=main-amd64
+	// we want to remove them for the purl normalization
+	// the correct purl for this would be pkg:oci/k8s-tools@main?repository_url=registry.opencode.de/open-code/oci/k8s-tools&tag=main-amd64
+	parts := strings.SplitN(artifactName, "?", 2)
+	base := parts[0]
+	var qualifiers string
+	if len(parts) == 2 {
+		qualifiers = "?" + parts[1]
+	}
+
+	if assetVersionName != "" {
+		base = fmt.Sprintf("%s@%s", base, assetVersionName)
+	}
+
+	return base + qualifiers
 }

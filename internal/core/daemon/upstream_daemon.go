@@ -8,10 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/internal/core/csaf"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -69,7 +71,7 @@ func SyncUpstream(db core.DB, rbacProvider core.RBACProvider) error {
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
 
-	artifactService := artifact.NewService(artifactRepository, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+	artifactService := artifact.NewService(artifactRepository, csaf.NewCSAFService(common.OutgoingConnectionClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
 	orgs, err := orgRepository.All()
 	if err != nil {
@@ -92,7 +94,7 @@ func SyncUpstream(db core.DB, rbacProvider core.RBACProvider) error {
 			}
 			for _, asset := range assets {
 				// get all asset versions for the asset
-				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(db, asset.ID)
+				assetVersions, err := assetVersionRepository.GetAssetVersionsByAssetID(db, asset.ID)
 				if err != nil {
 					slog.Error("failed to load asset versions for asset", "assetID", asset.ID, "error", err)
 					continue

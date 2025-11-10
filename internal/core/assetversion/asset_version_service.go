@@ -68,7 +68,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 }
 
 func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error) {
-	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
+	return s.assetVersionRepository.GetAssetVersionsByAssetID(nil, assetID)
 }
 
 var sarifResultKindsIndicatingNotAndIssue = []string{
@@ -801,12 +801,9 @@ func resolveLicense(component models.ComponentDependency, componentLicenseOverwr
 
 func (s *service) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
 	var err error
-
-	var rootPurl string
+	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
 	if artifactName == "" {
-		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
-	} else {
-		rootPurl = fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
 	}
 
 	bom := cdx.BOM{
@@ -937,9 +934,9 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 }
 
 func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-	rootPurl := fmt.Sprintf("%s@%s", artifactName, assetVersion.Name)
+	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
 	if artifactName == "" {
-		rootPurl = fmt.Sprintf("%s@%s", asset.Slug, assetVersion.Name)
+		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
 	}
 
 	bom := cdx.BOM{

@@ -1,10 +1,12 @@
 package inithelper
 
 import (
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/internal/core/csaf"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -71,6 +73,7 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 func CreateArtifactService(db core.DB, openSourceInsightsService core.OpenSourceInsightService) core.ArtifactService {
 	return artifact.NewService(
 		repositories.NewArtifactRepository(db),
+		csaf.NewCSAFService(common.OutgoingConnectionClient),
 		repositories.NewCVERepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),

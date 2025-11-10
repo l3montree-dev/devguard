@@ -597,6 +597,61 @@ func (_c *OrganizationRepository_GetOrgByID_Call) RunAndReturn(run func(id uuid.
 	return _c
 }
 
+// GetOrgsWithVulnSharingAssets provides a mock function for the type OrganizationRepository
+func (_mock *OrganizationRepository) GetOrgsWithVulnSharingAssets() ([]models.Org, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrgsWithVulnSharingAssets")
+	}
+
+	var r0 []models.Org
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() ([]models.Org, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() []models.Org); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Org)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// OrganizationRepository_GetOrgsWithVulnSharingAssets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgsWithVulnSharingAssets'
+type OrganizationRepository_GetOrgsWithVulnSharingAssets_Call struct {
+	*mock.Call
+}
+
+// GetOrgsWithVulnSharingAssets is a helper method to define mock.On call
+func (_e *OrganizationRepository_Expecter) GetOrgsWithVulnSharingAssets() *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+	return &OrganizationRepository_GetOrgsWithVulnSharingAssets_Call{Call: _e.mock.On("GetOrgsWithVulnSharingAssets")}
+}
+
+func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) Run(run func()) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) Return(orgs []models.Org, err error) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+	_c.Call.Return(orgs, err)
+	return _c
+}
+
+func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) RunAndReturn(run func() ([]models.Org, error)) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type OrganizationRepository
 func (_mock *OrganizationRepository) List(ids []uuid.UUID) ([]models.Org, error) {
 	ret := _mock.Called(ids)

@@ -1306,7 +1306,9 @@ func TestUploadVEX(t *testing.T) {
 
 	// verify DB: both dependency vulns should now be fixed
 	var dv []models.DependencyVuln
-	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events").Find(&dv).Error; err != nil {
+	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Find(&dv).Error; err != nil {
 		t.Fatalf("could not query dependency vulns: %v", err)
 	}
 	assert.GreaterOrEqual(t, len(dv), 2)
