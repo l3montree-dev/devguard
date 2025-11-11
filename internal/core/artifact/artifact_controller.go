@@ -40,17 +40,21 @@ func NewController(artifactRepository core.ArtifactRepository, artifactService c
 }
 
 type informationSource struct {
-	Purl string `json:"purl,omitempty"`
+	URL  string  `json:"url"`
+	Purl *string `json:"purl"`
 	// type can be "csaf", "vex", "sbom"
 	Type string `json:"type,omitempty"`
 }
 
 func informationSourceToString(source informationSource) string {
-	if source.Type == "" {
-		return source.Purl
+	r := source.URL
+	if source.Purl != nil && *source.Purl != "" {
+		r = *source.Purl + ":" + r
 	}
-
-	return source.Type + ":" + source.Purl
+	if source.Type != "" {
+		r = source.Type + ":" + r
+	}
+	return r
 }
 
 func (c *controller) Create(ctx core.Context) error {

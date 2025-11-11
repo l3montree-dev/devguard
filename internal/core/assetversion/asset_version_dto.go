@@ -8,6 +8,7 @@ type assetMetrics struct {
 }
 
 type InformationSourceDTO struct {
+	URL  string `json:"url,omitempty"`
 	Purl string `json:"purl,omitempty"`
 	// type can be "csaf", "vex", "sbom"
 	Type string `json:"type,omitempty"`

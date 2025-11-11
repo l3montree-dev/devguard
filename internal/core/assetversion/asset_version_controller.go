@@ -913,15 +913,15 @@ func extractInformationSourceFromPurl(purl string) InformationSourceDTO {
 	InformationSourcesDTO := InformationSourceDTO{}
 	if strings.HasPrefix(purl, "vex:") {
 		InformationSourcesDTO.Type = "vex"
-		InformationSourcesDTO.Purl = strings.Trim(purl, "vex:")
+		InformationSourcesDTO.URL = strings.Trim(purl, "vex:")
 	} else if strings.HasPrefix(purl, "sbom:") {
 		InformationSourcesDTO.Type = "sbom"
-		InformationSourcesDTO.Purl = strings.Trim(purl, "sbom:")
+		InformationSourcesDTO.URL = strings.Trim(purl, "sbom:")
 	} else if strings.HasPrefix(purl, "csaf:") {
 		InformationSourcesDTO.Type = "csaf"
-		InformationSourcesDTO.Purl = strings.Trim(purl, "csaf:")
+		InformationSourcesDTO.URL = strings.Trim(purl, "csaf:")
 	} else {
-		InformationSourcesDTO.Purl = purl
+		InformationSourcesDTO.URL = purl
 	}
 	return InformationSourcesDTO
 }
