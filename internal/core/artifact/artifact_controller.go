@@ -247,7 +247,6 @@ func (c *controller) UpdateArtifact(ctx core.Context) error {
 			slog.Error("could not scan sbom after updating it", "err", err)
 			return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
 		}
-		return nil
 	}
 
 	c.FireAndForget(func() {
