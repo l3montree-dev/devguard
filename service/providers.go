@@ -3,6 +3,8 @@ package service
 import (
 	"net/http"
 
+	"go.uber.org/fx"
+
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
@@ -19,11 +21,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"go.uber.org/fx"
 )
 
-// ServiceModule provides all service-layer constructors
-var ServiceModule = fx.Options(
+// Module provides all service-layer constructors
+var Module = fx.Options(
 	fx.Provide(vuln.NewService),
 	fx.Provide(vuln.NewFirstPartyVulnService),
 	fx.Provide(vuln.NewLicenseRiskService),

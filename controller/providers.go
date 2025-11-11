@@ -16,13 +16,8 @@
 package controller
 
 import (
-	"os"
-
 	"go.uber.org/fx"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
@@ -32,10 +27,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/csaf"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -45,62 +36,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
 )
 
-// RepositoryModule provides all repository constructors
-var RepositoryModule = fx.Options(
-	fx.Provide(repositories.NewPATRepository),
-	fx.Provide(repositories.NewAssetRepository),
-	fx.Provide(repositories.NewArtifactRiskHistoryRepository),
-	fx.Provide(repositories.NewAssetVersionRepository),
-	fx.Provide(repositories.NewStatisticsRepository),
-	fx.Provide(repositories.NewReleaseRepository),
-	fx.Provide(repositories.NewProjectRepository),
-	fx.Provide(repositories.NewComponentRepository),
-	fx.Provide(repositories.NewVulnEventRepository),
-	fx.Provide(repositories.NewOrgRepository),
-	fx.Provide(repositories.NewCVERepository),
-	fx.Provide(repositories.NewDependencyVulnRepository),
-	fx.Provide(repositories.NewFirstPartyVulnerabilityRepository),
-	fx.Provide(repositories.NewInTotoLinkRepository),
-	fx.Provide(repositories.NewSupplyChainRepository),
-	fx.Provide(repositories.NewAttestationRepository),
-	fx.Provide(repositories.NewPolicyRepository),
-	fx.Provide(repositories.NewLicenseRiskRepository),
-	fx.Provide(repositories.NewWebhookRepository),
-	fx.Provide(repositories.NewArtifactRepository),
-	fx.Provide(repositories.NewInvitationRepository),
-	fx.Provide(repositories.NewExternalUserRepository),
-	fx.Provide(repositories.NewComponentProjectRepository),
-	fx.Provide(repositories.NewGitLabIntegrationRepository),
-)
-
-// AuthModule provides authentication-related dependencies
-var AuthModule = fx.Options(
-	fx.Provide(func() core.AdminClient {
-		ory := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC"))
-		return core.NewAdminClient(ory)
-	}),
-	fx.Provide(func(db core.DB, broker pubsub.Broker) (core.RBACProvider, error) {
-		return accesscontrol.NewCasbinRBACProvider(db, broker)
-	}),
-)
-
-// IntegrationModule provides third-party integration dependencies
-var IntegrationModule = fx.Options(
-	fx.Provide(webhook.NewWebhookIntegration),
-	fx.Provide(jiraint.NewJiraIntegration),
-	fx.Provide(githubint.NewGithubIntegration),
-	fx.Provide(gitlabint.NewGitLabOauth2Integrations),
-	fx.Provide(gitlabint.NewGitlabClientFactory),
-	fx.Provide(gitlabint.NewGitlabIntegration),
-	fx.Provide(integrations.NewThirdPartyIntegrations),
-)
-
-// ControllerModule provides all HTTP controller constructors
-var ControllerModule = fx.Options(
+// Module provides all HTTP controller constructors
+var Module = fx.Options(
 	fx.Provide(artifact.NewController),
 	fx.Provide(vuln.NewHTTPController),
 	fx.Provide(events.NewVulnEventController),

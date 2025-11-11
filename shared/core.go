@@ -1,4 +1,4 @@
-package core
+package shared
 
 import (
 	"log/slog"
@@ -67,7 +67,6 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 }
 
 func BootstrapOrg(rbac AccessControl, userID string, userRole Role) error {
-
 	if err := rbac.GrantRole(userID, userRole); err != nil {
 		return err
 	}
