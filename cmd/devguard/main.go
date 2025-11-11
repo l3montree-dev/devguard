@@ -23,11 +23,14 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/controller"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/service"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/fx"
 
 	_ "github.com/lib/pq"
 )
@@ -96,12 +99,16 @@ func main() {
 		panic(err)
 	}
 
-	daemon.Start(db, broker)
-	api.Start(db, broker)
+	fx.New(
+		fx.Supply(db),
+		fx.Provide(pubsub.BrokerFactory),
+		fx.Supply(broker),
+		fx.Provide(api.NewServer),
+		fx.Invoke(func(server *echo.Echo) {}),
+	).Run()
 }
 
 func initSentry() {
-
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "dev"
@@ -128,3 +135,9 @@ func initSentry() {
 		slog.Error("Failed to init logger", "err", err)
 	}
 }
+
+// AllModules combines all FX modules for easy import
+var AllModules = fx.Options(
+	controller.ControllerModule,
+	service.ServiceModule,
+)

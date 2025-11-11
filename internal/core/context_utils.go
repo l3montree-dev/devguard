@@ -50,17 +50,17 @@ type AdminClient interface {
 	GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error)
 }
 
-type adminClientImplementation struct {
+type AdminClientImplementation struct {
 	apiClient *client.APIClient
 }
 
-func NewAdminClient(client *client.APIClient) adminClientImplementation {
-	return adminClientImplementation{
+func NewAdminClient(client *client.APIClient) AdminClientImplementation {
+	return AdminClientImplementation{
 		apiClient: client,
 	}
 }
 
-func (a adminClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
+func (a AdminClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
 	session, _, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
 	if err != nil {
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
@@ -71,12 +71,12 @@ func (a adminClientImplementation) GetIdentityFromCookie(ctx context.Context, co
 	return *session.Identity, nil
 }
 
-func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
+func (a AdminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
 	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
 	return clients, err
 }
 
-func (a adminClientImplementation) GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error) {
+func (a AdminClientImplementation) GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error) {
 	resp, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).IncludeCredential([]string{"oidc"}).Execute()
 	if err != nil {
 		return client.Identity{}, err
@@ -84,7 +84,7 @@ func (a adminClientImplementation) GetIdentityWithCredentials(ctx context.Contex
 	return *resp, nil
 }
 
-func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
+func (a AdminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
 	request, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).Execute()
 	if err != nil {
 		return *request, err

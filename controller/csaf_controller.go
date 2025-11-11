@@ -1,4 +1,4 @@
-package csaf
+package controller
 
 import (
 	"bytes"
@@ -15,7 +15,8 @@ import (
 	"time"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/l3montree-dev/devguard/internal/constants"
+
+	"github.com/l3montree-dev/devguard/constants"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"

@@ -17,43 +17,16 @@ package api
 
 import (
 	"log/slog"
-	"os"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/fx"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/artifact"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/attestation"
-	"github.com/l3montree-dev/devguard/internal/core/compliance"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/csaf"
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/intoto"
-	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/core/release"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/echohttp"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -124,158 +97,11 @@ func whoami(ctx echo.Context) error {
 	})
 }
 
-func health(ctx echo.Context) error {
-	return ctx.String(200, "ok")
-}
-
-func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
-	ory := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC"))
-	oryAdmin := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_ADMIN"))
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
-	if err != nil {
-		panic(err)
-	}
-
-	webhookIntegration := webhook.NewWebhookIntegration(db)
-
-	jiraIntegration := jiraint.NewJiraIntegration(db)
-
-	githubIntegration := githubint.NewGithubIntegration(db)
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-
-	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
-
-	// init all repositories using the provided database
-	patRepository := repositories.NewPATRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	// release repository used by statistics for release-scoped stats
-	releaseRepository := repositories.NewReleaseRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	projectScopedRBAC := projectAccessControlFactory(projectRepository)
-	assetScopedRBAC := assetAccessControlFactory(assetRepository)
-	orgRepository := repositories.NewOrgRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
-	supplyChainRepository := repositories.NewSupplyChainRepository(db)
-	attestationRepository := repositories.NewAttestationRepository(db)
-	policyRepository := repositories.NewPolicyRepository(db)
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	webhookRepository := repositories.NewWebhookRepository(db)
-	artifactRepository := repositories.NewArtifactRepository(db)
-
-	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
-	projectService := project.NewService(projectRepository, assetRepository)
-
-	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
-	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
-
-	// release module
-	// release repository will be created later when project router is available
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
-
-	csafService := csaf.NewCSAFService(common.OutgoingConnectionClient)
-
-	artifactService := artifact.NewService(artifactRepository, csafService, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
-	invitationRepository := repositories.NewInvitationRepository(db)
-
-	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
-
-	orgService := org.NewService(orgRepository, casbinRBACProvider)
-	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
-
-	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
-
-	// init all http controllers using the repositories
-
-	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService, scanService)
-	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
-	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
-	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
-	patController := pat.NewHTTPController(patRepository)
-	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
-	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
-	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
-
-	scanController := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
-
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
-	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)
-	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
-	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
-	statisticsController := statistics.NewHTTPController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
-	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
-	licenseRiskController := vuln.NewLicenseRiskController(licenseRiskRepository, licenseRiskService)
-	// release routes inside project scope
-	releaseRepository = repositories.NewReleaseRepository(db)
-	releaseService := release.NewService(releaseRepository)
-
-	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository, dependencyVulnRepository, assetRepository)
-
-	patService := pat.NewPatService(patRepository)
-
-	vulndbController := vulndb.NewHTTPController(cveRepository)
-	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, assetRepository, projectRepository, orgRepository, cveRepository, artifactRepository)
+func BuildRouter() *echo.Echo {
+	projectScopedRBAC := projectAccessControlFactory(params.ProjectRepository)
+	assetScopedRBAC := assetAccessControlFactory(params.AssetRepository)
 
 	server := echohttp.Server()
-
-	integrationController := integrations.NewIntegrationController(gitlabOauth2Integrations)
-
-	apiV1Router := server.Group("/api/v1")
-	// this makes the third party integrations available to all controllers
-	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
-			core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
-			return next(ctx)
-		}
-	})
-
-	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
-			// set the ory admin client to the context
-			core.SetAuthAdminClient(ctx, core.NewAdminClient(oryAdmin))
-			return next(ctx)
-		}
-	})
-
-	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
-	apiV1Router.GET("/health/", health)
-	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
-	apiV1Router.GET("/lookup/", assetController.HandleLookup)
-	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
-	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
-
-	// csaf routes
-	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)
-	apiV1Router.GET("/organizations/:organization/csaf/provider-metadata.json/", csafController.GetProviderMetadataForOrganization, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/csaf/openpgp/", csafController.GetOpenPGPHTML, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/csaf/openpgp/:file/", csafController.GetOpenPGPFile, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/", csafController.GetCSAFIndexHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/index.txt/", csafController.GetIndexFile, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/changes.csv/", csafController.GetChangesCSVFile, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/", csafController.GetTLPWhiteEntriesHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/", csafController.GetReportsByYearHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 
 	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
@@ -536,6 +362,10 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	return server
 }
 
-func Start(db core.DB, broker pubsub.Broker) {
-	slog.Error("failed to start server", "err", BuildRouter(db, broker).Start(":8080").Error())
+func NewServer(lc fx.Lifecycle, db core.DB, broker pubsub.Broker) *echo.Echo {
+	srv := BuildRouter(db, broker)
+	lc.Append(fx.StartHook(func() {
+		slog.Error("failed to start server", "err", srv.Start(":8080").Error())
+	}))
+	return srv
 }
