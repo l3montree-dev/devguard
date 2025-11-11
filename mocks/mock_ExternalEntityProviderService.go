@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,7 +38,7 @@ func (_m *ExternalEntityProviderService) EXPECT() *ExternalEntityProviderService
 }
 
 // RefreshExternalEntityProviderProjects provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
+func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, user string) error {
 	ret := _mock.Called(ctx, org, user)
 
 	if len(ret) == 0 {
@@ -46,7 +46,7 @@ func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProject
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, models.Org, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, models.Org, string) error); ok {
 		r0 = returnFunc(ctx, org, user)
 	} else {
 		r0 = ret.Error(0)
@@ -60,18 +60,18 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 }
 
 // RefreshExternalEntityProviderProjects is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 //   - org models.Org
 //   - user string
 func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, user interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, user)}
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx core.Context, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx shared.Context, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		var arg1 models.Org
 		if args[1] != nil {
@@ -95,13 +95,13 @@ func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Ca
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx core.Context, org models.Org, user string) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx shared.Context, org models.Org, user string) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SyncOrgs provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) SyncOrgs(c core.Context) ([]*models.Org, error) {
+func (_mock *ExternalEntityProviderService) SyncOrgs(c shared.Context) ([]*models.Org, error) {
 	ret := _mock.Called(c)
 
 	if len(ret) == 0 {
@@ -110,17 +110,17 @@ func (_mock *ExternalEntityProviderService) SyncOrgs(c core.Context) ([]*models.
 
 	var r0 []*models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]*models.Org, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]*models.Org, error)); ok {
 		return returnFunc(c)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []*models.Org); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []*models.Org); ok {
 		r0 = returnFunc(c)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(c)
 	} else {
 		r1 = ret.Error(1)
@@ -134,16 +134,16 @@ type ExternalEntityProviderService_SyncOrgs_Call struct {
 }
 
 // SyncOrgs is a helper method to define mock.On call
-//   - c core.Context
+//   - c shared.Context
 func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c interface{}) *ExternalEntityProviderService_SyncOrgs_Call {
 	return &ExternalEntityProviderService_SyncOrgs_Call{Call: _e.mock.On("SyncOrgs", c)}
 }
 
-func (_c *ExternalEntityProviderService_SyncOrgs_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_SyncOrgs_Call {
+func (_c *ExternalEntityProviderService_SyncOrgs_Call) Run(run func(c shared.Context)) *ExternalEntityProviderService_SyncOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -157,13 +157,13 @@ func (_c *ExternalEntityProviderService_SyncOrgs_Call) Return(orgs []*models.Org
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_SyncOrgs_Call) RunAndReturn(run func(c core.Context) ([]*models.Org, error)) *ExternalEntityProviderService_SyncOrgs_Call {
+func (_c *ExternalEntityProviderService_SyncOrgs_Call) RunAndReturn(run func(c shared.Context) ([]*models.Org, error)) *ExternalEntityProviderService_SyncOrgs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // TriggerOrgSync provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) TriggerOrgSync(c core.Context) error {
+func (_mock *ExternalEntityProviderService) TriggerOrgSync(c shared.Context) error {
 	ret := _mock.Called(c)
 
 	if len(ret) == 0 {
@@ -171,7 +171,7 @@ func (_mock *ExternalEntityProviderService) TriggerOrgSync(c core.Context) error
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) error); ok {
 		r0 = returnFunc(c)
 	} else {
 		r0 = ret.Error(0)
@@ -185,16 +185,16 @@ type ExternalEntityProviderService_TriggerOrgSync_Call struct {
 }
 
 // TriggerOrgSync is a helper method to define mock.On call
-//   - c core.Context
+//   - c shared.Context
 func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c interface{}) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	return &ExternalEntityProviderService_TriggerOrgSync_Call{Call: _e.mock.On("TriggerOrgSync", c)}
 }
 
-func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_TriggerOrgSync_Call {
+func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Run(run func(c shared.Context)) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -208,7 +208,7 @@ func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Return(err error) *
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) RunAndReturn(run func(c core.Context) error) *ExternalEntityProviderService_TriggerOrgSync_Call {
+func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) RunAndReturn(run func(c shared.Context) error) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	_c.Call.Return(run)
 	return _c
 }

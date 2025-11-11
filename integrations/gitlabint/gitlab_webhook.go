@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/pkg/errors"
@@ -33,7 +32,7 @@ func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, as
 	return nil
 }
 
-func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
+func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		return nil
@@ -42,7 +41,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
 	var vulnEvent models.VulnEvent
-	var client core.GitlabClientFacade
+	var client shared.GitlabClientFacade
 	var vuln models.Vuln
 	var issueID int
 	var projectID int
@@ -223,7 +222,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		vulnEvent.Apply(vuln)
 		// save the dependencyVuln and the event in a transaction
-		err = g.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+		err = g.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := g.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err

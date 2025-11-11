@@ -3,17 +3,17 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm/clause"
 )
 
 type attestationRepository struct {
-	db core.DB
-	common.Repository[string, models.Attestation, core.DB]
+	db shared.DB
+	common.Repository[string, models.Attestation, shared.DB]
 }
 
-func NewAttestationRepository(db core.DB) *attestationRepository {
+func NewAttestationRepository(db shared.DB) *attestationRepository {
 	return &attestationRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.Attestation](db),
@@ -38,7 +38,7 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, a
 	return attestationList, nil
 }
 
-func (a *attestationRepository) Create(db core.DB, attestation *models.Attestation) error {
+func (a *attestationRepository) Create(db shared.DB, attestation *models.Attestation) error {
 	return a.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "predicate_type"},

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package release
+package dtos
 
 import (
 	"time"
@@ -41,7 +41,7 @@ type ReleaseDTO struct {
 	Items     []ReleaseItemDTO `json:"items,omitempty"`
 }
 
-func releaseItemToDTO(i models.ReleaseItem) ReleaseItemDTO {
+func ReleaseItemToDTO(i models.ReleaseItem) ReleaseItemDTO {
 	return ReleaseItemDTO{
 		ID:               i.ID,
 		ReleaseID:        i.ReleaseID,
@@ -70,7 +70,7 @@ type CandidatesResponseDTO struct {
 	Releases  []ReleaseDTO  `json:"releases"`
 }
 
-func releaseToDTO(r models.Release) ReleaseDTO {
+func ReleaseToDTO(r models.Release) ReleaseDTO {
 	dto := ReleaseDTO{
 		ID:        r.ID,
 		CreatedAt: r.CreatedAt,
@@ -80,23 +80,23 @@ func releaseToDTO(r models.Release) ReleaseDTO {
 	}
 
 	for _, it := range r.Items {
-		dto.Items = append(dto.Items, releaseItemToDTO(it))
+		dto.Items = append(dto.Items, ReleaseItemToDTO(it))
 	}
 
 	return dto
 }
 
 // requests
-type createRequest struct {
+type ReleaseCreateRequest struct {
 	Name  string           `json:"name"`
 	Items []ReleaseItemDTO `json:"items,omitempty"`
 }
 
-type patchRequest struct {
+type ReleasePatchRequest struct {
 	Items []ReleaseItemDTO `json:"items,omitempty"`
 }
 
-func (r createRequest) toModel(projectID uuid.UUID) models.Release {
+func (r ReleaseCreateRequest) ToModel(projectID uuid.UUID) models.Release {
 	rel := models.Release{
 		Name:      r.Name,
 		ProjectID: projectID,
@@ -115,7 +115,7 @@ func (r createRequest) toModel(projectID uuid.UUID) models.Release {
 	return rel
 }
 
-func (r patchRequest) applyToModel(rel *models.Release) {
+func (r ReleasePatchRequest) ApplyToModel(rel *models.Release) {
 	// naive full replace of items for now
 	var items []models.ReleaseItem
 	for _, it := range r.Items {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/lib/pq"
@@ -14,11 +13,11 @@ import (
 )
 
 type projectRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.Project, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.Project, shared.DB]
 }
 
-func NewProjectRepository(db core.DB) *projectRepository {
+func NewProjectRepository(db shared.DB) *projectRepository {
 	return &projectRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
@@ -105,11 +104,11 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 	return root
 }
 
-func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
+func (g *projectRepository) Update(tx shared.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
 
-func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error) {
+func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.Project], error) {
 	var projects []models.Project
 
 	var q *gorm.DB
@@ -133,13 +132,13 @@ func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUI
 	var count int64
 	err := q.Count(&count).Error
 	if err != nil {
-		return core.Paged[models.Project]{}, err
+		return shared.Paged[models.Project]{}, err
 	}
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&projects).Error
 	if err != nil {
-		return core.Paged[models.Project]{}, err
+		return shared.Paged[models.Project]{}, err
 	}
-	return core.NewPaged(pageInfo, count, projects), nil
+	return shared.NewPaged(pageInfo, count, projects), nil
 }
 
 func (g *projectRepository) List(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
@@ -175,14 +174,14 @@ func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]model
 	return projects, err
 }
 
-func (g *projectRepository) EnablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (g *projectRepository) EnablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	return g.db.Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
 		},
 	}).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
 }
-func (g *projectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (g *projectRepository) DisablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	return g.db.Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
@@ -190,7 +189,7 @@ func (g *projectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.U
 	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
 }
 
-func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID uuid.UUID) error {
+func (g *projectRepository) EnableCommunityManagedPolicies(tx shared.DB, projectID uuid.UUID) error {
 	// community policies can be identified by their "organization_id" being nil
 	return g.GetDB(tx).Exec(`
 		INSERT INTO project_enabled_policies (project_id, policy_id)
@@ -200,7 +199,7 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID
 	`, projectID).Error
 }
 
-func (g *projectRepository) Create(tx core.DB, project *models.Project) error {
+func (g *projectRepository) Create(tx shared.DB, project *models.Project) error {
 	// set the slug if not set
 	slug, err := g.firstFreeSlug(project.OrganizationID, project.Slug)
 	if err != nil {
@@ -211,7 +210,7 @@ func (g *projectRepository) Create(tx core.DB, project *models.Project) error {
 	return g.GetDB(tx).Create(project).Error
 }
 
-func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+func (g *projectRepository) UpsertSplit(tx shared.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
 	var existingProjects []models.Project
 	err := g.db.Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error

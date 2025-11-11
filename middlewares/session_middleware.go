@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package auth
+package middleware
 
 import (
 	"context"
@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/labstack/echo/v4"
 )
 
@@ -36,7 +35,7 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func cookieAuth(ctx context.Context, oryAPIClient core.AdminClient, oryKratosSessionCookie string) (string, error) {
+func cookieAuth(ctx context.Context, oryAPIClient shared.AdminClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
 	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
@@ -51,7 +50,7 @@ func cookieAuth(ctx context.Context, oryAPIClient core.AdminClient, oryKratosSes
 	return session.Id, nil
 }
 
-func SessionMiddleware(oryAPIClient core.AdminClient, verifier core.Verifier) echo.MiddlewareFunc {
+func SessionMiddleware(oryAPIClient shared.AdminClient, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())

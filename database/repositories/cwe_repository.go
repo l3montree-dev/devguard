@@ -2,17 +2,17 @@ package repositories
 
 import (
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
 
 type cweRepository struct {
 	db *gorm.DB
-	common.Repository[string, models.CWE, core.DB]
+	common.Repository[string, models.CWE, shared.DB]
 }
 
-func NewCWERepository(db core.DB) *cweRepository {
+func NewCWERepository(db shared.DB) *cweRepository {
 	return &cweRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.CWE](db),

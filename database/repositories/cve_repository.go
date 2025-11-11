@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -15,10 +14,10 @@ import (
 
 type cveRepository struct {
 	db *gorm.DB
-	common.Repository[string, models.CVE, core.DB]
+	common.Repository[string, models.CVE, shared.DB]
 }
 
-func NewCVERepository(db core.DB) *cveRepository {
+func NewCVERepository(db shared.DB) *cveRepository {
 	return &cveRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.CVE](db),
@@ -53,7 +52,7 @@ func (g *cveRepository) FindAll(cveIDs []string) ([]models.CVE, error) {
 	return cves, err
 }
 
-func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, affectedComponentHashes []string) error {
+func (g *cveRepository) SaveCveAffectedComponents(tx shared.DB, cveID string, affectedComponentHashes []string) error {
 
 	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c string) string {
 		return c
@@ -76,7 +75,7 @@ func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, affe
 	return assoc.Append(&affectedComponents)
 }
 
-func (g *cveRepository) createInBatches(tx core.DB, cves []models.CVE, batchSize int) error {
+func (g *cveRepository) createInBatches(tx shared.DB, cves []models.CVE, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{
 			Logger:               logger.Default.LogMode(logger.Silent),
@@ -116,11 +115,11 @@ func (g *cveRepository) createInBatches(tx core.DB, cves []models.CVE, batchSize
 	return err
 }
 
-func (g *cveRepository) SaveBatch(tx core.DB, cves []models.CVE) error {
+func (g *cveRepository) SaveBatch(tx shared.DB, cves []models.CVE) error {
 	return g.createInBatches(tx, cves, 1000)
 }
 
-func (g *cveRepository) Save(tx core.DB, cve *models.CVE) error {
+func (g *cveRepository) Save(tx shared.DB, cve *models.CVE) error {
 	return g.GetDB(tx).Clauses(
 		clause.OnConflict{
 			UpdateAll: true,
@@ -128,7 +127,7 @@ func (g *cveRepository) Save(tx core.DB, cve *models.CVE) error {
 	).Save(cve).Error
 }
 
-func (g *cveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
+func (g *cveRepository) FindAllListPaged(tx shared.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	var count int64
 	var cves = []models.CVE{}
 
@@ -161,13 +160,13 @@ func (g *cveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, fil
 
 	err := q.Preload("AffectedComponents").Preload("Exploits").Find(&cves).Error
 	if err != nil {
-		return core.Paged[models.CVE]{}, err
+		return shared.Paged[models.CVE]{}, err
 	}
 
-	return core.NewPaged(pageInfo, count, cves), nil
+	return shared.NewPaged(pageInfo, count, cves), nil
 }
 
-func (g *cveRepository) FindCVE(tx core.DB, cveID string) (models.CVE, error) {
+func (g *cveRepository) FindCVE(tx shared.DB, cveID string) (models.CVE, error) {
 
 	var cves models.CVE
 
@@ -186,7 +185,7 @@ func (g *cveRepository) FindCVE(tx core.DB, cveID string) (models.CVE, error) {
 // this method is used inside the risk_daemon to get all cves.
 // we need this to run FAST. Do not add any preloading here (except exploits). We do not need it in the risk_daemon.
 // create your own method if you need preloading.
-func (g *cveRepository) FindCVEs(tx core.DB, cveIds []string) ([]models.CVE, error) {
+func (g *cveRepository) FindCVEs(tx shared.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
 
 	err := g.GetDB(tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error

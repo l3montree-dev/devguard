@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,19 +38,19 @@ func (_m *ConfigRepository) EXPECT() *ConfigRepository_Expecter {
 }
 
 // GetDB provides a mock function for the type ConfigRepository
-func (_mock *ConfigRepository) GetDB(tx core.DB) core.DB {
+func (_mock *ConfigRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -62,16 +62,16 @@ type ConfigRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *ConfigRepository_Expecter) GetDB(tx interface{}) *ConfigRepository_GetDB_Call {
 	return &ConfigRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *ConfigRepository_GetDB_Call) Run(run func(tx core.DB)) *ConfigRepository_GetDB_Call {
+func (_c *ConfigRepository_GetDB_Call) Run(run func(tx shared.DB)) *ConfigRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -80,18 +80,18 @@ func (_c *ConfigRepository_GetDB_Call) Run(run func(tx core.DB)) *ConfigReposito
 	return _c
 }
 
-func (_c *ConfigRepository_GetDB_Call) Return(v core.DB) *ConfigRepository_GetDB_Call {
+func (_c *ConfigRepository_GetDB_Call) Return(v shared.DB) *ConfigRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *ConfigRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *ConfigRepository_GetDB_Call {
+func (_c *ConfigRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ConfigRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type ConfigRepository
-func (_mock *ConfigRepository) Save(tx core.DB, config *models.Config) error {
+func (_mock *ConfigRepository) Save(tx shared.DB, config *models.Config) error {
 	ret := _mock.Called(tx, config)
 
 	if len(ret) == 0 {
@@ -99,7 +99,7 @@ func (_mock *ConfigRepository) Save(tx core.DB, config *models.Config) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Config) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Config) error); ok {
 		r0 = returnFunc(tx, config)
 	} else {
 		r0 = ret.Error(0)
@@ -113,17 +113,17 @@ type ConfigRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - config *models.Config
 func (_e *ConfigRepository_Expecter) Save(tx interface{}, config interface{}) *ConfigRepository_Save_Call {
 	return &ConfigRepository_Save_Call{Call: _e.mock.On("Save", tx, config)}
 }
 
-func (_c *ConfigRepository_Save_Call) Run(run func(tx core.DB, config *models.Config)) *ConfigRepository_Save_Call {
+func (_c *ConfigRepository_Save_Call) Run(run func(tx shared.DB, config *models.Config)) *ConfigRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Config
 		if args[1] != nil {
@@ -142,7 +142,7 @@ func (_c *ConfigRepository_Save_Call) Return(err error) *ConfigRepository_Save_C
 	return _c
 }
 
-func (_c *ConfigRepository_Save_Call) RunAndReturn(run func(tx core.DB, config *models.Config) error) *ConfigRepository_Save_Call {
+func (_c *ConfigRepository_Save_Call) RunAndReturn(run func(tx shared.DB, config *models.Config) error) *ConfigRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

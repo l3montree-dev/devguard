@@ -3,8 +3,8 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

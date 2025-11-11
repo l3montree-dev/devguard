@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 	"golang.org/x/mod/semver"
 	"gorm.io/gorm"
 	"pault.ag/go/debian/version"
@@ -19,7 +19,7 @@ import (
 
 type debianSecurityTracker struct {
 	httpClient            *http.Client
-	affectedCmpRepository core.AffectedComponentRepository
+	affectedCmpRepository shared.AffectedComponentRepository
 }
 
 /*
@@ -68,7 +68,7 @@ type debianCVE struct {
 // value is the cve
 type debianJSONResponse = map[string]map[string]debianCVE
 
-func NewDebianSecurityTracker(affectedCmpRepository core.AffectedComponentRepository) debianSecurityTracker {
+func NewDebianSecurityTracker(affectedCmpRepository shared.AffectedComponentRepository) debianSecurityTracker {
 	return debianSecurityTracker{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,

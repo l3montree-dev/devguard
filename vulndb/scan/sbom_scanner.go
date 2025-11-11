@@ -18,10 +18,10 @@ package scan
 import (
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type sbomScanner struct {
@@ -36,7 +36,7 @@ type comparer interface {
 	GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error)
 }
 
-func NewSBOMScanner(purlComparer comparer, cveRepository core.CveRepository) *sbomScanner {
+func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *sbomScanner {
 	return &sbomScanner{
 		purlComparer: purlComparer,
 	}

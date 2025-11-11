@@ -19,23 +19,23 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type scanService struct {
-	sbomScanner           core.SBOMScanner
-	assetVersionService   core.AssetVersionService
-	dependencyVulnService core.DependencyVulnService
-	artifactService       core.ArtifactService
-	statisticsService     core.StatisticsService
+	sbomScanner           shared.SBOMScanner
+	assetVersionService   shared.AssetVersionService
+	dependencyVulnService shared.DependencyVulnService
+	artifactService       shared.ArtifactService
+	statisticsService     shared.StatisticsService
 	// mark public to let it be overridden in tests
-	core.FireAndForgetSynchronizer
+	shared.FireAndForgetSynchronizer
 }
 
-func NewScanService(db core.DB, cveRepository core.CveRepository, assetVersionService core.AssetVersionService, dependencyVulnService core.DependencyVulnService, artifactService core.ArtifactService, statisticsService core.StatisticsService) *scanService {
+func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, artifactService shared.ArtifactService, statisticsService shared.StatisticsService) *scanService {
 	purlComparer := NewPurlComparer(db)
 	scanner := NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{

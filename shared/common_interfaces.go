@@ -23,12 +23,32 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/labstack/echo/v4"
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm/clause"
 )
+
+type ReleaseService interface {
+	ListByProject(projectID uuid.UUID) ([]models.Release, error)
+	ListByProjectPaged(projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)
+	Read(id uuid.UUID) (models.Release, error)
+	ReadRecursive(id uuid.UUID) (models.Release, error)
+	Create(r *models.Release) error
+	Update(r *models.Release) error
+	Delete(id uuid.UUID) error
+	AddItem(item *models.ReleaseItem) error
+	RemoveItem(id uuid.UUID) error
+	ListCandidates(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+}
+
+type PersonalAccessTokenService interface {
+	VerifyRequestSignature(req *http.Request) (string, string, error)
+	RevokeByPrivateKey(privKey string) error
+}
 
 type CSAFService interface {
 	GetVexFromCsafProvider(purl packageurl.PackageURL, realURL string, domain string) (*normalize.CdxBom, error)
@@ -63,14 +83,14 @@ type Verifier interface {
 }
 
 type PolicyRepository interface {
-	common.Repository[uuid.UUID, models.Policy, DB]
+	Repository[uuid.UUID, models.Policy, DB]
 	FindByProjectID(projectID uuid.UUID) ([]models.Policy, error)
 	FindByOrganizationID(organizationID uuid.UUID) ([]models.Policy, error)
 	FindCommunityManagedPolicies() ([]models.Policy, error)
 }
 
 type AssetRepository interface {
-	common.Repository[uuid.UUID, models.Asset, DB]
+	Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
@@ -89,13 +109,13 @@ type AssetRepository interface {
 }
 
 type AttestationRepository interface {
-	common.Repository[string, models.Attestation, DB]
+	Repository[string, models.Attestation, DB]
 	GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error)
 	GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
 }
 
 type ArtifactRepository interface {
-	common.Repository[string, models.Artifact, DB]
+	Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
@@ -104,7 +124,7 @@ type ArtifactRepository interface {
 }
 
 type ReleaseRepository interface {
-	common.Repository[uuid.UUID, models.Release, DB]
+	Repository[uuid.UUID, models.Release, DB]
 	GetByProjectID(projectID uuid.UUID) ([]models.Release, error)
 	ReadWithItems(id uuid.UUID) (models.Release, error)
 	ReadRecursive(id uuid.UUID) (models.Release, error)
@@ -115,7 +135,7 @@ type ReleaseRepository interface {
 }
 
 type CveRepository interface {
-	common.Repository[string, models.CVE, DB]
+	Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
 	GetLastModDate() (time.Time, error)
 	GetAllCVEsID() ([]string, error)
@@ -137,7 +157,7 @@ type ExploitRepository interface {
 }
 
 type AffectedComponentRepository interface {
-	common.Repository[string, models.AffectedComponent, DB]
+	Repository[string, models.AffectedComponent, DB]
 	GetAllAffectedComponentsID() ([]string, error)
 	Save(tx DB, affectedComponent *models.AffectedComponent) error
 	SaveBatch(tx DB, affectedPkgs []models.AffectedComponent) error
@@ -145,7 +165,7 @@ type AffectedComponentRepository interface {
 }
 
 type ComponentRepository interface {
-	common.Repository[string, models.Component, DB]
+	Repository[string, models.Component, DB]
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)
@@ -159,7 +179,7 @@ type ComponentRepository interface {
 }
 
 type DependencyVulnRepository interface {
-	common.Repository[string, models.DependencyVuln, DB]
+	Repository[string, models.DependencyVuln, DB]
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -173,7 +193,7 @@ type DependencyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
-	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
+	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dto.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
@@ -182,7 +202,7 @@ type DependencyVulnRepository interface {
 }
 
 type FirstPartyVulnRepository interface {
-	common.Repository[string, models.FirstPartyVuln, DB]
+	Repository[string, models.FirstPartyVuln, DB]
 	SaveBatch(tx DB, vulns []models.FirstPartyVuln) error
 	Save(tx DB, vuln *models.FirstPartyVuln) error
 	Transaction(txFunc func(DB) error) error
@@ -198,7 +218,7 @@ type FirstPartyVulnRepository interface {
 }
 
 type LicenseRiskRepository interface {
-	common.Repository[string, models.LicenseRisk, DB]
+	Repository[string, models.LicenseRisk, DB]
 	GetAllLicenseRisksForAssetVersionPaged(tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.LicenseRisk], error)
 	GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)
 	GetLicenseRisksByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error)
@@ -210,14 +230,14 @@ type LicenseRiskRepository interface {
 }
 
 type InTotoLinkRepository interface {
-	common.Repository[uuid.UUID, models.InTotoLink, DB]
+	Repository[uuid.UUID, models.InTotoLink, DB]
 	FindByAssetAndSupplyChainID(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)
 	Save(tx DB, model *models.InTotoLink) error
 	FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error)
 }
 
 type PersonalAccessTokenRepository interface {
-	common.Repository[uuid.UUID, models.PAT, DB]
+	Repository[uuid.UUID, models.PAT, DB]
 	GetByFingerprint(fingerprint string) (models.PAT, error)
 	FindByUserIDs(userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(userID string) ([]models.PAT, error)
@@ -226,14 +246,14 @@ type PersonalAccessTokenRepository interface {
 }
 
 type SupplyChainRepository interface {
-	common.Repository[uuid.UUID, models.SupplyChain, DB]
+	Repository[uuid.UUID, models.SupplyChain, DB]
 	FindByDigest(digest string) ([]models.SupplyChain, error)
 	FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error)
 	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
 type OrganizationRepository interface {
-	common.Repository[uuid.UUID, models.Org, DB]
+	Repository[uuid.UUID, models.Org, DB]
 	ReadBySlug(slug string) (models.Org, error)
 	Update(tx DB, organization *models.Org) error
 	ContentTree(orgID uuid.UUID, projects []string) []any // returns project dtos as values - including fetched assets
@@ -464,7 +484,7 @@ type OpenSourceInsightService interface {
 }
 
 type ComponentProjectRepository interface {
-	common.Repository[string, models.ComponentProject, DB]
+	Repository[string, models.ComponentProject, DB]
 }
 
 type ComponentService interface {

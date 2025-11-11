@@ -1,10 +1,9 @@
-package vuln
+package dtos
 
 import (
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 )
 
 type FirstPartyVulnDTO struct {
@@ -33,9 +32,9 @@ type FirstPartyVulnDTO struct {
 	RuleProperties  map[string]any `json:"ruleProperties"`
 }
 
-type detailedFirstPartyVulnDTO struct {
+type DetailedFirstPartyVulnDTO struct {
 	FirstPartyVulnDTO
-	Events []events.VulnEventDTO `json:"events"`
+	Events []VulnEventDTO `json:"events"`
 }
 
 func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {

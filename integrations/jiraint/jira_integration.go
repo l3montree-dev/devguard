@@ -15,7 +15,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
@@ -32,8 +31,8 @@ type jiraRepository struct {
 	JiraIntegrationID uuid.UUID `json:"jiraIntegrationID"`
 }
 
-func (r *jiraRepository) toRepository() core.Repository {
-	return core.Repository{
+func (r *jiraRepository) toRepository() shared.Repository {
+	return shared.Repository{
 		ID:          fmt.Sprintf("jira:%s:%s", r.JiraIntegrationID, r.ID),
 		Label:       r.Name,
 		Description: r.Description,
@@ -41,26 +40,26 @@ func (r *jiraRepository) toRepository() core.Repository {
 }
 
 type JiraIntegration struct {
-	jiraIntegrationRepository core.JiraIntegrationRepository
-	aggregatedVulnRepository  core.VulnRepository
-	dependencyVulnRepository  core.DependencyVulnRepository
-	firstPartyVulnRepository  core.FirstPartyVulnRepository
-	componentRepository       core.ComponentRepository
-	externalUserRepository    core.ExternalUserRepository
-	vulnEventRepository       core.VulnEventRepository
-	assetVersionRepository    core.AssetVersionRepository
-	assetRepository           core.AssetRepository
-	orgRepository             core.OrganizationRepository
-	projectRepository         core.ProjectRepository
+	jiraIntegrationRepository shared.JiraIntegrationRepository
+	aggregatedVulnRepository  shared.VulnRepository
+	dependencyVulnRepository  shared.DependencyVulnRepository
+	firstPartyVulnRepository  shared.FirstPartyVulnRepository
+	componentRepository       shared.ComponentRepository
+	externalUserRepository    shared.ExternalUserRepository
+	vulnEventRepository       shared.VulnEventRepository
+	assetVersionRepository    shared.AssetVersionRepository
+	assetRepository           shared.AssetRepository
+	orgRepository             shared.OrganizationRepository
+	projectRepository         shared.ProjectRepository
 	frontendURL               string
-	statisticsService         core.StatisticsService
+	statisticsService         shared.StatisticsService
 }
 
-var _ core.ThirdPartyIntegration = &JiraIntegration{}
+var _ shared.ThirdPartyIntegration = &JiraIntegration{}
 
 var DevguardCommentText = "This comment was added via DevGuard."
 
-func NewJiraIntegration(db core.DB) *JiraIntegration {
+func NewJiraIntegration(db shared.DB) *JiraIntegration {
 	jiraIntegrationRepository := repositories.NewJiraIntegrationRepository(db)
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
@@ -98,7 +97,7 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 	}
 }
 
-func (i *JiraIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+func (i *JiraIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
@@ -133,7 +132,7 @@ func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, a
 	return nil
 }
 
-func (i *JiraIntegration) Delete(ctx core.Context) error {
+func (i *JiraIntegration) Delete(ctx shared.Context) error {
 	id := ctx.Param("jira_integration_id")
 
 	if id == "" {
@@ -164,27 +163,27 @@ func (i *JiraIntegration) CreateLabels(ctx context.Context, asset models.Asset) 
 	return nil
 }
 
-func (i *JiraIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (i *JiraIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	// Jira integration does not have organizations in the same way as GitLab or GitHub
 	return nil, fmt.Errorf("Jira integration does not support listing organizations")
 }
-func (i *JiraIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (i *JiraIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// Jira integration does not have groups in the same way as GitLab or GitHub
 	return nil, nil, fmt.Errorf("Jira integration does not support listing groups")
 }
-func (i *JiraIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (i *JiraIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	// Jira integration does not have projects in the same way as GitLab or GitHub
 	return nil, nil, fmt.Errorf("Jira integration does not support listing projects")
 }
-func (i *JiraIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
+func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
 
-	if !core.HasOrganization(ctx) {
+	if !shared.HasOrganization(ctx) {
 		return nil, fmt.Errorf("organization is required to list repositories")
 	}
 
-	org := core.GetOrg(ctx)
+	org := shared.GetOrg(ctx)
 
-	repos := []core.Repository{}
+	repos := []shared.Repository{}
 
 	if org.JiraIntegrations != nil {
 		jiraClient, err := NewJiraBatchClient(org.JiraIntegrations)
@@ -198,7 +197,7 @@ func (i *JiraIntegration) ListRepositories(ctx core.Context) ([]core.Repository,
 			return nil, fmt.Errorf("failed to get repositories from Jira: %w", err)
 		}
 
-		repos = append(repos, utils.Map(r, func(repo jiraRepository) core.Repository {
+		repos = append(repos, utils.Map(r, func(repo jiraRepository) shared.Repository {
 			return repo.toRepository()
 		})...)
 		return repos, nil
@@ -262,7 +261,7 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	return adfComment
 
 }
-func (i *JiraIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (i *JiraIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// Jira integration does not have access control in the same way as GitLab or GitHub
 	return false, fmt.Errorf("Jira integration does not support access control for external entity providers")
 }
@@ -330,7 +329,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Clien
 
 func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
 
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -672,7 +671,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 }
 
 func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -793,15 +792,15 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	return nil
 }
 
-func (i *JiraIntegration) GetUsers(org models.Org) []core.User {
+func (i *JiraIntegration) GetUsers(org models.Org) []shared.User {
 	// Jira integration does not have users in the same way as GitLab or GitHub
 	return nil
 }
-func (i *JiraIntegration) GetID() core.IntegrationID {
-	return core.JiraIntegrationID
+func (i *JiraIntegration) GetID() shared.IntegrationID {
+	return shared.JiraIntegrationID
 }
 
-func (i *JiraIntegration) TestAndSave(ctx core.Context) error {
+func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 	var data struct {
 		URL       string `json:"url"`
 		Token     string `json:"token"`
@@ -820,7 +819,7 @@ func (i *JiraIntegration) TestAndSave(ctx core.Context) error {
 		AccessToken: data.Token,
 		Name:        data.Name,
 		UserEmail:   data.UserEmail,
-		OrgID:       (core.GetOrg(ctx).GetID()),
+		OrgID:       (shared.GetOrg(ctx).GetID()),
 	}
 
 	// check if the token valid and get the account ID

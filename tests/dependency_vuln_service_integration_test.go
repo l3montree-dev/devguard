@@ -13,27 +13,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vuln_test
+package tests
 
 import (
 	"testing"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create org, project, asset, and asset version
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Configure asset for ticket creation with thresholds that will trigger issue creation
 	asset.ConfidentialityRequirement = models.RequirementLevelHigh
@@ -102,7 +101,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 
 		// Create service with mock
 		depVulnRepo := repositories.NewDependencyVulnRepository(db)
-		depVulnService := vuln.NewService(
+		depVulnService := services.NewDependencyVulnService(
 			depVulnRepo,
 			repositories.NewVulnEventRepository(db),
 			repositories.NewAssetRepository(db),
@@ -213,7 +212,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 
 		// Create service with mock
 		depVulnRepo := repositories.NewDependencyVulnRepository(db)
-		depVulnService := vuln.NewService(
+		depVulnService := services.NewDependencyVulnService(
 			depVulnRepo,
 			repositories.NewVulnEventRepository(db),
 			repositories.NewAssetRepository(db),
@@ -234,11 +233,11 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 }
 
 func TestSyncIssuesWithExistingTickets(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create org, project, asset, and asset version
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Configure asset
 	asset.ConfidentialityRequirement = models.RequirementLevelHigh
@@ -313,7 +312,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 
 		// Create service with mock
 		depVulnRepo := repositories.NewDependencyVulnRepository(db)
-		depVulnService := vuln.NewService(
+		depVulnService := services.NewDependencyVulnService(
 			depVulnRepo,
 			repositories.NewVulnEventRepository(db),
 			repositories.NewAssetRepository(db),

@@ -3,16 +3,16 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type policyRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.Policy, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.Policy, shared.DB]
 }
 
-func NewPolicyRepository(db core.DB) *policyRepository {
+func NewPolicyRepository(db shared.DB) *policyRepository {
 	return &policyRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Policy](db),

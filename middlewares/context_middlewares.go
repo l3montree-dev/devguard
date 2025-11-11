@@ -13,14 +13,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package api
+package middleware
 
 import (
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 )
@@ -29,9 +28,9 @@ import (
 
 // this middleware is used to set the project slug parameter based on an X-Asset-ID header.
 // it is useful for reusing the projectAccessControl middleware and rely on the rbac to determine if the user has access to an specific asset
-func assetNameMiddleware() core.MiddlewareFunc {
+func assetNameMiddleware() shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 			// extract the asset id from the header
 			// asset name is <organization_slug>/<project_slug>/<asset_slug>
 			assetName := ctx.Request().Header.Get("X-Asset-Name")
@@ -60,12 +59,12 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func artifactMiddleware(repository core.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func artifactMiddleware(repository shared.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			assetVersion := core.GetAssetVersion(ctx)
+			assetVersion := shared.GetAssetVersion(ctx)
 
-			artifactName, err := core.GetArtifactName(ctx)
+			artifactName, err := shared.GetArtifactName(ctx)
 			if err != nil {
 				slog.Error("invalid artifact name", "err", err)
 				return echo.NewHTTPError(400, "invalid artifact name")
@@ -77,20 +76,20 @@ func artifactMiddleware(repository core.ArtifactRepository) func(next echo.Handl
 				return echo.NewHTTPError(404, "could not find artifact").WithInternal(err)
 			}
 
-			core.SetArtifact(ctx, artifact)
+			shared.SetArtifact(ctx, artifact)
 
 			return next(ctx)
 		}
 	}
 }
 
-func assetVersionMiddleware(repository core.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetVersionMiddleware(repository shared.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 
-			asset := core.GetAsset(ctx)
+			asset := shared.GetAsset(ctx)
 
-			assetVersionSlug, err := core.GetAssetVersionSlug(ctx)
+			assetVersionSlug, err := shared.GetAssetVersionSlug(ctx)
 			if err != nil {
 				return echo.NewHTTPError(400, "invalid asset version slug")
 			}
@@ -99,17 +98,17 @@ func assetVersionMiddleware(repository core.AssetVersionRepository) func(next ec
 
 			if err != nil {
 				if assetVersionSlug == "default" {
-					core.SetAssetVersion(ctx, models.AssetVersion{})
+					shared.SetAssetVersion(ctx, models.AssetVersion{})
 
 					return next(ctx)
 				}
 				return echo.NewHTTPError(404, "could not find asset version")
 			}
 
-			core.SetAssetVersion(ctx, assetVersion)
+			shared.SetAssetVersion(ctx, assetVersion)
 
 			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			if !core.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
+			if !shared.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
 				go func() {
 					now := time.Now()
 					assetVersion.LastAccessedAt = now

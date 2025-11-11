@@ -13,19 +13,18 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type WebhookStruct struct {
-	Organization core.OrgObject          `json:"organization"`
-	Project      core.ProjectObject      `json:"project"`
-	Asset        core.AssetObject        `json:"asset"`
-	AssetVersion core.AssetVersionObject `json:"assetVersion"`
-	Payload      any                     `json:"payload"`
-	Type         WebhookType             `json:"type"`
-	Artifact     core.ArtifactObject     `json:"artifact,omitempty"`
+	Organization shared.OrgObject          `json:"organization"`
+	Project      shared.ProjectObject      `json:"project"`
+	Asset        shared.AssetObject        `json:"asset"`
+	AssetVersion shared.AssetVersionObject `json:"assetVersion"`
+	Payload      any                       `json:"payload"`
+	Type         WebhookType               `json:"type"`
+	Artifact     shared.ArtifactObject     `json:"artifact,omitempty"`
 }
 
 type WebhookType string
@@ -102,7 +101,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 
 }
 
-func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, artifact core.ArtifactObject) error {
+func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -135,7 +134,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org core.OrgObject, project core.
 	return nil
 }
 
-func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVulnDTO, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject) error {
+func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
 	return nil
 
 	/*body := WebhookStruct{
@@ -165,7 +164,7 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVuln
 	return nil*/
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVulnDTO, org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, artifact core.ArtifactObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -198,7 +197,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVuln
 	return nil
 }
 
-func (c *webhookClient) SendTest(org core.OrgObject, project core.ProjectObject, asset core.AssetObject, assetVersion core.AssetVersionObject, payloadType TestPayloadType) error {
+func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
 
 	var payload any
 	var webhookType WebhookType

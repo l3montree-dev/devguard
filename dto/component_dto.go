@@ -1,12 +1,12 @@
-package component
+package dtos
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
-type componentDTO struct {
+type ComponentDTO struct {
 	ID            uuid.UUID        `json:"id"`
 	Component     models.Component `json:"component"`
 	ComponentPurl string           `json:"componentPurl"`
@@ -19,8 +19,8 @@ type componentDTO struct {
 	Artifacts      []models.Artifact `json:"artifacts"`
 }
 
-func toDTO(m models.ComponentDependency) componentDTO {
-	return componentDTO{
+func toDTO(m models.ComponentDependency) ComponentDTO {
+	return ComponentDTO{
 		ID:             m.ID,
 		Component:      m.Component,
 		ComponentPurl:  utils.SafeDereference(m.ComponentPurl),

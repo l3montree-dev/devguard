@@ -1,4 +1,4 @@
-package vuln_test
+package tests
 
 import (
 	"bytes"
@@ -7,28 +7,29 @@ import (
 	"os"
 	"testing"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
+
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestDependencyVulnController_CreateEvent(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
-	factory, client := integration_tests.NewTestClientFactory(t)
+	factory, client := NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		map[string]*gitlabint.GitlabOauth2Config{
@@ -45,7 +46,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 
 	// Setup repositories and services
 	depVulnRepo := repositories.NewDependencyVulnRepository(db)
-	depVulnService := vuln.NewService(
+	depVulnService := services.NewDependencyVulnService(
 		depVulnRepo,
 		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
@@ -59,10 +60,10 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 
 	statisticsService := mocks.NewStatisticsService(t)
 	vulnEventRepository := mocks.NewVulnEventRepository(t)
-	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService, statisticsService, vulnEventRepository)
+	controller := controllers.NewDependencyVulnController(depVulnRepo, depVulnService, projectService, statisticsService, vulnEventRepository)
 
 	// Create org, project, asset, asset version, and dependency vuln
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// mark the asset as external provider
 	asset.ExternalEntityProviderID = utils.Ptr("gitlab")
@@ -93,7 +94,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		}
 		assert.Nil(t, db.Create(&depVuln).Error)
 
-		msg := vuln.DependencyVulnStatus{
+		msg := controllers.DependencyVulnStatus{
 			StatusType:    "reopened",
 			Justification: "Reopening the ticket for further investigation",
 		}
@@ -102,25 +103,25 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/dependency_vuln/event", bytes.NewBuffer(b))
 		rec := httptest.NewRecorder()
-		ctx := integration_tests.NewContext(req, rec)
+		ctx := NewContext(req, rec)
 
 		session := mocks.NewAuthSession(t)
 		session.On("GetUserID").Return("")
-		core.SetSession(ctx, session)
+		shared.SetSession(ctx, session)
 		// set the elements into the context
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetAssetVersion(ctx, assetVersion)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetAssetVersion(ctx, assetVersion)
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues(depVuln.ID)
 		rbac := mocks.NewAccessControl(t)
 		rbac.On("GetAllMembersOfOrganization").Return(nil, nil)
-		core.SetRBAC(ctx, rbac)
+		shared.SetRBAC(ctx, rbac)
 
 		adminClient := mocks.NewAdminClient(t)
-		core.SetAuthAdminClient(ctx, adminClient)
-		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+		shared.SetAuthAdminClient(ctx, adminClient)
+		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
 		client.On("CreateIssueComment", ctx.Request().Context(), 123, 123, mock.Anything).Return(nil, nil, nil)
 		client.On("EditIssue", ctx.Request().Context(), mock.Anything, mock.Anything, mock.Anything).Return(nil, nil, nil)

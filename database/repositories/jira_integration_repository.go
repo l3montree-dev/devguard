@@ -6,16 +6,16 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type jiraIntegrationRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.JiraIntegration, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.JiraIntegration, shared.DB]
 }
 
-func NewJiraIntegrationRepository(db core.DB) *jiraIntegrationRepository {
+func NewJiraIntegrationRepository(db shared.DB) *jiraIntegrationRepository {
 	return &jiraIntegrationRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.JiraIntegration](db),

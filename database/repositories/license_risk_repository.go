@@ -3,25 +3,24 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
 
 type LicenseRiskRepository struct {
-	common.Repository[string, models.LicenseRisk, core.DB]
+	common.Repository[string, models.LicenseRisk, shared.DB]
 	db *gorm.DB
 }
 
-func NewLicenseRiskRepository(db core.DB) *LicenseRiskRepository {
+func NewLicenseRiskRepository(db shared.DB) *LicenseRiskRepository {
 	return &LicenseRiskRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.LicenseRisk](db),
 	}
 }
 
-func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(tx core.DB, assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.LicenseRisk], error) {
+func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
@@ -39,18 +38,18 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 
 	err := q.Session(&gorm.Session{}).Distinct("license_risks.id").Count(&count).Error
 	if err != nil {
-		return core.Paged[models.LicenseRisk]{}, err
+		return shared.Paged[models.LicenseRisk]{}, err
 	}
 
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&licenseRisks).Error
 	if err != nil {
-		return core.Paged[models.LicenseRisk]{}, err
+		return shared.Paged[models.LicenseRisk]{}, err
 	}
 	//TODO: check it
-	return core.NewPaged(pageInfo, count, licenseRisks), nil
+	return shared.NewPaged(pageInfo, count, licenseRisks), nil
 }
 
-func (repository *LicenseRiskRepository) GetByAssetID(tx core.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
 	err := repository.db.Where("asset_id = ? ", assetID).Find(&licenseRisks).Error
@@ -70,10 +69,10 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(asset
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events", func(db core.DB) core.DB {
+	q := repository.Repository.GetDB(tx).Preload("Events", func(db shared.DB) shared.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
 
@@ -118,10 +117,10 @@ func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName str
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) ApplyAndSave(tx core.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
+func (repository *LicenseRiskRepository) ApplyAndSave(tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return repository.Transaction(func(d core.DB) error {
+		return repository.Transaction(func(d shared.DB) error {
 			_, err := repository.applyAndSave(d, licenseRisk, vulnEvent)
 			return err
 		})
@@ -131,7 +130,7 @@ func (repository *LicenseRiskRepository) ApplyAndSave(tx core.DB, licenseRisk *m
 	return err
 }
 
-func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (repository *LicenseRiskRepository) applyAndSave(tx shared.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
 	ev.Apply(licenseRisk)
 
 	// run the updates in the transaction to keep a valid state
@@ -148,7 +147,7 @@ func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *m
 
 func (repository *LicenseRiskRepository) Read(vulnID string) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
-	err := repository.db.Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db core.DB) core.DB {
+	err := repository.db.Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db shared.DB) shared.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Component").First(&licenseRisk).Error
 	if err != nil {

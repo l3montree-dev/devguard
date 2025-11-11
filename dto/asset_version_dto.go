@@ -1,6 +1,6 @@
-package assetversion
+package dtos
 
-type assetMetrics struct {
+type AssetMetrics struct {
 	EnabledContainerScanning       bool    `json:"enabledContainerScanning"`
 	EnabledImageSigning            bool    `json:"enabledImageSigning"`
 	VerifiedSupplyChainsPercentage float64 `json:"verifiedSupplyChainsPercentage"`

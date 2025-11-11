@@ -22,7 +22,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/auth"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -33,11 +32,11 @@ import (
 
 // AuthModule provides authentication-related dependencies
 var AuthModule = fx.Options(
-	fx.Provide(func() core.AdminClient {
+	fx.Provide(func() shared.AdminClient {
 		ory := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC"))
-		return core.NewAdminClient(ory)
+		return shared.NewAdminClient(ory)
 	}),
-	fx.Provide(func(db core.DB, broker pubsub.Broker) (core.RBACProvider, error) {
+	fx.Provide(func(db shared.DB, broker pubsub.Broker) (shared.RBACProvider, error) {
 		return accesscontrol.NewCasbinRBACProvider(db, broker)
 	}),
 )
@@ -56,7 +55,7 @@ var IntegrationModule = fx.Options(
 // MiddlewareProvider represents a named middleware with its factory function
 type MiddlewareProvider struct {
 	Name string
-	Func core.MiddlewareFunc
+	Func shared.MiddlewareFunc
 }
 
 // AsMiddleware annotates the result for the middleware value group
@@ -68,7 +67,7 @@ type AsMiddleware struct {
 
 // ProvideExternalEntityProviderOrgSyncMiddleware provides the org sync middleware
 func ProvideExternalEntityProviderOrgSyncMiddleware(
-	externalEntityProviderService core.ExternalEntityProviderService,
+	externalEntityProviderService shared.ExternalEntityProviderService,
 ) AsMiddleware {
 	return AsMiddleware{
 		Middleware: MiddlewareProvider{
@@ -80,7 +79,7 @@ func ProvideExternalEntityProviderOrgSyncMiddleware(
 
 // ProvideExternalEntityProviderRefreshMiddleware provides the entity refresh middleware
 func ProvideExternalEntityProviderRefreshMiddleware(
-	externalEntityProviderService core.ExternalEntityProviderService,
+	externalEntityProviderService shared.ExternalEntityProviderService,
 ) AsMiddleware {
 	return AsMiddleware{
 		Middleware: MiddlewareProvider{
@@ -98,13 +97,13 @@ var MiddlewareModule = fx.Options(
 
 // MiddlewareRegistry holds all registered middlewares by name
 type MiddlewareRegistry struct {
-	middlewares map[string]core.MiddlewareFunc
+	middlewares map[string]shared.MiddlewareFunc
 }
 
 // NewMiddlewareRegistry creates a registry from the value group
 func NewMiddlewareRegistry(middlewares []MiddlewareProvider) *MiddlewareRegistry {
 	registry := &MiddlewareRegistry{
-		middlewares: make(map[string]core.MiddlewareFunc),
+		middlewares: make(map[string]shared.MiddlewareFunc),
 	}
 	for _, m := range middlewares {
 		registry.middlewares[m.Name] = m.Func
@@ -113,7 +112,7 @@ func NewMiddlewareRegistry(middlewares []MiddlewareProvider) *MiddlewareRegistry
 }
 
 // Get retrieves a middleware by name
-func (r *MiddlewareRegistry) Get(name string) core.MiddlewareFunc {
+func (r *MiddlewareRegistry) Get(name string) shared.MiddlewareFunc {
 	return r.middlewares[name]
 }
 

@@ -3,7 +3,7 @@
 
 package common
 
-import "github.com/l3montree-dev/devguard/internal/core/integrations/jira"
+import "github.com/l3montree-dev/devguard/integrations/jira"
 
 func descriptionADF(adf *jira.ADF) {
 	adf.Content = append(adf.Content,

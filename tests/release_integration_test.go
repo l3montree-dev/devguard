@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package release_test
+package tests
 
 import (
 	"bytes"
@@ -23,22 +23,21 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/core"
 	releasepkg "github.com/l3montree-dev/devguard/internal/core/release"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/inithelper"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReleaseSBOMMergeIntegration(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// repositories
 	avRepo := repositories.NewAssetVersionRepository(db)
@@ -48,7 +47,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	// services using inithelper to follow repository patterns
-	avService := inithelper.CreateAssetVersionService(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	avService := inithelper.CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	relService := releasepkg.NewService(releaseRepo)
 
 	// use subtests: setup and then call SBOM endpoint
@@ -116,11 +115,11 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		ctx.SetParamNames("projectSlug", "releaseID")
 		ctx.SetParamValues(project.Slug, rel.ID.String())
 
-		// attach required objects into echo.Context using core.Set helpers (core.Context is alias to echo.Context)
-		core.SetOrg(ctx, org)
-		core.SetProject(ctx, project)
+		// attach required objects into echo.Context using shared.Set helpers (shared.Context is alias to echo.Context)
+		shared.SetOrg(ctx, org)
+		shared.SetProject(ctx, project)
 
-		// call SBOMJSON directly with ctx (core.Context is an alias of echo.Context)
+		// call SBOMJSON directly with ctx (shared.Context is an alias of echo.Context)
 		if err := releaseController.SBOMJSON(ctx); err != nil {
 			t.Fatalf("SBOMJSON returned error: %v", err)
 		}

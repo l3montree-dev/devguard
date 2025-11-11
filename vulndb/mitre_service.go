@@ -6,14 +6,14 @@ import (
 
 	"net/http"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type mitreService struct {
 	httpClient    *http.Client
-	cweRepository core.CweRepository
+	cweRepository shared.CweRepository
 }
 
 func (mitreService) parseCWEs(xmlBytes []byte) ([]*WeaknessType, error) {
@@ -63,7 +63,7 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	return cwes, nil
 }
 
-func NewMitreService(cweRepository core.CweRepository) mitreService {
+func NewMitreService(cweRepository shared.CweRepository) mitreService {
 	return mitreService{
 		cweRepository: cweRepository,
 		httpClient:    &http.Client{},

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/pkg/errors"
 )
 

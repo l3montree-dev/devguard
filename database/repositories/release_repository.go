@@ -3,16 +3,15 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type releaseRepository struct {
-	common.Repository[uuid.UUID, models.Release, core.DB]
-	db core.DB
+	common.Repository[uuid.UUID, models.Release, shared.DB]
+	db shared.DB
 }
 
-func NewReleaseRepository(db core.DB) *releaseRepository {
+func NewReleaseRepository(db shared.DB) *releaseRepository {
 	return &releaseRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Release](db),
@@ -109,7 +108,7 @@ func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) 
 }
 
 // CreateReleaseItem inserts a new ReleaseItem row.
-func (r *releaseRepository) CreateReleaseItem(tx core.DB, item *models.ReleaseItem) error {
+func (r *releaseRepository) CreateReleaseItem(tx shared.DB, item *models.ReleaseItem) error {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -118,7 +117,7 @@ func (r *releaseRepository) CreateReleaseItem(tx core.DB, item *models.ReleaseIt
 }
 
 // DeleteReleaseItem deletes a release item by id.
-func (r *releaseRepository) DeleteReleaseItem(tx core.DB, id uuid.UUID) error {
+func (r *releaseRepository) DeleteReleaseItem(tx shared.DB, id uuid.UUID) error {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -127,7 +126,7 @@ func (r *releaseRepository) DeleteReleaseItem(tx core.DB, id uuid.UUID) error {
 }
 
 // GetByProjectIDPaged returns a paged list of releases for a project with optional search, filter and sort
-func (r *releaseRepository) GetByProjectIDPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Release], error) {
+func (r *releaseRepository) GetByProjectIDPaged(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -149,7 +148,7 @@ func (r *releaseRepository) GetByProjectIDPaged(tx core.DB, projectID uuid.UUID,
 	// count
 	var count int64
 	if err := q.Count(&count).Error; err != nil {
-		return core.Paged[models.Release]{}, err
+		return shared.Paged[models.Release]{}, err
 	}
 
 	// apply sort
@@ -163,10 +162,10 @@ func (r *releaseRepository) GetByProjectIDPaged(tx core.DB, projectID uuid.UUID,
 
 	var releases []models.Release
 	if err := q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&releases).Error; err != nil {
-		return core.Paged[models.Release]{}, err
+		return shared.Paged[models.Release]{}, err
 	}
 
-	return core.NewPaged(pageInfo, count, releases), nil
+	return shared.NewPaged(pageInfo, count, releases), nil
 }
 
 func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {

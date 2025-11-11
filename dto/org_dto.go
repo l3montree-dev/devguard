@@ -13,17 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org
+package dtos
 
 import (
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
-type acceptInvitationRequest struct {
+type AcceptInvitationRequest struct {
 	Code string `json:"code" validate:"required"`
 }
 
@@ -31,7 +29,7 @@ type inviteRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
-type changeRoleRequest struct {
+type OrgChangeRoleRequest struct {
 	Role string `json:"role" validate:"required,oneof=member admin"`
 }
 
@@ -66,7 +64,7 @@ func (c createRequest) toModel() models.Org {
 	}
 }
 
-type patchRequest struct {
+type OrgPatchRequest struct {
 	Name                   *string `json:"name"`
 	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
 	NumberOfEmployees      *int    `json:"numberOfEmployees"`
@@ -84,7 +82,7 @@ type patchRequest struct {
 	Language             *string         `json:"language"`
 }
 
-func (p patchRequest) applyToModel(org *models.Org) bool {
+func (p OrgPatchRequest) applyToModel(org *models.Org) bool {
 	updated := false
 
 	if p.Name != nil {
@@ -180,13 +178,13 @@ type OrgDTO struct {
 
 	GithubAppInstallations []models.GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 
-	GitLabIntegrations []common.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
+	GitLabIntegrations []GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
-	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	SharesVulnInformation bool                           `json:"sharesVulnInformation"`
-	IsPublic              bool                           `json:"isPublic" gorm:"default:false;"`
-	Webhooks              []common.WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
+	SharesVulnInformation bool                    `json:"sharesVulnInformation"`
+	IsPublic              bool                    `json:"isPublic" gorm:"default:false;"`
+	Webhooks              []WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
 
@@ -194,8 +192,8 @@ type OrgDTO struct {
 	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"type:text"`
 }
 
-func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
-	return common.GitlabIntegrationDTO{
+func obfuscateGitLabIntegrations(integration models.GitLabIntegration) GitlabIntegrationDTO {
+	return GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -203,8 +201,8 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.Gi
 	}
 }
 
-func obfuscateJiraIntegrations(integration models.JiraIntegration) common.JiraIntegrationDTO {
-	return common.JiraIntegrationDTO{
+func obfuscateJiraIntegrations(integration models.JiraIntegration) JiraIntegrationDTO {
+	return JiraIntegrationDTO{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -213,8 +211,8 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) common.JiraIn
 	}
 }
 
-func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.WebhookIntegrationDTO {
-	return common.WebhookIntegrationDTO{
+func obfuscateWebhookIntegrations(integration models.WebhookIntegration) WebhookIntegrationDTO {
+	return WebhookIntegrationDTO{
 		ID:          integration.ID.String(),
 		Name:        *integration.Name,
 		Description: *integration.Description,
@@ -224,7 +222,7 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.
 	}
 }
 
-func FromModel(org models.Org) OrgDTO {
+func OrgDTOFromModel(org models.Org) OrgDTO {
 	return OrgDTO{
 		Model:                  org.Model,
 		Name:                   org.Name,
@@ -254,5 +252,5 @@ func FromModel(org models.Org) OrgDTO {
 
 type orgDetailsDTO struct {
 	OrgDTO
-	Members []core.User `json:"members"`
+	Members []UserDTO `json:"members"`
 }

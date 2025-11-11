@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -18,10 +17,10 @@ import (
 
 func (i *JiraIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
-	case core.ManualMitigateEvent:
-		asset := core.GetAsset(event.Ctx)
+	case shared.ManualMitigateEvent:
+		asset := shared.GetAsset(event.Ctx)
 
-		repoID, err := core.GetRepositoryID(&asset)
+		repoID, err := shared.GetRepositoryID(&asset)
 		if err != nil {
 			return err
 		}
@@ -29,15 +28,15 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		assetVersionName := core.GetAssetVersion(event.Ctx).Name
+		assetVersionName := shared.GetAssetVersion(event.Ctx).Name
 
-		projectSlug, err := core.GetProjectSlug(event.Ctx)
+		projectSlug, err := shared.GetProjectSlug(event.Ctx)
 
 		if err != nil {
 			return err
 		}
 
-		vulnID, vulnType, err := core.GetVulnID(event.Ctx)
+		vulnID, vulnType, err := shared.GetVulnID(event.Ctx)
 
 		if err != nil {
 			return err
@@ -60,19 +59,19 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			vuln = &v
 		}
 
-		orgSlug, err := core.GetOrgSlug(event.Ctx)
+		orgSlug, err := shared.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		session := core.GetSession(event.Ctx)
+		session := shared.GetSession(event.Ctx)
 
 		return i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
-	case core.VulnEvent:
+	case shared.VulnEvent:
 		ev := event.Event
 
-		asset := core.GetAsset(event.Ctx)
-		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
+		asset := shared.GetAsset(event.Ctx)
+		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
 		vulnType := ev.VulnType
 
 		var vuln models.Vuln
@@ -116,12 +115,12 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member core.User) bool {
+			func(member shared.User) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = core.User{
+			member = shared.User{
 				Name: "unknown",
 			}
 		}
@@ -173,19 +172,19 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			if err != nil {
 				if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
 
-					assetVersionName := core.GetAssetVersion(event.Ctx).Name
+					assetVersionName := shared.GetAssetVersion(event.Ctx).Name
 
-					projectSlug, err := core.GetProjectSlug(event.Ctx)
+					projectSlug, err := shared.GetProjectSlug(event.Ctx)
 
 					if err != nil {
 						return err
 					}
-					orgSlug, err := core.GetOrgSlug(event.Ctx)
+					orgSlug, err := shared.GetOrgSlug(event.Ctx)
 					if err != nil {
 						return err
 					}
 
-					session := core.GetSession(event.Ctx)
+					session := shared.GetSession(event.Ctx)
 					err = i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, utils.SafeDereference(ev.Justification), session.GetUserID())
 					if err != nil {
 						slog.Error("failed to create Jira issue", "err", err, "issue", vuln.GetTicketID())

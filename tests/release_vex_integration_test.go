@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package release_test
+package tests
 
 import (
 	"bytes"
@@ -23,24 +23,23 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/core"
 	releasepkg "github.com/l3montree-dev/devguard/internal/core/release"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestReleaseVEXMergeIntegration verifies that the release VEX endpoint returns a merged VeX (CycloneDX BOM with vulnerabilities)
 func TestReleaseVEXMergeIntegration(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// repositories
 	avRepo := repositories.NewAssetVersionRepository(db)
@@ -51,7 +50,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 	assetRepository := repositories.NewAssetRepository(db)
 
 	// services using inithelper to follow repository patterns
-	avService := inithelper.CreateAssetVersionService(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	avService := inithelper.CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	relService := releasepkg.NewService(releaseRepo)
 
 	// create an artifact
@@ -99,8 +98,8 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 	ctx.SetParamNames("projectSlug", "releaseID")
 	ctx.SetParamValues(project.Slug, rel.ID.String())
 
-	core.SetOrg(ctx, org)
-	core.SetProject(ctx, project)
+	shared.SetOrg(ctx, org)
+	shared.SetProject(ctx, project)
 
 	if err := releaseController.VEXJSON(ctx); err != nil {
 		t.Fatalf("VEXJSON returned error: %v", err)

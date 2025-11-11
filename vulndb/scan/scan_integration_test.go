@@ -13,7 +13,6 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -48,13 +47,13 @@ func TestScanning(t *testing.T) {
 	app := echo.New()
 	createCVE2025_46569(db)
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	t.Run("should find a vulnerability in the SBOM", func(t *testing.T) {
@@ -262,13 +261,13 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 	app := echo.New()
 	createCVE2025_46569(db)
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
@@ -347,13 +346,13 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 	app := echo.New()
 	createCVE2025_46569(db)
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
@@ -456,13 +455,13 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	app := echo.New()
 	createCVE2025_46569(db)
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	t.Run("should copy all events when vulnerability is found on different branches - complete lifecycle test", func(t *testing.T) {
@@ -688,13 +687,13 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 
 	app := echo.New()
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("test-user")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
@@ -807,13 +806,13 @@ func TestTicketHandling(t *testing.T) {
 	app := echo.New()
 	createCVE2025_46569(db)
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	gitlabIntegration := models.GitLabIntegration{
@@ -1028,7 +1027,7 @@ func TestTicketHandling(t *testing.T) {
 	})
 }
 
-func createCVE2025_46569(db core.DB) {
+func createCVE2025_46569(db shared.DB) {
 	cve := models.CVE{
 		CVE: "CVE-2025-46569",
 	}
@@ -1152,7 +1151,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func initHTTPController(t *testing.T, db core.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
+func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
 
@@ -1181,16 +1180,16 @@ func TestUploadVEX(t *testing.T) {
 		t.Fatalf("could not save asset: %v", err)
 	}
 
-	setupContext := func(ctx *core.Context) {
-		core.SetAsset(*ctx, asset)
-		core.SetProject(*ctx, project)
-		core.SetOrg(*ctx, org)
-		core.SetAssetVersion(*ctx, assetVersion)
+	setupContext := func(ctx *shared.Context) {
+		shared.SetAsset(*ctx, asset)
+		shared.SetProject(*ctx, project)
+		shared.SetOrg(*ctx, org)
+		shared.SetAssetVersion(*ctx, assetVersion)
 
 		// attach an authenticated session for UploadVEX handler
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetSession(*ctx, authSession)
+		shared.SetSession(*ctx, authSession)
 	}
 
 	// create fresh dependency vulns (two entries for same new CVE) so they are not pre-fixed
@@ -1306,7 +1305,7 @@ func TestUploadVEX(t *testing.T) {
 
 	// verify DB: both dependency vulns should now be fixed
 	var dv []models.DependencyVuln
-	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events", func(db core.DB) core.DB {
+	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events", func(db shared.DB) shared.DB {
 		return db.Order("created_at ASC")
 	}).Find(&dv).Error; err != nil {
 		t.Fatalf("could not query dependency vulns: %v", err)
@@ -1343,15 +1342,15 @@ func TestIdempotency(t *testing.T) {
 	openSourceInsightsService := mocks.OpenSourceInsightService{}
 	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
 
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}
 
 		authSession.On("GetUserID").Return("test-user")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, &authSession)
-		core.SetAssetVersion(ctx, assetVersion)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, &authSession)
+		shared.SetAssetVersion(ctx, assetVersion)
 	}
 
 	t.Run("scanning the same sbom multiple times should yield the same result", func(t *testing.T) {
@@ -1462,15 +1461,15 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
-	setupContext := func(ctx core.Context) {
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}
 
 		authSession.On("GetUserID").Return("test-user")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, &authSession)
-		core.SetAssetVersion(ctx, assetVersion)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, &authSession)
+		shared.SetAssetVersion(ctx, assetVersion)
 	}
 
 	setupContext(ctx)

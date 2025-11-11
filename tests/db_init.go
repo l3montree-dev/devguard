@@ -1,17 +1,17 @@
-package integrationtestutil
+package tests
 
 import (
 	"context"
 	"log"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
+func InitDatabaseContainer(initDBSQLPath string) (shared.DB, func()) {
 	ctx := context.Background()
 
 	dbName := "devguard"

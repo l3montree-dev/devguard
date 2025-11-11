@@ -1,4 +1,4 @@
-package echohttp
+package middleware
 
 import (
 	"log/slog"

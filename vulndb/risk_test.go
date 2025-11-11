@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package risk
+package vulndb
 
 import (
 	"fmt"
@@ -21,15 +21,15 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 )
 
 type tableTest struct {
 	vector             string
 	metrics            common.RiskMetrics
-	env                core.Environmental
+	env                shared.Environmental
 	exploits           []*models.Exploit
 	expectedVector     string
 	cvss               float32
@@ -46,7 +46,7 @@ func TestCalculateRawRisk(t *testing.T) {
 			CVSS:   5,
 			Vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
 		}
-		env := core.Environmental{
+		env := shared.Environmental{
 			ConfidentialityRequirements: "L",
 			IntegrityRequirements:       "L",
 			AvailabilityRequirements:    "L",
@@ -66,7 +66,7 @@ func TestCalculateRisk(t *testing.T) {
 			CVSS:   5,
 			Vector: "",
 		}
-		env := core.Environmental{}
+		env := shared.Environmental{}
 		riskMetrics, vector := RiskCalculation(sut, env)
 
 		if riskMetrics.BaseScore != 0 {
@@ -99,7 +99,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 5.0,
 			},
-			env:            core.Environmental{},
+			env:            shared.Environmental{},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:U/RL:ND/RC:C",
 			cvss:           5.9,
 		},
@@ -111,7 +111,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 3.4,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				ConfidentialityRequirements: "L",
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
@@ -127,7 +127,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				ConfidentialityRequirements: "L",
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
@@ -148,7 +148,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				ConfidentialityRequirements: "L",
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
@@ -172,7 +172,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				ConfidentialityRequirements: "L",
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
@@ -196,7 +196,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.4,
 				WithEnvironmentAndThreatIntelligence: 2.4,
 			},
-			env:            core.Environmental{},
+			env:            shared.Environmental{},
 			expectedVector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:U/RC:C",
 			cvss:           2.6,
 		},
@@ -208,7 +208,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.4,
 				WithEnvironmentAndThreatIntelligence: 1.8,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "L",
 				ConfidentialityRequirements: "L",
 				AvailabilityRequirements:    "L",
@@ -224,7 +224,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.6,
 				WithEnvironmentAndThreatIntelligence: 3.3,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "H",
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
@@ -248,7 +248,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.6,
 				WithEnvironmentAndThreatIntelligence: 3.3,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "H",
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
@@ -272,7 +272,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               4.8,
 				WithEnvironmentAndThreatIntelligence: 2.4,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "L",
 				ConfidentialityRequirements: "L",
 				AvailabilityRequirements:    "L",
@@ -288,7 +288,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               6.6,
 				WithEnvironmentAndThreatIntelligence: 5.1,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "L",
 				ConfidentialityRequirements: "L",
 				AvailabilityRequirements:    "L",
@@ -305,7 +305,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               6.0,
 				WithEnvironmentAndThreatIntelligence: 6.6,
 			},
-			env: core.Environmental{
+			env: shared.Environmental{
 				IntegrityRequirements:       "M",
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "M",

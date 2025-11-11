@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vuln
+package dtos
 
 import (
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 )
 
 type DependencyVulnDTO struct {
@@ -49,7 +48,7 @@ type DependencyVulnDTO struct {
 
 type detailedDependencyVulnDTO struct {
 	DependencyVulnDTO
-	Events []events.VulnEventDTO `json:"events"`
+	Events []VulnEventDTO `json:"events"`
 }
 
 func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {

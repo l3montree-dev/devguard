@@ -1,4 +1,4 @@
-package statistics
+package dtos
 
 import (
 	"github.com/google/uuid"

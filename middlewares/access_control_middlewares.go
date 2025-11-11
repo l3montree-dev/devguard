@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package api
+package middleware
 
 import (
 	"fmt"
@@ -22,21 +22,20 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
-func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.MiddlewareFunc {
+func organizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			// get the rbac
-			rbac := core.GetRBAC(ctx)
-			org := core.GetOrg(ctx)
+			rbac := shared.GetRBAC(ctx)
+			org := shared.GetOrg(ctx)
 			// get the user
-			user := core.GetSession(ctx).GetUserID()
+			user := shared.GetSession(ctx).GetUserID()
 
 			allowed, err := rbac.IsAllowed(user, obj, act)
 			if err != nil {
@@ -46,8 +45,8 @@ func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.
 
 			// check if the user has the required role
 			if !allowed {
-				if org.IsPublic && act == core.ActionRead {
-					core.SetIsPublicRequest(ctx)
+				if org.IsPublic && act == shared.ActionRead {
+					shared.SetIsPublicRequest(ctx)
 				} else {
 					slog.Error("access denied in accessControlMiddleware", "user", user, "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
@@ -60,10 +59,10 @@ func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.
 	}
 }
 
-func neededScope(neededScopes []string) core.MiddlewareFunc {
+func neededScope(neededScopes []string) shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c core.Context) error {
-			userScopes := core.GetSession(c).GetScopes()
+		return func(c shared.Context) error {
+			userScopes := shared.GetSession(c).GetScopes()
 
 			ok := utils.ContainsAll(userScopes, neededScopes)
 			if !ok {
@@ -77,18 +76,18 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 	}
 }
 
-func assetAccessControlFactory(assetRepository core.AssetRepository) core.RBACMiddleware {
-	return func(obj core.Object, act core.Action) core.MiddlewareFunc {
+func assetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
+	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(ctx core.Context) error {
+			return func(ctx shared.Context) error {
 				// get the rbac
-				rbac := core.GetRBAC(ctx)
+				rbac := shared.GetRBAC(ctx)
 				// get the user
-				user := core.GetSession(ctx).GetUserID()
+				user := shared.GetSession(ctx).GetUserID()
 				// get the project
-				project := core.GetProject(ctx)
+				project := shared.GetProject(ctx)
 				// get the asset slug
-				assetSlug, err := core.GetAssetSlug(ctx)
+				assetSlug, err := shared.GetAssetSlug(ctx)
 				if err != nil {
 					return echo.NewHTTPError(400, "invalid asset slug")
 				}
@@ -110,33 +109,33 @@ func assetAccessControlFactory(assetRepository core.AssetRepository) core.RBACMi
 				}
 				// check if the user has the required role
 				if !allowed {
-					if asset.IsPublic && act == core.ActionRead {
+					if asset.IsPublic && act == shared.ActionRead {
 						// allow READ on all objects in the project - if access is public
-						core.SetIsPublicRequest(ctx)
+						shared.SetIsPublicRequest(ctx)
 					} else {
 						slog.Warn("access denied in AssetAccess", "user", user, "object", obj, "action", act, "assetSlug", assetSlug)
 						return echo.NewHTTPError(404, "could not find asset")
 					}
 				}
-				core.SetAsset(ctx, asset)
+				shared.SetAsset(ctx, asset)
 				return next(ctx)
 			}
 		}
 	}
 }
 
-func projectAccessControlFactory(projectRepository core.ProjectRepository) core.RBACMiddleware {
-	return func(obj core.Object, act core.Action) core.MiddlewareFunc {
+func projectAccessControlFactory(projectRepository shared.ProjectRepository) shared.RBACMiddleware {
+	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(ctx core.Context) error {
+			return func(ctx shared.Context) error {
 				// get the rbac
-				rbac := core.GetRBAC(ctx)
+				rbac := shared.GetRBAC(ctx)
 
 				// get the user
-				user := core.GetSession(ctx).GetUserID()
+				user := shared.GetSession(ctx).GetUserID()
 
 				// get the project id
-				projectSlug, err := core.GetProjectSlug(ctx)
+				projectSlug, err := shared.GetProjectSlug(ctx)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not get project id")
 				}
@@ -147,7 +146,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 					project = p
 				} else {
 					// get the project by slug and organization.
-					project, err = projectRepository.ReadBySlug(core.GetOrg(ctx).GetID(), projectSlug)
+					project, err = projectRepository.ReadBySlug(shared.GetOrg(ctx).GetID(), projectSlug)
 				}
 
 				if err != nil {
@@ -162,9 +161,9 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 
 				// check if the user has the required role
 				if !allowed {
-					if project.IsPublic && act == core.ActionRead {
+					if project.IsPublic && act == shared.ActionRead {
 						// allow READ on all objects in the project - if access is public
-						core.SetIsPublicRequest(ctx)
+						shared.SetIsPublicRequest(ctx)
 					} else {
 						slog.Warn("access denied in ProjectAccess", "user", user, "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(404, "could not find project")
@@ -179,11 +178,11 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 	}
 }
 
-func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
+func multiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) (err error) {
+		return func(ctx shared.Context) (err error) {
 			// get the organization from the provided context
-			organization, err := core.GetURLDecodedParam(ctx, "organization")
+			organization, err := shared.GetURLDecodedParam(ctx, "organization")
 			if err != nil {
 				slog.Error("could not get organization from url", "err", err)
 				return echo.NewHTTPError(400, "invalid organization")
@@ -210,11 +209,11 @@ func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizatio
 					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
 				}
 
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
 			}
 
 			// check if the user is allowed to access the organization
-			session := core.GetSession(ctx)
+			session := shared.GetSession(ctx)
 			allowed, err := domainRBAC.HasAccess(session.GetUserID())
 			if err != nil {
 				slog.Info("asking user to reauthorize", "err", err)
@@ -223,7 +222,7 @@ func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizatio
 
 			if !allowed {
 				if org.IsPublic {
-					core.SetIsPublicRequest(ctx)
+					shared.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
 					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
@@ -231,20 +230,20 @@ func multiOrganizationMiddlewareRBAC(rbacProvider core.RBACProvider, organizatio
 				}
 			}
 
-			core.SetOrg(ctx, *org)
-			core.SetRBAC(ctx, domainRBAC)
-			core.SetOrgSlug(ctx, organization)
+			shared.SetOrg(ctx, *org)
+			shared.SetRBAC(ctx, domainRBAC)
+			shared.SetOrgSlug(ctx, organization)
 			// continue to the request
 			return next(ctx)
 		}
 	}
 }
 
-func shareMiddleware(orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
+func shareMiddleware(orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 			// get the assetID from the url
-			assetID, err := core.GetURLDecodedParam(ctx, "assetID")
+			assetID, err := shared.GetURLDecodedParam(ctx, "assetID")
 			if err != nil {
 				slog.Error("could not get assetID from url", "err", err)
 				return echo.NewHTTPError(400, "invalid assetID")
@@ -303,24 +302,24 @@ func shareMiddleware(orgRepository core.OrganizationRepository, projectRepositor
 					slog.Error("could not find artifact in shareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
 					return echo.NewHTTPError(404, "could not find artifact for the provided artifact name")
 				}
-				core.SetArtifact(ctx, artifact)
+				shared.SetArtifact(ctx, artifact)
 			}
 
-			core.SetOrg(ctx, org)
-			core.SetProject(ctx, project)
-			core.SetAsset(ctx, asset)
-			core.SetAssetVersion(ctx, assetVersion)
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
 
 			return next(ctx)
 		}
 	}
 }
 
-func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, artifactRepository core.ArtifactRepository) echo.MiddlewareFunc {
+func CsafMiddleware(orgLevel bool, orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 			// get the assetID from the url
-			orgSlug, err := core.GetURLDecodedParam(ctx, "organization")
+			orgSlug, err := shared.GetURLDecodedParam(ctx, "organization")
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find organization")
 			}
@@ -342,11 +341,11 @@ func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, pr
 				return echo.NewHTTPError(404, "could not find organization")
 			}
 			if orgLevel {
-				core.SetOrg(ctx, *orgFound)
+				shared.SetOrg(ctx, *orgFound)
 				return next(ctx)
 			}
 			// check if project project is set, if so load it
-			projectSlug, err := core.GetURLDecodedParam(ctx, "projectSlug")
+			projectSlug, err := shared.GetURLDecodedParam(ctx, "projectSlug")
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find project")
 			}
@@ -356,7 +355,7 @@ func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, pr
 			}
 
 			// read the asset
-			assetSlug, err := core.GetURLDecodedParam(ctx, "assetSlug")
+			assetSlug, err := shared.GetURLDecodedParam(ctx, "assetSlug")
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find asset")
 			}
@@ -368,9 +367,9 @@ func CsafMiddleware(orgLevel bool, orgRepository core.OrganizationRepository, pr
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 
-			core.SetOrg(ctx, *orgFound)
-			core.SetProject(ctx, project)
-			core.SetAsset(ctx, asset)
+			shared.SetOrg(ctx, *orgFound)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
 			return next(ctx)
 		}
 	}

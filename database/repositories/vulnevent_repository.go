@@ -5,16 +5,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type eventRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.VulnEvent, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.VulnEvent, shared.DB]
 }
 
-func NewVulnEventRepository(db core.DB) *eventRepository {
+func NewVulnEventRepository(db shared.DB) *eventRepository {
 	return &eventRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.VulnEvent](db),
@@ -86,7 +85,7 @@ func (r *eventRepository) readDependencyVulnAssetEvents(vulnID string) ([]models
 	return events, nil
 }
 
-func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error) {
+func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
 
 	var events []models.VulnEventDetail
 
@@ -118,12 +117,12 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 
 	err := q.Count(&count).Error
 	if err != nil {
-		return core.Paged[models.VulnEventDetail]{}, err
+		return shared.Paged[models.VulnEventDetail]{}, err
 	}
 
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&events).Error
 
-	return core.NewPaged(pageInfo, count, events), err
+	return shared.NewPaged(pageInfo, count, events), err
 }
 
 func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
@@ -136,7 +135,7 @@ func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
 	return nil
 }
 
-func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error) {
+func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx shared.DB, vulnIDs []string) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
 	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id IN (?) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs).Find(&events).Error
 	if err != nil {
@@ -145,7 +144,7 @@ func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB, vulnID
 	return events, nil
 }
 
-func (r *eventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID string, time time.Time) (models.VulnEvent, error) {
+func (r *eventRepository) GetLastEventBeforeTimestamp(tx shared.DB, vulnID string, time time.Time) (models.VulnEvent, error) {
 	var event models.VulnEvent
 	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id = ? AND type IN ('detected','accepted','fixed','reopened') AND created_at <= ? ORDER BY created_at DESC", vulnID, time).First(&event).Error
 	if err != nil {

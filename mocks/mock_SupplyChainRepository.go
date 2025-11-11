@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -40,7 +40,7 @@ func (_m *SupplyChainRepository) EXPECT() *SupplyChainRepository_Expecter {
 }
 
 // Activate provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Activate(tx core.DB, id uuid.UUID) error {
+func (_mock *SupplyChainRepository) Activate(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -48,7 +48,7 @@ func (_mock *SupplyChainRepository) Activate(tx core.DB, id uuid.UUID) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -62,17 +62,17 @@ type SupplyChainRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *SupplyChainRepository_Expecter) Activate(tx interface{}, id interface{}) *SupplyChainRepository_Activate_Call {
 	return &SupplyChainRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
-func (_c *SupplyChainRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *SupplyChainRepository_Activate_Call {
+func (_c *SupplyChainRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *SupplyChainRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -91,7 +91,7 @@ func (_c *SupplyChainRepository_Activate_Call) Return(err error) *SupplyChainRep
 	return _c
 }
 
-func (_c *SupplyChainRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *SupplyChainRepository_Activate_Call {
+func (_c *SupplyChainRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *SupplyChainRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -152,19 +152,19 @@ func (_c *SupplyChainRepository_All_Call) RunAndReturn(run func() ([]models.Supp
 }
 
 // Begin provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Begin() core.DB {
+func (_mock *SupplyChainRepository) Begin() shared.DB {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -187,18 +187,18 @@ func (_c *SupplyChainRepository_Begin_Call) Run(run func()) *SupplyChainReposito
 	return _c
 }
 
-func (_c *SupplyChainRepository_Begin_Call) Return(v core.DB) *SupplyChainRepository_Begin_Call {
+func (_c *SupplyChainRepository_Begin_Call) Return(v shared.DB) *SupplyChainRepository_Begin_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *SupplyChainRepository_Begin_Call) RunAndReturn(run func() core.DB) *SupplyChainRepository_Begin_Call {
+func (_c *SupplyChainRepository_Begin_Call) RunAndReturn(run func() shared.DB) *SupplyChainRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Create(tx core.DB, t *models.SupplyChain) error {
+func (_mock *SupplyChainRepository) Create(tx shared.DB, t *models.SupplyChain) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -206,7 +206,7 @@ func (_mock *SupplyChainRepository) Create(tx core.DB, t *models.SupplyChain) er
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.SupplyChain) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.SupplyChain) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -220,17 +220,17 @@ type SupplyChainRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) Create(tx interface{}, t interface{}) *SupplyChainRepository_Create_Call {
 	return &SupplyChainRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *SupplyChainRepository_Create_Call) Run(run func(tx core.DB, t *models.SupplyChain)) *SupplyChainRepository_Create_Call {
+func (_c *SupplyChainRepository_Create_Call) Run(run func(tx shared.DB, t *models.SupplyChain)) *SupplyChainRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.SupplyChain
 		if args[1] != nil {
@@ -249,13 +249,13 @@ func (_c *SupplyChainRepository_Create_Call) Return(err error) *SupplyChainRepos
 	return _c
 }
 
-func (_c *SupplyChainRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.SupplyChain) error) *SupplyChainRepository_Create_Call {
+func (_c *SupplyChainRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.SupplyChain) error) *SupplyChainRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) CreateBatch(tx core.DB, ts []models.SupplyChain) error {
+func (_mock *SupplyChainRepository) CreateBatch(tx shared.DB, ts []models.SupplyChain) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -263,7 +263,7 @@ func (_mock *SupplyChainRepository) CreateBatch(tx core.DB, ts []models.SupplyCh
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.SupplyChain) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.SupplyChain) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -277,17 +277,17 @@ type SupplyChainRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *SupplyChainRepository_CreateBatch_Call {
 	return &SupplyChainRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *SupplyChainRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.SupplyChain)) *SupplyChainRepository_CreateBatch_Call {
+func (_c *SupplyChainRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.SupplyChain)) *SupplyChainRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.SupplyChain
 		if args[1] != nil {
@@ -306,13 +306,13 @@ func (_c *SupplyChainRepository_CreateBatch_Call) Return(err error) *SupplyChain
 	return _c
 }
 
-func (_c *SupplyChainRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.SupplyChain) error) *SupplyChainRepository_CreateBatch_Call {
+func (_c *SupplyChainRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.SupplyChain) error) *SupplyChainRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Delete(tx core.DB, id uuid.UUID) error {
+func (_mock *SupplyChainRepository) Delete(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -320,7 +320,7 @@ func (_mock *SupplyChainRepository) Delete(tx core.DB, id uuid.UUID) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -334,17 +334,17 @@ type SupplyChainRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *SupplyChainRepository_Expecter) Delete(tx interface{}, id interface{}) *SupplyChainRepository_Delete_Call {
 	return &SupplyChainRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *SupplyChainRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *SupplyChainRepository_Delete_Call {
+func (_c *SupplyChainRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *SupplyChainRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -363,13 +363,13 @@ func (_c *SupplyChainRepository_Delete_Call) Return(err error) *SupplyChainRepos
 	return _c
 }
 
-func (_c *SupplyChainRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *SupplyChainRepository_Delete_Call {
+func (_c *SupplyChainRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *SupplyChainRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) DeleteBatch(tx core.DB, ids []models.SupplyChain) error {
+func (_mock *SupplyChainRepository) DeleteBatch(tx shared.DB, ids []models.SupplyChain) error {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -377,7 +377,7 @@ func (_mock *SupplyChainRepository) DeleteBatch(tx core.DB, ids []models.SupplyC
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.SupplyChain) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.SupplyChain) error); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		r0 = ret.Error(0)
@@ -391,17 +391,17 @@ type SupplyChainRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *SupplyChainRepository_DeleteBatch_Call {
 	return &SupplyChainRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
-func (_c *SupplyChainRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.SupplyChain)) *SupplyChainRepository_DeleteBatch_Call {
+func (_c *SupplyChainRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.SupplyChain)) *SupplyChainRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.SupplyChain
 		if args[1] != nil {
@@ -420,7 +420,7 @@ func (_c *SupplyChainRepository_DeleteBatch_Call) Return(err error) *SupplyChain
 	return _c
 }
 
-func (_c *SupplyChainRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.SupplyChain) error) *SupplyChainRepository_DeleteBatch_Call {
+func (_c *SupplyChainRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.SupplyChain) error) *SupplyChainRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -550,19 +550,19 @@ func (_c *SupplyChainRepository_FindBySupplyChainID_Call) RunAndReturn(run func(
 }
 
 // GetDB provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) GetDB(tx core.DB) core.DB {
+func (_mock *SupplyChainRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -574,16 +574,16 @@ type SupplyChainRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *SupplyChainRepository_Expecter) GetDB(tx interface{}) *SupplyChainRepository_GetDB_Call {
 	return &SupplyChainRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *SupplyChainRepository_GetDB_Call) Run(run func(tx core.DB)) *SupplyChainRepository_GetDB_Call {
+func (_c *SupplyChainRepository_GetDB_Call) Run(run func(tx shared.DB)) *SupplyChainRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -592,12 +592,12 @@ func (_c *SupplyChainRepository_GetDB_Call) Run(run func(tx core.DB)) *SupplyCha
 	return _c
 }
 
-func (_c *SupplyChainRepository_GetDB_Call) Return(v core.DB) *SupplyChainRepository_GetDB_Call {
+func (_c *SupplyChainRepository_GetDB_Call) Return(v shared.DB) *SupplyChainRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *SupplyChainRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *SupplyChainRepository_GetDB_Call {
+func (_c *SupplyChainRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *SupplyChainRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -791,7 +791,7 @@ func (_c *SupplyChainRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (
 }
 
 // Save provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Save(tx core.DB, t *models.SupplyChain) error {
+func (_mock *SupplyChainRepository) Save(tx shared.DB, t *models.SupplyChain) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -799,7 +799,7 @@ func (_mock *SupplyChainRepository) Save(tx core.DB, t *models.SupplyChain) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.SupplyChain) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.SupplyChain) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -813,17 +813,17 @@ type SupplyChainRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) Save(tx interface{}, t interface{}) *SupplyChainRepository_Save_Call {
 	return &SupplyChainRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
-func (_c *SupplyChainRepository_Save_Call) Run(run func(tx core.DB, t *models.SupplyChain)) *SupplyChainRepository_Save_Call {
+func (_c *SupplyChainRepository_Save_Call) Run(run func(tx shared.DB, t *models.SupplyChain)) *SupplyChainRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.SupplyChain
 		if args[1] != nil {
@@ -842,13 +842,13 @@ func (_c *SupplyChainRepository_Save_Call) Return(err error) *SupplyChainReposit
 	return _c
 }
 
-func (_c *SupplyChainRepository_Save_Call) RunAndReturn(run func(tx core.DB, t *models.SupplyChain) error) *SupplyChainRepository_Save_Call {
+func (_c *SupplyChainRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.SupplyChain) error) *SupplyChainRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) SaveBatch(tx core.DB, ts []models.SupplyChain) error {
+func (_mock *SupplyChainRepository) SaveBatch(tx shared.DB, ts []models.SupplyChain) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -856,7 +856,7 @@ func (_mock *SupplyChainRepository) SaveBatch(tx core.DB, ts []models.SupplyChai
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.SupplyChain) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.SupplyChain) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -870,17 +870,17 @@ type SupplyChainRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *SupplyChainRepository_SaveBatch_Call {
 	return &SupplyChainRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *SupplyChainRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.SupplyChain)) *SupplyChainRepository_SaveBatch_Call {
+func (_c *SupplyChainRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.SupplyChain)) *SupplyChainRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.SupplyChain
 		if args[1] != nil {
@@ -899,13 +899,13 @@ func (_c *SupplyChainRepository_SaveBatch_Call) Return(err error) *SupplyChainRe
 	return _c
 }
 
-func (_c *SupplyChainRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.SupplyChain) error) *SupplyChainRepository_SaveBatch_Call {
+func (_c *SupplyChainRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.SupplyChain) error) *SupplyChainRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) Transaction(fn func(tx core.DB) error) error {
+func (_mock *SupplyChainRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)
 
 	if len(ret) == 0 {
@@ -913,7 +913,7 @@ func (_mock *SupplyChainRepository) Transaction(fn func(tx core.DB) error) error
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
 		r0 = returnFunc(fn)
 	} else {
 		r0 = ret.Error(0)
@@ -927,16 +927,16 @@ type SupplyChainRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn func(tx shared.DB) error
 func (_e *SupplyChainRepository_Expecter) Transaction(fn interface{}) *SupplyChainRepository_Transaction_Call {
 	return &SupplyChainRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
-func (_c *SupplyChainRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *SupplyChainRepository_Transaction_Call {
+func (_c *SupplyChainRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *SupplyChainRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
+		var arg0 func(tx shared.DB) error
 		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
+			arg0 = args[0].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
@@ -950,7 +950,7 @@ func (_c *SupplyChainRepository_Transaction_Call) Return(err error) *SupplyChain
 	return _c
 }
 
-func (_c *SupplyChainRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *SupplyChainRepository_Transaction_Call {
+func (_c *SupplyChainRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *SupplyChainRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

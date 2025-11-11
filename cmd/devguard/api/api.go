@@ -24,25 +24,24 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/echohttp"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"github.com/labstack/echo/v4"
 )
 
-func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService shared.ExternalEntityProviderService) shared.MiddlewareFunc {
 	limiter := &sync.Map{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 
-			key := core.GetSession(ctx).GetUserID()
+			key := shared.GetSession(ctx).GetUserID()
 			now := time.Now()
 
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter.Store(key, now.Add(15*time.Minute))
 				// Create a goroutine-safe context to avoid using the request context
-				safeCtx := core.GoroutineSafeContext(ctx)
+				safeCtx := shared.GoroutineSafeContext(ctx)
 				go func() {
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
@@ -54,16 +53,16 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.
 	}
 }
 
-func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+func externalEntityProviderRefreshMiddleware(externalEntityProviderService shared.ExternalEntityProviderService) shared.MiddlewareFunc {
 	limiter := &sync.Map{}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the current org
-		return func(ctx core.Context) error {
-			org := core.GetOrg(ctx)
+		return func(ctx shared.Context) error {
+			org := shared.GetOrg(ctx)
 
 			if org.IsExternalEntity() {
-				key := org.GetID().String() + "/" + core.GetSession(ctx).GetUserID()
+				key := org.GetID().String() + "/" + shared.GetSession(ctx).GetUserID()
 				now := time.Now()
 
 				// Check if we are allowed to refresh the external entity provider projects
@@ -71,8 +70,8 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					limiter.Store(key, now.Add(15*time.Minute))
 
 					// Create a goroutine-safe context and capture the values we need
-					safeCtx := core.GoroutineSafeContext(ctx)
-					userID := core.GetSession(ctx).GetUserID()
+					safeCtx := shared.GoroutineSafeContext(ctx)
+					userID := shared.GetSession(ctx).GetUserID()
 					orgID := org.GetID()
 
 					go func() {
@@ -93,7 +92,7 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 
 func whoami(ctx echo.Context) error {
 	return ctx.JSON(200, map[string]string{
-		"userID": core.GetSession(ctx).GetUserID(),
+		"userID": shared.GetSession(ctx).GetUserID(),
 	})
 }
 
@@ -116,7 +115,7 @@ func BuildRouter() *echo.Echo {
 	/**
 	Everything below this line needs authentication
 	*/
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
+	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(shared.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
 	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, neededScope([]string{"manage"}))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
@@ -129,8 +128,8 @@ func BuildRouter() *echo.Echo {
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
 	fastAccessRoutes := sessionRouter.Group("", neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
-		projectScopedRBAC(core.ObjectProject, core.ActionRead),
-		assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
+		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	fastAccessRoutes.POST("/scan/", scanController.ScanDependencyVulnFromProject)
 	fastAccessRoutes.POST("/vex/", scanController.UploadVEX)
@@ -159,9 +158,9 @@ func BuildRouter() *echo.Echo {
 	Organization scoped router
 	All routes below this line are scoped to a specific organization.
 	*/
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
-	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
+	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 
@@ -179,7 +178,7 @@ func BuildRouter() *echo.Echo {
 	organizationRouter.GET("/projects/", projectController.List)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
-	organizationUpdateAccessControlRequired := organizationRouter.Group("", neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+	organizationUpdateAccessControlRequired := organizationRouter.Group("", neededScope([]string{"manage"}), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
@@ -204,7 +203,7 @@ func BuildRouter() *echo.Echo {
 	Project scoped router
 	All routes below this line are scoped to a specific project.
 	*/
-	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectScopedRBAC(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
@@ -222,9 +221,9 @@ func BuildRouter() *echo.Echo {
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 
-	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionCreate))
+	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
-	projectUpdateAccessControlRequired := projectRouter.Group("", neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectUpdateAccessControlRequired := projectRouter.Group("", neededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.Test)
@@ -249,7 +248,7 @@ func BuildRouter() *echo.Echo {
 	Asset scoped router
 	All routes below this line are scoped to a specific asset.
 	*/
-	assetRouter := projectRouter.Group("/assets/:assetSlug", assetScopedRBAC(core.ObjectAsset, core.ActionRead))
+	assetRouter := projectRouter.Group("/assets/:assetSlug", assetScopedRBAC(shared.ObjectAsset, shared.ActionRead))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
@@ -260,12 +259,12 @@ func BuildRouter() *echo.Echo {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 
-	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
-	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
+	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
-	assetUpdateAccessControlRequired := assetRouter.Group("", neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetUpdateAccessControlRequired := assetRouter.Group("", neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
@@ -306,8 +305,8 @@ func BuildRouter() *echo.Echo {
 	assetVersionRouter.POST("/artifacts/", artifactController.Create, neededScope([]string{"manage"}))
 
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}))
-	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", artifactMiddleware(artifactRepository))
 
@@ -362,7 +361,7 @@ func BuildRouter() *echo.Echo {
 	return server
 }
 
-func NewServer(lc fx.Lifecycle, db core.DB, broker pubsub.Broker) *echo.Echo {
+func NewServer(lc fx.Lifecycle, db shared.DB, broker pubsub.Broker) *echo.Echo {
 	srv := BuildRouter(db, broker)
 	lc.Append(fx.StartHook(func() {
 		slog.Error("failed to start server", "err", srv.Start(":8080").Error())

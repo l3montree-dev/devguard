@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/constants"
+	"github.com/l3montree-dev/devguard/constants"
 )
 
 var OutgoingConnectionClient = http.Client{

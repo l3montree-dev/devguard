@@ -34,7 +34,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
-	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -59,6 +59,6 @@ func init() {
 }
 
 func main() {
-	core.InitLogger()
+	shared.InitLogger()
 	Execute()
 }

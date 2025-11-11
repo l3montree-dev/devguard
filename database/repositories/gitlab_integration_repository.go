@@ -18,17 +18,17 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm/clause"
 )
 
 type gitlabIntegrationRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.GitLabIntegration, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.GitLabIntegration, shared.DB]
 }
 
-func NewGitLabIntegrationRepository(db core.DB) *gitlabIntegrationRepository {
+func NewGitLabIntegrationRepository(db shared.DB) *gitlabIntegrationRepository {
 	return &gitlabIntegrationRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.GitLabIntegration](db),
@@ -44,16 +44,16 @@ func (r *gitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]m
 }
 
 type gitlabOauth2TokenRepository struct {
-	db core.DB
+	db shared.DB
 }
 
-func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
+func NewGitlabOauth2TokenRepository(db shared.DB) *gitlabOauth2TokenRepository {
 	return &gitlabOauth2TokenRepository{
 		db: db,
 	}
 }
 
-func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token ...*models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Save(tx shared.DB, token ...*models.GitLabOauth2Token) error {
 	if err := r.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
 		UpdateAll: true,
@@ -63,7 +63,7 @@ func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token ...*models.GitLabOa
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) Upsert(tx core.DB, token *models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Upsert(tx shared.DB, token *models.GitLabOauth2Token) error {
 	if err := r.db.Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(token).Error; err != nil {
@@ -88,7 +88,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserID(userID string) ([]models.GitL
 	return tokens, nil
 }
 
-func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Delete(tx shared.DB, tokens []models.GitLabOauth2Token) error {
 	if err := r.db.Delete(tokens).Error; err != nil {
 		return err
 	}

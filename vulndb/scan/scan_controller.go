@@ -21,7 +21,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -31,21 +30,21 @@ import (
 )
 
 type HTTPController struct {
-	componentRepository      core.ComponentRepository
-	assetRepository          core.AssetRepository
-	assetVersionRepository   core.AssetVersionRepository
-	assetVersionService      core.AssetVersionService
-	statisticsService        core.StatisticsService
-	dependencyVulnRepository core.DependencyVulnRepository
-	artifactService          core.ArtifactService
-	dependencyVulnService    core.DependencyVulnService
-	firstPartyVulnService    core.FirstPartyVulnService
-	core.ScanService
+	componentRepository      shared.ComponentRepository
+	assetRepository          shared.AssetRepository
+	assetVersionRepository   shared.AssetVersionRepository
+	assetVersionService      shared.AssetVersionService
+	statisticsService        shared.StatisticsService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	artifactService          shared.ArtifactService
+	dependencyVulnService    shared.DependencyVulnService
+	firstPartyVulnService    shared.FirstPartyVulnService
+	shared.ScanService
 	// mark public to let it be overridden in tests
-	core.FireAndForgetSynchronizer
+	shared.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(scanService core.ScanService, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService, dependencyVulnRepository core.DependencyVulnRepository) *HTTPController {
+func NewHTTPController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository) *HTTPController {
 	return &HTTPController{
 		componentRepository:       componentRepository,
 		assetVersionService:       assetVersionService,
@@ -75,7 +74,7 @@ type FirstPartyScanResponse struct {
 
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
 // It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
-func (s HTTPController) UploadVEX(ctx core.Context) error {
+func (s HTTPController) UploadVEX(ctx shared.Context) error {
 	var bom cdx.BOM
 	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
 	if err := dec.Decode(&bom); err != nil {
@@ -85,12 +84,12 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 
 	ctx.Request().Body.Close()
 
-	asset := core.GetAsset(ctx)
-	userID := core.GetSession(ctx).GetUserID()
+	asset := shared.GetAsset(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
-	org := core.GetOrg(ctx)
-	project := core.GetProject(ctx)
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
 	tag := ctx.Request().Header.Get("X-Tag")
 
 	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
@@ -177,7 +176,7 @@ func (s HTTPController) UploadVEX(ctx core.Context) error {
 	return ctx.JSON(200, nil)
 }
 
-func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanResponse, error) {
+func (s *HTTPController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -186,12 +185,12 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 
-	asset := core.GetAsset(c)
+	asset := shared.GetAsset(c)
 
-	org := core.GetOrg(c)
-	project := core.GetProject(c)
+	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
 
-	userID := core.GetSession(c).GetUserID()
+	userID := shared.GetSession(c).GetUserID()
 
 	tag := c.Request().Header.Get("X-Tag")
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -244,7 +243,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom *cdx.BOM) (ScanR
 	}, nil
 }
 
-func (s *HTTPController) FirstPartyVulnScan(ctx core.Context) error {
+func (s *HTTPController) FirstPartyVulnScan(ctx shared.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -260,11 +259,11 @@ func (s *HTTPController) FirstPartyVulnScan(ctx core.Context) error {
 		return err
 	}
 
-	org := core.GetOrg(ctx)
-	project := core.GetProject(ctx)
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
 
-	asset := core.GetAsset(ctx)
-	userID := core.GetSession(ctx).GetUserID()
+	asset := shared.GetAsset(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
 
 	tag := ctx.Request().Header.Get("X-Tag")
 
@@ -316,7 +315,7 @@ func (s *HTTPController) FirstPartyVulnScan(ctx core.Context) error {
 	})
 }
 
-func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
+func (s *HTTPController) ScanDependencyVulnFromProject(c shared.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -332,7 +331,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 	return c.JSON(200, scanResults)
 }
 
-func (s *HTTPController) ScanSbomFile(c core.Context) error {
+func (s *HTTPController) ScanSbomFile(c shared.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {

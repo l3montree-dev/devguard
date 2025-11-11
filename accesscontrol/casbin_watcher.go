@@ -21,7 +21,7 @@ import (
 	"log/slog"
 
 	"github.com/casbin/casbin/v2/persist"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/pubsub"
 )
 
 type casbinPubSubWatcher struct {

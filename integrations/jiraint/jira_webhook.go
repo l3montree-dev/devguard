@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
-func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
+func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	req := ctx.Request()
 	if req.Method != "POST" {
 		return ctx.JSON(405, "Method Not Allowed")
@@ -139,7 +139,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 
 		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
-		err = i.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+		err = i.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := i.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err

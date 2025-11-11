@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +39,7 @@ func (_m *ExternalUserRepository) EXPECT() *ExternalUserRepository_Expecter {
 }
 
 // FindByOrgID provides a mock function for the type ExternalUserRepository
-func (_mock *ExternalUserRepository) FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
+func (_mock *ExternalUserRepository) FindByOrgID(tx shared.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
 	ret := _mock.Called(tx, orgID)
 
 	if len(ret) == 0 {
@@ -48,17 +48,17 @@ func (_mock *ExternalUserRepository) FindByOrgID(tx core.DB, orgID uuid.UUID) ([
 
 	var r0 []models.ExternalUser
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) ([]models.ExternalUser, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) ([]models.ExternalUser, error)); ok {
 		return returnFunc(tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) []models.ExternalUser); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []models.ExternalUser); ok {
 		r0 = returnFunc(tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ExternalUser)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(tx, orgID)
 	} else {
 		r1 = ret.Error(1)
@@ -72,17 +72,17 @@ type ExternalUserRepository_FindByOrgID_Call struct {
 }
 
 // FindByOrgID is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - orgID uuid.UUID
 func (_e *ExternalUserRepository_Expecter) FindByOrgID(tx interface{}, orgID interface{}) *ExternalUserRepository_FindByOrgID_Call {
 	return &ExternalUserRepository_FindByOrgID_Call{Call: _e.mock.On("FindByOrgID", tx, orgID)}
 }
 
-func (_c *ExternalUserRepository_FindByOrgID_Call) Run(run func(tx core.DB, orgID uuid.UUID)) *ExternalUserRepository_FindByOrgID_Call {
+func (_c *ExternalUserRepository_FindByOrgID_Call) Run(run func(tx shared.DB, orgID uuid.UUID)) *ExternalUserRepository_FindByOrgID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -101,25 +101,25 @@ func (_c *ExternalUserRepository_FindByOrgID_Call) Return(externalUsers []models
 	return _c
 }
 
-func (_c *ExternalUserRepository_FindByOrgID_Call) RunAndReturn(run func(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error)) *ExternalUserRepository_FindByOrgID_Call {
+func (_c *ExternalUserRepository_FindByOrgID_Call) RunAndReturn(run func(tx shared.DB, orgID uuid.UUID) ([]models.ExternalUser, error)) *ExternalUserRepository_FindByOrgID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type ExternalUserRepository
-func (_mock *ExternalUserRepository) GetDB(tx core.DB) core.DB {
+func (_mock *ExternalUserRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -131,16 +131,16 @@ type ExternalUserRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *ExternalUserRepository_Expecter) GetDB(tx interface{}) *ExternalUserRepository_GetDB_Call {
 	return &ExternalUserRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *ExternalUserRepository_GetDB_Call) Run(run func(tx core.DB)) *ExternalUserRepository_GetDB_Call {
+func (_c *ExternalUserRepository_GetDB_Call) Run(run func(tx shared.DB)) *ExternalUserRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -149,18 +149,18 @@ func (_c *ExternalUserRepository_GetDB_Call) Run(run func(tx core.DB)) *External
 	return _c
 }
 
-func (_c *ExternalUserRepository_GetDB_Call) Return(v core.DB) *ExternalUserRepository_GetDB_Call {
+func (_c *ExternalUserRepository_GetDB_Call) Return(v shared.DB) *ExternalUserRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *ExternalUserRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *ExternalUserRepository_GetDB_Call {
+func (_c *ExternalUserRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ExternalUserRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type ExternalUserRepository
-func (_mock *ExternalUserRepository) Save(db core.DB, user *models.ExternalUser) error {
+func (_mock *ExternalUserRepository) Save(db shared.DB, user *models.ExternalUser) error {
 	ret := _mock.Called(db, user)
 
 	if len(ret) == 0 {
@@ -168,7 +168,7 @@ func (_mock *ExternalUserRepository) Save(db core.DB, user *models.ExternalUser)
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.ExternalUser) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.ExternalUser) error); ok {
 		r0 = returnFunc(db, user)
 	} else {
 		r0 = ret.Error(0)
@@ -182,17 +182,17 @@ type ExternalUserRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db core.DB
+//   - db shared.DB
 //   - user *models.ExternalUser
 func (_e *ExternalUserRepository_Expecter) Save(db interface{}, user interface{}) *ExternalUserRepository_Save_Call {
 	return &ExternalUserRepository_Save_Call{Call: _e.mock.On("Save", db, user)}
 }
 
-func (_c *ExternalUserRepository_Save_Call) Run(run func(db core.DB, user *models.ExternalUser)) *ExternalUserRepository_Save_Call {
+func (_c *ExternalUserRepository_Save_Call) Run(run func(db shared.DB, user *models.ExternalUser)) *ExternalUserRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.ExternalUser
 		if args[1] != nil {
@@ -211,7 +211,7 @@ func (_c *ExternalUserRepository_Save_Call) Return(err error) *ExternalUserRepos
 	return _c
 }
 
-func (_c *ExternalUserRepository_Save_Call) RunAndReturn(run func(db core.DB, user *models.ExternalUser) error) *ExternalUserRepository_Save_Call {
+func (_c *ExternalUserRepository_Save_Call) RunAndReturn(run func(db shared.DB, user *models.ExternalUser) error) *ExternalUserRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

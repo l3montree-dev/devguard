@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package project
+package dtos
 
 import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -130,7 +129,7 @@ type ProjectDTO struct {
 
 type projectDetailsDTO struct {
 	ProjectDTO
-	Members  []core.User                    `json:"members"`
+	Members  []UserDTO                      `json:"members"`
 	Webhooks []common.WebhookIntegrationDTO `json:"webhooks"`
 }
 

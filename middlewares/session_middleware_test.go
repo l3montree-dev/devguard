@@ -1,4 +1,4 @@
-package auth
+package middleware
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -29,7 +28,7 @@ func TestSessionMiddleware(t *testing.T) {
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
-			sess := core.GetSession(ctx)
+			sess := shared.GetSession(ctx)
 
 			assert.Equal(t, "user1", sess.GetUserID())
 			assert.ElementsMatch(t, []string{"read", "write"}, sess.GetScopes())
@@ -55,7 +54,7 @@ func TestSessionMiddleware(t *testing.T) {
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
-			sess := core.GetSession(ctx)
+			sess := shared.GetSession(ctx)
 			assert.Equal(t, NoSession, sess)
 			return nil
 		})
@@ -79,7 +78,7 @@ func TestSessionMiddleware(t *testing.T) {
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
-			sess := core.GetSession(ctx)
+			sess := shared.GetSession(ctx)
 			assert.Equal(t, NoSession, sess)
 			return nil
 		})
@@ -111,7 +110,7 @@ func TestSessionMiddleware(t *testing.T) {
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
-			sess := core.GetSession(ctx)
+			sess := shared.GetSession(ctx)
 
 			assert.Equal(t, "user2", sess.GetUserID())
 			assert.ElementsMatch(t, []string{"scan", "manage"}, sess.GetScopes())
@@ -134,7 +133,7 @@ func TestSessionMiddleware(t *testing.T) {
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
-			sess := core.GetSession(ctx)
+			sess := shared.GetSession(ctx)
 
 			assert.Equal(t, "admin_token_value", sess.GetUserID())
 			assert.ElementsMatch(t, []string{}, sess.GetScopes())

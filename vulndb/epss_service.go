@@ -10,19 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
 type epssService struct {
 	nvdService    NVDService
-	cveRepository core.CveRepository
+	cveRepository shared.CveRepository
 	httpClient    *http.Client
 }
 
-func NewEPSSService(nvdService NVDService, cveRepository core.CveRepository) epssService {
+func NewEPSSService(nvdService NVDService, cveRepository shared.CveRepository) epssService {
 	return epssService{
 		nvdService:    nvdService,
 		cveRepository: cveRepository,

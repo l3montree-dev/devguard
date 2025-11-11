@@ -12,7 +12,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package vuln_test
+package tests
 
 import (
 	"bytes"
@@ -21,9 +21,7 @@ import (
 	"os"
 	"testing"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -31,17 +29,18 @@ import (
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestLicenseRiskArtifactAssociation(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create test org/project/asset/version
-	_, _, _, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, _, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	t.Run("License risk is created and associated with multiple artifacts", func(t *testing.T) {
 
 		// Create a component with an invalid license
@@ -125,7 +124,7 @@ func getSBOMWithWithLicenseRisk() io.Reader {
 }
 
 func TestLicenseRiskLifecycleManagement(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	artifactName := "main"
@@ -133,7 +132,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	clientfactory, _ := integration_tests.NewTestClientFactory(t)
+	clientfactory, _ := NewTestClientFactory(t)
 	repositories.NewExploitRepository(db)
 	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
@@ -146,14 +145,14 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 
 	app := echo.New()
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx core.Context) {
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetAsset(ctx, asset)
-		core.SetProject(ctx, project)
-		core.SetOrg(ctx, org)
-		core.SetSession(ctx, authSession)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, authSession)
 	}
 
 	artifact := models.Artifact{

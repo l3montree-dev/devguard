@@ -1,4 +1,4 @@
-package risk
+package vulndb
 
 import (
 	"fmt"
@@ -91,7 +91,7 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 	return
 }
 
-// epssMessage generates a message based on the EPSS score.
+// epssMessage generates a message based on the EPSS sshared.
 func epssMessage(epss float64) string {
 	switch {
 	case epss < 0.1:

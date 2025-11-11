@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -38,13 +37,13 @@ type gitlabClient struct {
 }
 
 type gitlabBatchClient struct {
-	clients []core.GitlabClientFacade
+	clients []shared.GitlabClientFacade
 }
 
 var ErrNoGitlabIntegration = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
-func NewGitlabBatchClient(clients []core.GitlabClientFacade) *gitlabBatchClient {
+func NewGitlabBatchClient(clients []shared.GitlabClientFacade) *gitlabBatchClient {
 	return &gitlabBatchClient{
 		clients: clients,
 	}

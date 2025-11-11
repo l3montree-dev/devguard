@@ -1,4 +1,4 @@
-package vuln
+package integrations
 
 import (
 	"github.com/l3montree-dev/devguard/internal/database/models"

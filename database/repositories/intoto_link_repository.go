@@ -18,17 +18,17 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
 
 type inTotoLinkRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.InTotoLink, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.InTotoLink, shared.DB]
 }
 
-func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {
+func NewInTotoLinkRepository(db shared.DB) *inTotoLinkRepository {
 	return &inTotoLinkRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.InTotoLink](db),
@@ -52,7 +52,7 @@ func (g *inTotoLinkRepository) FindBySupplyChainID(supplyChainID string) ([]mode
 	return t, err
 }
 
-func (g *inTotoLinkRepository) Save(tx core.DB, model *models.InTotoLink) error {
+func (g *inTotoLinkRepository) Save(tx shared.DB, model *models.InTotoLink) error {
 	return g.db.Session(&gorm.Session{
 		FullSaveAssociations: false,
 	}).Save(model).Error

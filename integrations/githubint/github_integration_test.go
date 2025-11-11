@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -27,14 +26,14 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:123"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 
@@ -52,16 +51,16 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
 		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.Error(t, err)
@@ -75,17 +74,17 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("gitlab:123"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		core.SetProject(ctx, models.Project{})
+		shared.SetProject(ctx, models.Project{})
 		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.NoError(t, err)
@@ -107,25 +106,25 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:1"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		core.SetOrgSlug(ctx, "test")
-		core.SetProjectSlug(ctx, "test")
-		core.SetAssetSlug(ctx, "test")
-		core.SetProject(ctx, models.Project{})
+		shared.SetOrgSlug(ctx, "test")
+		shared.SetProjectSlug(ctx, "test")
+		shared.SetAssetSlug(ctx, "test")
+		shared.SetProject(ctx, models.Project{})
 
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
 
-		core.SetSession(ctx, authSession)
+		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 
@@ -183,23 +182,23 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		core.SetOrgSlug(ctx, "test")
-		core.SetProjectSlug(ctx, "test")
-		core.SetAssetSlug(ctx, "test")
+		shared.SetOrgSlug(ctx, "test")
+		shared.SetProjectSlug(ctx, "test")
+		shared.SetAssetSlug(ctx, "test")
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
-		core.SetSession(ctx, authSession)
+		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.Error(t, err)
@@ -268,23 +267,23 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 
-		core.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
-		core.SetAssetVersion(ctx, models.AssetVersion{
+		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		core.SetOrgSlug(ctx, "test")
-		core.SetProjectSlug(ctx, "test")
-		core.SetAssetSlug(ctx, "test")
+		shared.SetOrgSlug(ctx, "test")
+		shared.SetProjectSlug(ctx, "test")
+		shared.SetAssetSlug(ctx, "test")
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("1")
-		core.SetSession(ctx, authSession)
+		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.NoError(t, err)

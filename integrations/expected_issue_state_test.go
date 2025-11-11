@@ -1,4 +1,4 @@
-package vuln_test
+package integrations_test
 
 import (
 	"testing"

@@ -1,16 +1,15 @@
 package vulndb
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/labstack/echo/v4"
 )
 
 type cveHTTPController struct {
-	cveRepository core.CveRepository
+	cveRepository shared.CveRepository
 }
 
-func NewHTTPController(cveRepository core.CveRepository) *cveHTTPController {
+func NewHTTPController(cveRepository shared.CveRepository) *cveHTTPController {
 	return &cveHTTPController{
 		cveRepository: cveRepository,
 	}
@@ -30,18 +29,18 @@ func NewHTTPController(cveRepository core.CveRepository) *cveHTTPController {
 // @Success 200 {object} object{pageSize=int,page=int,total=int,data=[]models.CVE} "A paginated list of CVEs"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb [get]
-func (c cveHTTPController) ListPaged(ctx core.Context) error {
+func (c cveHTTPController) ListPaged(ctx shared.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
-		core.GetPageInfo(ctx),
-		core.GetFilterQuery(ctx),
-		core.GetSortQuery(ctx),
+		shared.GetPageInfo(ctx),
+		shared.GetFilterQuery(ctx),
+		shared.GetSortQuery(ctx),
 	)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
 
-	env := core.GetEnvironmental(ctx)
+	env := shared.GetEnvironmental(ctx)
 
 	for i, cve := range pagedResp.Data {
 		risk, vector := risk.RiskCalculation(cve, env)
@@ -63,17 +62,17 @@ func (c cveHTTPController) ListPaged(ctx core.Context) error {
 // @Success 200 {object} models.CVE "Details of the specified CVE"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/{cveID}/ [get]
-func (c cveHTTPController) Read(ctx core.Context) error {
+func (c cveHTTPController) Read(ctx shared.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		nil,
-		core.GetParam(ctx, "cveID"),
+		shared.GetParam(ctx, "cveID"),
 	)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
 
-	e := core.GetEnvironmental(ctx)
+	e := shared.GetEnvironmental(ctx)
 
 	risk, vector := risk.RiskCalculation(cve, e)
 	cve.Risk = risk

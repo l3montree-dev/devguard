@@ -5,16 +5,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type artifactRiskHistoryRepository struct {
-	db core.DB
-	common.Repository[uint, models.ArtifactRiskHistory, core.DB]
+	db shared.DB
+	common.Repository[uint, models.ArtifactRiskHistory, shared.DB]
 }
 
-func NewArtifactRiskHistoryRepository(db core.DB) *artifactRiskHistoryRepository {
+func NewArtifactRiskHistoryRepository(db shared.DB) *artifactRiskHistoryRepository {
 	return &artifactRiskHistoryRepository{
 		db:         db,
 		Repository: newGormRepository[uint, models.ArtifactRiskHistory](db),

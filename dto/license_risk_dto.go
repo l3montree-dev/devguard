@@ -1,11 +1,10 @@
-package vuln
+package dtos
 
 import (
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/licenses"
 )
 
 type LicenseRiskDTO struct {
@@ -28,7 +27,7 @@ type LicenseRiskDTO struct {
 
 type detailedLicenseRiskDTO struct {
 	LicenseRiskDTO
-	Events []events.VulnEventDTO `json:"events"`
+	Events []VulnEventDTO `json:"events"`
 }
 
 func LicenseRiskToDto(f models.LicenseRisk) LicenseRiskDTO {
@@ -54,7 +53,7 @@ func beautifyFinalLicenseDecision(licenseDecision *string) *string {
 	if licenseDecision == nil {
 		return nil
 	}
-	if val, ok := component.LicenseMap[*licenseDecision]; ok {
+	if val, ok := licenses.LicenseMap[*licenseDecision]; ok {
 		return &val.Name
 	}
 	return licenseDecision

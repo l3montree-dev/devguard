@@ -10,26 +10,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
 type WebhookIntegration struct {
-	webhookRepository core.WebhookIntegrationRepository
+	webhookRepository shared.WebhookIntegrationRepository
 }
 
-var _ core.ThirdPartyIntegration = &WebhookIntegration{}
+var _ shared.ThirdPartyIntegration = &WebhookIntegration{}
 
-func NewWebhookIntegration(db core.DB) *WebhookIntegration {
+func NewWebhookIntegration(db shared.DB) *WebhookIntegration {
 	webhookRepository := repositories.NewWebhookRepository(db)
 	return &WebhookIntegration{
 		webhookRepository: webhookRepository,
 	}
 }
 
-func (w *WebhookIntegration) Delete(ctx core.Context) error {
+func (w *WebhookIntegration) Delete(ctx shared.Context) error {
 	id := ctx.Param("id")
 	if id == "" {
 		return ctx.JSON(400, "id is required")
@@ -47,7 +46,7 @@ func (w *WebhookIntegration) Delete(ctx core.Context) error {
 	return ctx.JSON(200, "Webhook integration deleted successfully")
 }
 
-func (w *WebhookIntegration) Update(ctx core.Context) error {
+func (w *WebhookIntegration) Update(ctx shared.Context) error {
 	var data struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -103,7 +102,7 @@ func (w *WebhookIntegration) Update(ctx core.Context) error {
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})
 }
-func (w *WebhookIntegration) Save(ctx core.Context) error {
+func (w *WebhookIntegration) Save(ctx shared.Context) error {
 	var data struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -122,9 +121,9 @@ func (w *WebhookIntegration) Save(ctx core.Context) error {
 
 	var projectID *uuid.UUID
 
-	ok := core.HasProject(ctx)
+	ok := shared.HasProject(ctx)
 	if ok {
-		projID := core.GetProject(ctx).GetID()
+		projID := shared.GetProject(ctx).GetID()
 		projectID = &projID
 	}
 
@@ -135,7 +134,7 @@ func (w *WebhookIntegration) Save(ctx core.Context) error {
 		Secret:      &data.Secret,
 		SbomEnabled: data.SbomEnabled,
 		VulnEnabled: data.VulnEnabled,
-		OrgID:       core.GetOrg(ctx).GetID(),
+		OrgID:       shared.GetOrg(ctx).GetID(),
 		ProjectID:   projectID, // Set project ID if available
 	}
 
@@ -153,7 +152,7 @@ func (w *WebhookIntegration) Save(ctx core.Context) error {
 	})
 }
 
-func (w *WebhookIntegration) Test(ctx core.Context) error {
+func (w *WebhookIntegration) Test(ctx shared.Context) error {
 	var data struct {
 		URL         string `json:"url"`
 		Secret      string `json:"secret"`
@@ -190,18 +189,18 @@ func (w *WebhookIntegration) Test(ctx core.Context) error {
 	}
 
 	// Create example objects for testing
-	org := core.ToOrgObject(core.GetOrg(ctx))
+	org := shared.ToOrgObject(shared.GetOrg(ctx))
 
 	// For assets and projects, we'll use example data if not available in context
-	var project core.ProjectObject
-	var asset core.AssetObject
-	var assetVersion core.AssetVersionObject
+	var project shared.ProjectObject
+	var asset shared.AssetObject
+	var assetVersion shared.AssetVersionObject
 
-	if core.HasProject(ctx) {
-		project = core.ToProjectObject(core.GetProject(ctx))
+	if shared.HasProject(ctx) {
+		project = shared.ToProjectObject(shared.GetProject(ctx))
 	} else {
 		// Create example project data
-		project = core.ProjectObject{
+		project = shared.ProjectObject{
 			ID:          uuid.New(),
 			Name:        "Example Project",
 			Slug:        "example-project",
@@ -212,7 +211,7 @@ func (w *WebhookIntegration) Test(ctx core.Context) error {
 	}
 
 	// Create example asset and asset version data for testing
-	asset = core.AssetObject{
+	asset = shared.AssetObject{
 		ID:                         uuid.New(),
 		Name:                       "Example Asset",
 		Slug:                       "example-asset",
@@ -224,7 +223,7 @@ func (w *WebhookIntegration) Test(ctx core.Context) error {
 		ReachableFromInternet:      false,
 	}
 
-	assetVersion = core.AssetVersionObject{
+	assetVersion = shared.AssetVersionObject{
 		Name:          "example-version",
 		AssetID:       asset.ID,
 		Slug:          "example-version",
@@ -256,7 +255,7 @@ func (w *WebhookIntegration) Test(ctx core.Context) error {
 func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	switch event := event.(type) {
-	case core.SBOMCreatedEvent:
+	case shared.SBOMCreatedEvent:
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
@@ -273,7 +272,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
 			}
 		}
-	case core.FirstPartyVulnsDetectedEvent:
+	case shared.FirstPartyVulnsDetectedEvent:
 
 		vulns := event.Vulns.([]vuln.FirstPartyVulnDTO)
 
@@ -294,7 +293,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 			}
 		}
 
-	case core.DependencyVulnsDetectedEvent:
+	case shared.DependencyVulnsDetectedEvent:
 
 		vulns := event.Vulns.([]vuln.DependencyVulnDTO)
 
@@ -324,37 +323,37 @@ func (w *WebhookIntegration) CreateLabels(ctx context.Context, asset models.Asse
 	return nil
 }
 
-func (w *WebhookIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+func (w *WebhookIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	// Logic to determine if this integration wants to handle the webhook
 	return true
 }
 
-func (w *WebhookIntegration) HandleWebhook(ctx core.Context) error {
+func (w *WebhookIntegration) HandleWebhook(ctx shared.Context) error {
 	// Logic to handle the webhook
 	return nil
 }
 
-func (w *WebhookIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (w *WebhookIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	// Logic to list organizations
 	return nil, nil
 }
 
-func (w *WebhookIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (w *WebhookIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// Logic to list groups
 	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (w *WebhookIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	// Logic to list projects
 	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
+func (w *WebhookIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
 	// Logic to list repositories
 	return nil, nil
 }
 
-func (w *WebhookIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (w *WebhookIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// Logic to check access to external entity provider
 	return false, nil
 }
@@ -379,12 +378,12 @@ func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 	return nil
 }
 
-func (w *WebhookIntegration) GetUsers(org models.Org) []core.User {
+func (w *WebhookIntegration) GetUsers(org models.Org) []shared.User {
 	// Logic to get users in an organization
 	return nil
 }
 
-func (w *WebhookIntegration) GetID() core.IntegrationID {
+func (w *WebhookIntegration) GetID() shared.IntegrationID {
 	// Return the integration ID for this webhook integration
-	return core.WebhookIntegrationID
+	return shared.WebhookIntegrationID
 }

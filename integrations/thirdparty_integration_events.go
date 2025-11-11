@@ -1,4 +1,4 @@
-package core
+package integrations
 
 import (
 	"time"
@@ -6,15 +6,16 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type ManualMitigateEvent struct {
-	Ctx           Context
+	Ctx           shared.Context
 	Justification string
 }
 
 type VulnEvent struct {
-	Ctx   Context
+	Ctx   shared.Context
 	Event models.VulnEvent
 }
 

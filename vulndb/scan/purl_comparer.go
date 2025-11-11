@@ -16,19 +16,19 @@
 package scan
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
 type PurlComparer struct {
-	db core.DB
+	db shared.DB
 }
 
-func NewPurlComparer(db core.DB) *PurlComparer {
+func NewPurlComparer(db shared.DB) *PurlComparer {
 	return &PurlComparer{
 		db: db,
 	}

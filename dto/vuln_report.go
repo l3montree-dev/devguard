@@ -1,4 +1,4 @@
-package assetversion
+package dtos
 
 // Copyright (C) 2025 l3montree GmbH
 //

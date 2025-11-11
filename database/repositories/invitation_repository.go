@@ -17,17 +17,17 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm/clause"
 )
 
 type InvitationRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.Invitation, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.Invitation, shared.DB]
 }
 
-func NewInvitationRepository(db core.DB) *InvitationRepository {
+func NewInvitationRepository(db shared.DB) *InvitationRepository {
 	return &InvitationRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Invitation](db),
@@ -40,6 +40,6 @@ func (g *InvitationRepository) FindByCode(code string) (models.Invitation, error
 	return t, err
 }
 
-func (g *InvitationRepository) Save(db core.DB, invitation *models.Invitation) error {
+func (g *InvitationRepository) Save(db shared.DB, invitation *models.Invitation) error {
 	return g.Repository.GetDB(db).Omit(clause.Associations).Save(invitation).Error
 }

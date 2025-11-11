@@ -8,8 +8,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/models"
+
 	"github.com/labstack/echo/v4"
 	"github.com/lmittmann/tint"
 	"gorm.io/gorm"

@@ -26,7 +26,6 @@ import (
 
 	"github.com/google/go-github/v62/github"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -42,14 +41,14 @@ type githubRepository struct {
 	GithubAppInstallationID int `json:"githubAppInstallationId"`
 }
 
-func (githubIntegration githubRepository) toRepository() core.Repository {
+func (githubIntegration githubRepository) toRepository() shared.Repository {
 	var image string
 	if githubIntegration.Organization != nil && githubIntegration.Organization.AvatarURL != nil {
 		image = utils.SafeDereference(githubIntegration.Organization.AvatarURL)
 	} else if githubIntegration.Owner != nil && githubIntegration.Owner.AvatarURL != nil {
 		image = utils.SafeDereference(githubIntegration.Owner.AvatarURL)
 	}
-	return core.Repository{
+	return shared.Repository{
 		ID:          fmt.Sprintf("github:%d:%s", githubIntegration.GithubAppInstallationID, utils.SafeDereference(githubIntegration.FullName)),
 		Label:       utils.SafeDereference(githubIntegration.FullName),
 		Image:       image,
@@ -58,29 +57,29 @@ func (githubIntegration githubRepository) toRepository() core.Repository {
 }
 
 type GithubIntegration struct {
-	githubAppInstallationRepository core.GithubAppInstallationRepository
-	externalUserRepository          core.ExternalUserRepository
-	dependencyVulnRepository        core.DependencyVulnRepository
-	firstPartyVulnRepository        core.FirstPartyVulnRepository
-	vulnEventRepository             core.VulnEventRepository
-	aggregatedVulnRepository        core.VulnRepository
+	githubAppInstallationRepository shared.GithubAppInstallationRepository
+	externalUserRepository          shared.ExternalUserRepository
+	dependencyVulnRepository        shared.DependencyVulnRepository
+	firstPartyVulnRepository        shared.FirstPartyVulnRepository
+	vulnEventRepository             shared.VulnEventRepository
+	aggregatedVulnRepository        shared.VulnRepository
 	frontendURL                     string
-	assetRepository                 core.AssetRepository
-	assetVersionRepository          core.AssetVersionRepository
-	componentRepository             core.ComponentRepository
-	licenseRiskRepository           core.LicenseRiskRepository
+	assetRepository                 shared.AssetRepository
+	assetVersionRepository          shared.AssetVersionRepository
+	componentRepository             shared.ComponentRepository
+	licenseRiskRepository           shared.LicenseRiskRepository
 
-	orgRepository       core.OrganizationRepository
-	projectRepository   core.ProjectRepository
+	orgRepository       shared.OrganizationRepository
+	projectRepository   shared.ProjectRepository
 	githubClientFactory func(repoID string) (githubClientFacade, error)
-	statisticsService   core.StatisticsService
+	statisticsService   shared.StatisticsService
 }
 
-var _ core.ThirdPartyIntegration = &GithubIntegration{}
+var _ shared.ThirdPartyIntegration = &GithubIntegration{}
 
 var ErrNoGithubAppInstallation = fmt.Errorf("no github app installations found")
 
-func NewGithubIntegration(db core.DB) *GithubIntegration {
+func NewGithubIntegration(db shared.DB) *GithubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
@@ -127,36 +126,36 @@ func (githubIntegration *GithubIntegration) CreateLabels(ctx context.Context, as
 	return nil
 }
 
-func (githubIntegration *GithubIntegration) GetID() core.IntegrationID {
-	return core.GitHubIntegrationID
+func (githubIntegration *GithubIntegration) GetID() shared.IntegrationID {
+	return shared.GitHubIntegrationID
 }
 
-func (githubIntegration *GithubIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (githubIntegration *GithubIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	// currently not supported.
 	return nil, nil, nil
 }
 
-func (githubIntegration *GithubIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (githubIntegration *GithubIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	return nil, nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (githubIntegration *GithubIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	// currently not supported.
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	return false, nil
 }
 
-func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (core.Role, error) {
+func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
 	// currently not supported.
-	return core.RoleGuest, fmt.Errorf("not implemented")
+	return shared.RoleGuest, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (core.Role, error) {
+func (githubIntegration *GithubIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (shared.Role, error) {
 	// currently not supported.
-	return core.RoleGuest, fmt.Errorf("not implemented")
+	return shared.RoleGuest, fmt.Errorf("not implemented")
 }
 
 func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {
@@ -164,16 +163,16 @@ func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID s
 	return models.Org{}, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	if !core.HasOrganization(ctx) {
+func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+	if !shared.HasOrganization(ctx) {
 		// github integration is connected to an organization not a user
 		// thus we NEED an organization for this
-		return []core.Repository{}, nil
+		return []shared.Repository{}, nil
 	}
 
-	organization := core.GetOrg(ctx)
+	organization := shared.GetOrg(ctx)
 
-	repos := []core.Repository{}
+	repos := []shared.Repository{}
 	// check if a github integration exists on that org
 	if organization.GithubAppInstallations != nil {
 		// get the github integration
@@ -188,20 +187,20 @@ func (githubIntegration *GithubIntegration) ListRepositories(ctx core.Context) (
 			return nil, err
 		}
 
-		repos = append(repos, utils.Map(r, func(repo githubRepository) core.Repository {
+		repos = append(repos, utils.Map(r, func(repo githubRepository) shared.Repository {
 			return repo.toRepository()
 		})...)
 		return repos, nil
 	}
 
-	return []core.Repository{}, nil
+	return []shared.Repository{}, nil
 }
 
-func (githubIntegration *GithubIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+func (githubIntegration *GithubIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
-func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) error {
+func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) error {
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
@@ -364,7 +363,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 
 		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
-		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err
@@ -444,11 +443,11 @@ func isGithubUserAuthorized(event *github.IssueCommentEvent, client githubClient
 	return client.IsCollaboratorInRepository(context.TODO(), *event.Repo.Owner.Login, *event.Repo.Name, *event.Sender.ID, nil)
 }
 
-func (githubIntegration *GithubIntegration) WantsToFinishInstallation(ctx core.Context) bool {
+func (githubIntegration *GithubIntegration) WantsToFinishInstallation(ctx shared.Context) bool {
 	return true
 }
 
-func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context) error {
+func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Context) error {
 	// get the installation id from the request
 	installationID := ctx.QueryParam("installationId")
 	if installationID == "" {
@@ -457,7 +456,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// check if the org id does match the current organization id, thus the user has access to the organization
-	organization := core.GetOrg(ctx)
+	organization := shared.GetOrg(ctx)
 	// convert the installation id to an integer
 	installationIDInt, err := strconv.Atoi(installationID)
 	if err != nil {
@@ -546,27 +545,27 @@ func githubTicketIDToIDAndNumber(id string) (int, int) {
 
 func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
-	case core.ManualMitigateEvent:
-		asset := core.GetAsset(event.Ctx)
+	case shared.ManualMitigateEvent:
+		asset := shared.GetAsset(event.Ctx)
 
-		repoID, err := core.GetRepositoryID(&asset)
+		repoID, err := shared.GetRepositoryID(&asset)
 
 		if !strings.HasPrefix(repoID, "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
 
-		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
+		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
 		if err != nil {
 			return err
 		}
-		projectSlug, err := core.GetProjectSlug(event.Ctx)
+		projectSlug, err := shared.GetProjectSlug(event.Ctx)
 
 		if err != nil {
 			return err
 		}
 
-		vulnID, vulnType, err := core.GetVulnID(event.Ctx)
+		vulnID, vulnType, err := shared.GetVulnID(event.Ctx)
 
 		if err != nil {
 			return err
@@ -596,19 +595,19 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 			vuln = &v
 		}
 
-		orgSlug, err := core.GetOrgSlug(event.Ctx)
+		orgSlug, err := shared.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		session := core.GetSession(event.Ctx)
+		session := shared.GetSession(event.Ctx)
 
 		return githubIntegration.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
-	case core.VulnEvent:
+	case shared.VulnEvent:
 		ev := event.Event
 
-		asset := core.GetAsset(event.Ctx)
-		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
+		asset := shared.GetAsset(event.Ctx)
+		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
 
 		vulnType := ev.VulnType
 
@@ -665,12 +664,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member core.User) bool {
+			func(member shared.User) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = core.User{
+			member = shared.User{
 				Name: "unknown",
 			}
 		}
@@ -788,7 +787,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 
 func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionSlug, orgSlug, projectSlug, owner, repo string) error {
 
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -905,7 +904,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 }
 
 func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 

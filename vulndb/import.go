@@ -23,8 +23,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -35,14 +35,14 @@ import (
 )
 
 type importService struct {
-	cveRepository                core.CveRepository
-	cweRepository                core.CweRepository
-	exploitRepository            core.ExploitRepository
-	affectedComponentsRepository core.AffectedComponentRepository
-	configService                core.ConfigService
+	cveRepository                shared.CveRepository
+	cweRepository                shared.CweRepository
+	exploitRepository            shared.ExploitRepository
+	affectedComponentsRepository shared.AffectedComponentRepository
+	configService                shared.ConfigService
 }
 
-func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository, configService core.ConfigService) *importService {
+func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.CweRepository, exploitRepository shared.ExploitRepository, affectedComponentsRepository shared.AffectedComponentRepository, configService shared.ConfigService) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
 		cweRepository:                cweRepository,
@@ -58,7 +58,7 @@ var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
 
-func (service importService) Import(tx core.DB, tag string) error {
+func (service importService) Import(tx shared.DB, tag string) error {
 	begin := time.Now()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"

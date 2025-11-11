@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
@@ -40,7 +39,7 @@ func (_m *ProjectRepository) EXPECT() *ProjectRepository_Expecter {
 }
 
 // Activate provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) Activate(tx core.DB, projectID uuid.UUID) error {
+func (_mock *ProjectRepository) Activate(tx shared.DB, projectID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID)
 
 	if len(ret) == 0 {
@@ -48,7 +47,7 @@ func (_mock *ProjectRepository) Activate(tx core.DB, projectID uuid.UUID) error 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, projectID)
 	} else {
 		r0 = ret.Error(0)
@@ -62,17 +61,17 @@ type ProjectRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - projectID uuid.UUID
 func (_e *ProjectRepository_Expecter) Activate(tx interface{}, projectID interface{}) *ProjectRepository_Activate_Call {
 	return &ProjectRepository_Activate_Call{Call: _e.mock.On("Activate", tx, projectID)}
 }
 
-func (_c *ProjectRepository_Activate_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_Activate_Call {
+func (_c *ProjectRepository_Activate_Call) Run(run func(tx shared.DB, projectID uuid.UUID)) *ProjectRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -91,13 +90,13 @@ func (_c *ProjectRepository_Activate_Call) Return(err error) *ProjectRepository_
 	return _c
 }
 
-func (_c *ProjectRepository_Activate_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID) error) *ProjectRepository_Activate_Call {
+func (_c *ProjectRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID) error) *ProjectRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) Create(tx core.DB, project *models.Project) error {
+func (_mock *ProjectRepository) Create(tx shared.DB, project *models.Project) error {
 	ret := _mock.Called(tx, project)
 
 	if len(ret) == 0 {
@@ -105,7 +104,7 @@ func (_mock *ProjectRepository) Create(tx core.DB, project *models.Project) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Project) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Project) error); ok {
 		r0 = returnFunc(tx, project)
 	} else {
 		r0 = ret.Error(0)
@@ -119,17 +118,17 @@ type ProjectRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - project *models.Project
 func (_e *ProjectRepository_Expecter) Create(tx interface{}, project interface{}) *ProjectRepository_Create_Call {
 	return &ProjectRepository_Create_Call{Call: _e.mock.On("Create", tx, project)}
 }
 
-func (_c *ProjectRepository_Create_Call) Run(run func(tx core.DB, project *models.Project)) *ProjectRepository_Create_Call {
+func (_c *ProjectRepository_Create_Call) Run(run func(tx shared.DB, project *models.Project)) *ProjectRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Project
 		if args[1] != nil {
@@ -148,13 +147,13 @@ func (_c *ProjectRepository_Create_Call) Return(err error) *ProjectRepository_Cr
 	return _c
 }
 
-func (_c *ProjectRepository_Create_Call) RunAndReturn(run func(tx core.DB, project *models.Project) error) *ProjectRepository_Create_Call {
+func (_c *ProjectRepository_Create_Call) RunAndReturn(run func(tx shared.DB, project *models.Project) error) *ProjectRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) Delete(tx core.DB, projectID uuid.UUID) error {
+func (_mock *ProjectRepository) Delete(tx shared.DB, projectID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID)
 
 	if len(ret) == 0 {
@@ -162,7 +161,7 @@ func (_mock *ProjectRepository) Delete(tx core.DB, projectID uuid.UUID) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, projectID)
 	} else {
 		r0 = ret.Error(0)
@@ -176,17 +175,17 @@ type ProjectRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - projectID uuid.UUID
 func (_e *ProjectRepository_Expecter) Delete(tx interface{}, projectID interface{}) *ProjectRepository_Delete_Call {
 	return &ProjectRepository_Delete_Call{Call: _e.mock.On("Delete", tx, projectID)}
 }
 
-func (_c *ProjectRepository_Delete_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_Delete_Call {
+func (_c *ProjectRepository_Delete_Call) Run(run func(tx shared.DB, projectID uuid.UUID)) *ProjectRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -205,13 +204,13 @@ func (_c *ProjectRepository_Delete_Call) Return(err error) *ProjectRepository_De
 	return _c
 }
 
-func (_c *ProjectRepository_Delete_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID) error) *ProjectRepository_Delete_Call {
+func (_c *ProjectRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID) error) *ProjectRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DisablePolicyForProject provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (_mock *ProjectRepository) DisablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID, policyID)
 
 	if len(ret) == 0 {
@@ -219,7 +218,7 @@ func (_mock *ProjectRepository) DisablePolicyForProject(tx core.DB, projectID uu
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, projectID, policyID)
 	} else {
 		r0 = ret.Error(0)
@@ -233,18 +232,18 @@ type ProjectRepository_DisablePolicyForProject_Call struct {
 }
 
 // DisablePolicyForProject is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - projectID uuid.UUID
 //   - policyID uuid.UUID
 func (_e *ProjectRepository_Expecter) DisablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_DisablePolicyForProject_Call {
 	return &ProjectRepository_DisablePolicyForProject_Call{Call: _e.mock.On("DisablePolicyForProject", tx, projectID, policyID)}
 }
 
-func (_c *ProjectRepository_DisablePolicyForProject_Call) Run(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_DisablePolicyForProject_Call {
+func (_c *ProjectRepository_DisablePolicyForProject_Call) Run(run func(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_DisablePolicyForProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -268,13 +267,13 @@ func (_c *ProjectRepository_DisablePolicyForProject_Call) Return(err error) *Pro
 	return _c
 }
 
-func (_c *ProjectRepository_DisablePolicyForProject_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error) *ProjectRepository_DisablePolicyForProject_Call {
+func (_c *ProjectRepository_DisablePolicyForProject_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error) *ProjectRepository_DisablePolicyForProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // EnableCommunityManagedPolicies provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID uuid.UUID) error {
+func (_mock *ProjectRepository) EnableCommunityManagedPolicies(tx shared.DB, projectID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID)
 
 	if len(ret) == 0 {
@@ -282,7 +281,7 @@ func (_mock *ProjectRepository) EnableCommunityManagedPolicies(tx core.DB, proje
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, projectID)
 	} else {
 		r0 = ret.Error(0)
@@ -296,17 +295,17 @@ type ProjectRepository_EnableCommunityManagedPolicies_Call struct {
 }
 
 // EnableCommunityManagedPolicies is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - projectID uuid.UUID
 func (_e *ProjectRepository_Expecter) EnableCommunityManagedPolicies(tx interface{}, projectID interface{}) *ProjectRepository_EnableCommunityManagedPolicies_Call {
 	return &ProjectRepository_EnableCommunityManagedPolicies_Call{Call: _e.mock.On("EnableCommunityManagedPolicies", tx, projectID)}
 }
 
-func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) Run(run func(tx shared.DB, projectID uuid.UUID)) *ProjectRepository_EnableCommunityManagedPolicies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -325,13 +324,13 @@ func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) Return(err erro
 	return _c
 }
 
-func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID) error) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID) error) *ProjectRepository_EnableCommunityManagedPolicies_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // EnablePolicyForProject provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) EnablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (_mock *ProjectRepository) EnablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID, policyID)
 
 	if len(ret) == 0 {
@@ -339,7 +338,7 @@ func (_mock *ProjectRepository) EnablePolicyForProject(tx core.DB, projectID uui
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, projectID, policyID)
 	} else {
 		r0 = ret.Error(0)
@@ -353,18 +352,18 @@ type ProjectRepository_EnablePolicyForProject_Call struct {
 }
 
 // EnablePolicyForProject is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - projectID uuid.UUID
 //   - policyID uuid.UUID
 func (_e *ProjectRepository_Expecter) EnablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_EnablePolicyForProject_Call {
 	return &ProjectRepository_EnablePolicyForProject_Call{Call: _e.mock.On("EnablePolicyForProject", tx, projectID, policyID)}
 }
 
-func (_c *ProjectRepository_EnablePolicyForProject_Call) Run(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_EnablePolicyForProject_Call {
+func (_c *ProjectRepository_EnablePolicyForProject_Call) Run(run func(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_EnablePolicyForProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -388,7 +387,7 @@ func (_c *ProjectRepository_EnablePolicyForProject_Call) Return(err error) *Proj
 	return _c
 }
 
-func (_c *ProjectRepository_EnablePolicyForProject_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error) *ProjectRepository_EnablePolicyForProject_Call {
+func (_c *ProjectRepository_EnablePolicyForProject_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error) *ProjectRepository_EnablePolicyForProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -652,24 +651,24 @@ func (_c *ProjectRepository_List_Call) RunAndReturn(run func(idSlice []uuid.UUID
 }
 
 // ListPaged provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error) {
+func (_mock *ProjectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.Project], error) {
 	ret := _mock.Called(projectIDs, parentID, orgID, pageInfo, search)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListPaged")
 	}
 
-	var r0 core.Paged[models.Project]
+	var r0 shared.Paged[models.Project]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) (core.Paged[models.Project], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string) (shared.Paged[models.Project], error)); ok {
 		return returnFunc(projectIDs, parentID, orgID, pageInfo, search)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) core.Paged[models.Project]); ok {
+	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string) shared.Paged[models.Project]); ok {
 		r0 = returnFunc(projectIDs, parentID, orgID, pageInfo, search)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Project])
+		r0 = ret.Get(0).(shared.Paged[models.Project])
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string) error); ok {
 		r1 = returnFunc(projectIDs, parentID, orgID, pageInfo, search)
 	} else {
 		r1 = ret.Error(1)
@@ -686,13 +685,13 @@ type ProjectRepository_ListPaged_Call struct {
 //   - projectIDs []uuid.UUID
 //   - parentID *uuid.UUID
 //   - orgID uuid.UUID
-//   - pageInfo core.PageInfo
+//   - pageInfo shared.PageInfo
 //   - search string
 func (_e *ProjectRepository_Expecter) ListPaged(projectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}) *ProjectRepository_ListPaged_Call {
 	return &ProjectRepository_ListPaged_Call{Call: _e.mock.On("ListPaged", projectIDs, parentID, orgID, pageInfo, search)}
 }
 
-func (_c *ProjectRepository_ListPaged_Call) Run(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string)) *ProjectRepository_ListPaged_Call {
+func (_c *ProjectRepository_ListPaged_Call) Run(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string)) *ProjectRepository_ListPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []uuid.UUID
 		if args[0] != nil {
@@ -706,9 +705,9 @@ func (_c *ProjectRepository_ListPaged_Call) Run(run func(projectIDs []uuid.UUID,
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 core.PageInfo
+		var arg3 shared.PageInfo
 		if args[3] != nil {
-			arg3 = args[3].(core.PageInfo)
+			arg3 = args[3].(shared.PageInfo)
 		}
 		var arg4 string
 		if args[4] != nil {
@@ -725,12 +724,12 @@ func (_c *ProjectRepository_ListPaged_Call) Run(run func(projectIDs []uuid.UUID,
 	return _c
 }
 
-func (_c *ProjectRepository_ListPaged_Call) Return(paged core.Paged[models.Project], err error) *ProjectRepository_ListPaged_Call {
+func (_c *ProjectRepository_ListPaged_Call) Return(paged shared.Paged[models.Project], err error) *ProjectRepository_ListPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *ProjectRepository_ListPaged_Call) RunAndReturn(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error)) *ProjectRepository_ListPaged_Call {
+func (_c *ProjectRepository_ListPaged_Call) RunAndReturn(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.Project], error)) *ProjectRepository_ListPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -990,7 +989,7 @@ func (_c *ProjectRepository_RecursivelyGetChildProjects_Call) RunAndReturn(run f
 }
 
 // Update provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) Update(tx core.DB, project *models.Project) error {
+func (_mock *ProjectRepository) Update(tx shared.DB, project *models.Project) error {
 	ret := _mock.Called(tx, project)
 
 	if len(ret) == 0 {
@@ -998,7 +997,7 @@ func (_mock *ProjectRepository) Update(tx core.DB, project *models.Project) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Project) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Project) error); ok {
 		r0 = returnFunc(tx, project)
 	} else {
 		r0 = ret.Error(0)
@@ -1012,17 +1011,17 @@ type ProjectRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - project *models.Project
 func (_e *ProjectRepository_Expecter) Update(tx interface{}, project interface{}) *ProjectRepository_Update_Call {
 	return &ProjectRepository_Update_Call{Call: _e.mock.On("Update", tx, project)}
 }
 
-func (_c *ProjectRepository_Update_Call) Run(run func(tx core.DB, project *models.Project)) *ProjectRepository_Update_Call {
+func (_c *ProjectRepository_Update_Call) Run(run func(tx shared.DB, project *models.Project)) *ProjectRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Project
 		if args[1] != nil {
@@ -1041,7 +1040,7 @@ func (_c *ProjectRepository_Update_Call) Return(err error) *ProjectRepository_Up
 	return _c
 }
 
-func (_c *ProjectRepository_Update_Call) RunAndReturn(run func(tx core.DB, project *models.Project) error) *ProjectRepository_Update_Call {
+func (_c *ProjectRepository_Update_Call) RunAndReturn(run func(tx shared.DB, project *models.Project) error) *ProjectRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1110,7 +1109,7 @@ func (_c *ProjectRepository_Upsert_Call) RunAndReturn(run func(projects *[]*mode
 }
 
 // UpsertSplit provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) UpsertSplit(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+func (_mock *ProjectRepository) UpsertSplit(tx shared.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	ret := _mock.Called(tx, externalProviderID, projects)
 
 	if len(ret) == 0 {
@@ -1120,24 +1119,24 @@ func (_mock *ProjectRepository) UpsertSplit(tx core.DB, externalProviderID strin
 	var r0 []*models.Project
 	var r1 []*models.Project
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []*models.Project) ([]*models.Project, []*models.Project, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []*models.Project) ([]*models.Project, []*models.Project, error)); ok {
 		return returnFunc(tx, externalProviderID, projects)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []*models.Project) []*models.Project); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []*models.Project) []*models.Project); ok {
 		r0 = returnFunc(tx, externalProviderID, projects)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, []*models.Project) []*models.Project); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, []*models.Project) []*models.Project); ok {
 		r1 = returnFunc(tx, externalProviderID, projects)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]*models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(core.DB, string, []*models.Project) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(shared.DB, string, []*models.Project) error); ok {
 		r2 = returnFunc(tx, externalProviderID, projects)
 	} else {
 		r2 = ret.Error(2)
@@ -1151,18 +1150,18 @@ type ProjectRepository_UpsertSplit_Call struct {
 }
 
 // UpsertSplit is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - externalProviderID string
 //   - projects []*models.Project
 func (_e *ProjectRepository_Expecter) UpsertSplit(tx interface{}, externalProviderID interface{}, projects interface{}) *ProjectRepository_UpsertSplit_Call {
 	return &ProjectRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", tx, externalProviderID, projects)}
 }
 
-func (_c *ProjectRepository_UpsertSplit_Call) Run(run func(tx core.DB, externalProviderID string, projects []*models.Project)) *ProjectRepository_UpsertSplit_Call {
+func (_c *ProjectRepository_UpsertSplit_Call) Run(run func(tx shared.DB, externalProviderID string, projects []*models.Project)) *ProjectRepository_UpsertSplit_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -1186,7 +1185,7 @@ func (_c *ProjectRepository_UpsertSplit_Call) Return(projects1 []*models.Project
 	return _c
 }
 
-func (_c *ProjectRepository_UpsertSplit_Call) RunAndReturn(run func(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)) *ProjectRepository_UpsertSplit_Call {
+func (_c *ProjectRepository_UpsertSplit_Call) RunAndReturn(run func(tx shared.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)) *ProjectRepository_UpsertSplit_Call {
 	_c.Call.Return(run)
 	return _c
 }

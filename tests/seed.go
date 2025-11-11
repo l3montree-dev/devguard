@@ -1,14 +1,14 @@
 // Copyright 2025 l3montree UG (haftungsbeschraenkt).
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package integrationtestutil
+package tests
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
-func CreateOrgProjectAndAssetAssetVersion(db core.DB) (models.Org, models.Project, models.Asset, models.AssetVersion) {
+func CreateOrgProjectAndAssetAssetVersion(db shared.DB) (models.Org, models.Project, models.Asset, models.AssetVersion) {
 	org := models.Org{
 		Name: "Test Org",
 		Slug: "test-org",

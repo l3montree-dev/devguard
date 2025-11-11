@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
+	"github.com/l3montree-dev/devguard/tests"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func (m testMessage) GetPayload() map[string]interface{} {
 
 func TestPostgreSQLBroker(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := integration_tests.InitSQLDatabaseContainer("../../initdb.sql")
+	dbUser, dbPassword, host, port, dbName, terminate := tests.InitSQLDatabaseContainer("../../initdb.sql")
 	defer terminate()
 
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
@@ -219,7 +219,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 
 func TestBrokerIntegration(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := integration_tests.InitSQLDatabaseContainer("../../initdb.sql")
+	dbUser, dbPassword, host, port, dbName, terminate := tests.InitSQLDatabaseContainer("../../initdb.sql")
 	defer terminate()
 
 	broker, err := NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)

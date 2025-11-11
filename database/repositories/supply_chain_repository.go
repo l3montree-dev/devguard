@@ -3,17 +3,17 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
 
 type supplyChainRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.SupplyChain, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.SupplyChain, shared.DB]
 }
 
-func NewSupplyChainRepository(db core.DB) *supplyChainRepository {
+func NewSupplyChainRepository(db shared.DB) *supplyChainRepository {
 	return &supplyChainRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.SupplyChain](db),
@@ -40,7 +40,7 @@ func (g *supplyChainRepository) FindBySupplyChainID(supplyChainID string) ([]mod
 	return t, err
 }
 
-func (g *supplyChainRepository) Save(tx core.DB, model *models.SupplyChain) error {
+func (g *supplyChainRepository) Save(tx shared.DB, model *models.SupplyChain) error {
 	return g.db.Session(&gorm.Session{
 		FullSaveAssociations: false,
 	}).Save(model).Error

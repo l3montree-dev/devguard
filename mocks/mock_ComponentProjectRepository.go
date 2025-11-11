@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -39,7 +39,7 @@ func (_m *ComponentProjectRepository) EXPECT() *ComponentProjectRepository_Expec
 }
 
 // Activate provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Activate(tx core.DB, id string) error {
+func (_mock *ComponentProjectRepository) Activate(tx shared.DB, id string) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -47,7 +47,7 @@ func (_mock *ComponentProjectRepository) Activate(tx core.DB, id string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -61,17 +61,17 @@ type ComponentProjectRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id string
 func (_e *ComponentProjectRepository_Expecter) Activate(tx interface{}, id interface{}) *ComponentProjectRepository_Activate_Call {
 	return &ComponentProjectRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
-func (_c *ComponentProjectRepository_Activate_Call) Run(run func(tx core.DB, id string)) *ComponentProjectRepository_Activate_Call {
+func (_c *ComponentProjectRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *ComponentProjectRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -90,7 +90,7 @@ func (_c *ComponentProjectRepository_Activate_Call) Return(err error) *Component
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id string) error) *ComponentProjectRepository_Activate_Call {
+func (_c *ComponentProjectRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *ComponentProjectRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -151,19 +151,19 @@ func (_c *ComponentProjectRepository_All_Call) RunAndReturn(run func() ([]models
 }
 
 // Begin provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Begin() core.DB {
+func (_mock *ComponentProjectRepository) Begin() shared.DB {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -186,18 +186,18 @@ func (_c *ComponentProjectRepository_Begin_Call) Run(run func()) *ComponentProje
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Begin_Call) Return(v core.DB) *ComponentProjectRepository_Begin_Call {
+func (_c *ComponentProjectRepository_Begin_Call) Return(v shared.DB) *ComponentProjectRepository_Begin_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Begin_Call) RunAndReturn(run func() core.DB) *ComponentProjectRepository_Begin_Call {
+func (_c *ComponentProjectRepository_Begin_Call) RunAndReturn(run func() shared.DB) *ComponentProjectRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Create(tx core.DB, t *models.ComponentProject) error {
+func (_mock *ComponentProjectRepository) Create(tx shared.DB, t *models.ComponentProject) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -205,7 +205,7 @@ func (_mock *ComponentProjectRepository) Create(tx core.DB, t *models.ComponentP
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.ComponentProject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.ComponentProject) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -219,17 +219,17 @@ type ComponentProjectRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) Create(tx interface{}, t interface{}) *ComponentProjectRepository_Create_Call {
 	return &ComponentProjectRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *ComponentProjectRepository_Create_Call) Run(run func(tx core.DB, t *models.ComponentProject)) *ComponentProjectRepository_Create_Call {
+func (_c *ComponentProjectRepository_Create_Call) Run(run func(tx shared.DB, t *models.ComponentProject)) *ComponentProjectRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.ComponentProject
 		if args[1] != nil {
@@ -248,13 +248,13 @@ func (_c *ComponentProjectRepository_Create_Call) Return(err error) *ComponentPr
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.ComponentProject) error) *ComponentProjectRepository_Create_Call {
+func (_c *ComponentProjectRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.ComponentProject) error) *ComponentProjectRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) CreateBatch(tx core.DB, ts []models.ComponentProject) error {
+func (_mock *ComponentProjectRepository) CreateBatch(tx shared.DB, ts []models.ComponentProject) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -262,7 +262,7 @@ func (_mock *ComponentProjectRepository) CreateBatch(tx core.DB, ts []models.Com
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.ComponentProject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.ComponentProject) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -276,17 +276,17 @@ type ComponentProjectRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ComponentProjectRepository_CreateBatch_Call {
 	return &ComponentProjectRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *ComponentProjectRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.ComponentProject)) *ComponentProjectRepository_CreateBatch_Call {
+func (_c *ComponentProjectRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.ComponentProject)) *ComponentProjectRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.ComponentProject
 		if args[1] != nil {
@@ -305,13 +305,13 @@ func (_c *ComponentProjectRepository_CreateBatch_Call) Return(err error) *Compon
 	return _c
 }
 
-func (_c *ComponentProjectRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.ComponentProject) error) *ComponentProjectRepository_CreateBatch_Call {
+func (_c *ComponentProjectRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.ComponentProject) error) *ComponentProjectRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Delete(tx core.DB, id string) error {
+func (_mock *ComponentProjectRepository) Delete(tx shared.DB, id string) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -319,7 +319,7 @@ func (_mock *ComponentProjectRepository) Delete(tx core.DB, id string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -333,17 +333,17 @@ type ComponentProjectRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id string
 func (_e *ComponentProjectRepository_Expecter) Delete(tx interface{}, id interface{}) *ComponentProjectRepository_Delete_Call {
 	return &ComponentProjectRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *ComponentProjectRepository_Delete_Call) Run(run func(tx core.DB, id string)) *ComponentProjectRepository_Delete_Call {
+func (_c *ComponentProjectRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *ComponentProjectRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -362,13 +362,13 @@ func (_c *ComponentProjectRepository_Delete_Call) Return(err error) *ComponentPr
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id string) error) *ComponentProjectRepository_Delete_Call {
+func (_c *ComponentProjectRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *ComponentProjectRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) DeleteBatch(tx core.DB, ids []models.ComponentProject) error {
+func (_mock *ComponentProjectRepository) DeleteBatch(tx shared.DB, ids []models.ComponentProject) error {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -376,7 +376,7 @@ func (_mock *ComponentProjectRepository) DeleteBatch(tx core.DB, ids []models.Co
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.ComponentProject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.ComponentProject) error); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		r0 = ret.Error(0)
@@ -390,17 +390,17 @@ type ComponentProjectRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ComponentProjectRepository_DeleteBatch_Call {
 	return &ComponentProjectRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
-func (_c *ComponentProjectRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.ComponentProject)) *ComponentProjectRepository_DeleteBatch_Call {
+func (_c *ComponentProjectRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.ComponentProject)) *ComponentProjectRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.ComponentProject
 		if args[1] != nil {
@@ -419,25 +419,25 @@ func (_c *ComponentProjectRepository_DeleteBatch_Call) Return(err error) *Compon
 	return _c
 }
 
-func (_c *ComponentProjectRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.ComponentProject) error) *ComponentProjectRepository_DeleteBatch_Call {
+func (_c *ComponentProjectRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.ComponentProject) error) *ComponentProjectRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) GetDB(tx core.DB) core.DB {
+func (_mock *ComponentProjectRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -449,16 +449,16 @@ type ComponentProjectRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *ComponentProjectRepository_Expecter) GetDB(tx interface{}) *ComponentProjectRepository_GetDB_Call {
 	return &ComponentProjectRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *ComponentProjectRepository_GetDB_Call) Run(run func(tx core.DB)) *ComponentProjectRepository_GetDB_Call {
+func (_c *ComponentProjectRepository_GetDB_Call) Run(run func(tx shared.DB)) *ComponentProjectRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -467,12 +467,12 @@ func (_c *ComponentProjectRepository_GetDB_Call) Run(run func(tx core.DB)) *Comp
 	return _c
 }
 
-func (_c *ComponentProjectRepository_GetDB_Call) Return(v core.DB) *ComponentProjectRepository_GetDB_Call {
+func (_c *ComponentProjectRepository_GetDB_Call) Return(v shared.DB) *ComponentProjectRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *ComponentProjectRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *ComponentProjectRepository_GetDB_Call {
+func (_c *ComponentProjectRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ComponentProjectRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -600,7 +600,7 @@ func (_c *ComponentProjectRepository_Read_Call) RunAndReturn(run func(id string)
 }
 
 // Save provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Save(tx core.DB, t *models.ComponentProject) error {
+func (_mock *ComponentProjectRepository) Save(tx shared.DB, t *models.ComponentProject) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -608,7 +608,7 @@ func (_mock *ComponentProjectRepository) Save(tx core.DB, t *models.ComponentPro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.ComponentProject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.ComponentProject) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -622,17 +622,17 @@ type ComponentProjectRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) Save(tx interface{}, t interface{}) *ComponentProjectRepository_Save_Call {
 	return &ComponentProjectRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
-func (_c *ComponentProjectRepository_Save_Call) Run(run func(tx core.DB, t *models.ComponentProject)) *ComponentProjectRepository_Save_Call {
+func (_c *ComponentProjectRepository_Save_Call) Run(run func(tx shared.DB, t *models.ComponentProject)) *ComponentProjectRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.ComponentProject
 		if args[1] != nil {
@@ -651,13 +651,13 @@ func (_c *ComponentProjectRepository_Save_Call) Return(err error) *ComponentProj
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Save_Call) RunAndReturn(run func(tx core.DB, t *models.ComponentProject) error) *ComponentProjectRepository_Save_Call {
+func (_c *ComponentProjectRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.ComponentProject) error) *ComponentProjectRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) SaveBatch(tx core.DB, ts []models.ComponentProject) error {
+func (_mock *ComponentProjectRepository) SaveBatch(tx shared.DB, ts []models.ComponentProject) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -665,7 +665,7 @@ func (_mock *ComponentProjectRepository) SaveBatch(tx core.DB, ts []models.Compo
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.ComponentProject) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.ComponentProject) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -679,17 +679,17 @@ type ComponentProjectRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ComponentProjectRepository_SaveBatch_Call {
 	return &ComponentProjectRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *ComponentProjectRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.ComponentProject)) *ComponentProjectRepository_SaveBatch_Call {
+func (_c *ComponentProjectRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.ComponentProject)) *ComponentProjectRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.ComponentProject
 		if args[1] != nil {
@@ -708,13 +708,13 @@ func (_c *ComponentProjectRepository_SaveBatch_Call) Return(err error) *Componen
 	return _c
 }
 
-func (_c *ComponentProjectRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.ComponentProject) error) *ComponentProjectRepository_SaveBatch_Call {
+func (_c *ComponentProjectRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.ComponentProject) error) *ComponentProjectRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type ComponentProjectRepository
-func (_mock *ComponentProjectRepository) Transaction(fn func(tx core.DB) error) error {
+func (_mock *ComponentProjectRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)
 
 	if len(ret) == 0 {
@@ -722,7 +722,7 @@ func (_mock *ComponentProjectRepository) Transaction(fn func(tx core.DB) error) 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
 		r0 = returnFunc(fn)
 	} else {
 		r0 = ret.Error(0)
@@ -736,16 +736,16 @@ type ComponentProjectRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn func(tx shared.DB) error
 func (_e *ComponentProjectRepository_Expecter) Transaction(fn interface{}) *ComponentProjectRepository_Transaction_Call {
 	return &ComponentProjectRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
-func (_c *ComponentProjectRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *ComponentProjectRepository_Transaction_Call {
+func (_c *ComponentProjectRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *ComponentProjectRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
+		var arg0 func(tx shared.DB) error
 		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
+			arg0 = args[0].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
@@ -759,7 +759,7 @@ func (_c *ComponentProjectRepository_Transaction_Call) Return(err error) *Compon
 	return _c
 }
 
-func (_c *ComponentProjectRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *ComponentProjectRepository_Transaction_Call {
+func (_c *ComponentProjectRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *ComponentProjectRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

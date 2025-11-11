@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type componentProjectRepository struct {
-	db core.DB
-	common.Repository[string, models.ComponentProject, core.DB]
+	db shared.DB
+	common.Repository[string, models.ComponentProject, shared.DB]
 }
 
-func NewComponentProjectRepository(db core.DB) *componentProjectRepository {
+func NewComponentProjectRepository(db shared.DB) *componentProjectRepository {
 	return &componentProjectRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.ComponentProject](db),

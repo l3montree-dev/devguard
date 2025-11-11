@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -27,7 +26,7 @@ type GitlabOauth2Config struct {
 	ProviderID    string
 	GitlabBaseURL string
 
-	GitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+	GitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository
 
 	Oauth2Conf *oauth2.Config
 
@@ -146,7 +145,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	return urls
 }
 
-func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
+func NewGitLabOauth2Config(db shared.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -181,12 +180,12 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 type tokenPersister struct {
 	next                   oauth2.TokenSource // wrapped token source
 	currentToken           models.GitLabOauth2Token
-	gitlabOauth2Repository core.GitLabOauth2TokenRepository
+	gitlabOauth2Repository shared.GitLabOauth2TokenRepository
 }
 
 var tokenSingleFlightGroup = singleflight.Group{}
 
-func newTokenPersister(gitlabOauth2Repository core.GitLabOauth2TokenRepository, token models.GitLabOauth2Token, tokenSource oauth2.TokenSource) *tokenPersister {
+func newTokenPersister(gitlabOauth2Repository shared.GitLabOauth2TokenRepository, token models.GitLabOauth2Token, tokenSource oauth2.TokenSource) *tokenPersister {
 	return &tokenPersister{
 		next:                   tokenSource,
 		currentToken:           token,
@@ -238,7 +237,7 @@ func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client
 	return oauth2.NewClient(context.TODO(), newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
 }
 
-func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
+func NewGitLabOauth2Integrations(db shared.DB) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
 	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
@@ -249,9 +248,9 @@ func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
 	return gitlabIntegrations
 }
 
-func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
+func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	// get the user
-	userID := core.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetUserID()
 	code := ctx.QueryParam("code")
 	if code == "" {
 		return ctx.JSON(400, map[string]any{
@@ -340,12 +339,12 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	return ctx.Redirect(302, redirectURL)
 }
 
-func (c *GitlabOauth2Config) Oauth2Login(ctx core.Context) error {
+func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// use PKCE to protect against CSRF attacks
 	// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 	verifier := oauth2.GenerateVerifier()
 	// get the user
-	userID := core.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetUserID()
 
 	redirectTo := ctx.QueryParam("redirectTo")
 

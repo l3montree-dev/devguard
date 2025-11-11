@@ -5,16 +5,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type projectRiskHistoryRepository struct {
-	db core.DB
-	common.Repository[uint, models.ProjectRiskHistory, core.DB]
+	db shared.DB
+	common.Repository[uint, models.ProjectRiskHistory, shared.DB]
 }
 
-func NewProjectRiskHistoryRepository(db core.DB) *projectRiskHistoryRepository {
+func NewProjectRiskHistoryRepository(db shared.DB) *projectRiskHistoryRepository {
 	return &projectRiskHistoryRepository{
 		db:         db,
 		Repository: newGormRepository[uint, models.ProjectRiskHistory](db),

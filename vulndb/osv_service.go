@@ -28,18 +28,18 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 )
 
 type osvService struct {
 	httpClient            *http.Client
-	affectedCmpRepository core.AffectedComponentRepository
+	affectedCmpRepository shared.AffectedComponentRepository
 }
 
-func NewOSVService(affectedCmpRepository core.AffectedComponentRepository) osvService {
+func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,

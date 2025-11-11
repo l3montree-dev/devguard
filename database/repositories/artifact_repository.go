@@ -8,16 +8,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type artifactRepository struct {
-	common.Repository[string, models.Artifact, core.DB]
-	db core.DB
+	common.Repository[string, models.Artifact, shared.DB]
+	db shared.DB
 }
 
-func NewArtifactRepository(db core.DB) *artifactRepository {
+func NewArtifactRepository(db shared.DB) *artifactRepository {
 	return &artifactRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.Artifact](db),
@@ -69,7 +69,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	return err
 }
 
-func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx core.DB, vulnID string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx shared.DB, vulnID string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 	err := r.Repository.GetDB(tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 

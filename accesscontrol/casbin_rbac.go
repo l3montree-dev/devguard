@@ -20,17 +20,16 @@ import (
 	"log/slog"
 	"strings"
 
-	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
-	"github.com/l3montree-dev/devguard/internal/utils"
-
 	"github.com/casbin/casbin/v2"
+	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/pubsub"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
-var _ core.AccessControl = &casbinRBAC{}
+var _ shared.AccessControl = &casbinRBAC{}
 var casbinEnforcer *casbin.SyncedEnforcer
 
 type casbinRBAC struct {
@@ -42,7 +41,7 @@ type casbinRBACProvider struct {
 	enforcer *casbin.SyncedEnforcer
 }
 
-func (c casbinRBACProvider) GetDomainRBAC(domain string) core.AccessControl {
+func (c casbinRBACProvider) GetDomainRBAC(domain string) shared.AccessControl {
 	return &casbinRBAC{
 		domain:   domain,
 		enforcer: c.enforcer,
@@ -152,7 +151,7 @@ func (c *casbinRBAC) GetAllRoles(user string) []string {
 	return roles
 }
 
-func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
+func (c *casbinRBAC) GetDomainRole(user string) (shared.Role, error) {
 	dbRoles := c.GetAllRoles(user)
 	// filter the roles to only get the domain roles
 	roles := utils.Map(utils.Filter(dbRoles, func(r string) bool {
@@ -161,9 +160,9 @@ func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
 		return strings.TrimPrefix(r, "role::")
 	})
 
-	// transform the roles to core.Role
-	r := utils.Map(roles, func(r string) core.Role {
-		return core.Role(r)
+	// transform the roles to shared.Role
+	r := utils.Map(roles, func(r string) shared.Role {
+		return shared.Role(r)
 	})
 
 	role, err := getMostPowerfulRole(r)
@@ -173,22 +172,22 @@ func (c *casbinRBAC) GetDomainRole(user string) (core.Role, error) {
 	return role, err
 }
 
-func getMostPowerfulRole(roles []core.Role) (core.Role, error) {
-	if utils.Contains(roles, core.RoleOwner) {
-		return core.RoleOwner, nil
+func getMostPowerfulRole(roles []shared.Role) (shared.Role, error) {
+	if utils.Contains(roles, shared.RoleOwner) {
+		return shared.RoleOwner, nil
 	}
 
-	if utils.Contains(roles, core.RoleAdmin) {
-		return core.RoleAdmin, nil
+	if utils.Contains(roles, shared.RoleAdmin) {
+		return shared.RoleAdmin, nil
 	}
-	if utils.Contains(roles, core.RoleMember) {
-		return core.RoleMember, nil
+	if utils.Contains(roles, shared.RoleMember) {
+		return shared.RoleMember, nil
 	}
 
 	return "", fmt.Errorf("no domain role found for user. Roles from user: %v", roles)
 }
 
-func (c *casbinRBAC) GetProjectRole(user string, project string) (core.Role, error) {
+func (c *casbinRBAC) GetProjectRole(user string, project string) (shared.Role, error) {
 	roles := c.GetAllRoles(user)
 	// filter the roles to only get the project roles
 	roles = utils.Map(utils.Filter(roles, func(r string) bool {
@@ -197,15 +196,15 @@ func (c *casbinRBAC) GetProjectRole(user string, project string) (core.Role, err
 		return strings.TrimPrefix(r, "project::"+project+"|role::")
 	})
 
-	// transform the roles to core.Role
-	r := utils.Map(roles, func(r string) core.Role {
-		return core.Role(r)
+	// transform the roles to shared.Role
+	r := utils.Map(roles, func(r string) shared.Role {
+		return shared.Role(r)
 	})
 
 	return getMostPowerfulRole(r)
 }
 
-func (c *casbinRBAC) GetAssetRole(user string, asset string) (core.Role, error) {
+func (c *casbinRBAC) GetAssetRole(user string, asset string) (shared.Role, error) {
 	roles := c.GetAllRoles(user)
 	// filter the roles to only get the asset roles
 	roles = utils.Map(utils.Filter(roles, func(r string) bool {
@@ -214,68 +213,68 @@ func (c *casbinRBAC) GetAssetRole(user string, asset string) (core.Role, error) 
 		return strings.TrimPrefix(r, "asset::"+asset+"|role::")
 	})
 
-	// transform the roles to core.Role
-	r := utils.Map(roles, func(r string) core.Role {
-		return core.Role(r)
+	// transform the roles to shared.Role
+	r := utils.Map(roles, func(r string) shared.Role {
+		return shared.Role(r)
 	})
 
 	return getMostPowerfulRole(r)
 }
 
-func (c *casbinRBAC) GrantRole(user string, role core.Role) error {
+func (c *casbinRBAC) GrantRole(user string, role shared.Role) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
 // both roles are treated as projects roles.
-func (c *casbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role, project string) error {
+func (c *casbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions, project), c.getProjectRoleName(roleWhichProvidesPermissions, project), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role, asset string) error {
+func (c *casbinRBAC) InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, asset string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getAssetRoleName(roleWhichGetsPermissions, asset), c.getAssetRoleName(roleWhichProvidesPermissions, asset), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions core.ProjectRole) error {
+func (c *casbinRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.ProjectRole) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions.Role, roleWhichGetsPermissions.Project), c.getProjectRoleName(roleWhichProvidesPermissions.Role, roleWhichProvidesPermissions.Project), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role) error {
+func (c *casbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions core.Role, project string) error {
+func (c *casbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions shared.Role, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+string(domainRoleWhichGetsPermission), c.getProjectRoleName(projectRoleWhichProvidesPermissions, project), "domain::"+c.domain)
 	return err
 }
 
 func (c *casbinRBAC) LinkProjectAndAssetRole(
-	projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions core.Role, project string, asset string,
+	projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions shared.Role, project string, asset string,
 ) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(projectRoleWhichGetsPermission, project), c.getAssetRoleName(assetRoleWhichProvidesPermissions, asset), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) getProjectRoleName(role core.Role, project string) string {
+func (c *casbinRBAC) getProjectRoleName(role shared.Role, project string) string {
 	return "project::" + project + "|role::" + string(role)
 }
 
-func (c *casbinRBAC) getAssetRoleName(role core.Role, asset string) string {
+func (c *casbinRBAC) getAssetRoleName(role shared.Role, asset string) string {
 	return "asset::" + asset + "|role::" + string(role)
 }
 
-func (c *casbinRBAC) RevokeRole(user string, role core.Role) error {
+func (c *casbinRBAC) RevokeRole(user string, role shared.Role) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
 
 	return err
 }
 
 func (c *casbinRBAC) RevokeAllRolesInProjectForUser(user string, project string) error {
-	for _, role := range []core.Role{core.RoleOwner, core.RoleAdmin, core.RoleMember} {
+	for _, role := range []shared.Role{shared.RoleOwner, shared.RoleAdmin, shared.RoleMember} {
 		err := c.RevokeRoleInProject(user, role, project)
 		if err != nil {
 			return fmt.Errorf("could not revoke role %s for user %s in project %s: %w", role, user, project, err)
@@ -285,7 +284,7 @@ func (c *casbinRBAC) RevokeAllRolesInProjectForUser(user string, project string)
 }
 
 func (c *casbinRBAC) RevokeAllRolesInAssetForUser(user string, asset string) error {
-	for _, role := range []core.Role{core.RoleOwner, core.RoleAdmin, core.RoleMember} {
+	for _, role := range []shared.Role{shared.RoleOwner, shared.RoleAdmin, shared.RoleMember} {
 		err := c.RevokeRoleInAsset(user, role, asset)
 		if err != nil {
 			return fmt.Errorf("could not revoke role %s for user %s in project %s: %w", role, user, asset, err)
@@ -294,7 +293,7 @@ func (c *casbinRBAC) RevokeAllRolesInAssetForUser(user string, asset string) err
 	return nil
 }
 
-func (c *casbinRBAC) AllowRole(role core.Role, object core.Object, action []core.Action) error {
+func (c *casbinRBAC) AllowRole(role shared.Role, object shared.Object, action []shared.Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"role::" + string(role), "domain::" + c.domain, "obj::" + string(object), "act::" + string(ac)}
@@ -304,7 +303,7 @@ func (c *casbinRBAC) AllowRole(role core.Role, object core.Object, action []core
 	return err
 }
 
-func (c *casbinRBAC) AllowRoleInProject(project string, role core.Role, object core.Object, action []core.Action) error {
+func (c *casbinRBAC) AllowRoleInProject(project string, role shared.Role, object shared.Object, action []shared.Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"project::" + project + "|role::" + string(role), "domain::" + c.domain, "project::" + project + "|obj::" + string(object), "act::" + string(ac)}
@@ -313,7 +312,7 @@ func (c *casbinRBAC) AllowRoleInProject(project string, role core.Role, object c
 	return err
 }
 
-func (c *casbinRBAC) AllowRoleInAsset(asset string, role core.Role, object core.Object, action []core.Action) error {
+func (c *casbinRBAC) AllowRoleInAsset(asset string, role shared.Role, object shared.Object, action []shared.Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"asset::" + asset + "|role::" + string(role), "domain::" + c.domain, "asset::" + asset + "|obj::" + string(object), "act::" + string(ac)}
@@ -322,27 +321,27 @@ func (c *casbinRBAC) AllowRoleInAsset(asset string, role core.Role, object core.
 	return err
 }
 
-func (c *casbinRBAC) GrantRoleInProject(user string, role core.Role, project string) error {
+func (c *casbinRBAC) GrantRoleInProject(user string, role shared.Role, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) GrantRoleInAsset(user string, role core.Role, asset string) error {
+func (c *casbinRBAC) GrantRoleInAsset(user string, role shared.Role, asset string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) RevokeRoleInProject(user string, role core.Role, project string) error {
+func (c *casbinRBAC) RevokeRoleInProject(user string, role shared.Role, project string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) RevokeRoleInAsset(user string, role core.Role, project string) error {
+func (c *casbinRBAC) RevokeRoleInAsset(user string, role shared.Role, project string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "asset::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(user string, object core.Object, action core.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowed(user string, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 
 	if err != nil {
@@ -358,7 +357,7 @@ func (c *casbinRBAC) IsAllowed(user string, object core.Object, action core.Acti
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, object core.Object, action core.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -374,7 +373,7 @@ func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, ob
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInAsset(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInAsset(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err

@@ -1,4 +1,4 @@
-package risk
+package vulndb
 
 import (
 	"log/slog"
@@ -10,17 +10,17 @@ import (
 	gocvss40 "github.com/pandatix/go-cvss/40"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) common.RiskCalculationReport {
+func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth int) common.RiskCalculationReport {
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
-	e := core.SanitizeEnv(env)
+	e := shared.SanitizeEnv(env)
 	r, vector := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
@@ -59,7 +59,7 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	}
 }
 
-func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics, string) {
+func RiskCalculation(cve models.CVE, env shared.Environmental) (common.RiskMetrics, string) {
 	if cve.Vector == "" {
 		return common.RiskMetrics{}, ""
 	}
@@ -246,7 +246,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics
 		}
 
 		setEnv(cvss, env)
-		if env != (core.Environmental{}) {
+		if env != (shared.Environmental{}) {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 		} else {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
@@ -310,7 +310,7 @@ func getBaseAndEnvironmentalScore(cvss cvssInterface, version string) float64 {
 	return score
 }
 
-func setEnv(cvss cvssInterface, env core.Environmental) {
+func setEnv(cvss cvssInterface, env shared.Environmental) {
 	if env.ConfidentialityRequirements != "" {
 		cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
 	}

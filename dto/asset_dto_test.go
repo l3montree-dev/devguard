@@ -1,4 +1,4 @@
-package asset
+package dtos
 
 import (
 	"testing"

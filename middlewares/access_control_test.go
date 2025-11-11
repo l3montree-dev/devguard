@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package api
+package middleware
 
 import (
 	"errors"
@@ -21,9 +21,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,13 +42,13 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", "user-id", core.ObjectOrganization, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead)
+		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -72,13 +72,13 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", "user-id", core.ObjectOrganization, core.ActionUpdate).Return(false, nil)
+		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionUpdate)
+		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -102,13 +102,13 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockRBAC.On("IsAllowed", "user-id", core.ObjectOrganization, core.ActionRead).Return(false, nil)
+		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead)
+		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -142,7 +142,7 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", core.ObjectProject, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -150,7 +150,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(core.ObjectProject, core.ActionRead)
+		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -182,7 +182,7 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", core.ObjectProject, core.ActionUpdate).Return(false, nil)
+		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -190,7 +190,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(core.ObjectProject, core.ActionUpdate)
+		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -222,7 +222,7 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", core.ObjectProject, core.ActionRead).Return(false, nil)
+		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -230,7 +230,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(core.ObjectProject, core.ActionRead)
+		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -262,7 +262,7 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		// Project already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", core.ObjectProject, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -271,7 +271,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(core.ObjectProject, core.ActionRead)
+		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -306,7 +306,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", core.ObjectAsset, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -314,7 +314,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -346,7 +346,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", core.ObjectAsset, core.ActionUpdate).Return(false, nil)
+		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -354,7 +354,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionUpdate)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -389,7 +389,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", core.ObjectAsset, core.ActionRead).Return(false, nil)
+		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -397,7 +397,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -429,7 +429,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		// Asset already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", core.ObjectAsset, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -438,7 +438,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -472,7 +472,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("nonexistent-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -505,7 +505,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", core.ObjectAsset, core.ActionRead).Return(false, errors.New("rbac error"))
+		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, errors.New("rbac error"))
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -513,7 +513,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -554,7 +554,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
 		// The RBAC implementation should return true for org admins
-		mockRBAC.On("IsAllowedInProject", &project, "org-admin", core.ObjectProject, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInProject", &project, "org-admin", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -562,7 +562,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(core.ObjectProject, core.ActionRead)
+		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
@@ -592,7 +592,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
 		// The RBAC implementation should return true for project admins
-		mockRBAC.On("IsAllowedInAsset", &asset, "project-admin", core.ObjectAsset, core.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInAsset", &asset, "project-admin", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -600,7 +600,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(core.ObjectAsset, core.ActionRead)
+		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")

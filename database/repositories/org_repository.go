@@ -20,25 +20,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 
 	project "github.com/l3montree-dev/devguard/internal/core/project"
 )
 
 type orgRepository struct {
-	db core.DB
-	common.Repository[uuid.UUID, models.Org, core.DB]
+	db shared.DB
+	common.Repository[uuid.UUID, models.Org, shared.DB]
 }
 
-func NewOrgRepository(db core.DB) *orgRepository {
+func NewOrgRepository(db shared.DB) *orgRepository {
 	return &orgRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Org](db),
 	}
 }
 
-func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
+func (g *orgRepository) Create(tx shared.DB, org *models.Org) error {
 	firstFreeSlug, err := g.firstFreeSlug(org.Slug)
 	if err != nil {
 		return fmt.Errorf("could not generate next slug: %w", err)
@@ -48,7 +48,7 @@ func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
 	return g.GetDB(tx).Create(org).Error
 }
 
-func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
+func (g *orgRepository) Save(tx shared.DB, org *models.Org) error {
 	// if the slug is empty, generate a new one
 	if org.ID == uuid.Nil {
 		firstFreeSlug, err := g.firstFreeSlug(org.Name)
@@ -73,7 +73,7 @@ func (g *orgRepository) List(ids []uuid.UUID) ([]models.Org, error) {
 	return ts, err
 }
 
-func (g *orgRepository) Update(tx core.DB, org *models.Org) error {
+func (g *orgRepository) Update(tx shared.DB, org *models.Org) error {
 	return g.GetDB(tx).Save(org).Error
 }
 

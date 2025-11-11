@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type statisticsRepository struct {
-	db core.DB
+	db shared.DB
 }
 
-func NewStatisticsRepository(db core.DB) *statisticsRepository {
+func NewStatisticsRepository(db shared.DB) *statisticsRepository {
 	return &statisticsRepository{
 		db: db,
 	}
@@ -24,21 +24,21 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 	dependencyVulns := []models.DependencyVuln{}
 	var err error
 	if artifactName == nil && assetVersionName == nil {
-		err = r.db.Debug().Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+		err = r.db.Debug().Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
 			Where("dependency_vulns.asset_id = ?", assetID).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	} else if artifactName != nil {
-		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
 			Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	} else {
-		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
+		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error

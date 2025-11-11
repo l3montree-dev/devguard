@@ -17,12 +17,12 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, artifactName string) models.VulnEvent {
@@ -209,7 +209,7 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
+func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
 	artifactName := ""
 	if len(artifacts) > 0 {
 		artifactName = artifacts[0].ArtifactName

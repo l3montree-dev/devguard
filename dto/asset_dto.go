@@ -1,12 +1,11 @@
-package asset
+package dtos
 
 import (
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 )
 
 type LookupResponse struct {
@@ -16,11 +15,11 @@ type LookupResponse struct {
 	Link    string `json:"link"`
 }
 
-type changeRoleRequest struct {
+type AssetChangeRoleRequest struct {
 	Role string `json:"role" validate:"required,oneof=member admin"`
 }
 
-type inviteToAssetRequest struct {
+type AssetInviteToAssetRequest struct {
 	Ids []string `json:"ids" validate:"required"`
 }
 
@@ -71,12 +70,12 @@ type AssetWithSecretsDTO struct {
 
 type AssetDetailsDTO struct {
 	AssetDTO
-	Members []core.User `json:"members"`
+	Members []UserDTO `json:"members"`
 }
 
 type AssetDetailsWithSecretsDTO struct {
 	AssetWithSecretsDTO
-	Members []core.User `json:"members"`
+	Members []UserDTO `json:"members"`
 }
 
 func ToDTOs(assets []models.Asset) []AssetDTO {
@@ -87,14 +86,14 @@ func ToDTOs(assets []models.Asset) []AssetDTO {
 	return assetDTOs
 }
 
-func ToDetailsDTO(asset models.Asset, members []core.User) AssetDetailsDTO {
+func ToDetailsDTO(asset models.Asset, members []UserDTO) AssetDetailsDTO {
 	return AssetDetailsDTO{
 		AssetDTO: ToDTO(asset),
 		Members:  members,
 	}
 }
 
-func ToDetailsDTOWithSecrets(asset models.Asset, members []core.User) AssetDetailsWithSecretsDTO {
+func ToDetailsDTOWithSecrets(asset models.Asset, members []UserDTO) AssetDetailsWithSecretsDTO {
 	return AssetDetailsWithSecretsDTO{
 		AssetWithSecretsDTO: toDTOWithSecrets(asset),
 		Members:             members,
@@ -144,7 +143,7 @@ func toDTOWithSecrets(asset models.Asset) AssetWithSecretsDTO {
 	}
 }
 
-type createRequest struct {
+type AssetCreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
@@ -172,7 +171,7 @@ func sanitizeRequirementLevel(level string) models.RequirementLevel {
 	}
 }
 
-func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
+func (a *AssetCreateRequest) toModel(projectID uuid.UUID) models.Asset {
 	asset := models.Asset{Name: a.Name,
 		Slug:        slug.Make(a.Name),
 		ProjectID:   projectID,

@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -14,17 +13,17 @@ import (
 
 func (g *GitlabIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
-	case core.ManualMitigateEvent:
-		asset := core.GetAsset(event.Ctx)
+	case shared.ManualMitigateEvent:
+		asset := shared.GetAsset(event.Ctx)
 
-		assetVersionName := core.GetAssetVersion(event.Ctx).Name
+		assetVersionName := shared.GetAssetVersion(event.Ctx).Name
 
-		projectSlug, err := core.GetProjectSlug(event.Ctx)
+		projectSlug, err := shared.GetProjectSlug(event.Ctx)
 
 		if err != nil {
 			return err
 		}
-		vulnID, vulnType, err := core.GetVulnID(event.Ctx)
+		vulnID, vulnType, err := shared.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}
@@ -53,12 +52,12 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			vuln = &licenseRisk
 		}
 
-		orgSlug, err := core.GetOrgSlug(event.Ctx)
+		orgSlug, err := shared.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		session := core.GetSession(event.Ctx)
+		session := shared.GetSession(event.Ctx)
 
 		//check if we have already created the labels in gitlab, if not create them
 		if asset.Metadata == nil {
@@ -77,7 +76,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
-	case core.VulnEvent:
+	case shared.VulnEvent:
 		ev := event.Event
 
 		vulnType := ev.VulnType
@@ -104,8 +103,8 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			vuln = &licenseRisk
 		}
 
-		asset := core.GetAsset(event.Ctx)
-		assetVersionSlug := core.GetAssetVersion(event.Ctx).Slug
+		asset := shared.GetAsset(event.Ctx)
+		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
 
 		if vuln.GetTicketID() == nil {
 			// we do not have a ticket id - we do not need to do anything
@@ -135,12 +134,12 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member core.User) bool {
+			func(member shared.User) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = core.User{
+			member = shared.User{
 				Name: "unknown",
 			}
 		}

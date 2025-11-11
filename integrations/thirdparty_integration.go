@@ -6,20 +6,20 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 // batches multiple third party integrations
 type thirdPartyIntegrations struct {
-	integrations           []core.ThirdPartyIntegration
-	externalUserRepository core.ExternalUserRepository
+	integrations           []shared.ThirdPartyIntegration
+	externalUserRepository shared.ExternalUserRepository
 }
 
-var _ core.IntegrationAggregate = &thirdPartyIntegrations{}
+var _ shared.IntegrationAggregate = &thirdPartyIntegrations{}
 
-func (t *thirdPartyIntegrations) GetIntegration(id core.IntegrationID) core.ThirdPartyIntegration {
+func (t *thirdPartyIntegrations) GetIntegration(id shared.IntegrationID) shared.ThirdPartyIntegration {
 	for _, i := range t.integrations {
 		if i.GetID() == id {
 			return i
@@ -28,14 +28,14 @@ func (t *thirdPartyIntegrations) GetIntegration(id core.IntegrationID) core.Thir
 	return nil
 }
 
-func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
-	return core.AggregateID
+func (t *thirdPartyIntegrations) GetID() shared.IntegrationID {
+	return shared.AggregateID
 }
 
-func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	type projectsWithRoles struct {
 		projects []models.Project
-		roles    []core.Role
+		roles    []shared.Role
 	}
 
 	wg := utils.ErrGroup[projectsWithRoles](-1)
@@ -57,7 +57,7 @@ func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, 
 	}
 
 	projects := make([]models.Project, 0, len(results))
-	roles := make([]core.Role, 0, len(results))
+	roles := make([]shared.Role, 0, len(results))
 	for _, result := range results {
 		projects = append(projects, result.projects...)
 		roles = append(roles, result.roles...)
@@ -65,10 +65,10 @@ func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, 
 	return projects, roles, nil
 }
 
-func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	type assetsWithRoles struct {
 		assets []models.Asset
-		roles  []core.Role
+		roles  []shared.Role
 	}
 	wg := utils.ErrGroup[assetsWithRoles](-1)
 
@@ -87,7 +87,7 @@ func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string
 		slog.Error("error while listing projects", "err", err)
 	}
 	assets := make([]models.Asset, 0, len(results))
-	roles := make([]core.Role, 0, len(results))
+	roles := make([]shared.Role, 0, len(results))
 	for _, result := range results {
 		assets = append(assets, result.assets...)
 		roles = append(roles, result.roles...)
@@ -95,7 +95,7 @@ func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string
 	return assets, roles, nil
 }
 
-func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	for _, i := range t.integrations {
 		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
 		if unauth != nil {
@@ -110,10 +110,10 @@ func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Cont
 	return false, nil
 }
 
-func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	wg := utils.ErrGroup[[]core.Repository](-1)
+func (t *thirdPartyIntegrations) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+	wg := utils.ErrGroup[[]shared.Repository](-1)
 	for _, i := range t.integrations {
-		wg.Go(func() ([]core.Repository, error) {
+		wg.Go(func() ([]shared.Repository, error) {
 			repos, err := i.ListRepositories(ctx)
 			if err != nil {
 				slog.Debug("error while listing repositories", "err", err)
@@ -133,7 +133,7 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 	return utils.Flat(results), nil
 }
 
-func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (t *thirdPartyIntegrations) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	wg := utils.ErrGroup[[]models.Org](-1)
 
 	for _, i := range t.integrations {
@@ -155,13 +155,13 @@ func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error
 	return utils.Flat(results), nil
 }
 
-func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx core.Context) bool {
-	return utils.Any(t.integrations, func(i core.ThirdPartyIntegration) bool {
+func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx shared.Context) bool {
+	return utils.Any(t.integrations, func(i shared.ThirdPartyIntegration) bool {
 		return i.WantsToHandleWebhook(ctx)
 	})
 }
 
-func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
+func (t *thirdPartyIntegrations) HandleWebhook(ctx shared.Context) error {
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
 	return nil
 }
 
-func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
+func (t *thirdPartyIntegrations) GetUsers(org models.Org) []shared.User {
 
 	users, err := t.externalUserRepository.FindByOrgID(nil, org.ID)
 	if err != nil {
@@ -193,13 +193,13 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
 		return nil
 	}
 
-	return utils.Map(users, func(user models.ExternalUser) core.User {
-		return core.User{
+	return utils.Map(users, func(user models.ExternalUser) shared.User {
+		return shared.User{
 			ID:        user.ID,
 			Name:      user.Username,
 			AvatarURL: &user.AvatarURL,
 
-			Role: string(core.RoleUnknown), // all users from github are members
+			Role: string(shared.RoleUnknown), // all users from github are members
 		}
 	})
 }
@@ -250,7 +250,7 @@ func (t *thirdPartyIntegrations) CreateLabels(ctx context.Context, asset models.
 	return err
 }
 
-func NewThirdPartyIntegrations(externalUserRepository core.ExternalUserRepository, integrations ...core.ThirdPartyIntegration) *thirdPartyIntegrations {
+func NewThirdPartyIntegrations(externalUserRepository shared.ExternalUserRepository, integrations ...shared.ThirdPartyIntegration) *thirdPartyIntegrations {
 	return &thirdPartyIntegrations{
 		integrations:           integrations,
 		externalUserRepository: externalUserRepository,

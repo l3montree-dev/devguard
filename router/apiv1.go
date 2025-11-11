@@ -1,7 +1,6 @@
 package router
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -31,22 +30,22 @@ func health(ctx echo.Context) error {
 }
 
 func NewAPIV1Router(srv *echo.Echo,
-	thirdPartyIntegration core.IntegrationAggregate,
+	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin *client.APIClient,
 ) APIV1Router {
 	apiV1Router := srv.Group("/api/v1")
 	// this makes the third party integrations available to all controllers
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
-			core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+		return func(ctx shared.Context) error {
+			shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 			return next(ctx)
 		}
 	})
 
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 			// set the ory admin client to the context
-			core.SetAuthAdminClient(ctx, core.NewAdminClient(oryAdmin))
+			shared.SetAuthAdminClient(ctx, shared.NewAdminClient(oryAdmin))
 			return next(ctx)
 		}
 	})
