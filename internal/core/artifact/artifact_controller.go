@@ -5,7 +5,6 @@ package artifact
 
 import (
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -41,19 +40,17 @@ func NewController(artifactRepository core.ArtifactRepository, artifactService c
 }
 
 type informationSource struct {
-	URL  string  `json:"url"`
-	Purl *string `json:"purl"`
+	Purl string `json:"purl,omitempty"`
+	// type can be "csaf", "vex", "sbom"
+	Type string `json:"type,omitempty"`
 }
 
 func informationSourceToString(source informationSource) string {
-	// detect a csaf url
-	if !strings.HasSuffix(source.URL, "provider-metadata.json") {
-		return source.URL
+	if source.Type == "" {
+		return source.Purl
 	}
-	if source.Purl != nil && *source.Purl != "" {
-		return *source.Purl + ":" + source.URL
-	}
-	return source.URL
+
+	return source.Type + ":" + source.Purl
 }
 
 func (c *controller) Create(ctx core.Context) error {
