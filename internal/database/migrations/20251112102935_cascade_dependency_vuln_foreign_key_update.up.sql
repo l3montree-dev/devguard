@@ -21,4 +21,5 @@ DROP CONSTRAINT fk_artifact_dependency_vulns_dependency_vuln;
 ALTER TABLE public.artifact_dependency_vulns
 ADD CONSTRAINT fk_artifact_dependency_vulns_dependency_vuln
 FOREIGN KEY (dependency_vuln_id) REFERENCES public.dependency_vulns(id)
-ON UPDATE CASCADE;
+ON UPDATE CASCADE
+ON DELETE CASCADE;
