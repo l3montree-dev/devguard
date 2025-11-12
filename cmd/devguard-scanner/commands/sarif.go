@@ -60,7 +60,8 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 	}
 
-	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
@@ -241,7 +242,8 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
 		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
@@ -266,6 +268,8 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 		}
 
+		slog.Info("Uploading SARIF report", "scannerID", scannerID)
+
 		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
@@ -282,6 +286,10 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
+			// check for timeout
+			if os.IsTimeout(err) || strings.Contains(err.Error(), "context deadline exceeded") {
+				slog.Error("request timed out after configured or default timeout - as scan commands can take a while consider increasing using the --timeout flag", "timeout", timeout)
+			}
 			return errors.Wrap(err, "could not send request")
 		}
 

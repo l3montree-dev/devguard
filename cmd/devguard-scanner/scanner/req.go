@@ -32,7 +32,8 @@ import (
 )
 
 func UploadVEX(vex io.Reader) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
@@ -55,7 +56,8 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 }
 
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
 	if err != nil {
