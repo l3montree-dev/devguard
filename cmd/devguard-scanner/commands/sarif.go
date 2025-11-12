@@ -82,6 +82,10 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
+		}
 		return err
 	}
 
@@ -242,14 +246,15 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			}
 		}
 
-		timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
 		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
+		slog.Info("Completed code scan", "scannerID", scannerID)
+
+		timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
 		// expand snippet and obfuscate it
 		expandAndObfuscateSnippet(sarifResult, config.RuntimeBaseConfig.Path)
@@ -287,8 +292,8 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			// check for timeout
-			if os.IsTimeout(err) || strings.Contains(err.Error(), "context deadline exceeded") {
-				slog.Error("request timed out after configured or default timeout - as scan commands can take a while consider increasing using the --timeout flag", "timeout", timeout)
+			if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+				slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
 			}
 			return errors.Wrap(err, "could not send request")
 		}

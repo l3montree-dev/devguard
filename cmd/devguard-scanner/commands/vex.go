@@ -16,11 +16,16 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +56,10 @@ Example:
 
 			resp, err := scanner.UploadVEX(file)
 			if err != nil {
+				// check for timeout
+				if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+					slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", time.Duration(config.RuntimeBaseConfig.Timeout)*time.Second)
+				}
 				return fmt.Errorf("could not upload VEX: %w", err)
 			}
 
