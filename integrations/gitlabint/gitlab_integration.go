@@ -1086,8 +1086,8 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 	return err
 }
 
-func (g *GitlabIntegration) GetUsers(org models.Org) []shared.User {
-	return []shared.User{}
+func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.User {
+	return []dtos.User{}
 }
 
 func (g *GitlabIntegration) GetID() shared.IntegrationID {

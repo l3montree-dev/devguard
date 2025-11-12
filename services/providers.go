@@ -6,7 +6,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
@@ -21,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/services"
 )
 
 // Module provides all service-layer constructors
@@ -38,7 +38,7 @@ var Module = fx.Options(
 		return common.OutgoingConnectionClient
 	}),
 	fx.Provide(NewCSAFService),
-	fx.Provide(artifact.NewService),
+	fx.Provide(services.NewArtifactService),
 	fx.Provide(statistics.NewService),
 	fx.Provide(intoto.NewInTotoService),
 	fx.Provide(org.NewService),

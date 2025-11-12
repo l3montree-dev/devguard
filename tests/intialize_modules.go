@@ -66,7 +66,7 @@ func CreateDependencyVulnService(db shared.DB, oauth2 map[string]*gitlabint.Gitl
 }
 
 func CreateArtifactService(db shared.DB, openSourceInsightsService shared.OpenSourceInsightService) shared.ArtifactService {
-	return artifact.NewService(
+	return services.NewArtifactService(
 		repositories.NewArtifactRepository(db),
 		csaf.NewCSAFService(common.OutgoingConnectionClient),
 		repositories.NewCVERepository(db),

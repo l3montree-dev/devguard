@@ -378,7 +378,7 @@ func (a *assetController) GetBadges(ctx shared.Context) error {
 	return ctx.String(200, svg)
 }
 
-func FetchMembersOfAsset(ctx shared.Context) ([]shared.User, error) {
+func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
 	asset := shared.GetAsset(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -388,7 +388,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]shared.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []shared.User{}, nil
+		return []dtos.User{}, nil
 	}
 
 	// get the auth admin client from the context
@@ -400,7 +400,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]shared.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) shared.User {
+	users := utils.Map(m, func(i client.Identity) dtos.User {
 		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
 		if nameMap != nil {
@@ -413,12 +413,12 @@ func FetchMembersOfAsset(ctx shared.Context) ([]shared.User, error) {
 		}
 		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
 		if err != nil {
-			return shared.User{
+			return dtos.User{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return shared.User{
+		return dtos.User{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),
@@ -443,7 +443,7 @@ func (a *assetController) InviteMembers(c shared.Context) error {
 	// get rbac
 	rbac := shared.GetRBAC(c)
 
-	var req inviteToAssetRequest
+	var req dtos.AssetInviteToAssetRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}

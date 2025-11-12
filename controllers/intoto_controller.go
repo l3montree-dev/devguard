@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	dtos "github.com/l3montree-dev/devguard/dto"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
 
@@ -33,7 +34,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type httpController struct {
+type inToToController struct {
 	linkRepository         shared.InTotoLinkRepository
 	supplyChainRepository  shared.SupplyChainRepository
 	assetVersionRepository shared.AssetVersionRepository
@@ -42,8 +43,8 @@ type httpController struct {
 	inTotoVerifierService shared.InTotoVerifierService
 }
 
-func NewHTTPController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, inTotoVerifierService shared.InTotoVerifierService) *httpController {
-	return &httpController{
+func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, inTotoVerifierService shared.InTotoVerifierService) *inToToController {
+	return &inToToController{
 		linkRepository:         repository,
 		supplyChainRepository:  supplyChainRepository,
 		assetVersionRepository: assetVersionRepository,
@@ -52,7 +53,7 @@ func NewHTTPController(repository shared.InTotoLinkRepository, supplyChainReposi
 	}
 }
 
-func (a *httpController) VerifySupplyChain(ctx shared.Context) error {
+func (a *inToToController) VerifySupplyChain(ctx shared.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
 
@@ -85,8 +86,8 @@ func (a *httpController) VerifySupplyChain(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (a *httpController) Create(ctx shared.Context) error {
-	var req createInTotoLinkRequest
+func (a *inToToController) Create(ctx shared.Context) error {
+	var req dtos.CreateInTotoLinkRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -116,7 +117,7 @@ func (a *httpController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not load metadata").WithInternal(valid)
 	}
 
-	pubKey, valid := hexPublicKeyToInTotoKey(pat.PubKey)
+	pubKey, valid := a.inTotoVerifierService.HexPublicKeyToInTotoKey(pat.PubKey)
 	if valid != nil {
 		return echo.NewHTTPError(500, "could not convert public key").WithInternal(valid)
 	}
@@ -181,7 +182,7 @@ func (a *httpController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, link)
 }
 
-func (a *httpController) RootLayout(ctx shared.Context) error {
+func (a *inToToController) RootLayout(ctx shared.Context) error {
 	// get all pats which are part of the asset
 	project := shared.GetProject(ctx)
 	accessControl := shared.GetRBAC(ctx)
@@ -210,7 +211,7 @@ func (a *httpController) RootLayout(ctx shared.Context) error {
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := hexPublicKeyToInTotoKey(pat.PubKey)
+		key, err := a.inTotoVerifierService.HexPublicKeyToInTotoKey(pat.PubKey)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
 		}
@@ -308,7 +309,7 @@ func (a *httpController) RootLayout(ctx shared.Context) error {
 	return ctx.File(tmpfile.Name())
 }
 
-func (a *httpController) Read(ctx shared.Context) error {
+func (a *inToToController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// find a link with the corresponding opaque id
 	links, err := a.linkRepository.FindByAssetAndSupplyChainID(app.GetID(), ctx.Param("supplyChainID"))

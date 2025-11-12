@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	dtos "github.com/l3montree-dev/devguard/dto"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -339,7 +340,7 @@ func TestHTTPControllerMembers(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var users []shared.User
+		var users []dtos.User
 		json.Unmarshal(rec.Body.Bytes(), &users) // nolint:errcheck
 		assert.Len(t, users, 1)
 		assert.Equal(t, "Test User", users[0].Name)
@@ -350,7 +351,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 	e := echo.New()
 
 	t.Run("successfully invites members", func(t *testing.T) {
-		reqBody := inviteToAssetRequest{
+		reqBody := dtos.AssetInviteToAssetRequest{
 			Ids: []string{"user-123", "user-456"},
 		}
 		body, _ := json.Marshal(reqBody)
@@ -388,7 +389,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 	})
 
 	t.Run("returns error when user is not project member", func(t *testing.T) {
-		reqBody := inviteToAssetRequest{
+		reqBody := dtos.AssetInviteToAssetRequest{
 			Ids: []string{"user-123"},
 		}
 		body, _ := json.Marshal(reqBody)
@@ -425,7 +426,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 	})
 
 	t.Run("returns error when RBAC fails", func(t *testing.T) {
-		reqBody := inviteToAssetRequest{
+		reqBody := dtos.AssetInviteToAssetRequest{
 			Ids: []string{"user-123"},
 		}
 		body, _ := json.Marshal(reqBody)

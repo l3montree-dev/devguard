@@ -664,12 +664,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member shared.User) bool {
+			func(member dtos.User) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = shared.User{
+			member = dtos.User{
 				Name: "unknown",
 			}
 		}

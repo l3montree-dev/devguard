@@ -66,7 +66,7 @@ func (projectController *projectController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, newProject)
 }
 
-func FetchMembersOfProject(ctx shared.Context) ([]shared.User, error) {
+func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
 	project := shared.GetProject(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -76,7 +76,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]shared.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []shared.User{}, nil
+		return []dtos.User{}, nil
 	}
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -87,7 +87,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]shared.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) shared.User {
+	users := utils.Map(m, func(i client.Identity) dtos.User {
 		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
 		if nameMap != nil {
@@ -100,12 +100,12 @@ func FetchMembersOfProject(ctx shared.Context) ([]shared.User, error) {
 		}
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
-			return shared.User{
+			return dtos.User{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return shared.User{
+		return dtos.User{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),

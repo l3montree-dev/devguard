@@ -378,7 +378,7 @@ func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 	return nil
 }
 
-func (w *WebhookIntegration) GetUsers(org models.Org) []shared.User {
+func (w *WebhookIntegration) GetUsers(org models.Org) []dtos.User {
 	// Logic to get users in an organization
 	return nil
 }

@@ -286,7 +286,7 @@ func (controller *httpController) RemoveMember(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func FetchMembersOfOrganization(ctx shared.Context) ([]shared.User, error) {
+func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.User, error) {
 	// get all members from the organization
 	organization := shared.GetOrg(ctx)
 	accessControl := shared.GetRBAC(ctx)
@@ -297,7 +297,7 @@ func FetchMembersOfOrganization(ctx shared.Context) ([]shared.User, error) {
 		return nil, err
 	}
 
-	users := make([]shared.User, 0, len(members))
+	users := make([]dtos.User, 0, len(members))
 	if len(members) > 0 {
 		// get the auth admin client from the context
 		authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -341,7 +341,7 @@ func FetchMembersOfOrganization(ctx shared.Context) ([]shared.User, error) {
 				}
 			}
 
-			users = append(users, shared.User{
+			users = append(users, dtos.User{
 				ID:   member.Id,
 				Name: name,
 				Role: string(roleMap[member.Id]),

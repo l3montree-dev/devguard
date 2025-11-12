@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	integration_tests "github.com/l3montree-dev/devguard/tests"
 	"github.com/labstack/echo/v4"
@@ -31,8 +32,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 	assetVersionService := mocks.NewAssetVersionService(t)
 	dependencyVulnService := mocks.NewDependencyVulnService(t)
 
-	artifactService := artifact.NewService(artifactRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-	controller := artifact.NewController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
+	artifactService := services.NewArtifactService(artifactRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+	controller := NewArtifactController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
 
 	// Create test organization, project, asset, and asset version
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -174,8 +175,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		terminateFailingDB() // Close the database connection to simulate a failure
 
 		failingRepository := repositories.NewArtifactRepository(failingDB)
-		failingService := artifact.NewService(failingRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-		failingController := artifact.NewController(failingRepository, failingService, nil, nil, nil, nil, nil)
+		failingService := services.NewArtifactService(failingRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+		failingController := NewArtifactController(failingRepository, failingService, nil, nil, nil, nil, nil)
 
 		// Setup HTTP request and response
 		recorder := httptest.NewRecorder()

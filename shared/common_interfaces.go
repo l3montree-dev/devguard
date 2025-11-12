@@ -21,9 +21,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dto"
+	dtos "github.com/l3montree-dev/devguard/dto"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/labstack/echo/v4"
 
@@ -193,7 +194,7 @@ type DependencyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
-	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dto.DependencyVulnHints, error)
+	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
@@ -293,6 +294,7 @@ type InTotoVerifierService interface {
 	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error)
 	VerifySupplyChain(supplyChainID string) (bool, error)
 	VerifySupplyChainByDigestOnly(digest string) (bool, error)
+	HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error)
 }
 
 type AssetService interface {

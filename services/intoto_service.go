@@ -120,7 +120,7 @@ func (i InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 	}
 
 	// convert the pats to in-toto keys
-	keyIDs, totoKeys, err := convertPatsToInTotoKeys(pats)
+	keyIDs, totoKeys, err := i.convertPatsToInTotoKeys(pats)
 	if err != nil {
 		return false, errors.Wrap(err, "could not convert pats to in-toto keys")
 	}
@@ -232,11 +232,11 @@ func getProjectUsersID(projectID uuid.UUID, accessControl shared.AccessControl) 
 	return userUuids, nil
 }
 
-func convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
+func (s InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := hexPublicKeyToInTotoKey(pat.PubKey)
+		key, err := s.HexPublicKeyToInTotoKey(pat.PubKey)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not convert public key")
 		}
@@ -397,7 +397,7 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 	return key, nil
 }
 
-func hexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
+func (InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
 	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }

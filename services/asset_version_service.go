@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	dtos "github.com/l3montree-dev/devguard/dto"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"

@@ -15,7 +15,7 @@
 
 package dtos
 
-type createInTotoLinkRequest struct {
+type CreateInTotoLinkRequest struct {
 	SupplyChainID           string `json:"supplyChainId"`
 	Step                    string `json:"step"`
 	Payload                 string `json:"payload"`

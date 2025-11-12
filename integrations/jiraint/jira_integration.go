@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
@@ -792,7 +793,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	return nil
 }
 
-func (i *JiraIntegration) GetUsers(org models.Org) []shared.User {
+func (i *JiraIntegration) GetUsers(org models.Org) []dtos.User {
 	// Jira integration does not have users in the same way as GitLab or GitHub
 	return nil
 }

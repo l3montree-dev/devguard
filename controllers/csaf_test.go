@@ -14,9 +14,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/csaf"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -52,7 +52,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 		},
 	}
 
-	artifactService := artifact.NewService(artifactRepository, csaf.NewCSAFService(httpsClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+	artifactService := services.NewArtifactService(artifactRepository, csaf.NewCSAFService(httpsClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
 	csafController := csaf.NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
 

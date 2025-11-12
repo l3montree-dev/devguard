@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -286,19 +287,19 @@ func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id sha
 }
 
 // GetUsers provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetUsers(org models.Org) []shared.User {
+func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.User {
 	ret := _mock.Called(org)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUsers")
 	}
 
-	var r0 []shared.User
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []shared.User); ok {
+	var r0 []dtos.User
+	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.User); ok {
 		r0 = returnFunc(org)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]shared.User)
+			r0 = ret.Get(0).([]dtos.User)
 		}
 	}
 	return r0
@@ -328,12 +329,12 @@ func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *Int
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) Return(users []shared.User) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) Return(users []dtos.User) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(users)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []shared.User) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.User) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }
