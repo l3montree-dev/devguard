@@ -55,6 +55,8 @@ type baseConfig struct {
 	Origin        string `json:"origin" mapstructure:"origin"`
 	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
 
+	Timeout int `json:"timeout" mapstructure:"timeout"`
+
 	Offline bool `json:"offline" mapstructure:"offline"`
 }
 
@@ -128,6 +130,10 @@ func ParseBaseConfig(runningCMD string) {
 
 	if RuntimeBaseConfig.ArtifactName == "" {
 		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
+	}
+
+	if RuntimeBaseConfig.Timeout <= 0 {
+		RuntimeBaseConfig.Timeout = 300
 	}
 }
 

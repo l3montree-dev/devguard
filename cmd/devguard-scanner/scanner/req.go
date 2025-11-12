@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
@@ -32,7 +33,8 @@ import (
 )
 
 func UploadVEX(vex io.Reader) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
@@ -55,7 +57,8 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 }
 
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
 	if err != nil {
@@ -74,6 +77,15 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", time.Duration(config.RuntimeBaseConfig.Timeout)*time.Second)
+		}
+		slog.Error("could not upload bom", "err", err)
+	}
+
 	return resp, cancel, err
 }
 
@@ -104,6 +116,11 @@ func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetNam
 
 	resp, err := devGuardClient.Do(req)
 	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", time.Duration(config.RuntimeBaseConfig.Timeout)*time.Second)
+		}
+		slog.Error("could not upload public key", "err", err)
 		return err
 	}
 
@@ -141,6 +158,10 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", time.Duration(config.RuntimeBaseConfig.Timeout)*time.Second)
+		}
 		slog.Error("could not upload attestation", "err", err)
 		return err
 	}
