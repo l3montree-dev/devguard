@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -43,17 +42,19 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 type informationSource struct {
 	URL  string  `json:"url"`
 	Purl *string `json:"purl"`
+	// type can be "csaf", "vex", "sbom"
+	Type string `json:"type,omitempty"`
 }
 
 func informationSourceToString(source informationSource) string {
-	// detect a csaf url
-	if !strings.HasSuffix(source.URL, "provider-metadata.json") {
-		return source.URL
-	}
+	r := source.URL
 	if source.Purl != nil && *source.Purl != "" {
-		return *source.Purl + ":" + source.URL
+		r = *source.Purl + ":" + r
 	}
-	return source.URL
+	if source.Type != "" {
+		r = source.Type + ":" + r
+	}
+	return r
 }
 
 func (c *artifactController) Create(ctx shared.Context) error {
@@ -250,7 +251,6 @@ func (c *artifactController) UpdateArtifact(ctx shared.Context) error {
 			slog.Error("could not scan sbom after updating it", "err", err)
 			return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
 		}
-		return nil
 	}
 
 	c.FireAndForget(func() {

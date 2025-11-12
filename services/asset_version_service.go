@@ -351,9 +351,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 		return f.CalculateHash()
 	})
 
-	// let the asset assetVersionService handle the new scan result - we do not need
-	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom.InformationFromVexOrMultipleSBOMs(), dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom, dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -489,7 +487,122 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, purlsReachableThroughMultipleRoots []string, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+// rewriteNewPurlsToExisting rewrites new vulnerability PURLs to use more specific existing PURLs
+// when the existing PURL is found in the parent chain of the new PURL.
+func rewriteNewPurlsToExisting(sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln, csafPurls []string) {
+	// Build a map of CVE to existing PURLs for quick lookup
+	cveToPurl := make(map[string][]string)
+	for _, existing := range existingDependencyVulns {
+		if existing.ComponentPurl != nil && existing.CVEID != nil {
+			cveToPurl[*existing.CVEID] = append(cveToPurl[*existing.CVEID], *existing.ComponentPurl)
+		}
+	}
+
+	// Check if we can improve new dependency vuln PURLs based on existing ones
+	for i, newVuln := range dependencyVulns {
+		if newVuln.ComponentPurl == nil || newVuln.CVEID == nil {
+			continue
+		}
+
+		existingPurls, hasSameCVE := cveToPurl[*newVuln.CVEID]
+		if !hasSameCVE {
+			continue
+		}
+
+		for _, existingPurl := range existingPurls {
+			// Skip if PURLs are identical or if existing is a CSAF root purl
+			if *newVuln.ComponentPurl == existingPurl || slices.Contains(csafPurls, existingPurl) {
+				continue
+			}
+
+			// Check if existing purl is in the parent chain of new purl
+			parents := sbom.GetAllParentNodes(existingPurl)
+			if slices.Contains(parents, *newVuln.ComponentPurl) {
+				slog.Info("rewriting purl of dependency vuln based on better matching from sbom",
+					"cve", *newVuln.CVEID, "oldPurl", *newVuln.ComponentPurl, "newPurl", existingPurl)
+				dependencyVulns[i].ComponentPurl = utils.Ptr(existingPurl)
+				break
+			}
+		}
+	}
+}
+
+// updateCsafRootPurls updates existing vulnerabilities that point to CSAF root PURLs
+// with more specific PURLs from the new scan. Returns update ID mappings and IDs to remove.
+func updateCsafRootPurls(dependencyVulns []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln, csafPurls []string) (updateIDs []map[string]string, removeNewIDs []string, removeExistingIDs []string) {
+	updateIDs = make([]map[string]string, 0)
+	removeNewIDs = make([]string, 0)
+	removeExistingIDs = make([]string, 0)
+
+	for _, existing := range existingDependencyVulns {
+		if existing.ComponentPurl == nil || !slices.Contains(csafPurls, *existing.ComponentPurl) {
+			continue
+		}
+
+		// Find matching CVE in new vulnerabilities with better (more specific) PURL
+		for _, newVuln := range dependencyVulns {
+			if newVuln.CVEID == nil || existing.CVEID == nil || *newVuln.CVEID != *existing.CVEID {
+				continue
+			}
+
+			if newVuln.ComponentPurl != nil && *newVuln.ComponentPurl != *existing.ComponentPurl {
+				slog.Info("rewriting purl of dependency vuln based on better matching from sbom for csaf root purl",
+					"cve", *newVuln.CVEID, "oldPurl", *existing.ComponentPurl, "newPurl", *newVuln.ComponentPurl)
+
+				// Update the existing vuln with new PURL and create ID mapping
+				oldID := existing.ID
+				existing.ComponentPurl = newVuln.ComponentPurl
+				newID := existing.CalculateHash()
+
+				updateIDs = append(updateIDs, map[string]string{
+					"oldID":   oldID,
+					"newID":   newID,
+					"newPurl": *existing.ComponentPurl,
+				})
+
+				removeNewIDs = append(removeNewIDs, newVuln.CalculateHash())
+				removeExistingIDs = append(removeExistingIDs, oldID)
+				break
+			}
+		}
+	}
+
+	return updateIDs, removeNewIDs, removeExistingIDs
+}
+
+// filterVulnerabilities removes vulnerabilities from the list based on IDs or hashes to remove
+func filterVulnerabilities(vulns []models.DependencyVuln, removeHashes []string, removeIDs []string) []models.DependencyVuln {
+	filtered := make([]models.DependencyVuln, 0, len(vulns))
+	for _, v := range vulns {
+		hash := v.CalculateHash()
+		if !slices.Contains(removeHashes, hash) && !slices.Contains(removeIDs, v.ID) {
+			filtered = append(filtered, v)
+		}
+	}
+	return filtered
+}
+
+// redistributeCsafPurlVulns rewrites vulnerability PURLs when better SBOM information is available.
+// It handles two cases:
+// 1. New scans with generic PURLs that can be rewritten to more specific existing PURLs
+// 2. Existing CSAF root PURLs that can be updated with more specific PURLs from new scans
+func redistributeCsafPurlVulns(sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []map[string]string) {
+	csafPurls := sbom.GetCsafRootPurls()
+
+	// Phase 1: Rewrite new PURLs to use more specific existing PURLs
+	rewriteNewPurlsToExisting(sbom, dependencyVulns, existingDependencyVulns, csafPurls)
+
+	// Phase 2: Update existing CSAF root PURLs with better information from new scan
+	updateIDs, removeNewIDs, removeExistingIDs := updateCsafRootPurls(dependencyVulns, existingDependencyVulns, csafPurls)
+
+	// Filter out vulnerabilities that are being updated or covered
+	filteredNew := filterVulnerabilities(dependencyVulns, removeNewIDs, nil)
+	filteredExisting := filterVulnerabilities(existingDependencyVulns, nil, removeExistingIDs)
+
+	return filteredNew, filteredExisting, updateIDs
+}
+
+func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -510,15 +623,20 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
+	var updateExistingVulns []map[string]string
+	dependencyVulns, existingDependencyVulns, updateExistingVulns = redistributeCsafPurlVulns(sbom, dependencyVulns, existingDependencyVulns)
+
 	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
+	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
 	filterPredicate := func(dv models.DependencyVuln) bool {
 		if dv.ComponentPurl == nil {
 			return true
 		}
-		return !slices.Contains(purlsReachableThroughMultipleRoots, *dv.ComponentPurl)
+		return !slices.Contains(unfixablePurls, *dv.ComponentPurl)
 	}
+
 	fixedVulns = utils.Filter(fixedVulns, filterPredicate)
 	fixedOnThisArtifactName = utils.Filter(fixedOnThisArtifactName, filterPredicate)
 
@@ -553,6 +671,42 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 			return err
 		}
 
+		if len(updateExistingVulns) > 0 {
+			// do it all in a single query - update the id and purl columns
+			var valueClauses []string
+			for _, uv := range updateExistingVulns {
+				valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s', '%s')", uv["oldID"], uv["newID"], uv["newPurl"]))
+			}
+			// Join the value clauses with commas
+			values := strings.Join(valueClauses, ",")
+			// Construct the SQL query
+			query := fmt.Sprintf(`
+				UPDATE dependency_vulns
+				SET id = data.new_id,
+				    component_purl = data.new_purl
+				FROM (VALUES %s) AS data(old_id, new_id, new_purl)
+				WHERE dependency_vulns.asset_id = ?
+				AND dependency_vulns.asset_version_name = ?
+				AND dependency_vulns.id = data.old_id
+			`, values)
+			if err := s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error; err != nil {
+				slog.Error("could not update dependency vuln ids and purls", "err", err)
+				return err
+			}
+
+			// update the vuln_events table as well
+			queryEvents := fmt.Sprintf(`
+				UPDATE vuln_events
+				SET vuln_id = data.new_id
+				FROM (VALUES %s) AS data(old_id, new_id, new_purl)	
+				WHERE vuln_events.vuln_id = data.old_id
+			`, values)
+			if err := s.dependencyVulnRepository.GetDB(tx).Exec(queryEvents).Error; err != nil {
+				slog.Error("could not update vuln event vuln ids", "err", err)
+				return err
+			}
+		}
+
 		if len(nothingChanged) > 0 {
 			var valueClauses []string
 			for _, dv := range nothingChanged {
@@ -567,8 +721,8 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 				UPDATE dependency_vulns
 				SET component_depth = data.component_depth
 				FROM (VALUES %s) AS data(id, component_depth)
-				WHERE dependency_vulns.asset_id = $1
-				AND dependency_vulns.asset_version_name = $2
+				WHERE dependency_vulns.asset_id = ?
+				AND dependency_vulns.asset_version_name = ?
 				AND dependency_vulns.id = data.id
 			`, values)
 			// update just the component depth for nothingChanged vulns

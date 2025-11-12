@@ -909,6 +909,30 @@ func (a *assetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion.DefaultBranch = true
 	return ctx.JSON(200, assetVersion)
 }
+func extractInformationSourceFromPurl(purl string) InformationSourceDTO {
+
+	InformationSourcesDTO := InformationSourceDTO{}
+	if strings.HasPrefix(purl, "vex:") {
+		InformationSourcesDTO.Type = "vex"
+		InformationSourcesDTO.URL = strings.TrimPrefix(purl, "vex:")
+	} else if strings.HasPrefix(purl, "sbom:") {
+		InformationSourcesDTO.Type = "sbom"
+		InformationSourcesDTO.URL = strings.TrimPrefix(purl, "sbom:")
+	} else if strings.HasPrefix(purl, "csaf:") {
+		InformationSourcesDTO.Type = "csaf"
+		p := strings.TrimPrefix(purl, "csaf:")
+		parts := strings.SplitN(p, ":http", 2)
+		if len(parts) > 1 {
+			InformationSourcesDTO.Purl = parts[0]
+			InformationSourcesDTO.URL = "http" + parts[1]
+		} else {
+			InformationSourcesDTO.URL = p
+		}
+	} else {
+		InformationSourcesDTO.URL = purl
+	}
+	return InformationSourcesDTO
+}
 
 func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
@@ -919,19 +943,19 @@ func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}
 	// fetch all root nodes
-	errgroup := utils.ErrGroup[map[string][]string](10)
+	errgroup := utils.ErrGroup[map[string][]InformationSourceDTO](10)
 	for _, artifact := range artifacts {
-		errgroup.Go(func() (map[string][]string, error) {
+		errgroup.Go(func() (map[string][]InformationSourceDTO, error) {
 			rootNodes, err := a.componentService.FetchInformationSources(&artifact)
 			if err != nil {
 				return nil, err
 			}
-			return map[string][]string{
+			return map[string][]InformationSourceDTO{
 				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
 					el models.ComponentDependency,
-				) string {
-					return el.DependencyPurl
-				}), func(s string) string {
+				) InformationSourceDTO {
+					return extractInformationSourceFromPurl(el.DependencyPurl)
+				}), func(s InformationSourceDTO) InformationSourceDTO {
 					return s
 				}),
 			}, nil
@@ -942,7 +966,7 @@ func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch root nodes of artifacts").WithInternal(err)
 	}
 
-	result := make(map[string][]string)
+	result := make(map[string][]InformationSourceDTO)
 	// merge the maps
 	for _, r := range results {
 		maps.Copy(result, r)

@@ -93,7 +93,7 @@ func (componentController componentController) ListPaged(ctx shared.Context) err
 	// make sure to only load valid purls
 	filter = append(filter, shared.FilterQuery{
 		Field:      "purl",
-		FieldValue: "pkg:",
+		FieldValue: "pkg:%",
 		Operator:   "like",
 	})
 

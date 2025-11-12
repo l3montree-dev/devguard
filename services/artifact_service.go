@@ -256,23 +256,23 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 			}
 		}
 
-		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
-		if err != nil {
-			slog.Error("could not handle scan result", "err", err)
-			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
-		}
-
 		_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
+		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
+		if err != nil {
+			slog.Error("could not handle scan result", "err", err)
+			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
+		}
+
 	outer:
 		for i := range newState {
 			if expected, ok := expectedMap[*newState[i].CVEID]; ok {
 
-				expectedEventType, err := models.EventTypeToVulnState(expected.eventType)
+				expectedVulnState, err := models.EventTypeToVulnState(expected.eventType)
 				if err != nil {
 					slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue
@@ -280,7 +280,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 				// check if we already have seen this event from upstream
 				for j := len(newState[i].Events) - 1; j >= 0; j-- {
 					event := newState[i].Events[j]
-					eventType, err := models.EventTypeToVulnState(event.Type)
+					vulnState, err := models.EventTypeToVulnState(event.Type)
 					if err != nil {
 						slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
 						continue
@@ -288,7 +288,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					// only consider non-internal upstream events
 					if event.Upstream != models.UpstreamStateInternal {
 						// the last event
-						if eventType == expectedEventType && utils.SafeDereference(event.Justification) == expected.justification {
+						if vulnState == expectedVulnState && utils.SafeDereference(event.Justification) == expected.justification {
 							// we already have seen this event
 							continue outer
 						} else {
