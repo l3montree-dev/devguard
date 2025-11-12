@@ -36,7 +36,7 @@ func (repository *componentOccurrenceRepository) SearchComponentOccurrencesByOrg
 		Joins("JOIN organizations ON projects.organization_id = organizations.id").
 		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Where("projects.organization_id = ?", orgID).
-		Where("component_dependencies.dependency_purl LIKE ?", "%"+search+"%")
+		Where("component_dependencies.dependency_purl ILIKE ?", "%"+search+"%")
 
 	var total int64
 	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
