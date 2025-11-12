@@ -149,7 +149,6 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", "Set the log level. Options: debug, info, warn, error")
-	rootCmd.PersistentFlags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

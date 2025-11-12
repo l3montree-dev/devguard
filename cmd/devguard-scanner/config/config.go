@@ -131,6 +131,10 @@ func ParseBaseConfig(runningCMD string) {
 	if RuntimeBaseConfig.ArtifactName == "" {
 		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
 	}
+
+	if RuntimeBaseConfig.Timeout <= 0 {
+		RuntimeBaseConfig.Timeout = 300
+	}
 }
 
 func StoreTokenInKeyring(assetName, token string) error {
