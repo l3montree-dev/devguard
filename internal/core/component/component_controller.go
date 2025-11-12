@@ -93,7 +93,7 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 	// make sure to only load valid purls
 	filter = append(filter, core.FilterQuery{
 		Field:      "purl",
-		FieldValue: "pkg:",
+		FieldValue: "pkg:%",
 		Operator:   "like",
 	})
 

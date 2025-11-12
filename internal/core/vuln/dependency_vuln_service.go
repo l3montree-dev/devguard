@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 
@@ -328,7 +329,7 @@ func (s *service) createVulnEventAndApply(tx core.DB, userID string, dependencyV
 	case models.EventTypeFalsePositive:
 		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 	case models.EventTypeDetected:
-		fallthrough
+		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, common.RiskCalculationReport{}, "", upstream)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, upstream)
 	case models.EventTypeComment:

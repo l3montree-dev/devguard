@@ -3,6 +3,7 @@ package normalize
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -51,7 +52,7 @@ func (bom *CdxBom) GetInformationSourceNodes() []*TreeNode[cdxBomNode] {
 		if node == nil {
 			return
 		}
-		if node.element.Type() == NodeTypeSbomInformationSource || node.element.Type() == NodeTypeVexInformationSource {
+		if node.element.Type() == NodeTypeSbomInformationSource || node.element.Type() == NodeTypeVexInformationSource || node.element.Type() == NodeTypeCSAFInformationSource {
 			result = append(result, node)
 		}
 		for _, child := range node.Children {
@@ -76,7 +77,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 
 	var visit func(node *TreeNode[cdxBomNode], depth int)
 	visit = func(node *TreeNode[cdxBomNode], depth int) {
-		if node == nil || node.element.nodeType == NodeTypeVexInformationSource {
+		if node == nil || node.element.nodeType == NodeTypeVexInformationSource || node.element.nodeType == NodeTypeCSAFInformationSource {
 			// do not run down vex paths
 			return
 		}
@@ -130,10 +131,54 @@ func (bom *CdxBom) InformationFromVexOrMultipleSBOMs() []string {
 	result := []string{}
 	countMap := bom.CountParentTypes()
 	for id, typeCount := range countMap {
-		if typeCount[NodeTypeSbomInformationSource] > 1 || typeCount[NodeTypeVexInformationSource] > 0 {
+		if typeCount[NodeTypeSbomInformationSource] > 1 || typeCount[NodeTypeVexInformationSource] > 0 || (typeCount[NodeTypeCSAFInformationSource] > 0) {
 			result = append(result, id)
 		}
 	}
+	return result
+}
+
+func (bom *CdxBom) GetAllParentNodes(nodeID string) []string {
+	// traverse the tree downwards and find all parents of the given nodeID
+	result := []string{}
+	var visit func(node *TreeNode[cdxBomNode], parents []string)
+	visit = func(node *TreeNode[cdxBomNode], parents []string) {
+		if node == nil {
+			return
+		}
+		if node.ID == nodeID {
+			result = append(result, parents...)
+			return
+		}
+		newParents := append(parents, node.ID)
+		for _, child := range node.Children {
+			visit(child, newParents)
+		}
+	}
+	visit(bom.tree.Root, []string{})
+	return result
+}
+
+// this returns direct csaf children of csaf information source nodes
+// since csaf does not scope transitive dependencies
+// but we might be able to redistribute found cves to the subtree reachable from those purls.
+func (bom *CdxBom) GetCsafRootPurls() []string {
+	// iterate the tree and find all nodes which have a direct csaf parent
+	result := []string{}
+	var visit func(node *TreeNode[cdxBomNode], parentType nodeType)
+	visit = func(node *TreeNode[cdxBomNode], parentType nodeType) {
+		if node == nil {
+			return
+		}
+		if parentType == NodeTypeCSAFInformationSource && node.element.Type() == NodeTypeComponent {
+			result = append(result, node.ID)
+		}
+		for _, child := range node.Children {
+			visit(child, node.element.Type())
+		}
+	}
+
+	visit(bom.tree.Root, "")
 	return result
 }
 
@@ -367,6 +412,7 @@ const (
 	NodeTypeComponent             nodeType = "component"
 	NodeTypeSbomInformationSource nodeType = "sbom"
 	NodeTypeVexInformationSource  nodeType = "vex"
+	NodeTypeCSAFInformationSource nodeType = "csaf"
 	NodeTypeUnknown               nodeType = "unknown"
 )
 
@@ -392,9 +438,15 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 			nodeType:  NodeTypeSbomInformationSource,
 		}
 	} else if strings.HasPrefix(component.BOMRef, fmt.Sprintf("%s:", NodeTypeVexInformationSource)) {
+		// check if its a csaf information source
 		return cdxBomNode{
 			Component: component,
 			nodeType:  NodeTypeVexInformationSource,
+		}
+	} else if strings.HasPrefix(component.BOMRef, fmt.Sprintf("%s:", NodeTypeCSAFInformationSource)) {
+		return cdxBomNode{
+			Component: component,
+			nodeType:  NodeTypeCSAFInformationSource,
 		}
 	}
 
@@ -606,7 +658,10 @@ func RemoveOriginTypePrefixIfExists(origin string) (nodeType, string) {
 		return NodeTypeVexInformationSource, after
 	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", NodeTypeSbomInformationSource)); ok {
 		return NodeTypeSbomInformationSource, after
+	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", NodeTypeCSAFInformationSource)); ok {
+		return NodeTypeCSAFInformationSource, after
 	}
+
 	return "", origin
 }
 
@@ -686,11 +741,23 @@ func FromNormalizedCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	return cdxBom
 }
 
+// example: csaf:pkg:npm/%40angular/animation@12.3.1:https://example.com/csaf/1234
+var csafInformationSourceRegex = regexp.MustCompile(`^(?:csaf:)?(pkg:[a-zA-Z0-9\/\.\-_]+(?:@[a-zA-Z0-9\.\-_]+)?):(https?:\/\/[^\s\/$.?#][^\s]*)$`)
+
+func isCSAFInformationSource(informationSource string) bool {
+	return csafInformationSourceRegex.MatchString(informationSource)
+}
+
 func FromCdxBom(bom *cdx.BOM, artifactName, informationSource string) *CdxBom {
+	// default to sbom
 	bomType := NodeTypeSbomInformationSource
-	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
+	// check if a purl is inside the string - if so we treat it as a csaf information source
+	if isCSAFInformationSource(informationSource) {
+		bomType = NodeTypeCSAFInformationSource
+	} else if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
 		bomType = NodeTypeVexInformationSource
 	}
+
 	// check if the prefix already exists
 	if !strings.HasPrefix(informationSource, fmt.Sprintf("%s:", bomType)) {
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)

@@ -81,10 +81,10 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 // buildVersionRangeQuery creates the database query for version range matching
 func (comparer *PurlComparer) buildVersionRangeQuery(targetVersion, originalVersion, normalizedVersion string) *gorm.DB {
 	return comparer.db.Where("version = ?", targetVersion). // Exact match - to the target version
-								Or("version = ?", originalVersion).                                                    // Original purl version match
-								Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).               // Vulnerable from start until fixed version
-								Or("semver_introduced < ? AND semver_fixed IS NULL", normalizedVersion).               // Vulnerable from introduced version onwards
-								Or("semver_introduced < ? AND semver_fixed > ?", normalizedVersion, normalizedVersion) // Vulnerable in range
+								Or("version = ?", originalVersion).                                                     // Original purl version match
+								Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).                // Vulnerable from start until fixed version
+								Or("semver_introduced <= ? AND semver_fixed IS NULL", normalizedVersion).               // Vulnerable from introduced version onwards
+								Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion) // Vulnerable in range
 }
 
 // some purls do contain versions, which cannot be found in the database. An example is git.
