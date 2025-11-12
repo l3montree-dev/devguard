@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
@@ -48,7 +49,8 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
@@ -70,6 +72,10 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
+		}
 		return err
 	}
 

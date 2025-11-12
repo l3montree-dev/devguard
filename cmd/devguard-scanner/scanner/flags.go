@@ -52,6 +52,7 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If not specified, it will default to the empty artifact name ''.")
 	cmd.Flags().String("origin", "DEFAULT", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
+	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 }
 func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)
@@ -71,5 +72,5 @@ func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("outputPath", "", "Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
-
+	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 }
