@@ -912,18 +912,6 @@ func extractInformationSourceFromPurl(purl string) InformationSourceDTO {
 
 	InformationSourcesDTO := InformationSourceDTO{}
 	if strings.HasPrefix(purl, "vex:") {
-		if strings.Contains(purl, "csaf") {
-			InformationSourcesDTO.Type = "csaf"
-			p := strings.TrimPrefix(purl, "vex:")
-			parts := strings.SplitN(p, ":http", 2)
-			if len(parts) > 1 {
-				InformationSourcesDTO.Purl = parts[0]
-				InformationSourcesDTO.URL = "http" + parts[1]
-			} else {
-				InformationSourcesDTO.URL = p
-			}
-			return InformationSourcesDTO
-		}
 		InformationSourcesDTO.Type = "vex"
 		InformationSourcesDTO.URL = strings.TrimPrefix(purl, "vex:")
 	} else if strings.HasPrefix(purl, "sbom:") {
