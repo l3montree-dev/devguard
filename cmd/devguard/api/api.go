@@ -167,7 +167,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	componentOccurrenceRepository := repositories.NewComponentOccurrenceRepository(db)
+	// componentOccurrenceRepository := repositories.NewComponentOccurrenceRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
@@ -209,7 +209,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService, scanService)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
-	componentOccurrenceController := vuln.NewComponentOccurrenceHTTPController(componentOccurrenceRepository)
+	// componentOccurrenceController := vuln.NewComponentOccurrenceHTTPController(componentOccurrenceRepository)
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)

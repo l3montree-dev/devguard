@@ -18,6 +18,23 @@ type componentDTO struct {
 	DependencyPurl string            `json:"dependencyPurl"` // will be nil, for direct dependencies
 	Artifacts      []models.Artifact `json:"artifacts"`
 }
+type ComponentOccurrenceDTO struct {
+	ComponentDependencyID string  `json:"componentDependencyId"`
+	DependencyPurl        *string `json:"dependencyPurl"`
+	OrganizationID        string  `json:"organizationId"`
+	OrganizationName      string  `json:"organizationName"`
+	ProjectID             string  `json:"projectId"`
+	ProjectName           string  `json:"projectName"`
+	ProjectSlug           string  `json:"projectSlug"`
+	AssetID               string  `json:"assetId"`
+	AssetName             string  `json:"assetName"`
+	AssetSlug             string  `json:"assetSlug"`
+	AssetVersionName      string  `json:"assetVersionName"`
+	ComponentPurl         *string `json:"componentPurl"`
+	ComponentVersion      *string `json:"componentVersion"`
+	ArtifactName          *string `json:"artifactName"`
+	ArtifactAssetVersion  *string `json:"artifactAssetVersion"`
+}
 
 func toDTO(m models.ComponentDependency) componentDTO {
 	return componentDTO{
@@ -27,5 +44,25 @@ func toDTO(m models.ComponentDependency) componentDTO {
 		Dependency:     m.Dependency,
 		DependencyPurl: m.DependencyPurl,
 		Artifacts:      m.Artifacts,
+	}
+}
+
+func convertComponentOccurrenceToDTO(m models.ComponentOccurrence) ComponentOccurrenceDTO {
+	return ComponentOccurrenceDTO{
+		ComponentDependencyID: m.ComponentDependencyID.String(),
+		DependencyPurl:        m.DependencyPurl,
+		OrganizationID:        m.OrganizationID.String(),
+		OrganizationName:      m.OrganizationName,
+		ProjectID:             m.ProjectID.String(),
+		ProjectName:           m.ProjectName,
+		ProjectSlug:           m.ProjectSlug,
+		AssetID:               m.AssetID.String(),
+		AssetName:             m.AssetName,
+		AssetSlug:             m.AssetSlug,
+		AssetVersionName:      m.AssetVersionName,
+		ComponentPurl:         m.ComponentPurl,
+		ComponentVersion:      m.ComponentVersion,
+		ArtifactName:          m.ArtifactName,
+		ArtifactAssetVersion:  m.ArtifactAssetVersion,
 	}
 }
