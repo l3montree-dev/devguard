@@ -36,6 +36,5 @@ type MyRoundTripper struct {
 func (mrt MyRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("User-Agent", constants.UserAgent)
 
-	r.URL.Scheme = "http"
 	return mrt.r.RoundTrip(r)
 }
