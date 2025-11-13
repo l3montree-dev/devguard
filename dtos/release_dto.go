@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database/models"
 )
 
 type ReleaseItemDTO struct {
@@ -41,23 +40,6 @@ type ReleaseDTO struct {
 	Items     []ReleaseItemDTO `json:"items,omitempty"`
 }
 
-func ReleaseItemToDTO(i models.ReleaseItem) ReleaseItemDTO {
-	return ReleaseItemDTO{
-		ID:               i.ID,
-		ReleaseID:        i.ReleaseID,
-		ChildReleaseID:   i.ChildReleaseID,
-		ArtifactName:     i.ArtifactName,
-		AssetVersionName: i.AssetVersionName,
-		AssetID:          i.AssetID,
-		ChildReleaseName: func() *string {
-			if i.ChildRelease != nil {
-				return &i.ChildRelease.Name
-			}
-			return nil
-		}(),
-	}
-}
-
 // ArtifactDTO is a trimmed artifact view returned to clients. It includes the asset's name.
 type ArtifactDTO struct {
 	ArtifactName     string    `json:"artifactName"`
@@ -70,22 +52,6 @@ type CandidatesResponseDTO struct {
 	Releases  []ReleaseDTO  `json:"releases"`
 }
 
-func ReleaseToDTO(r models.Release) ReleaseDTO {
-	dto := ReleaseDTO{
-		ID:        r.ID,
-		CreatedAt: r.CreatedAt,
-		UpdatedAt: r.UpdatedAt,
-		ProjectID: r.ProjectID,
-		Name:      r.Name,
-	}
-
-	for _, it := range r.Items {
-		dto.Items = append(dto.Items, ReleaseItemToDTO(it))
-	}
-
-	return dto
-}
-
 // requests
 type ReleaseCreateRequest struct {
 	Name  string           `json:"name"`
@@ -94,39 +60,4 @@ type ReleaseCreateRequest struct {
 
 type ReleasePatchRequest struct {
 	Items []ReleaseItemDTO `json:"items,omitempty"`
-}
-
-func (r ReleaseCreateRequest) ToModel(projectID uuid.UUID) models.Release {
-	rel := models.Release{
-		Name:      r.Name,
-		ProjectID: projectID,
-	}
-
-	for _, it := range r.Items {
-		rel.Items = append(rel.Items, models.ReleaseItem{
-			ID:               it.ID,
-			ChildReleaseID:   it.ChildReleaseID,
-			ArtifactName:     it.ArtifactName,
-			AssetVersionName: it.AssetVersionName,
-			AssetID:          it.AssetID,
-		})
-	}
-
-	return rel
-}
-
-func (r ReleasePatchRequest) ApplyToModel(rel *models.Release) {
-	// naive full replace of items for now
-	var items []models.ReleaseItem
-	for _, it := range r.Items {
-		items = append(items, models.ReleaseItem{
-			ID:               it.ID,
-			ReleaseID:        rel.ID,
-			ChildReleaseID:   it.ChildReleaseID,
-			ArtifactName:     it.ArtifactName,
-			AssetVersionName: it.AssetVersionName,
-			AssetID:          it.AssetID,
-		})
-	}
-	rel.Items = items
 }

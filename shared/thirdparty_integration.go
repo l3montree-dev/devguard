@@ -28,7 +28,7 @@ type ThirdPartyIntegration interface {
 	ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []Role, error)                 // maps groups to projects
 	ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []Role, error) // maps projects to assets
 
-	ListRepositories(ctx Context) ([]GitRepository, error)
+	ListRepositories(ctx Context) ([]dtos.GitRepository, error)
 
 	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) (bool, error)
 

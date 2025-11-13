@@ -1,4 +1,4 @@
-package daemon
+package daemons
 
 import (
 	"context"
@@ -7,20 +7,20 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/githubint"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/leaderelection"
+	"github.com/l3montree-dev/devguard/pubsub"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-func getLastMirrorTime(configService config.Service, key string) (time.Time, error) {
+func getLastMirrorTime(configService services.ConfigService, key string) (time.Time, error) {
 	var lastMirror struct {
 		Time time.Time `json:"time"`
 	}
@@ -38,7 +38,7 @@ func getLastMirrorTime(configService config.Service, key string) (time.Time, err
 	return lastMirror.Time, nil
 }
 
-func shouldMirror(configService config.Service, key string) bool {
+func shouldMirror(configService services.ConfigService, key string) bool {
 	lastTime, err := getLastMirrorTime(configService, key)
 	if err != nil {
 		return false
@@ -47,7 +47,7 @@ func shouldMirror(configService config.Service, key string) bool {
 	return time.Since(lastTime) > 12*time.Hour
 }
 
-func markMirrored(configService config.Service, key string) error {
+func markMirrored(configService services.ConfigService, key string) error {
 	return configService.SetJSONConfig(key, struct {
 		Time time.Time `json:"time"`
 	}{
@@ -55,7 +55,7 @@ func markMirrored(configService config.Service, key string) error {
 	})
 }
 
-func runDaemons(db shared.DB, broker pubsub.Broker, configService config.Service) error {
+func runDaemons(db shared.DB, broker pubsub.Broker, configService services.ConfigService) error {
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {
 		panic(err)
@@ -221,7 +221,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService config.Service
 }
 
 func Start(db shared.DB, broker pubsub.Broker) {
-	configService := config.NewService(db)
+	configService := services.NewConfigService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	go func() {
 		// check if the vulndb is empty

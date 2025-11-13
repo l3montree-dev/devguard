@@ -11,12 +11,13 @@ import (
 
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth int) common.RiskCalculationReport {
+func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
@@ -36,7 +37,7 @@ func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth in
 	// round to 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
 
-	return common.RiskCalculationReport{
+	return dtos.RiskCalculationReport{
 		Risk: tmp,
 
 		EPSS:      utils.OrDefault(cve.EPSS, 0),

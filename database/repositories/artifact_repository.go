@@ -7,17 +7,16 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type artifactRepository struct {
-	common.Repository[string, models.Artifact, shared.DB]
-	db shared.DB
+	Repository[string, models.Artifact, *gorm.DB]
+	db *gorm.DB
 }
 
-func NewArtifactRepository(db shared.DB) *artifactRepository {
+func NewArtifactRepository(db *gorm.DB) *artifactRepository {
 	return &artifactRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.Artifact](db),
@@ -69,7 +68,7 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 	return err
 }
 
-func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx shared.DB, vulnID string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx *gorm.DB, vulnID string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 	err := r.Repository.GetDB(tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 

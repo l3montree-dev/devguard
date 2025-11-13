@@ -5,11 +5,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +38,7 @@ func newUpdateOpenSourceInsightInformation() *cobra.Command {
 			openSourceInsightsService := vulndb.NewOpenSourceInsightService()
 			componentProjectRepository := repositories.NewComponentProjectRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database), repositories.NewVulnEventRepository(database))
+			licenseRiskService := services.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database), repositories.NewVulnEventRepository(database))
 
 			components, err := componentRepository.All()
 			if err != nil {
@@ -47,7 +46,7 @@ func newUpdateOpenSourceInsightInformation() *cobra.Command {
 				return
 			}
 
-			componentService := component.NewComponentService(
+			componentService := services.NewComponentService(
 				&openSourceInsightsService,
 				componentProjectRepository,
 				componentRepository,

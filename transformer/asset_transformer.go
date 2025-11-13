@@ -37,7 +37,7 @@ func AssetModelToDetailsDTO(asset models.Asset, members []dtos.UserDTO) dtos.Ass
 	}
 }
 
-func AssetModelToDetailsDTOWithSecrets(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsWithSecretsDTO {
+func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsWithSecretsDTO {
 	return dtos.AssetDetailsWithSecretsDTO{
 		AssetWithSecretsDTO: toDTOWithSecrets(asset),
 		Members:             members,

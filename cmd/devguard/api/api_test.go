@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/auth"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -40,7 +40,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", auth.NoSession)
 
-		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -77,7 +77,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", session)
 
-		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -101,7 +101,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -128,7 +128,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 
-		middleware := multiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -163,7 +163,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := organizationAccessControlMiddleware(obj, act)
+		middleware := OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -197,7 +197,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := organizationAccessControlMiddleware(obj, act)
+		middleware := OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -233,7 +233,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := organizationAccessControlMiddleware(obj, act)
+		middleware := OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -267,7 +267,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := organizationAccessControlMiddleware(obj, act)
+		middleware := OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -291,7 +291,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1", "scope2", "scope3"})
 		ctx.Set("session", mockSession)
 
-		middleware := neededScope([]string{"scope1", "scope2"})
+		middleware := NeededScope([]string{"scope1", "scope2"})
 
 		handler := func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
@@ -316,7 +316,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1"})
 		ctx.Set("session", mockSession)
 
-		middleware := neededScope([]string{"scope1", "scope2"})
+		middleware := NeededScope([]string{"scope1", "scope2"})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -342,7 +342,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{})
 		ctx.Set("session", mockSession)
 
-		middleware := neededScope([]string{"scope1"})
+		middleware := NeededScope([]string{"scope1"})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -368,7 +368,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1"})
 		ctx.Set("session", mockSession)
 
-		middleware := neededScope([]string{})
+		middleware := NeededScope([]string{})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {

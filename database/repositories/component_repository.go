@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -32,11 +31,11 @@ import (
 )
 
 type componentRepository struct {
-	common.Repository[string, models.Component, shared.DB]
+	Repository[string, models.Component, *gorm.DB]
 	db *gorm.DB
 }
 
-func NewComponentRepository(db shared.DB) *componentRepository {
+func NewComponentRepository(db *gorm.DB) *componentRepository {
 	return &componentRepository{
 		Repository: newGormRepository[string, models.Component](db),
 		db:         db,
@@ -49,7 +48,7 @@ func (c *componentRepository) FindAllWithoutLicense() ([]models.Component, error
 	return components, err
 }
 
-func (c *componentRepository) CreateComponents(tx shared.DB, components []models.ComponentDependency) error {
+func (c *componentRepository) CreateComponents(tx *gorm.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil
 	}
@@ -57,7 +56,7 @@ func (c *componentRepository) CreateComponents(tx shared.DB, components []models
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) loadComponentsForAllArtifacts(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+func (c *componentRepository) loadComponentsForAllArtifacts(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
@@ -72,7 +71,7 @@ func (c *componentRepository) loadComponentsForAllArtifacts(tx shared.DB, assetV
 	return components, err
 }
 
-func (c *componentRepository) LoadComponents(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
 	if artifactName == nil {
 		return c.loadComponentsForAllArtifacts(tx, assetVersionName, assetID)
 	}
@@ -91,7 +90,7 @@ func (c *componentRepository) LoadComponents(tx shared.DB, assetVersionName stri
 }
 
 // function which returns all dependency_components which lead to the package transmitted via the pURL parameter
-func (c *componentRepository) LoadPathToComponent(tx shared.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadPathToComponent(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -196,7 +195,7 @@ SELECT * FROM target_path;
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error) {
 	type License []struct {
 		License string
 		Count   int
@@ -291,7 +290,7 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
 
 	var componentDependencies []models.ComponentDependency
 
@@ -360,13 +359,13 @@ func (c *componentRepository) LoadComponentsWithProject(tx shared.DB, overwritte
 
 }
 
-func (c *componentRepository) FindByPurl(tx shared.DB, purl string) (models.Component, error) {
+func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Component, error) {
 	var component models.Component
 	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
+func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,54 +20,216 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 )
 
-func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, artifactName string) models.VulnEvent {
+// receives an uri and matches the extension to supported extensions, if not valid or not supported we return txt extension
+func getLanguage(URI string) string {
+
+	extension := filepath.Ext(URI)
+	switch extension {
+	case ".go":
+		extension = "go"
+	case ".ts":
+		extension = "typescript"
+	case ".js":
+		extension = "js"
+	case ".java":
+		extension = "java"
+	case ".py":
+		extension = "python"
+	case ".c":
+		extension = "c"
+	case ".cpp":
+		extension = "cpp"
+	case ".hpp":
+		extension = "cpp"
+	case ".css":
+		extension = "css"
+	case ".cs":
+		extension = "csharp"
+	case ".json":
+		extension = "json"
+	case ".yaml":
+		extension = "yaml"
+	case ".html":
+		extension = "html"
+	case ".xml":
+		extension = "xml"
+	case ".sql":
+		extension = "sql"
+	case ".mak":
+		extension = "make"
+	default:
+		extension = "txt"
+	}
+	return extension
+}
+
+func RenderADF(firstPartyVuln *models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
+	snippets, err := transformer.FromJSONSnippetContents(firstPartyVuln)
+	if err != nil {
+		slog.Error("could not parse snippet contents", "error", err)
+		return jira.ADF{}
+	}
+
+	adf := jira.ADF{
+		Version: 1,
+		Type:    "doc",
+		Content: []jira.ADFContent{
+			{
+				Type: "paragraph",
+				Content: []jira.ADFContent{
+					{
+						Type: "text",
+						Text: *firstPartyVuln.Message,
+					},
+				},
+			},
+		},
+	}
+
+	for _, snippet := range snippets.Snippets {
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "codeBlock",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: snippet.Snippet,
+				},
+			},
+		})
+	}
+
+	if firstPartyVuln.URI != "" {
+		link := strings.TrimPrefix(firstPartyVuln.URI, "/")
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "paragraph",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "File: " + link,
+				},
+			},
+		})
+	}
+
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID),
+			},
+		},
+	})
+
+	//add slash commands
+	jira.AddSlashCommandsToToFirstPartyVulnADF(&adf)
+
+	return adf
+}
+
+func RenderMarkdown(firstPartyVuln *models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
+	var str strings.Builder
+	str.WriteString("## Vulnerability Description\n\n")
+	str.WriteString(*firstPartyVuln.Message)
+
+	snippet, err := transformer.FromJSONSnippetContents(firstPartyVuln)
+	if err != nil {
+		slog.Error("could not parse snippet contents", "error", err)
+		return str.String()
+	}
+	extension := getLanguage(firstPartyVuln.URI)
+
+	// dynamically change the headline to the amount of Snippets
+	str.WriteString("\n\n")
+	if len(snippet.Snippets) == 1 {
+		str.WriteString("## Code Snippet\n")
+	} else if len(snippet.Snippets) >= 2 {
+		str.WriteString("## Code Snippets\n")
+	}
+
+	var locationString string
+	for _, snippet := range snippet.Snippets {
+		// check if there is a filename and snippet - if so, we can render that as well
+		sanitizedSnippet := strings.ReplaceAll(snippet.Snippet, "+++\n", "")
+		sanitizedSnippet = strings.ReplaceAll(sanitizedSnippet, "\n+++", "") //just to make sure
+		str.WriteString("\n\n")
+		str.WriteString("```" + extension + "\n")
+		str.WriteString(sanitizedSnippet)
+		str.WriteString("\n")
+		str.WriteString("```\n")
+
+		// build the link to the file and start line of the snippet
+		link := fmt.Sprintf("[%s](../%s#L%d)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"), snippet.StartLine)
+		if snippet.StartLine == snippet.EndLine {
+			locationString = fmt.Sprintf("**Found at:** %s\n**Line:** %d\n", link, snippet.StartLine)
+		} else {
+			locationString = fmt.Sprintf("**Found at:** %s\n**Lines:** %d - %d\n", link, snippet.StartLine, snippet.EndLine)
+		}
+		str.WriteString(locationString)
+	}
+
+	str.WriteString("\n\n")
+
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
+	fmt.Println("str:", str.String())
+
+	common.AddSlashCommandsToFirstPartyVuln(&str)
+
+	return str.String()
+}
+
+func CreateNewVulnEventBasedOnComment(vulnID string, vulnType dtos.VulnType, userID, comment string, artifactName string) models.VulnEvent {
 
 	event, mechanicalJustification, justification := commentTrimmedPrefix(vulnType, comment)
 
 	switch event {
-	case models.EventTypeAccepted:
+	case dtos.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
-	case models.EventTypeFalsePositive:
+	case dtos.EventTypeFalsePositive:
 		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, dtos.UpstreamStateInternal)
-	case models.EventTypeReopened:
+	case dtos.EventTypeReopened:
 		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
-	case models.EventTypeComment:
+	case dtos.EventTypeComment:
 		return models.NewCommentEvent(vulnID, vulnType, userID, comment)
 	}
 
 	return models.VulnEvent{}
 }
 
-func commentTrimmedPrefix(vulnType models.VulnType, comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
+func commentTrimmedPrefix(vulnType dtos.VulnType, comment string) (dtos.VulnEventType, dtos.MechanicalJustificationType, string) {
 
 	comment = strings.TrimSpace(strings.TrimPrefix(comment, "`"))
 	comment = strings.TrimSpace(strings.TrimSuffix(comment, "`"))
 
-	if strings.HasPrefix(comment, "/component-not-present") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, models.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, models.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, dtos.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, models.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
-	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, models.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
-	} else if strings.HasPrefix(comment, "/false-positive") && vulnType == models.VulnTypeFirstPartyVuln {
-		return models.EventTypeFalsePositive, models.MechanicalJustificationType(strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive"))), ""
+	if strings.HasPrefix(comment, "/component-not-present") && vulnType == dtos.VulnTypeDependencyVuln {
+		return dtos.EventTypeFalsePositive, dtos.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") && vulnType == dtos.VulnTypeDependencyVuln {
+		return dtos.EventTypeFalsePositive, dtos.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") && vulnType == dtos.VulnTypeDependencyVuln {
+		return dtos.EventTypeFalsePositive, dtos.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") && vulnType == dtos.VulnTypeDependencyVuln {
+		return dtos.EventTypeFalsePositive, dtos.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
+	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") && vulnType == dtos.VulnTypeDependencyVuln {
+		return dtos.EventTypeFalsePositive, dtos.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
+	} else if strings.HasPrefix(comment, "/false-positive") && vulnType == dtos.VulnTypeFirstPartyVuln {
+		return dtos.EventTypeFalsePositive, dtos.MechanicalJustificationType(strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive"))), ""
 	} else if strings.HasPrefix(comment, "/accept") {
-		return models.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
+		return dtos.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
 	} else if strings.HasPrefix(comment, "/reopen") {
-		return models.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
+		return dtos.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
 	}
-	return models.EventTypeComment, "", comment
+	return dtos.EventTypeComment, "", comment
 }
 
 //go:embed templates/full_template.yml.gotmpl
@@ -252,14 +416,14 @@ func GetLabels(vuln models.Vuln) []string {
 		"state:" + stateToLabel(vuln.GetState()),
 	}
 
-	riskSeverity, err := risk.RiskToSeverity(vuln.GetRawRiskAssessment())
+	riskSeverity, err := vulndb.RiskToSeverity(vuln.GetRawRiskAssessment())
 	if err == nil {
 		labels = append(labels, "risk:"+strings.ToLower(riskSeverity))
 	}
 
 	if v, ok := vuln.(*models.DependencyVuln); ok {
 		if v.CVE != nil {
-			cvssSeverity, err := risk.RiskToSeverity(float64(v.CVE.CVSS))
+			cvssSeverity, err := vulndb.RiskToSeverity(float64(v.CVE.CVSS))
 			if err == nil {
 				labels = append(labels, "cvss-severity:"+strings.ToLower(cvssSeverity))
 			}

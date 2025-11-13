@@ -17,24 +17,23 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type externalUserRepository struct {
-	db shared.DB
-	common.Repository[int, models.ExternalUser, shared.DB]
+	db *gorm.DB
+	Repository[int, models.ExternalUser, *gorm.DB]
 }
 
-func NewExternalUserRepository(db shared.DB) *externalUserRepository {
+func NewExternalUserRepository(db *gorm.DB) *externalUserRepository {
 	return &externalUserRepository{
 		db:         db,
 		Repository: newGormRepository[int, models.ExternalUser](db),
 	}
 }
 
-func (r *externalUserRepository) FindByOrgID(tx shared.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
+func (r *externalUserRepository) FindByOrgID(tx *gorm.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
 	var users []models.ExternalUser
 	if err := r.GetDB(tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
 		return nil, err

@@ -2,8 +2,11 @@ package compliance
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -102,6 +105,17 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	}, nil
 }
 
+func ConvertPolicyFsToModel(policy PolicyFS) models.Policy {
+	return models.Policy{
+		Rego:           policy.Content,
+		Description:    policy.Description,
+		Title:          policy.Title,
+		PredicateType:  policy.PredicateType,
+		OpaqueID:       &policy.Filename,
+		OrganizationID: nil,
+	}
+}
+
 func NewPolicy(filename string, content string) (*PolicyFS, error) {
 	metadata, err := parseMetadata(filename, content)
 	if err != nil {
@@ -169,4 +183,39 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 		Compliant:  compliant,
 		Violations: violations,
 	}
+}
+
+// embed the policies in the binary
+//
+//go:embed attestation-compliance-policies/policies/*.rego
+var policiesFs embed.FS
+
+func GetCommunityManagedPoliciesFromFS() []PolicyFS {
+	// fetch all policies
+	policyFiles, err := policiesFs.ReadDir("attestation-compliance-policies/policies")
+	if err != nil {
+		return nil
+	}
+
+	var policies []PolicyFS
+	for _, file := range policyFiles {
+		content, err := policiesFs.ReadFile(filepath.Join("attestation-compliance-policies/policies", file.Name()))
+		if err != nil {
+			continue
+		}
+
+		policy, err := NewPolicy(file.Name(), string(content))
+		if err != nil {
+			continue
+		}
+
+		policies = append(policies, *policy)
+	}
+
+	// sort the policies by priority - use a stable sort
+	sort.SliceStable(policies, func(i, j int) bool {
+		return policies[i].Priority < policies[j].Priority
+	})
+
+	return policies
 }

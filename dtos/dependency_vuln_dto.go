@@ -17,7 +17,37 @@ package dtos
 
 import (
 	"time"
+
+	"gorm.io/datatypes"
 )
+
+type Severity string
+
+const (
+	SeverityCritical Severity = "critical"
+	SeverityHigh     Severity = "high"
+	SeverityMedium   Severity = "medium"
+	SeverityLow      Severity = "low"
+	SeverityInfo     Severity = "info"
+)
+
+type CVEDTO struct {
+	CVE                   string          `json:"cve"`
+	CreatedAt             time.Time       `json:"createdAt"`
+	UpdatedAt             time.Time       `json:"updatedAt"`
+	DatePublished         time.Time       `json:"datePublished"`
+	DateLastModified      time.Time       `json:"dateLastModified"`
+	Description           string          `json:"description"`
+	CVSS                  float32         `json:"cvss"`
+	References            string          `json:"references"`
+	CISAExploitAdd        *datatypes.Date `json:"cisaExploitAdd"`
+	CISAActionDue         *datatypes.Date `json:"cisaActionDue"`
+	CISARequiredAction    string          `json:"cisaRequiredAction"`
+	CISAVulnerabilityName string          `json:"cisaVulnerabilityName"`
+	EPSS                  *float64        `json:"epss"`
+	Percentile            *float32        `json:"percentile"`
+	Vector                string          `json:"vector"`
+}
 
 type VulnState string
 
@@ -57,31 +87,4 @@ type DependencyVulnDTO struct {
 type detailedDependencyVulnDTO struct {
 	DependencyVulnDTO
 	Events []VulnEventDTO `json:"events"`
-}
-
-func DependencyVulnToDto(f DependencyVuln) DependencyVulnDTO {
-
-	return DependencyVulnDTO{
-		ID:                    f.ID,
-		Message:               f.Message,
-		AssetVersionName:      f.AssetVersionName,
-		AssetID:               f.AssetID.String(),
-		State:                 f.State,
-		CVE:                   f.CVE,
-		CVEID:                 f.CVEID,
-		ComponentPurl:         f.ComponentPurl,
-		ComponentDepth:        f.ComponentDepth,
-		ComponentFixedVersion: f.ComponentFixedVersion,
-		Effort:                f.Effort,
-		RiskAssessment:        f.RiskAssessment,
-		RawRiskAssessment:     f.RawRiskAssessment,
-		Priority:              f.Priority,
-		LastDetected:          f.LastDetected,
-		CreatedAt:             f.CreatedAt,
-		TicketID:              f.TicketID,
-		TicketURL:             f.TicketURL,
-		ManualTicketCreation:  f.ManualTicketCreation,
-		RiskRecalculatedAt:    f.RiskRecalculatedAt,
-		Artifacts:             f.Artifacts,
-	}
 }

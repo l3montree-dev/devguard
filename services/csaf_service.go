@@ -1032,15 +1032,15 @@ func buildRevisionHistory(asset models.Asset, vuln models.DependencyVuln) ([]*go
 
 func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
 	switch event.Type {
-	case models.EventTypeDetected:
+	case dtos.EventTypeDetected:
 		return fmt.Sprintf("Detected vulnerability %s.", *vuln.CVEID), nil
-	case models.EventTypeReopened:
+	case dtos.EventTypeReopened:
 		return fmt.Sprintf("Reopened vulnerability %s.", *vuln.CVEID), nil
-	case models.EventTypeFixed:
+	case dtos.EventTypeFixed:
 		return fmt.Sprintf("Fixed vulnerability %s.", *vuln.CVEID), nil
-	case models.EventTypeAccepted:
+	case dtos.EventTypeAccepted:
 		return fmt.Sprintf("Accepted vulnerability %s.", *vuln.CVEID), nil
-	case models.EventTypeFalsePositive:
+	case dtos.EventTypeFalsePositive:
 		return fmt.Sprintf("Marked vulnerability %s as false positive.", *vuln.CVEID), nil
 	default:
 		return "", fmt.Errorf("unknown event type: %s", event.Type)

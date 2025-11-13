@@ -25,9 +25,9 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
@@ -71,7 +71,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		// Prepare repositories and services
 		licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 		vulnEventRepository := repositories.NewVulnEventRepository(db)
-		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+		licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 		// First run: detect risk for artifact-1
 		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, dtos.UpstreamStateInternal)
@@ -102,7 +102,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 
 		// Sanity: ensure vuln events were created (at least one detected event)
 		var events []models.VulnEvent
-		err = db.Where("vuln_type = ?", models.VulnTypeLicenseRisk).Find(&events).Error
+		err = db.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&events).Error
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(events))
 

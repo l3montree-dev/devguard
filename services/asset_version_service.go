@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -148,7 +149,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 			if len(result.Locations) > 0 {
 				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
 
-				snippetContent := models.SnippetContent{
+				snippetContent := dtos.SnippetContent{
 					StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
 					EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
 					StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
@@ -158,23 +159,23 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 
 				hash = firstPartyVulnerability.CalculateHash()
 				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
-					snippetContents, err := existingVuln.FromJSONSnippetContents()
+					snippetContents, err := transformer.FromJSONSnippetContents(&existingVuln)
 					if err != nil {
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
 					}
 					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
-					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
 					if err != nil {
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
 				} else {
 
-					snippetContents := models.SnippetContents{
-						Snippets: []models.SnippetContent{snippetContent},
+					snippetContents := dtos.SnippetContents{
+						Snippets: []dtos.SnippetContent{snippetContent},
 					}
 					var err error
-					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
 					if err != nil {
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
@@ -285,12 +286,12 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 
 	if len(newDetectedVulnsNotOnOtherBranch) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
 		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(dtos.FirstPartyVulnsDetectedEvent{
-				AssetVersion: dtos.ToAssetVersionObject(*assetVersion),
-				Asset:        dtos.ToAssetObject(asset),
-				Project:      dtos.ToProjectObject(project),
-				Org:          dtos.ToOrgObject(org),
-				Vulns:        utils.Map(newDetectedVulnsNotOnOtherBranch, vuln.FirstPartyVulnToDto),
+			if err = s.thirdPartyIntegration.HandleEvent(shared.FirstPartyVulnsDetectedEvent{
+				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
+				Asset:        shared.ToAssetObject(asset),
+				Project:      shared.ToProjectObject(project),
+				Org:          shared.ToOrgObject(org),
+				Vulns:        utils.Map(newDetectedVulnsNotOnOtherBranch, transformer.FirstPartyVulnToDto),
 			}); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
@@ -300,7 +301,7 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
-func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream models.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
@@ -375,7 +376,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 				Asset:        shared.ToAssetObject(asset),
 				Project:      shared.ToProjectObject(project),
 				Org:          shared.ToOrgObject(org),
-				Vulns:        utils.Map(opened, vuln.DependencyVulnToDto),
+				Vulns:        utils.Map(opened, transformer.DependencyVulnToDTO),
 				Artifact: shared.ArtifactObject{
 					ArtifactName: artifactName,
 				},
@@ -471,7 +472,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 			for _, existingVuln := range existingVulns {
 
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return ev.OriginalAssetVersionName == nil && ev.Type != models.EventTypeRawRiskAssessmentUpdated
+					return ev.OriginalAssetVersionName == nil && ev.Type != dtos.EventTypeRawRiskAssessmentUpdated
 				})
 
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
@@ -603,7 +604,7 @@ func redistributeCsafPurlVulns(sbom *normalize.CdxBom, dependencyVulns []models.
 	return filteredNew, filteredExisting, updateIDs
 }
 
-func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream models.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -756,7 +757,7 @@ func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
 	return res
 }
 
-func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream models.UpstreamState) (*normalize.CdxBom, error) {
+func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
@@ -1208,7 +1209,7 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
-			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Type != models.EventTypeComment && dependencyVuln.Events[i].Justification != nil {
+			if dependencyVuln.Events[i].Type != dtos.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Type != dtos.EventTypeComment && dependencyVuln.Events[i].Justification != nil {
 				return dependencyVuln.Events[i].Justification
 			}
 		}
@@ -1241,7 +1242,7 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 		firstIssued = time.Now()
 		// find the date when the vulnerability was detected/created in the database
 		for _, event := range vulnEvents {
-			if event.Type == models.EventTypeDetected {
+			if event.Type == dtos.EventTypeDetected {
 				firstIssued = event.CreatedAt
 				break
 			}
@@ -1253,13 +1254,13 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 		// find the newest/latest event that was triggered through a human / manual interaction
 		for _, event := range vulnEvents {
 			// only manual events
-			if event.Type == models.EventTypeFixed ||
-				event.Type == models.EventTypeReopened ||
-				event.Type == models.EventTypeAccepted ||
+			if event.Type == dtos.EventTypeFixed ||
+				event.Type == dtos.EventTypeReopened ||
+				event.Type == dtos.EventTypeAccepted ||
 				event.Type == models.EventTypeMitigate ||
-				event.Type == models.EventTypeFalsePositive ||
+				event.Type == dtos.EventTypeFalsePositive ||
 				event.Type == models.EventTypeMarkedForTransfer ||
-				event.Type == models.EventTypeComment {
+				event.Type == dtos.EventTypeComment {
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}

@@ -1,14 +1,13 @@
 package controllers
 
 import (
-	"embed"
 	"log/slog"
-	"path/filepath"
-	"sort"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -30,25 +29,14 @@ func NewPolicyController(policyRepository shared.PolicyRepository, projectReposi
 	return c
 }
 
-func convertPolicyFsToModel(policy PolicyFS) models.Policy {
-	return models.Policy{
-		Rego:           policy.Content,
-		Description:    policy.Description,
-		Title:          policy.Title,
-		PredicateType:  policy.PredicateType,
-		OpaqueID:       &policy.Filename,
-		OrganizationID: nil,
-	}
-}
-
 func (c *policyController) migratePolicies() error {
 	// we need to migrate the policies from the old format to the new format
 	// this is only needed for the first time we run the application
 	// after that we can remove this function
-	policies := getCommunityManagedPoliciesFromFS()
+	policies := compliance.GetCommunityManagedPoliciesFromFS()
 	policyModels := make([]models.Policy, len(policies))
 	for i, policy := range policies {
-		policyModels[i] = convertPolicyFsToModel(policy)
+		policyModels[i] = compliance.ConvertPolicyFsToModel(policy)
 	}
 
 	// get all community managed policies from the database
@@ -161,7 +149,7 @@ func (c *policyController) GetPolicy(ctx shared.Context) error {
 }
 
 func (c *policyController) CreatePolicy(ctx shared.Context) error {
-	policy := policyDTO{}
+	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}
@@ -195,7 +183,7 @@ func (c *policyController) UpdatePolicy(ctx shared.Context) error {
 		return err
 	}
 
-	policy := policyDTO{}
+	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}
@@ -272,39 +260,4 @@ func (c *policyController) DisablePolicyForProject(ctx shared.Context) error {
 	}
 
 	return ctx.NoContent(204)
-}
-
-// embed the policies in the binary
-//
-//go:embed attestation-compliance-policies/policies/*.rego
-var policiesFs embed.FS
-
-func getCommunityManagedPoliciesFromFS() []PolicyFS {
-	// fetch all policies
-	policyFiles, err := policiesFs.ReadDir("attestation-compliance-policies/policies")
-	if err != nil {
-		return nil
-	}
-
-	var policies []PolicyFS
-	for _, file := range policyFiles {
-		content, err := policiesFs.ReadFile(filepath.Join("attestation-compliance-policies/policies", file.Name()))
-		if err != nil {
-			continue
-		}
-
-		policy, err := NewPolicy(file.Name(), string(content))
-		if err != nil {
-			continue
-		}
-
-		policies = append(policies, *policy)
-	}
-
-	// sort the policies by priority - use a stable sort
-	sort.SliceStable(policies, func(i, j int) bool {
-		return policies[i].Priority < policies[j].Priority
-	})
-
-	return policies
 }

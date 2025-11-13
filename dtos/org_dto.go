@@ -16,7 +16,9 @@
 package dtos
 
 import (
-	"github.com/l3montree-dev/devguard/database/models"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type AcceptInvitationRequest struct {
@@ -63,36 +65,45 @@ type OrgPatchRequest struct {
 	Language             *string         `json:"language"`
 }
 
-type OrgDTO struct {
-	models.Model
-	Avatar                 *string          `json:"avatar,omitempty"`
-	Name                   string           `json:"name" gorm:"type:text"`
-	ContactPhoneNumber     *string          `json:"contactPhoneNumber" gorm:"type:text"`
-	NumberOfEmployees      *int             `json:"numberOfEmployees"`
-	Country                *string          `json:"country" gorm:"type:text"`
-	Industry               *string          `json:"industry" gorm:"type:text"`
-	CriticalInfrastructure bool             `json:"criticalInfrastructure"`
-	ISO27001               bool             `json:"iso27001"`
-	NIST                   bool             `json:"nist"`
-	Grundschutz            bool             `json:"grundschutz"`
-	Projects               []models.Project `json:"projects" gorm:"foreignKey:OrganizationID;"`
-	Slug                   string           `json:"slug" gorm:"type:text;unique;not null;index"`
-	Description            string           `json:"description" gorm:"type:text"`
+type GithubAppInstallationDTO struct {
+	InstallationID                         int `json:"installationId"`
+	OrgID                                  uuid.UUID
+	InstallationCreatedWebhookReceivedTime time.Time `json:"installationCreatedWebhookReceivedTime"`
+	SettingsURL                            string    `json:"settingsUrl"`
+	TargetType                             string    `json:"targetType"`
+	TargetLogin                            string    `json:"targetLogin"`
+	TargetAvatarURL                        string    `json:"targetAvatarUrl"`
+}
 
-	GithubAppInstallations []models.GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
+type OrgDTO struct {
+	ID                     uuid.UUID    `json:"id"`
+	CreatedAt              time.Time    `json:"createdAt"`
+	UpdatedAt              time.Time    `json:"updatedAt"`
+	Name                   string       `json:"name" gorm:"type:text"`
+	ContactPhoneNumber     *string      `json:"contactPhoneNumber" gorm:"type:text"`
+	NumberOfEmployees      *int         `json:"numberOfEmployees"`
+	Country                *string      `json:"country" gorm:"type:text"`
+	Industry               *string      `json:"industry" gorm:"type:text"`
+	CriticalInfrastructure bool         `json:"criticalInfrastructure"`
+	ISO27001               bool         `json:"iso27001"`
+	NIST                   bool         `json:"nist"`
+	Grundschutz            bool         `json:"grundschutz"`
+	Projects               []ProjectDTO `json:"projects" gorm:"foreignKey:OrganizationID;"`
+	Slug                   string       `json:"slug" gorm:"type:text;unique;not null;index"`
+	Description            string       `json:"description" gorm:"type:text"`
+
+	GithubAppInstallations []GithubAppInstallationDTO `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 
 	GitLabIntegrations []GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
 	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	SharesVulnInformation bool                    `json:"sharesVulnInformation"`
-	IsPublic              bool                    `json:"isPublic" gorm:"default:false;"`
-	Webhooks              []WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
-
-	ConfigFiles map[string]any `json:"configFiles"`
-
-	Language                 string  `json:"language"`
-	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"type:text"`
+	SharesVulnInformation    bool                    `json:"sharesVulnInformation"`
+	IsPublic                 bool                    `json:"isPublic" gorm:"default:false;"`
+	Webhooks                 []WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
+	ConfigFiles              map[string]any          `json:"configFiles"`
+	Language                 string                  `json:"language"`
+	ExternalEntityProviderID *string                 `json:"externalEntityProviderId" gorm:"type:text"`
 }
 
 type OrgDetailsDTO struct {

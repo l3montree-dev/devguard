@@ -4,19 +4,18 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/githubint"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
 )
 
-func markMirrored(configService config.Service, key string) error {
+func markMirrored(configService services.ConfigService, key string) error {
 	return configService.SetJSONConfig(key, struct {
 		Time time.Time `json:"time"`
 	}{
@@ -30,7 +29,7 @@ func NewDaemonCommand() *cobra.Command {
 		Short: "daemon",
 	}
 
-	daemon.AddCommand(newTriggerCommand())
+	daemons.AddCommand(newTriggerCommand())
 	return &daemon
 }
 
@@ -64,7 +63,7 @@ func newTriggerCommand() *cobra.Command {
 }
 
 func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
-	configService := config.NewService(db)
+	configService := services.NewConfigService(db)
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {
 		panic(err)
@@ -86,7 +85,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "deleteOldAssetVersions") {
 		start = time.Now()
 		// delete old asset versions
-		err := daemon.DeleteOldAssetVersions(db)
+		err := daemons.DeleteOldAssetVersions(db)
 		if err != nil {
 			slog.Error("could not delete old asset versions", "err", err)
 			return nil
@@ -103,7 +102,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "openSourceInsights") {
 		start = time.Now()
 		// update deps dev
-		err := daemon.UpdateOpenSourceInsightInformation(db)
+		err := daemons.UpdateOpenSourceInsightInformation(db)
 		if err != nil {
 			slog.Error("could not update deps dev information", "err", err)
 			return nil
@@ -114,7 +113,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "scan") {
 		start = time.Now()
 		// update scan
-		err := daemon.ScanArtifacts(db, casbinRBACProvider)
+		err := daemons.ScanArtifacts(db, casbinRBACProvider)
 		if err != nil {
 			slog.Error("could not scan asset versions", "err", err)
 			return nil
@@ -125,7 +124,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	// this will give us the latest cves, cwes, exploits and affected components
 	if emptyOrContains(daemons, "vulndb") {
 		start = time.Now()
-		if err := daemon.UpdateVulnDB(db); err != nil {
+		if err := daemons.UpdateVulnDB(db); err != nil {
 			slog.Error("could not update vulndb", "err", err)
 			return nil
 		}
@@ -140,7 +139,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	// those need to be updated before recalculating the risk
 	if emptyOrContains(daemons, "fixedVersions") {
 		start = time.Now()
-		if err := daemon.UpdateFixedVersions(db); err != nil {
+		if err := daemons.UpdateFixedVersions(db); err != nil {
 			slog.Error("could not update component properties", "err", err)
 			return nil
 		}
@@ -153,7 +152,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "risk") {
 		start = time.Now()
 		// finally, recalculate the risk.
-		if err := daemon.RecalculateRisk(db, thirdPartyIntegrationAggregate); err != nil {
+		if err := daemons.RecalculateRisk(db, thirdPartyIntegrationAggregate); err != nil {
 			slog.Error("could not recalculate risk", "err", err)
 			return nil
 		}
@@ -165,7 +164,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 
 	if emptyOrContains(daemons, "tickets") {
 		start = time.Now()
-		if err := daemon.SyncTickets(db, thirdPartyIntegrationAggregate, casbinRBACProvider); err != nil {
+		if err := daemons.SyncTickets(db, thirdPartyIntegrationAggregate, casbinRBACProvider); err != nil {
 			slog.Error("could not sync tickets", "err", err)
 			return nil
 		}
@@ -178,7 +177,7 @@ func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	if emptyOrContains(daemons, "statistics") {
 		start = time.Now()
 		// as a last step - update the statistics
-		if err := daemon.UpdateStatistics(db); err != nil {
+		if err := daemons.UpdateStatistics(db); err != nil {
 			slog.Error("could not update statistics", "err", err)
 			return nil
 		}

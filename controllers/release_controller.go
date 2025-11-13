@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -42,7 +43,7 @@ func (h *releaseController) List(c shared.Context) error {
 
 	// map releases to DTOs
 	pagedDTO := paged.Map(func(r models.Release) any {
-		return releaseToDTO(r)
+		return transformer.ReleaseToDTO(r)
 	})
 
 	return c.JSON(http.StatusOK, pagedDTO)
@@ -254,23 +255,23 @@ func (h *releaseController) Read(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusOK, releaseToDTO(rel))
+	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
 func (h *releaseController) Create(c shared.Context) error {
-	var req createRequest
+	var req dtos.ReleaseCreateRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
 	project := shared.GetProject(c)
-	model := req.toModel(project.GetID())
+	model := transformer.ReleaseCreateRequestToModel(req, project.GetID())
 
 	if err := h.service.Create(&model); err != nil {
 		return echo.NewHTTPError(500, "could not create release").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusCreated, releaseToDTO(model))
+	return c.JSON(http.StatusCreated, transformer.ReleaseToDTO(model))
 }
 
 func (h *releaseController) Update(c shared.Context) error {
@@ -280,7 +281,7 @@ func (h *releaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	var req patchRequest
+	var req dtos.ReleasePatchRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
@@ -290,13 +291,13 @@ func (h *releaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	req.applyToModel(&rel)
+	transformer.ApplyReleasePatchRequestToModel(req, &rel)
 
 	if err := h.service.Update(&rel); err != nil {
 		return echo.NewHTTPError(500, "could not update release").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusOK, releaseToDTO(rel))
+	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
 func (h *releaseController) Delete(c shared.Context) error {
@@ -321,7 +322,7 @@ func (h *releaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	var dto ReleaseItemDTO
+	var dto dtos.ReleaseItemDTO
 	if err := c.Bind(&dto); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
@@ -339,7 +340,7 @@ func (h *releaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not add release item").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusCreated, dtos.ReleaseItemToDTO(item))
+	return c.JSON(http.StatusCreated, transformer.ReleaseItemToDTO(item))
 }
 
 // remove an item from a release
@@ -376,18 +377,18 @@ func (h *releaseController) ListCandidates(c shared.Context) error {
 	}
 
 	// map artifacts to DTOs and include asset name
-	artDTOs := []ArtifactDTO{}
+	artDTOs := []dtos.ArtifactDTO{}
 	for _, a := range artifacts {
-		artDTOs = append(artDTOs, ArtifactDTO{
+		artDTOs = append(artDTOs, dtos.ArtifactDTO{
 			ArtifactName:     a.ArtifactName,
 			AssetVersionName: a.AssetVersionName,
 			AssetID:          a.AssetID,
 		})
 	}
 
-	dto := CandidatesResponseDTO{
+	dto := dtos.CandidatesResponseDTO{
 		Artifacts: artDTOs,
-		Releases:  utils.Map(releases, releaseToDTO),
+		Releases:  utils.Map(releases, transformer.ReleaseToDTO),
 	}
 
 	return c.JSON(http.StatusOK, dto)

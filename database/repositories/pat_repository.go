@@ -19,17 +19,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type gormPatRepository struct {
-	common.Repository[uuid.UUID, models.PAT, shared.DB]
-	db shared.DB
+	Repository[uuid.UUID, models.PAT, *gorm.DB]
+	db *gorm.DB
 }
 
-func NewPATRepository(db shared.DB) *gormPatRepository {
+func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	return &gormPatRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.PAT](db),

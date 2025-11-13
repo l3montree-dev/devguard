@@ -147,25 +147,38 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.We
 	}
 }
 
+func GithubAppInstallationToDTO(g models.GithubAppInstallation) dtos.GithubAppInstallationDTO {
+	return dtos.GithubAppInstallationDTO{
+		InstallationID:                         g.InstallationID,
+		OrgID:                                  *g.OrgID,
+		InstallationCreatedWebhookReceivedTime: g.InstallationCreatedWebhookReceivedTime,
+		SettingsURL:                            g.SettingsURL,
+		TargetType:                             g.TargetType,
+		TargetLogin:                            g.TargetLogin,
+		TargetAvatarURL:                        g.TargetAvatarURL,
+	}
+}
+
 func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
 	return dtos.OrgDTO{
-		Model:                  org.Model,
-		Name:                   org.Name,
-		ContactPhoneNumber:     org.ContactPhoneNumber,
-		NumberOfEmployees:      org.NumberOfEmployees,
-		Country:                org.Country,
-		Industry:               org.Industry,
-		CriticalInfrastructure: org.CriticalInfrastructure,
-		ISO27001:               org.ISO27001,
-		NIST:                   org.NIST,
-		Grundschutz:            org.Grundschutz,
-		Slug:                   org.Slug,
-		Description:            org.Description,
-		SharesVulnInformation:  org.SharesVulnInformation,
-		IsPublic:               org.IsPublic,
-
-		Projects:                 org.Projects,
-		GithubAppInstallations:   org.GithubAppInstallations,
+		ID:                       org.ID,
+		CreatedAt:                org.CreatedAt,
+		UpdatedAt:                org.UpdatedAt,
+		Name:                     org.Name,
+		ContactPhoneNumber:       org.ContactPhoneNumber,
+		NumberOfEmployees:        org.NumberOfEmployees,
+		Country:                  org.Country,
+		Industry:                 org.Industry,
+		CriticalInfrastructure:   org.CriticalInfrastructure,
+		ISO27001:                 org.ISO27001,
+		NIST:                     org.NIST,
+		Grundschutz:              org.Grundschutz,
+		Slug:                     org.Slug,
+		Description:              org.Description,
+		SharesVulnInformation:    org.SharesVulnInformation,
+		IsPublic:                 org.IsPublic,
+		Projects:                 utils.Map(org.Projects, ProjectModelToDTO),
+		GithubAppInstallations:   utils.Map(org.GithubAppInstallations, GithubAppInstallationToDTO),
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
 		Webhooks:                 utils.Map(org.Webhooks, obfuscateWebhookIntegrations),

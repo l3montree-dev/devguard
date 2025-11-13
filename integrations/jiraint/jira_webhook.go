@@ -156,7 +156,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-		if vulnEvent.Type == models.EventTypeAccepted || vulnEvent.Type == models.EventTypeFalsePositive || vulnEvent.Type == models.EventTypeReopened {
+		if vulnEvent.Type == dtos.EventTypeAccepted || vulnEvent.Type == dtos.EventTypeFalsePositive || vulnEvent.Type == dtos.EventTypeReopened {
 			doUpdateArtifactRiskHistory = true
 		}
 

@@ -6,7 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/auth"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +57,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, NoSession, sess)
+			assert.Equal(t, auth.NoSession, sess)
 			return nil
 		})
 
@@ -79,7 +81,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, NoSession, sess)
+			assert.Equal(t, auth.NoSession, sess)
 			return nil
 		})
 

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,8 +24,8 @@ func TestRenderMarkdown(t *testing.T) {
 	assert.Equal(t, "v1-0-0", assertVersionSlug)
 
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
-		snippetContents := models.SnippetContents{
-			Snippets: []models.SnippetContent{
+		snippetContents := dtos.SnippetContents{
+			Snippets: []models.dtos.SnippetContent{
 				{
 					StartLine:   64,
 					EndLine:     64,
@@ -51,8 +52,8 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
 	})
 	t.Run("vuln without snippet contents", func(t *testing.T) {
-		snippetContents := models.SnippetContents{
-			Snippets: []models.SnippetContent{
+		snippetContents := dtos.SnippetContents{
+			Snippets: []models.dtos.SnippetContent{
 				{},
 			},
 		}
@@ -81,7 +82,7 @@ func TestTableName(t *testing.T) {
 func TestGetType(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
 		firstPartyVuln := models.FirstPartyVuln{}
-		assert.Equal(t, models.VulnType("firstPartyVuln"), firstPartyVuln.GetType())
+		assert.Equal(t, dtos.VulnType("firstPartyVuln"), firstPartyVuln.GetType())
 	})
 }
 

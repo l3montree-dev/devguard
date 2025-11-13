@@ -58,7 +58,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 				},
 			},
 		})
-		shared.SetAsset(ctx, AssetDTO{
+		shared.SetAsset(ctx, models.Asset{
 			ConfigFiles: map[string]any{
 				"config1": map[string]any{
 					"value": "asset-config-content",
@@ -97,7 +97,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 				},
 			},
 		})
-		shared.SetAsset(ctx, AssetDTO{
+		shared.SetAsset(ctx, models.Asset{
 			ConfigFiles: map[string]any{},
 		})
 
@@ -127,7 +127,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 		shared.SetProject(ctx, models.Project{
 			ConfigFiles: map[string]any{},
 		})
-		shared.SetAsset(ctx, AssetDTO{
+		shared.SetAsset(ctx, models.Asset{
 			ConfigFiles: map[string]any{},
 		})
 
@@ -150,7 +150,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -213,7 +213,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -235,7 +235,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -261,7 +261,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -305,7 +305,7 @@ func TestHTTPControllerMembers(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -362,7 +362,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -400,7 +400,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -437,7 +437,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -466,7 +466,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx.SetParamValues("user-123")
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -493,7 +493,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -518,7 +518,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx.SetParamValues("user-123")
 
 		assetID := uuid.New()
-		asset := AssetDTO{
+		asset := models.Asset{
 			Model: models.Model{ID: assetID},
 		}
 

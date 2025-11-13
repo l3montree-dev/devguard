@@ -17,18 +17,17 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type gitlabIntegrationRepository struct {
-	db shared.DB
-	common.Repository[uuid.UUID, models.GitLabIntegration, shared.DB]
+	db *gorm.DB
+	Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
 }
 
-func NewGitLabIntegrationRepository(db shared.DB) *gitlabIntegrationRepository {
+func NewGitLabIntegrationRepository(db *gorm.DB) *gitlabIntegrationRepository {
 	return &gitlabIntegrationRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.GitLabIntegration](db),
@@ -44,16 +43,16 @@ func (r *gitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]m
 }
 
 type gitlabOauth2TokenRepository struct {
-	db shared.DB
+	db *gorm.DB
 }
 
-func NewGitlabOauth2TokenRepository(db shared.DB) *gitlabOauth2TokenRepository {
+func NewGitlabOauth2TokenRepository(db *gorm.DB) *gitlabOauth2TokenRepository {
 	return &gitlabOauth2TokenRepository{
 		db: db,
 	}
 }
 
-func (r *gitlabOauth2TokenRepository) Save(tx shared.DB, token ...*models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Save(tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
 	if err := r.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
 		UpdateAll: true,
@@ -63,7 +62,7 @@ func (r *gitlabOauth2TokenRepository) Save(tx shared.DB, token ...*models.GitLab
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) Upsert(tx shared.DB, token *models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Upsert(tx *gorm.DB, token *models.GitLabOauth2Token) error {
 	if err := r.db.Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(token).Error; err != nil {
@@ -88,7 +87,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserID(userID string) ([]models.GitL
 	return tokens, nil
 }
 
-func (r *gitlabOauth2TokenRepository) Delete(tx shared.DB, tokens []models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Delete(tx *gorm.DB, tokens []models.GitLabOauth2Token) error {
 	if err := r.db.Delete(tokens).Error; err != nil {
 		return err
 	}

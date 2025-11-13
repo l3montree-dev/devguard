@@ -15,12 +15,12 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -235,7 +235,7 @@ func TestScanning(t *testing.T) {
 		var accEvent models.VulnEvent
 		var detectedOnAnotherBranchEvent models.VulnEvent
 		for _, ev := range lastTwoEvents {
-			if ev.Type == models.EventTypeAccepted {
+			if ev.Type == dtos.EventTypeAccepted {
 				accEvent = ev
 			} else {
 				detectedOnAnotherBranchEvent = ev
@@ -244,7 +244,7 @@ func TestScanning(t *testing.T) {
 
 		assert.NotEmpty(t, accEvent)
 		assert.NotEmpty(t, detectedOnAnotherBranchEvent)
-		assert.Equal(t, models.EventTypeAccepted, accEvent.Type)
+		assert.Equal(t, dtos.EventTypeAccepted, accEvent.Type)
 		assert.Equal(t, "accepting the vulnerability", *accEvent.Justification)
 		assert.Equal(t, "main", *accEvent.OriginalAssetVersionName)
 	})
@@ -553,27 +553,27 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 		for _, event := range branchBEvents {
 			switch event.Type {
-			case models.EventTypeDetected:
+			case dtos.EventTypeDetected:
 				copiedDetectedEvent = event
-			case models.EventTypeAccepted:
+			case dtos.EventTypeAccepted:
 				copiedAcceptedEvent = event
-			case models.EventTypeComment:
+			case dtos.EventTypeComment:
 				copiedCommentEvent = event
 			}
 		}
 
 		assert.NotEmpty(t, copiedDetectedEvent)
-		assert.Equal(t, models.EventTypeDetected, copiedDetectedEvent.Type)
+		assert.Equal(t, dtos.EventTypeDetected, copiedDetectedEvent.Type)
 		assert.Equal(t, branchBVuln.CalculateHash(), copiedDetectedEvent.VulnID)
 
 		assert.NotEmpty(t, copiedAcceptedEvent)
-		assert.Equal(t, models.EventTypeAccepted, copiedAcceptedEvent.Type)
+		assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 		assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 		assert.Equal(t, "Accepting this vulnerability for testing lifecycle management", *copiedAcceptedEvent.Justification)
 		assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
 
 		assert.NotEmpty(t, copiedCommentEvent)
-		assert.Equal(t, models.EventTypeComment, copiedCommentEvent.Type)
+		assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 		assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 		assert.Equal(t, "This is a test comment for lifecycle verification", *copiedCommentEvent.Justification)
 		assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
@@ -634,7 +634,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchDVuln := vulns[0]
 
-		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-artifact-fp", 0)
+		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
 		assert.Nil(t, err)
 
@@ -667,7 +667,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 		var copiedFPEvent models.VulnEvent
 		for _, event := range branchEVuln.Events {
-			if event.Type == models.EventTypeFalsePositive {
+			if event.Type == dtos.EventTypeFalsePositive {
 				copiedFPEvent = event
 				break
 			}
@@ -774,21 +774,21 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		var copiedAcceptedEvent, copiedCommentEvent models.VulnEvent
 		for _, event := range branchBVuln.Events {
 			switch event.Type {
-			case models.EventTypeAccepted:
+			case dtos.EventTypeAccepted:
 				copiedAcceptedEvent = event
-			case models.EventTypeComment:
+			case dtos.EventTypeComment:
 				copiedCommentEvent = event
 			}
 		}
 
 		assert.NotEmpty(t, copiedAcceptedEvent.ID)
-		assert.Equal(t, models.EventTypeAccepted, copiedAcceptedEvent.Type)
+		assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 		assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 		assert.Equal(t, "Accepted for lifecycle testing", *copiedAcceptedEvent.Justification)
 		assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
 
 		assert.NotEmpty(t, copiedCommentEvent.ID)
-		assert.Equal(t, models.EventTypeComment, copiedCommentEvent.Type)
+		assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 		assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 		assert.Equal(t, "Test comment for lifecycle verification", *copiedCommentEvent.Justification)
 		assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
@@ -1318,7 +1318,7 @@ func TestUploadVEX(t *testing.T) {
 		case "CVE-2025-00001":
 			// i think its a race condition and the ordering of events is non deterministic
 			assert.Equal(t, dtos.VulnStateFalsePositive, d.State)
-			assert.Equal(t, models.EventTypeFalsePositive, d.Events[1].Type)
+			assert.Equal(t, dtos.EventTypeFalsePositive, d.Events[1].Type)
 			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
 		case "CVE-2025-00002":
 			assert.Equal(t, dtos.VulnStateOpen, d.State) // was not part of the uploaded vex.

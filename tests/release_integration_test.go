@@ -23,11 +23,11 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	releasepkg "github.com/l3montree-dev/devguard/internal/core/release"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,8 +47,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	// services using inithelper to follow repository patterns
-	avService := tests.CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	relService := releasepkg.NewService(releaseRepo)
+	avService := CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	relService := services.NewReleaseService(releaseRepo)
 
 	// use subtests: setup and then call SBOM endpoint
 	var (
@@ -103,7 +103,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 	t.Run("sbom returns merged components", func(t *testing.T) {
 		// build controller using repo/service patterns
-		releaseController := releasepkg.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
+		releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
 
 		// prepare context with echo request/recorder
 		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)

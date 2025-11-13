@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -239,7 +240,7 @@ func (c *artifactController) UpdateArtifact(ctx shared.Context) error {
 		// make sure that we at least update the sbom once if there were deletions
 		// updating with nil, will just renormalize the sbom and remove all components which are not
 		// reachable anymore from the root nodes - we might have removed some root nodes above
-		sbom, err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, models.UpstreamStateExternal)
+		sbom, err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, dtos.UpstreamStateExternal)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)

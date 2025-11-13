@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree GmbH.
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package daemon
+package daemons
 
 import (
 	"log/slog"

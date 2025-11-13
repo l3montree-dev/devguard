@@ -45,14 +45,14 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 
 		var vuln models.Vuln
 		switch vulnType {
-		case models.VulnTypeDependencyVuln:
+		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
 			v, err := i.dependencyVulnRepository.Read(vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
-		case models.VulnTypeFirstPartyVuln:
+		case dtos.VulnTypeFirstPartyVuln:
 			v, err := i.firstPartyVulnRepository.Read(vulnID)
 			if err != nil {
 				return err
@@ -77,15 +77,15 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 
 		var vuln models.Vuln
 		switch vulnType {
-		case models.VulnTypeLicenseRisk:
+		case dtos.VulnTypeLicenseRisk:
 			return nil
-		case models.VulnTypeDependencyVuln:
+		case dtos.VulnTypeDependencyVuln:
 			v, err := i.dependencyVulnRepository.Read(ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
-		case models.VulnTypeFirstPartyVuln:
+		case dtos.VulnTypeFirstPartyVuln:
 			v, err := i.firstPartyVulnRepository.Read(ev.VulnID)
 			if err != nil {
 				return err
@@ -134,7 +134,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		}
 
 		switch ev.Type {
-		case models.EventTypeAccepted:
+		case dtos.EventTypeAccepted:
 			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
 				ticketID,
@@ -147,7 +147,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
-		case models.EventTypeFalsePositive:
+		case dtos.EventTypeFalsePositive:
 			justification := i.createADFComment(member.Name,
 				"  marked the vulnerability as false positive",
 				utils.SafeDereference(ev.Justification))
@@ -161,7 +161,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
 
-		case models.EventTypeReopened:
+		case dtos.EventTypeReopened:
 			justification := i.createADFComment(member.Name, " reopened the vulnerability", utils.SafeDereference(ev.Justification))
 
 			err = client.CreateIssueComment(
@@ -196,7 +196,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
 
-		case models.EventTypeComment:
+		case dtos.EventTypeComment:
 			justification := i.createADFComment(utils.SafeDereference(ev.Justification), "", "Sent from "+member.Name+" using DevGuard")
 
 			err = client.CreateIssueComment(

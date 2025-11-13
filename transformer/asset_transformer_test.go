@@ -1,9 +1,13 @@
-package dtos
+package transformer_test
 
 import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,22 +19,22 @@ func TestApplyToModel(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		patch    AssetPatchRequest
-		initial  AssetDTO
-		expected AssetDTO
+		patch    dtos.AssetPatchRequest
+		initial  models.Asset
+		expected models.Asset
 		updated  bool
 	}{
 		{
 			name: "Update Name and Description",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				Name:        utils.Ptr("New Name"),
 				Description: utils.Ptr("New Description"),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
 				Name:        "New Name",
 				Slug:        "new-name",
 				Description: "New Description",
@@ -39,41 +43,47 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update CentralDependencyVulnManagement",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				CentralDependencyVulnManagement: utils.Ptr(true),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
+
 				CentralDependencyVulnManagement: false,
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
+
 				CentralDependencyVulnManagement: true,
 			},
 			updated: true,
 		},
 		{
 			name: "Update ReachableFromInternet",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				ReachableFromInternet: utils.Ptr(true),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
+
 				ReachableFromInternet: false,
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
+
 				ReachableFromInternet: true,
 			},
 			updated: true,
 		},
 		{
 			name: "Update RepositoryID and RepositoryName",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				RepositoryID:   utils.Ptr("new-repo-id"),
 				RepositoryName: utils.Ptr("new-repo-name"),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
+
 				RepositoryID:   utils.Ptr("old-repo-id"),
 				RepositoryName: utils.Ptr("old-repo-name"),
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
+
 				RepositoryID:   utils.Ptr("new-repo-id"),
 				RepositoryName: utils.Ptr("new-repo-name"),
 			},
@@ -81,12 +91,14 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name:  "No Updates",
-			patch: AssetPatchRequest{},
-			initial: AssetDTO{
+			patch: dtos.AssetPatchRequest{},
+			initial: models.Asset{
+
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
+
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
@@ -94,52 +106,52 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update nil Badge Secret",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
 				WebhookSecret: nil,
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
 				WebhookSecret: &webhookSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update nil Webhook Secret",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
 				BadgeSecret: nil,
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
 				BadgeSecret: &badgeSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update Webhook Secret",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
 				WebhookSecret: utils.Ptr(uuid.New()),
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
 				WebhookSecret: &webhookSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update Badge Secret",
-			patch: AssetPatchRequest{
+			patch: dtos.AssetPatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
-			initial: AssetDTO{
+			initial: models.Asset{
 				BadgeSecret: utils.Ptr(uuid.New()),
 			},
-			expected: AssetDTO{
+			expected: models.Asset{
 				BadgeSecret: &badgeSecret,
 			},
 			updated: true,
@@ -149,7 +161,7 @@ func TestApplyToModel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			asset := tt.initial
-			updated := tt.patch.applyToModel(&asset)
+			updated := transformer.ApplyAssetPatchRequestToModel(tt.patch, &asset)
 			assert.Equal(t, tt.updated, updated)
 			assert.Equal(t, tt.expected, asset)
 		})

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package daemon
+package daemons
 
 import (
 	"fmt"
@@ -53,7 +53,7 @@ func AutoReopenAcceptedVulnerabilities(db shared.DB) error {
 
 		for _, vuln := range vulnerabilities {
 			// create a new event for the vulnerability
-			event := models.NewReopenedEvent(vuln.ID, models.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), dtos.UpstreamStateInternal)
+			event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), dtos.UpstreamStateInternal)
 
 			if err := dependencyVulnRepository.ApplyAndSave(nil, &vuln, &event); err != nil {
 				slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)

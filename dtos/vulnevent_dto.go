@@ -74,17 +74,3 @@ type VulnEventDTO struct {
 	URI               string        `json:"uri"`
 	Upstream          UpstreamState `json:"upstream"`
 }
-
-func (dto VulnEventDTO) ToModel() VulnEvent {
-	vulnID := dto.VulnID
-	userID := dto.UserID
-
-	return VulnEvent{
-		Type:          dto.Type,
-		VulnID:        vulnID,
-		UserID:        userID,
-		Justification: dto.Justification,
-		VulnType:      dto.VulnType,
-		Upstream:      dto.Upstream,
-	}
-}

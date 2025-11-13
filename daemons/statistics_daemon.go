@@ -1,12 +1,12 @@
-package daemon
+package daemons
 
 import (
 	"log/slog"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -19,7 +19,7 @@ func UpdateStatistics(db shared.DB) error {
 
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 
-	statisticsService := statistics.NewService(
+	statisticsService := services.NewStatisticsService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewArtifactRiskHistoryRepository(db),

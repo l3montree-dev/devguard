@@ -2,6 +2,7 @@ package tests
 
 import (
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/githubint"
@@ -13,14 +14,14 @@ import (
 )
 
 func CreateLicenseRiskService(db shared.DB) shared.LicenseRiskService {
-	return vuln.NewLicenseRiskService(
+	return services.NewLicenseRiskService(
 		repositories.NewLicenseRiskRepository(db),
 		repositories.NewVulnEventRepository(db),
 	)
 }
 
 func CreateStatisticsService(db shared.DB) shared.StatisticsService {
-	return statistics.NewService(
+	return services.NewStatisticsService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewArtifactRiskHistoryRepository(db),
@@ -32,7 +33,7 @@ func CreateStatisticsService(db shared.DB) shared.StatisticsService {
 }
 
 func CreateComponentService(db shared.DB, openSourceInsightsService shared.OpenSourceInsightService) shared.ComponentService {
-	componentService := component.NewComponentService(
+	componentService := services.NewComponentService(
 		openSourceInsightsService,
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
@@ -44,7 +45,7 @@ func CreateComponentService(db shared.DB, openSourceInsightsService shared.OpenS
 }
 
 func CreateFirstPartyVulnService(db shared.DB, thirdPartyIntegration shared.ThirdPartyIntegration) shared.FirstPartyVulnService {
-	return vuln.NewFirstPartyVulnService(
+	return services.NewFirstPartyVulnService(
 		repositories.NewFirstPartyVulnerabilityRepository(db),
 		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
@@ -52,7 +53,7 @@ func CreateFirstPartyVulnService(db shared.DB, thirdPartyIntegration shared.Thir
 	)
 }
 
-func CreateDependencyVulnService(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory shared.GitlabClientFactory) shared.DependencyVulnService {
+func CreateDependencyVulnService(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory integrations.GitlabClientFactory) shared.DependencyVulnService {
 	return services.NewDependencyVulnService(
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewVulnEventRepository(db),
@@ -68,7 +69,7 @@ func CreateDependencyVulnService(db shared.DB, oauth2 map[string]*gitlabint.Gitl
 func CreateArtifactService(db shared.DB, openSourceInsightsService shared.OpenSourceInsightService) shared.ArtifactService {
 	return services.NewArtifactService(
 		repositories.NewArtifactRepository(db),
-		csaf.NewCSAFService(common.OutgoingConnectionClient),
+		services.NewCSAFService(common.OutgoingConnectionClient),
 		repositories.NewCVERepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),
@@ -79,9 +80,9 @@ func CreateArtifactService(db shared.DB, openSourceInsightsService shared.OpenSo
 	)
 }
 
-func CreateAssetVersionService(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory shared.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) shared.AssetVersionService {
+func CreateAssetVersionService(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory integrations.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) shared.AssetVersionService {
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
-	s := assetversion.NewService(
+	s := services.NewAssetVersionService(
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),
@@ -100,8 +101,8 @@ func CreateAssetVersionService(db shared.DB, oauth2 map[string]*gitlabint.Gitlab
 	return s
 }
 
-func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory shared.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *assetversion.AssetVersionController {
-	cmpService := component.NewComponentService(
+func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory integrations.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *controllers.AssetVersionController {
+	cmpService := services.NewComponentService(
 		openSourceInsightsService,
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
@@ -109,7 +110,7 @@ func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.Git
 		repositories.NewArtifactRepository(db),
 		utils.NewSyncFireAndForgetSynchronizer(),
 	)
-	return assetversion.NewAssetVersionController(
+	return controllers.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),
 		CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService),
 		repositories.NewDependencyVulnRepository(db),
@@ -118,7 +119,7 @@ func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.Git
 		repositories.NewSupplyChainRepository(db),
 		repositories.NewLicenseRiskRepository(db),
 		&cmpService,
-		statistics.NewService(
+		services.NewStatisticsService(
 			repositories.NewStatisticsRepository(db),
 			repositories.NewComponentRepository(db),
 			repositories.NewArtifactRiskHistoryRepository(db),
@@ -131,7 +132,7 @@ func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.Git
 	)
 }
 
-func CreateScanHTTPController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory shared.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *scan.HTTPController {
+func CreateScanHTTPController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory integrations.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *scan.HTTPController {
 	assetVersionService := CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService)
 	dependencyVulnService := CreateDependencyVulnService(db, oauth2, rbac, clientFactory)
 	artifactService := CreateArtifactService(db, openSourceInsightsService)

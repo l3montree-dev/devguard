@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -15,21 +14,21 @@ import (
 )
 
 type dependencyVulnRepository struct {
-	db shared.DB
+	db *gorm.DB
 	VulnerabilityRepository[models.DependencyVuln]
 }
 
-func NewDependencyVulnRepository(db shared.DB) *dependencyVulnRepository {
+func NewDependencyVulnRepository(db *gorm.DB) *dependencyVulnRepository {
 	return &dependencyVulnRepository{
 		db:                      db,
 		VulnerabilityRepository: *NewVulnerabilityRepository[models.DependencyVuln](db),
 	}
 }
 
-func (repository *dependencyVulnRepository) ApplyAndSave(tx shared.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error {
+func (repository *dependencyVulnRepository) ApplyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return repository.Transaction(func(d shared.DB) error {
+		return repository.Transaction(func(d *gorm.DB) error {
 			_, err := repository.applyAndSave(d, dependencyVuln, vulnEvent)
 			return err
 		})
@@ -39,7 +38,7 @@ func (repository *dependencyVulnRepository) ApplyAndSave(tx shared.DB, dependenc
 	return err
 }
 
-func (repository *dependencyVulnRepository) applyAndSave(tx shared.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (repository *dependencyVulnRepository) applyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
 	ev.Apply(dependencyVuln)
 
@@ -58,7 +57,7 @@ func (repository *dependencyVulnRepository) applyAndSave(tx shared.DB, dependenc
 func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(tx).Preload("Events", func(db shared.DB) shared.DB {
+	q := repository.Repository.GetDB(tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").Preload("Artifacts").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
 
@@ -78,10 +77,10 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events", func(db shared.DB) shared.DB {
+	q := repository.Repository.GetDB(tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
 
@@ -91,11 +90,11 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersio
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx shared.DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx *gorm.DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	subQuery := repository.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
 
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(tx).Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
+	q := repository.Repository.GetDB(tx).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name IN (?) AND dependency_vulns.asset_id = ?", subQuery, assetID)
 
@@ -116,7 +115,7 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 	// Get all dependency vulns that have events with upstream=2 but no events with upstream=1
 	q := repository.Repository.GetDB(repository.db).Model(&models.DependencyVuln{}).
 		Preload("Artifacts").
-		Preload("Events", func(db shared.DB) shared.DB {
+		Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
 		}).
 		Joins("CVE").
@@ -132,8 +131,8 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 				AND (ve2.upstream = 1 OR (ve2.upstream = 0 AND ve2.type IN ?))
 			)
 		)`, assetID, assetVersionName, []string{
-			string(models.EventTypeAccepted),
-			string(models.EventTypeFalsePositive),
+			string(dtos.EventTypeAccepted),
+			string(dtos.EventTypeFalsePositive),
 		})
 
 	// apply filters
@@ -173,7 +172,7 @@ func (repository *dependencyVulnRepository) ListByAssetIDWithoutHandledExternalE
 
 func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Preload("Events", func(db shared.DB) shared.DB {
+	if err := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
@@ -183,7 +182,7 @@ func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVers
 
 func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
+	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 
@@ -207,7 +206,7 @@ type riskStats struct {
 	PackageName         string  `json:"package_name"`
 }
 
-func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx shared.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], map[string]int, error) {
+func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], map[string]int, error) {
 	var count int64
 	var dependencyVulns = []models.DependencyVuln{}
 
@@ -272,27 +271,27 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx shared.DB,
 	return shared.NewPaged(pageInfo, count, dependencyVulns), packageNameIndexMap, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPagedAndFlat(tx shared.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPagedAndFlat(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
 	return repository.GetDependencyVulnsPaged(tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
 }
 
 func (repository dependencyVulnRepository) Read(id string) (models.DependencyVuln, error) {
 	var t models.DependencyVuln
-	err := repository.db.Preload("CVE.Weaknesses").Preload("Events", func(db shared.DB) shared.DB {
+	err := repository.db.Preload("CVE.Weaknesses").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").Preload("Artifacts").First(&t, "id = ?", id).Error
 
 	return t, err
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByPurl(tx shared.DB, purl []string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByPurl(tx *gorm.DB, purl []string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns = []models.DependencyVuln{}
 	if len(purl) == 0 {
 		return dependencyVulns, nil
 	}
 
-	if err := repository.Repository.GetDB(tx).Preload("Artifacts").Preload("Events", func(db shared.DB) shared.DB {
+	if err := repository.Repository.GetDB(tx).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Joins("CVE").Where("component_purl IN ?", purl).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
@@ -301,10 +300,10 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByPurl(tx shared.D
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(tx shared.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Artifacts").Preload("Events", func(db shared.DB) shared.DB {
+	q := repository.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Joins("left join artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("CVE").Where("dependency_vulns.asset_version_name IN (?) AND dependency_vulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery).Distinct()
 
@@ -341,7 +340,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(tx shared.DB
 	return shared.NewPaged(pageInfo, count, dependencyVulns), nil
 }
 
-func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByProjectIDPaged(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
+func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByProjectIDPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
 
 	subQueryAssetIDs := repository.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
@@ -350,7 +349,7 @@ func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByProjectID
 	return repository.GetDependencyVulnsPaged(tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByOrgIDPaged(tx shared.DB, userAllowedProjectIds []string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
+func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByOrgIDPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
 
 	subQueryAssetIDs := repository.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
@@ -360,7 +359,7 @@ func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByOrgIDPage
 
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(tx shared.DB, dependencyVulnID string) (string, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(tx *gorm.DB, dependencyVulnID string) (string, error) {
 	var dependencyVulnAssetID string
 	if err := repository.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Select("dependency_vuln_asset_id").Where("id = ?", dependencyVulnID).Row().Scan(&dependencyVulnAssetID); err != nil {
 		return "", err
@@ -368,7 +367,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependency
 	return dependencyVulnAssetID, nil
 }
 
-func (repository *dependencyVulnRepository) GetOrgFromVulnID(tx shared.DB, dependencyVulnID string) (models.Org, error) {
+func (repository *dependencyVulnRepository) GetOrgFromVulnID(tx *gorm.DB, dependencyVulnID string) (models.Org, error) {
 	var org models.Org
 	if err := repository.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join dependency_vulns f on a.id = f.asset_id where f.id = ?", dependencyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err
@@ -376,7 +375,7 @@ func (repository *dependencyVulnRepository) GetOrgFromVulnID(tx shared.DB, depen
 	return org, nil
 }
 
-func (repository *dependencyVulnRepository) FindByTicketID(tx shared.DB, ticketID string) (models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) FindByTicketID(tx *gorm.DB, ticketID string) (models.DependencyVuln, error) {
 	var vuln models.DependencyVuln
 	if err := repository.Repository.GetDB(tx).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Where("ticket_id = ?", ticketID).First(&vuln).Error; err != nil {
 		return vuln, err
@@ -384,12 +383,12 @@ func (repository *dependencyVulnRepository) FindByTicketID(tx shared.DB, ticketI
 	return vuln, nil
 }
 
-func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
+func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx *gorm.DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error) {
 	type stateCount struct {
 		State string `json:"state"`
 		Count int    `json:"count"`
 	}
-	var hints common.DependencyVulnHints
+	var hints dtos.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
 
 	err := repository.GetDB(tx).Raw(`SELECT state, COUNT(*) as "count" FROM (
@@ -428,7 +427,7 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx sha
 	return hints, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetID(tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetID(tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
 
 	if artifactName != nil {
@@ -446,9 +445,9 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 }
 
 // Override the base GetAllVulnsByAssetID method to preload artifacts
-func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db shared.DB) shared.DB {
+	if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
 		return nil, err
@@ -456,7 +455,7 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(tx shared.DB, a
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx shared.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
 	err := repository.Repository.GetDB(tx).Raw("SELECT * FROM dependency_vulns WHERE asset_id = ? AND ticket_id IS NOT NULL", assetID.String()).Find(&vulns).Error
 	if err != nil {
@@ -465,7 +464,7 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx shared.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx *gorm.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	var vulns []models.DependencyVuln
 	err := repository.Repository.GetDB(tx).Raw(`
 		SELECT vulns.* FROM dependency_vulns vulns 
@@ -479,20 +478,20 @@ func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx shared.DB, 
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx shared.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx *gorm.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error) {
 	var vulns []models.DependencyVuln
 	var err error
 	// choose which states we want to include
 	if len(excludedStates) == 0 {
 		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
-		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Preload("Events", func(db shared.DB) shared.DB {
+		WHERE vulns.asset_id = ? AND (av.default_branch = true OR av.type = 'tag');`, assetID).Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
 		}).Preload("Artifacts").Find(&vulns).Error
 	} else {
 		err = repository.Repository.GetDB(tx).Raw(`SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN asset_versions av ON vulns.asset_id = av.asset_id AND vulns.asset_version_name = av.name
-		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Preload("Events", func(db shared.DB) shared.DB {
+		WHERE vulns.asset_id = ? AND vulns.state NOT IN ? AND (av.default_branch = true OR av.type = 'tag');`, assetID, excludedStates).Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
 		}).Preload("Artifacts").Find(&vulns).Error
 	}
@@ -502,9 +501,9 @@ func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchIn
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(tx shared.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(tx *gorm.DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vuln []models.DependencyVuln
-	err := repository.Repository.GetDB(tx).Preload("Events", func(db shared.DB) shared.DB {
+	err := repository.Repository.GetDB(tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Preload("CVE").Where("cve_id = ? AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err

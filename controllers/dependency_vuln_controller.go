@@ -37,9 +37,9 @@ type dependencyVulnController struct {
 }
 
 type DependencyVulnStatus struct {
-	StatusType              string                             `json:"status"`
-	Justification           string                             `json:"justification"`
-	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
+	StatusType              string                           `json:"status"`
+	Justification           string                           `json:"justification"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository) *dependencyVulnController {
@@ -389,16 +389,16 @@ func (controller dependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, models.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
 
 	//update risk history if the risk has changed
-	eventType := models.VulnEventType(statusType)
+	eventType := dtos.VulnEventType(statusType)
 
 	for _, artifact := range dependencyVuln.Artifacts {
-		if eventType == models.EventTypeAccepted || eventType == models.EventTypeFalsePositive || eventType == models.EventTypeReopened {
+		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
 			if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 

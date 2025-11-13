@@ -16,16 +16,15 @@
 package repositories
 
 import (
-	"github.com/l3montree-dev/devguard/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type GormRepository[ID comparable, T common.Tabler] struct {
+type GormRepository[ID comparable, T Tabler] struct {
 	db *gorm.DB
 }
 
-func newGormRepository[ID comparable, T common.Tabler](db *gorm.DB) *GormRepository[ID, T] {
+func newGormRepository[ID comparable, T Tabler](db *gorm.DB) *GormRepository[ID, T] {
 	return &GormRepository[ID, T]{
 		db: db,
 	}

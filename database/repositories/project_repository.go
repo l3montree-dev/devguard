@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -14,11 +13,11 @@ import (
 )
 
 type projectRepository struct {
-	db shared.DB
-	common.Repository[uuid.UUID, models.Project, shared.DB]
+	db *gorm.DB
+	Repository[uuid.UUID, models.Project, *gorm.DB]
 }
 
-func NewProjectRepository(db shared.DB) *projectRepository {
+func NewProjectRepository(db *gorm.DB) *projectRepository {
 	return &projectRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
@@ -105,7 +104,7 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 	return root
 }
 
-func (g *projectRepository) Update(tx shared.DB, project *models.Project) error {
+func (g *projectRepository) Update(tx *gorm.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
 
@@ -175,14 +174,14 @@ func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]model
 	return projects, err
 }
 
-func (g *projectRepository) EnablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (g *projectRepository) EnablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	return g.db.Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
 		},
 	}).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
 }
-func (g *projectRepository) DisablePolicyForProject(tx shared.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+func (g *projectRepository) DisablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	return g.db.Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
@@ -190,7 +189,7 @@ func (g *projectRepository) DisablePolicyForProject(tx shared.DB, projectID uuid
 	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
 }
 
-func (g *projectRepository) EnableCommunityManagedPolicies(tx shared.DB, projectID uuid.UUID) error {
+func (g *projectRepository) EnableCommunityManagedPolicies(tx *gorm.DB, projectID uuid.UUID) error {
 	// community policies can be identified by their "organization_id" being nil
 	return g.GetDB(tx).Exec(`
 		INSERT INTO project_enabled_policies (project_id, policy_id)
@@ -200,7 +199,7 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx shared.DB, project
 	`, projectID).Error
 }
 
-func (g *projectRepository) Create(tx shared.DB, project *models.Project) error {
+func (g *projectRepository) Create(tx *gorm.DB, project *models.Project) error {
 	// set the slug if not set
 	slug, err := g.firstFreeSlug(project.OrganizationID, project.Slug)
 	if err != nil {
@@ -211,7 +210,7 @@ func (g *projectRepository) Create(tx shared.DB, project *models.Project) error 
 	return g.GetDB(tx).Create(project).Error
 }
 
-func (g *projectRepository) UpsertSplit(tx shared.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+func (g *projectRepository) UpsertSplit(tx *gorm.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
 	var existingProjects []models.Project
 	err := g.db.Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error

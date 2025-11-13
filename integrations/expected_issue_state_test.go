@@ -5,7 +5,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/integrations"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestShouldCreateIssue(t *testing.T) {
 			DefaultBranch: false,
 		}
 
-		defaultBranch := vuln.ShouldCreateIssues(assetVersion)
+		defaultBranch := integrations.ShouldCreateIssues(assetVersion)
 		if defaultBranch {
 			t.Fail()
 		}
@@ -25,7 +26,7 @@ func TestShouldCreateIssue(t *testing.T) {
 			DefaultBranch: true,
 		}
 
-		defaultBranch := vuln.ShouldCreateIssues(assetVersion)
+		defaultBranch := integrations.ShouldCreateIssues(assetVersion)
 		if !defaultBranch {
 			t.Fail()
 		}
@@ -57,53 +58,53 @@ func TestGetExpectedIssueState(t *testing.T) {
 	t.Run("Ticket should stay open if the cvss threshold is still exceeded", func(t *testing.T) {
 		asset := makeAsset(&cvssThreshold, nil)
 		dep := makeDepVuln(dtos.VulnStateOpen, 8.0, nil, false)
-		assert.Equal(t, vuln.ExpectedIssueStateOpen, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateOpen, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Ticket should stay open if the risk threshold is still exceeded", func(t *testing.T) {
 		asset := makeAsset(nil, &riskThreshold)
 		risk := 0.7
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, &risk, false)
-		assert.Equal(t, vuln.ExpectedIssueStateOpen, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateOpen, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Ticket should stay open, even if the risk threshold is not exceeded anymore - BUT the user created it manually.", func(t *testing.T) {
 		asset := makeAsset(&cvssThreshold, &riskThreshold)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateOpen, 1.0, &risk, true)
-		assert.Equal(t, vuln.ExpectedIssueStateOpen, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateOpen, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Ticket should get closed, if the ticket was not manually created and the thresholds are not exceeded anymore", func(t *testing.T) {
 		asset := makeAsset(&cvssThreshold, &riskThreshold)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateOpen, 1.0, &risk, false)
-		assert.Equal(t, vuln.ExpectedIssueStateClosed, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateClosed, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Ticket should stay closed, if it is fixed but the thresholds are exceeded", func(t *testing.T) {
 		asset := makeAsset(&cvssThreshold, &riskThreshold)
 		risk := 1.0
 		dep := makeDepVuln(dtos.VulnStateFixed, 10.0, &risk, false)
-		assert.Equal(t, vuln.ExpectedIssueStateClosed, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateClosed, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("ticket should stay closed, if it is fixed and the thresholds are not exceeded (trivial)", func(t *testing.T) {
 		asset := makeAsset(&cvssThreshold, &riskThreshold)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateFixed, 1.0, &risk, false)
-		assert.Equal(t, vuln.ExpectedIssueStateClosed, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateClosed, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Close the ticket if the thresholds are disabled and the ticket was not created manually", func(t *testing.T) {
 		asset := makeAsset(nil, nil)
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, nil, false)
-		assert.Equal(t, vuln.ExpectedIssueStateClosed, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateClosed, integrations.GetExpectedIssueState(asset, dep))
 	})
 
 	t.Run("Keep the ticket open even if the thresholds dont exist anymore", func(t *testing.T) {
 		asset := makeAsset(nil, nil)
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, nil, true)
-		assert.Equal(t, vuln.ExpectedIssueStateOpen, vuln.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, integrations.ExpectedIssueStateOpen, integrations.GetExpectedIssueState(asset, dep))
 	})
 }

@@ -4,17 +4,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type assetRiskHistoryRepository struct {
-	db shared.DB
-	common.Repository[uint, models.ArtifactRiskHistory, shared.DB]
+	db *gorm.DB
+	Repository[uint, models.ArtifactRiskHistory, *gorm.DB]
 }
 
-func NewAssetRiskHistoryRepository(db shared.DB) *assetRiskHistoryRepository {
+func NewAssetRiskHistoryRepository(db *gorm.DB) *assetRiskHistoryRepository {
 	return &assetRiskHistoryRepository{
 		db:         db,
 		Repository: newGormRepository[uint, models.ArtifactRiskHistory](db),

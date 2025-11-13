@@ -1,14 +1,15 @@
-package daemon_test
+package daemons_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
+
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
@@ -37,7 +38,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		acceptVulnerability(t, db, &vulnerability, 2*time.Hour)
 
 		// Run auto-reopen
-		err = daemon.AutoReopenAcceptedVulnerabilities(db)
+		err = daemons.AutoReopenAcceptedVulnerabilities(db)
 		assert.NoError(t, err)
 
 		// Verify vulnerability is still accepted
@@ -58,7 +59,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		acceptVulnerability(t, db, &vulnerability, 1*time.Hour)
 
 		// Run auto-reopen
-		err = daemon.AutoReopenAcceptedVulnerabilities(db)
+		err = daemons.AutoReopenAcceptedVulnerabilities(db)
 		assert.NoError(t, err)
 
 		// Verify vulnerability is still accepted
@@ -79,7 +80,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		acceptVulnerability(t, db, &vulnerability, 48*time.Hour)
 
 		// Run auto-reopen
-		err = daemon.AutoReopenAcceptedVulnerabilities(db)
+		err = daemons.AutoReopenAcceptedVulnerabilities(db)
 		assert.NoError(t, err)
 
 		// Verify vulnerability has been reopened
@@ -94,7 +95,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		// Find the reopen event
 		var reopenEvent *models.VulnEvent
 		for _, event := range events {
-			if event.Type == models.EventTypeReopened {
+			if event.Type == dtos.EventTypeReopened {
 				reopenEvent = &event
 				break
 			}
@@ -143,7 +144,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		acceptVulnerability(t, db, &vuln2, 72*time.Hour) // Accepted 3 days ago
 
 		// Run auto-reopen
-		err = daemon.AutoReopenAcceptedVulnerabilities(db)
+		err = daemons.AutoReopenAcceptedVulnerabilities(db)
 		assert.NoError(t, err)
 
 		// Verify both vulnerabilities are reopened
@@ -200,7 +201,7 @@ func createTestVulnerability(t *testing.T, db shared.DB, asset models.Asset, ass
 // acceptVulnerability creates an accepted event for a vulnerability
 func acceptVulnerability(t *testing.T, db shared.DB, vulnerability *models.DependencyVuln, timeAgo time.Duration) {
 	// Create an accepted event using the model constructor
-	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), models.VulnTypeDependencyVuln, "test-user", "Accepted for testing", dtos.UpstreamStateInternal)
+	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), dtos.VulnTypeDependencyVuln, "test-user", "Accepted for testing", dtos.UpstreamStateInternal)
 
 	// Manually set the creation time for testing
 	acceptEvent.CreatedAt = time.Now().Add(-timeAgo)

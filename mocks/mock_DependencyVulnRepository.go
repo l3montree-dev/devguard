@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -1666,22 +1665,22 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByPurl_Call) RunAndReturn(r
 }
 
 // GetHintsInOrganizationForVuln provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetHintsInOrganizationForVuln(tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
+func (_mock *DependencyVulnRepository) GetHintsInOrganizationForVuln(tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error) {
 	ret := _mock.Called(tx, orgID, pURL, cveID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetHintsInOrganizationForVuln")
 	}
 
-	var r0 common.DependencyVulnHints
+	var r0 dtos.DependencyVulnHints
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) (common.DependencyVulnHints, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) (dtos.DependencyVulnHints, error)); ok {
 		return returnFunc(tx, orgID, pURL, cveID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) common.DependencyVulnHints); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) dtos.DependencyVulnHints); ok {
 		r0 = returnFunc(tx, orgID, pURL, cveID)
 	} else {
-		r0 = ret.Get(0).(common.DependencyVulnHints)
+		r0 = ret.Get(0).(dtos.DependencyVulnHints)
 	}
 	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, string) error); ok {
 		r1 = returnFunc(tx, orgID, pURL, cveID)
@@ -1733,12 +1732,12 @@ func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Run(run f
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Return(dependencyVulnHints common.DependencyVulnHints, err error) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Return(dependencyVulnHints dtos.DependencyVulnHints, err error) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
 	_c.Call.Return(dependencyVulnHints, err)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) RunAndReturn(run func(tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) RunAndReturn(run func(tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }

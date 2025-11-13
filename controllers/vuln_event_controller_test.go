@@ -20,8 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/core/events"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +37,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
 		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		// Execution
-		err := events.NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
+		err := NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)
@@ -47,7 +46,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
-		mockRepository.On("ReadAssetEventsByVulnID", "vulnID", models.VulnTypeDependencyVuln).Return(nil, assert.AnError)
+		mockRepository.On("ReadAssetEventsByVulnID", "vulnID", dtos.VulnTypeDependencyVuln).Return(nil, assert.AnError)
 		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnID=vulnID", nil)
@@ -57,7 +56,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		ctx.SetParamValues("vulnID")
 
 		// Execution
-		err := events.NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
+		err := NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)

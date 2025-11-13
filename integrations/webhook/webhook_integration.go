@@ -13,7 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type WebhookIntegration struct {
@@ -275,7 +275,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 		}
 	case shared.FirstPartyVulnsDetectedEvent:
 
-		vulns := event.Vulns.([]vuln.FirstPartyVulnDTO)
+		vulns := event.Vulns.([]dtos.FirstPartyVulnDTO)
 
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {
@@ -296,7 +296,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	case shared.DependencyVulnsDetectedEvent:
 
-		vulns := event.Vulns.([]vuln.DependencyVulnDTO)
+		vulns := event.Vulns.([]dtos.DependencyVulnDTO)
 
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {

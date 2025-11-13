@@ -17,92 +17,34 @@ package dtos
 
 import (
 	"github.com/google/uuid"
-	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/common"
-	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/utils"
 )
 
-type CreateRequest struct {
+type ProjectCreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	ParentID *uuid.UUID         `json:"parentId"` // if created as a child project
-	Type     models.ProjectType `json:"type"`
+	ParentID *uuid.UUID `json:"parentId"` // if created as a child project
+	Type     string     `json:"type"`
 }
 
-func (projectCreate *CreateRequest) ToModel() models.Project {
-	// check if valid type
-	if projectCreate.Type != models.ProjectTypeDefault && projectCreate.Type != models.ProjectTypeKubernetesNamespace {
-		projectCreate.Type = models.ProjectTypeDefault
-	}
-
-	return models.Project{Name: projectCreate.Name,
-		Slug:        slug.Make(projectCreate.Name),
-		Description: projectCreate.Description,
-
-		ParentID: projectCreate.ParentID,
-		Type:     projectCreate.Type,
-	}
-}
-
-type changeRoleRequest struct {
+type ProjectChangeRoleRequest struct {
 	Role string `json:"role" validate:"required,oneof=member admin"`
 }
 
-type inviteToProjectRequest struct {
+type ProjectInviteRequest struct {
 	Ids []string `json:"ids" validate:"required"`
 }
 
-type patchRequest struct {
+type ProjectPatchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsPublic    *bool   `json:"isPublic"`
 
-	Type *models.ProjectType `json:"type"`
+	Type *string `json:"type"`
 
 	RepositoryID   *string         `json:"repositoryId"`
 	RepositoryName *string         `json:"repositoryName"`
 	ConfigFiles    *map[string]any `json:"configFiles"`
-}
-
-func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
-	updated := false
-	if projectPatch.Name != nil {
-		project.Name = *projectPatch.Name
-		project.Slug = slug.Make(*projectPatch.Name)
-		updated = true
-	}
-	if projectPatch.Description != nil {
-		project.Description = *projectPatch.Description
-		updated = true
-	}
-
-	if projectPatch.IsPublic != nil {
-		project.IsPublic = *projectPatch.IsPublic
-		updated = true
-	}
-
-	if projectPatch.Type != nil {
-		project.Type = *projectPatch.Type
-		updated = true
-	}
-
-	if projectPatch.RepositoryID != nil {
-		project.RepositoryID = projectPatch.RepositoryID
-		updated = true
-	}
-
-	if projectPatch.RepositoryName != nil {
-		project.RepositoryName = projectPatch.RepositoryName
-		updated = true
-	}
-
-	if projectPatch.ConfigFiles != nil {
-		updated = true
-		project.ConfigFiles = *projectPatch.ConfigFiles
-	}
-	return updated
 }
 
 type ProjectDTO struct {
@@ -120,41 +62,15 @@ type ProjectDTO struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	Assets      []models.Asset `json:"assets"`
+	Assets      []AssetDTO     `json:"assets"`
 	ConfigFiles map[string]any `json:"configFiles"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"` // only set if this is an external entity
 }
 
-type projectDetailsDTO struct {
+type ProjectDetailsDTO struct {
 	ProjectDTO
-	Members  []UserDTO                      `json:"members"`
-	Webhooks []common.WebhookIntegrationDTO `json:"webhooks"`
-}
-
-func FromModel(project models.Project) ProjectDTO {
-	var parentDTO *ProjectDTO
-	if project.Parent != nil {
-		parentDTO = utils.Ptr(FromModel(*project.Parent))
-	}
-
-	return ProjectDTO{
-		Avatar:      project.Avatar,
-		ID:          project.ID,
-		Name:        project.Name,
-		Slug:        project.Slug,
-		Description: project.Description,
-		IsPublic:    project.IsPublic,
-		Type:        string(project.Type),
-
-		ParentID: project.ParentID,
-		Parent:   parentDTO,
-
-		Assets:      project.Assets,
-		ConfigFiles: project.ConfigFiles,
-
-		ExternalEntityProviderID: project.ExternalEntityProviderID,
-		ExternalEntityID:         project.ExternalEntityID,
-	}
+	Members  []UserDTO               `json:"members"`
+	Webhooks []WebhookIntegrationDTO `json:"webhooks"`
 }

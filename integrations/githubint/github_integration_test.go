@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(dtos.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 

@@ -22,17 +22,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type assetVersionRepository struct {
-	db shared.DB
-	common.Repository[uuid.UUID, models.AssetVersion, shared.DB]
+	db *gorm.DB
+	Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
 }
 
-func NewAssetVersionRepository(db shared.DB) *assetVersionRepository {
+func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {
 	return &assetVersionRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
@@ -52,9 +51,9 @@ func (repository *assetVersionRepository) Read(assetVersionName string, assetID 
 	return asset, err
 }
 
-func (repository *assetVersionRepository) Delete(tx shared.DB, assetVersion *models.AssetVersion) error {
+func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *models.AssetVersion) error {
 	// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-	return repository.GetDB(tx).Transaction(func(dbTx shared.DB) error {
+	return repository.GetDB(tx).Transaction(func(dbTx *gorm.DB) error {
 		// First, explicitly delete all related artifacts to ensure proper cleanup
 		if err := dbTx.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Delete(&models.Artifact{}).Error; err != nil {
 			slog.Error("error deleting artifacts for asset version", "err", err, "assetVersion", assetVersion.Name)
@@ -135,7 +134,7 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 }
 
 func (repository *assetVersionRepository) UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
-	return repository.db.Transaction(func(tx shared.DB) error {
+	return repository.db.Transaction(func(tx *gorm.DB) error {
 		// reset the default branch for all versions of this asset
 		if err := tx.Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Update("default_branch", false).Error; err != nil {
 			slog.Error("error resetting default branch for asset versions", "err", err, "assetID", assetID)
@@ -202,17 +201,17 @@ func (repository *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID
 	return app.ID, nil
 } */
 
-func (repository *assetVersionRepository) Update(tx shared.DB, asset *models.AssetVersion) error {
+func (repository *assetVersionRepository) Update(tx *gorm.DB, asset *models.AssetVersion) error {
 	return repository.db.Save(asset).Error
 }
 
-func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(tx shared.DB) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(tx *gorm.DB) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
 	err := repository.db.Find(&assets).Error
 	return assets, err
 }
 
-func (repository *assetVersionRepository) GetAssetVersionsByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAssetVersionsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
 	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
@@ -235,7 +234,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	if count > 0 {
 
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-		err = repository.db.Transaction(func(tx shared.DB) error {
+		err = repository.db.Transaction(func(tx *gorm.DB) error {
 			// Delete all artifacts for the asset versions being deleted in a single query
 			artifactDeleteQuery := `
 				DELETE FROM artifacts 
@@ -277,7 +276,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	return count, nil
 }
 
-func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assetVersions []models.AssetVersion
 	err := repository.Repository.GetDB(tx).Raw("SELECT * FROM asset_versions WHERE asset_id = ? AND (default_branch = true OR type = 'tag')", assetID).Find(&assetVersions).Error
 	if err != nil {

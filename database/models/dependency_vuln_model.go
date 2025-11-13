@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -59,8 +60,8 @@ func (vuln *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
 	vuln.RiskRecalculatedAt = t
 }
 
-func (vuln *DependencyVuln) GetType() VulnType {
-	return VulnTypeDependencyVuln
+func (vuln *DependencyVuln) GetType() dtos.VulnType {
+	return dtos.VulnTypeDependencyVuln
 }
 
 func (vuln *DependencyVuln) GetArtifacts() []Artifact {

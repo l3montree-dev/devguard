@@ -12,10 +12,10 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 )
 
@@ -140,7 +140,7 @@ func newImportCommand() *cobra.Command {
 			cweRepository := repositories.NewCWERepository(database)
 			exploitsRepository := repositories.NewExploitRepository(database)
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-			configService := config.NewService(database)
+			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 			for _, arg := range args {
 				slog.Info(arg)
@@ -316,7 +316,7 @@ func newExportIncrementalCommand() *cobra.Command {
 			cweRepository := repositories.NewCWERepository(database)
 			exploitsRepository := repositories.NewExploitRepository(database)
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-			configService := config.NewService(database)
+			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 			for _, arg := range args {
 				slog.Info(arg)

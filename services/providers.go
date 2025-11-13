@@ -6,21 +6,20 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/release"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 )
 
 // Module provides all service-layer constructors
@@ -39,7 +38,7 @@ var Module = fx.Options(
 	}),
 	fx.Provide(NewCSAFService),
 	fx.Provide(services.NewArtifactService),
-	fx.Provide(statistics.NewService),
+	fx.Provide(services.NewStatisticsService),
 	fx.Provide(intoto.NewInTotoService),
 	fx.Provide(org.NewService),
 	fx.Provide(scan.NewScanService),

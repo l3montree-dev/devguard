@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -151,7 +152,7 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 			// Handle merging multiple vulns with same hash
 			mergedFirstPartyVuln := firstPartyVulnsWithOldHash[0].FirstPartyVuln
 			mergedSnippetContents := SnippetContents{
-				Snippets: []SnippetContent{},
+				Snippets: []dtos.SnippetContent{},
 			}
 			for _, fp := range firstPartyVulnsWithOldHash {
 				snippetContents, err := fp.FirstPartyVuln.FromJSONSnippetContents()

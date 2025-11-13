@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -21,17 +22,17 @@ import (
 
 func TestFirstPartyVulnHash(t *testing.T) {
 	t.Run("should return the same hash for two equal vulnerabilities", func(t *testing.T) {
-		snippet1 := models.SnippetContent{
+		snippet1 := dtos.SnippetContent{
 			StartLine:   1,
 			EndLine:     2,
 			StartColumn: 1,
 			EndColumn:   20,
 			Snippet:     "TestSnippet",
 		}
-		snippetContents1 := models.SnippetContents{
-			Snippets: []models.SnippetContent{snippet1},
+		snippetContents1 := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{snippet1},
 		}
-		snippetJSON1, err := snippetContents1.ToJSON()
+		snippetJSON1, err := transformer.SnippetContentsToJSON(snippetContents1)
 		assert.NoError(t, err)
 		vuln1 := models.FirstPartyVuln{
 			URI:             "test-uri",
@@ -41,17 +42,17 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			},
 		}
 
-		snippet2 := models.SnippetContent{
+		snippet2 := dtos.SnippetContent{
 			StartLine:   1,
 			EndLine:     2,
 			StartColumn: 1,
 			EndColumn:   20,
 			Snippet:     "TestSnippet",
 		}
-		snippetContents2 := models.SnippetContents{
-			Snippets: []models.SnippetContent{snippet2},
+		snippetContents2 := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{snippet2},
 		}
-		snippetJSON2, err := snippetContents2.ToJSON()
+		snippetJSON2, err := transformer.SnippetContentsToJSON(snippetContents2)
 		assert.NoError(t, err)
 
 		vuln2 := models.FirstPartyVuln{
@@ -66,17 +67,17 @@ func TestFirstPartyVulnHash(t *testing.T) {
 	})
 
 	t.Run("should return different hashes for different vulnerabilities", func(t *testing.T) {
-		snippet1 := models.SnippetContent{
+		snippet1 := dtos.SnippetContent{
 			StartLine:   1,
 			EndLine:     2,
 			StartColumn: 1,
 			EndColumn:   20,
 			Snippet:     "TestSnippet",
 		}
-		snippetContents1 := models.SnippetContents{
-			Snippets: []models.SnippetContent{snippet1},
+		snippetContents1 := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{snippet1},
 		}
-		snippetJSON1, err := snippetContents1.ToJSON()
+		snippetJSON1, err := transformer.SnippetContentsToJSON(snippetContents1)
 		assert.NoError(t, err)
 		vuln1 := models.FirstPartyVuln{
 			URI:             "test-uri",
@@ -86,17 +87,17 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			},
 		}
 
-		snippet2 := models.SnippetContent{
+		snippet2 := dtos.SnippetContent{
 			StartLine:   3,
 			EndLine:     4,
 			StartColumn: 5,
 			EndColumn:   6,
 			Snippet:     "AnotherSnippet",
 		}
-		snippetContents2 := models.SnippetContents{
-			Snippets: []models.SnippetContent{snippet2},
+		snippetContents2 := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{snippet2},
 		}
-		snippetJSON2, err := snippetContents2.ToJSON()
+		snippetJSON2, err := transformer.SnippetContentsToJSON(snippetContents2)
 		assert.NoError(t, err)
 
 		vuln2 := models.FirstPartyVuln{
@@ -400,8 +401,8 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					ID:               "vuln-2",
 					AssetVersionName: "main",
 					AssetID:          assetID,
-					Events: []models.VulnEvent{{Type: models.EventTypeDetected},
-						{Type: models.EventTypeComment}},
+					Events: []models.VulnEvent{{Type: dtos.EventTypeDetected},
+						{Type: dtos.EventTypeComment}},
 				},
 				Artifacts: []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: "feature-branch", AssetID: assetID},
 					{ArtifactName: "artifact2", AssetVersionName: "feature-branch", AssetID: assetID}},
@@ -469,7 +470,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeAccepted,
+							Type: dtos.EventTypeAccepted,
 						},
 					},
 				},
@@ -503,7 +504,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeComment,
+							Type: dtos.EventTypeComment,
 						},
 					},
 				},
@@ -514,7 +515,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "develop",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeComment,
+							Type: dtos.EventTypeComment,
 						},
 					},
 				},
@@ -548,11 +549,11 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type:                     models.EventTypeDetected,
+							Type:                     dtos.EventTypeDetected,
 							OriginalAssetVersionName: nil, // original event
 						},
 						{
-							Type:                     models.EventTypeAccepted,
+							Type:                     dtos.EventTypeAccepted,
 							OriginalAssetVersionName: utils.Ptr("other-branch"), // already copied event
 						},
 					},
@@ -566,7 +567,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
 		assert.Len(t, existingEvents, 1)
 		assert.Len(t, existingEvents[0], 1) // only the original event, not the copied one
-		assert.Equal(t, models.EventTypeDetected, existingEvents[0][0].Type)
+		assert.Equal(t, dtos.EventTypeDetected, existingEvents[0][0].Type)
 		assert.Equal(t, "main", *existingEvents[0][0].OriginalAssetVersionName)
 	})
 
@@ -599,7 +600,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					AssetVersionName: "main",
 					Events: []models.VulnEvent{
 						{
-							Type: models.EventTypeDetected,
+							Type: dtos.EventTypeDetected,
 						},
 					},
 				},
@@ -685,21 +686,21 @@ func TestBuildVeX(t *testing.T) {
 					State: dtos.VulnStateAccepted,
 					Events: []models.VulnEvent{
 						{
-							Type:          models.EventTypeDetected,
+							Type:          dtos.EventTypeDetected,
 							Justification: utils.Ptr("Initial detection event without justification"),
 							Model: models.Model{
 								CreatedAt: time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
 							},
 						},
 						{
-							Type:          models.EventTypeAccepted,
+							Type:          dtos.EventTypeAccepted,
 							Justification: &justification,
 							Model: models.Model{
 								CreatedAt: time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC),
 							},
 						},
 						{
-							Type:          models.EventTypeComment,
+							Type:          dtos.EventTypeComment,
 							Justification: utils.Ptr("This is a comment and should be ignored"),
 							Model: models.Model{
 								CreatedAt: time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),

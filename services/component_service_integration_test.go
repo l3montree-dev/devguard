@@ -9,9 +9,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
@@ -123,7 +122,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		vulnEventRepository := repositories.NewVulnEventRepository(db)
 
 		// Set up services
-		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+		licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 		// Mock the OpenSourceInsightService for the component without license
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
@@ -135,7 +134,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			}, nil)
 
 		// Create the component service with mocked dependencies
-		componentService := component.NewComponentService(
+		componentService := services.NewComponentService(
 			mockOpenSourceInsightService,
 			componentProjectRepository,
 			componentRepository,
@@ -185,14 +184,14 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 		// Verify that corresponding vuln events were created
 		var vulnEvents []models.VulnEvent
-		err = db.Where("vuln_type = ?", models.VulnTypeLicenseRisk).Find(&vulnEvents).Error
+		err = db.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&vulnEvents).Error
 		assert.NoError(t, err)
 		assert.Equal(t, expectedRiskCount, len(vulnEvents))
 
 		// Verify vuln events are of correct type
 		for _, event := range vulnEvents {
-			assert.Equal(t, models.VulnTypeLicenseRisk, event.VulnType)
-			assert.Equal(t, models.EventTypeDetected, event.Type)
+			assert.Equal(t, dtos.VulnTypeLicenseRisk, event.VulnType)
+			assert.Equal(t, dtos.EventTypeDetected, event.Type)
 			assert.Equal(t, "system", event.UserID)
 		}
 
@@ -261,11 +260,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		componentProjectRepository := repositories.NewComponentProjectRepository(db)
 		licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 		vulnEventRepository := repositories.NewVulnEventRepository(db)
-		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+		licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
-		componentService := component.NewComponentService(
+		componentService := services.NewComponentService(
 			mockOpenSourceInsightService,
 			componentProjectRepository,
 			componentRepository,

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -99,32 +100,32 @@ func GetAuthAdminClient(ctx Context) AdminClient {
 	return ctx.Get("authAdminClient").(AdminClient)
 }
 
-func GetVulnID(ctx Context) (string, models.VulnType, error) {
+func GetVulnID(ctx Context) (string, dtos.VulnType, error) {
 	dependencyVulnID := ctx.Param("dependencyVulnID")
 	if dependencyVulnID != "" {
-		return dependencyVulnID, models.VulnTypeDependencyVuln, nil
+		return dependencyVulnID, dtos.VulnTypeDependencyVuln, nil
 	}
 	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
 	if ok && dependencyVulnIDFromGet != "" {
-		return dependencyVulnIDFromGet, models.VulnTypeDependencyVuln, nil
+		return dependencyVulnIDFromGet, dtos.VulnTypeDependencyVuln, nil
 	}
 
 	firstPartyVulnID := ctx.Param("firstPartyVulnID")
 	if firstPartyVulnID != "" {
-		return firstPartyVulnID, models.VulnTypeFirstPartyVuln, nil
+		return firstPartyVulnID, dtos.VulnTypeFirstPartyVuln, nil
 	}
 	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
 	if ok && firstPartyVulnIDFromGet != "" {
-		return firstPartyVulnIDFromGet, models.VulnTypeFirstPartyVuln, nil
+		return firstPartyVulnIDFromGet, dtos.VulnTypeFirstPartyVuln, nil
 	}
 
 	licenseRiskID := ctx.Param("licenseRiskID")
 	if licenseRiskID != "" {
-		return licenseRiskID, models.VulnTypeLicenseRisk, nil
+		return licenseRiskID, dtos.VulnTypeLicenseRisk, nil
 	}
 	licenseRiskIDFromGet, ok := ctx.Get("licenseRiskID").(string)
 	if ok && licenseRiskIDFromGet != "" {
-		return licenseRiskIDFromGet, models.VulnTypeLicenseRisk, nil
+		return licenseRiskIDFromGet, dtos.VulnTypeLicenseRisk, nil
 	}
 
 	return "", "", fmt.Errorf("could not get vuln id")

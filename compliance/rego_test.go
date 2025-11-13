@@ -16,7 +16,7 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input, err := ExtractAttestationPayload(string(b))
+	input, err := utils.ExtractAttestationPayload(string(b))
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	model := convertPolicyFsToModel(*policy)
+	model := ConvertPolicyFsToModel(*policy)
 
 	// evaluate the policy
 	res := Eval(model, input)
@@ -86,7 +86,7 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	model := convertPolicyFsToModel(*policy)
+	model := ConvertPolicyFsToModel(*policy)
 	result := Eval(model, input)
 
 	expectedResult := &PolicyEvaluation{

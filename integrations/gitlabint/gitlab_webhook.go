@@ -239,7 +239,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 		}
 
-		if vulnEvent.Type == models.EventTypeAccepted || vulnEvent.Type == models.EventTypeFalsePositive || vulnEvent.Type == models.EventTypeReopened {
+		if vulnEvent.Type == dtos.EventTypeAccepted || vulnEvent.Type == dtos.EventTypeFalsePositive || vulnEvent.Type == dtos.EventTypeReopened {
 			doUpdateArtifactRiskHistory = true
 		}
 
@@ -254,7 +254,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	}
 
 	switch vulnEvent.Type {
-	case models.EventTypeAccepted, models.EventTypeFalsePositive:
+	case dtos.EventTypeAccepted, dtos.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: gitlab.Ptr("close"),
@@ -262,7 +262,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		})
 
 		return err
-	case models.EventTypeReopened:
+	case dtos.EventTypeReopened:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: gitlab.Ptr("reopen"),

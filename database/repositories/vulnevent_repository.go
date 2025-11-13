@@ -4,25 +4,26 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type eventRepository struct {
-	db shared.DB
-	common.Repository[uuid.UUID, models.VulnEvent, shared.DB]
+	db *gorm.DB
+	Repository[uuid.UUID, models.VulnEvent, *gorm.DB]
 }
 
-func NewVulnEventRepository(db shared.DB) *eventRepository {
+func NewVulnEventRepository(db *gorm.DB) *eventRepository {
 	return &eventRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.VulnEvent](db),
 	}
 }
 
-func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
-	if vulnType == models.VulnTypeDependencyVuln {
+func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error) {
+	if vulnType == dtos.VulnTypeDependencyVuln {
 		return r.readDependencyVulnAssetEvents(vulnID)
 	}
 	return r.readFirstPartyVulnAssetEvents(vulnID)
@@ -136,7 +137,7 @@ func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
 	return nil
 }
 
-func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx shared.DB, vulnIDs []string) ([]models.VulnEvent, error) {
+func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx *gorm.DB, vulnIDs []string) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
 	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id IN (?) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs).Find(&events).Error
 	if err != nil {
@@ -145,7 +146,7 @@ func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx shared.DB, vuln
 	return events, nil
 }
 
-func (r *eventRepository) GetLastEventBeforeTimestamp(tx shared.DB, vulnID string, time time.Time) (models.VulnEvent, error) {
+func (r *eventRepository) GetLastEventBeforeTimestamp(tx *gorm.DB, vulnID string, time time.Time) (models.VulnEvent, error) {
 	var event models.VulnEvent
 	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id = ? AND type IN ('detected','accepted','fixed','reopened') AND created_at <= ? ORDER BY created_at DESC", vulnID, time).First(&event).Error
 	if err != nil {

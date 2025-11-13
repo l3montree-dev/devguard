@@ -3,7 +3,6 @@ package models_test
 import (
 	"testing"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
@@ -15,13 +14,13 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 		userID := "user123"
 		justification := "justification text"
 		oldRisk := 0.5
-		report := common.RiskCalculationReport{
+		report := dtos.RiskCalculationReport{
 			// populate with necessary fields
 		}
 
-		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, models.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
+		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
 
-		assert.Equal(t, models.EventTypeRawRiskAssessmentUpdated, event.Type)
+		assert.Equal(t, dtos.EventTypeRawRiskAssessmentUpdated, event.Type)
 		assert.Equal(t, vulnID, event.VulnID)
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
@@ -35,7 +34,7 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 func TestVulnEvent_Apply(t *testing.T) {
 	t.Run("should set state to fixed for EventTypeFixed", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{Type: models.EventTypeFixed}
+		event := models.VulnEvent{Type: dtos.EventTypeFixed}
 
 		event.Apply(&vuln)
 
@@ -43,7 +42,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	})
 	t.Run("should set state to false positive for EventTypeFalsePositive", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{Type: models.EventTypeFalsePositive}
+		event := models.VulnEvent{Type: dtos.EventTypeFalsePositive}
 
 		event.Apply(&vuln)
 
@@ -52,7 +51,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	t.Run("should update the risk assessment for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
-			Type:              models.EventTypeRawRiskAssessmentUpdated,
+			Type:              dtos.EventTypeRawRiskAssessmentUpdated,
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
@@ -64,7 +63,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	t.Run("should update RiskRecalculatedAt for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
-			Type:              models.EventTypeRawRiskAssessmentUpdated,
+			Type:              dtos.EventTypeRawRiskAssessmentUpdated,
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
@@ -74,7 +73,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	})
 	t.Run("should set state to open for EventTypeDetected", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{Type: models.EventTypeDetected}
+		event := models.VulnEvent{Type: dtos.EventTypeDetected}
 
 		event.Apply(&vuln)
 
@@ -84,7 +83,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	t.Run("should update the RiskRecalculatedAt for EventTypeDetected", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
-			Type:              models.EventTypeDetected,
+			Type:              dtos.EventTypeDetected,
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
@@ -95,7 +94,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 	t.Run("should update the state to open on reopened event", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{Type: models.EventTypeReopened}
+		event := models.VulnEvent{Type: dtos.EventTypeReopened}
 
 		event.Apply(&vuln)
 
@@ -103,7 +102,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 	})
 	t.Run("should set state to accepted for EventTypeAccepted", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{Type: models.EventTypeAccepted}
+		event := models.VulnEvent{Type: dtos.EventTypeAccepted}
 
 		event.Apply(&vuln)
 

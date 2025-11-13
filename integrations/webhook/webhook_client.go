@@ -15,7 +15,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type WebhookStruct struct {
@@ -135,7 +135,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project sha
 	return nil
 }
 
-func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
+func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
 	return nil
 
 	/*body := WebhookStruct{
@@ -165,7 +165,7 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []vuln.FirstPartyVuln
 	return nil*/
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []vuln.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -299,7 +299,7 @@ func createSampleSBOM() cdx.BOM {
 	}
 }
 
-func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
+func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 	cve := "CVE-2021-44228"
 	purl := "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
 	fixedVersion := "2.15.0"
@@ -316,7 +316,7 @@ func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
 		Vector:      "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
 	}
 
-	return []vuln.DependencyVulnDTO{
+	return []dtos.DependencyVulnDTO{
 		{
 			ID: "dep-vuln-001",
 			//	ScannerIDs:            "trivy",
@@ -339,10 +339,10 @@ func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
 	}
 }
 
-func createSampleFirstPartyVulns() []vuln.FirstPartyVulnDTO {
+func createSampleFirstPartyVulns() []dtos.FirstPartyVulnDTO {
 	message := "SQL injection vulnerability detected"
 
-	return []vuln.FirstPartyVulnDTO{
+	return []dtos.FirstPartyVulnDTO{
 		{
 			ID:               "fpv-001",
 			ScannerIDs:       "semgrep",
@@ -352,7 +352,7 @@ func createSampleFirstPartyVulns() []vuln.FirstPartyVulnDTO {
 			State:            dtos.VulnStateOpen,
 			RuleID:           "javascript.lang.security.audit.sqli",
 			URI:              "src/auth/login.js",
-			SnippetContents: []models.SnippetContent{
+			SnippetContents: []models.dtos.SnippetContent{
 				{
 					StartLine: 42,
 					EndLine:   45,

@@ -19,10 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -45,7 +45,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 }
 
 func (projectController *projectController) Create(ctx shared.Context) error {
-	var req CreateRequest
+	var req dtos.ProjectCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -54,7 +54,7 @@ func (projectController *projectController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	newProject := req.ToModel()
+	newProject := transformer.ProjectCreateRequestToModel(req)
 
 	// add the organization id
 	newProject.OrganizationID = shared.GetOrg(ctx).GetID()
@@ -131,7 +131,7 @@ func (projectController *projectController) InviteMembers(c shared.Context) erro
 	// get rbac
 	rbac := shared.GetRBAC(c)
 
-	var req inviteToProjectRequest
+	var req dtos.ProjectInviteRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -181,7 +181,7 @@ func (projectController *projectController) ChangeRole(c shared.Context) error {
 	// get rbac
 	rbac := shared.GetRBAC(c)
 
-	var req changeRoleRequest
+	var req dtos.ProjectChangeRoleRequest
 
 	userID := c.Param("userID")
 	if userID == "" {
@@ -264,8 +264,8 @@ func (projectController *projectController) Read(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch webhooks").WithInternal(err)
 	}
 
-	resp := projectDetailsDTO{
-		ProjectDTO: FromModel(project),
+	resp := dtos.ProjectDetailsDTO{
+		ProjectDTO: transformer.ProjectModelToDTO(project),
 		Members:    members,
 		Webhooks:   webhooks,
 	}
@@ -273,7 +273,7 @@ func (projectController *projectController) Read(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (projectController *projectController) getWebhooks(c shared.Context) ([]common.WebhookIntegrationDTO, error) {
+func (projectController *projectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
 
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
@@ -283,8 +283,8 @@ func (projectController *projectController) getWebhooks(c shared.Context) ([]com
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
 
-	return utils.Map(webhooks, func(w models.WebhookIntegration) common.WebhookIntegrationDTO {
-		return common.WebhookIntegrationDTO{
+	return utils.Map(webhooks, func(w models.WebhookIntegration) dtos.WebhookIntegrationDTO {
+		return dtos.WebhookIntegrationDTO{
 			ID:          w.ID.String(),
 			Name:        *w.Name,
 			Description: *w.Description,
@@ -309,7 +309,7 @@ func (projectController *projectController) List(c shared.Context) error {
 func (projectController *projectController) Update(c shared.Context) error {
 	req := c.Request().Body
 	defer req.Close()
-	var patchRequest patchRequest
+	var patchRequest dtos.ProjectPatchRequest
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("could not decode request: %w", err)
@@ -317,7 +317,7 @@ func (projectController *projectController) Update(c shared.Context) error {
 
 	project := shared.GetProject(c)
 
-	updated := patchRequest.applyToModel(&project)
+	updated := transformer.ApplyProjectPatchRequestToModel(patchRequest, &project)
 
 	if project.Name == "" || project.Slug == "" {
 		return echo.NewHTTPError(409, "projects with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("projects with an empty name or an empty slug are not allowed"))
@@ -350,8 +350,8 @@ func (projectController *projectController) Update(c shared.Context) error {
 
 	project.Assets = assets
 
-	resp := projectDetailsDTO{
-		ProjectDTO: FromModel(project),
+	resp := dtos.ProjectDetailsDTO{
+		ProjectDTO: transformer.ProjectModelToDTO(project),
 		Members:    members,
 	}
 	return c.JSON(200, resp)

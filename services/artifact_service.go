@@ -172,15 +172,15 @@ func extractCVE(s string) string {
 
 func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
-	upstream := models.UpstreamStateExternalAccepted
+	upstream := dtos.UpstreamStateExternalAccepted
 	if asset.ParanoidMode {
-		upstream = models.UpstreamStateExternal
+		upstream = dtos.UpstreamStateExternal
 	}
 
 	notFound := 0
 
 	type VulnEvent struct {
-		eventType     models.VulnEventType
+		eventType     dtos.VulnEventType
 		purl          string
 		justification string
 	}
@@ -226,7 +226,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 
 				componentPurl := ref
 
-				expectedMap[cveID] = VulnEvent{eventType: models.VulnEventType(eventType), justification: justification,
+				expectedMap[cveID] = VulnEvent{eventType: dtos.VulnEventType(eventType), justification: justification,
 					purl: componentPurl}
 			}
 
@@ -299,12 +299,12 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					}
 				}
 
-				if newState[i].State != dtos.VulnStateOpen && expected.eventType == models.EventTypeAccepted {
+				if newState[i].State != dtos.VulnStateOpen && expected.eventType == dtos.EventTypeAccepted {
 					// map the event to a reopen event if the vuln is not open yet
-					expected.eventType = models.EventTypeReopened
+					expected.eventType = dtos.EventTypeReopened
 				}
 
-				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, models.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue

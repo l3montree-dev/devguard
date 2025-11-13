@@ -21,15 +21,15 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
-func organizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
+func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			// get the rbac
@@ -60,15 +60,15 @@ func organizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 	}
 }
 
-func neededScope(neededScopes []string) shared.MiddlewareFunc {
+func NeededScope(NeededScopes []string) shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c shared.Context) error {
 			userScopes := shared.GetSession(c).GetScopes()
 
-			ok := utils.ContainsAll(userScopes, neededScopes)
+			ok := utils.ContainsAll(userScopes, NeededScopes)
 			if !ok {
-				slog.Error("user does not have the required scopes", "neededScopes", neededScopes, "userScopes", userScopes)
-				return echo.NewHTTPError(403, fmt.Sprintf("your personal access token does not have the required scope, needed scopes: %s", strings.Join(neededScopes, ", ")))
+				slog.Error("user does not have the required scopes", "NeededScopes", NeededScopes, "userScopes", userScopes)
+				return echo.NewHTTPError(403, fmt.Sprintf("your personal access token does not have the required scope, needed scopes: %s", strings.Join(NeededScopes, ", ")))
 			}
 
 			return next(c)
@@ -77,7 +77,7 @@ func neededScope(neededScopes []string) shared.MiddlewareFunc {
 	}
 }
 
-func assetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
+func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
@@ -125,7 +125,7 @@ func assetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 	}
 }
 
-func projectAccessControlFactory(projectRepository shared.ProjectRepository) shared.RBACMiddleware {
+func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
@@ -179,7 +179,7 @@ func projectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 	}
 }
 
-func multiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) shared.MiddlewareFunc {
+func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) (err error) {
 			// get the organization from the provided context

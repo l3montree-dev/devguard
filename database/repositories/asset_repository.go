@@ -19,19 +19,18 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/lib/pq"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type assetRepository struct {
-	db shared.DB
-	common.Repository[uuid.UUID, models.Asset, shared.DB]
+	db *gorm.DB
+	Repository[uuid.UUID, models.Asset, *gorm.DB]
 }
 
-func NewAssetRepository(db shared.DB) *assetRepository {
+func NewAssetRepository(db *gorm.DB) *assetRepository {
 	return &assetRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Asset](db),
@@ -93,7 +92,7 @@ func (repository *assetRepository) Upsert(t *[]*models.Asset, conflictingColumns
 	return repository.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-func (repository *assetRepository) Create(db shared.DB, asset *models.Asset) error {
+func (repository *assetRepository) Create(db *gorm.DB, asset *models.Asset) error {
 	// get the next slug for the asset
 	firstFreeSlug, err := repository.firstFreeSlug(asset.ProjectID, asset.Slug)
 	if err != nil {
@@ -107,7 +106,7 @@ func (repository *assetRepository) Create(db shared.DB, asset *models.Asset) err
 	return nil
 }
 
-func (repository *assetRepository) Save(db shared.DB, asset *models.Asset) error {
+func (repository *assetRepository) Save(db *gorm.DB, asset *models.Asset) error {
 	if asset.ID == uuid.Nil {
 		// get the next slug for the asset
 		firstFreeSlug, err := repository.firstFreeSlug(asset.ProjectID, asset.Slug)
@@ -212,7 +211,7 @@ func (repository *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug st
 	return app.ID, nil
 }
 
-func (repository *assetRepository) Update(tx shared.DB, asset *models.Asset) error {
+func (repository *assetRepository) Update(tx *gorm.DB, asset *models.Asset) error {
 	return repository.db.Save(asset).Error
 }
 
@@ -232,7 +231,7 @@ func (repository *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.
 	return asset, err
 }
 
-func (repository *assetRepository) Delete(tx shared.DB, id uuid.UUID) error {
+func (repository *assetRepository) Delete(tx *gorm.DB, id uuid.UUID) error {
 	asset := models.Asset{Model: models.Model{ID: id}}
 	return repository.db.Select("AssetVersions").Delete(&asset).Error
 }

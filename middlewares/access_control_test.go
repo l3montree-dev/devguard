@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/auth"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -48,7 +48,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
+		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -78,7 +78,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)
+		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -108,7 +108,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
+		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -150,7 +150,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -190,7 +190,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionUpdate)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -230,7 +230,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -271,7 +271,7 @@ func TestProjectAccessControl(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -314,7 +314,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -354,7 +354,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionUpdate)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -397,7 +397,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -438,7 +438,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -472,7 +472,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("nonexistent-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -513,7 +513,7 @@ func TestAssetAccessControl(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -562,7 +562,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := projectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
@@ -600,7 +600,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := assetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")

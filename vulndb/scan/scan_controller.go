@@ -23,10 +23,10 @@ import (
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -65,13 +65,13 @@ func NewHTTPController(scanService shared.ScanService, componentRepository share
 type ScanResponse struct {
 	AmountOpened    int                      `json:"amountOpened"`
 	AmountClosed    int                      `json:"amountClosed"`
-	DependencyVulns []vuln.DependencyVulnDTO `json:"dependencyVulns"`
+	DependencyVulns []dtos.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 type FirstPartyScanResponse struct {
 	AmountOpened    int                      `json:"amountOpened"`
 	AmountClosed    int                      `json:"amountClosed"`
-	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+	FirstPartyVulns []dtos.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
@@ -241,7 +241,7 @@ func (s *HTTPController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (Sca
 	return ScanResponse{
 		AmountOpened:    opened,
 		AmountClosed:    closed,
-		DependencyVulns: utils.Map(newState, vuln.DependencyVulnToDto),
+		DependencyVulns: utils.Map(newState, transformer.DependencyVulnToDTO),
 	}, nil
 }
 
@@ -313,7 +313,7 @@ func (s *HTTPController) FirstPartyVulnScan(ctx shared.Context) error {
 	return ctx.JSON(200, FirstPartyScanResponse{
 		AmountOpened:    len(opened),
 		AmountClosed:    len(closed),
-		FirstPartyVulns: utils.Map(newState, vuln.FirstPartyVulnToDto),
+		FirstPartyVulns: utils.Map(newState, transformer.FirstPartyVulnToDto),
 	})
 }
 

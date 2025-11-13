@@ -21,6 +21,40 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
+func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
+	var componentProject *dtos.ComponentProjectDTO
+	if m.ComponentProject != nil {
+		var scoreCard map[string]any
+		if m.ComponentProject.ScoreCard != nil {
+			scoreCard = *m.ComponentProject.ScoreCard
+		}
+
+		componentProject = &dtos.ComponentProjectDTO{
+			ProjectKey:      m.ComponentProject.ProjectKey,
+			StarsCount:      m.ComponentProject.StarsCount,
+			ForksCount:      m.ComponentProject.ForksCount,
+			OpenIssuesCount: m.ComponentProject.OpenIssuesCount,
+			Homepage:        m.ComponentProject.Homepage,
+			License:         m.ComponentProject.License,
+			Description:     m.ComponentProject.Description,
+			ScoreCard:       scoreCard,
+			ScoreCardScore:  m.ComponentProject.ScoreCardScore,
+			UpdatedAt:       m.ComponentProject.UpdatedAt,
+		}
+	}
+
+	return dtos.ComponentDTO{
+		Purl:                m.Purl,
+		Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+		ComponentType:       m.ComponentType,
+		Version:             m.Version,
+		License:             m.License,
+		Published:           m.Published,
+		ComponentProject:    componentProject,
+		ComponentProjectKey: m.ComponentProjectKey,
+	}
+}
+
 func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDependencyDTO {
 	return dtos.ComponentDependencyDTO{
 		ID:             m.ID,

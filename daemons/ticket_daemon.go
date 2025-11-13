@@ -1,4 +1,4 @@
-package daemon
+package daemons
 
 import (
 	"context"
@@ -10,10 +10,11 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -71,7 +72,7 @@ func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyI
 				continue
 			}
 			for _, asset := range assets {
-				if !vuln.IsConnectedToThirdPartyIntegration(asset) {
+				if !integrations.IsConnectedToThirdPartyIntegration(asset) {
 					continue
 				}
 				// get all asset versions for the asset
@@ -127,7 +128,7 @@ func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyI
 	return nil
 }
 
-func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
+func CompareStatesAndResolveDifferences(client integrations.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
 	// if do not have a connection to a repo we do not need to do anything
 	if asset.RepositoryID == nil {
 		return nil

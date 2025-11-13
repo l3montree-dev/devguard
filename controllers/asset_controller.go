@@ -87,7 +87,7 @@ func (a *assetController) List(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, transformer.ToDTOs(apps))
+	return ctx.JSON(200, transformer.AssetModelsToDTOs(apps))
 }
 
 func (a *assetController) AttachSigningKey(ctx shared.Context) error {
@@ -157,7 +157,7 @@ func (a *assetController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, transformer.ToDTO(*asset))
+	return ctx.JSON(200, transformer.AssetModelToDTO(*asset))
 }
 
 func (a *assetController) Read(ctx shared.Context) error {
@@ -168,7 +168,7 @@ func (a *assetController) Read(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, transformer.ToDetailsDTO(app, members))
+	return ctx.JSON(200, transformer.AssetModelToDetailsDTO(app, members))
 }
 
 func (a *assetController) Update(ctx shared.Context) error {
@@ -303,7 +303,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, transformer.ToDetailsDTOWithSecrets(asset, members))
+	return ctx.JSON(200, transformer.AssetModelToDetailsWithSecretsDTO(asset, members))
 }
 
 func (a *assetController) GetConfigFile(ctx shared.Context) error {

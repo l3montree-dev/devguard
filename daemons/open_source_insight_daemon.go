@@ -1,16 +1,15 @@
-package daemon
+package daemons
 
 import (
 	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 )
 
 func UpdateOpenSourceInsightInformation(db shared.DB) error {
@@ -21,8 +20,8 @@ func UpdateOpenSourceInsightInformation(db shared.DB) error {
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
 	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
-	licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
-	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
+	licenseRiskService := services.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
+	componentService := services.NewComponentService(&openSourceInsightsService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
 
 	if err != nil {
 		return err

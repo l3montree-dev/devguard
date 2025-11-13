@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -23,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -80,7 +80,7 @@ func NewJiraIntegration(db shared.DB) *JiraIntegration {
 	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	releaseRepository := repositories.NewReleaseRepository(db)
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
+	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 
 	return &JiraIntegration{
 		jiraIntegrationRepository: jiraIntegrationRepository,

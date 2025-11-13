@@ -11,6 +11,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
@@ -223,7 +224,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
 		Type:     "detected",
 		UserID:   "system",
-		VulnType: models.VulnTypeDependencyVuln,
+		VulnType: dtos.VulnTypeDependencyVuln,
 	}
 	if err = db.Create(&vuln1DetectedEvent).Error; err != nil {
 		panic(err)
@@ -234,7 +235,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		Model:    models.Model{CreatedAt: time.Now().Add(-7 * time.Minute), UpdatedAt: time.Now().Add(-7 * time.Minute)},
 		Type:     "comment",
 		UserID:   "system",
-		VulnType: models.VulnTypeDependencyVuln,
+		VulnType: dtos.VulnTypeDependencyVuln,
 	}
 	if err = db.Create(&vuln1CommentEvent).Error; err != nil {
 		panic(err)
@@ -244,7 +245,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-3 * time.Minute)},
 		Type:     "fixed",
 		UserID:   "system",
-		VulnType: models.VulnTypeDependencyVuln,
+		VulnType: dtos.VulnTypeDependencyVuln,
 	}
 	if err = db.Create(&vuln1FixedEvent).Error; err != nil {
 		panic(err)
@@ -254,7 +255,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-2 * time.Minute)},
 		Type:     "detected",
 		UserID:   "system",
-		VulnType: models.VulnTypeDependencyVuln,
+		VulnType: dtos.VulnTypeDependencyVuln,
 	}
 	if err = db.Create(&vuln2DetectedEvent).Error; err != nil {
 		panic(err)
@@ -265,7 +266,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		Model:    models.Model{CreatedAt: time.Now().Add(-1 * time.Minute), UpdatedAt: time.Now().Add(-1 * time.Minute)},
 		Type:     "fixed",
 		UserID:   "system",
-		VulnType: models.VulnTypeDependencyVuln,
+		VulnType: dtos.VulnTypeDependencyVuln,
 	}
 	if err = db.Create(&vuln2FixedEvent).Error; err != nil {
 		panic(err)

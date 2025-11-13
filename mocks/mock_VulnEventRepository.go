@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -181,7 +182,7 @@ func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndRe
 }
 
 // ReadAssetEventsByVulnID provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
+func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error) {
 	ret := _mock.Called(vulnID, vulnType)
 
 	if len(ret) == 0 {
@@ -190,17 +191,17 @@ func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnTyp
 
 	var r0 []models.VulnEventDetail
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, models.VulnType) ([]models.VulnEventDetail, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, dtos.VulnType) ([]models.VulnEventDetail, error)); ok {
 		return returnFunc(vulnID, vulnType)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, models.VulnType) []models.VulnEventDetail); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, dtos.VulnType) []models.VulnEventDetail); ok {
 		r0 = returnFunc(vulnID, vulnType)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnEventDetail)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, models.VulnType) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, dtos.VulnType) error); ok {
 		r1 = returnFunc(vulnID, vulnType)
 	} else {
 		r1 = ret.Error(1)
@@ -215,20 +216,20 @@ type VulnEventRepository_ReadAssetEventsByVulnID_Call struct {
 
 // ReadAssetEventsByVulnID is a helper method to define mock.On call
 //   - vulnID string
-//   - vulnType models.VulnType
+//   - vulnType dtos.VulnType
 func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(vulnID interface{}, vulnType interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", vulnID, vulnType)}
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType models.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType dtos.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 models.VulnType
+		var arg1 dtos.VulnType
 		if args[1] != nil {
-			arg1 = args[1].(models.VulnType)
+			arg1 = args[1].(dtos.VulnType)
 		}
 		run(
 			arg0,
@@ -243,7 +244,7 @@ func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Return(vulnEventDeta
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Return(run)
 	return _c
 }

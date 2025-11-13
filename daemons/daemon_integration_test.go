@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree UG (haftungsbeschraenkt).
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package daemon_test
+package daemons_test
 
 import (
 	"fmt"
@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
@@ -40,7 +40,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 
-		err = daemon.DeleteOldAssetVersions(db)
+		err = daemons.DeleteOldAssetVersions(db)
 		assert.Nil(t, err)
 
 		var notDeletedAssetVersion models.AssetVersion
@@ -79,7 +79,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 
-		err = daemon.DeleteOldAssetVersions(db)
+		err = daemons.DeleteOldAssetVersions(db)
 		assert.Nil(t, err)
 
 		var deletedAssetVersion models.AssetVersion
@@ -109,7 +109,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 
-		err = daemon.DeleteOldAssetVersions(db)
+		err = daemons.DeleteOldAssetVersions(db)
 		assert.Nil(t, err)
 
 		var notDeletedAssetVersion models.AssetVersion
@@ -188,7 +188,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		assert.Nil(t, err)
 		fmt.Println("Updated Asset Version:", updaedAssetVersion.UpdatedAt)
 
-		err = daemon.DeleteOldAssetVersions(db)
+		err = daemons.DeleteOldAssetVersions(db)
 		assert.Nil(t, err)
 
 		var deletedAssetVersion models.AssetVersion
@@ -273,7 +273,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.Create(&componentDependency).Error
 		assert.Nil(t, err)
 
-		err = daemon.ScanArtifacts(db, casbinRBACProvider)
+		err = daemons.ScanArtifacts(db, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		var dependencyVuln []models.DependencyVuln
@@ -367,7 +367,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 		Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
 	}).Return(nil, nil, nil)
 
-	err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
+	err = daemons.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 	assert.Nil(t, err)
 
 	db.Find(&dependencyVuln, "id = ?", dependencyVuln.ID)
@@ -410,7 +410,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 				State: "opened",
 			}, nil, nil)
 
-		err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
+		err = daemons.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		// Check if the ticket was updated
@@ -445,7 +445,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 				State: "closed",
 			}, nil, nil)
 
-		err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
+		err = daemons.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 		assert.Nil(t, err)
 
 		// Check if the ticket was updated
@@ -553,7 +553,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 	}).Return(nil, nil, nil)
 
 	// Run the ticket daemon
-	err = daemon.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
+	err = daemons.SyncTickets(db, thirdPartyIntegration, casbinRBACProvider)
 	assert.Nil(t, err)
 
 	t.Run("should create a ticket with all artifact names in description", func(t *testing.T) {
@@ -640,7 +640,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
 
 	t.Run("should recalculate the risk of the dependency vuln", func(t *testing.T) {
-		err = daemon.RecalculateRisk(db, thirdPartyIntegration)
+		err = daemons.RecalculateRisk(db, thirdPartyIntegration)
 		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln
@@ -662,7 +662,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 		assert.Nil(t, err)
 		oldRawRiskValue = *dependencyVuln.RawRiskAssessment
 
-		err = daemon.RecalculateRisk(db, thirdPartyIntegration)
+		err = daemons.RecalculateRisk(db, thirdPartyIntegration)
 		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln
@@ -691,7 +691,7 @@ func TestDaemonFixedVersions(t *testing.T) {
 
 	componentA := models.Component{
 		Purl:          "pkg:npm/react@18.2.0",
-		ComponentType: models.ComponentTypeLibrary,
+		ComponentType: dtos.ComponentTypeLibrary,
 		Version:       "18.2.0",
 	}
 	err = db.Create(&componentA).Error
@@ -699,7 +699,7 @@ func TestDaemonFixedVersions(t *testing.T) {
 
 	componentB := models.Component{
 		Purl:          "pkg:npm/react-dom@15.0.0",
-		ComponentType: models.ComponentTypeLibrary,
+		ComponentType: dtos.ComponentTypeLibrary,
 		Version:       "15.0.0",
 	}
 	err = db.Create(&componentB).Error
@@ -774,7 +774,7 @@ func TestDaemonFixedVersions(t *testing.T) {
 		err = db.Save(&dependencyVuln).Error
 		assert.Nil(t, err)
 
-		err = daemon.UpdateFixedVersions(db)
+		err = daemons.UpdateFixedVersions(db)
 		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln

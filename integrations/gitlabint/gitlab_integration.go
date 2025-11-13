@@ -30,8 +30,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -145,11 +145,11 @@ func NewGitlabIntegration(db shared.DB, oauth2GitlabIntegration map[string]*Gitl
 
 	orgRepository := repositories.NewOrgRepository(db)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
+	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
-	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+	licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {

@@ -196,7 +196,7 @@
                     "digest": {
                         "sha256": "7873fb03278090410cd7619d82de1bc931a50ababdbaab89adf8fff3742b6365"
                     },
-                    "uri": "file://internal/core/daemon/deps_dev_daemon.go"
+                    "uri": "file://internal/core/daemon/deps_dev_daemons.go"
                 },
                 {
                     "digest": {
@@ -1006,7 +1006,7 @@
                     "digest": {
                         "sha256": "9b7ebcfcb7531498118de04ef5e6931aec8a45d353cb6deda3a58161b1923ba8"
                     },
-                    "uri": "file://internal/core/daemon/daemon.go"
+                    "uri": "file://internal/core/daemon/daemons.go"
                 },
                 {
                     "digest": {
@@ -1468,7 +1468,7 @@
                     "digest": {
                         "sha256": "12e6bc808d9b2b87d7d96065ed17b68741923179dea706c18f0352d7b94f03f3"
                     },
-                    "uri": "file://internal/core/daemon/vulndb_daemon.go"
+                    "uri": "file://internal/core/daemon/vulndb_daemons.go"
                 },
                 {
                     "digest": {
@@ -1534,7 +1534,7 @@
                     "digest": {
                         "sha256": "4d30e1394736c4f5c50381dff63ea04216eaed83184f53fb6e2e580d0c99660a"
                     },
-                    "uri": "file://internal/core/daemon/risk_daemon.go"
+                    "uri": "file://internal/core/daemon/risk_daemons.go"
                 },
                 {
                     "digest": {
@@ -1750,7 +1750,7 @@
                     "digest": {
                         "sha256": "73aedb851d7201c019020960ab385cc3bd4ca1b4444be572cef0679f48c0c43b"
                     },
-                    "uri": "file://internal/core/daemon/flaw_daemon.go"
+                    "uri": "file://internal/core/daemon/flaw_daemons.go"
                 },
                 {
                     "digest": {
@@ -2146,7 +2146,7 @@
                     "digest": {
                         "sha256": "4a3e2d6106d2a4d21dbbe87e8f7f941c468b100934d547b5534644839d1854f1"
                     },
-                    "uri": "file://internal/core/daemon/statistics_daemon.go"
+                    "uri": "file://internal/core/daemon/statistics_daemons.go"
                 },
                 {
                     "digest": {

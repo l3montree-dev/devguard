@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -27,8 +28,8 @@ func (licenseRisk LicenseRisk) TableName() string {
 	return "license_risks"
 }
 
-func (licenseRisk LicenseRisk) GetType() VulnType {
-	return VulnTypeLicenseRisk
+func (licenseRisk LicenseRisk) GetType() dtos.VulnType {
+	return dtos.VulnTypeLicenseRisk
 }
 
 func (licenseRisk *LicenseRisk) CalculateHash() string {

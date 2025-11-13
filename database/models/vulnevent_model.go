@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
@@ -14,7 +13,7 @@ type VulnEvent struct {
 	Model
 	Type                     dtos.VulnEventType               `json:"type" gorm:"type:text"`
 	VulnID                   string                           `json:"vulnId"`
-	VulnType                 dtos.VulnType                    `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
+	VulnType                 dtos.VulnType                    `json:"dtos.VulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
@@ -36,18 +35,18 @@ type VulnEventDetail struct {
 
 func EventTypeToVulnState(eventType dtos.VulnEventType) (dtos.VulnState, error) {
 	switch eventType {
-	case EventTypeFixed:
-		return VulnStateFixed, nil
-	case EventTypeDetected:
+	case dtos.EventTypeFixed:
+		return dtos.VulnStateFixed, nil
+	case dtos.EventTypeDetected:
 		fallthrough
-	case EventTypeReopened:
-		return VulnStateOpen, nil
-	case EventTypeAccepted:
-		return VulnStateAccepted, nil
-	case EventTypeFalsePositive:
-		return VulnStateFalsePositive, nil
-	case EventTypeMarkedForTransfer:
-		return VulnStateMarkedForTransfer, nil
+	case dtos.EventTypeReopened:
+		return dtos.VulnStateOpen, nil
+	case dtos.EventTypeAccepted:
+		return dtos.VulnStateAccepted, nil
+	case dtos.EventTypeFalsePositive:
+		return dtos.VulnStateFalsePositive, nil
+	case dtos.EventTypeMarkedForTransfer:
+		return dtos.VulnStateMarkedForTransfer, nil
 	default:
 		return "", fmt.Errorf("event type %s does not map to a vuln state", eventType)
 	}
@@ -82,13 +81,13 @@ func (event VulnEvent) TableName() string {
 }
 
 func (event VulnEvent) Apply(vuln Vuln) {
-	if event.Upstream != UpstreamStateInternal && event.Type == EventTypeAccepted {
+	if event.Upstream != dtos.UpstreamStateInternal && event.Type == dtos.EventTypeAccepted {
 		// its an external accepted event that should not modify state
 		return
 	}
 
 	switch event.Type {
-	case EventTypeLicenseDecision:
+	case dtos.EventTypeLicenseDecision:
 		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
 		if !ok {
 			slog.Error("could not parse final license decision", "dependencyVulnID",
@@ -98,15 +97,15 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		}
 		v := vuln.(*LicenseRisk)
 		v.SetFinalLicenseDecision(finalLicenseDecision)
-		v.SetState(VulnStateFixed)
-	case EventTypeFixed:
-		vuln.SetState(VulnStateFixed)
-	case EventTypeReopened:
-		if event.Upstream == UpstreamStateExternal {
+		v.SetState(dtos.VulnStateFixed)
+	case dtos.EventTypeFixed:
+		vuln.SetState(dtos.VulnStateFixed)
+	case dtos.EventTypeReopened:
+		if event.Upstream == dtos.UpstreamStateExternal {
 			return
 		}
-		vuln.SetState(VulnStateOpen)
-	case EventTypeDetected:
+		vuln.SetState(dtos.VulnStateOpen)
+	case dtos.EventTypeDetected:
 		// event type detected will always be applied!
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
@@ -114,17 +113,17 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
-		vuln.SetState(VulnStateOpen)
-	case EventTypeAccepted:
-		vuln.SetState(VulnStateAccepted)
-	case EventTypeFalsePositive:
-		if event.Upstream == UpstreamStateExternal {
+		vuln.SetState(dtos.VulnStateOpen)
+	case dtos.EventTypeAccepted:
+		vuln.SetState(dtos.VulnStateAccepted)
+	case dtos.EventTypeFalsePositive:
+		if event.Upstream == dtos.UpstreamStateExternal {
 			return
 		}
-		vuln.SetState(VulnStateFalsePositive)
-	case EventTypeMarkedForTransfer:
-		vuln.SetState(VulnStateMarkedForTransfer)
-	case EventTypeRawRiskAssessmentUpdated:
+		vuln.SetState(dtos.VulnStateFalsePositive)
+	case dtos.EventTypeMarkedForTransfer:
+		vuln.SetState(dtos.VulnStateMarkedForTransfer)
+	case dtos.EventTypeRawRiskAssessmentUpdated:
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
 			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
@@ -136,10 +135,10 @@ func (event VulnEvent) Apply(vuln Vuln) {
 
 }
 
-func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string, upstream UpstreamState) VulnEvent {
+func NewAcceptedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
 
 	return VulnEvent{
-		Type:          EventTypeAccepted,
+		Type:          dtos.EventTypeAccepted,
 		VulnID:        vulnID,
 		UserID:        userID,
 		VulnType:      vulnType,
@@ -148,9 +147,9 @@ func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification st
 	}
 }
 
-func NewReopenedEvent(vulnID string, vulnType VulnType, userID, justification string, upstream UpstreamState) VulnEvent {
+func NewReopenedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
 	return VulnEvent{
-		Type:          EventTypeReopened,
+		Type:          dtos.EventTypeReopened,
 		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
@@ -159,9 +158,9 @@ func NewReopenedEvent(vulnID string, vulnType VulnType, userID, justification st
 	}
 }
 
-func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
+func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:          EventTypeComment,
+		Type:          dtos.EventTypeComment,
 		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
@@ -169,9 +168,9 @@ func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification str
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, artifactName string, upstream UpstreamState) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, upstream dtos.UpstreamState) VulnEvent {
 	ev := VulnEvent{
-		Type:                    EventTypeFalsePositive,
+		Type:                    dtos.EventTypeFalsePositive,
 		VulnID:                  vulnID,
 		VulnType:                vulnType,
 		UserID:                  userID,
@@ -183,9 +182,9 @@ func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justificati
 	return ev
 }
 
-func NewFixedEvent(vulnID string, vulnType VulnType, userID string, artifactName string, upstream UpstreamState) VulnEvent {
+func NewFixedEvent(vulnID string, vulnType dtos.VulnType, userID string, artifactName string, upstream dtos.UpstreamState) VulnEvent {
 	ev := VulnEvent{
-		Type:     EventTypeFixed,
+		Type:     dtos.EventTypeFixed,
 		VulnType: vulnType,
 		VulnID:   vulnID,
 		UserID:   userID,
@@ -195,9 +194,9 @@ func NewFixedEvent(vulnID string, vulnType VulnType, userID string, artifactName
 	return ev
 }
 
-func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, justification, artifactName string, finalLicenseDecision string) VulnEvent {
+func NewLicenseDecisionEvent(vulnID string, vulnType dtos.VulnType, userID string, justification, artifactName string, finalLicenseDecision string) VulnEvent {
 	ev := VulnEvent{
-		Type:          EventTypeLicenseDecision,
+		Type:          dtos.EventTypeLicenseDecision,
 		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
@@ -207,13 +206,13 @@ func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, ju
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string, upstream UpstreamState) VulnEvent {
-	if upstream == UpstreamStateExternal {
+func NewDetectedEvent(vulnID string, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, upstream dtos.UpstreamState) VulnEvent {
+	if upstream == dtos.UpstreamStateExternal {
 		// detected events can ONLY be accepted!
-		upstream = UpstreamStateExternalAccepted
+		upstream = dtos.UpstreamStateExternalAccepted
 	}
 	ev := VulnEvent{
-		Type:     EventTypeDetected,
+		Type:     dtos.EventTypeDetected,
 		VulnType: vulnType,
 		VulnID:   vulnID,
 		UserID:   userID,
@@ -228,9 +227,9 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	return ev
 }
 
-func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justification string, arbitraryData map[string]any) VulnEvent {
+func NewMitigateEvent(vulnID string, vulnType dtos.VulnType, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
-		Type:          EventTypeMitigate,
+		Type:          dtos.EventTypeMitigate,
 		VulnID:        vulnID,
 		VulnType:      vulnType,
 		UserID:        userID,
@@ -240,9 +239,9 @@ func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justifica
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType VulnType, userID string, justification string, oldRisk *float64, report common.RiskCalculationReport) VulnEvent {
+func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType dtos.VulnType, userID string, justification string, oldRisk *float64, report dtos.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
-		Type:          EventTypeRawRiskAssessmentUpdated,
+		Type:          dtos.EventTypeRawRiskAssessmentUpdated,
 		VulnID:        vulnID,
 		VulnType:      vulnType,
 		UserID:        userID,

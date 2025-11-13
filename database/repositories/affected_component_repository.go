@@ -17,9 +17,7 @@ package repositories
 import (
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -28,7 +26,7 @@ import (
 
 type affectedCmpRepository struct {
 	db *gorm.DB
-	common.Repository[string, models.AffectedComponent, shared.DB]
+	Repository[string, models.AffectedComponent, *gorm.DB]
 }
 
 func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.AffectedComponent) error {
@@ -39,14 +37,14 @@ func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.Aff
 	).Save(affectedComponents).Error
 }
 
-func NewAffectedComponentRepository(db shared.DB) *affectedCmpRepository {
+func NewAffectedComponentRepository(db *gorm.DB) *affectedCmpRepository {
 	return &affectedCmpRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.AffectedComponent](db),
 	}
 }
 
-func (g *affectedCmpRepository) DeleteAll(tx shared.DB, ecosystem string) error {
+func (g *affectedCmpRepository) DeleteAll(tx *gorm.DB, ecosystem string) error {
 	return g.GetDB(tx).Where("ecosystem = ?", ecosystem).Delete(&models.AffectedComponent{}).Error
 }
 
@@ -58,7 +56,7 @@ func (g *affectedCmpRepository) GetAllAffectedComponentsID() ([]string, error) {
 	return affectedComponents, err
 }
 
-func (g *affectedCmpRepository) createInBatches(tx shared.DB, pkgs []models.AffectedComponent, batchSize int) error {
+func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.AffectedComponent, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{
 			Logger: logger.Default.LogMode(logger.Silent),
@@ -96,6 +94,6 @@ func (g *affectedCmpRepository) createInBatches(tx shared.DB, pkgs []models.Affe
 	return err
 }
 
-func (g *affectedCmpRepository) SaveBatch(tx shared.DB, affectedPkgs []models.AffectedComponent) error {
+func (g *affectedCmpRepository) SaveBatch(tx *gorm.DB, affectedPkgs []models.AffectedComponent) error {
 	return g.createInBatches(tx, affectedPkgs, 1000)
 }

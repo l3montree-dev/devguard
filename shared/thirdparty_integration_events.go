@@ -1,4 +1,4 @@
-package integrations
+package shared
 
 import (
 	"time"
@@ -6,16 +6,15 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
 )
 
 type ManualMitigateEvent struct {
-	Ctx           shared.Context
+	Ctx           Context
 	Justification string
 }
 
 type VulnEvent struct {
-	Ctx   shared.Context
+	Ctx   Context
 	Event models.VulnEvent
 }
 
@@ -29,7 +28,7 @@ type SBOMCreatedEvent struct {
 }
 
 type DependencyVulnsDetectedEvent struct {
-	Vulns        any // []vuln.DependencyVulnDTO
+	Vulns        any // []dtos.DependencyVulnDTO
 	Org          OrgObject
 	Project      ProjectObject
 	Asset        AssetObject
@@ -38,7 +37,7 @@ type DependencyVulnsDetectedEvent struct {
 }
 
 type FirstPartyVulnsDetectedEvent struct {
-	Vulns        any //[]vuln.FirstPartyVulnDTO
+	Vulns        any //[]dtos.FirstPartyVulnDTO
 	Org          OrgObject
 	Project      ProjectObject
 	Asset        AssetObject

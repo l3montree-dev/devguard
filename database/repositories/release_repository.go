@@ -2,17 +2,17 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type releaseRepository struct {
-	common.Repository[uuid.UUID, models.Release, shared.DB]
-	db shared.DB
+	Repository[uuid.UUID, models.Release, *gorm.DB]
+	db *gorm.DB
 }
 
-func NewReleaseRepository(db shared.DB) *releaseRepository {
+func NewReleaseRepository(db *gorm.DB) *releaseRepository {
 	return &releaseRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Release](db),
@@ -109,7 +109,7 @@ func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) 
 }
 
 // CreateReleaseItem inserts a new ReleaseItem row.
-func (r *releaseRepository) CreateReleaseItem(tx shared.DB, item *models.ReleaseItem) error {
+func (r *releaseRepository) CreateReleaseItem(tx *gorm.DB, item *models.ReleaseItem) error {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -118,7 +118,7 @@ func (r *releaseRepository) CreateReleaseItem(tx shared.DB, item *models.Release
 }
 
 // DeleteReleaseItem deletes a release item by id.
-func (r *releaseRepository) DeleteReleaseItem(tx shared.DB, id uuid.UUID) error {
+func (r *releaseRepository) DeleteReleaseItem(tx *gorm.DB, id uuid.UUID) error {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -127,7 +127,7 @@ func (r *releaseRepository) DeleteReleaseItem(tx shared.DB, id uuid.UUID) error 
 }
 
 // GetByProjectIDPaged returns a paged list of releases for a project with optional search, filter and sort
-func (r *releaseRepository) GetByProjectIDPaged(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
+func (r *releaseRepository) GetByProjectIDPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
 	db := r.db
 	if tx != nil {
 		db = tx

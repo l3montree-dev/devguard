@@ -19,9 +19,9 @@ type firstPartyVulnController struct {
 }
 
 type FirstPartyVulnStatus struct {
-	StatusType              string                             `json:"status"`
-	Justification           string                             `json:"justification"`
-	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
+	StatusType              string                           `json:"status"`
+	Justification           string                           `json:"justification"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnRepository, firstPartyVulnService shared.FirstPartyVulnService, projectService shared.ProjectService) *firstPartyVulnController {

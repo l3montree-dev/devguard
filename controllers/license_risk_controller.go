@@ -11,6 +11,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
@@ -23,9 +25,9 @@ type LicenseRiskController struct {
 }
 
 type LicenseRiskStatus struct {
-	StatusType              string                             `json:"status"`
-	Justification           string                             `json:"justification"`
-	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
+	StatusType              string                           `json:"status"`
+	Justification           string                           `json:"justification"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewLicenseRiskController(licenseOverwriteRepository shared.LicenseRiskRepository, LicenseRiskService shared.LicenseRiskService) *LicenseRiskController {
@@ -76,7 +78,7 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 		licenseRisk = existingLicenseRisk
 	}
 
-	ev := models.NewLicenseDecisionEvent(riskHash, models.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision)
+	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision)
 
 	err = controller.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 	if err != nil {
@@ -122,9 +124,9 @@ func (controller LicenseRiskController) GetComponentOverwriteForAssetVersion(ass
 	return result, nil
 }
 
-func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLicenseRiskDTO {
-	return detailedLicenseRiskDTO{
-		LicenseRiskDTO: LicenseRiskToDto(licenseRisk),
+func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.DetailedLicenseRiskDTO {
+	return dtos.DetailedLicenseRiskDTO{
+		LicenseRiskDTO: transformer.LicenseRiskToDTO(licenseRisk),
 		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
 			return dtos.VulnEventDTO{
 				ID:                      ev.ID,
@@ -243,7 +245,7 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 	}
 
 	vulnID, vulnType, err := shared.GetVulnID(ctx)
-	if err != nil || vulnType != models.VulnTypeLicenseRisk {
+	if err != nil || vulnType != dtos.VulnTypeLicenseRisk {
 		return echo.NewHTTPError(500, "could not get vulnID")
 	}
 
