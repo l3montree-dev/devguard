@@ -361,6 +361,7 @@ type VulnEventRepository interface {
 	GetSecurityRelevantEventsForVulnIDs(tx DB, vulnIDs []string) ([]models.VulnEvent, error)
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
+	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
 }
 
 type GithubAppInstallationRepository interface {
