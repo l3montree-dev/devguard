@@ -41,10 +41,11 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/gocsaf/csaf/v3/util"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"golang.org/x/mod/semver"
 )
@@ -830,11 +831,11 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 			})
 
 			switch vuln.State {
-			case models.VulnStateOpen:
+			case dtos.VulnStateOpen:
 				for _, pid := range productIDs {
 					underInvestigation[string(*pid)] = struct{}{}
 				}
-			case models.VulnStateAccepted:
+			case dtos.VulnStateAccepted:
 				threats = append(threats, &gocsaf.Threat{
 					Category: utils.Ptr(gocsaf.CSAFThreatCategoryImpact),
 					Details:  lastEvents[vuln.ID].Justification,
@@ -842,11 +843,11 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 				for _, pid := range productIDs {
 					affected[string(*pid)] = struct{}{}
 				}
-			case models.VulnStateFixed:
+			case dtos.VulnStateFixed:
 				for _, pid := range productIDs {
 					fixed[string(*pid)] = struct{}{}
 				}
-			case models.VulnStateFalsePositive:
+			case dtos.VulnStateFalsePositive:
 				justification := string(lastEvents[vuln.ID].MechanicalJustification)
 				if lastEvents[vuln.ID].MechanicalJustification == "" {
 					justification = string(gocsaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
@@ -955,15 +956,15 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 }
 
 // Helper function to map state to human-readable string
-func stateToString(state models.VulnState) string {
+func stateToString(state dtos.VulnState) string {
 	switch state {
-	case models.VulnStateOpen:
+	case dtos.VulnStateOpen:
 		return "unhandled"
-	case models.VulnStateAccepted:
+	case dtos.VulnStateAccepted:
 		return "accepted"
-	case models.VulnStateFalsePositive:
+	case dtos.VulnStateFalsePositive:
 		return "marked as false positive"
-	case models.VulnStateFixed:
+	case dtos.VulnStateFixed:
 		return "fixed"
 	default:
 		return "unknown state"

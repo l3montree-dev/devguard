@@ -9,17 +9,18 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	integration_tests "github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/tests"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteArtifactIntegration(t *testing.T) {
 	// Initialize test database
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create artifact service and controller
@@ -36,7 +37,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 	controller := NewArtifactController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
 
 	// Create test organization, project, asset, and asset version
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Setup echo app
 	app := echo.New()
@@ -123,7 +124,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 			},
 			CVEID:         &testCVE.CVE,
 			ComponentPurl: &testComponent.Purl,
@@ -171,7 +172,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		}
 
 		// Create a separate test database connection that will be closed
-		failingDB, terminateFailingDB := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+		failingDB, terminateFailingDB := tests.InitDatabaseContainer("../../../initdb.sql")
 		terminateFailingDB() // Close the database connection to simulate a failure
 
 		failingRepository := repositories.NewArtifactRepository(failingDB)

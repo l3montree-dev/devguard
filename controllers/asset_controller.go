@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dtos "github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -86,7 +87,7 @@ func (a *assetController) List(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, ToDTOs(apps))
+	return ctx.JSON(200, transformer.ToDTOs(apps))
 }
 
 func (a *assetController) AttachSigningKey(ctx shared.Context) error {
@@ -137,7 +138,7 @@ func (a *assetController) GetSecrets(ctx shared.Context) error {
 }
 
 func (a *assetController) Create(ctx shared.Context) error {
-	var req createRequest
+	var req dtos.AssetCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -148,7 +149,7 @@ func (a *assetController) Create(ctx shared.Context) error {
 
 	project := shared.GetProject(ctx)
 
-	newAsset := req.toModel(project.GetID())
+	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
 	newAsset.ProjectID = project.GetID()
 
 	asset, err := a.assetService.CreateAsset(shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
@@ -156,7 +157,7 @@ func (a *assetController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, ToDTO(*asset))
+	return ctx.JSON(200, transformer.ToDTO(*asset))
 }
 
 func (a *assetController) Read(ctx shared.Context) error {
@@ -167,7 +168,7 @@ func (a *assetController) Read(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, ToDetailsDTO(app, members))
+	return ctx.JSON(200, transformer.ToDetailsDTO(app, members))
 }
 
 func (a *assetController) Update(ctx shared.Context) error {
@@ -176,7 +177,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 	req := ctx.Request().Body
 	defer req.Close()
 
-	var patchRequest PatchRequest
+	var patchRequest dtos.AssetPatchRequest
 
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
@@ -285,7 +286,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 		}()
 	}
 
-	updated := patchRequest.applyToModel(&asset)
+	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
@@ -302,7 +303,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, ToDetailsDTOWithSecrets(asset, members))
+	return ctx.JSON(200, transformer.ToDetailsDTOWithSecrets(asset, members))
 }
 
 func (a *assetController) GetConfigFile(ctx shared.Context) error {
@@ -378,7 +379,7 @@ func (a *assetController) GetBadges(ctx shared.Context) error {
 	return ctx.String(200, svg)
 }
 
-func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
+func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 	asset := shared.GetAsset(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -388,7 +389,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []dtos.User{}, nil
+		return []dtos.UserDTO{}, nil
 	}
 
 	// get the auth admin client from the context
@@ -400,7 +401,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) dtos.User {
+	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
 		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
 		if nameMap != nil {
@@ -413,12 +414,12 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
 		}
 		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
 		if err != nil {
-			return dtos.User{
+			return dtos.UserDTO{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return dtos.User{
+		return dtos.UserDTO{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),
@@ -504,7 +505,7 @@ func (a *assetController) ChangeRole(c shared.Context) error {
 	// get rbac
 	rbac := shared.GetRBAC(c)
 
-	var req changeRoleRequest
+	var req dtos.AssetChangeRoleRequest
 
 	userID := c.Param("userID")
 	if userID == "" {

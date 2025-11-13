@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/database"
 )
 
 type ProjectType string

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type jiraBatchClient struct {

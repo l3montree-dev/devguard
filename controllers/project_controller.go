@@ -19,10 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 )
@@ -66,7 +67,7 @@ func (projectController *projectController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, newProject)
 }
 
-func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
+func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	project := shared.GetProject(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -76,7 +77,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []dtos.User{}, nil
+		return []dtos.UserDTO{}, nil
 	}
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -87,7 +88,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) dtos.User {
+	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
 		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
 		if nameMap != nil {
@@ -100,12 +101,12 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
 		}
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
-			return dtos.User{
+			return dtos.UserDTO{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return dtos.User{
+		return dtos.UserDTO{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),

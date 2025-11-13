@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"

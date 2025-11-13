@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -286,7 +287,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 						continue
 					}
 					// only consider non-internal upstream events
-					if event.Upstream != models.UpstreamStateInternal {
+					if event.Upstream != dtos.UpstreamStateInternal {
 						// the last event
 						if vulnState == expectedVulnState && utils.SafeDereference(event.Justification) == expected.justification {
 							// we already have seen this event
@@ -298,7 +299,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					}
 				}
 
-				if newState[i].State != models.VulnStateOpen && expected.eventType == models.EventTypeAccepted {
+				if newState[i].State != dtos.VulnStateOpen && expected.eventType == models.EventTypeAccepted {
 					// map the event to a reopen event if the vuln is not open yet
 					expected.eventType = models.EventTypeReopened
 				}

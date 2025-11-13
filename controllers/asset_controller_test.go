@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	dtos "github.com/l3montree-dev/devguard/dto"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -58,7 +58,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 				},
 			},
 		})
-		shared.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, AssetDTO{
 			ConfigFiles: map[string]any{
 				"config1": map[string]any{
 					"value": "asset-config-content",
@@ -66,7 +66,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 			},
 		})
 
-		controller := &httpController{}
+		controller := &assetController{}
 
 		err := controller.GetConfigFile(ctx)
 
@@ -97,11 +97,11 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 				},
 			},
 		})
-		shared.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, AssetDTO{
 			ConfigFiles: map[string]any{},
 		})
 
-		controller := &httpController{}
+		controller := &assetController{}
 
 		err := controller.GetConfigFile(ctx)
 
@@ -127,11 +127,11 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 		shared.SetProject(ctx, models.Project{
 			ConfigFiles: map[string]any{},
 		})
-		shared.SetAsset(ctx, models.Asset{
+		shared.SetAsset(ctx, AssetDTO{
 			ConfigFiles: map[string]any{},
 		})
 
-		controller := &httpController{}
+		controller := &assetController{}
 
 		err := controller.GetConfigFile(ctx)
 
@@ -150,7 +150,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -213,7 +213,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -235,7 +235,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -261,7 +261,7 @@ func TestFetchMembersOfAsset(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -305,7 +305,7 @@ func TestHTTPControllerMembers(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -334,13 +334,13 @@ func TestHTTPControllerMembers(t *testing.T) {
 		shared.SetRBAC(ctx, mockRBAC)
 		shared.SetAuthAdminClient(ctx, mockAdminClient)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.Members(ctx)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var users []dtos.User
+		var users []dtos.UserDTO
 		json.Unmarshal(rec.Body.Bytes(), &users) // nolint:errcheck
 		assert.Len(t, users, 1)
 		assert.Equal(t, "Test User", users[0].Name)
@@ -362,7 +362,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -381,7 +381,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		session := mocks.NewAuthSession(t)
 		session.On("GetUserID").Return("user-123")
 		shared.SetSession(ctx, session)
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.NoError(t, err)
@@ -400,7 +400,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -415,7 +415,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		shared.SetRBAC(ctx, mockRBAC)
 		shared.SetSession(ctx, session)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.Error(t, err)
@@ -437,7 +437,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 
 		projectID := uuid.New()
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model:     models.Model{ID: assetID},
 			ProjectID: projectID,
 		}
@@ -448,7 +448,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.Error(t, err)
@@ -466,7 +466,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx.SetParamValues("user-123")
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -480,7 +480,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.NoError(t, err)
@@ -493,7 +493,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -501,7 +501,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.Error(t, err)
@@ -518,7 +518,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		ctx.SetParamValues("user-123")
 
 		assetID := uuid.New()
-		asset := models.Asset{
+		asset := AssetDTO{
 			Model: models.Model{ID: assetID},
 		}
 
@@ -533,7 +533,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &httpController{}
+		controller := &assetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.NoError(t, err)

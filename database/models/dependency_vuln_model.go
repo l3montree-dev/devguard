@@ -6,17 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/l3montree-dev/devguard/internal/utils"
-)
-
-type VulnState string
-
-const (
-	VulnStateOpen              VulnState = "open"
-	VulnStateFixed             VulnState = "fixed"         // we did not find the dependencyVuln anymore in the last scan!
-	VulnStateAccepted          VulnState = "accepted"      // like ignore
-	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
-	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type DependencyVuln struct {

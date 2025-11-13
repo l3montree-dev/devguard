@@ -7,7 +7,8 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -633,23 +634,23 @@ func (_c *ThirdPartyIntegration_ListProjects_Call) RunAndReturn(run func(ctx con
 }
 
 // ListRepositories provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (_mock *ThirdPartyIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListRepositories")
 	}
 
-	var r0 []shared.Repository
+	var r0 []dtos.GitRepository
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]shared.Repository, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]dtos.GitRepository, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context) []shared.Repository); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []dtos.GitRepository); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]shared.Repository)
+			r0 = ret.Get(0).([]dtos.GitRepository)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
@@ -684,12 +685,12 @@ func (_c *ThirdPartyIntegration_ListRepositories_Call) Run(run func(ctx shared.C
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(repositorys []shared.Repository, err error) *ThirdPartyIntegration_ListRepositories_Call {
+func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(repositorys []dtos.GitRepository, err error) *ThirdPartyIntegration_ListRepositories_Call {
 	_c.Call.Return(repositorys, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]shared.Repository, error)) *ThirdPartyIntegration_ListRepositories_Call {
+func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]dtos.GitRepository, error)) *ThirdPartyIntegration_ListRepositories_Call {
 	_c.Call.Return(run)
 	return _c
 }

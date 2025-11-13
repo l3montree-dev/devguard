@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,11 +22,11 @@ import (
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
-	factory, client := integration_tests.NewTestClientFactory(t)
+	factory, client := tests.NewTestClientFactory(t)
 	// Setup integration
 	gitlabInt := gitlabint.NewGitlabIntegration(
 		db,
@@ -35,7 +36,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	)
 
 	// Setup org, asset, asset version, and vuln
-	org, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, _, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	// create a gitlab integration
 	integration := models.GitLabIntegration{
 		OrgID: org.ID,
@@ -56,7 +57,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	// add a vulnerability to the asset version
 	vuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			AssetVersionName: assetVersion.Name,
 			AssetID:          asset.ID,
 			TicketID:         utils.Ptr("gitlab:0/123"),
@@ -89,7 +90,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		// expect the vuln to still be open
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
-		assert.Equal(t, models.VulnStateOpen, vulnFromDB.State)
+		assert.Equal(t, dtos.VulnStateOpen, vulnFromDB.State)
 	})
 
 	t.Run("should do nothing, if there is no ticket with the given id", func(t *testing.T) {
@@ -182,7 +183,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
-		assert.Equal(t, models.VulnStateAccepted, vulnFromDB.State)
+		assert.Equal(t, dtos.VulnStateAccepted, vulnFromDB.State)
 	})
 
 	t.Run("should reopen the ticket, if the action is reopen and the vuln isnt open", func(t *testing.T) {
@@ -199,7 +200,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		b, err := json.Marshal(issueEvent)
 		assert.Nil(t, err)
 		// make sure to close the vuln first
-		vuln.State = models.VulnStateAccepted
+		vuln.State = dtos.VulnStateAccepted
 		assert.Nil(t, db.Save(&vuln).Error)
 
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBuffer(b))
@@ -223,7 +224,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
-		assert.Equal(t, models.VulnStateOpen, vulnFromDB.State)
+		assert.Equal(t, dtos.VulnStateOpen, vulnFromDB.State)
 	})
 
 	t.Run("should not reopen the vulnerability, if the ticket is reopened but the vulnerability is fixed", func(t *testing.T) {
@@ -240,7 +241,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		b, err := json.Marshal(issueEvent)
 		assert.Nil(t, err)
 		// make sure to close the vuln first
-		vuln.State = models.VulnStateFixed
+		vuln.State = dtos.VulnStateFixed
 		assert.Nil(t, db.Save(&vuln).Error)
 
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBuffer(b))
@@ -255,12 +256,12 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
-		assert.Equal(t, models.VulnStateFixed, vulnFromDB.State)
+		assert.Equal(t, dtos.VulnStateFixed, vulnFromDB.State)
 	})
 
 	t.Run("should regenerate risk history when vulnerability state changes via comment", func(t *testing.T) {
 		// Reset vuln state to open for this test
-		vuln.State = models.VulnStateOpen
+		vuln.State = dtos.VulnStateOpen
 		assert.Nil(t, db.Save(&vuln).Error)
 
 		// Create an artifact associated with the vulnerability
@@ -339,7 +340,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		// Verify the vulnerability state changed to accepted
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.Preload("Artifacts").First(&vulnFromDB, "id = ?", vuln.ID).Error)
-		assert.Equal(t, models.VulnStateAccepted, vulnFromDB.State)
+		assert.Equal(t, dtos.VulnStateAccepted, vulnFromDB.State)
 
 		// Verify that the vulnerability has artifacts
 		assert.NotEmpty(t, vulnFromDB.GetArtifacts(), "Vulnerability should have associated artifacts for risk history update")

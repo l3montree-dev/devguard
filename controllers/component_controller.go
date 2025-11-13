@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type componentController struct {

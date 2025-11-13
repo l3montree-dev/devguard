@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Tim Bastin, l3montree GmbH
+// Copyright (C) 2025 l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -11,43 +11,18 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package dtos
+package transformer
 
 import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-type AcceptInvitationRequest struct {
-	Code string `json:"code" validate:"required"`
-}
-
-type inviteRequest struct {
-	Email string `json:"email" validate:"required,email"`
-}
-
-type OrgChangeRoleRequest struct {
-	Role string `json:"role" validate:"required,oneof=member admin"`
-}
-
-type createRequest struct {
-	Name                   string  `json:"name" validate:"required"`
-	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
-	NumberOfEmployees      *int    `json:"numberOfEmployees"`
-	Country                *string `json:"country"`
-	Industry               *string `json:"industry"`
-	CriticalInfrastructure bool    `json:"criticalInfrastructure"`
-	ISO27001               bool    `json:"iso27001"`
-	NIST                   bool    `json:"nist"`
-	Grundschutz            bool    `json:"grundschutz"`
-	Description            string  `json:"description"`
-	Language               string  `json:"language"`
-}
-
-func (c createRequest) toModel() models.Org {
+func OrgCreateRequestToModel(c dtos.OrgCreateRequest) models.Org {
 
 	return models.Org{
 		Name:                   c.Name,
@@ -64,25 +39,7 @@ func (c createRequest) toModel() models.Org {
 	}
 }
 
-type OrgPatchRequest struct {
-	Name                   *string `json:"name"`
-	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
-	NumberOfEmployees      *int    `json:"numberOfEmployees"`
-	Country                *string `json:"country"`
-	Industry               *string `json:"industry"`
-	CriticalInfrastructure *bool   `json:"criticalInfrastructure"`
-	ISO27001               *bool   `json:"iso27001"`
-	NIST                   *bool   `json:"nist"`
-	Grundschutz            *bool   `json:"grundschutz"`
-	Description            *string `json:"description"`
-
-	ShareVulnInformation *bool           `json:"shareVulnInformation"`
-	IsPublic             *bool           `json:"isPublic"`
-	ConfigFiles          *map[string]any `json:"configFiles"`
-	Language             *string         `json:"language"`
-}
-
-func (p OrgPatchRequest) applyToModel(org *models.Org) bool {
+func ApplyOrgPatchRequestToModel(p dtos.OrgPatchRequest, org *models.Org) bool {
 	updated := false
 
 	if p.Name != nil {
@@ -160,40 +117,8 @@ func (p OrgPatchRequest) applyToModel(org *models.Org) bool {
 
 }
 
-type OrgDTO struct {
-	models.Model
-	Avatar                 *string          `json:"avatar,omitempty"`
-	Name                   string           `json:"name" gorm:"type:text"`
-	ContactPhoneNumber     *string          `json:"contactPhoneNumber" gorm:"type:text"`
-	NumberOfEmployees      *int             `json:"numberOfEmployees"`
-	Country                *string          `json:"country" gorm:"type:text"`
-	Industry               *string          `json:"industry" gorm:"type:text"`
-	CriticalInfrastructure bool             `json:"criticalInfrastructure"`
-	ISO27001               bool             `json:"iso27001"`
-	NIST                   bool             `json:"nist"`
-	Grundschutz            bool             `json:"grundschutz"`
-	Projects               []models.Project `json:"projects" gorm:"foreignKey:OrganizationID;"`
-	Slug                   string           `json:"slug" gorm:"type:text;unique;not null;index"`
-	Description            string           `json:"description" gorm:"type:text"`
-
-	GithubAppInstallations []models.GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
-
-	GitLabIntegrations []GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
-
-	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
-
-	SharesVulnInformation bool                    `json:"sharesVulnInformation"`
-	IsPublic              bool                    `json:"isPublic" gorm:"default:false;"`
-	Webhooks              []WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
-
-	ConfigFiles map[string]any `json:"configFiles"`
-
-	Language                 string  `json:"language"`
-	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"type:text"`
-}
-
-func obfuscateGitLabIntegrations(integration models.GitLabIntegration) GitlabIntegrationDTO {
-	return GitlabIntegrationDTO{
+func obfuscateGitLabIntegrations(integration models.GitLabIntegration) dtos.GitlabIntegrationDTO {
+	return dtos.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -201,8 +126,8 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) GitlabInt
 	}
 }
 
-func obfuscateJiraIntegrations(integration models.JiraIntegration) JiraIntegrationDTO {
-	return JiraIntegrationDTO{
+func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraIntegrationDTO {
+	return dtos.JiraIntegrationDTO{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -211,8 +136,8 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) JiraIntegrati
 	}
 }
 
-func obfuscateWebhookIntegrations(integration models.WebhookIntegration) WebhookIntegrationDTO {
-	return WebhookIntegrationDTO{
+func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.WebhookIntegrationDTO {
+	return dtos.WebhookIntegrationDTO{
 		ID:          integration.ID.String(),
 		Name:        *integration.Name,
 		Description: *integration.Description,
@@ -222,8 +147,8 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) Webhook
 	}
 }
 
-func OrgDTOFromModel(org models.Org) OrgDTO {
-	return OrgDTO{
+func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
+	return dtos.OrgDTO{
 		Model:                  org.Model,
 		Name:                   org.Name,
 		ContactPhoneNumber:     org.ContactPhoneNumber,
@@ -248,9 +173,4 @@ func OrgDTOFromModel(org models.Org) OrgDTO {
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,
 	}
-}
-
-type orgDetailsDTO struct {
-	OrgDTO
-	Members []UserDTO `json:"members"`
 }

@@ -1,8 +1,9 @@
 package integrations
 
 import (
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ExpectedIssueState string
@@ -53,7 +54,7 @@ func IsConnectedToThirdPartyIntegration(asset models.Asset) bool {
 }
 
 func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *models.FirstPartyVuln) ExpectedIssueState {
-	if firstPartyVuln.State == models.VulnStateOpen {
+	if firstPartyVuln.State == dtos.VulnStateOpen {
 		return ExpectedIssueStateOpen
 	} else {
 		return ExpectedIssueStateClosed
@@ -66,7 +67,7 @@ func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.Dependency
 
 	// keep the ticket open if the state is open AND
 	// if the CVSS/Risk Threshold is exceeded OR the ticket was manually created
-	if dependencyVuln.State == models.VulnStateOpen {
+	if dependencyVuln.State == dtos.VulnStateOpen {
 		if (cvssThresholdExceeded || riskThresholdExceeded) || dependencyVuln.ManualTicketCreation {
 			return ExpectedIssueStateOpen
 		} else {

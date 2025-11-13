@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
 	mock "github.com/stretchr/testify/mock"
 )
 

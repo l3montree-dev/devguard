@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

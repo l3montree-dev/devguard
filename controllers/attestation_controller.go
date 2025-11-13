@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )

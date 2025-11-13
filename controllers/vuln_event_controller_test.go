@@ -20,8 +20,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"

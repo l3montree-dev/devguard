@@ -23,10 +23,10 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -38,7 +38,7 @@ func PrintFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 
 	// get all "open" vulns
 	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v vuln.FirstPartyVulnDTO) bool {
-		return v.State == models.VulnStateOpen
+		return v.State == dtos.VulnStateOpen
 	})
 
 	switch scannerID {

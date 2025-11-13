@@ -14,17 +14,18 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type jiraRepository struct {
@@ -32,8 +33,8 @@ type jiraRepository struct {
 	JiraIntegrationID uuid.UUID `json:"jiraIntegrationID"`
 }
 
-func (r *jiraRepository) toRepository() shared.Repository {
-	return shared.Repository{
+func (r *jiraRepository) toRepository() dtos.GitRepository {
+	return dtos.GitRepository{
 		ID:          fmt.Sprintf("jira:%s:%s", r.JiraIntegrationID, r.ID),
 		Label:       r.Name,
 		Description: r.Description,
@@ -176,7 +177,7 @@ func (i *JiraIntegration) ListProjects(ctx context.Context, userID string, provi
 	// Jira integration does not have projects in the same way as GitLab or GitHub
 	return nil, nil, fmt.Errorf("Jira integration does not support listing projects")
 }
-func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 
 	if !shared.HasOrganization(ctx) {
 		return nil, fmt.Errorf("organization is required to list repositories")
@@ -184,7 +185,7 @@ func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]shared.Reposit
 
 	org := shared.GetOrg(ctx)
 
-	repos := []shared.Repository{}
+	repos := []dtos.GitRepository{}
 
 	if org.JiraIntegrations != nil {
 		jiraClient, err := NewJiraBatchClient(org.JiraIntegrations)
@@ -198,7 +199,7 @@ func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]shared.Reposit
 			return nil, fmt.Errorf("failed to get repositories from Jira: %w", err)
 		}
 
-		repos = append(repos, utils.Map(r, func(repo jiraRepository) shared.Repository {
+		repos = append(repos, utils.Map(r, func(repo jiraRepository) dtos.GitRepository {
 			return repo.toRepository()
 		})...)
 		return repos, nil
@@ -330,9 +331,9 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Clien
 
 func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
 
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
-	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
+	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
 
@@ -374,7 +375,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	// a possible workaround is to ask which priority schema are available, then check which projects are using which priority schema, and then check the priorities of the project.
 	//so for now we will just set the priority to "highest" if the risk is critical or high
 	// check if the risk is critical or high and set the priority accordingly
-	riskSeverity, err := risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert risk assessment to severity: %w", err)
 	}
@@ -598,7 +599,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
 			// save the event
 			err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -672,9 +673,9 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 }
 
 func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
-	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
+	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
@@ -714,7 +715,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		},
 	}
 
-	riskSeverity, err := risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
 	if err != nil {
 		slog.Error("failed to convert risk assessment to severity", "err", err, "vuln", dependencyVuln)
 		return fmt.Errorf("failed to convert risk assessment to severity: %w", err)
@@ -793,7 +794,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	return nil
 }
 
-func (i *JiraIntegration) GetUsers(org models.Org) []dtos.User {
+func (i *JiraIntegration) GetUsers(org models.Org) []dtos.UserDTO {
 	// Jira integration does not have users in the same way as GitLab or GitHub
 	return nil
 }

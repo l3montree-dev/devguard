@@ -23,9 +23,9 @@ import (
 	"net/http"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/zalando/go-keyring"

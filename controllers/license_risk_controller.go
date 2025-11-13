@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -125,8 +125,8 @@ func (controller LicenseRiskController) GetComponentOverwriteForAssetVersion(ass
 func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLicenseRiskDTO {
 	return detailedLicenseRiskDTO{
 		LicenseRiskDTO: LicenseRiskToDto(licenseRisk),
-		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) events.VulnEventDTO {
-			return events.VulnEventDTO{
+		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
+			return dtos.VulnEventDTO{
 				ID:                      ev.ID,
 				Type:                    ev.Type,
 				VulnID:                  ev.VulnID,
@@ -214,7 +214,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, models.UpstreamStateInternal)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, dtos.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/stretchr/testify/assert"
 )
 

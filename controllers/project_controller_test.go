@@ -12,16 +12,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/tests"
 )
 
 func TestProjectCreation(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	controller := project.NewHTTPController(
@@ -34,7 +34,7 @@ func TestProjectCreation(t *testing.T) {
 		repositories.NewWebhookRepository(db),
 	)
 
-	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, _, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should enable all community policies by default", func(t *testing.T) {
 		e := echo.New()

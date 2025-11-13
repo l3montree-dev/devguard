@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/services"
@@ -84,7 +85,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		// create a dependency vuln with a ticket ID
 		depVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:                models.VulnStateAccepted,
+				State:                dtos.VulnStateAccepted,
 				AssetVersionName:     assetVersion.Name,
 				AssetID:              asset.ID,
 				TicketID:             utils.Ptr("gitlab:0/123"),

@@ -3,8 +3,9 @@ package models_test
 import (
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +39,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		event.Apply(&vuln)
 
-		assert.Equal(t, models.VulnStateFixed, vuln.State)
+		assert.Equal(t, dtos.VulnStateFixed, vuln.State)
 	})
 	t.Run("should set state to false positive for EventTypeFalsePositive", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
@@ -46,7 +47,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		event.Apply(&vuln)
 
-		assert.Equal(t, models.VulnStateFalsePositive, vuln.State)
+		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 	})
 	t.Run("should update the risk assessment for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
@@ -77,7 +78,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		event.Apply(&vuln)
 
-		assert.Equal(t, models.VulnStateOpen, vuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
 
 	t.Run("should update the RiskRecalculatedAt for EventTypeDetected", func(t *testing.T) {
@@ -98,7 +99,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		event.Apply(&vuln)
 
-		assert.Equal(t, models.VulnStateOpen, vuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
 	t.Run("should set state to accepted for EventTypeAccepted", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
@@ -106,6 +107,6 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		event.Apply(&vuln)
 
-		assert.Equal(t, models.VulnStateAccepted, vuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
 	})
 }

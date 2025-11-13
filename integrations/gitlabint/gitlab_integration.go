@@ -22,17 +22,17 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type gitlabRepository struct {
@@ -40,10 +40,10 @@ type gitlabRepository struct {
 	gitlabIntegrationID string
 }
 
-func (g gitlabRepository) toRepository() shared.Repository {
+func (g gitlabRepository) toRepository() dtos.GitRepository {
 	// check for group and project access
 	if g.Permissions == nil || (g.Permissions.GroupAccess == nil && g.Permissions.ProjectAccess == nil) {
-		return shared.Repository{
+		return dtos.GitRepository{
 			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:        g.NameWithNamespace,
 			IsDeveloper:  false,
@@ -57,7 +57,7 @@ func (g gitlabRepository) toRepository() shared.Repository {
 	// check for project access
 	if g.Permissions.ProjectAccess == nil {
 		// group access has to be defined
-		return shared.Repository{
+		return dtos.GitRepository{
 			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:        g.NameWithNamespace,
 			IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions,
@@ -70,7 +70,7 @@ func (g gitlabRepository) toRepository() shared.Repository {
 
 	if g.Permissions.GroupAccess == nil {
 
-		return shared.Repository{
+		return dtos.GitRepository{
 			ID:          fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:       g.NameWithNamespace,
 			Description: g.Description,
@@ -84,7 +84,7 @@ func (g gitlabRepository) toRepository() shared.Repository {
 	}
 
 	// both is defined - check for the highest access level
-	return shared.Repository{
+	return dtos.GitRepository{
 		ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 		Label:        g.NameWithNamespace,
 		IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
@@ -736,7 +736,7 @@ func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string,
 	return gitlabAccessLevelToRole(member.AccessLevel), nil
 }
 
-func (g *GitlabIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (g *GitlabIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	var organizationGitlabIntegrations []models.GitLabIntegration
 	if shared.HasOrganization(ctx) {
 		org := shared.GetOrg(ctx)
@@ -763,7 +763,7 @@ func (g *GitlabIntegration) ListRepositories(ctx shared.Context) ([]shared.Repos
 		return nil, err
 	}
 
-	return utils.Map(repos, func(r gitlabRepository) shared.Repository {
+	return utils.Map(repos, func(r gitlabRepository) dtos.GitRepository {
 		return r.toRepository()
 	}), nil
 }
@@ -1086,8 +1086,8 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 	return err
 }
 
-func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.User {
-	return []dtos.User{}
+func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.UserDTO {
+	return []dtos.UserDTO{}
 }
 
 func (g *GitlabIntegration) GetID() shared.IntegrationID {
@@ -1207,7 +1207,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		if err.Error() == "404 Not Found" {
 
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
 			// save the event
 			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -1231,7 +1231,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 		return err
 	}
 
-	if dependencyVuln.State == models.VulnStateOpen {
+	if dependencyVuln.State == dtos.VulnStateOpen {
 		stateEvent = "reopen"
 	}
 

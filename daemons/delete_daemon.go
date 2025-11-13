@@ -6,7 +6,7 @@ package daemon
 import (
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 )
 

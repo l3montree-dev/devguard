@@ -7,7 +7,8 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -287,19 +288,19 @@ func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id sha
 }
 
 // GetUsers provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.User {
+func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.UserDTO {
 	ret := _mock.Called(org)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUsers")
 	}
 
-	var r0 []dtos.User
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.User); ok {
+	var r0 []dtos.UserDTO
+	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.UserDTO); ok {
 		r0 = returnFunc(org)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.User)
+			r0 = ret.Get(0).([]dtos.UserDTO)
 		}
 	}
 	return r0
@@ -329,12 +330,12 @@ func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *Int
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) Return(users []dtos.User) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) Return(users []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(users)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.User) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -740,23 +741,23 @@ func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx cont
 }
 
 // ListRepositories provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (_mock *IntegrationAggregate) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListRepositories")
 	}
 
-	var r0 []shared.Repository
+	var r0 []dtos.GitRepository
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]shared.Repository, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]dtos.GitRepository, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context) []shared.Repository); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []dtos.GitRepository); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]shared.Repository)
+			r0 = ret.Get(0).([]dtos.GitRepository)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
@@ -791,12 +792,12 @@ func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx shared.Co
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) Return(repositorys []shared.Repository, err error) *IntegrationAggregate_ListRepositories_Call {
+func (_c *IntegrationAggregate_ListRepositories_Call) Return(repositorys []dtos.GitRepository, err error) *IntegrationAggregate_ListRepositories_Call {
 	_c.Call.Return(repositorys, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]shared.Repository, error)) *IntegrationAggregate_ListRepositories_Call {
+func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]dtos.GitRepository, error)) *IntegrationAggregate_ListRepositories_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -103,11 +104,11 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 		switch action {
 		case "close":
-			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
+			if vuln.GetState() == dtos.VulnStateAccepted || vuln.GetState() == dtos.VulnStateFalsePositive {
 				return nil
 			}
 
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), models.UpstreamStateInternal)
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), dtos.UpstreamStateInternal)
 
 			err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -116,11 +117,11 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			doUpdateArtifactRiskHistory = true
 
 		case "reopen":
-			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
+			if vuln.GetState() == dtos.VulnStateOpen || vuln.GetState() == dtos.VulnStateFixed {
 				return nil
 			}
 
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), models.UpstreamStateInternal)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), dtos.UpstreamStateInternal)
 
 			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {

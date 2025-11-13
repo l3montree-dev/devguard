@@ -18,9 +18,9 @@ package dtos
 import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type CreateRequest struct {

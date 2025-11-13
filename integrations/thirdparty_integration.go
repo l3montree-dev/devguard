@@ -6,9 +6,10 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 // batches multiple third party integrations
@@ -110,10 +111,10 @@ func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx shared.Co
 	return false, nil
 }
 
-func (t *thirdPartyIntegrations) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
-	wg := utils.ErrGroup[[]shared.Repository](-1)
+func (t *thirdPartyIntegrations) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
+	wg := utils.ErrGroup[[]dtos.GitRepository](-1)
 	for _, i := range t.integrations {
-		wg.Go(func() ([]shared.Repository, error) {
+		wg.Go(func() ([]dtos.GitRepository, error) {
 			repos, err := i.ListRepositories(ctx)
 			if err != nil {
 				slog.Debug("error while listing repositories", "err", err)
@@ -185,7 +186,7 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx shared.Context) error {
 	return nil
 }
 
-func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.User {
+func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
 
 	users, err := t.externalUserRepository.FindByOrgID(nil, org.ID)
 	if err != nil {
@@ -193,8 +194,8 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.User {
 		return nil
 	}
 
-	return utils.Map(users, func(user models.ExternalUser) dtos.User {
-		return dtos.User{
+	return utils.Map(users, func(user models.ExternalUser) dtos.UserDTO {
+		return dtos.UserDTO{
 			ID:        user.ID,
 			Name:      user.Username,
 			AvatarURL: &user.AvatarURL,

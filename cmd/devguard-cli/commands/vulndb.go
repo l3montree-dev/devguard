@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/spf13/cobra"
 )
 

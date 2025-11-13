@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/dtos"
 )
 
 type AssetType string
@@ -12,14 +13,6 @@ type AssetType string
 const (
 	AssetTypeApplication    AssetType = "application"
 	AssetTypeInfrastructure AssetType = "infrastructure"
-)
-
-type RequirementLevel string
-
-const (
-	RequirementLevelLow    RequirementLevel = "low"
-	RequirementLevelMedium RequirementLevel = "medium"
-	RequirementLevelHigh   RequirementLevel = "high"
 )
 
 type Asset struct {
@@ -41,9 +34,9 @@ type Asset struct {
 	Importance            int  `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet bool `json:"reachableFromInternet" gorm:"default:false;"`
 
-	ConfidentialityRequirement RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
-	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
-	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
+	ConfidentialityRequirement dtos.RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
+	IntegrityRequirement       dtos.RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
+	AvailabilityRequirement    dtos.RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
@@ -72,11 +65,11 @@ type Asset struct {
 	SharesInformation bool `json:"shareInformation" gorm:"default:false;not null;"`
 }
 
-func (m *Asset) UpstreamState() UpstreamState {
+func (m *Asset) UpstreamState() dtos.UpstreamState {
 	if m.ParanoidMode {
-		return UpstreamStateExternal
+		return dtos.UpstreamStateExternal
 	}
-	return UpstreamStateExternalAccepted
+	return dtos.UpstreamStateExternalAccepted
 }
 
 func (m Asset) TableName() string {

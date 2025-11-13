@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 )

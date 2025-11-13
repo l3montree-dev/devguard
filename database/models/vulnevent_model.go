@@ -6,68 +6,22 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/common"
-)
-
-type VulnEventType string
-
-type VulnType string
-
-const (
-	VulnTypeDependencyVuln VulnType = "dependencyVuln"
-	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
-	VulnTypeLicenseRisk    VulnType = "licenseRisk"
-)
-
-const (
-	// Manual Events (Events that required User Interaction) (see asset_version_service.go @ getDatesForVulnerabilityEvent)
-	EventTypeFixed           VulnEventType = "fixed"
-	EventTypeLicenseDecision VulnEventType = "licenseDecision"
-	EventTypeReopened        VulnEventType = "reopened"
-
-	EventTypeAccepted          VulnEventType = "accepted"
-	EventTypeMitigate          VulnEventType = "mitigate"
-	EventTypeFalsePositive     VulnEventType = "falsePositive"
-	EventTypeMarkedForTransfer VulnEventType = "markedForTransfer"
-	EventTypeComment           VulnEventType = "comment"
-
-	// Automated Events (Events that are triggered by automation's on the server)
-	EventTypeDetected VulnEventType = "detected"
-
-	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
-	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
-)
-
-type MechanicalJustificationType string
-
-const (
-	ComponentNotPresent                         MechanicalJustificationType = "component_not_present"
-	VulnerableCodeNotPresent                    MechanicalJustificationType = "vulnerable_code_not_present"
-	VulnerableCodeNotInExecutePath              MechanicalJustificationType = "vulnerable_code_not_in_execute_path"
-	VulnerableCodeCannotBeControlledByAdversary MechanicalJustificationType = "vulnerable_code_cannot_be_controlled_by_adversary"
-	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
-)
-
-type UpstreamState int
-
-const (
-	UpstreamStateInternal         UpstreamState = 0
-	UpstreamStateExternalAccepted UpstreamState = 1
-	UpstreamStateExternal         UpstreamState = 2
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 )
 
 type VulnEvent struct {
 	Model
-	Type                     VulnEventType               `json:"type" gorm:"type:text"`
-	VulnID                   string                      `json:"vulnId"`
-	VulnType                 VulnType                    `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
-	UserID                   string                      `json:"userId"`
-	Justification            *string                     `json:"justification" gorm:"type:text;"`
-	MechanicalJustification  MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	ArbitraryJSONData        string                      `json:"arbitraryJSONData" gorm:"type:text;"`
+	Type                     dtos.VulnEventType               `json:"type" gorm:"type:text"`
+	VulnID                   string                           `json:"vulnId"`
+	VulnType                 dtos.VulnType                    `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
+	UserID                   string                           `json:"userId"`
+	Justification            *string                          `json:"justification" gorm:"type:text;"`
+	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
+	ArbitraryJSONData        string                           `json:"arbitraryJSONData" gorm:"type:text;"`
 	arbitraryJSONData        map[string]any
-	OriginalAssetVersionName *string       `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
-	Upstream                 UpstreamState `json:"upstream" gorm:"default:0;not null;"`
+	OriginalAssetVersionName *string            `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	Upstream                 dtos.UpstreamState `json:"upstream" gorm:"default:0;not null;"`
 }
 
 type VulnEventDetail struct {
@@ -80,7 +34,7 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
-func EventTypeToVulnState(eventType VulnEventType) (VulnState, error) {
+func EventTypeToVulnState(eventType dtos.VulnEventType) (dtos.VulnState, error) {
 	switch eventType {
 	case EventTypeFixed:
 		return VulnStateFixed, nil

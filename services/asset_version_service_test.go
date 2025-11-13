@@ -9,11 +9,12 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -681,7 +682,7 @@ func TestBuildVeX(t *testing.T) {
 					Description: "Test CVE Description",
 				},
 				Vulnerability: models.Vulnerability{
-					State: models.VulnStateAccepted,
+					State: dtos.VulnStateAccepted,
 					Events: []models.VulnEvent{
 						{
 							Type:          models.EventTypeDetected,

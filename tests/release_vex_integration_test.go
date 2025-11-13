@@ -23,12 +23,12 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	releasepkg "github.com/l3montree-dev/devguard/internal/core/release"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/inithelper"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +50,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 	assetRepository := repositories.NewAssetRepository(db)
 
 	// services using inithelper to follow repository patterns
-	avService := inithelper.CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	avService := tests.CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	relService := releasepkg.NewService(releaseRepo)
 
 	// create an artifact

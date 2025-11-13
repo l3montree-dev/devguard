@@ -19,25 +19,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/utils"
-)
-
-type ComponentType string
-
-const (
-	ComponentTypeApplication          ComponentType = "application"
-	ComponentTypeContainer            ComponentType = "container"
-	ComponentTypeData                 ComponentType = "data"
-	ComponentTypeDevice               ComponentType = "device"
-	ComponentTypeDeviceDriver         ComponentType = "device-driver"
-	ComponentTypeFile                 ComponentType = "file"
-	ComponentTypeFirmware             ComponentType = "firmware"
-	ComponentTypeFramework            ComponentType = "framework"
-	ComponentTypeLibrary              ComponentType = "library"
-	ComponentTypeMachineLearningModel ComponentType = "machine-learning-model"
-	ComponentTypeOS                   ComponentType = "operating-system"
-	ComponentTypePlatform             ComponentType = "platform"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ComponentProject struct {
@@ -62,7 +46,7 @@ func (c ComponentProject) TableName() string {
 type Component struct {
 	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
-	ComponentType ComponentType         `json:"componentType"`
+	ComponentType dtos.ComponentType    `json:"componentType"`
 	Version       string                `json:"version"`
 	License       *string               `json:"license"`
 	Published     *time.Time            `json:"published"`

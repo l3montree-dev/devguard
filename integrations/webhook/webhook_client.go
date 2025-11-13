@@ -13,8 +13,9 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type WebhookStruct struct {
@@ -321,7 +322,7 @@ func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
 			//	ScannerIDs:            "trivy",
 			AssetVersionName:      "v1.2.3",
 			AssetID:               "asset-12345",
-			State:                 models.VulnStateOpen,
+			State:                 dtos.VulnStateOpen,
 			CVEID:                 &cve,
 			CVE:                   cveData,
 			ComponentPurl:         &purl,
@@ -348,7 +349,7 @@ func createSampleFirstPartyVulns() []vuln.FirstPartyVulnDTO {
 			Message:          &message,
 			AssetVersionName: "v1.2.3",
 			AssetID:          "asset-12345",
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			RuleID:           "javascript.lang.security.audit.sqli",
 			URI:              "src/auth/login.js",
 			SnippetContents: []models.SnippetContent{

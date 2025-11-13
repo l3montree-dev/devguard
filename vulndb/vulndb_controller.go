@@ -1,7 +1,7 @@
 package vulndb
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 

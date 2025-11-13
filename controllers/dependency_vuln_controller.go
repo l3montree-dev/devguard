@@ -6,12 +6,11 @@ import (
 	"slices"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/events"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 
-	"github.com/l3montree-dev/devguard/internal/core/risk"
-
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -303,8 +302,8 @@ func (controller dependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	project := shared.GetProject(ctx)
 
 	type vulnReq struct {
-		VulnID string              `json:"vulnId"`
-		Event  events.VulnEventDTO `json:"event"`
+		VulnID string            `json:"vulnId"`
+		Event  dtos.VulnEventDTO `json:"event"`
 	}
 
 	type requestBody struct {
@@ -390,7 +389,7 @@ func (controller dependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, models.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, models.UpstreamStateInternal)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, models.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
@@ -449,8 +448,8 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
-		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
-			return events.VulnEventDTO{
+		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
+			return dtos.VulnEventDTO{
 				ID:                      ev.ID,
 				Type:                    ev.Type,
 				VulnID:                  ev.VulnID,

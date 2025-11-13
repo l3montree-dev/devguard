@@ -6,7 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"

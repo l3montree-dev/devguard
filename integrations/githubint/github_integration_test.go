@@ -8,10 +8,11 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v62/github"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -358,7 +359,7 @@ func TestGetLabels(t *testing.T) {
 	t.Run("it should include state label if dependency vuln has a state", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State: models.VulnStateAccepted,
+				State: dtos.VulnStateAccepted,
 			},
 			RawRiskAssessment: utils.Ptr(5.0),
 			CVE: &models.CVE{
@@ -399,7 +400,7 @@ func TestGetLabels(t *testing.T) {
 	t.Run("it should not include risk:none labels", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State: models.VulnStateFalsePositive,
+				State: dtos.VulnStateFalsePositive,
 			},
 			CVE: &models.CVE{
 				CVSS: 0.0,

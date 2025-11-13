@@ -2,8 +2,10 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
@@ -84,7 +86,7 @@ func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx 
 
 func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, models.VulnStateFixed).Find(&result).Error
+	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, dtos.VulnStateFixed).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
@@ -93,7 +95,7 @@ func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersio
 
 func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), models.VulnStateFixed).First(&result).Error
+	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), dtos.VulnStateFixed).First(&result).Error
 	if err != nil {
 		return result, err
 	}

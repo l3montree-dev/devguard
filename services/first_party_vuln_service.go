@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type firstPartyVulnService struct {
@@ -40,7 +41,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID st
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, models.UpstreamStateInternal)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, dtos.UpstreamStateInternal)
 
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -61,7 +62,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, common.RiskCalculationReport{}, scannerID, models.UpstreamStateInternal)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, common.RiskCalculationReport{}, scannerID, dtos.UpstreamStateInternal)
 		// apply the event on the dependencyVuln
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -144,11 +145,11 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID s
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, models.UpstreamStateInternal)
+		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, models.UpstreamStateInternal)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, dtos.UpstreamStateInternal)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, models.UpstreamStateInternal)
+		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification)
 	}

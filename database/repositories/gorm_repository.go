@@ -16,7 +16,7 @@
 package repositories
 
 import (
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

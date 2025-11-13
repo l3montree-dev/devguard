@@ -21,9 +21,10 @@ import (
 	"maps"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
 
 	"github.com/labstack/echo/v4"
@@ -101,7 +102,7 @@ func (controller *httpController) Update(ctx shared.Context) error {
 		}
 	}
 
-	resp := orgDetailsDTO{
+	resp := dtos.OrgDetailsDTO{
 		OrgDTO:  FromModel(organization),
 		Members: members,
 	}
@@ -286,7 +287,7 @@ func (controller *httpController) RemoveMember(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.User, error) {
+func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.UserDTO, error) {
 	// get all members from the organization
 	organization := shared.GetOrg(ctx)
 	accessControl := shared.GetRBAC(ctx)
@@ -297,7 +298,7 @@ func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.User, error) {
 		return nil, err
 	}
 
-	users := make([]dtos.User, 0, len(members))
+	users := make([]dtos.UserDTO, 0, len(members))
 	if len(members) > 0 {
 		// get the auth admin client from the context
 		authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -341,7 +342,7 @@ func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.User, error) {
 				}
 			}
 
-			users = append(users, dtos.User{
+			users = append(users, dtos.UserDTO{
 				ID:   member.Id,
 				Name: name,
 				Role: string(roleMap[member.Id]),
@@ -374,7 +375,7 @@ func (controller *httpController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	resp := orgDetailsDTO{
+	resp := dtos.OrgDetailsDTO{
 		OrgDTO:  FromModel(organization),
 		Members: members,
 	}

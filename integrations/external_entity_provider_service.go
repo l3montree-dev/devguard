@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm/clause"
@@ -62,7 +64,7 @@ func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
 		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)
 	}
 
-	return c.JSON(200, utils.Map(orgs, func(o *models.Org) org.OrgDTO {
+	return c.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.OrgDTO {
 		return org.FromModel(*o)
 	}))
 }

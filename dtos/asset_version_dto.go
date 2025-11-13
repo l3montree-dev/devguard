@@ -13,3 +13,6 @@ type InformationSourceDTO struct {
 	// type can be "csaf", "vex", "sbom"
 	Type string `json:"type,omitempty"`
 }
+
+type AssetVersionDTO struct {
+}

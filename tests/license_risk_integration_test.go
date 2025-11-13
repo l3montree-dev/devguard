@@ -21,15 +21,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/inithelper"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -73,7 +74,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 		// First run: detect risk for artifact-1
-		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, models.UpstreamStateInternal)
+		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, dtos.UpstreamStateInternal)
 		assert.NoError(t, err)
 
 		// Verify license risk exists and is associated with artifact-1
@@ -84,7 +85,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
 
 		// Second run: process same component for artifact-2 and ensure association is created
-		err = licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName, models.UpstreamStateInternal)
+		err = licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName, dtos.UpstreamStateInternal)
 		assert.NoError(t, err)
 
 		// Verify the license risk is now associated with both artifacts
@@ -139,7 +140,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{
 		Licenses: []string{},
 	}, nil)
-	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
+	controller := tests.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 
@@ -185,9 +186,9 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 
 		// accept the risk
 		risk := risks[0]
-		assert.Equal(t, models.VulnStateOpen, risk.State)
+		assert.Equal(t, dtos.VulnStateOpen, risk.State)
 
-		risk.State = models.VulnStateAccepted
+		risk.State = dtos.VulnStateAccepted
 		assert.NoError(t, db.Save(&risk).Error)
 
 		// create a new asset version to simulate a scan from a different branch
@@ -219,7 +220,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Len(t, risks, 1)
 		newRisk := risks[0]
-		assert.Equal(t, models.VulnStateAccepted, newRisk.State)
+		assert.Equal(t, dtos.VulnStateAccepted, newRisk.State)
 
 	})
 

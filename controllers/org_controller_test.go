@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -120,7 +121,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		// adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
 
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]dtos.User{})
+		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]dtos.UserDTO{})
 
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -148,7 +149,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
 
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]dtos.User{})
+		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]dtos.UserDTO{})
 
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

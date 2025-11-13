@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 

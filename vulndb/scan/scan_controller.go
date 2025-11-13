@@ -20,12 +20,14 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -225,7 +227,7 @@ func (s *HTTPController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (Sca
 		return scanResults, err
 	}
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, models.UpstreamStateInternal)
+	_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 	}

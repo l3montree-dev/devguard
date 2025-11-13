@@ -18,8 +18,9 @@ package tests
 import (
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
@@ -35,9 +36,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Configure asset for ticket creation with thresholds that will trigger issue creation
-	asset.ConfidentialityRequirement = models.RequirementLevelHigh
-	asset.IntegrityRequirement = models.RequirementLevelHigh
-	asset.AvailabilityRequirement = models.RequirementLevelHigh
+	asset.ConfidentialityRequirement = dtos.RequirementLevelHigh
+	asset.IntegrityRequirement = dtos.RequirementLevelHigh
+	asset.AvailabilityRequirement = dtos.RequirementLevelHigh
 	// Set thresholds to ensure tickets are created
 	cvssThreshold := 5.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
@@ -72,7 +73,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		// Create a dependency vuln associated with both artifacts
 		depVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
 			},
@@ -171,7 +172,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		// Create two different dependency vulns
 		depVuln1 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetVersionName: assetVersion2.Name,
 				AssetID:          asset.ID,
 			},
@@ -182,7 +183,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		}
 		depVuln2 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetVersionName: assetVersion2.Name,
 				AssetID:          asset.ID,
 			},
@@ -240,9 +241,9 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Configure asset
-	asset.ConfidentialityRequirement = models.RequirementLevelHigh
-	asset.IntegrityRequirement = models.RequirementLevelHigh
-	asset.AvailabilityRequirement = models.RequirementLevelHigh
+	asset.ConfidentialityRequirement = dtos.RequirementLevelHigh
+	asset.IntegrityRequirement = dtos.RequirementLevelHigh
+	asset.AvailabilityRequirement = dtos.RequirementLevelHigh
 	cvssThreshold := 5.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
 	assert.NoError(t, db.Save(&asset).Error)
@@ -271,7 +272,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 		existingTicketID := "ISSUE-123"
 		depVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
 				TicketID:         &existingTicketID,

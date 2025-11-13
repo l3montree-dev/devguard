@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 )

@@ -25,11 +25,11 @@ import (
 
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	dtos "github.com/l3montree-dev/devguard/dto"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 
 	"github.com/labstack/echo/v4"
 )

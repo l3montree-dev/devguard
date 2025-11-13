@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/attestation"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -32,7 +32,7 @@ func TestList(t *testing.T) {
 			{PredicateType: "not ocol name"},
 		}, nil)
 
-		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
+		attestationController := NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
 		result := attestationController.List(ctx)
 		if result != nil {
 			t.Fail()
@@ -53,7 +53,7 @@ func TestList(t *testing.T) {
 		assetVersionNameRepository := mocks.NewAssetVersionRepository(t)
 		attestationRepository := mocks.NewAttestationRepository(t)
 		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{}, fmt.Errorf("Something went wrong"))
-		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
+		attestationController := NewAttestationController(attestationRepository, assetVersionNameRepository, mocks.NewArtifactRepository(t))
 
 		result := attestationController.List(ctx)
 

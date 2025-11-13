@@ -8,9 +8,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -99,7 +100,7 @@ func TestGetLabels(t *testing.T) {
 	t.Run("should return correct labels for a DependencyVuln with CVE", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State: models.VulnStateOpen,
+				State: dtos.VulnStateOpen,
 			},
 			Artifacts: []models.Artifact{
 				{ArtifactName: "source-code"},
@@ -125,7 +126,7 @@ func TestGetLabels(t *testing.T) {
 	t.Run("should return correct labels for a FirstPartyVuln", func(t *testing.T) {
 		vuln := &models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				State: models.VulnStateFixed,
+				State: dtos.VulnStateFixed,
 			},
 			ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sast github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/iac",
 		}

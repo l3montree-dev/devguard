@@ -6,21 +6,8 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	dtos "github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/dtos"
 )
-
-type GitRepository struct {
-	ID          string `json:"id"`
-	Label       string `json:"label"`
-	Image       string `json:"image"`
-	Description string `json:"description"`
-
-	IsDeveloper  bool `json:"isDeveloper"`
-	IsMaintainer bool `json:"isMaintainer"`
-	IsOwner      bool `json:"isOwner"`
-
-	GitProvider string `json:"gitProvider"`
-}
 
 type IntegrationID string
 

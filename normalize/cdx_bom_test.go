@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 )
 

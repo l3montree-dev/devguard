@@ -24,7 +24,7 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	dtos "github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/labstack/echo/v4"
 
@@ -195,10 +195,10 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
-	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
+	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
-	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error)
+	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 }
 

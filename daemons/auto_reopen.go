@@ -20,8 +20,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -45,14 +46,14 @@ func AutoReopenAcceptedVulnerabilities(db shared.DB) error {
 		reopenAfterDuration := time.Duration(*asset.VulnAutoReopenAfterDays) * 24 * time.Hour
 
 		// get all closed/accepted vulnerabilities for the asset version
-		vulnerabilities, err := dependencyVulnRepository.GetAllByAssetIDAndState(nil, asset.ID, models.VulnStateAccepted, reopenAfterDuration)
+		vulnerabilities, err := dependencyVulnRepository.GetAllByAssetIDAndState(nil, asset.ID, dtos.VulnStateAccepted, reopenAfterDuration)
 		if err != nil {
 			return err
 		}
 
 		for _, vuln := range vulnerabilities {
 			// create a new event for the vulnerability
-			event := models.NewReopenedEvent(vuln.ID, models.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), models.UpstreamStateInternal)
+			event := models.NewReopenedEvent(vuln.ID, models.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), dtos.UpstreamStateInternal)
 
 			if err := dependencyVulnRepository.ApplyAndSave(nil, &vuln, &event); err != nil {
 				slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)

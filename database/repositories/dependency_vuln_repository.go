@@ -5,10 +5,12 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
@@ -183,7 +185,7 @@ func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(as
 	var dependencyVulns = []models.DependencyVuln{}
 	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events", func(db shared.DB) shared.DB {
 		return db.Order("created_at ASC")
-	}).Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, models.VulnStateFixed)
+	}).Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 
 	if artifactName != nil {
 		// scanner ids is a string array separated by whitespaces
@@ -430,12 +432,12 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 	var vulns = []models.DependencyVuln{}
 
 	if artifactName != nil {
-		if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ? AND EXISTS(SELECT 1 from artifact_dependency_vulns WHERE dependency_vuln_id = id AND artifact_artifact_name = ?)", assetVersionName, assetID, models.VulnStateOpen, *artifactName).Find(&vulns).Error; err != nil {
+		if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ? AND EXISTS(SELECT 1 from artifact_dependency_vulns WHERE dependency_vuln_id = id AND artifact_artifact_name = ?)", assetVersionName, assetID, dtos.VulnStateOpen, *artifactName).Find(&vulns).Error; err != nil {
 			return nil, err
 		}
 		return vulns, nil
 	} else {
-		if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, models.VulnStateOpen).Find(&vulns).Error; err != nil {
+		if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, dtos.VulnStateOpen).Find(&vulns).Error; err != nil {
 			return nil, err
 		}
 		return vulns, nil
@@ -477,7 +479,7 @@ func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx shared.DB, 
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx shared.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx shared.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error) {
 	var vulns []models.DependencyVuln
 	var err error
 	// choose which states we want to include

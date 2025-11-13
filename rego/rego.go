@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gopkg.in/yaml.v2"
 )

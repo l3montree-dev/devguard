@@ -19,10 +19,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type scanService struct {
@@ -58,7 +59,7 @@ func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project,
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, models.UpstreamStateInternal)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return 0, 0, nil, err

@@ -10,23 +10,24 @@ import (
 	"testing"
 	"time"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestDaemonAssetVersionDelete(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	var err error
 	t.Run("should not delete the asset version if it is the default branch", func(t *testing.T) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -216,14 +217,14 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 }
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	casbinRBACProvider := mocks.NewRBACProvider(t)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should find the cve in the component dependency", func(t *testing.T) {
 
@@ -285,12 +286,12 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 }
 
 func TestDaemonSyncTickets(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error
@@ -320,7 +321,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 			AssetVersionName: assetVersion.Name,
 			TicketID:         nil,
 			TicketURL:        nil,
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
 		Artifacts:         []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: assetVersion.Name, AssetID: asset.ID}},
@@ -335,7 +336,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketID)
 	assert.Nil(t, dependencyVuln.TicketURL)
 
-	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
+	clientfactory, gitlabClientFacade := tests.NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -463,12 +464,12 @@ func TestDaemonSyncTickets(t *testing.T) {
 }
 
 func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug-multi"
 	err := db.Save(&org).Error
@@ -499,7 +500,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 			AssetVersionName: assetVersion.Name,
 			TicketID:         nil,
 			TicketURL:        nil,
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
 		Artifacts: []models.Artifact{
@@ -518,7 +519,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketID)
 	assert.Nil(t, dependencyVuln.TicketURL)
 
-	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
+	clientfactory, gitlabClientFacade := tests.NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -580,12 +581,12 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 }
 
 func TestDaemonRecalculateRisk(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error
@@ -594,9 +595,9 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	err = db.Save(&project).Error
 	assert.Nil(t, err)
 
-	asset.AvailabilityRequirement = models.RequirementLevelLow
-	asset.ConfidentialityRequirement = models.RequirementLevelLow
-	asset.IntegrityRequirement = models.RequirementLevelLow
+	asset.AvailabilityRequirement = dtos.RequirementLevelLow
+	asset.ConfidentialityRequirement = dtos.RequirementLevelLow
+	asset.IntegrityRequirement = dtos.RequirementLevelLow
 	err = db.Save(&asset).Error
 	assert.Nil(t, err)
 
@@ -615,7 +616,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 			AssetID:          asset.ID,
 			AssetVersion:     assetVersion,
 			AssetVersionName: assetVersion.Name,
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
 		Artifacts:         []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: assetVersion.Name, AssetID: asset.ID}},
@@ -628,7 +629,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	assert.Nil(t, err)
 
 	//gitlabClientFacade
-	clientfactory, _ := integration_tests.NewTestClientFactory(t)
+	clientfactory, _ := tests.NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -651,9 +652,9 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	})
 
 	t.Run("should recalculate the risk of the dependency vuln to higher value if the requirements are set to high", func(t *testing.T) {
-		asset.AvailabilityRequirement = models.RequirementLevelHigh
-		asset.ConfidentialityRequirement = models.RequirementLevelHigh
-		asset.IntegrityRequirement = models.RequirementLevelHigh
+		asset.AvailabilityRequirement = dtos.RequirementLevelHigh
+		asset.ConfidentialityRequirement = dtos.RequirementLevelHigh
+		asset.IntegrityRequirement = dtos.RequirementLevelHigh
 		err = db.Save(&asset).Error
 		assert.Nil(t, err)
 
@@ -674,12 +675,12 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 }
 
 func TestDaemonFixedVersions(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error
@@ -752,7 +753,7 @@ func TestDaemonFixedVersions(t *testing.T) {
 			AssetID:          asset.ID,
 			AssetVersion:     assetVersion,
 			AssetVersionName: assetVersion.Name,
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
 

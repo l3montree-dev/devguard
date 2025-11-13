@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
@@ -51,56 +53,10 @@ func (firstPartyVuln *FirstPartyVuln) GetScannerIDsOrArtifactNames() string {
 	return firstPartyVuln.ScannerIDs
 }
 
-type SnippetContents struct {
-	Snippets []SnippetContent `json:"snippets"`
-}
-
-type SnippetContent struct {
-	StartLine   int    `json:"startLine"`
-	EndLine     int    `json:"endLine"`
-	StartColumn int    `json:"startColumn"`
-	EndColumn   int    `json:"endColumn"`
-	Snippet     string `json:"snippet"`
-}
-
-func (s SnippetContents) ToJSON() (database.JSONB, error) {
-	if len(s.Snippets) == 0 {
-		return database.JSONB{}, fmt.Errorf("no snippets to convert to JSON")
-	}
-	return database.JSONbFromStruct(s)
-}
-
-func (firstPartyVuln *FirstPartyVuln) FromJSONSnippetContents() (SnippetContents, error) {
-	res := SnippetContents{
-		Snippets: []SnippetContent{},
-	}
-
-	snippetsInterface := firstPartyVuln.SnippetContents["snippets"].([]any)
-	if snippetsInterface == nil {
-		return res, fmt.Errorf("no snippets found in SnippetContents")
-	}
-	for _, snippetAny := range snippetsInterface {
-		snippet, ok := snippetAny.(map[string]any)
-		if !ok {
-			continue
-		}
-		sc := SnippetContent{
-			StartLine:   int(snippet["startLine"].(float64)),
-			EndLine:     int(snippet["endLine"].(float64)),
-			StartColumn: int(snippet["startColumn"].(float64)),
-			EndColumn:   int(snippet["endColumn"].(float64)),
-			Snippet:     snippet["snippet"].(string),
-		}
-		res.Snippets = append(res.Snippets, sc)
-	}
-
-	return res, nil
-}
-
 var _ Vuln = &FirstPartyVuln{}
 
-func (firstPartyVuln *FirstPartyVuln) GetType() VulnType {
-	return VulnTypeFirstPartyVuln
+func (firstPartyVuln *FirstPartyVuln) GetType() dtos.VulnType {
+	return dtos.VulnTypeFirstPartyVuln
 }
 
 func (firstPartyVuln FirstPartyVuln) TableName() string {
@@ -139,7 +95,7 @@ func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 }
 
 func (firstPartyVuln *FirstPartyVuln) RenderADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
-	snippets, err := firstPartyVuln.FromJSONSnippetContents()
+	snippets, err := transformer.FromJSONSnippetContents(firstPartyVuln)
 	if err != nil {
 		slog.Error("could not parse snippet contents", "error", err)
 		return jira.ADF{}
@@ -207,7 +163,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown(baseURL, orgSlug, projectSl
 	str.WriteString("## Vulnerability Description\n\n")
 	str.WriteString(*firstPartyVuln.Message)
 
-	snippet, err := firstPartyVuln.FromJSONSnippetContents()
+	snippet, err := transformer.FromJSONSnippetContents(firstPartyVuln)
 	if err != nil {
 		slog.Error("could not parse snippet contents", "error", err)
 		return str.String()

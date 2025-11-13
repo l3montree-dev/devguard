@@ -18,10 +18,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +46,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
-		v.State = models.VulnState("Example State")
+		v.State = dtos.VulnState("Example State")
 
 		output := dependencyVulnToTableRow(pURL, v)
 		firstValue := fmt.Sprintln(output[0])
@@ -70,7 +71,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		}
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
-		v.State = models.VulnState("Example State")
+		v.State = dtos.VulnState("Example State")
 
 		output := dependencyVulnToTableRow(pURL, v)
 		firstValue := fmt.Sprintln(output[0])

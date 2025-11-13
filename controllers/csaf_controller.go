@@ -17,9 +17,9 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 
 	"github.com/l3montree-dev/devguard/constants"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 

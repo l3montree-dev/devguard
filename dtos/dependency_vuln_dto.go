@@ -17,31 +17,39 @@ package dtos
 
 import (
 	"time"
+)
 
-	"github.com/l3montree-dev/devguard/database/models"
+type VulnState string
+
+const (
+	VulnStateOpen              VulnState = "open"
+	VulnStateFixed             VulnState = "fixed"         // we did not find the dependencyVuln anymore in the last scan!
+	VulnStateAccepted          VulnState = "accepted"      // like ignore
+	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
 )
 
 type DependencyVulnDTO struct {
-	ID                    string            `json:"id"`
-	Message               *string           `json:"message"`
-	AssetVersionName      string            `json:"assetVersionId"`
-	AssetID               string            `json:"assetId"`
-	State                 models.VulnState  `json:"state"`
-	CVE                   *models.CVE       `json:"cve"`
-	CVEID                 *string           `json:"cveID"`
-	ComponentPurl         *string           `json:"componentPurl"`
-	ComponentDepth        *int              `json:"componentDepth"`
-	ComponentFixedVersion *string           `json:"componentFixedVersion"`
-	Effort                *int              `json:"effort"`
-	RiskAssessment        *int              `json:"riskAssessment"`
-	RawRiskAssessment     *float64          `json:"rawRiskAssessment"`
-	Priority              *int              `json:"priority"`
-	LastDetected          time.Time         `json:"lastDetected"`
-	CreatedAt             time.Time         `json:"createdAt"`
-	TicketID              *string           `json:"ticketId"`
-	TicketURL             *string           `json:"ticketUrl"`
-	ManualTicketCreation  bool              `json:"manualTicketCreation"`
-	Artifacts             []models.Artifact `json:"artifacts"`
+	ID                    string        `json:"id"`
+	Message               *string       `json:"message"`
+	AssetVersionName      string        `json:"assetVersionId"`
+	AssetID               string        `json:"assetId"`
+	State                 VulnState     `json:"state"`
+	CVE                   *CVEDTO       `json:"cve"`
+	CVEID                 *string       `json:"cveID"`
+	ComponentPurl         *string       `json:"componentPurl"`
+	ComponentDepth        *int          `json:"componentDepth"`
+	ComponentFixedVersion *string       `json:"componentFixedVersion"`
+	Effort                *int          `json:"effort"`
+	RiskAssessment        *int          `json:"riskAssessment"`
+	RawRiskAssessment     *float64      `json:"rawRiskAssessment"`
+	Priority              *int          `json:"priority"`
+	LastDetected          time.Time     `json:"lastDetected"`
+	CreatedAt             time.Time     `json:"createdAt"`
+	TicketID              *string       `json:"ticketId"`
+	TicketURL             *string       `json:"ticketUrl"`
+	ManualTicketCreation  bool          `json:"manualTicketCreation"`
+	Artifacts             []ArtifactDTO `json:"artifacts"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
@@ -51,7 +59,7 @@ type detailedDependencyVulnDTO struct {
 	Events []VulnEventDTO `json:"events"`
 }
 
-func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
+func DependencyVulnToDto(f DependencyVuln) DependencyVulnDTO {
 
 	return DependencyVulnDTO{
 		ID:                    f.ID,

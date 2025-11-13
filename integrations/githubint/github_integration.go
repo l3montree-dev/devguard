@@ -26,14 +26,14 @@ import (
 
 	"github.com/google/go-github/v62/github"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type githubRepository struct {
@@ -41,14 +41,14 @@ type githubRepository struct {
 	GithubAppInstallationID int `json:"githubAppInstallationId"`
 }
 
-func (githubIntegration githubRepository) toRepository() shared.Repository {
+func (githubIntegration githubRepository) toRepository() dtos.GitRepository {
 	var image string
 	if githubIntegration.Organization != nil && githubIntegration.Organization.AvatarURL != nil {
 		image = utils.SafeDereference(githubIntegration.Organization.AvatarURL)
 	} else if githubIntegration.Owner != nil && githubIntegration.Owner.AvatarURL != nil {
 		image = utils.SafeDereference(githubIntegration.Owner.AvatarURL)
 	}
-	return shared.Repository{
+	return dtos.GitRepository{
 		ID:          fmt.Sprintf("github:%d:%s", githubIntegration.GithubAppInstallationID, utils.SafeDereference(githubIntegration.FullName)),
 		Label:       utils.SafeDereference(githubIntegration.FullName),
 		Image:       image,
@@ -163,16 +163,16 @@ func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID s
 	return models.Org{}, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	if !shared.HasOrganization(ctx) {
 		// github integration is connected to an organization not a user
 		// thus we NEED an organization for this
-		return []shared.Repository{}, nil
+		return []dtos.GitRepository{}, nil
 	}
 
 	organization := shared.GetOrg(ctx)
 
-	repos := []shared.Repository{}
+	repos := []dtos.GitRepository{}
 	// check if a github integration exists on that org
 	if organization.GithubAppInstallations != nil {
 		// get the github integration
@@ -187,13 +187,13 @@ func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context)
 			return nil, err
 		}
 
-		repos = append(repos, utils.Map(r, func(repo githubRepository) shared.Repository {
+		repos = append(repos, utils.Map(r, func(repo githubRepository) dtos.GitRepository {
 			return repo.toRepository()
 		})...)
 		return repos, nil
 	}
 
-	return []shared.Repository{}, nil
+	return []dtos.GitRepository{}, nil
 }
 
 func (githubIntegration *GithubIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
@@ -259,7 +259,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		switch action {
 		case "closed":
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()), models.UpstreamStateInternal)
+			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()), dtos.UpstreamStateInternal)
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -268,7 +268,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			doUpdateArtifactRiskHistory = true
 
 		case "reopened":
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), models.UpstreamStateInternal)
+			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), dtos.UpstreamStateInternal)
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -277,7 +277,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			doUpdateArtifactRiskHistory = true
 
 		case "deleted":
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -664,12 +664,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member dtos.User) bool {
+			func(member dtos.UserDTO) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = dtos.User{
+			member = dtos.UserDTO{
 				Name: "unknown",
 			}
 		}
@@ -751,7 +751,7 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
 			// save the event
 			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -769,7 +769,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	_, ticketNumber := githubTicketIDToIDAndNumber(*firstPartyVuln.TicketID)
 
 	expectedIssueState := "closed"
-	if firstPartyVuln.State == models.VulnStateOpen {
+	if firstPartyVuln.State == dtos.VulnStateOpen {
 		expectedIssueState = "open"
 	}
 

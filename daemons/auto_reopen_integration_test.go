@@ -5,21 +5,22 @@ import (
 	"testing"
 	"time"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create test data
-	_, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Set up repositories
 	assetRepo := repositories.NewAssetRepository(db)
@@ -42,7 +43,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		// Verify vulnerability is still accepted
 		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, models.VulnStateAccepted, updatedVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
 	})
 
 	t.Run("should not reopen vulnerabilities that are within the time threshold", func(t *testing.T) {
@@ -63,7 +64,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		// Verify vulnerability is still accepted
 		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, models.VulnStateAccepted, updatedVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
 	})
 
 	t.Run("should reopen vulnerabilities that exceed the time threshold", func(t *testing.T) {
@@ -84,7 +85,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		// Verify vulnerability has been reopened
 		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, models.VulnStateOpen, updatedVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State)
 
 		// Verify a reopen event was created
 		events := updatedVuln.Events
@@ -148,11 +149,11 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 		// Verify both vulnerabilities are reopened
 		updatedVuln1, err := dependencyVulnRepo.Read(vuln1.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, models.VulnStateOpen, updatedVuln1.State)
+		assert.Equal(t, dtos.VulnStateOpen, updatedVuln1.State)
 
 		updatedVuln2, err := dependencyVulnRepo.Read(vuln2.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, models.VulnStateOpen, updatedVuln2.State)
+		assert.Equal(t, dtos.VulnStateOpen, updatedVuln2.State)
 	})
 }
 
@@ -177,7 +178,7 @@ func createTestVulnerability(t *testing.T, db shared.DB, asset models.Asset, ass
 		Vulnerability: models.Vulnerability{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          asset.ID,
-			State:            models.VulnStateOpen,
+			State:            dtos.VulnStateOpen,
 			LastDetected:     time.Now().Add(-timeAgo),
 		},
 		CVEID:          utils.Ptr(cveID),
@@ -199,7 +200,7 @@ func createTestVulnerability(t *testing.T, db shared.DB, asset models.Asset, ass
 // acceptVulnerability creates an accepted event for a vulnerability
 func acceptVulnerability(t *testing.T, db shared.DB, vulnerability *models.DependencyVuln, timeAgo time.Duration) {
 	// Create an accepted event using the model constructor
-	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), models.VulnTypeDependencyVuln, "test-user", "Accepted for testing", models.UpstreamStateInternal)
+	acceptEvent := models.NewAcceptedEvent(vulnerability.CalculateHash(), models.VulnTypeDependencyVuln, "test-user", "Accepted for testing", dtos.UpstreamStateInternal)
 
 	// Manually set the creation time for testing
 	acceptEvent.CreatedAt = time.Now().Add(-timeAgo)
@@ -209,7 +210,7 @@ func acceptVulnerability(t *testing.T, db shared.DB, vulnerability *models.Depen
 	assert.NoError(t, err)
 
 	// Update vulnerability state
-	vulnerability.State = models.VulnStateAccepted
+	vulnerability.State = dtos.VulnStateAccepted
 	vulnerability.LastDetected = time.Now().Add(-timeAgo)
 	err = db.Save(vulnerability).Error
 	assert.NoError(t, err)

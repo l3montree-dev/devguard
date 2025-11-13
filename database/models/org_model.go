@@ -1,6 +1,6 @@
 package models
 
-import "github.com/l3montree-dev/devguard/internal/database"
+import "github.com/l3montree-dev/devguard/database"
 
 type Org struct {
 	Model

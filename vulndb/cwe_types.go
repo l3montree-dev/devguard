@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 )
 
 func (w WeaknessType) toModel() models.CWE {

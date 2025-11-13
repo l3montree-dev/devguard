@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
 	"golang.org/x/time/rate"
 )
 

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -300,8 +300,8 @@ func (c firstPartyVulnController) Sarif(ctx shared.Context) error {
 func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {
 	return detailedFirstPartyVulnDTO{
 		FirstPartyVulnDTO: FirstPartyVulnToDto(firstPartyVuln),
-		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
-			return events.VulnEventDTO{
+		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
+			return dtos.VulnEventDTO{
 				ID:                      ev.ID,
 				Type:                    ev.Type,
 				VulnID:                  ev.VulnID,

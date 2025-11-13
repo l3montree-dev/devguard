@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type statisticsService struct {
@@ -122,7 +123,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 
 		for _, dependencyVuln := range dependencyVulns {
 			var key string
-			if dependencyVuln.State == models.VulnStateOpen {
+			if dependencyVuln.State == dtos.VulnStateOpen {
 				openDependencyVulns++
 				key = "open"
 				openVulns = append(openVulns, dependencyVuln)

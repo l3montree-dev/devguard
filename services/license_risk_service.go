@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	component "github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
-	// "github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
+	// "github.com/l3montree-dev/devguard/utils"
 )
 
 type LicenseRiskService struct {
@@ -41,7 +42,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	}
 	// filter to only open ones
 	existingLicenseRisks = utils.Filter(existingLicenseRisks, func(risk models.LicenseRisk) bool {
-		return risk.State == models.VulnStateOpen
+		return risk.State == dtos.VulnStateOpen
 	})
 
 	// get all current valid licenses to compare against
@@ -61,7 +62,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
 					AssetVersion:     assetVersion,
-					State:            models.VulnStateOpen,
+					State:            dtos.VulnStateOpen,
 					LastDetected:     time.Now(),
 				},
 				FinalLicenseDecision: nil,
@@ -94,7 +95,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 		return err
 	}
 	existingRisksOnOtherBranch = utils.Filter(existingRisksOnOtherBranch, func(risk models.LicenseRisk) bool {
-		return risk.State != models.VulnStateFixed
+		return risk.State != dtos.VulnStateFixed
 	})
 
 	// Apply branch diffing to new license risks

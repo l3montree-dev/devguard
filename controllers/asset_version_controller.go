@@ -19,7 +19,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	dtos "github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -329,7 +329,7 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
 	m := make(map[string]bool)
 	for _, v := range defaultVulns {
-		if v.State == models.VulnStateFixed {
+		if v.State == dtos.VulnStateFixed {
 			m[v.ID] = true
 		}
 	}
@@ -337,7 +337,7 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	// mark all vulns as fixed if they are in the map
 	for i := range dependencyVulns {
 		if _, ok := m[dependencyVulns[i].ID]; ok {
-			dependencyVulns[i].State = models.VulnStateFixed
+			dependencyVulns[i].State = dtos.VulnStateFixed
 		}
 	}
 	return dependencyVulns, nil
@@ -407,7 +407,7 @@ func (a *assetVersionController) RefetchLicenses(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
-	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true, models.UpstreamStateInternal)
+	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true, dtos.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}

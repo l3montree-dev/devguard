@@ -9,10 +9,11 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
 type WebhookIntegration struct {
@@ -348,7 +349,7 @@ func (w *WebhookIntegration) ListProjects(ctx context.Context, userID string, pr
 	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
+func (w *WebhookIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	// Logic to list repositories
 	return nil, nil
 }
@@ -378,7 +379,7 @@ func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 	return nil
 }
 
-func (w *WebhookIntegration) GetUsers(org models.Org) []dtos.User {
+func (w *WebhookIntegration) GetUsers(org models.Org) []dtos.UserDTO {
 	// Logic to get users in an organization
 	return nil
 }

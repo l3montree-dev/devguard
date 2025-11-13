@@ -25,9 +25,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
@@ -119,7 +119,7 @@ func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent
 }
 */
 
-func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
+func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
 	cveIds := osv.GetCVE()

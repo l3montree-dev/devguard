@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -171,10 +172,10 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		// Handle issue updated event
 		switch statusCategory {
 		case jira.StatusCategoryDone:
-			if vuln.GetState() != models.VulnStateOpen {
+			if vuln.GetState() != dtos.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), models.UpstreamStateInternal)
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), dtos.UpstreamStateInternal)
 
 			err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -182,10 +183,10 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			}
 			doUpdateArtifactRiskHistory = true
 		case jira.StatusCategoryToDo, jira.StatusCategoryInProgress:
-			if vuln.GetState() == models.VulnStateOpen {
+			if vuln.GetState() == dtos.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), models.UpstreamStateInternal)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), dtos.UpstreamStateInternal)
 
 			err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -195,10 +196,10 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 
 		}
 	case jira.EventIssueDeleted:
-		if vuln.GetState() == models.VulnStateFalsePositive {
+		if vuln.GetState() == dtos.VulnStateFalsePositive {
 			return nil
 		}
-		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), models.UpstreamStateInternal)
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
 
 		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 		if err != nil {

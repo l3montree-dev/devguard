@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -491,7 +493,7 @@ func (_c *DependencyVulnRepository_DeleteBatch_Call) RunAndReturn(run func(tx sh
 }
 
 // GetAllByAssetIDAndState provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllByAssetIDAndState(tx shared.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error) {
+func (_mock *DependencyVulnRepository) GetAllByAssetIDAndState(tx shared.DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, assetID, state, durationSinceStateChange)
 
 	if len(ret) == 0 {
@@ -500,17 +502,17 @@ func (_mock *DependencyVulnRepository) GetAllByAssetIDAndState(tx shared.DB, ass
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, models.VulnState, time.Duration) ([]models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, dtos.VulnState, time.Duration) ([]models.DependencyVuln, error)); ok {
 		return returnFunc(tx, assetID, state, durationSinceStateChange)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, models.VulnState, time.Duration) []models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, dtos.VulnState, time.Duration) []models.DependencyVuln); ok {
 		r0 = returnFunc(tx, assetID, state, durationSinceStateChange)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, models.VulnState, time.Duration) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, dtos.VulnState, time.Duration) error); ok {
 		r1 = returnFunc(tx, assetID, state, durationSinceStateChange)
 	} else {
 		r1 = ret.Error(1)
@@ -526,13 +528,13 @@ type DependencyVulnRepository_GetAllByAssetIDAndState_Call struct {
 // GetAllByAssetIDAndState is a helper method to define mock.On call
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - state models.VulnState
+//   - state dtos.VulnState
 //   - durationSinceStateChange time.Duration
 func (_e *DependencyVulnRepository_Expecter) GetAllByAssetIDAndState(tx interface{}, assetID interface{}, state interface{}, durationSinceStateChange interface{}) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
 	return &DependencyVulnRepository_GetAllByAssetIDAndState_Call{Call: _e.mock.On("GetAllByAssetIDAndState", tx, assetID, state, durationSinceStateChange)}
 }
 
-func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Run(run func(tx shared.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Run(run func(tx shared.DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -542,9 +544,9 @@ func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Run(run func(tx
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 models.VulnState
+		var arg2 dtos.VulnState
 		if args[2] != nil {
-			arg2 = args[2].(models.VulnState)
+			arg2 = args[2].(dtos.VulnState)
 		}
 		var arg3 time.Duration
 		if args[3] != nil {
@@ -565,7 +567,7 @@ func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Return(dependen
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -787,7 +789,7 @@ func (_c *DependencyVulnRepository_GetAllVulnsByAssetID_Call) RunAndReturn(run f
 }
 
 // GetAllVulnsForTagsAndDefaultBranchInAsset provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx shared.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error) {
+func (_mock *DependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx shared.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, assetID, excludedStates)
 
 	if len(ret) == 0 {
@@ -796,17 +798,17 @@ func (_mock *DependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, []models.VulnState) ([]models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, []dtos.VulnState) ([]models.DependencyVuln, error)); ok {
 		return returnFunc(tx, assetID, excludedStates)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, []models.VulnState) []models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, []dtos.VulnState) []models.DependencyVuln); ok {
 		r0 = returnFunc(tx, assetID, excludedStates)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, []models.VulnState) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, []dtos.VulnState) error); ok {
 		r1 = returnFunc(tx, assetID, excludedStates)
 	} else {
 		r1 = ret.Error(1)
@@ -822,12 +824,12 @@ type DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call str
 // GetAllVulnsForTagsAndDefaultBranchInAsset is a helper method to define mock.On call
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - excludedStates []models.VulnState
+//   - excludedStates []dtos.VulnState
 func (_e *DependencyVulnRepository_Expecter) GetAllVulnsForTagsAndDefaultBranchInAsset(tx interface{}, assetID interface{}, excludedStates interface{}) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
 	return &DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call{Call: _e.mock.On("GetAllVulnsForTagsAndDefaultBranchInAsset", tx, assetID, excludedStates)}
 }
 
-func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) Run(run func(tx shared.DB, assetID uuid.UUID, excludedStates []models.VulnState)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) Run(run func(tx shared.DB, assetID uuid.UUID, excludedStates []dtos.VulnState)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -837,9 +839,9 @@ func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Cal
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 []models.VulnState
+		var arg2 []dtos.VulnState
 		if args[2] != nil {
-			arg2 = args[2].([]models.VulnState)
+			arg2 = args[2].([]dtos.VulnState)
 		}
 		run(
 			arg0,
@@ -855,7 +857,7 @@ func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Cal
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, excludedStates []models.VulnState) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+func (_c *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

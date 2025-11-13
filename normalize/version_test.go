@@ -3,7 +3,7 @@ package normalize_test
 import (
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/mod/semver"
 )

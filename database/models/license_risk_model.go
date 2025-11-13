@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 

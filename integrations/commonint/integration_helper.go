@@ -18,11 +18,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/core/risk"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, artifactName string) models.VulnEvent {
@@ -31,11 +31,11 @@ func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, u
 
 	switch event {
 	case models.EventTypeAccepted:
-		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, models.UpstreamStateInternal)
+		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
 	case models.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, models.UpstreamStateInternal)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, dtos.UpstreamStateInternal)
 	case models.EventTypeReopened:
-		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, models.UpstreamStateInternal)
+		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
 	case models.EventTypeComment:
 		return models.NewCommentEvent(vulnID, vulnType, userID, comment)
 	}
@@ -53,7 +53,7 @@ func commentTrimmedPrefix(vulnType models.VulnType, comment string) (models.Vuln
 	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") && vulnType == models.VulnTypeDependencyVuln {
 		return models.EventTypeFalsePositive, models.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
 	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") && vulnType == models.VulnTypeDependencyVuln {
-		return models.EventTypeFalsePositive, models.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
+		return models.EventTypeFalsePositive, dtos.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
 	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") && vulnType == models.VulnTypeDependencyVuln {
 		return models.EventTypeFalsePositive, models.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
 	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") && vulnType == models.VulnTypeDependencyVuln {
@@ -230,17 +230,17 @@ func RenderPathToComponent(componentRepository shared.ComponentRepository, asset
 	return tree.RenderToMermaid(), nil
 }
 
-func stateToLabel(state models.VulnState) string {
+func stateToLabel(state dtos.VulnState) string {
 	switch state {
-	case models.VulnStateFalsePositive:
+	case dtos.VulnStateFalsePositive:
 		return "false-positive"
-	case models.VulnStateAccepted:
+	case dtos.VulnStateAccepted:
 		return "accepted"
-	case models.VulnStateFixed:
+	case dtos.VulnStateFixed:
 		return "fixed"
-	case models.VulnStateOpen:
+	case dtos.VulnStateOpen:
 		return "open"
-	case models.VulnStateMarkedForTransfer:
+	case dtos.VulnStateMarkedForTransfer:
 		return "marked-for-transfer"
 	}
 	return "unknown"

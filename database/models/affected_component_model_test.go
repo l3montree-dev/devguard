@@ -21,14 +21,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFromOSV(t *testing.T) {
 	t.Run("empty OSV", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{},
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{},
 		}
 		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 0 {
@@ -37,13 +37,13 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package without purl", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "",
 					},
-					Ranges: []common.Rng{},
+					Ranges: []dtos.Rng{},
 				},
 			},
 		}
@@ -54,13 +54,13 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with invalid purl", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "invalidPURL",
 					},
-					Ranges: []common.Rng{},
+					Ranges: []dtos.Rng{},
 				},
 			},
 		}
@@ -71,16 +71,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with valid purl", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []common.Rng{
+					Ranges: []dtos.Rng{
 						{
 							Type: "SEMVER",
-							Events: []common.SemverEvent{
+							Events: []dtos.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -137,16 +137,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []common.Rng{
+					Ranges: []dtos.Rng{
 						{
 							Type: "SEMVER",
-							Events: []common.SemverEvent{
+							Events: []dtos.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -190,16 +190,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package without SEMVER ranges but with versions", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []common.Rng{
+					Ranges: []dtos.Rng{
 						{
 							Type: "ECOSYSTEM",
-							Events: []common.SemverEvent{
+							Events: []dtos.SemverEvent{
 								{
 									Introduced: "1.14.14",
 								},
@@ -228,7 +228,7 @@ func TestFromOSV(t *testing.T) {
 		f, _ := os.Open("testdata/GHSA-2v6x-frw8-7r7f.json")
 		defer f.Close()
 		bytes, _ := io.ReadAll(f)
-		osv := common.OSV{}
+		osv := dtos.OSV{}
 		err := json.Unmarshal(bytes, &osv)
 		if err != nil {
 			t.Errorf("Could not unmarshal osv, got %s", err)
@@ -241,16 +241,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with GIT ranges", func(t *testing.T) {
-		osv := common.OSV{
-			Affected: []common.Affected{
+		osv := dtos.OSV{
+			Affected: []dtos.Affected{
 				{
-					Package: common.Pkg{
+					Package: dtos.Pkg{
 						Purl: "pkg:github/package-url/purl-spec",
 					},
-					Ranges: []common.Rng{
+					Ranges: []dtos.Rng{
 						{
 							Type: "GIT",
-							Events: []common.SemverEvent{
+							Events: []dtos.SemverEvent{
 								{
 									Introduced: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 								},
@@ -279,7 +279,7 @@ func TestFromOSV(t *testing.T) {
 		f, _ := os.Open("testdata/CVE-2024-52523.json")
 		defer f.Close()
 		bytes, _ := io.ReadAll(f)
-		osv := common.OSV{}
+		osv := dtos.OSV{}
 		err := json.Unmarshal(bytes, &osv)
 		if err != nil {
 			t.Errorf("Could not unmarshal osv, got %s", err)

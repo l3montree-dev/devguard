@@ -17,7 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
-	dtos "github.com/l3montree-dev/devguard/dto"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -215,7 +215,7 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 
 	// remove all fixed vulns from the existing vulns
 	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State != models.VulnStateFixed
+		return vuln.State != dtos.VulnStateFixed
 	})
 
 	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
@@ -225,7 +225,7 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 	}
 
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.FirstPartyVuln) bool {
-		return dependencyVuln.State != models.VulnStateFixed
+		return dependencyVuln.State != dtos.VulnStateFixed
 	})
 
 	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
@@ -247,7 +247,7 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 	}
 	// filter out any vulnerabilities which were already fixed, by only keeping the open ones
 	fixedVulns := utils.Filter(comparison.OnlyInA, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State == models.VulnStateOpen
+		return vuln.State == dtos.VulnStateOpen
 	})
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newVulns, existingVulnsOnOtherBranch)
@@ -616,12 +616,12 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State != models.VulnStateFixed
+		return dependencyVuln.State != dtos.VulnStateFixed
 	})
 
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State != models.VulnStateFixed
+		return dependencyVuln.State != dtos.VulnStateFixed
 	})
 
 	var updateExistingVulns []map[string]string
@@ -1032,15 +1032,15 @@ func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
 	switch dependencyVuln.State {
-	case models.VulnStateOpen:
+	case dtos.VulnStateOpen:
 		return vex.StatusUnderInvestigation
-	case models.VulnStateFixed:
+	case dtos.VulnStateFixed:
 		return vex.StatusFixed
-	case models.VulnStateFalsePositive:
+	case dtos.VulnStateFalsePositive:
 		return vex.StatusNotAffected
-	case models.VulnStateAccepted:
+	case dtos.VulnStateAccepted:
 		return vex.StatusAffected
-	case models.VulnStateMarkedForTransfer:
+	case dtos.VulnStateMarkedForTransfer:
 		return vex.StatusAffected
 	default:
 		return vex.StatusUnderInvestigation
@@ -1186,17 +1186,17 @@ func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
 	return cdx.ScoringMethodCVSSv4
 }
 
-func dependencyVulnStateToImpactAnalysisState(state models.VulnState) cdx.ImpactAnalysisState {
+func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAnalysisState {
 	switch state {
-	case models.VulnStateOpen:
+	case dtos.VulnStateOpen:
 		return cdx.IASInTriage
-	case models.VulnStateFixed:
+	case dtos.VulnStateFixed:
 		return cdx.IASResolved
-	case models.VulnStateAccepted:
+	case dtos.VulnStateAccepted:
 		return cdx.IASExploitable
-	case models.VulnStateFalsePositive:
+	case dtos.VulnStateFalsePositive:
 		return cdx.IASFalsePositive
-	case models.VulnStateMarkedForTransfer:
+	case dtos.VulnStateMarkedForTransfer:
 		return cdx.IASInTriage
 	default:
 		return cdx.IASInTriage
@@ -1216,17 +1216,17 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	return nil
 }
 
-func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnalysisResponse {
+func dependencyVulnStateToResponseStatus(state dtos.VulnState) cdx.ImpactAnalysisResponse {
 	switch state {
-	case models.VulnStateOpen:
+	case dtos.VulnStateOpen:
 		return ""
-	case models.VulnStateFixed:
+	case dtos.VulnStateFixed:
 		return cdx.IARUpdate
-	case models.VulnStateAccepted:
+	case dtos.VulnStateAccepted:
 		return cdx.IARWillNotFix
-	case models.VulnStateFalsePositive:
+	case dtos.VulnStateFalsePositive:
 		return cdx.IARWillNotFix
-	case models.VulnStateMarkedForTransfer:
+	case dtos.VulnStateMarkedForTransfer:
 		return ""
 	default:
 		return ""

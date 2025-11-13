@@ -23,9 +23,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
@@ -215,7 +217,7 @@ func (c *componentRepository) GetLicenseDistribution(tx shared.DB, assetVersionN
 	AND cd.asset_version_name = ?
 	AND cd.asset_id = ?
 	GROUP BY lr.final_license_decision`,
-		models.VulnStateFixed, assetVersionName, assetID)
+		dtos.VulnStateFixed, assetVersionName, assetID)
 
 	//Components WITHOUT an overwrite
 	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(DISTINCT cd.component_purl) AS count
@@ -227,7 +229,7 @@ func (c *componentRepository) GetLicenseDistribution(tx shared.DB, assetVersionN
 	AND asset_version_name = ?
 	AND asset_id = ?
 	GROUP BY c.license`,
-		models.VulnStateFixed, assetVersionName, assetID)
+		dtos.VulnStateFixed, assetVersionName, assetID)
 
 	//We then still need to filter for the right scanner
 	if artifactName != nil {

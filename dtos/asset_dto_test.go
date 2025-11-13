@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,22 +15,22 @@ func TestApplyToModel(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		patch    PatchRequest
-		initial  models.Asset
-		expected models.Asset
+		patch    AssetPatchRequest
+		initial  AssetDTO
+		expected AssetDTO
 		updated  bool
 	}{
 		{
 			name: "Update Name and Description",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				Name:        utils.Ptr("New Name"),
 				Description: utils.Ptr("New Description"),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				Name:        "New Name",
 				Slug:        "new-name",
 				Description: "New Description",
@@ -40,41 +39,41 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update CentralDependencyVulnManagement",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				CentralDependencyVulnManagement: utils.Ptr(true),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				CentralDependencyVulnManagement: false,
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				CentralDependencyVulnManagement: true,
 			},
 			updated: true,
 		},
 		{
 			name: "Update ReachableFromInternet",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				ReachableFromInternet: utils.Ptr(true),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				ReachableFromInternet: false,
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				ReachableFromInternet: true,
 			},
 			updated: true,
 		},
 		{
 			name: "Update RepositoryID and RepositoryName",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				RepositoryID:   utils.Ptr("new-repo-id"),
 				RepositoryName: utils.Ptr("new-repo-name"),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				RepositoryID:   utils.Ptr("old-repo-id"),
 				RepositoryName: utils.Ptr("old-repo-name"),
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				RepositoryID:   utils.Ptr("new-repo-id"),
 				RepositoryName: utils.Ptr("new-repo-name"),
 			},
@@ -82,12 +81,12 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name:  "No Updates",
-			patch: PatchRequest{},
-			initial: models.Asset{
+			patch: AssetPatchRequest{},
+			initial: AssetDTO{
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				Name:        "Old Name",
 				Description: "Old Description",
 			},
@@ -95,52 +94,52 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update nil Badge Secret",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				WebhookSecret: nil,
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				WebhookSecret: &webhookSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update nil Webhook Secret",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				BadgeSecret: nil,
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				BadgeSecret: &badgeSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update Webhook Secret",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				WebhookSecret: utils.Ptr(uuid.New()),
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				WebhookSecret: &webhookSecret,
 			},
 			updated: true,
 		},
 		{
 			name: "Update Badge Secret",
-			patch: PatchRequest{
+			patch: AssetPatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
-			initial: models.Asset{
+			initial: AssetDTO{
 				BadgeSecret: utils.Ptr(uuid.New()),
 			},
-			expected: models.Asset{
+			expected: AssetDTO{
 				BadgeSecret: &badgeSecret,
 			},
 			updated: true,

@@ -11,15 +11,16 @@ import (
 	"testing"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/inithelper"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -37,7 +38,7 @@ func getArtifactNames(artifacts []models.Artifact) []string {
 }
 
 func TestScanning(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -46,7 +47,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -219,7 +220,7 @@ func TestScanning(t *testing.T) {
 
 		// both should be accepted
 		for _, vuln := range vulns {
-			assert.Equal(t, models.VulnStateAccepted, vuln.State)
+			assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
 		}
 		var newVuln models.DependencyVuln
 		for _, v := range vulns {
@@ -250,7 +251,7 @@ func TestScanning(t *testing.T) {
 }
 
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -260,7 +261,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -297,7 +298,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln := vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing state management", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
@@ -306,7 +307,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
 		assert.Nil(t, err)
 		branchAVuln = vulns[0]
-		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
 
 		recorder = httptest.NewRecorder()
 		sbomFile = sbomWithVulnerability()
@@ -327,7 +328,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln = vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
 		assert.Len(t, branchAVuln.Events, 2)
 
 	})
@@ -335,7 +336,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -345,7 +346,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -382,7 +383,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln := vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 		recorder = httptest.NewRecorder()
 		sbomFile = sbomWithVulnerability()
@@ -403,7 +404,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln = vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 		assert.Len(t, branchAVuln.Events, 1)
 
 		recorder = httptest.NewRecorder()
@@ -434,17 +435,17 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		}
 
 		assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAFinalVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAFinalVuln.State)
 		assert.Len(t, branchAFinalVuln.Events, 1)
 		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchBVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchBVuln.State)
 		assert.Len(t, branchBVuln.Events, 1) // only one event should be copied
 	})
 
 }
 
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -454,7 +455,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -491,7 +492,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln := vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management", 0)
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
@@ -505,7 +506,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Len(t, vulns, 1)
 		branchAVuln = vulns[0]
-		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
 		assert.Len(t, branchAVuln.Events, 3)
 
 		recorder = httptest.NewRecorder()
@@ -537,11 +538,11 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		}
 
 		assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateAccepted, branchAFinalVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchAFinalVuln.State)
 		assert.Len(t, branchAFinalVuln.Events, 3)
 
 		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateAccepted, branchBVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchBVuln.State)
 		assert.Len(t, branchBVuln.Events, 3)
 
 		branchBEvents := branchBVuln.Events
@@ -603,7 +604,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		}
 
 		assert.Equal(t, "branch-c", branchCVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateAccepted, branchCVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchCVuln.State)
 		assert.Len(t, branchCVuln.Events, 3)
 	})
 
@@ -661,7 +662,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, models.VulnStateFalsePositive, branchEVuln.State)
+		assert.Equal(t, dtos.VulnStateFalsePositive, branchEVuln.State)
 		assert.Len(t, branchEVuln.Events, 2)
 
 		var copiedFPEvent models.VulnEvent
@@ -678,7 +679,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -686,7 +687,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 	controller, _ := initHTTPController(t, db, false)
 
 	app := echo.New()
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("test-user")
@@ -724,7 +725,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		branchAVuln := vulns[0]
 		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing", 0)
 		err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
@@ -737,7 +738,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
 		assert.Nil(t, err)
 		branchAVuln = vulns[0]
-		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
 		assert.Len(t, branchAVuln.Events, 3)
 
 		recorder = httptest.NewRecorder()
@@ -767,7 +768,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 
 		assert.NotEmpty(t, branchBVuln.ID)
 		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
-		assert.Equal(t, models.VulnStateAccepted, branchBVuln.State)
+		assert.Equal(t, dtos.VulnStateAccepted, branchBVuln.State)
 		assert.Len(t, branchBVuln.Events, 3)
 
 		var copiedAcceptedEvent, copiedCommentEvent models.VulnEvent
@@ -795,7 +796,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestTicketHandling(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -805,7 +806,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -866,7 +867,7 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: "main",
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetID:          asset.ID,
 				// use numeric project id to mimic real stored value format gitlab:<projectID>/<issueIID>
 				TicketID: utils.Ptr("gitlab:123/789"),
@@ -900,7 +901,7 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: "main",
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetID:          asset.ID,
 				TicketID:         utils.Ptr("gitlab:123/789"),
 			},
@@ -940,7 +941,7 @@ func TestTicketHandling(t *testing.T) {
 			CVEID:         utils.Ptr("CVE-2025-46569"),
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateAccepted,
+				State:            dtos.VulnStateAccepted,
 				AssetVersionName: "main",
 				AssetID:          asset.ID,
 			},
@@ -980,7 +981,7 @@ func TestTicketHandling(t *testing.T) {
 			CVEID:         utils.Ptr("CVE-2025-46569"),
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 				AssetVersionName: "main",
 				AssetID:          asset.ID,
 				TicketID:         nil,
@@ -1153,7 +1154,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 
 func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
-	clientfactory, client := integration_tests.NewTestClientFactory(t)
+	clientfactory, client := tests.NewTestClientFactory(t)
 
 	repositories.NewExploitRepository(db)
 	// mock the openSourceInsightsService to avoid any external calls during tests
@@ -1162,19 +1163,19 @@ func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) 
 		openSourceInsightsService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{}, nil)
 	}
 
-	controller := inithelper.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, openSourceInsightsService)
+	controller := tests.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, openSourceInsightsService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client
 }
 
 func TestUploadVEX(t *testing.T) {
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	app := echo.New()
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	scanController := inithelper.CreateScanHTTPController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	scanController := tests.CreateScanHTTPController(db, nil, nil, tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	asset.ParanoidMode = false
 	if err := db.Save(&asset).Error; err != nil {
 		t.Fatalf("could not save asset: %v", err)
@@ -1316,11 +1317,11 @@ func TestUploadVEX(t *testing.T) {
 		switch *d.CVEID {
 		case "CVE-2025-00001":
 			// i think its a race condition and the ordering of events is non deterministic
-			assert.Equal(t, models.VulnStateFalsePositive, d.State)
+			assert.Equal(t, dtos.VulnStateFalsePositive, d.State)
 			assert.Equal(t, models.EventTypeFalsePositive, d.Events[1].Type)
 			assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
 		case "CVE-2025-00002":
-			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
+			assert.Equal(t, dtos.VulnStateOpen, d.State) // was not part of the uploaded vex.
 		}
 	}
 }
@@ -1331,16 +1332,16 @@ func TestIdempotency(t *testing.T) {
 	// 3. Scan that sbom
 	// 4. Download it
 	// 5. compare 2 and 4
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	controller, _ := initHTTPController(t, db, true)
 
 	app := echo.New()
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 	openSourceInsightsService := mocks.OpenSourceInsightService{}
-	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
+	assetVersionController := tests.CreateAssetVersionController(db, nil, nil, tests.TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
 
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}
@@ -1436,7 +1437,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	smallVex, err := os.Open("testdata/small-vex-false-positive.json")
 	assert.Nil(t, err)
 	// lets scan the sbom
-	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	newCVE := models.CVE{
@@ -1459,7 +1460,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	ctx := app.NewContext(req, recorder)
 
-	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}
@@ -1489,5 +1490,5 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	result := models.DependencyVuln{}
 	assert.Nil(t, db.Model(&models.DependencyVuln{}).Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).First(&result).Error)
 
-	assert.Equal(t, models.VulnStateFalsePositive, result.State)
+	assert.Equal(t, dtos.VulnStateFalsePositive, result.State)
 }

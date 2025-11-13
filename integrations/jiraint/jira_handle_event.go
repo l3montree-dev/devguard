@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 func (i *JiraIntegration) HandleEvent(event any) error {
@@ -115,12 +116,12 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member dtos.User) bool {
+			func(member dtos.UserDTO) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = dtos.User{
+			member = dtos.UserDTO{
 				Name: "unknown",
 			}
 		}

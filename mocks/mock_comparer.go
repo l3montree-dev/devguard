@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
 

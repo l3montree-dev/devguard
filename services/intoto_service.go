@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 )

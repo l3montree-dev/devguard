@@ -8,15 +8,15 @@ import (
 )
 
 type LicenseRiskDTO struct {
-	ID                   string           `json:"id"`
-	Message              *string          `json:"message"`
-	AssetVersionName     string           `json:"assetVersionName"`
-	AssetID              string           `json:"assetId"`
-	State                models.VulnState `json:"state"`
-	CreatedAt            time.Time        `json:"createdAt"`
-	TicketID             *string          `json:"ticketId"`
-	TicketURL            *string          `json:"ticketUrl"`
-	ManualTicketCreation bool             `json:"manualTicketCreation"`
+	ID                   string    `json:"id"`
+	Message              *string   `json:"message"`
+	AssetVersionName     string    `json:"assetVersionName"`
+	AssetID              string    `json:"assetId"`
+	State                VulnState `json:"state"`
+	CreatedAt            time.Time `json:"createdAt"`
+	TicketID             *string   `json:"ticketId"`
+	TicketURL            *string   `json:"ticketUrl"`
+	ManualTicketCreation bool      `json:"manualTicketCreation"`
 
 	FinalLicenseDecision *string `json:"finalLicenseDecision"`
 	ComponentPurl        string  `json:"componentPurl"`

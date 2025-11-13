@@ -5,14 +5,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/tests"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -41,11 +42,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		// Reset the global license cache
 
 		// Initialize database container
-		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+		db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
 		// Create test data using the utility function
-		_, _, _, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+		_, _, _, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 		// Create test components with different license scenarios
 		componentWithInvalidLicense := models.Component{
@@ -168,7 +169,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		// Verify license risk for component with invalid license
 		invalidLicenseRisk, exists := licenseRiskPurls[componentWithInvalidLicense.Purl]
 		assert.True(t, exists, "License risk should exist for component with invalid license")
-		assert.Equal(t, models.VulnStateOpen, invalidLicenseRisk.State)
+		assert.Equal(t, dtos.VulnStateOpen, invalidLicenseRisk.State)
 		assert.Equal(t, artifact.ArtifactName, invalidLicenseRisk.Artifacts[0].ArtifactName)
 		assert.Equal(t, assetVersion.AssetID, invalidLicenseRisk.AssetID)
 		assert.Equal(t, assetVersion.Name, invalidLicenseRisk.AssetVersionName)
@@ -176,7 +177,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		// Verify license risk for component without license (should get "unknown")
 		unknownLicenseRisk, exists := licenseRiskPurls[componentWithoutLicense.Purl]
 		assert.True(t, exists, "License risk should exist for component with unknown license")
-		assert.Equal(t, models.VulnStateOpen, unknownLicenseRisk.State)
+		assert.Equal(t, dtos.VulnStateOpen, unknownLicenseRisk.State)
 
 		// Verify NO license risk was created for component with valid license
 		_, exists = licenseRiskPurls[componentWithValidLicense.Purl]
@@ -201,11 +202,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 	t.Run("should not create duplicate license risks for existing entries", func(t *testing.T) {
 
 		// Initialize database container
-		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+		db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
 		// Create test data
-		_, _, _, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+		_, _, _, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 		// Create component with invalid license
 		componentWithInvalidLicense := models.Component{
@@ -245,7 +246,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				State:            models.VulnStateOpen,
+				State:            dtos.VulnStateOpen,
 			},
 			Artifacts:     []models.Artifact{artifact},
 			ComponentPurl: componentWithInvalidLicense.Purl,
