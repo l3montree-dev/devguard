@@ -109,3 +109,26 @@ func (c vulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx core.Con
 		return convertSingleToDetailedDTO(ved)
 	}))
 }
+
+func (c vulnEventController) DeleteEventByID(ctx core.Context) error {
+	eventID := ctx.Param("eventID")
+	if eventID == "" {
+		return echo.NewHTTPError(400, "eventID is required")
+	}
+
+	asset := core.GetAsset(ctx)
+	hasAccess, err := c.vulnEventRepository.HasAccessToEvent(asset.ID, eventID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not verify access to event").WithInternal(err)
+	}
+	if !hasAccess {
+		return echo.NewHTTPError(403, "you do not have access to this event")
+	}
+
+	err = c.vulnEventRepository.DeleteEventByID(nil, eventID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete event").WithInternal(err)
+	}
+
+	return ctx.NoContent(204)
+}

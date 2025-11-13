@@ -496,11 +496,14 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, neededScope([]string{"manage"}))
 	artifactRouter.POST("/sync-external-sources/", artifactController.SyncExternalSources)
 
+	artifactRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
+
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/sync/", dependencyVulnController.ListByAssetIDWithoutHandledExternalEventsPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
+	dependencyVulnRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
 	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, neededScope([]string{"manage"}))
