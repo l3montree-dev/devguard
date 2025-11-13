@@ -103,7 +103,7 @@ func TestAssetUpdate(t *testing.T) {
 		updateRequest := asset.PatchRequest{
 			Name:                         utils.Ptr("test-asset"),
 			Description:                  utils.Ptr("test description"),
-			EnableTicketRange:            true,
+			EnableTicketRange:            utils.Ptr(true),
 			CVSSAutomaticTicketThreshold: utils.Ptr(7.0),
 			RiskAutomaticTicketThreshold: utils.Ptr(5.0),
 		}
