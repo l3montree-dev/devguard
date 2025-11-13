@@ -153,3 +153,11 @@ func (r *eventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID string,
 	}
 	return event, nil
 }
+
+func (r *eventRepository) DeleteEventByID(tx core.DB, eventID string) error {
+	err := r.Repository.GetDB(tx).Delete(&models.VulnEvent{}, "id = ?", eventID).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -501,6 +501,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	dependencyVulnRouter.GET("/sync/", dependencyVulnController.ListByAssetIDWithoutHandledExternalEventsPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
+	dependencyVulnRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
 	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, neededScope([]string{"manage"}))
