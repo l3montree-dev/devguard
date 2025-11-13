@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
@@ -59,8 +60,30 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// read entire BOM into memory so we can decode and (optionally) re-encode it
+	bodyBytes, err := io.ReadAll(bom)
+	if err != nil {
+		return nil, cancel, errors.Wrap(err, "could not read bom")
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bom)
+	// try to parse it as cyclonedx into a non-nil value
+	var cycloneDxBom cyclonedx.BOM
+	if err := cyclonedx.NewBOMDecoder(bytes.NewReader(bodyBytes), cyclonedx.BOMFileFormatJSON).Decode(&cycloneDxBom); err != nil {
+		slog.Warn("uploaded BOM is not a valid CycloneDX BOM", "err", err)
+		return nil, cancel, err
+	}
+
+	if config.RuntimeBaseConfig.IgnoreExternalReferences && cycloneDxBom.ExternalReferences != nil {
+		// remove all external references
+		cycloneDxBom.ExternalReferences = &[]cyclonedx.ExternalReference{}
+		// re-marshal modified BOM to use as request body
+		bodyBytes, err = json.Marshal(cycloneDxBom)
+		if err != nil {
+			return nil, cancel, errors.Wrap(err, "could not marshal cycloneDX BOM")
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, cancel, errors.Wrap(err, "could not create request")
 	}
