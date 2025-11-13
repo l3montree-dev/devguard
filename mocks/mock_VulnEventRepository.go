@@ -237,6 +237,72 @@ func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndRe
 	return _c
 }
 
+// HasAccessToEvent provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error) {
+	ret := _mock.Called(assetID, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasAccessToEvent")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) (bool, error)); ok {
+		return returnFunc(assetID, eventID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) bool); ok {
+		r0 = returnFunc(assetID, eventID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetID, eventID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_HasAccessToEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToEvent'
+type VulnEventRepository_HasAccessToEvent_Call struct {
+	*mock.Call
+}
+
+// HasAccessToEvent is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - eventID string
+func (_e *VulnEventRepository_Expecter) HasAccessToEvent(assetID interface{}, eventID interface{}) *VulnEventRepository_HasAccessToEvent_Call {
+	return &VulnEventRepository_HasAccessToEvent_Call{Call: _e.mock.On("HasAccessToEvent", assetID, eventID)}
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Run(run func(assetID uuid.UUID, eventID string)) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Return(b bool, err error) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) RunAndReturn(run func(assetID uuid.UUID, eventID string) (bool, error)) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReadAssetEventsByVulnID provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
 	ret := _mock.Called(vulnID, vulnType)
