@@ -23,11 +23,14 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
+	"github.com/l3montree-dev/devguard/controller"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/service"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/fx"
 
 	_ "github.com/lib/pq"
 )
@@ -48,8 +51,8 @@ var release string // Will be filled at build time
 // @BasePath	/api/v1
 func main() {
 	//os.Setenv("TZ", "UTC")
-	core.LoadConfig() // nolint: errcheck
-	core.InitLogger()
+	shared.LoadConfig() // nolint: errcheck
+	shared.InitLogger()
 
 	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
@@ -66,7 +69,7 @@ func main() {
 	}
 
 	// Initialize database connection first
-	db, err := core.DatabaseFactory()
+	db, err := shared.DatabaseFactory()
 	if err != nil {
 		slog.Error(err.Error()) // print detailed error message to stdout
 		panic(errors.New("Failed to setup database connection"))
@@ -96,12 +99,16 @@ func main() {
 		panic(err)
 	}
 
-	daemon.Start(db, broker)
-	api.Start(db, broker)
+	fx.New(
+		fx.Supply(db),
+		fx.Provide(pubsub.BrokerFactory),
+		fx.Supply(broker),
+		fx.Provide(api.NewServer),
+		fx.Invoke(func(server *echo.Echo) {}),
+	).Run()
 }
 
 func initSentry() {
-
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "dev"
@@ -128,3 +135,9 @@ func initSentry() {
 		slog.Error("Failed to init logger", "err", err)
 	}
 }
+
+// AllModules combines all FX modules for easy import
+var AllModules = fx.Options(
+	controller.ControllerModule,
+	service.ServiceModule,
+)

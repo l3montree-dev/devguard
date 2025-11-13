@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
@@ -13,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -39,8 +39,8 @@ func newTriggerCommand() *cobra.Command {
 		Use:   "trigger",
 		Short: "Will trigger the background jobs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
+			shared.LoadConfig() // nolint
+			database, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return err
@@ -63,7 +63,7 @@ func newTriggerCommand() *cobra.Command {
 	return trigger
 }
 
-func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
+func triggerDaemon(db shared.DB, broker pubsub.Broker, daemons []string) error {
 	configService := config.NewService(db)
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {

@@ -3,13 +3,13 @@ package commands
 import (
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +29,8 @@ func newUpdateOpenSourceInsightInformation() *cobra.Command {
 		Short: "Will update the dev information for all existing components",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
+			shared.LoadConfig() // nolint
+			database, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return

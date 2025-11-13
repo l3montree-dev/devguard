@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -94,7 +94,7 @@ func (_c *AssetVersionRepository_All_Call) RunAndReturn(run func() ([]models.Ass
 }
 
 // Delete provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVersion) error {
+func (_mock *AssetVersionRepository) Delete(tx shared.DB, assetVersion *models.AssetVersion) error {
 	ret := _mock.Called(tx, assetVersion)
 
 	if len(ret) == 0 {
@@ -102,7 +102,7 @@ func (_mock *AssetVersionRepository) Delete(tx core.DB, assetVersion *models.Ass
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.AssetVersion) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.AssetVersion) error); ok {
 		r0 = returnFunc(tx, assetVersion)
 	} else {
 		r0 = ret.Error(0)
@@ -116,17 +116,17 @@ type AssetVersionRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - assetVersion *models.AssetVersion
 func (_e *AssetVersionRepository_Expecter) Delete(tx interface{}, assetVersion interface{}) *AssetVersionRepository_Delete_Call {
 	return &AssetVersionRepository_Delete_Call{Call: _e.mock.On("Delete", tx, assetVersion)}
 }
 
-func (_c *AssetVersionRepository_Delete_Call) Run(run func(tx core.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Delete_Call {
+func (_c *AssetVersionRepository_Delete_Call) Run(run func(tx shared.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.AssetVersion
 		if args[1] != nil {
@@ -145,7 +145,7 @@ func (_c *AssetVersionRepository_Delete_Call) Return(err error) *AssetVersionRep
 	return _c
 }
 
-func (_c *AssetVersionRepository_Delete_Call) RunAndReturn(run func(tx core.DB, assetVersion *models.AssetVersion) error) *AssetVersionRepository_Delete_Call {
+func (_c *AssetVersionRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, assetVersion *models.AssetVersion) error) *AssetVersionRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -229,7 +229,7 @@ func (_c *AssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(assetV
 }
 
 // GetAllTagsAndDefaultBranchForAsset provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (_mock *AssetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	ret := _mock.Called(tx, assetID)
 
 	if len(ret) == 0 {
@@ -238,17 +238,17 @@ func (_mock *AssetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx core.
 
 	var r0 []models.AssetVersion
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) ([]models.AssetVersion, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) ([]models.AssetVersion, error)); ok {
 		return returnFunc(tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) []models.AssetVersion); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []models.AssetVersion); ok {
 		r0 = returnFunc(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.AssetVersion)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(tx, assetID)
 	} else {
 		r1 = ret.Error(1)
@@ -262,17 +262,17 @@ type AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call struct {
 }
 
 // GetAllTagsAndDefaultBranchForAsset is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - assetID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetAllTagsAndDefaultBranchForAsset(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	return &AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call{Call: _e.mock.On("GetAllTagsAndDefaultBranchForAsset", tx, assetID)}
 }
 
-func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
+func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) Run(run func(tx shared.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -291,13 +291,13 @@ func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) Return
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
+func (_c *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAssetVersionsByAssetID provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) GetAssetVersionsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (_mock *AssetVersionRepository) GetAssetVersionsByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	ret := _mock.Called(tx, assetID)
 
 	if len(ret) == 0 {
@@ -306,17 +306,17 @@ func (_mock *AssetVersionRepository) GetAssetVersionsByAssetID(tx core.DB, asset
 
 	var r0 []models.AssetVersion
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) ([]models.AssetVersion, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) ([]models.AssetVersion, error)); ok {
 		return returnFunc(tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) []models.AssetVersion); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []models.AssetVersion); ok {
 		r0 = returnFunc(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.AssetVersion)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(tx, assetID)
 	} else {
 		r1 = ret.Error(1)
@@ -330,17 +330,17 @@ type AssetVersionRepository_GetAssetVersionsByAssetID_Call struct {
 }
 
 // GetAssetVersionsByAssetID is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - assetID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetID(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
 	return &AssetVersionRepository_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", tx, assetID)}
 }
 
-func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) Run(run func(tx shared.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -359,25 +359,25 @@ func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) Return(assetVer
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+func (_c *AssetVersionRepository_GetAssetVersionsByAssetID_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error)) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) GetDB(v core.DB) core.DB {
+func (_mock *AssetVersionRepository) GetDB(v shared.DB) shared.DB {
 	ret := _mock.Called(v)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(v)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -389,16 +389,16 @@ type AssetVersionRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - v core.DB
+//   - v shared.DB
 func (_e *AssetVersionRepository_Expecter) GetDB(v interface{}) *AssetVersionRepository_GetDB_Call {
 	return &AssetVersionRepository_GetDB_Call{Call: _e.mock.On("GetDB", v)}
 }
 
-func (_c *AssetVersionRepository_GetDB_Call) Run(run func(v core.DB)) *AssetVersionRepository_GetDB_Call {
+func (_c *AssetVersionRepository_GetDB_Call) Run(run func(v shared.DB)) *AssetVersionRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -407,12 +407,12 @@ func (_c *AssetVersionRepository_GetDB_Call) Run(run func(v core.DB)) *AssetVers
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetDB_Call) Return(v1 core.DB) *AssetVersionRepository_GetDB_Call {
+func (_c *AssetVersionRepository_GetDB_Call) Return(v1 shared.DB) *AssetVersionRepository_GetDB_Call {
 	_c.Call.Return(v1)
 	return _c
 }
 
-func (_c *AssetVersionRepository_GetDB_Call) RunAndReturn(run func(v core.DB) core.DB) *AssetVersionRepository_GetDB_Call {
+func (_c *AssetVersionRepository_GetDB_Call) RunAndReturn(run func(v shared.DB) shared.DB) *AssetVersionRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -734,7 +734,7 @@ func (_c *AssetVersionRepository_ReadBySlug_Call) RunAndReturn(run func(assetID 
 }
 
 // Save provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) Save(tx core.DB, assetVersion *models.AssetVersion) error {
+func (_mock *AssetVersionRepository) Save(tx shared.DB, assetVersion *models.AssetVersion) error {
 	ret := _mock.Called(tx, assetVersion)
 
 	if len(ret) == 0 {
@@ -742,7 +742,7 @@ func (_mock *AssetVersionRepository) Save(tx core.DB, assetVersion *models.Asset
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.AssetVersion) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.AssetVersion) error); ok {
 		r0 = returnFunc(tx, assetVersion)
 	} else {
 		r0 = ret.Error(0)
@@ -756,17 +756,17 @@ type AssetVersionRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - assetVersion *models.AssetVersion
 func (_e *AssetVersionRepository_Expecter) Save(tx interface{}, assetVersion interface{}) *AssetVersionRepository_Save_Call {
 	return &AssetVersionRepository_Save_Call{Call: _e.mock.On("Save", tx, assetVersion)}
 }
 
-func (_c *AssetVersionRepository_Save_Call) Run(run func(tx core.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Save_Call {
+func (_c *AssetVersionRepository_Save_Call) Run(run func(tx shared.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.AssetVersion
 		if args[1] != nil {
@@ -785,7 +785,7 @@ func (_c *AssetVersionRepository_Save_Call) Return(err error) *AssetVersionRepos
 	return _c
 }
 
-func (_c *AssetVersionRepository_Save_Call) RunAndReturn(run func(tx core.DB, assetVersion *models.AssetVersion) error) *AssetVersionRepository_Save_Call {
+func (_c *AssetVersionRepository_Save_Call) RunAndReturn(run func(tx shared.DB, assetVersion *models.AssetVersion) error) *AssetVersionRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

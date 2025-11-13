@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,7 +38,7 @@ func (_m *AccessControl) EXPECT() *AccessControl_Expecter {
 }
 
 // AllowRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) AllowRole(role core.Role, object core.Object, action []core.Action) error {
+func (_mock *AccessControl) AllowRole(role shared.Role, object shared.Object, action []shared.Action) error {
 	ret := _mock.Called(role, object, action)
 
 	if len(ret) == 0 {
@@ -46,7 +46,7 @@ func (_mock *AccessControl) AllowRole(role core.Role, object core.Object, action
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Object, []core.Action) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Object, []shared.Action) error); ok {
 		r0 = returnFunc(role, object, action)
 	} else {
 		r0 = ret.Error(0)
@@ -60,26 +60,26 @@ type AccessControl_AllowRole_Call struct {
 }
 
 // AllowRole is a helper method to define mock.On call
-//   - role core.Role
-//   - object core.Object
-//   - action []core.Action
+//   - role shared.Role
+//   - object shared.Object
+//   - action []shared.Action
 func (_e *AccessControl_Expecter) AllowRole(role interface{}, object interface{}, action interface{}) *AccessControl_AllowRole_Call {
 	return &AccessControl_AllowRole_Call{Call: _e.mock.On("AllowRole", role, object, action)}
 }
 
-func (_c *AccessControl_AllowRole_Call) Run(run func(role core.Role, object core.Object, action []core.Action)) *AccessControl_AllowRole_Call {
+func (_c *AccessControl_AllowRole_Call) Run(run func(role shared.Role, object shared.Object, action []shared.Action)) *AccessControl_AllowRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Object
+		var arg1 shared.Object
 		if args[1] != nil {
-			arg1 = args[1].(core.Object)
+			arg1 = args[1].(shared.Object)
 		}
-		var arg2 []core.Action
+		var arg2 []shared.Action
 		if args[2] != nil {
-			arg2 = args[2].([]core.Action)
+			arg2 = args[2].([]shared.Action)
 		}
 		run(
 			arg0,
@@ -95,13 +95,13 @@ func (_c *AccessControl_AllowRole_Call) Return(err error) *AccessControl_AllowRo
 	return _c
 }
 
-func (_c *AccessControl_AllowRole_Call) RunAndReturn(run func(role core.Role, object core.Object, action []core.Action) error) *AccessControl_AllowRole_Call {
+func (_c *AccessControl_AllowRole_Call) RunAndReturn(run func(role shared.Role, object shared.Object, action []shared.Action) error) *AccessControl_AllowRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // AllowRoleInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) AllowRoleInAsset(asset string, role core.Role, object core.Object, action []core.Action) error {
+func (_mock *AccessControl) AllowRoleInAsset(asset string, role shared.Role, object shared.Object, action []shared.Action) error {
 	ret := _mock.Called(asset, role, object, action)
 
 	if len(ret) == 0 {
@@ -109,7 +109,7 @@ func (_mock *AccessControl) AllowRoleInAsset(asset string, role core.Role, objec
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, core.Object, []core.Action) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, shared.Object, []shared.Action) error); ok {
 		r0 = returnFunc(asset, role, object, action)
 	} else {
 		r0 = ret.Error(0)
@@ -124,30 +124,30 @@ type AccessControl_AllowRoleInAsset_Call struct {
 
 // AllowRoleInAsset is a helper method to define mock.On call
 //   - asset string
-//   - role core.Role
-//   - object core.Object
-//   - action []core.Action
+//   - role shared.Role
+//   - object shared.Object
+//   - action []shared.Action
 func (_e *AccessControl_Expecter) AllowRoleInAsset(asset interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRoleInAsset_Call {
 	return &AccessControl_AllowRoleInAsset_Call{Call: _e.mock.On("AllowRoleInAsset", asset, role, object, action)}
 }
 
-func (_c *AccessControl_AllowRoleInAsset_Call) Run(run func(asset string, role core.Role, object core.Object, action []core.Action)) *AccessControl_AllowRoleInAsset_Call {
+func (_c *AccessControl_AllowRoleInAsset_Call) Run(run func(asset string, role shared.Role, object shared.Object, action []shared.Action)) *AccessControl_AllowRoleInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
-		var arg2 core.Object
+		var arg2 shared.Object
 		if args[2] != nil {
-			arg2 = args[2].(core.Object)
+			arg2 = args[2].(shared.Object)
 		}
-		var arg3 []core.Action
+		var arg3 []shared.Action
 		if args[3] != nil {
-			arg3 = args[3].([]core.Action)
+			arg3 = args[3].([]shared.Action)
 		}
 		run(
 			arg0,
@@ -164,13 +164,13 @@ func (_c *AccessControl_AllowRoleInAsset_Call) Return(err error) *AccessControl_
 	return _c
 }
 
-func (_c *AccessControl_AllowRoleInAsset_Call) RunAndReturn(run func(asset string, role core.Role, object core.Object, action []core.Action) error) *AccessControl_AllowRoleInAsset_Call {
+func (_c *AccessControl_AllowRoleInAsset_Call) RunAndReturn(run func(asset string, role shared.Role, object shared.Object, action []shared.Action) error) *AccessControl_AllowRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // AllowRoleInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) AllowRoleInProject(project string, role core.Role, object core.Object, action []core.Action) error {
+func (_mock *AccessControl) AllowRoleInProject(project string, role shared.Role, object shared.Object, action []shared.Action) error {
 	ret := _mock.Called(project, role, object, action)
 
 	if len(ret) == 0 {
@@ -178,7 +178,7 @@ func (_mock *AccessControl) AllowRoleInProject(project string, role core.Role, o
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, core.Object, []core.Action) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, shared.Object, []shared.Action) error); ok {
 		r0 = returnFunc(project, role, object, action)
 	} else {
 		r0 = ret.Error(0)
@@ -193,30 +193,30 @@ type AccessControl_AllowRoleInProject_Call struct {
 
 // AllowRoleInProject is a helper method to define mock.On call
 //   - project string
-//   - role core.Role
-//   - object core.Object
-//   - action []core.Action
+//   - role shared.Role
+//   - object shared.Object
+//   - action []shared.Action
 func (_e *AccessControl_Expecter) AllowRoleInProject(project interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRoleInProject_Call {
 	return &AccessControl_AllowRoleInProject_Call{Call: _e.mock.On("AllowRoleInProject", project, role, object, action)}
 }
 
-func (_c *AccessControl_AllowRoleInProject_Call) Run(run func(project string, role core.Role, object core.Object, action []core.Action)) *AccessControl_AllowRoleInProject_Call {
+func (_c *AccessControl_AllowRoleInProject_Call) Run(run func(project string, role shared.Role, object shared.Object, action []shared.Action)) *AccessControl_AllowRoleInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
-		var arg2 core.Object
+		var arg2 shared.Object
 		if args[2] != nil {
-			arg2 = args[2].(core.Object)
+			arg2 = args[2].(shared.Object)
 		}
-		var arg3 []core.Action
+		var arg3 []shared.Action
 		if args[3] != nil {
-			arg3 = args[3].([]core.Action)
+			arg3 = args[3].([]shared.Action)
 		}
 		run(
 			arg0,
@@ -233,7 +233,7 @@ func (_c *AccessControl_AllowRoleInProject_Call) Return(err error) *AccessContro
 	return _c
 }
 
-func (_c *AccessControl_AllowRoleInProject_Call) RunAndReturn(run func(project string, role core.Role, object core.Object, action []core.Action) error) *AccessControl_AllowRoleInProject_Call {
+func (_c *AccessControl_AllowRoleInProject_Call) RunAndReturn(run func(project string, role shared.Role, object shared.Object, action []shared.Action) error) *AccessControl_AllowRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -595,22 +595,22 @@ func (_c *AccessControl_GetAllRoles_Call) RunAndReturn(run func(user string) []s
 }
 
 // GetAssetRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) GetAssetRole(user string, asset string) (core.Role, error) {
+func (_mock *AccessControl) GetAssetRole(user string, asset string) (shared.Role, error) {
 	ret := _mock.Called(user, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAssetRole")
 	}
 
-	var r0 core.Role
+	var r0 shared.Role
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) (core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) (shared.Role, error)); ok {
 		return returnFunc(user, asset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) core.Role); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) shared.Role); ok {
 		r0 = returnFunc(user, asset)
 	} else {
-		r0 = ret.Get(0).(core.Role)
+		r0 = ret.Get(0).(shared.Role)
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
 		r1 = returnFunc(user, asset)
@@ -650,33 +650,33 @@ func (_c *AccessControl_GetAssetRole_Call) Run(run func(user string, asset strin
 	return _c
 }
 
-func (_c *AccessControl_GetAssetRole_Call) Return(role core.Role, err error) *AccessControl_GetAssetRole_Call {
+func (_c *AccessControl_GetAssetRole_Call) Return(role shared.Role, err error) *AccessControl_GetAssetRole_Call {
 	_c.Call.Return(role, err)
 	return _c
 }
 
-func (_c *AccessControl_GetAssetRole_Call) RunAndReturn(run func(user string, asset string) (core.Role, error)) *AccessControl_GetAssetRole_Call {
+func (_c *AccessControl_GetAssetRole_Call) RunAndReturn(run func(user string, asset string) (shared.Role, error)) *AccessControl_GetAssetRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDomainRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) GetDomainRole(user string) (core.Role, error) {
+func (_mock *AccessControl) GetDomainRole(user string) (shared.Role, error) {
 	ret := _mock.Called(user)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDomainRole")
 	}
 
-	var r0 core.Role
+	var r0 shared.Role
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string) (shared.Role, error)); ok {
 		return returnFunc(user)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) core.Role); ok {
+	if returnFunc, ok := ret.Get(0).(func(string) shared.Role); ok {
 		r0 = returnFunc(user)
 	} else {
-		r0 = ret.Get(0).(core.Role)
+		r0 = ret.Get(0).(shared.Role)
 	}
 	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
 		r1 = returnFunc(user)
@@ -710,12 +710,12 @@ func (_c *AccessControl_GetDomainRole_Call) Run(run func(user string)) *AccessCo
 	return _c
 }
 
-func (_c *AccessControl_GetDomainRole_Call) Return(role core.Role, err error) *AccessControl_GetDomainRole_Call {
+func (_c *AccessControl_GetDomainRole_Call) Return(role shared.Role, err error) *AccessControl_GetDomainRole_Call {
 	_c.Call.Return(role, err)
 	return _c
 }
 
-func (_c *AccessControl_GetDomainRole_Call) RunAndReturn(run func(user string) (core.Role, error)) *AccessControl_GetDomainRole_Call {
+func (_c *AccessControl_GetDomainRole_Call) RunAndReturn(run func(user string) (shared.Role, error)) *AccessControl_GetDomainRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -820,22 +820,22 @@ func (_c *AccessControl_GetOwnerOfOrganization_Call) RunAndReturn(run func() (st
 }
 
 // GetProjectRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) GetProjectRole(user string, project string) (core.Role, error) {
+func (_mock *AccessControl) GetProjectRole(user string, project string) (shared.Role, error) {
 	ret := _mock.Called(user, project)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProjectRole")
 	}
 
-	var r0 core.Role
+	var r0 shared.Role
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) (core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) (shared.Role, error)); ok {
 		return returnFunc(user, project)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) core.Role); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) shared.Role); ok {
 		r0 = returnFunc(user, project)
 	} else {
-		r0 = ret.Get(0).(core.Role)
+		r0 = ret.Get(0).(shared.Role)
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
 		r1 = returnFunc(user, project)
@@ -875,18 +875,18 @@ func (_c *AccessControl_GetProjectRole_Call) Run(run func(user string, project s
 	return _c
 }
 
-func (_c *AccessControl_GetProjectRole_Call) Return(role core.Role, err error) *AccessControl_GetProjectRole_Call {
+func (_c *AccessControl_GetProjectRole_Call) Return(role shared.Role, err error) *AccessControl_GetProjectRole_Call {
 	_c.Call.Return(role, err)
 	return _c
 }
 
-func (_c *AccessControl_GetProjectRole_Call) RunAndReturn(run func(user string, project string) (core.Role, error)) *AccessControl_GetProjectRole_Call {
+func (_c *AccessControl_GetProjectRole_Call) RunAndReturn(run func(user string, project string) (shared.Role, error)) *AccessControl_GetProjectRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GrantRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRole(subject string, role core.Role) error {
+func (_mock *AccessControl) GrantRole(subject string, role shared.Role) error {
 	ret := _mock.Called(subject, role)
 
 	if len(ret) == 0 {
@@ -894,7 +894,7 @@ func (_mock *AccessControl) GrantRole(subject string, role core.Role) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role) error); ok {
 		r0 = returnFunc(subject, role)
 	} else {
 		r0 = ret.Error(0)
@@ -909,20 +909,20 @@ type AccessControl_GrantRole_Call struct {
 
 // GrantRole is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 func (_e *AccessControl_Expecter) GrantRole(subject interface{}, role interface{}) *AccessControl_GrantRole_Call {
 	return &AccessControl_GrantRole_Call{Call: _e.mock.On("GrantRole", subject, role)}
 }
 
-func (_c *AccessControl_GrantRole_Call) Run(run func(subject string, role core.Role)) *AccessControl_GrantRole_Call {
+func (_c *AccessControl_GrantRole_Call) Run(run func(subject string, role shared.Role)) *AccessControl_GrantRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		run(
 			arg0,
@@ -937,13 +937,13 @@ func (_c *AccessControl_GrantRole_Call) Return(err error) *AccessControl_GrantRo
 	return _c
 }
 
-func (_c *AccessControl_GrantRole_Call) RunAndReturn(run func(subject string, role core.Role) error) *AccessControl_GrantRole_Call {
+func (_c *AccessControl_GrantRole_Call) RunAndReturn(run func(subject string, role shared.Role) error) *AccessControl_GrantRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GrantRoleInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRoleInAsset(subject string, role core.Role, asset string) error {
+func (_mock *AccessControl) GrantRoleInAsset(subject string, role shared.Role, asset string) error {
 	ret := _mock.Called(subject, role, asset)
 
 	if len(ret) == 0 {
@@ -951,7 +951,7 @@ func (_mock *AccessControl) GrantRoleInAsset(subject string, role core.Role, ass
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, string) error); ok {
 		r0 = returnFunc(subject, role, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -966,21 +966,21 @@ type AccessControl_GrantRoleInAsset_Call struct {
 
 // GrantRoleInAsset is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 //   - asset string
 func (_e *AccessControl_Expecter) GrantRoleInAsset(subject interface{}, role interface{}, asset interface{}) *AccessControl_GrantRoleInAsset_Call {
 	return &AccessControl_GrantRoleInAsset_Call{Call: _e.mock.On("GrantRoleInAsset", subject, role, asset)}
 }
 
-func (_c *AccessControl_GrantRoleInAsset_Call) Run(run func(subject string, role core.Role, asset string)) *AccessControl_GrantRoleInAsset_Call {
+func (_c *AccessControl_GrantRoleInAsset_Call) Run(run func(subject string, role shared.Role, asset string)) *AccessControl_GrantRoleInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1000,13 +1000,13 @@ func (_c *AccessControl_GrantRoleInAsset_Call) Return(err error) *AccessControl_
 	return _c
 }
 
-func (_c *AccessControl_GrantRoleInAsset_Call) RunAndReturn(run func(subject string, role core.Role, asset string) error) *AccessControl_GrantRoleInAsset_Call {
+func (_c *AccessControl_GrantRoleInAsset_Call) RunAndReturn(run func(subject string, role shared.Role, asset string) error) *AccessControl_GrantRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GrantRoleInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRoleInProject(subject string, role core.Role, project string) error {
+func (_mock *AccessControl) GrantRoleInProject(subject string, role shared.Role, project string) error {
 	ret := _mock.Called(subject, role, project)
 
 	if len(ret) == 0 {
@@ -1014,7 +1014,7 @@ func (_mock *AccessControl) GrantRoleInProject(subject string, role core.Role, p
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, string) error); ok {
 		r0 = returnFunc(subject, role, project)
 	} else {
 		r0 = ret.Error(0)
@@ -1029,21 +1029,21 @@ type AccessControl_GrantRoleInProject_Call struct {
 
 // GrantRoleInProject is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 //   - project string
 func (_e *AccessControl_Expecter) GrantRoleInProject(subject interface{}, role interface{}, project interface{}) *AccessControl_GrantRoleInProject_Call {
 	return &AccessControl_GrantRoleInProject_Call{Call: _e.mock.On("GrantRoleInProject", subject, role, project)}
 }
 
-func (_c *AccessControl_GrantRoleInProject_Call) Run(run func(subject string, role core.Role, project string)) *AccessControl_GrantRoleInProject_Call {
+func (_c *AccessControl_GrantRoleInProject_Call) Run(run func(subject string, role shared.Role, project string)) *AccessControl_GrantRoleInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1063,7 +1063,7 @@ func (_c *AccessControl_GrantRoleInProject_Call) Return(err error) *AccessContro
 	return _c
 }
 
-func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(subject string, role core.Role, project string) error) *AccessControl_GrantRoleInProject_Call {
+func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(subject string, role shared.Role, project string) error) *AccessControl_GrantRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1129,7 +1129,7 @@ func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(subject string) (b
 }
 
 // InheritAssetRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) InheritAssetRole(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string) error {
+func (_mock *AccessControl) InheritAssetRole(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, asset string) error {
 	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
 
 	if len(ret) == 0 {
@@ -1137,7 +1137,7 @@ func (_mock *AccessControl) InheritAssetRole(roleWhichGetsPermissions core.Role,
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Role, string) error); ok {
 		r0 = returnFunc(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -1151,22 +1151,22 @@ type AccessControl_InheritAssetRole_Call struct {
 }
 
 // InheritAssetRole is a helper method to define mock.On call
-//   - roleWhichGetsPermissions core.Role
-//   - roleWhichProvidesPermissions core.Role
+//   - roleWhichGetsPermissions shared.Role
+//   - roleWhichProvidesPermissions shared.Role
 //   - asset string
 func (_e *AccessControl_Expecter) InheritAssetRole(roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}, asset interface{}) *AccessControl_InheritAssetRole_Call {
 	return &AccessControl_InheritAssetRole_Call{Call: _e.mock.On("InheritAssetRole", roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)}
 }
 
-func (_c *AccessControl_InheritAssetRole_Call) Run(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string)) *AccessControl_InheritAssetRole_Call {
+func (_c *AccessControl_InheritAssetRole_Call) Run(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, asset string)) *AccessControl_InheritAssetRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1186,13 +1186,13 @@ func (_c *AccessControl_InheritAssetRole_Call) Return(err error) *AccessControl_
 	return _c
 }
 
-func (_c *AccessControl_InheritAssetRole_Call) RunAndReturn(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, asset string) error) *AccessControl_InheritAssetRole_Call {
+func (_c *AccessControl_InheritAssetRole_Call) RunAndReturn(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, asset string) error) *AccessControl_InheritAssetRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // InheritProjectRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) InheritProjectRole(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, project string) error {
+func (_mock *AccessControl) InheritProjectRole(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, project string) error {
 	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
 
 	if len(ret) == 0 {
@@ -1200,7 +1200,7 @@ func (_mock *AccessControl) InheritProjectRole(roleWhichGetsPermissions core.Rol
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Role, string) error); ok {
 		r0 = returnFunc(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
 	} else {
 		r0 = ret.Error(0)
@@ -1214,22 +1214,22 @@ type AccessControl_InheritProjectRole_Call struct {
 }
 
 // InheritProjectRole is a helper method to define mock.On call
-//   - roleWhichGetsPermissions core.Role
-//   - roleWhichProvidesPermissions core.Role
+//   - roleWhichGetsPermissions shared.Role
+//   - roleWhichProvidesPermissions shared.Role
 //   - project string
 func (_e *AccessControl_Expecter) InheritProjectRole(roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}, project interface{}) *AccessControl_InheritProjectRole_Call {
 	return &AccessControl_InheritProjectRole_Call{Call: _e.mock.On("InheritProjectRole", roleWhichGetsPermissions, roleWhichProvidesPermissions, project)}
 }
 
-func (_c *AccessControl_InheritProjectRole_Call) Run(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, project string)) *AccessControl_InheritProjectRole_Call {
+func (_c *AccessControl_InheritProjectRole_Call) Run(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, project string)) *AccessControl_InheritProjectRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1249,13 +1249,13 @@ func (_c *AccessControl_InheritProjectRole_Call) Return(err error) *AccessContro
 	return _c
 }
 
-func (_c *AccessControl_InheritProjectRole_Call) RunAndReturn(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role, project string) error) *AccessControl_InheritProjectRole_Call {
+func (_c *AccessControl_InheritProjectRole_Call) RunAndReturn(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role, project string) error) *AccessControl_InheritProjectRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // InheritProjectRolesAcrossProjects provides a mock function for the type AccessControl
-func (_mock *AccessControl) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions core.ProjectRole, roleWhichProvidesPermissions core.ProjectRole) error {
+func (_mock *AccessControl) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions shared.ProjectRole, roleWhichProvidesPermissions shared.ProjectRole) error {
 	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 
 	if len(ret) == 0 {
@@ -1263,7 +1263,7 @@ func (_mock *AccessControl) InheritProjectRolesAcrossProjects(roleWhichGetsPermi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.ProjectRole, core.ProjectRole) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.ProjectRole, shared.ProjectRole) error); ok {
 		r0 = returnFunc(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 	} else {
 		r0 = ret.Error(0)
@@ -1277,21 +1277,21 @@ type AccessControl_InheritProjectRolesAcrossProjects_Call struct {
 }
 
 // InheritProjectRolesAcrossProjects is a helper method to define mock.On call
-//   - roleWhichGetsPermissions core.ProjectRole
-//   - roleWhichProvidesPermissions core.ProjectRole
+//   - roleWhichGetsPermissions shared.ProjectRole
+//   - roleWhichProvidesPermissions shared.ProjectRole
 func (_e *AccessControl_Expecter) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}) *AccessControl_InheritProjectRolesAcrossProjects_Call {
 	return &AccessControl_InheritProjectRolesAcrossProjects_Call{Call: _e.mock.On("InheritProjectRolesAcrossProjects", roleWhichGetsPermissions, roleWhichProvidesPermissions)}
 }
 
-func (_c *AccessControl_InheritProjectRolesAcrossProjects_Call) Run(run func(roleWhichGetsPermissions core.ProjectRole, roleWhichProvidesPermissions core.ProjectRole)) *AccessControl_InheritProjectRolesAcrossProjects_Call {
+func (_c *AccessControl_InheritProjectRolesAcrossProjects_Call) Run(run func(roleWhichGetsPermissions shared.ProjectRole, roleWhichProvidesPermissions shared.ProjectRole)) *AccessControl_InheritProjectRolesAcrossProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.ProjectRole
+		var arg0 shared.ProjectRole
 		if args[0] != nil {
-			arg0 = args[0].(core.ProjectRole)
+			arg0 = args[0].(shared.ProjectRole)
 		}
-		var arg1 core.ProjectRole
+		var arg1 shared.ProjectRole
 		if args[1] != nil {
-			arg1 = args[1].(core.ProjectRole)
+			arg1 = args[1].(shared.ProjectRole)
 		}
 		run(
 			arg0,
@@ -1306,13 +1306,13 @@ func (_c *AccessControl_InheritProjectRolesAcrossProjects_Call) Return(err error
 	return _c
 }
 
-func (_c *AccessControl_InheritProjectRolesAcrossProjects_Call) RunAndReturn(run func(roleWhichGetsPermissions core.ProjectRole, roleWhichProvidesPermissions core.ProjectRole) error) *AccessControl_InheritProjectRolesAcrossProjects_Call {
+func (_c *AccessControl_InheritProjectRolesAcrossProjects_Call) RunAndReturn(run func(roleWhichGetsPermissions shared.ProjectRole, roleWhichProvidesPermissions shared.ProjectRole) error) *AccessControl_InheritProjectRolesAcrossProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // InheritRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) InheritRole(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role) error {
+func (_mock *AccessControl) InheritRole(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role) error {
 	ret := _mock.Called(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 
 	if len(ret) == 0 {
@@ -1320,7 +1320,7 @@ func (_mock *AccessControl) InheritRole(roleWhichGetsPermissions core.Role, role
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Role) error); ok {
 		r0 = returnFunc(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 	} else {
 		r0 = ret.Error(0)
@@ -1334,21 +1334,21 @@ type AccessControl_InheritRole_Call struct {
 }
 
 // InheritRole is a helper method to define mock.On call
-//   - roleWhichGetsPermissions core.Role
-//   - roleWhichProvidesPermissions core.Role
+//   - roleWhichGetsPermissions shared.Role
+//   - roleWhichProvidesPermissions shared.Role
 func (_e *AccessControl_Expecter) InheritRole(roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}) *AccessControl_InheritRole_Call {
 	return &AccessControl_InheritRole_Call{Call: _e.mock.On("InheritRole", roleWhichGetsPermissions, roleWhichProvidesPermissions)}
 }
 
-func (_c *AccessControl_InheritRole_Call) Run(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role)) *AccessControl_InheritRole_Call {
+func (_c *AccessControl_InheritRole_Call) Run(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role)) *AccessControl_InheritRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		run(
 			arg0,
@@ -1363,13 +1363,13 @@ func (_c *AccessControl_InheritRole_Call) Return(err error) *AccessControl_Inher
 	return _c
 }
 
-func (_c *AccessControl_InheritRole_Call) RunAndReturn(run func(roleWhichGetsPermissions core.Role, roleWhichProvidesPermissions core.Role) error) *AccessControl_InheritRole_Call {
+func (_c *AccessControl_InheritRole_Call) RunAndReturn(run func(roleWhichGetsPermissions shared.Role, roleWhichProvidesPermissions shared.Role) error) *AccessControl_InheritRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAllowed provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowed(subject string, object core.Object, action core.Action) (bool, error) {
+func (_mock *AccessControl) IsAllowed(subject string, object shared.Object, action shared.Action) (bool, error) {
 	ret := _mock.Called(subject, object, action)
 
 	if len(ret) == 0 {
@@ -1378,15 +1378,15 @@ func (_mock *AccessControl) IsAllowed(subject string, object core.Object, action
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Object, core.Action) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Object, shared.Action) (bool, error)); ok {
 		return returnFunc(subject, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, core.Object, core.Action) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Object, shared.Action) bool); ok {
 		r0 = returnFunc(subject, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, core.Object, core.Action) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, shared.Object, shared.Action) error); ok {
 		r1 = returnFunc(subject, object, action)
 	} else {
 		r1 = ret.Error(1)
@@ -1401,25 +1401,25 @@ type AccessControl_IsAllowed_Call struct {
 
 // IsAllowed is a helper method to define mock.On call
 //   - subject string
-//   - object core.Object
-//   - action core.Action
+//   - object shared.Object
+//   - action shared.Action
 func (_e *AccessControl_Expecter) IsAllowed(subject interface{}, object interface{}, action interface{}) *AccessControl_IsAllowed_Call {
 	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", subject, object, action)}
 }
 
-func (_c *AccessControl_IsAllowed_Call) Run(run func(subject string, object core.Object, action core.Action)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) Run(run func(subject string, object shared.Object, action shared.Action)) *AccessControl_IsAllowed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Object
+		var arg1 shared.Object
 		if args[1] != nil {
-			arg1 = args[1].(core.Object)
+			arg1 = args[1].(shared.Object)
 		}
-		var arg2 core.Action
+		var arg2 shared.Action
 		if args[2] != nil {
-			arg2 = args[2].(core.Action)
+			arg2 = args[2].(shared.Action)
 		}
 		run(
 			arg0,
@@ -1435,13 +1435,13 @@ func (_c *AccessControl_IsAllowed_Call) Return(b bool, err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(subject string, object core.Object, action core.Action) (bool, error)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(subject string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowed_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAllowedInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error) {
+func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
 	ret := _mock.Called(asset, user, object, action)
 
 	if len(ret) == 0 {
@@ -1450,15 +1450,15 @@ func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, o
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, core.Object, core.Action) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, shared.Object, shared.Action) (bool, error)); ok {
 		return returnFunc(asset, user, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, core.Object, core.Action) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, shared.Object, shared.Action) bool); ok {
 		r0 = returnFunc(asset, user, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*models.Asset, string, core.Object, core.Action) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*models.Asset, string, shared.Object, shared.Action) error); ok {
 		r1 = returnFunc(asset, user, object, action)
 	} else {
 		r1 = ret.Error(1)
@@ -1474,13 +1474,13 @@ type AccessControl_IsAllowedInAsset_Call struct {
 // IsAllowedInAsset is a helper method to define mock.On call
 //   - asset *models.Asset
 //   - user string
-//   - object core.Object
-//   - action core.Action
+//   - object shared.Object
+//   - action shared.Action
 func (_e *AccessControl_Expecter) IsAllowedInAsset(asset interface{}, user interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInAsset_Call {
 	return &AccessControl_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", asset, user, object, action)}
 }
 
-func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset, user string, object core.Object, action core.Action)) *AccessControl_IsAllowedInAsset_Call {
+func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset, user string, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Asset
 		if args[0] != nil {
@@ -1490,13 +1490,13 @@ func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset,
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 core.Object
+		var arg2 shared.Object
 		if args[2] != nil {
-			arg2 = args[2].(core.Object)
+			arg2 = args[2].(shared.Object)
 		}
-		var arg3 core.Action
+		var arg3 shared.Action
 		if args[3] != nil {
-			arg3 = args[3].(core.Action)
+			arg3 = args[3].(shared.Action)
 		}
 		run(
 			arg0,
@@ -1513,13 +1513,13 @@ func (_c *AccessControl_IsAllowedInAsset_Call) Return(b bool, err error) *Access
 	return _c
 }
 
-func (_c *AccessControl_IsAllowedInAsset_Call) RunAndReturn(run func(asset *models.Asset, user string, object core.Object, action core.Action) (bool, error)) *AccessControl_IsAllowedInAsset_Call {
+func (_c *AccessControl_IsAllowedInAsset_Call) RunAndReturn(run func(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAllowedInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user string, object core.Object, action core.Action) (bool, error) {
+func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
 	ret := _mock.Called(project, user, object, action)
 
 	if len(ret) == 0 {
@@ -1528,15 +1528,15 @@ func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user str
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, core.Object, core.Action) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, shared.Object, shared.Action) (bool, error)); ok {
 		return returnFunc(project, user, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, core.Object, core.Action) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, shared.Object, shared.Action) bool); ok {
 		r0 = returnFunc(project, user, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*models.Project, string, core.Object, core.Action) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*models.Project, string, shared.Object, shared.Action) error); ok {
 		r1 = returnFunc(project, user, object, action)
 	} else {
 		r1 = ret.Error(1)
@@ -1552,13 +1552,13 @@ type AccessControl_IsAllowedInProject_Call struct {
 // IsAllowedInProject is a helper method to define mock.On call
 //   - project *models.Project
 //   - user string
-//   - object core.Object
-//   - action core.Action
+//   - object shared.Object
+//   - action shared.Action
 func (_e *AccessControl_Expecter) IsAllowedInProject(project interface{}, user interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInProject_Call {
 	return &AccessControl_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", project, user, object, action)}
 }
 
-func (_c *AccessControl_IsAllowedInProject_Call) Run(run func(project *models.Project, user string, object core.Object, action core.Action)) *AccessControl_IsAllowedInProject_Call {
+func (_c *AccessControl_IsAllowedInProject_Call) Run(run func(project *models.Project, user string, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Project
 		if args[0] != nil {
@@ -1568,13 +1568,13 @@ func (_c *AccessControl_IsAllowedInProject_Call) Run(run func(project *models.Pr
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 core.Object
+		var arg2 shared.Object
 		if args[2] != nil {
-			arg2 = args[2].(core.Object)
+			arg2 = args[2].(shared.Object)
 		}
-		var arg3 core.Action
+		var arg3 shared.Action
 		if args[3] != nil {
-			arg3 = args[3].(core.Action)
+			arg3 = args[3].(shared.Action)
 		}
 		run(
 			arg0,
@@ -1591,13 +1591,13 @@ func (_c *AccessControl_IsAllowedInProject_Call) Return(b bool, err error) *Acce
 	return _c
 }
 
-func (_c *AccessControl_IsAllowedInProject_Call) RunAndReturn(run func(project *models.Project, user string, object core.Object, action core.Action) (bool, error)) *AccessControl_IsAllowedInProject_Call {
+func (_c *AccessControl_IsAllowedInProject_Call) RunAndReturn(run func(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LinkDomainAndProjectRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) LinkDomainAndProjectRole(domainRoleWhichGetsPermission core.Role, projectRoleWhichProvidesPermissions core.Role, project string) error {
+func (_mock *AccessControl) LinkDomainAndProjectRole(domainRoleWhichGetsPermission shared.Role, projectRoleWhichProvidesPermissions shared.Role, project string) error {
 	ret := _mock.Called(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
 
 	if len(ret) == 0 {
@@ -1605,7 +1605,7 @@ func (_mock *AccessControl) LinkDomainAndProjectRole(domainRoleWhichGetsPermissi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Role, string) error); ok {
 		r0 = returnFunc(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
 	} else {
 		r0 = ret.Error(0)
@@ -1619,22 +1619,22 @@ type AccessControl_LinkDomainAndProjectRole_Call struct {
 }
 
 // LinkDomainAndProjectRole is a helper method to define mock.On call
-//   - domainRoleWhichGetsPermission core.Role
-//   - projectRoleWhichProvidesPermissions core.Role
+//   - domainRoleWhichGetsPermission shared.Role
+//   - projectRoleWhichProvidesPermissions shared.Role
 //   - project string
 func (_e *AccessControl_Expecter) LinkDomainAndProjectRole(domainRoleWhichGetsPermission interface{}, projectRoleWhichProvidesPermissions interface{}, project interface{}) *AccessControl_LinkDomainAndProjectRole_Call {
 	return &AccessControl_LinkDomainAndProjectRole_Call{Call: _e.mock.On("LinkDomainAndProjectRole", domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)}
 }
 
-func (_c *AccessControl_LinkDomainAndProjectRole_Call) Run(run func(domainRoleWhichGetsPermission core.Role, projectRoleWhichProvidesPermissions core.Role, project string)) *AccessControl_LinkDomainAndProjectRole_Call {
+func (_c *AccessControl_LinkDomainAndProjectRole_Call) Run(run func(domainRoleWhichGetsPermission shared.Role, projectRoleWhichProvidesPermissions shared.Role, project string)) *AccessControl_LinkDomainAndProjectRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1654,13 +1654,13 @@ func (_c *AccessControl_LinkDomainAndProjectRole_Call) Return(err error) *Access
 	return _c
 }
 
-func (_c *AccessControl_LinkDomainAndProjectRole_Call) RunAndReturn(run func(domainRoleWhichGetsPermission core.Role, projectRoleWhichProvidesPermissions core.Role, project string) error) *AccessControl_LinkDomainAndProjectRole_Call {
+func (_c *AccessControl_LinkDomainAndProjectRole_Call) RunAndReturn(run func(domainRoleWhichGetsPermission shared.Role, projectRoleWhichProvidesPermissions shared.Role, project string) error) *AccessControl_LinkDomainAndProjectRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LinkProjectAndAssetRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) LinkProjectAndAssetRole(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string) error {
+func (_mock *AccessControl) LinkProjectAndAssetRole(projectRoleWhichGetsPermission shared.Role, assetRoleWhichProvidesPermissions shared.Role, project string, asset string) error {
 	ret := _mock.Called(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
 
 	if len(ret) == 0 {
@@ -1668,7 +1668,7 @@ func (_mock *AccessControl) LinkProjectAndAssetRole(projectRoleWhichGetsPermissi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Role, core.Role, string, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Role, shared.Role, string, string) error); ok {
 		r0 = returnFunc(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -1682,23 +1682,23 @@ type AccessControl_LinkProjectAndAssetRole_Call struct {
 }
 
 // LinkProjectAndAssetRole is a helper method to define mock.On call
-//   - projectRoleWhichGetsPermission core.Role
-//   - assetRoleWhichProvidesPermissions core.Role
+//   - projectRoleWhichGetsPermission shared.Role
+//   - assetRoleWhichProvidesPermissions shared.Role
 //   - project string
 //   - asset string
 func (_e *AccessControl_Expecter) LinkProjectAndAssetRole(projectRoleWhichGetsPermission interface{}, assetRoleWhichProvidesPermissions interface{}, project interface{}, asset interface{}) *AccessControl_LinkProjectAndAssetRole_Call {
 	return &AccessControl_LinkProjectAndAssetRole_Call{Call: _e.mock.On("LinkProjectAndAssetRole", projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)}
 }
 
-func (_c *AccessControl_LinkProjectAndAssetRole_Call) Run(run func(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string)) *AccessControl_LinkProjectAndAssetRole_Call {
+func (_c *AccessControl_LinkProjectAndAssetRole_Call) Run(run func(projectRoleWhichGetsPermission shared.Role, assetRoleWhichProvidesPermissions shared.Role, project string, asset string)) *AccessControl_LinkProjectAndAssetRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Role
+		var arg0 shared.Role
 		if args[0] != nil {
-			arg0 = args[0].(core.Role)
+			arg0 = args[0].(shared.Role)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1723,7 +1723,7 @@ func (_c *AccessControl_LinkProjectAndAssetRole_Call) Return(err error) *AccessC
 	return _c
 }
 
-func (_c *AccessControl_LinkProjectAndAssetRole_Call) RunAndReturn(run func(projectRoleWhichGetsPermission core.Role, assetRoleWhichProvidesPermissions core.Role, project string, asset string) error) *AccessControl_LinkProjectAndAssetRole_Call {
+func (_c *AccessControl_LinkProjectAndAssetRole_Call) RunAndReturn(run func(projectRoleWhichGetsPermission shared.Role, assetRoleWhichProvidesPermissions shared.Role, project string, asset string) error) *AccessControl_LinkProjectAndAssetRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1843,7 +1843,7 @@ func (_c *AccessControl_RevokeAllRolesInProjectForUser_Call) RunAndReturn(run fu
 }
 
 // RevokeRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRole(subject string, role core.Role) error {
+func (_mock *AccessControl) RevokeRole(subject string, role shared.Role) error {
 	ret := _mock.Called(subject, role)
 
 	if len(ret) == 0 {
@@ -1851,7 +1851,7 @@ func (_mock *AccessControl) RevokeRole(subject string, role core.Role) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role) error); ok {
 		r0 = returnFunc(subject, role)
 	} else {
 		r0 = ret.Error(0)
@@ -1866,20 +1866,20 @@ type AccessControl_RevokeRole_Call struct {
 
 // RevokeRole is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 func (_e *AccessControl_Expecter) RevokeRole(subject interface{}, role interface{}) *AccessControl_RevokeRole_Call {
 	return &AccessControl_RevokeRole_Call{Call: _e.mock.On("RevokeRole", subject, role)}
 }
 
-func (_c *AccessControl_RevokeRole_Call) Run(run func(subject string, role core.Role)) *AccessControl_RevokeRole_Call {
+func (_c *AccessControl_RevokeRole_Call) Run(run func(subject string, role shared.Role)) *AccessControl_RevokeRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		run(
 			arg0,
@@ -1894,13 +1894,13 @@ func (_c *AccessControl_RevokeRole_Call) Return(err error) *AccessControl_Revoke
 	return _c
 }
 
-func (_c *AccessControl_RevokeRole_Call) RunAndReturn(run func(subject string, role core.Role) error) *AccessControl_RevokeRole_Call {
+func (_c *AccessControl_RevokeRole_Call) RunAndReturn(run func(subject string, role shared.Role) error) *AccessControl_RevokeRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RevokeRoleInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRoleInAsset(subject string, role core.Role, asset string) error {
+func (_mock *AccessControl) RevokeRoleInAsset(subject string, role shared.Role, asset string) error {
 	ret := _mock.Called(subject, role, asset)
 
 	if len(ret) == 0 {
@@ -1908,7 +1908,7 @@ func (_mock *AccessControl) RevokeRoleInAsset(subject string, role core.Role, as
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, string) error); ok {
 		r0 = returnFunc(subject, role, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -1923,21 +1923,21 @@ type AccessControl_RevokeRoleInAsset_Call struct {
 
 // RevokeRoleInAsset is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 //   - asset string
 func (_e *AccessControl_Expecter) RevokeRoleInAsset(subject interface{}, role interface{}, asset interface{}) *AccessControl_RevokeRoleInAsset_Call {
 	return &AccessControl_RevokeRoleInAsset_Call{Call: _e.mock.On("RevokeRoleInAsset", subject, role, asset)}
 }
 
-func (_c *AccessControl_RevokeRoleInAsset_Call) Run(run func(subject string, role core.Role, asset string)) *AccessControl_RevokeRoleInAsset_Call {
+func (_c *AccessControl_RevokeRoleInAsset_Call) Run(run func(subject string, role shared.Role, asset string)) *AccessControl_RevokeRoleInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1957,13 +1957,13 @@ func (_c *AccessControl_RevokeRoleInAsset_Call) Return(err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_RevokeRoleInAsset_Call) RunAndReturn(run func(subject string, role core.Role, asset string) error) *AccessControl_RevokeRoleInAsset_Call {
+func (_c *AccessControl_RevokeRoleInAsset_Call) RunAndReturn(run func(subject string, role shared.Role, asset string) error) *AccessControl_RevokeRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RevokeRoleInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRoleInProject(subject string, role core.Role, project string) error {
+func (_mock *AccessControl) RevokeRoleInProject(subject string, role shared.Role, project string) error {
 	ret := _mock.Called(subject, role, project)
 
 	if len(ret) == 0 {
@@ -1971,7 +1971,7 @@ func (_mock *AccessControl) RevokeRoleInProject(subject string, role core.Role, 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, core.Role, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, shared.Role, string) error); ok {
 		r0 = returnFunc(subject, role, project)
 	} else {
 		r0 = ret.Error(0)
@@ -1986,21 +1986,21 @@ type AccessControl_RevokeRoleInProject_Call struct {
 
 // RevokeRoleInProject is a helper method to define mock.On call
 //   - subject string
-//   - role core.Role
+//   - role shared.Role
 //   - project string
 func (_e *AccessControl_Expecter) RevokeRoleInProject(subject interface{}, role interface{}, project interface{}) *AccessControl_RevokeRoleInProject_Call {
 	return &AccessControl_RevokeRoleInProject_Call{Call: _e.mock.On("RevokeRoleInProject", subject, role, project)}
 }
 
-func (_c *AccessControl_RevokeRoleInProject_Call) Run(run func(subject string, role core.Role, project string)) *AccessControl_RevokeRoleInProject_Call {
+func (_c *AccessControl_RevokeRoleInProject_Call) Run(run func(subject string, role shared.Role, project string)) *AccessControl_RevokeRoleInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 core.Role
+		var arg1 shared.Role
 		if args[1] != nil {
-			arg1 = args[1].(core.Role)
+			arg1 = args[1].(shared.Role)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -2020,7 +2020,7 @@ func (_c *AccessControl_RevokeRoleInProject_Call) Return(err error) *AccessContr
 	return _c
 }
 
-func (_c *AccessControl_RevokeRoleInProject_Call) RunAndReturn(run func(subject string, role core.Role, project string) error) *AccessControl_RevokeRoleInProject_Call {
+func (_c *AccessControl_RevokeRoleInProject_Call) RunAndReturn(run func(subject string, role shared.Role, project string) error) *AccessControl_RevokeRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

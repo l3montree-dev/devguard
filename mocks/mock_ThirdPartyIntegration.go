@@ -7,7 +7,6 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -190,18 +189,18 @@ func (_c *ThirdPartyIntegration_CreateLabels_Call) RunAndReturn(run func(ctx con
 }
 
 // GetID provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) GetID() core.IntegrationID {
+func (_mock *ThirdPartyIntegration) GetID() shared.IntegrationID {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetID")
 	}
 
-	var r0 core.IntegrationID
-	if returnFunc, ok := ret.Get(0).(func() core.IntegrationID); ok {
+	var r0 shared.IntegrationID
+	if returnFunc, ok := ret.Get(0).(func() shared.IntegrationID); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(core.IntegrationID)
+		r0 = ret.Get(0).(shared.IntegrationID)
 	}
 	return r0
 }
@@ -223,12 +222,12 @@ func (_c *ThirdPartyIntegration_GetID_Call) Run(run func()) *ThirdPartyIntegrati
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_GetID_Call) Return(integrationID core.IntegrationID) *ThirdPartyIntegration_GetID_Call {
+func (_c *ThirdPartyIntegration_GetID_Call) Return(integrationID shared.IntegrationID) *ThirdPartyIntegration_GetID_Call {
 	_c.Call.Return(integrationID)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_GetID_Call) RunAndReturn(run func() core.IntegrationID) *ThirdPartyIntegration_GetID_Call {
+func (_c *ThirdPartyIntegration_GetID_Call) RunAndReturn(run func() shared.IntegrationID) *ThirdPartyIntegration_GetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -285,7 +284,7 @@ func (_c *ThirdPartyIntegration_HandleEvent_Call) RunAndReturn(run func(event an
 }
 
 // HandleWebhook provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) HandleWebhook(ctx core.Context) error {
+func (_mock *ThirdPartyIntegration) HandleWebhook(ctx shared.Context) error {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -293,7 +292,7 @@ func (_mock *ThirdPartyIntegration) HandleWebhook(ctx core.Context) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) error); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
@@ -307,16 +306,16 @@ type ThirdPartyIntegration_HandleWebhook_Call struct {
 }
 
 // HandleWebhook is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *ThirdPartyIntegration_Expecter) HandleWebhook(ctx interface{}) *ThirdPartyIntegration_HandleWebhook_Call {
 	return &ThirdPartyIntegration_HandleWebhook_Call{Call: _e.mock.On("HandleWebhook", ctx)}
 }
 
-func (_c *ThirdPartyIntegration_HandleWebhook_Call) Run(run func(ctx core.Context)) *ThirdPartyIntegration_HandleWebhook_Call {
+func (_c *ThirdPartyIntegration_HandleWebhook_Call) Run(run func(ctx shared.Context)) *ThirdPartyIntegration_HandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -330,13 +329,13 @@ func (_c *ThirdPartyIntegration_HandleWebhook_Call) Return(err error) *ThirdPart
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HandleWebhook_Call) RunAndReturn(run func(ctx core.Context) error) *ThirdPartyIntegration_HandleWebhook_Call {
+func (_c *ThirdPartyIntegration_HandleWebhook_Call) RunAndReturn(run func(ctx shared.Context) error) *ThirdPartyIntegration_HandleWebhook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // HasAccessToExternalEntityProvider provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
@@ -345,15 +344,15 @@ func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.C
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string) (bool, error)); ok {
 		return returnFunc(ctx, externalEntityProviderID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string) bool); ok {
 		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, string) error); ok {
 		r1 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r1 = ret.Error(1)
@@ -367,17 +366,17 @@ type ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call struct {
 }
 
 // HasAccessToExternalEntityProvider is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 //   - externalEntityProviderID string
 func (_e *ThirdPartyIntegration_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
 	return &ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Run(run func(ctx core.Context, externalEntityProviderID string)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Run(run func(ctx shared.Context, externalEntityProviderID string)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -396,13 +395,13 @@ func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) (bool, error)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx shared.Context, externalEntityProviderID string) (bool, error)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListGroups provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (_mock *ThirdPartyIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID)
 
 	if len(ret) == 0 {
@@ -410,9 +409,9 @@ func (_mock *ThirdPartyIntegration) ListGroups(ctx context.Context, userID strin
 	}
 
 	var r0 []models.Project
-	var r1 []core.Role
+	var r1 []shared.Role
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.Project, []core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.Project, []shared.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []models.Project); ok {
@@ -422,11 +421,11 @@ func (_mock *ThirdPartyIntegration) ListGroups(ctx context.Context, userID strin
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) []core.Role); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) []shared.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]core.Role)
+			r1 = ret.Get(1).([]shared.Role)
 		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
@@ -473,18 +472,18 @@ func (_c *ThirdPartyIntegration_ListGroups_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListGroups_Call) Return(projects []models.Project, roles []core.Role, err error) *ThirdPartyIntegration_ListGroups_Call {
+func (_c *ThirdPartyIntegration_ListGroups_Call) Return(projects []models.Project, roles []shared.Role, err error) *ThirdPartyIntegration_ListGroups_Call {
 	_c.Call.Return(projects, roles, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListGroups_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error)) *ThirdPartyIntegration_ListGroups_Call {
+func (_c *ThirdPartyIntegration_ListGroups_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error)) *ThirdPartyIntegration_ListGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListOrgs provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (_mock *ThirdPartyIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -493,17 +492,17 @@ func (_mock *ThirdPartyIntegration) ListOrgs(ctx core.Context) ([]models.Org, er
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]models.Org, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]models.Org, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []models.Org); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []models.Org); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -517,16 +516,16 @@ type ThirdPartyIntegration_ListOrgs_Call struct {
 }
 
 // ListOrgs is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *ThirdPartyIntegration_Expecter) ListOrgs(ctx interface{}) *ThirdPartyIntegration_ListOrgs_Call {
 	return &ThirdPartyIntegration_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
 }
 
-func (_c *ThirdPartyIntegration_ListOrgs_Call) Run(run func(ctx core.Context)) *ThirdPartyIntegration_ListOrgs_Call {
+func (_c *ThirdPartyIntegration_ListOrgs_Call) Run(run func(ctx shared.Context)) *ThirdPartyIntegration_ListOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -540,13 +539,13 @@ func (_c *ThirdPartyIntegration_ListOrgs_Call) Return(orgs []models.Org, err err
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListOrgs_Call) RunAndReturn(run func(ctx core.Context) ([]models.Org, error)) *ThirdPartyIntegration_ListOrgs_Call {
+func (_c *ThirdPartyIntegration_ListOrgs_Call) RunAndReturn(run func(ctx shared.Context) ([]models.Org, error)) *ThirdPartyIntegration_ListOrgs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListProjects provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (_mock *ThirdPartyIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID, groupID)
 
 	if len(ret) == 0 {
@@ -554,9 +553,9 @@ func (_mock *ThirdPartyIntegration) ListProjects(ctx context.Context, userID str
 	}
 
 	var r0 []models.Asset
-	var r1 []core.Role
+	var r1 []shared.Role
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) ([]models.Asset, []core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) ([]models.Asset, []shared.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID, groupID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) []models.Asset); ok {
@@ -566,11 +565,11 @@ func (_mock *ThirdPartyIntegration) ListProjects(ctx context.Context, userID str
 			r0 = ret.Get(0).([]models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) []core.Role); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) []shared.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID, groupID)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]core.Role)
+			r1 = ret.Get(1).([]shared.Role)
 		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, string) error); ok {
@@ -623,37 +622,37 @@ func (_c *ThirdPartyIntegration_ListProjects_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListProjects_Call) Return(assets []models.Asset, roles []core.Role, err error) *ThirdPartyIntegration_ListProjects_Call {
+func (_c *ThirdPartyIntegration_ListProjects_Call) Return(assets []models.Asset, roles []shared.Role, err error) *ThirdPartyIntegration_ListProjects_Call {
 	_c.Call.Return(assets, roles, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListProjects_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error)) *ThirdPartyIntegration_ListProjects_Call {
+func (_c *ThirdPartyIntegration_ListProjects_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error)) *ThirdPartyIntegration_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListRepositories provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
+func (_mock *ThirdPartyIntegration) ListRepositories(ctx shared.Context) ([]shared.Repository, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListRepositories")
 	}
 
-	var r0 []core.Repository
+	var r0 []shared.Repository
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]core.Repository, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]shared.Repository, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []core.Repository); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []shared.Repository); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]core.Repository)
+			r0 = ret.Get(0).([]shared.Repository)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -667,16 +666,16 @@ type ThirdPartyIntegration_ListRepositories_Call struct {
 }
 
 // ListRepositories is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *ThirdPartyIntegration_Expecter) ListRepositories(ctx interface{}) *ThirdPartyIntegration_ListRepositories_Call {
 	return &ThirdPartyIntegration_ListRepositories_Call{Call: _e.mock.On("ListRepositories", ctx)}
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) Run(run func(ctx core.Context)) *ThirdPartyIntegration_ListRepositories_Call {
+func (_c *ThirdPartyIntegration_ListRepositories_Call) Run(run func(ctx shared.Context)) *ThirdPartyIntegration_ListRepositories_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -685,12 +684,12 @@ func (_c *ThirdPartyIntegration_ListRepositories_Call) Run(run func(ctx core.Con
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(repositorys []core.Repository, err error) *ThirdPartyIntegration_ListRepositories_Call {
+func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(repositorys []shared.Repository, err error) *ThirdPartyIntegration_ListRepositories_Call {
 	_c.Call.Return(repositorys, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx core.Context) ([]core.Repository, error)) *ThirdPartyIntegration_ListRepositories_Call {
+func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]shared.Repository, error)) *ThirdPartyIntegration_ListRepositories_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -765,7 +764,7 @@ func (_c *ThirdPartyIntegration_UpdateIssue_Call) RunAndReturn(run func(ctx cont
 }
 
 // WantsToHandleWebhook provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+func (_mock *ThirdPartyIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -773,7 +772,7 @@ func (_mock *ThirdPartyIntegration) WantsToHandleWebhook(ctx core.Context) bool 
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(core.Context) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) bool); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -787,16 +786,16 @@ type ThirdPartyIntegration_WantsToHandleWebhook_Call struct {
 }
 
 // WantsToHandleWebhook is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *ThirdPartyIntegration_Expecter) WantsToHandleWebhook(ctx interface{}) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
 	return &ThirdPartyIntegration_WantsToHandleWebhook_Call{Call: _e.mock.On("WantsToHandleWebhook", ctx)}
 }
 
-func (_c *ThirdPartyIntegration_WantsToHandleWebhook_Call) Run(run func(ctx core.Context)) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
+func (_c *ThirdPartyIntegration_WantsToHandleWebhook_Call) Run(run func(ctx shared.Context)) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -810,7 +809,7 @@ func (_c *ThirdPartyIntegration_WantsToHandleWebhook_Call) Return(b bool) *Third
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_WantsToHandleWebhook_Call) RunAndReturn(run func(ctx core.Context) bool) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
+func (_c *ThirdPartyIntegration_WantsToHandleWebhook_Call) RunAndReturn(run func(ctx shared.Context) bool) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
 	_c.Call.Return(run)
 	return _c
 }

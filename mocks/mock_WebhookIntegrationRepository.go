@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +39,7 @@ func (_m *WebhookIntegrationRepository) EXPECT() *WebhookIntegrationRepository_E
 }
 
 // Delete provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) Delete(tx core.DB, id uuid.UUID) error {
+func (_mock *WebhookIntegrationRepository) Delete(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -47,7 +47,7 @@ func (_mock *WebhookIntegrationRepository) Delete(tx core.DB, id uuid.UUID) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -61,17 +61,17 @@ type WebhookIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *WebhookIntegrationRepository_Delete_Call {
 	return &WebhookIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *WebhookIntegrationRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *WebhookIntegrationRepository_Delete_Call {
+func (_c *WebhookIntegrationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *WebhookIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -90,7 +90,7 @@ func (_c *WebhookIntegrationRepository_Delete_Call) Return(err error) *WebhookIn
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *WebhookIntegrationRepository_Delete_Call {
+func (_c *WebhookIntegrationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *WebhookIntegrationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -352,7 +352,7 @@ func (_c *WebhookIntegrationRepository_Read_Call) RunAndReturn(run func(id uuid.
 }
 
 // Save provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) Save(tx core.DB, model *models.WebhookIntegration) error {
+func (_mock *WebhookIntegrationRepository) Save(tx shared.DB, model *models.WebhookIntegration) error {
 	ret := _mock.Called(tx, model)
 
 	if len(ret) == 0 {
@@ -360,7 +360,7 @@ func (_mock *WebhookIntegrationRepository) Save(tx core.DB, model *models.Webhoo
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.WebhookIntegration) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.WebhookIntegration) error); ok {
 		r0 = returnFunc(tx, model)
 	} else {
 		r0 = ret.Error(0)
@@ -374,17 +374,17 @@ type WebhookIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - model *models.WebhookIntegration
 func (_e *WebhookIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *WebhookIntegrationRepository_Save_Call {
 	return &WebhookIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
-func (_c *WebhookIntegrationRepository_Save_Call) Run(run func(tx core.DB, model *models.WebhookIntegration)) *WebhookIntegrationRepository_Save_Call {
+func (_c *WebhookIntegrationRepository_Save_Call) Run(run func(tx shared.DB, model *models.WebhookIntegration)) *WebhookIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.WebhookIntegration
 		if args[1] != nil {
@@ -403,7 +403,7 @@ func (_c *WebhookIntegrationRepository_Save_Call) Return(err error) *WebhookInte
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_Save_Call) RunAndReturn(run func(tx core.DB, model *models.WebhookIntegration) error) *WebhookIntegrationRepository_Save_Call {
+func (_c *WebhookIntegrationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model *models.WebhookIntegration) error) *WebhookIntegrationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

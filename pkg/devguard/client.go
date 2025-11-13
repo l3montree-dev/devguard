@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/services"
 )
 
 type HTTPClient struct {
@@ -32,7 +32,7 @@ func NewHTTPClient(token, apiURL string) HTTPClient {
 }
 
 func (c HTTPClient) Do(req *http.Request) (*http.Response, error) {
-	err := pat.SignRequest(c.token, req)
+	err := services.SignRequest(c.token, req)
 	if err != nil {
 		return nil, err
 	}

@@ -17,59 +17,31 @@ package api
 
 import (
 	"log/slog"
-	"os"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/fx"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/artifact"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/attestation"
-	"github.com/l3montree-dev/devguard/internal/core/compliance"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/csaf"
-	"github.com/l3montree-dev/devguard/internal/core/events"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
-	"github.com/l3montree-dev/devguard/internal/core/intoto"
-	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/core/release"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/echohttp"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
-func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService shared.ExternalEntityProviderService) shared.MiddlewareFunc {
 	limiter := &sync.Map{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
+		return func(ctx shared.Context) error {
 
-			key := core.GetSession(ctx).GetUserID()
+			key := shared.GetSession(ctx).GetUserID()
 			now := time.Now()
 
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter.Store(key, now.Add(15*time.Minute))
 				// Create a goroutine-safe context to avoid using the request context
-				safeCtx := core.GoroutineSafeContext(ctx)
+				safeCtx := shared.GoroutineSafeContext(ctx)
 				go func() {
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
@@ -81,16 +53,16 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.
 	}
 }
 
-func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+func externalEntityProviderRefreshMiddleware(externalEntityProviderService shared.ExternalEntityProviderService) shared.MiddlewareFunc {
 	limiter := &sync.Map{}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the current org
-		return func(ctx core.Context) error {
-			org := core.GetOrg(ctx)
+		return func(ctx shared.Context) error {
+			org := shared.GetOrg(ctx)
 
 			if org.IsExternalEntity() {
-				key := org.GetID().String() + "/" + core.GetSession(ctx).GetUserID()
+				key := org.GetID().String() + "/" + shared.GetSession(ctx).GetUserID()
 				now := time.Now()
 
 				// Check if we are allowed to refresh the external entity provider projects
@@ -98,8 +70,8 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					limiter.Store(key, now.Add(15*time.Minute))
 
 					// Create a goroutine-safe context and capture the values we need
-					safeCtx := core.GoroutineSafeContext(ctx)
-					userID := core.GetSession(ctx).GetUserID()
+					safeCtx := shared.GoroutineSafeContext(ctx)
+					userID := shared.GetSession(ctx).GetUserID()
 					orgID := org.GetID()
 
 					go func() {
@@ -120,162 +92,15 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 
 func whoami(ctx echo.Context) error {
 	return ctx.JSON(200, map[string]string{
-		"userID": core.GetSession(ctx).GetUserID(),
+		"userID": shared.GetSession(ctx).GetUserID(),
 	})
 }
 
-func health(ctx echo.Context) error {
-	return ctx.String(200, "ok")
-}
-
-func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
-	ory := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC"))
-	oryAdmin := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_ADMIN"))
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
-	if err != nil {
-		panic(err)
-	}
-
-	webhookIntegration := webhook.NewWebhookIntegration(db)
-
-	jiraIntegration := jiraint.NewJiraIntegration(db)
-
-	githubIntegration := githubint.NewGithubIntegration(db)
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-
-	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(repositories.NewExternalUserRepository(db), gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
-
-	// init all repositories using the provided database
-	patRepository := repositories.NewPATRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	// release repository used by statistics for release-scoped stats
-	releaseRepository := repositories.NewReleaseRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	projectScopedRBAC := projectAccessControlFactory(projectRepository)
-	assetScopedRBAC := assetAccessControlFactory(assetRepository)
-	orgRepository := repositories.NewOrgRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
-	supplyChainRepository := repositories.NewSupplyChainRepository(db)
-	attestationRepository := repositories.NewAttestationRepository(db)
-	policyRepository := repositories.NewPolicyRepository(db)
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	webhookRepository := repositories.NewWebhookRepository(db)
-	artifactRepository := repositories.NewArtifactRepository(db)
-
-	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
-	projectService := project.NewService(projectRepository, assetRepository)
-
-	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
-	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := component.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
-
-	// release module
-	// release repository will be created later when project router is available
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
-
-	csafService := csaf.NewCSAFService(common.OutgoingConnectionClient)
-
-	artifactService := artifact.NewService(artifactRepository, csafService, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
-	invitationRepository := repositories.NewInvitationRepository(db)
-
-	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
-
-	orgService := org.NewService(orgRepository, casbinRBACProvider)
-	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
-
-	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
-
-	// init all http controllers using the repositories
-
-	artifactController := artifact.NewController(artifactRepository, artifactService, assetVersionService, dependencyVulnService, statisticsService, &componentService, scanService)
-	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService, statisticsService, vulnEventRepository)
-	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
-	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
-	patController := pat.NewHTTPController(patRepository)
-	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
-	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
-	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService, thirdPartyIntegration)
-
-	scanController := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
-
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService, artifactService)
-	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, artifactRepository)
-	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
-	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
-	statisticsController := statistics.NewHTTPController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
-	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
-	licenseRiskController := vuln.NewLicenseRiskController(licenseRiskRepository, licenseRiskService)
-	// release routes inside project scope
-	releaseRepository = repositories.NewReleaseRepository(db)
-	releaseService := release.NewService(releaseRepository)
-
-	releaseController := release.NewReleaseController(releaseService, assetVersionService, assetVersionRepository, componentRepository, licenseRiskRepository, dependencyVulnRepository, assetRepository)
-
-	patService := pat.NewPatService(patRepository)
-
-	vulndbController := vulndb.NewHTTPController(cveRepository)
-	csafController := csaf.NewCSAFController(dependencyVulnRepository, vulnEventRepository, assetVersionRepository, assetRepository, projectRepository, orgRepository, cveRepository, artifactRepository)
+func BuildRouter() *echo.Echo {
+	projectScopedRBAC := projectAccessControlFactory(params.ProjectRepository)
+	assetScopedRBAC := assetAccessControlFactory(params.AssetRepository)
 
 	server := echohttp.Server()
-
-	integrationController := integrations.NewIntegrationController(gitlabOauth2Integrations)
-
-	apiV1Router := server.Group("/api/v1")
-	// this makes the third party integrations available to all controllers
-	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
-			core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
-			return next(ctx)
-		}
-	})
-
-	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx core.Context) error {
-			// set the ory admin client to the context
-			core.SetAuthAdminClient(ctx, core.NewAdminClient(oryAdmin))
-			return next(ctx)
-		}
-	})
-
-	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
-	apiV1Router.GET("/health/", health)
-	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
-	apiV1Router.GET("/lookup/", assetController.HandleLookup)
-	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
-	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
-
-	// csaf routes
-	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)
-	apiV1Router.GET("/organizations/:organization/csaf/provider-metadata.json/", csafController.GetProviderMetadataForOrganization, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/csaf/openpgp/", csafController.GetOpenPGPHTML, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/csaf/openpgp/:file/", csafController.GetOpenPGPFile, CsafMiddleware(true, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/", csafController.GetCSAFIndexHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/index.txt/", csafController.GetIndexFile, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/changes.csv/", csafController.GetChangesCSVFile, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/", csafController.GetTLPWhiteEntriesHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/", csafController.GetReportsByYearHTML, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	apiV1Router.GET("/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/:version/", csafController.ServeCSAFReportRequest, CsafMiddleware(false, orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 
 	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
@@ -290,7 +115,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	/**
 	Everything below this line needs authentication
 	*/
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
+	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(shared.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
 	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, neededScope([]string{"manage"}))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
@@ -303,8 +128,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
 	fastAccessRoutes := sessionRouter.Group("", neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
-		projectScopedRBAC(core.ObjectProject, core.ActionRead),
-		assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
+		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	fastAccessRoutes.POST("/scan/", scanController.ScanDependencyVulnFromProject)
 	fastAccessRoutes.POST("/vex/", scanController.UploadVEX)
@@ -333,9 +158,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	Organization scoped router
 	All routes below this line are scoped to a specific organization.
 	*/
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
-	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
+	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 
@@ -353,7 +178,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.GET("/projects/", projectController.List)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
-	organizationUpdateAccessControlRequired := organizationRouter.Group("", neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+	organizationUpdateAccessControlRequired := organizationRouter.Group("", neededScope([]string{"manage"}), organizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
@@ -378,7 +203,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	Project scoped router
 	All routes below this line are scoped to a specific project.
 	*/
-	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectScopedRBAC(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
@@ -396,9 +221,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 
-	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionCreate))
+	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
-	projectUpdateAccessControlRequired := projectRouter.Group("", neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectUpdateAccessControlRequired := projectRouter.Group("", neededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.Test)
@@ -423,7 +248,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	Asset scoped router
 	All routes below this line are scoped to a specific asset.
 	*/
-	assetRouter := projectRouter.Group("/assets/:assetSlug", assetScopedRBAC(core.ObjectAsset, core.ActionRead))
+	assetRouter := projectRouter.Group("/assets/:assetSlug", assetScopedRBAC(shared.ObjectAsset, shared.ActionRead))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
@@ -434,12 +259,12 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 
-	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionDelete))
-	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
+	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
-	assetUpdateAccessControlRequired := assetRouter.Group("", neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetUpdateAccessControlRequired := assetRouter.Group("", neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
@@ -480,8 +305,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.POST("/artifacts/", artifactController.Create, neededScope([]string{"manage"}))
 
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}))
-	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, neededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", artifactMiddleware(artifactRepository))
 
@@ -536,6 +361,10 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	return server
 }
 
-func Start(db core.DB, broker pubsub.Broker) {
-	slog.Error("failed to start server", "err", BuildRouter(db, broker).Start(":8080").Error())
+func NewServer(lc fx.Lifecycle, db shared.DB, broker pubsub.Broker) *echo.Echo {
+	srv := BuildRouter(db, broker)
+	lc.Append(fx.StartHook(func() {
+		slog.Error("failed to start server", "err", srv.Start(":8080").Error())
+	}))
+	return srv
 }

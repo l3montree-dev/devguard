@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -40,7 +40,7 @@ func (_m *PersonalAccessTokenRepository) EXPECT() *PersonalAccessTokenRepository
 }
 
 // Activate provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Activate(tx core.DB, id uuid.UUID) error {
+func (_mock *PersonalAccessTokenRepository) Activate(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -48,7 +48,7 @@ func (_mock *PersonalAccessTokenRepository) Activate(tx core.DB, id uuid.UUID) e
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -62,17 +62,17 @@ type PersonalAccessTokenRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) Activate(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Activate_Call {
 	return &PersonalAccessTokenRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
-func (_c *PersonalAccessTokenRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Activate_Call {
+func (_c *PersonalAccessTokenRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -91,7 +91,7 @@ func (_c *PersonalAccessTokenRepository_Activate_Call) Return(err error) *Person
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Activate_Call {
+func (_c *PersonalAccessTokenRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -152,19 +152,19 @@ func (_c *PersonalAccessTokenRepository_All_Call) RunAndReturn(run func() ([]mod
 }
 
 // Begin provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Begin() core.DB {
+func (_mock *PersonalAccessTokenRepository) Begin() shared.DB {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -187,18 +187,18 @@ func (_c *PersonalAccessTokenRepository_Begin_Call) Run(run func()) *PersonalAcc
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Begin_Call) Return(v core.DB) *PersonalAccessTokenRepository_Begin_Call {
+func (_c *PersonalAccessTokenRepository_Begin_Call) Return(v shared.DB) *PersonalAccessTokenRepository_Begin_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Begin_Call) RunAndReturn(run func() core.DB) *PersonalAccessTokenRepository_Begin_Call {
+func (_c *PersonalAccessTokenRepository_Begin_Call) RunAndReturn(run func() shared.DB) *PersonalAccessTokenRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Create(tx core.DB, t *models.PAT) error {
+func (_mock *PersonalAccessTokenRepository) Create(tx shared.DB, t *models.PAT) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -206,7 +206,7 @@ func (_mock *PersonalAccessTokenRepository) Create(tx core.DB, t *models.PAT) er
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.PAT) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.PAT) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -220,17 +220,17 @@ type PersonalAccessTokenRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) Create(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Create_Call {
 	return &PersonalAccessTokenRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *PersonalAccessTokenRepository_Create_Call) Run(run func(tx core.DB, t *models.PAT)) *PersonalAccessTokenRepository_Create_Call {
+func (_c *PersonalAccessTokenRepository_Create_Call) Run(run func(tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.PAT
 		if args[1] != nil {
@@ -249,13 +249,13 @@ func (_c *PersonalAccessTokenRepository_Create_Call) Return(err error) *Personal
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Create_Call {
+func (_c *PersonalAccessTokenRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) CreateBatch(tx core.DB, ts []models.PAT) error {
+func (_mock *PersonalAccessTokenRepository) CreateBatch(tx shared.DB, ts []models.PAT) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -263,7 +263,7 @@ func (_mock *PersonalAccessTokenRepository) CreateBatch(tx core.DB, ts []models.
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.PAT) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -277,17 +277,17 @@ type PersonalAccessTokenRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_CreateBatch_Call {
 	return &PersonalAccessTokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.PAT)) *PersonalAccessTokenRepository_CreateBatch_Call {
+func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.PAT
 		if args[1] != nil {
@@ -306,13 +306,13 @@ func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_CreateBatch_Call {
+func (_c *PersonalAccessTokenRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Delete(tx core.DB, id uuid.UUID) error {
+func (_mock *PersonalAccessTokenRepository) Delete(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -320,7 +320,7 @@ func (_mock *PersonalAccessTokenRepository) Delete(tx core.DB, id uuid.UUID) err
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -334,17 +334,17 @@ type PersonalAccessTokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) Delete(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Delete_Call {
 	return &PersonalAccessTokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *PersonalAccessTokenRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Delete_Call {
+func (_c *PersonalAccessTokenRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -363,13 +363,13 @@ func (_c *PersonalAccessTokenRepository_Delete_Call) Return(err error) *Personal
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Delete_Call {
+func (_c *PersonalAccessTokenRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) DeleteBatch(tx core.DB, ids []models.PAT) error {
+func (_mock *PersonalAccessTokenRepository) DeleteBatch(tx shared.DB, ids []models.PAT) error {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -377,7 +377,7 @@ func (_mock *PersonalAccessTokenRepository) DeleteBatch(tx core.DB, ids []models
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.PAT) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		r0 = ret.Error(0)
@@ -391,17 +391,17 @@ type PersonalAccessTokenRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	return &PersonalAccessTokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.PAT)) *PersonalAccessTokenRepository_DeleteBatch_Call {
+func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.PAT)) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.PAT
 		if args[1] != nil {
@@ -420,7 +420,7 @@ func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.PAT) error) *PersonalAccessTokenRepository_DeleteBatch_Call {
+func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.PAT) error) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -599,19 +599,19 @@ func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) RunAndReturn(run 
 }
 
 // GetDB provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) GetDB(tx core.DB) core.DB {
+func (_mock *PersonalAccessTokenRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -623,16 +623,16 @@ type PersonalAccessTokenRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *PersonalAccessTokenRepository_Expecter) GetDB(tx interface{}) *PersonalAccessTokenRepository_GetDB_Call {
 	return &PersonalAccessTokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(tx core.DB)) *PersonalAccessTokenRepository_GetDB_Call {
+func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(tx shared.DB)) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -641,12 +641,12 @@ func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(tx core.DB)) *P
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_GetDB_Call) Return(v core.DB) *PersonalAccessTokenRepository_GetDB_Call {
+func (_c *PersonalAccessTokenRepository_GetDB_Call) Return(v shared.DB) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *PersonalAccessTokenRepository_GetDB_Call {
+func (_c *PersonalAccessTokenRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -887,7 +887,7 @@ func (_c *PersonalAccessTokenRepository_Read_Call) RunAndReturn(run func(id uuid
 }
 
 // Save provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Save(tx core.DB, t *models.PAT) error {
+func (_mock *PersonalAccessTokenRepository) Save(tx shared.DB, t *models.PAT) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -895,7 +895,7 @@ func (_mock *PersonalAccessTokenRepository) Save(tx core.DB, t *models.PAT) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.PAT) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.PAT) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -909,17 +909,17 @@ type PersonalAccessTokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) Save(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Save_Call {
 	return &PersonalAccessTokenRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
-func (_c *PersonalAccessTokenRepository_Save_Call) Run(run func(tx core.DB, t *models.PAT)) *PersonalAccessTokenRepository_Save_Call {
+func (_c *PersonalAccessTokenRepository_Save_Call) Run(run func(tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.PAT
 		if args[1] != nil {
@@ -938,13 +938,13 @@ func (_c *PersonalAccessTokenRepository_Save_Call) Return(err error) *PersonalAc
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Save_Call) RunAndReturn(run func(tx core.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Save_Call {
+func (_c *PersonalAccessTokenRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) SaveBatch(tx core.DB, ts []models.PAT) error {
+func (_mock *PersonalAccessTokenRepository) SaveBatch(tx shared.DB, ts []models.PAT) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -952,7 +952,7 @@ func (_mock *PersonalAccessTokenRepository) SaveBatch(tx core.DB, ts []models.PA
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.PAT) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -966,17 +966,17 @@ type PersonalAccessTokenRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatch_Call {
 	return &PersonalAccessTokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatch_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.PAT
 		if args[1] != nil {
@@ -995,13 +995,13 @@ func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Return(err error) *Perso
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatch_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Transaction(fn func(tx core.DB) error) error {
+func (_mock *PersonalAccessTokenRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)
 
 	if len(ret) == 0 {
@@ -1009,7 +1009,7 @@ func (_mock *PersonalAccessTokenRepository) Transaction(fn func(tx core.DB) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
 		r0 = returnFunc(fn)
 	} else {
 		r0 = ret.Error(0)
@@ -1023,16 +1023,16 @@ type PersonalAccessTokenRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn func(tx shared.DB) error
 func (_e *PersonalAccessTokenRepository_Expecter) Transaction(fn interface{}) *PersonalAccessTokenRepository_Transaction_Call {
 	return &PersonalAccessTokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
-func (_c *PersonalAccessTokenRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *PersonalAccessTokenRepository_Transaction_Call {
+func (_c *PersonalAccessTokenRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *PersonalAccessTokenRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
+		var arg0 func(tx shared.DB) error
 		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
+			arg0 = args[0].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
@@ -1046,7 +1046,7 @@ func (_c *PersonalAccessTokenRepository_Transaction_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *PersonalAccessTokenRepository_Transaction_Call {
+func (_c *PersonalAccessTokenRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *PersonalAccessTokenRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

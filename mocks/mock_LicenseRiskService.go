@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -176,7 +176,7 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run fun
 }
 
 // UpdateLicenseRiskState provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
+func (_mock *LicenseRiskService) UpdateLicenseRiskState(tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 
 	if len(ret) == 0 {
@@ -185,15 +185,15 @@ func (_mock *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID strin
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) (models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) (models.VulnEvent, error)); ok {
 		return returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) models.VulnEvent); ok {
 		r0 = returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, models.UpstreamState) error); ok {
 		r1 = returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)
 	} else {
 		r1 = ret.Error(1)
@@ -207,7 +207,7 @@ type LicenseRiskService_UpdateLicenseRiskState_Call struct {
 }
 
 // UpdateLicenseRiskState is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - userID string
 //   - licenseRisk *models.LicenseRisk
 //   - statusType string
@@ -218,11 +218,11 @@ func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(tx interface{}, us
 	return &LicenseRiskService_UpdateLicenseRiskState_Call{Call: _e.mock.On("UpdateLicenseRiskState", tx, userID, licenseRisk, statusType, justification, mechanicalJustification, upstream)}
 }
 
-func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState)) *LicenseRiskService_UpdateLicenseRiskState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -266,7 +266,7 @@ func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Return(vulnEvent model
 	return _c
 }
 
-func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) RunAndReturn(run func(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error)) *LicenseRiskService_UpdateLicenseRiskState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) RunAndReturn(run func(tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, upstream models.UpstreamState) (models.VulnEvent, error)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Return(run)
 	return _c
 }

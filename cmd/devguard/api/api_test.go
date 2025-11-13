@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/auth"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
@@ -154,8 +153,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := core.Object("test-object")
-		act := core.Action("read")
+		obj := shared.Object("test-object")
+		act := shared.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, obj, act).Return(true, nil)
 
@@ -188,8 +187,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := core.Object("test-object")
-		act := core.Action("read")
+		obj := shared.Object("test-object")
+		act := shared.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
 
@@ -224,8 +223,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		}
 
 		userID := "user-id"
-		obj := core.Object("test-object")
-		act := core.Action("read")
+		obj := shared.Object("test-object")
+		act := shared.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
 
@@ -258,8 +257,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := core.Object("test-object")
-		act := core.Action("read")
+		obj := shared.Object("test-object")
+		act := shared.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, errors.New("error"))
 
@@ -404,7 +403,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		}
 
 		// Set up context with asset and parameters
-		core.SetAsset(ctx, asset)
+		shared.SetAsset(ctx, asset)
 		ctx.SetParamNames("assetVersionSlug")
 		ctx.SetParamValues(assetVersionSlug)
 
@@ -434,7 +433,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		// Verify that the asset version was set in context
-		setAssetVersion := core.GetAssetVersion(ctx)
+		setAssetVersion := shared.GetAssetVersion(ctx)
 		assert.Equal(t, assetVersion.Name, setAssetVersion.Name)
 		assert.Equal(t, assetVersion.Slug, setAssetVersion.Slug)
 
@@ -457,7 +456,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		}
 
 		// Set up context with asset and default slug
-		core.SetAsset(ctx, asset)
+		shared.SetAsset(ctx, asset)
 		ctx.SetParamNames("assetVersionSlug")
 		ctx.SetParamValues("default")
 
@@ -476,7 +475,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		// Verify that an empty asset version was set in context for default
-		setAssetVersion := core.GetAssetVersion(ctx)
+		setAssetVersion := shared.GetAssetVersion(ctx)
 		assert.Equal(t, "", setAssetVersion.Name)
 
 		mockAssetVersionRepository.AssertExpectations(t)
@@ -499,7 +498,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		}
 
 		// Set up context with asset and parameters
-		core.SetAsset(ctx, asset)
+		shared.SetAsset(ctx, asset)
 		ctx.SetParamNames("assetVersionSlug")
 		ctx.SetParamValues(assetVersionSlug)
 
@@ -539,7 +538,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		}
 
 		// Set up context with asset but no asset version slug parameter
-		core.SetAsset(ctx, asset)
+		shared.SetAsset(ctx, asset)
 		// Don't set param names/values to simulate missing slug
 
 		middleware := assetVersionMiddleware(mockAssetVersionRepository)
