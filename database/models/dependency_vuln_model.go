@@ -94,7 +94,7 @@ type DependencyVulnRisk struct {
 	CreatedAt         time.Time
 	ArbitraryJSONData string
 	Risk              float64
-	Type              VulnEventType
+	Type              dtos.VulnEventType
 }
 
 func (vuln DependencyVuln) TableName() string {

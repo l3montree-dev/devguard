@@ -1,4 +1,4 @@
-package integrations
+package services
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -65,7 +66,7 @@ func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
 	}
 
 	return c.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.OrgDTO {
-		return org.FromModel(*o)
+		return transformer.OrgDTOFromModel(*o)
 	}))
 }
 

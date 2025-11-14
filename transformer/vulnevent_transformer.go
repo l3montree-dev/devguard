@@ -30,3 +30,31 @@ func VulnEventDTOToModel(dto dtos.VulnEventDTO) models.VulnEvent {
 		Upstream:      dto.Upstream,
 	}
 }
+
+func ConvertVulnEventsToDtos(event []models.VulnEventDetail) []dtos.VulnEventDTO {
+	var result []dtos.VulnEventDTO
+	for _, e := range event {
+		originalAssetVersionName := e.AssetVersionName
+		if e.OriginalAssetVersionName != nil {
+			originalAssetVersionName = *e.OriginalAssetVersionName
+		}
+		result = append(result, dtos.VulnEventDTO{
+			ID:                      e.ID,
+			Type:                    e.Type,
+			VulnID:                  e.VulnID,
+			VulnType:                e.VulnType,
+			UserID:                  e.UserID,
+			Justification:           e.Justification,
+			MechanicalJustification: e.MechanicalJustification,
+			ArbitraryJSONData:       e.GetArbitraryJSONData(),
+			CreatedAt:               e.CreatedAt,
+			AssetVersionName:        originalAssetVersionName,
+			AssetVersionSlug:        e.Slug,
+			PackageName:             e.ComponentPurl,
+			URI:                     e.URI,
+			Upstream:                e.Upstream,
+		})
+
+	}
+	return result
+}

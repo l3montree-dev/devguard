@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 )
@@ -99,9 +101,9 @@ func (c *statisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	}
 
 	// convert to dto
-	dtoResults := make([]RiskHistoryDTO, 0, len(results))
+	dtoResults := make([]dtos.RiskHistoryDTO, 0, len(results))
 	for _, r := range results {
-		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
+		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
 	}
 
 	return ctx.JSON(200, dtoResults)
@@ -179,9 +181,9 @@ func (c *statisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	}
 
 	// convert to dto
-	dtoResults := make([]RiskHistoryDTO, 0, len(res))
+	dtoResults := make([]dtos.RiskHistoryDTO, 0, len(res))
 	for _, r := range res {
-		dtoResults = append(dtoResults, fromModelToRiskHistoryDTO(r))
+		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
 	}
 
 	return ctx.JSON(200, dtoResults)

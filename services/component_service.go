@@ -92,7 +92,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	// check the pURL type, if its a debian or alpine package we get the license from memory
 	switch validatedPURL.Type {
 	case "deb":
-		l := getDebianLicense(validatedPURL, component.Version)
+		l := licenses.GetDebianLicense(validatedPURL, component.Version)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")

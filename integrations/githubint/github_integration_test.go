@@ -10,7 +10,8 @@ import (
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
+
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -35,7 +36,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 
-		err := githubIntegration.HandleEvent(dtos.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 
@@ -236,7 +237,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		expectedEvent := models.VulnEvent{
-			Type:   models.EventTypeMitigate,
+			Type:   dtos.EventTypeMitigate,
 			UserID: "1",
 
 			ArbitraryJSONData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",

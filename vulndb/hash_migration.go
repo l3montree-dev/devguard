@@ -1,11 +1,13 @@
-package models
+package vulndb
 
 import (
 	"fmt"
 	"log/slog"
 	"strconv"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -19,7 +21,7 @@ const (
 
 func RunHashMigrationsIfNeeded(db *gorm.DB) error {
 	// Check current version from config table
-	var config Config
+	var config models.Config
 	err := db.Where("key = ?", HashMigrationVersionKey).First(&config).Error
 
 	currentVersion := 0
@@ -49,7 +51,7 @@ func RunHashMigrationsIfNeeded(db *gorm.DB) error {
 		}
 
 		// Update version record in config table
-		versionConfig := Config{
+		versionConfig := models.Config{
 			Key: HashMigrationVersionKey,
 			Val: strconv.Itoa(CurrentHashVersion),
 		}
@@ -65,8 +67,8 @@ func RunHashMigrationsIfNeeded(db *gorm.DB) error {
 }
 
 func runDependencyVulnHashMigration(db *gorm.DB) error {
-	var dependencyVulns []DependencyVuln
-	err := db.Model(&DependencyVuln{}).Find(&dependencyVulns).Error
+	var dependencyVulns []models.DependencyVuln
+	err := db.Model(&models.DependencyVuln{}).Find(&dependencyVulns).Error
 	if err != nil {
 		return err
 	}
@@ -82,25 +84,25 @@ func runDependencyVulnHashMigration(db *gorm.DB) error {
 		}
 
 		// Update the hash in the database
-		err = db.Model(&DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
+		err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 		if err != nil {
 			// Handle duplicate key error by merging
-			var otherVuln DependencyVuln
-			err = db.Model(&DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
+			var otherVuln models.DependencyVuln
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
 			if err != nil {
 				slog.Error("could not fetch other dependencyVuln", "err", err)
 				return err
 			}
 
-			if err = db.Model(&DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("scanner_ids", utils.AddToWhitespaceSeparatedStringList(otherVuln.GetScannerIDsOrArtifactNames(), dependencyVuln.GetScannerIDsOrArtifactNames())).Error; err != nil {
+			if err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("scanner_ids", utils.AddToWhitespaceSeparatedStringList(otherVuln.GetScannerIDsOrArtifactNames(), dependencyVuln.GetScannerIDsOrArtifactNames())).Error; err != nil {
 				slog.Error("could not update dependencyVuln", "err", err)
 				return err
 			}
-			db.Model(&DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln)
+			db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln)
 		}
 
 		// Update all vuln events
-		err = db.Model(&VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
+		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
 		if err != nil {
 			slog.Error("could not update vuln events", "err", err)
 			return err
@@ -111,8 +113,8 @@ func runDependencyVulnHashMigration(db *gorm.DB) error {
 }
 
 func runFirstPartyVulnHashMigration(db *gorm.DB) error {
-	var firstPartyVulns []FirstPartyVuln
-	err := db.Model(&FirstPartyVuln{}).Find(&firstPartyVulns).Error
+	var firstPartyVulns []models.FirstPartyVuln
+	err := db.Model(&models.FirstPartyVuln{}).Find(&firstPartyVulns).Error
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 
 	type firstPartyWithOldHash struct {
 		OldHash        string
-		FirstPartyVuln FirstPartyVuln
+		FirstPartyVuln models.FirstPartyVuln
 	}
 
 	firstPartyVulnMap := make(map[string][]firstPartyWithOldHash)
@@ -143,7 +145,7 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 	for newHash, firstPartyVulnsWithOldHash := range firstPartyVulnMap {
 		if len(firstPartyVulnsWithOldHash) == 1 {
 			fp := firstPartyVulnsWithOldHash[0]
-			err = db.Model(&FirstPartyVuln{}).Where("id = ?", fp.OldHash).UpdateColumn("id", newHash).Error
+			err = db.Model(&models.FirstPartyVuln{}).Where("id = ?", fp.OldHash).UpdateColumn("id", newHash).Error
 			if err != nil {
 				slog.Error("could not update firstPartyVuln", "err", err)
 				return err
@@ -151,38 +153,38 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 		} else {
 			// Handle merging multiple vulns with same hash
 			mergedFirstPartyVuln := firstPartyVulnsWithOldHash[0].FirstPartyVuln
-			mergedSnippetContents := SnippetContents{
+			mergedSnippetContents := dtos.SnippetContents{
 				Snippets: []dtos.SnippetContent{},
 			}
 			for _, fp := range firstPartyVulnsWithOldHash {
-				snippetContents, err := fp.FirstPartyVuln.FromJSONSnippetContents()
+				snippetContents, err := transformer.FromJSONSnippetContents(fp.FirstPartyVuln)
 				if err != nil {
 					slog.Error("could not parse snippet contents", "error", err)
 					return err
 				}
 				mergedSnippetContents.Snippets = append(mergedSnippetContents.Snippets, snippetContents.Snippets...)
 			}
-			mergedSnippetJSON, err := mergedSnippetContents.ToJSON()
+			mergedSnippetJSON, err := transformer.SnippetContentsToJSON(mergedSnippetContents)
 			if err != nil {
 				slog.Error("could not convert merged snippet contents to JSON", "error", err)
 				return err
 			}
 			mergedFirstPartyVuln.SnippetContents = mergedSnippetJSON
 
-			err = db.Model(&FirstPartyVuln{}).Save(&mergedFirstPartyVuln).Error
+			err = db.Model(&models.FirstPartyVuln{}).Save(&mergedFirstPartyVuln).Error
 			if err != nil {
 				slog.Error("could not create merged firstPartyVuln", "err", err)
 				return err
 			}
 
 			for _, fp := range firstPartyVulnsWithOldHash {
-				err = db.Model(&FirstPartyVuln{}).Where("id = ?", fp.OldHash).Delete(&FirstPartyVuln{}, "id = ?", fp.OldHash).Error
+				err = db.Model(&models.FirstPartyVuln{}).Where("id = ?", fp.OldHash).Delete(&models.FirstPartyVuln{}, "id = ?", fp.OldHash).Error
 				if err != nil {
 					slog.Error("could not delete old firstPartyVuln", "err", err)
 					return err
 				}
 
-				err = db.Model(&VulnEvent{}).Where("vuln_id = ?", fp.OldHash).UpdateColumn("vuln_id", newHash).Error
+				err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", fp.OldHash).UpdateColumn("vuln_id", newHash).Error
 				if err != nil {
 					slog.Error("could not update vuln events", "err", err)
 					return err

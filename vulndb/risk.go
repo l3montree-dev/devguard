@@ -9,7 +9,6 @@ import (
 	gocvss31 "github.com/pandatix/go-cvss/31"
 	gocvss40 "github.com/pandatix/go-cvss/40"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -60,12 +59,12 @@ func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth in
 	}
 }
 
-func RiskCalculation(cve models.CVE, env shared.Environmental) (common.RiskMetrics, string) {
+func RiskCalculation(cve models.CVE, env shared.Environmental) (dtos.RiskMetrics, string) {
 	if cve.Vector == "" {
-		return common.RiskMetrics{}, ""
+		return dtos.RiskMetrics{}, ""
 	}
 
-	risk := common.RiskMetrics{
+	risk := dtos.RiskMetrics{
 		BaseScore: float64(cve.CVSS),
 	}
 	/*
@@ -119,7 +118,7 @@ func RiskCalculation(cve models.CVE, env shared.Environmental) (common.RiskMetri
 		}
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return common.RiskMetrics{}, vector
+			return dtos.RiskMetrics{}, vector
 		}
 		// build up the temporal score
 		// if all affected components have a fixed version, we set it to official fix
@@ -167,7 +166,7 @@ func RiskCalculation(cve models.CVE, env shared.Environmental) (common.RiskMetri
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return common.RiskMetrics{}, vector
+			return dtos.RiskMetrics{}, vector
 		}
 		cvss.Set("E", "U") // nolint:errcheck
 		if len(cve.Exploits) > 0 {
@@ -212,7 +211,7 @@ func RiskCalculation(cve models.CVE, env shared.Environmental) (common.RiskMetri
 		cvss, err := gocvss20.ParseVector(vector)
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err, "cve", cve.CVE)
-			return common.RiskMetrics{}, vector
+			return dtos.RiskMetrics{}, vector
 		}
 		// cvss.Set("RL", "ND") // nolint:errcheck
 

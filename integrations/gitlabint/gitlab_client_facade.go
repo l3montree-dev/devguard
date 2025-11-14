@@ -1,4 +1,4 @@
-package integrations
+package gitlabint
 
 import (
 	"context"

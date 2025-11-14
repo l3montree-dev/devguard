@@ -1,6 +1,8 @@
 package router
 
 import (
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -32,6 +34,8 @@ func health(ctx echo.Context) error {
 func NewAPIV1Router(srv *echo.Echo,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin *client.APIClient,
+	assetController controllers.AssetController,
+
 ) APIV1Router {
 	apiV1Router := srv.Group("/api/v1")
 	// this makes the third party integrations available to all controllers

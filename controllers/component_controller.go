@@ -4,7 +4,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -23,8 +26,8 @@ func NewComponentController(componentRepository shared.ComponentRepository, asse
 }
 
 type licenseResponse struct {
-	License license `json:"license"`
-	Count   int     `json:"count"`
+	License licenses.License `json:"license"`
+	Count   int              `json:"count"`
 }
 
 func (componentController componentController) LicenseDistribution(ctx shared.Context) error {
@@ -42,18 +45,18 @@ func (componentController componentController) LicenseDistribution(ctx shared.Co
 		}
 	}
 
-	licenses, err := componentController.componentRepository.GetLicenseDistribution(nil,
+	fetchedLicenses, err := componentController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		utils.EmptyThenNil(artifactName),
 	)
 
-	var res = make([]licenseResponse, 0, len(licenses))
-	for id, count := range licenses {
+	var res = make([]licenseResponse, 0, len(fetchedLicenses))
+	for id, count := range fetchedLicenses {
 		// get the license from the license repository
-		l, ok := LicenseMap[strings.ToLower(id)]
+		l, ok := licenses.LicenseMap[strings.ToLower(id)]
 		if !ok {
-			l = license{
+			l = licenses.License{
 				LicenseID: id,
 				Name:      id,
 			}
@@ -111,10 +114,10 @@ func (componentController componentController) ListPaged(ctx shared.Context) err
 		return err
 	}
 
-	var componentsDTO = make([]componentDTO, 0, len(components.Data))
+	var componentsDTO = make([]dtos.ComponentDependencyDTO, 0, len(components.Data))
 
 	for _, component := range components.Data {
-		componentsDTO = append(componentsDTO, toDTO(component))
+		componentsDTO = append(componentsDTO, transformer.ComponentDependencyToDTO(component))
 	}
 
 	return ctx.JSON(200, shared.NewPaged(pageInfo, components.Total, componentsDTO))

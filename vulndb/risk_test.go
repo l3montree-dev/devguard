@@ -20,15 +20,15 @@ import (
 	"math"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 )
 
 type tableTest struct {
 	vector             string
-	metrics            common.RiskMetrics
+	metrics            dtos.RiskMetrics
 	env                shared.Environmental
 	exploits           []*models.Exploit
 	expectedVector     string
@@ -73,16 +73,16 @@ func TestCalculateRisk(t *testing.T) {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
 		}
 
-		if riskMetrics.WithEnvironment != common.CannotCalculateRisk {
-			t.Errorf("Expected with environment score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithEnvironment)
+		if riskMetrics.WithEnvironment != dtos.CannotCalculateRisk {
+			t.Errorf("Expected with environment score to be %f, got %f", dtos.CannotCalculateRisk, riskMetrics.WithEnvironment)
 		}
 
-		if riskMetrics.WithThreatIntelligence != common.CannotCalculateRisk {
-			t.Errorf("Expected with threat intelligence score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithThreatIntelligence)
+		if riskMetrics.WithThreatIntelligence != dtos.CannotCalculateRisk {
+			t.Errorf("Expected with threat intelligence score to be %f, got %f", dtos.CannotCalculateRisk, riskMetrics.WithThreatIntelligence)
 		}
 
-		if riskMetrics.WithEnvironmentAndThreatIntelligence != common.CannotCalculateRisk {
-			t.Errorf("Expected with environment and threat intelligence score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithEnvironmentAndThreatIntelligence)
+		if riskMetrics.WithEnvironmentAndThreatIntelligence != dtos.CannotCalculateRisk {
+			t.Errorf("Expected with environment and threat intelligence score to be %f, got %f", dtos.CannotCalculateRisk, riskMetrics.WithEnvironmentAndThreatIntelligence)
 		}
 
 		if vector != "" {
@@ -93,7 +93,7 @@ func TestCalculateRisk(t *testing.T) {
 	table := []tableTest{
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      5.9,
 				WithThreatIntelligence:               5.0,
@@ -105,7 +105,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.0,
@@ -121,7 +121,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -142,7 +142,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -166,7 +166,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -190,7 +190,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      2.6,
 				WithThreatIntelligence:               2.4,
@@ -202,7 +202,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      1.9,
 				WithThreatIntelligence:               2.4,
@@ -218,7 +218,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      3.4,
 				WithThreatIntelligence:               2.6,
@@ -242,7 +242,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      3.4,
 				WithThreatIntelligence:               2.6,
@@ -266,7 +266,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            7.5,
 				WithEnvironment:                      6.2,
 				WithThreatIntelligence:               4.8,
@@ -282,7 +282,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            7.5,
 				WithEnvironment:                      6.2,
 				WithThreatIntelligence:               6.6,
@@ -299,7 +299,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-			metrics: common.RiskMetrics{
+			metrics: dtos.RiskMetrics{
 				BaseScore:                            6.1,
 				WithEnvironment:                      6.8,
 				WithThreatIntelligence:               6.0,
@@ -406,7 +406,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should generate complete markdown with all sections", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore:                            7.5,
 				WithEnvironment:                      6.8,
 				WithThreatIntelligence:               7.2,
@@ -484,7 +484,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should handle no fixed version available", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 5.0,
 			},
 			cveID:                  "CVE-2023-5678",
@@ -505,7 +505,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should handle critical risk level", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 9.5,
 			},
 			cveID:                  "CVE-2023-9999",
@@ -525,7 +525,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should handle low risk level", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 2.1,
 			},
 			cveID:                  "CVE-2023-0001",
@@ -545,7 +545,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should handle multiple artifacts", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 6.0,
 			},
 			cveID:                  "CVE-2023-1111",
@@ -564,7 +564,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should handle zero risk level", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 0,
 			},
 			cveID:                  "CVE-2023-0000",
@@ -583,7 +583,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 	t.Run("should include proper markdown formatting", func(t *testing.T) {
 		explanation := Explanation{
-			RiskMetrics: common.RiskMetrics{
+			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 5.5,
 			},
 			cveID:                  "CVE-2023-FORMAT",

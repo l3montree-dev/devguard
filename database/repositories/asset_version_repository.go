@@ -22,13 +22,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type assetVersionRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
+	common.Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
 }
 
 func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {

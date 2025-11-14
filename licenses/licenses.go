@@ -12,7 +12,7 @@ import (
 //go:embed approved-licenses.json
 var licensesFile []byte
 
-type license struct {
+type License struct {
 	Reference             *string  `json:"reference"`
 	IsDeprecatedLicenseID *bool    `json:"isDeprecatedLicenseId"`
 	DetailsURL            *string  `json:"detailsURL"`
@@ -23,16 +23,16 @@ type license struct {
 	IsOsiApproved         bool     `json:"isOsiApproved"`
 }
 
-type licenseJSONFile struct {
+type LicenseJSONFile struct {
 	LicenseListVersion string    `json:"licenseListVersion"`
-	Licenses           []license `json:"licenses"`
+	Licenses           []License `json:"licenses"`
 }
 
-var LicenseMap map[string]license
+var LicenseMap map[string]License
 
 func init() {
-	LicenseMap = make(map[string]license)
-	var licenses licenseJSONFile
+	LicenseMap = make(map[string]License)
+	var licenses LicenseJSONFile
 	if err := json.Unmarshal(licensesFile, &licenses); err != nil {
 		panic(err)
 	}

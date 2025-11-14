@@ -3,46 +3,29 @@ package services
 import (
 	"net/http"
 
-	"go.uber.org/fx"
-
 	"github.com/l3montree-dev/devguard/common"
-	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/intoto"
-	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/project"
-	"github.com/l3montree-dev/devguard/internal/core/release"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"go.uber.org/fx"
 )
 
 // Module provides all service-layer constructors
 var Module = fx.Options(
-	fx.Provide(vuln.NewService),
-	fx.Provide(vuln.NewFirstPartyVulnService),
-	fx.Provide(vuln.NewLicenseRiskService),
-	fx.Provide(project.NewService),
-	fx.Provide(asset.NewService),
-	fx.Provide(vulndb.NewOpenSourceInsightService),
-	fx.Provide(utils.NewFireAndForgetSynchronizer),
-	fx.Provide(component.NewComponentService),
-	fx.Provide(assetversion.NewService),
+	fx.Provide(NewFirstPartyVulnService),
+	fx.Provide(NewLicenseRiskService),
+	fx.Provide(NewProjectService),
+	fx.Provide(NewAssetService),
+	fx.Provide(NewComponentService),
+	fx.Provide(NewAssetVersionService),
 	fx.Provide(func() http.Client {
 		return common.OutgoingConnectionClient
 	}),
 	fx.Provide(NewCSAFService),
-	fx.Provide(services.NewArtifactService),
-	fx.Provide(services.NewStatisticsService),
-	fx.Provide(intoto.NewInTotoService),
-	fx.Provide(org.NewService),
+	fx.Provide(NewArtifactService),
+	fx.Provide(NewStatisticsService),
+	fx.Provide(NewInTotoService),
+	fx.Provide(NewOrgService),
 	fx.Provide(scan.NewScanService),
-	fx.Provide(integrations.NewExternalEntityProviderService),
-	fx.Provide(release.NewService),
-	fx.Provide(pat.NewPatService),
+	fx.Provide(NewExternalEntityProviderService),
+	fx.Provide(NewReleaseService),
+	fx.Provide(NewPatService),
 )

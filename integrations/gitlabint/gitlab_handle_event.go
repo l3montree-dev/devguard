@@ -7,7 +7,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/org"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -127,7 +128,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		members, err := org.FetchMembersOfOrganization(event.Ctx)
+		members, err := services.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
 			return err
 		}

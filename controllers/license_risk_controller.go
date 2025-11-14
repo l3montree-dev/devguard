@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -54,7 +54,7 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 	}
 
 	// check if valid osi license
-	_, validLicense := component.LicenseMap[strings.ToLower(newLicenseRisk.FinalLicenseDecision)]
+	_, validLicense := licenses.LicenseMap[strings.ToLower(newLicenseRisk.FinalLicenseDecision)]
 	if !validLicense {
 		slog.Warn("license is not a valid osi license", "license", newLicenseRisk.FinalLicenseDecision)
 		return echo.NewHTTPError(400, "license is not a valid osi license")

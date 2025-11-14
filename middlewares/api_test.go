@@ -1,4 +1,4 @@
-package api
+package middlewares_test
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/auth"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -40,7 +41,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", auth.NoSession)
 
-		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -77,7 +78,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", session)
 
-		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -101,7 +102,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -128,7 +129,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 
-		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
+		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -163,7 +164,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -197,7 +198,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -233,7 +234,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -267,7 +268,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx.Set("session", &mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -280,7 +281,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockRBAC.AssertExpectations(t)
 	})
 }
-func TestNeededScope(t *testing.T) {
+func TestMiddlewareNeededScope(t *testing.T) {
 	t.Run("it should allow access if user has all required scopes", func(t *testing.T) {
 		// arrange
 		e := echo.New()
@@ -291,7 +292,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1", "scope2", "scope3"})
 		ctx.Set("session", mockSession)
 
-		middleware := NeededScope([]string{"scope1", "scope2"})
+		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
 
 		handler := func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
@@ -316,7 +317,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1"})
 		ctx.Set("session", mockSession)
 
-		middleware := NeededScope([]string{"scope1", "scope2"})
+		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -342,7 +343,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{})
 		ctx.Set("session", mockSession)
 
-		middleware := NeededScope([]string{"scope1"})
+		middleware := middlewares.NeededScope([]string{"scope1"})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -368,7 +369,7 @@ func TestNeededScope(t *testing.T) {
 		mockSession := auth.NewSession("user-id", []string{"scope1"})
 		ctx.Set("session", mockSession)
 
-		middleware := NeededScope([]string{})
+		middleware := middlewares.NeededScope([]string{})
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -419,7 +420,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 			return !av.LastAccessedAt.IsZero() && time.Since(av.LastAccessedAt) < time.Minute
 		})).Return(nil)
 
-		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -464,7 +465,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		// Mock the repository to return an error for default slug
 		mockAssetVersionRepository.On("ReadBySlug", assetID, "default").Return(models.AssetVersion{}, errors.New("not found"))
 
-		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -506,7 +507,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		// Mock the repository to return an error
 		mockAssetVersionRepository.On("ReadBySlug", assetID, assetVersionSlug).Return(models.AssetVersion{}, errors.New("not found"))
 
-		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -542,7 +543,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		// Don't set param names/values to simulate missing slug
 
-		middleware := assetVersionMiddleware(mockAssetVersionRepository)
+		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {

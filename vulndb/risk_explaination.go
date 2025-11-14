@@ -7,7 +7,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
@@ -212,7 +213,7 @@ func describeCVSS(cvss map[string]string) string {
 }
 
 type Explanation struct {
-	common.RiskMetrics
+	dtos.RiskMetrics
 
 	exploitMessage struct {
 		Short string
@@ -707,8 +708,7 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 	})
 
 	// add the commands to interact with the vulnerability
-	common.AddSlashCommandsToDependencyVulnADF(&adf)
-
+	jira.AddSlashCommandsToDependencyVulnADF(&adf)
 	return adf
 }
 
@@ -771,7 +771,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 }
 
 // provide the vector and risk metrics obtained from the risk calculation
-func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector string, riskMetrics common.RiskMetrics) Explanation {
+func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector string, riskMetrics dtos.RiskMetrics) Explanation {
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)

@@ -12,7 +12,6 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 package services
 
 import (
@@ -22,8 +21,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/ory/client-go"
 )
 
 type assetService struct {
@@ -148,4 +150,54 @@ func (s *assetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) str
 		return shared.GetBadgeSVG("CVSS", values)
 	}
 
+}
+
+func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
+	asset := shared.GetAsset(ctx)
+	// get rbac
+	rbac := shared.GetRBAC(ctx)
+
+	members, err := rbac.GetAllMembersOfAsset(asset.ID.String())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
+	}
+	if len(members) == 0 {
+		return []dtos.UserDTO{}, nil
+	}
+
+	// get the auth admin client from the context
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+	// fetch the users from the auth service
+	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
+	}
+
+	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
+		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+		var name string
+		if nameMap != nil {
+			if nameMap["first"] != nil {
+				name += nameMap["first"].(string)
+			}
+			if nameMap["last"] != nil {
+				name += " " + nameMap["last"].(string)
+			}
+		}
+		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
+		if err != nil {
+			return dtos.UserDTO{
+				ID:   i.Id,
+				Name: name,
+			}
+		}
+		return dtos.UserDTO{
+			ID:   i.Id,
+			Name: name,
+			Role: string(role),
+		}
+	})
+
+	return users, nil
 }

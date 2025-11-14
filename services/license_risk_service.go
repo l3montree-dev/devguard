@@ -98,7 +98,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	})
 
 	// Apply branch diffing to new license risks
-	newDetectedRisksNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newLicenseRisks, existingRisksOnOtherBranch)
+	newDetectedRisksNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffLicenseRisksBetweenBranches(newLicenseRisks, existingRisksOnOtherBranch)
 
 	// for fixed risks, either the component now has a valid license or the component was removed
 	// we can only check for now valid license components
@@ -272,8 +272,8 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(tx
 	return s.vulnEventRepository.SaveBatch(tx, utils.Flat(events))
 }
 
-// diffBetweenBranches compares found license risks with existing ones on other branches
-func diffBetweenBranches(foundLicenseRisks []models.LicenseRisk, existingRisks []models.LicenseRisk) ([]models.LicenseRisk, []models.LicenseRisk, [][]models.VulnEvent) {
+// diffLicenseRisksBetweenBranches compares found license risks with existing ones on other branches
+func diffLicenseRisksBetweenBranches(foundLicenseRisks []models.LicenseRisk, existingRisks []models.LicenseRisk) ([]models.LicenseRisk, []models.LicenseRisk, [][]models.VulnEvent) {
 	newDetectedRisksNotOnOtherBranch := make([]models.LicenseRisk, 0)
 	newDetectedButOnOtherBranchExisting := make([]models.LicenseRisk, 0)
 	existingEvents := make([][]models.VulnEvent, 0)

@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -10,7 +11,7 @@ import (
 )
 
 type LicenseRiskRepository struct {
-	Repository[string, models.LicenseRisk, *gorm.DB]
+	common.Repository[string, models.LicenseRisk, *gorm.DB]
 	db *gorm.DB
 }
 

@@ -25,13 +25,11 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
-	"github.com/l3montree-dev/devguard/internal/core/org"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -658,7 +656,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 
 		_, githubTicketNumber := githubTicketIDToIDAndNumber(*vuln.GetTicketID())
 
-		members, err := org.FetchMembersOfOrganization(event.Ctx)
+		members, err := services.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
 			return err
 		}
@@ -779,7 +777,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  github.String(expectedIssueState),
 		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(firstPartyVuln.RenderMarkdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   github.String(commonint.RenderMarkdown(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -789,9 +787,9 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 
 func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionSlug, orgSlug, projectSlug, owner, repo string) error {
 
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
-	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
+	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
@@ -800,7 +798,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
-	expectedIssueState := vuln.GetExpectedIssueState(asset, dependencyVuln)
+	expectedIssueState := integrations.GetExpectedIssueState(asset, dependencyVuln)
 
 	labels := commonint.GetLabels(dependencyVuln)
 	issueRequest := &github.IssueRequest{
@@ -877,7 +875,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	labels := commonint.GetLabels(firstPartyVuln)
 	issue := &github.IssueRequest{
 		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(firstPartyVuln.RenderMarkdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   github.String(commonint.RenderMarkdown(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -906,9 +904,9 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 }
 
 func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
-	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
+	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
@@ -934,7 +932,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 		// todo - we are editing the labels on each call. Actually we only need todo it once
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "risk:"+strings.ToLower(riskSeverity), &github.Label{
 			Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
-			Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
+			Color:       github.String(vulndb.RiskToColor(*dependencyVuln.RawRiskAssessment)),
 		})
 
 		if err != nil {
@@ -946,7 +944,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	if err == nil {
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "cvss-severity:"+strings.ToLower(cvssSeverity), &github.Label{
 			Description: github.String("CVSS severity of the vulnerability"),
-			Color:       github.String(risk.RiskToColor(float64(dependencyVuln.CVE.CVSS))),
+			Color:       github.String(vulndb.RiskToColor(float64(dependencyVuln.CVE.CVSS))),
 		})
 
 		if err != nil {

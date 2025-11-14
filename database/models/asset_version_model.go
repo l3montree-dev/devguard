@@ -36,7 +36,7 @@ type AssetVersion struct {
 
 	SigningPubKey  *string        `json:"signingPubKey" gorm:"type:text;"`
 	Metadata       database.JSONB `json:"metadata" gorm:"type:jsonb"`
-	LastAccessedAt time.Time      `json:"lastAccessedAt,omitempty" gorm:"default:NOW();"`
+	LastAccessedAt time.Time      `json:"lastAccessedAt" gorm:"default:NOW();"`
 }
 
 func (m AssetVersion) TableName() string {

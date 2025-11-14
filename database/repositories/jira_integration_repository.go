@@ -5,13 +5,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type jiraIntegrationRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.JiraIntegration, *gorm.DB]
+	common.Repository[uuid.UUID, models.JiraIntegration, *gorm.DB]
 }
 
 func NewJiraIntegrationRepository(db *gorm.DB) *jiraIntegrationRepository {

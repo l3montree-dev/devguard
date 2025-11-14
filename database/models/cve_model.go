@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
 )
 
@@ -41,7 +41,7 @@ type CVE struct {
 	Percentile            *float32             `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
 	AffectedComponents    []*AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
 	Vector                string               `json:"vector" gorm:"type:text;" cve:"vector"`
-	Risk                  common.RiskMetrics   `json:"risk" gorm:"-" cve:"risk"`
+	Risk                  dtos.RiskMetrics     `json:"risk" gorm:"-" cve:"risk"`
 	Exploits              []*Exploit           `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 

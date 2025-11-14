@@ -300,7 +300,7 @@ func TestYamlMetadata(t *testing.T) {
 		organizationName := "TestOrga"
 		projectTitle := "Komplette Fantasie"
 
-		metaData := createYAMLMetadata(organizationName, projectTitle, assetVersionName)
+		metaData := CreateYAMLMetadata(organizationName, projectTitle, assetVersionName)
 		yamlData, err := yaml.Marshal(metaData)
 		today := time.Now()
 		assert.Nil(t, err)
@@ -311,7 +311,7 @@ func TestYamlMetadata(t *testing.T) {
 		organizationName := "TestOrga"
 		projectTitle := ""
 
-		metaData := createYAMLMetadata(organizationName, projectTitle, assetVersionName)
+		metaData := CreateYAMLMetadata(organizationName, projectTitle, assetVersionName)
 		yamlData, err := yaml.Marshal(metaData)
 		today := time.Now()
 		assert.Nil(t, err)
@@ -409,7 +409,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -444,7 +444,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
 		assert.Empty(t, newDetectedButOnOtherBranchExisting)
@@ -477,7 +477,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -522,7 +522,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -561,7 +561,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -607,7 +607,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -640,7 +640,7 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 			},
 		}
 		markdownFile := bytes.Buffer{}
-		err := markdownTableFromSBOM(&markdownFile, &bom)
+		err := MarkdownTableFromSBOM(&markdownFile, &bom)
 		fmt.Println(markdownFile.String())
 		assert.Nil(t, err)
 		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** \n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
@@ -648,8 +648,8 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 }
 
 func TestBuildVeX(t *testing.T) {
-	// Create a mock service instance for testing
-	s := &service{}
+	// Create a mock assetVersionService instance for testing
+	s := &assetVersionService{}
 
 	t.Run("should handle justification from events", func(t *testing.T) {
 		asset := models.Asset{
@@ -848,7 +848,7 @@ func TestRedistributeCsafPurlVulns(t *testing.T) {
 		csafURL := csafRootPurl + ":https://example.com/csaf.json"
 		specificPurl := "pkg:npm/specific-package@1.0.0"
 
-		// Create BOM structure that CSAF service creates
+		// Create BOM structure that CSAF assetVersionService creates
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{

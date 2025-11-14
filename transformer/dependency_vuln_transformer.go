@@ -69,3 +69,52 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		Artifacts:             utils.Map(f.Artifacts, ArtifactModelToDTO),
 	}
 }
+
+func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.DetailedDependencyVulnDTO {
+	return dtos.DetailedDependencyVulnDTO{
+		DependencyVulnDTO: dtos.DependencyVulnDTO{
+			ID:                    dependencyVuln.ID,
+			Message:               dependencyVuln.Message,
+			AssetVersionName:      dependencyVuln.AssetVersionName,
+			AssetID:               dependencyVuln.AssetID.String(),
+			State:                 dependencyVuln.State,
+			CVE:                   CVEToDTO(dependencyVuln.CVE),
+			CVEID:                 dependencyVuln.CVEID,
+			ComponentPurl:         dependencyVuln.ComponentPurl,
+			ComponentDepth:        dependencyVuln.ComponentDepth,
+			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
+			Effort:                dependencyVuln.Effort,
+			RiskAssessment:        dependencyVuln.RiskAssessment,
+			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
+			Priority:              dependencyVuln.Priority,
+			LastDetected:          dependencyVuln.LastDetected,
+			CreatedAt:             dependencyVuln.CreatedAt,
+			Artifacts:             utils.Map(dependencyVuln.Artifacts, ArtifactModelToDTO),
+			TicketID:              dependencyVuln.TicketID,
+			TicketURL:             dependencyVuln.TicketURL,
+			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
+			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
+		},
+		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
+			return dtos.VulnEventDTO{
+				ID:                      ev.ID,
+				Type:                    ev.Type,
+				VulnID:                  ev.VulnID,
+				UserID:                  ev.UserID,
+				Justification:           ev.Justification,
+				MechanicalJustification: ev.MechanicalJustification,
+				AssetVersionName:        getAssetVersionName(dependencyVuln.Vulnerability, ev),
+				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
+				CreatedAt:               ev.CreatedAt,
+				Upstream:                ev.Upstream,
+			}
+		}),
+	}
+}
+
+func getAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string {
+	if ev.OriginalAssetVersionName != nil {
+		return *ev.OriginalAssetVersionName
+	}
+	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
+}

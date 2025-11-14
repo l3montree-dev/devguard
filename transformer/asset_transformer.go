@@ -20,6 +20,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 func AssetModelsToDTOs(assets []models.Asset) []dtos.AssetDTO {
@@ -46,36 +47,29 @@ func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDT
 
 func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 	return dtos.AssetDTO{
-		ID:          asset.ID,
-		Name:        asset.Name,
-		Avatar:      asset.Avatar,
-		Slug:        asset.Slug,
-		Description: asset.Description,
-		ProjectID:   asset.ProjectID,
-
-		AvailabilityRequirement:    asset.AvailabilityRequirement,
-		IntegrityRequirement:       asset.IntegrityRequirement,
-		ConfidentialityRequirement: asset.ConfidentialityRequirement,
-		ReachableFromInternet:      asset.ReachableFromInternet,
-
-		RepositoryID:   asset.RepositoryID,
-		RepositoryName: asset.RepositoryName,
-
-		SigningPubKey: asset.SigningPubKey,
-
+		ID:                           asset.ID,
+		Name:                         asset.Name,
+		Avatar:                       asset.Avatar,
+		Slug:                         asset.Slug,
+		Description:                  asset.Description,
+		ProjectID:                    asset.ProjectID,
+		AvailabilityRequirement:      asset.AvailabilityRequirement,
+		IntegrityRequirement:         asset.IntegrityRequirement,
+		ConfidentialityRequirement:   asset.ConfidentialityRequirement,
+		ReachableFromInternet:        asset.ReachableFromInternet,
+		RepositoryID:                 asset.RepositoryID,
+		RepositoryName:               asset.RepositoryName,
+		SigningPubKey:                asset.SigningPubKey,
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
 		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
-
-		VulnAutoReopenAfterDays: asset.VulnAutoReopenAfterDays,
-
-		AssetVersions: asset.AssetVersions,
-
-		ExternalEntityProviderID: asset.ExternalEntityProviderID,
-		ExternalEntityID:         asset.ExternalEntityID,
-		RepositoryProvider:       asset.RepositoryProvider,
-		IsPublic:                 asset.IsPublic,
-		ParanoidMode:             asset.ParanoidMode,
-		SharesInformation:        asset.SharesInformation,
+		VulnAutoReopenAfterDays:      asset.VulnAutoReopenAfterDays,
+		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
+		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
+		ExternalEntityID:             asset.ExternalEntityID,
+		RepositoryProvider:           asset.RepositoryProvider,
+		IsPublic:                     asset.IsPublic,
+		ParanoidMode:                 asset.ParanoidMode,
+		SharesInformation:            asset.SharesInformation,
 	}
 }
 

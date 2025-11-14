@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
+	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/utils"
 )
 

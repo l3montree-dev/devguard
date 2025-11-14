@@ -128,7 +128,7 @@ func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyI
 	return nil
 }
 
-func CompareStatesAndResolveDifferences(client integrations.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
+func CompareStatesAndResolveDifferences(client gitlabint.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
 	// if do not have a connection to a repo we do not need to do anything
 	if asset.RepositoryID == nil {
 		return nil

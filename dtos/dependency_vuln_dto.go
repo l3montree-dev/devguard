@@ -84,7 +84,7 @@ type DependencyVulnDTO struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
-type detailedDependencyVulnDTO struct {
+type DetailedDependencyVulnDTO struct {
 	DependencyVulnDTO
 	Events []VulnEventDTO `json:"events"`
 }

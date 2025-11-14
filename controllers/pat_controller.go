@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/labstack/echo/v4"
@@ -42,7 +43,7 @@ func (p *PatController) Create(c shared.Context) error {
 	userID := session.GetUserID()
 
 	// get the json body
-	var req CreateRequest
+	var req dtos.PatCreateRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -52,7 +53,7 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct := req.ToModel(userID)
+	patStruct := p.service.ToModel(req, userID)
 
 	err := p.patRepository.Create(nil, &patStruct)
 	if err != nil {
@@ -72,7 +73,7 @@ func (p *PatController) Create(c shared.Context) error {
 
 func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	// get the json body
-	var req RevokeByPrivateKeyRequest
+	var req dtos.RevokeByPrivateKeyRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}

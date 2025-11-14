@@ -650,7 +650,7 @@ func belongsToSamePackage(purl1, purl2 packageurl.PackageURL) bool {
 }
 
 // generate a specific csaf report version
-func generateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) (gocsaf.Advisory, error) {
+func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
 	// extract context information
 	cveID := ctx.Param("version")
@@ -1053,7 +1053,7 @@ func convertTimeToDateHourMinute(t time.Time) time.Time {
 }
 
 // signs data and returns the resulting signature
-func signCSAFReport(csafJSON []byte) ([]byte, error) {
+func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 	// configure pgp profile to meet the csaf standard
 	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())
 	privateKeyPath := os.Getenv("CSAF_OPENPGP_PRIVATE_KEY_PATH")

@@ -23,8 +23,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/l3montree-dev/devguard/auth"
-	middleware "github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/pubsub"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -42,7 +41,7 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter.Store(key, now.Add(15*time.Minute))
 				// Create a goroutine-safe context to avoid using the request context
-				safeCtx := shared.GoroutineSafeContext(ctx)
+				safeCtx := middlewares.GoroutineSafeContext(ctx)
 				go func() {
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
@@ -71,7 +70,7 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService share
 					limiter.Store(key, now.Add(15*time.Minute))
 
 					// Create a goroutine-safe context and capture the values we need
-					safeCtx := shared.GoroutineSafeContext(ctx)
+					safeCtx := middlewares.GoroutineSafeContext(ctx)
 					userID := shared.GetSession(ctx).GetUserID()
 					orgID := org.GetID()
 
@@ -98,12 +97,12 @@ func whoami(ctx echo.Context) error {
 }
 
 func BuildRouter() *echo.Echo {
-	projectScopedRBAC := middleware.ProjectAccessControlFactory(params.ProjectRepository)
-	assetScopedRBAC := AssetAccessControlFactory(params.AssetRepository)
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(params.ProjectRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(params.AssetRepository)
 
-	server := echohttp.Server()
+	server := middlewares.Server()
 
-	shareRouter := apiV1Router.Group("/public/:assetID", shareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	shareRouter := apiV1Router.Group("/public/:assetID", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	/**
@@ -116,19 +115,19 @@ func BuildRouter() *echo.Echo {
 	/**
 	Everything below this line needs authentication
 	*/
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(shared.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
-	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, NeededScope([]string{"manage"}))
+	sessionRouter := apiV1Router.Group("", middlewares.SessionMiddleware(shared.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
+	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, middlewares.NeededScope([]string{"manage"}))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
-	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, NeededScope([]string{"manage"}))
+	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, middlewares.NeededScope([]string{"manage"}))
 
 	/**
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	fastAccessRoutes := sessionRouter.Group("", NeededScope([]string{"scan"}), assetNameMiddleware(), MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
+	fastAccessRoutes := sessionRouter.Group("", middlewares.NeededScope([]string{"scan"}), assetNameMiddleware(), MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
 		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
@@ -142,7 +141,7 @@ func BuildRouter() *echo.Echo {
 	This does not happen in a org or anything.
 	We only need to make sure, that the user is logged in (sessionRouter)
 	*/
-	patRouter := sessionRouter.Group("/pats", NeededScope([]string{"manage"}))
+	patRouter := sessionRouter.Group("/pats", middlewares.NeededScope([]string{"manage"}))
 	patRouter.GET("/", patController.List)
 	patRouter.POST("/", patController.Create)
 	patRouter.POST("/revoke-by-private-key/", patController.RevokeByPrivateKey)
@@ -153,7 +152,7 @@ func BuildRouter() *echo.Echo {
 	*/
 	orgRouter := sessionRouter.Group("/organizations")
 	orgRouter.GET("/", orgController.List)
-	orgRouter.POST("/", orgController.Create, NeededScope([]string{"manage"}))
+	orgRouter.POST("/", orgController.Create, middlewares.NeededScope([]string{"manage"}))
 
 	/**
 	Organization scoped router
@@ -161,7 +160,7 @@ func BuildRouter() *echo.Echo {
 	*/
 	organizationRouter := orgRouter.Group("/:organization", MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
-	organizationRouter.DELETE("/", orgController.Delete, NeededScope([]string{"manage"}), OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
+	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 
@@ -179,7 +178,7 @@ func BuildRouter() *echo.Echo {
 	organizationRouter.GET("/projects/", projectController.List)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
-	organizationUpdateAccessControlRequired := organizationRouter.Group("", NeededScope([]string{"manage"}), OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
+	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
@@ -222,9 +221,9 @@ func BuildRouter() *echo.Echo {
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 
-	projectRouter.POST("/assets/", assetController.Create, NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
+	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
-	projectUpdateAccessControlRequired := projectRouter.Group("", NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
+	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.Test)
@@ -260,12 +259,12 @@ func BuildRouter() *echo.Echo {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 
-	assetRouter.DELETE("/", assetController.Delete, NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
-	assetRouter.GET("/secrets/", assetController.GetSecrets, NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, NeededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	assetRouter.POST("/in-toto/", intotoController.Create, NeededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
+	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, middlewares.NeededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.POST("/in-toto/", intotoController.Create, middlewares.NeededScope([]string{"scan"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
-	assetUpdateAccessControlRequired := assetRouter.Group("", NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
@@ -303,11 +302,11 @@ func BuildRouter() *echo.Echo {
 	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
 	assetVersionRouter.GET("/artifact-root-nodes/", assetVersionController.ReadRootNodes)
 
-	assetVersionRouter.POST("/artifacts/", artifactController.Create, NeededScope([]string{"manage"}))
+	assetVersionRouter.POST("/artifacts/", artifactController.Create, middlewares.NeededScope([]string{"manage"}))
 
-	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, NeededScope([]string{"manage"}))
-	assetVersionRouter.DELETE("/", assetVersionController.Delete, NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, middlewares.NeededScope([]string{"manage"}))
+	assetVersionRouter.DELETE("/", assetVersionController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	artifactRouter := assetVersionRouter.Group("/artifacts/:artifactName", artifactMiddleware(artifactRepository))
 
@@ -318,8 +317,8 @@ func BuildRouter() *echo.Echo {
 	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
 
-	artifactRouter.DELETE("/", artifactController.DeleteArtifact, NeededScope([]string{"manage"}))
-	artifactRouter.PUT("/", artifactController.UpdateArtifact, NeededScope([]string{"manage"}))
+	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}))
+	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}))
 	artifactRouter.POST("/sync-external-sources/", artifactController.SyncExternalSources)
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
@@ -329,25 +328,25 @@ func BuildRouter() *echo.Echo {
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
-	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, NeededScope([]string{"manage"}))
-	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, NeededScope([]string{"manage"}))
-	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, NeededScope([]string{"manage"}))
+	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, middlewares.NeededScope([]string{"manage"}))
+	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}))
+	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}))
 
 	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
 	firstPartyVulnRouter.GET("/", firstPartyVulnController.ListPaged)
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/", firstPartyVulnController.Read)
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
-	firstPartyVulnRouter.POST("/:firstPartyVulnID/", firstPartyVulnController.CreateEvent, NeededScope([]string{"manage"}))
-	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, NeededScope([]string{"manage"}))
+	firstPartyVulnRouter.POST("/:firstPartyVulnID/", firstPartyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}))
+	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}))
 
 	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
-	licenseRiskRouter.POST("/", licenseRiskController.Create, NeededScope([]string{"manage"}))
-	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, NeededScope([]string{"manage"}))
-	licenseRiskRouter.POST("/:licenseRiskID/mitigate/", licenseRiskController.Mitigate, NeededScope([]string{"manage"}))
-	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision/", licenseRiskController.MakeFinalLicenseDecision, NeededScope([]string{"manage"}))
+	licenseRiskRouter.POST("/", licenseRiskController.Create, middlewares.NeededScope([]string{"manage"}))
+	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, middlewares.NeededScope([]string{"manage"}))
+	licenseRiskRouter.POST("/:licenseRiskID/mitigate/", licenseRiskController.Mitigate, middlewares.NeededScope([]string{"manage"}))
+	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision/", licenseRiskController.MakeFinalLicenseDecision, middlewares.NeededScope([]string{"manage"}))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

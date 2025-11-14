@@ -9,14 +9,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
-	"github.com/ory/client-go"
 )
 
-type assetController struct {
+type AssetController struct {
 	assetRepository        shared.AssetRepository
 	assetVersionRepository shared.AssetVersionRepository
 	assetService           shared.AssetService
@@ -25,8 +25,8 @@ type assetController struct {
 	thirdPartyIntegration  shared.ThirdPartyIntegration
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.ThirdPartyIntegration) *assetController {
-	return &assetController{
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.ThirdPartyIntegration) *AssetController {
+	return &AssetController{
 		assetRepository:        repository,
 		assetVersionRepository: assetVersionRepository,
 		assetService:           assetService,
@@ -36,7 +36,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 	}
 }
 
-func (a *assetController) HandleLookup(ctx shared.Context) error {
+func (a *AssetController) HandleLookup(ctx shared.Context) error {
 	provider := ctx.QueryParam("provider")
 	if provider == "" {
 		return echo.NewHTTPError(400, "missing provider")
@@ -74,7 +74,7 @@ func (a *assetController) HandleLookup(ctx shared.Context) error {
 	return ctx.JSON(200, response)
 }
 
-func (a *assetController) List(ctx shared.Context) error {
+func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	rbac := shared.GetRBAC(ctx)
 	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(ctx).GetUserID())
@@ -90,7 +90,7 @@ func (a *assetController) List(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelsToDTOs(apps))
 }
 
-func (a *assetController) AttachSigningKey(ctx shared.Context) error {
+func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	// read the fingerprint from request body
@@ -112,7 +112,7 @@ func (a *assetController) AttachSigningKey(ctx shared.Context) error {
 	return nil
 }
 
-func (a *assetController) Delete(ctx shared.Context) error {
+func (a *AssetController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	err := a.assetRepository.Delete(nil, asset.GetID())
 	if err != nil {
@@ -121,7 +121,7 @@ func (a *assetController) Delete(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (a *assetController) GetSecrets(ctx shared.Context) error {
+func (a *AssetController) GetSecrets(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	secrets := map[string]string{}
@@ -137,7 +137,7 @@ func (a *assetController) GetSecrets(ctx shared.Context) error {
 	return ctx.JSON(200, secrets)
 }
 
-func (a *assetController) Create(ctx shared.Context) error {
+func (a *AssetController) Create(ctx shared.Context) error {
 	var req dtos.AssetCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -160,10 +160,10 @@ func (a *assetController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDTO(*asset))
 }
 
-func (a *assetController) Read(ctx shared.Context) error {
+func (a *AssetController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// fetch the members of the asset
-	members, err := FetchMembersOfAsset(ctx)
+	members, err := services.FetchMembersOfAsset(ctx)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (a *assetController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDetailsDTO(app, members))
 }
 
-func (a *assetController) Update(ctx shared.Context) error {
+func (a *AssetController) Update(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	req := ctx.Request().Body
@@ -298,7 +298,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 		}
 	}
 
-	members, err := FetchMembersOfAsset(ctx)
+	members, err := services.FetchMembersOfAsset(ctx)
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func (a *assetController) Update(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDetailsWithSecretsDTO(asset, members))
 }
 
-func (a *assetController) GetConfigFile(ctx shared.Context) error {
+func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
@@ -327,7 +327,7 @@ func (a *assetController) GetConfigFile(ctx shared.Context) error {
 	return ctx.JSON(200, configContent)
 }
 
-func (a *assetController) GetBadges(ctx shared.Context) error {
+func (a *AssetController) GetBadges(ctx shared.Context) error {
 
 	badgeSecret := ctx.Param("badgeSecret")
 	if badgeSecret == "" {
@@ -378,59 +378,8 @@ func (a *assetController) GetBadges(ctx shared.Context) error {
 
 	return ctx.String(200, svg)
 }
-
-func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
-	asset := shared.GetAsset(ctx)
-	// get rbac
-	rbac := shared.GetRBAC(ctx)
-
-	members, err := rbac.GetAllMembersOfAsset(asset.ID.String())
-	if err != nil {
-		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
-	}
-	if len(members) == 0 {
-		return []dtos.UserDTO{}, nil
-	}
-
-	// get the auth admin client from the context
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-	// fetch the users from the auth service
-	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
-
-	if err != nil {
-		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
-	}
-
-	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
-		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-		var name string
-		if nameMap != nil {
-			if nameMap["first"] != nil {
-				name += nameMap["first"].(string)
-			}
-			if nameMap["last"] != nil {
-				name += " " + nameMap["last"].(string)
-			}
-		}
-		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
-		if err != nil {
-			return dtos.UserDTO{
-				ID:   i.Id,
-				Name: name,
-			}
-		}
-		return dtos.UserDTO{
-			ID:   i.Id,
-			Name: name,
-			Role: string(role),
-		}
-	})
-
-	return users, nil
-}
-
-func (a *assetController) Members(c shared.Context) error {
-	members, err := FetchMembersOfAsset(c)
+func (a *AssetController) Members(c shared.Context) error {
+	members, err := services.FetchMembersOfAsset(c)
 	if err != nil {
 		return err
 	}
@@ -438,7 +387,7 @@ func (a *assetController) Members(c shared.Context) error {
 	return c.JSON(200, members)
 }
 
-func (a *assetController) InviteMembers(c shared.Context) error {
+func (a *AssetController) InviteMembers(c shared.Context) error {
 	asset := shared.GetAsset(c)
 
 	// get rbac
@@ -476,7 +425,7 @@ func (a *assetController) InviteMembers(c shared.Context) error {
 	return c.NoContent(200)
 }
 
-func (a *assetController) RemoveMember(c shared.Context) error {
+func (a *AssetController) RemoveMember(c shared.Context) error {
 	asset := shared.GetAsset(c)
 
 	// get rbac
@@ -499,7 +448,7 @@ func (a *assetController) RemoveMember(c shared.Context) error {
 	return c.NoContent(200)
 }
 
-func (a *assetController) ChangeRole(c shared.Context) error {
+func (a *AssetController) ChangeRole(c shared.Context) error {
 	asset := shared.GetAsset(c)
 
 	// get rbac

@@ -43,7 +43,7 @@ func (c cveHTTPController) ListPaged(ctx shared.Context) error {
 	env := shared.GetEnvironmental(ctx)
 
 	for i, cve := range pagedResp.Data {
-		risk, vector := risk.RiskCalculation(cve, env)
+		risk, vector := RiskCalculation(cve, env)
 		pagedResp.Data[i].Vector = vector
 		pagedResp.Data[i].Risk = risk
 	}
@@ -74,7 +74,7 @@ func (c cveHTTPController) Read(ctx shared.Context) error {
 
 	e := shared.GetEnvironmental(ctx)
 
-	risk, vector := risk.RiskCalculation(cve, e)
+	risk, vector := RiskCalculation(cve, e)
 	cve.Risk = risk
 	cve.Vector = vector
 

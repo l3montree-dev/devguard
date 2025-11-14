@@ -12,9 +12,9 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/csaf"
+
+	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -55,7 +55,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 
 	artifactService := services.NewArtifactService(artifactRepository, services.NewCSAFService(httpsClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
-	csafController := csaf.NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
+	csafController := NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
 
 	// Create test organization, project, asset, and asset version
 	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -77,7 +77,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
 			// set the params - we need todo that manually
 			// we can even test the csaf middleware right here.
-			assert.NotNil(t, api.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.ServeCSAFReportRequest)(ctx))
+			assert.NotNil(t, middlewares.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.ServeCSAFReportRequest)(ctx))
 		}))
 
 		csafURL := testserver.URL + "/provider-metadata.json"
@@ -93,7 +93,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 
 	createDependencyVulns(db, asset.ID, assetVersion.Name, artifact)
 	t.Run("should consume own produced csaf reports", func(t *testing.T) {
-		csafMiddleware := api.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)
+		csafMiddleware := middlewares.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)
 
 		testserver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// lets do some routing here
@@ -101,7 +101,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 				ctx := app.NewContext(r, w)
 				ctx.SetParamNames("organization")
 				ctx.SetParamValues(org.Slug)
-				assert.Nil(t, api.CsafMiddleware(true, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.GetProviderMetadataForOrganization)(ctx))
+				assert.Nil(t, middlewares.CsafMiddleware(true, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.GetProviderMetadataForOrganization)(ctx))
 				return
 			} else if strings.Contains(r.URL.Path, "/openpgp/") {
 				ctx := app.NewContext(r, w)

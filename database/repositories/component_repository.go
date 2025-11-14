@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -31,7 +32,7 @@ import (
 )
 
 type componentRepository struct {
-	Repository[string, models.Component, *gorm.DB]
+	common.Repository[string, models.Component, *gorm.DB]
 	db *gorm.DB
 }
 

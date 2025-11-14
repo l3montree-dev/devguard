@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type projectRiskHistoryRepository struct {
 	db *gorm.DB
-	Repository[uint, models.ProjectRiskHistory, *gorm.DB]
+	common.Repository[uint, models.ProjectRiskHistory, *gorm.DB]
 }
 
 func NewProjectRiskHistoryRepository(db *gorm.DB) *projectRiskHistoryRepository {

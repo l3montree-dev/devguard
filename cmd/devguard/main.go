@@ -23,11 +23,13 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
-	"github.com/l3montree-dev/devguard/controller"
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/vulndb"
+
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
-	"github.com/l3montree-dev/devguard/service"
+	"github.com/l3montree-dev/devguard/pubsub"
+
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
@@ -85,7 +87,7 @@ func main() {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
@@ -138,6 +140,6 @@ func initSentry() {
 
 // AllModules combines all FX modules for easy import
 var AllModules = fx.Options(
-	controller.ControllerModule,
-	service.ServiceModule,
+	controllers.Module,
+	services.Module,
 )

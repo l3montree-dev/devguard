@@ -29,7 +29,6 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -140,7 +139,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{
 		Licenses: []string{},
 	}, nil)
-	controller := tests.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
+	controller := CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 

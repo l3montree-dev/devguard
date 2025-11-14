@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/dtos"
 )

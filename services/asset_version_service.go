@@ -159,7 +159,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 
 				hash = firstPartyVulnerability.CalculateHash()
 				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
-					snippetContents, err := transformer.FromJSONSnippetContents(&existingVuln)
+					snippetContents, err := transformer.FromJSONSnippetContents(existingVuln)
 					if err != nil {
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
 					}
@@ -251,7 +251,7 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 		return vuln.State == dtos.VulnStateOpen
 	})
 
-	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newVulns, existingVulnsOnOtherBranch)
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(newVulns, existingVulnsOnOtherBranch)
 
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx shared.DB) error {
@@ -450,7 +450,7 @@ type Diffable interface {
 	GetEvents() []models.VulnEvent
 }
 
-func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
+func diffVulnsBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
 	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
 	newDetectedButOnOtherBranchExisting := make([]T, 0)
 	existingEvents := make([][]models.VulnEvent, 0)
@@ -642,7 +642,7 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	fixedVulns = utils.Filter(fixedVulns, filterPredicate)
 	fixedOnThisArtifactName = utils.Filter(fixedOnThisArtifactName, filterPredicate)
 
-	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
 		// make sure to first create a user detected event for vulnerabilities with just upstream events
@@ -834,7 +834,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 		if _, ok := existingComponentPurls[componentPackageURL]; !ok {
 			components[componentPackageURL] = models.Component{
 				Purl:          componentPackageURL,
-				ComponentType: models.ComponentType(c.Type),
+				ComponentType: dtos.ComponentType(c.Type),
 				Version:       c.Version,
 			}
 		}
@@ -1149,11 +1149,11 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 					Severity: scoreToSeverity(cvss),
 				},
 				{
-					Vector:        vulndb.Vector,
+					Vector:        risk.Vector,
 					Method:        "DevGuard",
-					Score:         &vulndb.Risk,
-					Severity:      scoreToSeverity(vulndb.Risk),
-					Justification: vulndb.String(),
+					Score:         &risk.Risk,
+					Severity:      scoreToSeverity(risk.Risk),
+					Justification: risk.String(),
 				},
 			}
 
@@ -1257,9 +1257,9 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 			if event.Type == dtos.EventTypeFixed ||
 				event.Type == dtos.EventTypeReopened ||
 				event.Type == dtos.EventTypeAccepted ||
-				event.Type == models.EventTypeMitigate ||
+				event.Type == dtos.EventTypeMitigate ||
 				event.Type == dtos.EventTypeFalsePositive ||
-				event.Type == models.EventTypeMarkedForTransfer ||
+				event.Type == dtos.EventTypeMarkedForTransfer ||
 				event.Type == dtos.EventTypeComment {
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
@@ -1277,7 +1277,7 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 }
 
 // write the components from bom to the output file following the template
-func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
+func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 
 	type componentData struct {
 		Package  string
@@ -1420,7 +1420,7 @@ Total Components: {{ .TotalComponents }}
 }
 
 // generate the metadata used to generate the sbom-pdf and return it as struct
-func createYAMLMetadata(organizationName string, assetName string, assetVersionName string) yamlMetadata {
+func CreateYAMLMetadata(organizationName string, assetName string, assetVersionName string) dtos.YamlMetadata {
 	today := time.Now()
 	title1, title2 := createTitles(assetName + "@" + assetVersionName)
 
@@ -1429,8 +1429,8 @@ func createYAMLMetadata(organizationName string, assetName string, assetVersionN
 	}
 
 	// TO-DO: add sha hash to test the integrity
-	return yamlMetadata{
-		Vars: yamlVars{
+	return dtos.YamlMetadata{
+		Vars: dtos.YamlVars{
 			DocumentTitle:    "DevGuard Report",
 			PrimaryColor:     "\"#FF5733\"",
 			Version:          assetVersionName,

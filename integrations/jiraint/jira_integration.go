@@ -14,18 +14,16 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
-	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb"
-
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
+	"github.com/l3montree-dev/devguard/jira"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 )
 
 type jiraRepository struct {
@@ -414,7 +412,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
-	description := firstPartyVuln.RenderADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)
+	description := commonint.RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)
 	summary := firstPartyVuln.Title()
 
 	issue := &jira.Issue{
@@ -613,7 +611,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 	return nil
 }
 
-func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState vuln.ExpectedIssueState, client *jira.Client, vulnTicketID *string) error {
+func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState integrations.ExpectedIssueState, client *jira.Client, vulnTicketID *string) error {
 
 	doUpdateStatus := false
 
@@ -646,13 +644,13 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	var stateID string
 
 	if issueStatusID == jira.StatusCategoryToDo || issueStatusID == jira.StatusCategoryInProgress {
-		if expectedIssueState != vuln.ExpectedIssueStateOpen {
+		if expectedIssueState != integrations.ExpectedIssueStateOpen {
 			doUpdateStatus = true
 			stateID = doneStatusID
 		}
 	}
 	if issueStatusID == jira.StatusCategoryDone {
-		if expectedIssueState != vuln.ExpectedIssueStateClosed {
+		if expectedIssueState != integrations.ExpectedIssueStateClosed {
 			doUpdateStatus = true
 			stateID = openStatusID
 		}
@@ -732,7 +730,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		return fmt.Errorf("failed to edit Jira issue: %w", err)
 	}
 
-	expectedIssueState := vuln.GetExpectedIssueState(asset, dependencyVuln)
+	expectedIssueState := integrations.GetExpectedIssueState(asset, dependencyVuln)
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, dependencyVuln.GetTicketID())
 	if err != nil {
@@ -772,7 +770,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 			Reporter: &jira.User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: firstPartyVuln.RenderADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug),
+			Description: commonint.RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug),
 			Summary:     firstPartyVuln.Title(),
 		},
 	}
@@ -783,7 +781,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 		return fmt.Errorf("failed to edit Jira issue: %w", err)
 	}
 
-	expectedIssueState := vuln.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln)
+	expectedIssueState := integrations.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln)
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, firstPartyVuln.GetTicketID())
 	if err != nil {
@@ -842,7 +840,7 @@ func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 	if err := i.jiraIntegrationRepository.Save(nil, jiraIntegration); err != nil {
 		return err
 	}
-	return ctx.JSON(200, common.JiraIntegrationDTO{
+	return ctx.JSON(200, dtos.JiraIntegrationDTO{
 		ID:              jiraIntegration.ID.String(),
 		Name:            jiraIntegration.Name,
 		URL:             jiraIntegration.URL,

@@ -16,33 +16,41 @@
 package controllers
 
 import (
-	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/vulndb"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"go.uber.org/fx"
 )
 
 // Module provides all HTTP controller constructors
 var Module = fx.Options(
+	// Asset Management
+	fx.Provide(NewAssetController),
+	fx.Provide(NewAssetVersionController),
 	fx.Provide(NewArtifactController),
-	fx.Provide(vuln.NewHTTPController),
-	fx.Provide(events.NewVulnEventController),
-	fx.Provide(compliance.NewPolicyController),
-	fx.Provide(pat.NewHTTPController),
-	fx.Provide(org.NewHTTPController),
-	fx.Provide(project.NewHTTPController),
-	fx.Provide(asset.NewHTTPController),
-	fx.Provide(scan.NewHTTPController),
-	fx.Provide(assetversion.NewAssetVersionController),
-	fx.Provide(attestation.NewAttestationController),
-	fx.Provide(intoto.NewHTTPController),
-	fx.Provide(component.NewHTTPController),
-	fx.Provide(compliance.NewHTTPController),
-	fx.Provide(statistics.NewHTTPController),
-	fx.Provide(vuln.NewFirstPartyVulnController),
-	fx.Provide(vuln.NewLicenseRiskController),
-	fx.Provide(release.NewReleaseController),
-	fx.Provide(vulndb.NewHTTPController),
-	fx.Provide(csaf.NewCSAFController),
-	fx.Provide(integrations.NewIntegrationController),
+	fx.Provide(NewComponentController),
+
+	// Vulnerability Management
+	fx.Provide(NewDependencyVulnController),
+	fx.Provide(NewFirstPartyVulnController),
+	fx.Provide(NewVulnEventController),
+	fx.Provide(NewLicenseRiskController),
+
+	// Organization & Project Management
+	fx.Provide(NewOrganizationController),
+	fx.Provide(NewProjectController),
+
+	// Security & Compliance
+	fx.Provide(NewCSAFController),
+	fx.Provide(NewComplianceController),
+	fx.Provide(NewAttestationController),
+	fx.Provide(NewInToToController),
+	fx.Provide(NewPolicyController),
+
+	// Integrations
+	fx.Provide(NewIntegrationController),
+
+	// Release & Statistics
+	fx.Provide(NewReleaseController),
+	fx.Provide(NewStatisticsController),
+
+	// Authentication & Access
+	fx.Provide(NewPatController),
 )

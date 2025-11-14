@@ -60,7 +60,7 @@ func TestBuildVEX(t *testing.T) {
 
 		assert.Empty(t, VEXResult.Vulnerabilities)
 	})
-	vuln1, vuln2 := createDependencyVulns(db, asset.ID, assetVersion.Name, artifactName)
+	vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(db, asset.ID, assetVersion.Name, artifactName)
 	t.Run("build Vex with everything set as intended", func(t *testing.T) {
 		//setup function call
 		recorder := httptest.NewRecorder()
@@ -154,7 +154,7 @@ func TestBuildVEX(t *testing.T) {
 	})
 }
 
-func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) (models.DependencyVuln, models.DependencyVuln) {
+func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) (models.DependencyVuln, models.DependencyVuln) {
 
 	var err error
 

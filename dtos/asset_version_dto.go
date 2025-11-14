@@ -15,4 +15,14 @@ type InformationSourceDTO struct {
 }
 
 type AssetVersionDTO struct {
+	CreatedAt      string         `json:"createdAt"`
+	UpdatedAt      string         `json:"updatedAt"`
+	Name           string         `json:"name"`
+	AssetID        string         `json:"assetId"`
+	DefaultBranch  bool           `json:"defaultBranch"`
+	Slug           string         `json:"slug"`
+	Type           string         `json:"type"`
+	SigningPubKey  *string        `json:"signingPubKey,omitempty"`
+	Metadata       map[string]any `json:"metadata,omitempty"`
+	LastAccessedAt string         `json:"lastAccessedAt,omitempty"`
 }

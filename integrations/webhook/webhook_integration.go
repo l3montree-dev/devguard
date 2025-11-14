@@ -9,7 +9,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -94,7 +93,7 @@ func (w *WebhookIntegration) Update(ctx shared.Context) error {
 		slog.Error("failed to update webhook integration", "err", err)
 		return ctx.JSON(500, "failed to update webhook integration")
 	}
-	return ctx.JSON(200, common.WebhookIntegrationDTO{
+	return ctx.JSON(200, dtos.WebhookIntegrationDTO{
 		ID:          webhookIntegration.ID.String(),
 		Name:        *webhookIntegration.Name,
 		Description: *webhookIntegration.Description,
@@ -143,7 +142,7 @@ func (w *WebhookIntegration) Save(ctx shared.Context) error {
 		slog.Error("failed to save webhook integration", "err", err)
 		return ctx.JSON(500, "failed to save webhook integration")
 	}
-	return ctx.JSON(200, common.WebhookIntegrationDTO{
+	return ctx.JSON(200, dtos.WebhookIntegrationDTO{
 		ID:          webhookIntegration.ID.String(),
 		Name:        *webhookIntegration.Name,
 		Description: *webhookIntegration.Description,

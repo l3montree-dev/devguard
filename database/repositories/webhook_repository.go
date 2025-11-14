@@ -5,13 +5,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type webhookRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.WebhookIntegration, *gorm.DB]
+	common.Repository[uuid.UUID, models.WebhookIntegration, *gorm.DB]
 }
 
 func NewWebhookRepository(db *gorm.DB) *webhookRepository {

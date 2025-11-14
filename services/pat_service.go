@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/yaronf/httpsign"
@@ -28,26 +29,26 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 	}
 }
 
-func (p *PatService) ToModel(request PatCreateRequest, userID string) models.PAT {
+func (p *PatService) ToModel(request dtos.PatCreateRequest, userID string) models.PAT {
 	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-	fingerprint, err := pubKeyToFingerprint(p.PubKey)
+	fingerprint, err := pubKeyToFingerprint(request.PubKey)
 	if err != nil {
 		slog.Error("could not convert public key to fingerprint", "err", err)
 		return models.PAT{}
 	}
 
 	//check if the scopes are valid
-	ok := utils.ContainsAll(AllowedScopes, strings.Fields(p.Scopes))
+	ok := utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes))
 	if !ok {
-		slog.Error("invalid scopes", "scopes", p.Scopes)
+		slog.Error("invalid scopes", "scopes", request.Scopes)
 		return models.PAT{}
 	}
 
 	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
-		Description: p.Description,
-		Scopes:      p.Scopes,
-		PubKey:      p.PubKey,
+		Description: request.Description,
+		Scopes:      request.Scopes,
+		PubKey:      request.PubKey,
 		Fingerprint: fingerprint,
 	}
 

@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -361,7 +362,7 @@ func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Projec
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
-			if !ShouldCreateIssues(assetVersion) || !ShouldCreateThisIssue(asset, &vulnerability) {
+			if !integrations.ShouldCreateIssues(assetVersion) || !integrations.ShouldCreateThisIssue(asset, &vulnerability) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {
@@ -379,14 +380,14 @@ func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Projec
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *DependencyVulnService) createIssue(vulnerability models.DependencyVulnService, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
+func (s *DependencyVulnService) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
-func (s *DependencyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVulnService) error {
+func (s *DependencyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type artifactRiskHistoryRepository struct {
 	db *gorm.DB
-	Repository[uint, models.ArtifactRiskHistory, *gorm.DB]
+	common.Repository[uint, models.ArtifactRiskHistory, *gorm.DB]
 }
 
 func NewArtifactRiskHistoryRepository(db *gorm.DB) *artifactRiskHistoryRepository {

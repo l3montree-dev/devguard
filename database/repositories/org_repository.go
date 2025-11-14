@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/transformer"
 	"gorm.io/gorm"
@@ -26,7 +27,7 @@ import (
 
 type orgRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.Org, *gorm.DB]
+	common.Repository[uuid.UUID, models.Org, *gorm.DB]
 }
 
 func NewOrgRepository(db *gorm.DB) *orgRepository {

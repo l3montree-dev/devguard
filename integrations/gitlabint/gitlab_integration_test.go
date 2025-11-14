@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 

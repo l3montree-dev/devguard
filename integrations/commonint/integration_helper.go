@@ -74,7 +74,7 @@ func getLanguage(URI string) string {
 	return extension
 }
 
-func RenderADF(firstPartyVuln *models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
+func RenderADF(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
 	snippets, err := transformer.FromJSONSnippetContents(firstPartyVuln)
 	if err != nil {
 		slog.Error("could not parse snippet contents", "error", err)
@@ -138,7 +138,7 @@ func RenderADF(firstPartyVuln *models.FirstPartyVuln, baseURL, orgSlug, projectS
 	return adf
 }
 
-func RenderMarkdown(firstPartyVuln *models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
+func RenderMarkdown(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
 	var str strings.Builder
 	str.WriteString("## Vulnerability Description\n\n")
 	str.WriteString(*firstPartyVuln.Message)

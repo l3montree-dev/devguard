@@ -21,7 +21,9 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -130,7 +132,7 @@ func (a *assetVersionController) AffectedComponents(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) dtos.DependencyVulnDTO {
-		return dtos.DependencyVulnToDto(m)
+		return transformer.DependencyVulnToDTO(m)
 	}))
 }
 
@@ -417,21 +419,6 @@ func (a *assetVersionController) RefetchLicenses(ctx shared.Context) error {
 	})
 }
 
-type yamlVars struct {
-	DocumentTitle    string `yaml:"document_title"`
-	PrimaryColor     string `yaml:"primary_color"`
-	Version          string `yaml:"version"`
-	TimeOfGeneration string `yaml:"generation_date"`
-	ProjectTitle1    string `yaml:"app_title_part_one"`
-	ProjectTitle2    string `yaml:"app_title_part_two"`
-	OrganizationName string `yaml:"organization_name"`
-	Integrity        string `yaml:"integrity"`
-}
-
-type yamlMetadata struct {
-	Vars yamlVars `yaml:"metadata_vars"`
-}
-
 var latexReplacer = strings.NewReplacer(
 	"\\", "\\textbackslash{}",
 	"&", "\\&",
@@ -596,7 +583,7 @@ func (a *assetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 
 	// create the metadata for the pdf and writing it into a buffer
 	metaDataFile := bytes.Buffer{}
-	metaData := createYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
+	metaData := a.assetVersionService.CreateYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
 	parsedYAML, err := yaml.Marshal(metaData)
 	if err != nil {
 		return err
@@ -678,14 +665,14 @@ func (a *assetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = markdownTableFromSBOM(&markdownFile, bom.EjectSBOM(assetID))
+	err = services.MarkdownTableFromSBOM(&markdownFile, bom.EjectSBOM(assetID))
 	if err != nil {
 		return err
 	}
 
 	// create the metadata for the pdf and writing it into a buffer
 	metaDataFile := bytes.Buffer{}
-	metaData := createYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
+	metaData := services.CreateYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
 	parsedYAML, err := yaml.Marshal(metaData)
 	if err != nil {
 		return err
@@ -909,9 +896,9 @@ func (a *assetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion.DefaultBranch = true
 	return ctx.JSON(200, assetVersion)
 }
-func extractInformationSourceFromPurl(purl string) InformationSourceDTO {
+func extractInformationSourceFromPurl(purl string) dtos.InformationSourceDTO {
 
-	InformationSourcesDTO := InformationSourceDTO{}
+	InformationSourcesDTO := dtos.InformationSourceDTO{}
 	if strings.HasPrefix(purl, "vex:") {
 		InformationSourcesDTO.Type = "vex"
 		InformationSourcesDTO.URL = strings.TrimPrefix(purl, "vex:")
@@ -943,19 +930,19 @@ func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}
 	// fetch all root nodes
-	errgroup := utils.ErrGroup[map[string][]InformationSourceDTO](10)
+	errgroup := utils.ErrGroup[map[string][]dtos.InformationSourceDTO](10)
 	for _, artifact := range artifacts {
-		errgroup.Go(func() (map[string][]InformationSourceDTO, error) {
+		errgroup.Go(func() (map[string][]dtos.InformationSourceDTO, error) {
 			rootNodes, err := a.componentService.FetchInformationSources(&artifact)
 			if err != nil {
 				return nil, err
 			}
-			return map[string][]InformationSourceDTO{
+			return map[string][]dtos.InformationSourceDTO{
 				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
 					el models.ComponentDependency,
-				) InformationSourceDTO {
+				) dtos.InformationSourceDTO {
 					return extractInformationSourceFromPurl(el.DependencyPurl)
-				}), func(s InformationSourceDTO) InformationSourceDTO {
+				}), func(s dtos.InformationSourceDTO) dtos.InformationSourceDTO {
 					return s
 				}),
 			}, nil
@@ -966,7 +953,7 @@ func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch root nodes of artifacts").WithInternal(err)
 	}
 
-	result := make(map[string][]InformationSourceDTO)
+	result := make(map[string][]dtos.InformationSourceDTO)
 	// merge the maps
 	for _, r := range results {
 		maps.Copy(result, r)

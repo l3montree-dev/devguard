@@ -14,6 +14,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/services"
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -24,10 +25,10 @@ func TestProjectCreation(t *testing.T) {
 	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	controller := project.NewHTTPController(
+	controller := NewProjectController(
 		repositories.NewProjectRepository(db),
 		repositories.NewAssetRepository(db),
-		project.NewService(
+		services.NewProjectService(
 			repositories.NewProjectRepository(db),
 			repositories.NewAssetRepository(db),
 		),

@@ -8,7 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
+
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -42,7 +44,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
 	var vulnEvent models.VulnEvent
-	var client shared.GitlabClientFacade
+	var client GitlabClientFacade
 	var vuln models.Vuln
 	var issueID int
 	var projectID int

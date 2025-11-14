@@ -10,7 +10,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -26,7 +25,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := org.NewHTTPController(nil, nil, nil, nil, nil)
+		h := NewOrganizationController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -41,7 +40,7 @@ func TestCreate(t *testing.T) {
 
 		shared.SetOrg(ctx, models.Org{Name: "fantasy", Slug: "fantasy"})
 
-		h := org.NewHTTPController(nil, nil, nil, nil, nil)
+		h := NewOrganizationController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -55,7 +54,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := org.NewHTTPController(nil, nil, nil, nil, nil)
+		h := NewOrganizationController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -79,7 +78,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetOrg(ctx, models.Org{})
 		shared.SetRBAC(ctx, accesscontrol)
 
-		_, err := org.FetchMembersOfOrganization(ctx)
+		_, err := FetchMembersOfOrganization(ctx)
 		if err == nil {
 
 			t.Fail()
@@ -104,7 +103,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetRBAC(ctx, accesscontrol)
 		shared.SetAuthAdminClient(ctx, adminClient)
 
-		_, err := org.FetchMembersOfOrganization(ctx)
+		_, err := FetchMembersOfOrganization(ctx)
 		if err == nil {
 
 			t.Fail()
@@ -133,7 +132,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		_, err := org.FetchMembersOfOrganization(ctx)
+		_, err := FetchMembersOfOrganization(ctx)
 		if err != nil {
 			t.Fail()
 		}
@@ -161,7 +160,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		_, err := org.FetchMembersOfOrganization(ctx)
+		_, err := FetchMembersOfOrganization(ctx)
 		if err != nil {
 
 			t.Fail()

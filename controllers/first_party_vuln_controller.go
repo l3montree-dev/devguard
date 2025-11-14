@@ -8,6 +8,8 @@ import (
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -264,7 +266,7 @@ func (c firstPartyVulnController) Sarif(ctx shared.Context) error {
 				},
 			}
 
-			snippet, err := vuln.FromJSONSnippetContents()
+			snippet, err := transformer.FromJSONSnippetContents(vuln)
 			if err != nil {
 				slog.Error("could not marshal snippet contents", "err", err)
 			}
@@ -297,9 +299,9 @@ func (c firstPartyVulnController) Sarif(ctx shared.Context) error {
 	return ctx.JSON(200, sarif)
 }
 
-func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {
-	return detailedFirstPartyVulnDTO{
-		FirstPartyVulnDTO: FirstPartyVulnToDto(firstPartyVuln),
+func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dtos.DetailedFirstPartyVulnDTO {
+	return dtos.DetailedFirstPartyVulnDTO{
+		FirstPartyVulnDTO: transformer.FirstPartyVulnToDto(firstPartyVuln),
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
 			return dtos.VulnEventDTO{
 				ID:                      ev.ID,

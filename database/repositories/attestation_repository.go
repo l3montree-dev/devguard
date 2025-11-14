@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -9,7 +10,7 @@ import (
 
 type attestationRepository struct {
 	db *gorm.DB
-	Repository[string, models.Attestation, *gorm.DB]
+	common.Repository[string, models.Attestation, *gorm.DB]
 }
 
 func NewAttestationRepository(db *gorm.DB) *attestationRepository {

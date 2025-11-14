@@ -1,4 +1,4 @@
-package services
+package tests
 
 import (
 	"net/http"
@@ -11,7 +11,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -41,11 +40,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		// Reset the global license cache
 
 		// Initialize database container
-		db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+		db, terminate := InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
 		// Create test data using the utility function
-		_, _, _, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+		_, _, _, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 		// Create test components with different license scenarios
 		componentWithInvalidLicense := models.Component{
@@ -201,11 +200,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 	t.Run("should not create duplicate license risks for existing entries", func(t *testing.T) {
 
 		// Initialize database container
-		db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+		db, terminate := InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 
 		// Create test data
-		_, _, _, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+		_, _, _, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 		// Create component with invalid license
 		componentWithInvalidLicense := models.Component{

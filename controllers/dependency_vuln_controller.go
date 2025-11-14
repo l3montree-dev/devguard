@@ -8,6 +8,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -23,7 +25,7 @@ type dependencyVulnsByPackage struct {
 	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
-	DependencyVulns []DependencyVulnDTO `json:"vulns"`
+	DependencyVulns []dtos.DependencyVulnDTO `json:"vulns"`
 }
 
 type dependencyVulnController struct {
@@ -76,7 +78,7 @@ func (controller dependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
-		return convertToDetailedDTO(dependencyVuln)
+		return transformer.DependencyVulnToDetailedDTO(dependencyVuln)
 	}))
 }
 
@@ -98,7 +100,7 @@ func (controller dependencyVulnController) ListByProjectPaged(ctx shared.Context
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
-		return convertToDetailedDTO(dependencyVuln)
+		return transformer.DependencyVulnToDetailedDTO(dependencyVuln)
 	}))
 }
 
@@ -120,7 +122,7 @@ func (controller dependencyVulnController) ListByAssetIDWithoutHandledExternalEv
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
-		return convertToDetailedDTO(dependencyVuln)
+		return transformer.DependencyVulnToDetailedDTO(dependencyVuln)
 	}))
 }
 
@@ -135,7 +137,7 @@ func (controller dependencyVulnController) ListPaged(ctx shared.Context) error {
 		}
 
 		return ctx.JSON(200, dependencyVulns.Map(func(dependencyVuln models.DependencyVuln) any {
-			return convertToDetailedDTO(dependencyVuln)
+			return transformer.DependencyVulnToDetailedDTO(dependencyVuln)
 		}))
 	}
 
@@ -163,25 +165,7 @@ func (controller dependencyVulnController) ListPaged(ctx shared.Context) error {
 		}
 		dependencyVulnsByPackage := res[*dependencyVuln.ComponentPurl]
 		// append the dependencyVuln to the package
-		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
-			ID:                    dependencyVuln.ID,
-			Artifacts:             dependencyVuln.Artifacts,
-			Message:               dependencyVuln.Message,
-			AssetVersionName:      dependencyVuln.AssetVersionName,
-			AssetID:               dependencyVuln.AssetID.String(),
-			State:                 dependencyVuln.State,
-			CVE:                   dependencyVuln.CVE,
-			CVEID:                 dependencyVuln.CVEID,
-			ComponentPurl:         dependencyVuln.ComponentPurl,
-			ComponentDepth:        dependencyVuln.ComponentDepth,
-			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
-			Effort:                dependencyVuln.Effort,
-			RiskAssessment:        dependencyVuln.RiskAssessment,
-			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
-			Priority:              dependencyVuln.Priority,
-			LastDetected:          dependencyVuln.LastDetected,
-			CreatedAt:             dependencyVuln.CreatedAt,
-		})
+		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, transformer.DependencyVulnToDTO(dependencyVuln))
 		res[*dependencyVuln.ComponentPurl] = dependencyVulnsByPackage
 	}
 
@@ -251,7 +235,7 @@ func (controller dependencyVulnController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
+	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
 func (controller dependencyVulnController) Read(ctx shared.Context) error {
@@ -267,11 +251,11 @@ func (controller dependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	risk, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
 	dependencyVuln.CVE.Vector = vector
 
-	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
+	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
 func (controller dependencyVulnController) Hints(ctx shared.Context) error {
@@ -420,54 +404,5 @@ func (controller dependencyVulnController) CreateEvent(ctx shared.Context) error
 		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
 	} */
 
-	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
-}
-
-func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependencyVulnDTO {
-	return detailedDependencyVulnDTO{
-		DependencyVulnDTO: DependencyVulnDTO{
-			ID:                    dependencyVuln.ID,
-			Message:               dependencyVuln.Message,
-			AssetVersionName:      dependencyVuln.AssetVersionName,
-			AssetID:               dependencyVuln.AssetID.String(),
-			State:                 dependencyVuln.State,
-			CVE:                   dependencyVuln.CVE,
-			CVEID:                 dependencyVuln.CVEID,
-			ComponentPurl:         dependencyVuln.ComponentPurl,
-			ComponentDepth:        dependencyVuln.ComponentDepth,
-			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
-			Effort:                dependencyVuln.Effort,
-			RiskAssessment:        dependencyVuln.RiskAssessment,
-			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
-			Priority:              dependencyVuln.Priority,
-			LastDetected:          dependencyVuln.LastDetected,
-			CreatedAt:             dependencyVuln.CreatedAt,
-			Artifacts:             dependencyVuln.Artifacts,
-			TicketID:              dependencyVuln.TicketID,
-			TicketURL:             dependencyVuln.TicketURL,
-			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
-			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
-		},
-		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
-			return dtos.VulnEventDTO{
-				ID:                      ev.ID,
-				Type:                    ev.Type,
-				VulnID:                  ev.VulnID,
-				UserID:                  ev.UserID,
-				Justification:           ev.Justification,
-				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        getAssetVersionName(dependencyVuln.Vulnerability, ev),
-				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
-				CreatedAt:               ev.CreatedAt,
-				Upstream:                ev.Upstream,
-			}
-		}),
-	}
-}
-
-func getAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string {
-	if ev.OriginalAssetVersionName != nil {
-		return *ev.OriginalAssetVersionName
-	}
-	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
+	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }

@@ -352,7 +352,7 @@ func createSampleFirstPartyVulns() []dtos.FirstPartyVulnDTO {
 			State:            dtos.VulnStateOpen,
 			RuleID:           "javascript.lang.security.audit.sqli",
 			URI:              "src/auth/login.js",
-			SnippetContents: []models.dtos.SnippetContent{
+			SnippetContents: []dtos.SnippetContent{
 				{
 					StartLine: 42,
 					EndLine:   45,

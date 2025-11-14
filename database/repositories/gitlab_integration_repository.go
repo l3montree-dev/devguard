@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -24,7 +25,7 @@ import (
 
 type gitlabIntegrationRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
+	common.Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
 }
 
 func NewGitLabIntegrationRepository(db *gorm.DB) *gitlabIntegrationRepository {

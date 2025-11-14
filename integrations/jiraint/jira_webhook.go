@@ -12,8 +12,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
+	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/shared"
 )
 

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package middleware
+package middlewares
 
 import (
 	"log/slog"
@@ -29,7 +29,7 @@ import (
 
 // this middleware is used to set the project slug parameter based on an X-Asset-ID header.
 // it is useful for reusing the projectAccessControl middleware and rely on the rbac to determine if the user has access to an specific asset
-func assetNameMiddleware() shared.MiddlewareFunc {
+func AssetNameMiddleware() shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
 			// extract the asset id from the header
@@ -60,7 +60,7 @@ func assetNameMiddleware() shared.MiddlewareFunc {
 	}
 }
 
-func artifactMiddleware(repository shared.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func ArtifactMiddleware(repository shared.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			assetVersion := shared.GetAssetVersion(ctx)
@@ -84,7 +84,7 @@ func artifactMiddleware(repository shared.ArtifactRepository) func(next echo.Han
 	}
 }
 
-func assetVersionMiddleware(repository shared.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 

@@ -1,13 +1,14 @@
 package repositories
 
 import (
+	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
 
 type cweRepository struct {
 	db *gorm.DB
-	Repository[string, models.CWE, *gorm.DB]
+	common.Repository[string, models.CWE, *gorm.DB]
 }
 
 func NewCWERepository(db *gorm.DB) *cweRepository {

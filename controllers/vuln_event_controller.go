@@ -4,7 +4,9 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
 )
 
@@ -31,16 +33,16 @@ func (c vulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 
-	return ctx.JSON(200, convertToDetailedDTO(events))
+	return ctx.JSON(200, transformer.ConvertVulnEventsToDtos(events))
 }
 
-func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
+func convertSingleToDetailedDTO(event models.VulnEventDetail) dtos.VulnEventDTO {
 	originalAssetVersionName := event.AssetVersionName
 	if event.OriginalAssetVersionName != nil {
 		originalAssetVersionName = *event.OriginalAssetVersionName
 	}
 
-	return VulnEventDTO{
+	return dtos.VulnEventDTO{
 		ID:                event.ID,
 		Type:              event.Type,
 		VulnID:            event.VulnID,
@@ -56,34 +58,6 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		URI:               event.URI,
 		Upstream:          event.Upstream,
 	}
-}
-
-func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
-	var dtos []VulnEventDTO
-	for _, e := range event {
-		originalAssetVersionName := e.AssetVersionName
-		if e.OriginalAssetVersionName != nil {
-			originalAssetVersionName = *e.OriginalAssetVersionName
-		}
-		dtos = append(dtos, VulnEventDTO{
-			ID:                      e.ID,
-			Type:                    e.Type,
-			VulnID:                  e.VulnID,
-			VulnType:                e.VulnType,
-			UserID:                  e.UserID,
-			Justification:           e.Justification,
-			MechanicalJustification: e.MechanicalJustification,
-			ArbitraryJSONData:       e.GetArbitraryJSONData(),
-			CreatedAt:               e.CreatedAt,
-			AssetVersionName:        originalAssetVersionName,
-			AssetVersionSlug:        e.Slug,
-			PackageName:             e.ComponentPurl,
-			URI:                     e.URI,
-			Upstream:                e.Upstream,
-		})
-
-	}
-	return dtos
 }
 
 func (c vulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {

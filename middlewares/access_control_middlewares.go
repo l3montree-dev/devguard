@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package middleware
+package middlewares
 
 import (
 	"fmt"
@@ -240,7 +240,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 	}
 }
 
-func shareMiddleware(orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) echo.MiddlewareFunc {
+func ShareMiddleware(orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
 			// get the assetID from the url
@@ -258,24 +258,24 @@ func shareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			// get the asset
 			asset, err := assetRepository.Read(assetUUID)
 			if err != nil {
-				slog.Error("could not find asset in shareMiddleware", "assetID", assetID, "err", err)
+				slog.Error("could not find asset in ShareMiddleware", "assetID", assetID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 			// fetch org and project
 			project, err := projectRepository.Read(asset.ProjectID)
 			if err != nil {
-				slog.Error("could not find project in shareMiddleware", "assetID", assetID, "projectID", asset.ProjectID, "err", err)
+				slog.Error("could not find project in ShareMiddleware", "assetID", assetID, "projectID", asset.ProjectID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 			org, err := orgRepository.Read(project.OrganizationID)
 			if err != nil {
-				slog.Error("could not find organization in shareMiddleware", "assetID", assetID, "organizationID", project.OrganizationID, "err", err)
+				slog.Error("could not find organization in ShareMiddleware", "assetID", assetID, "organizationID", project.OrganizationID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 
 			// check if sharing is enabled
 			if !asset.SharesInformation {
-				slog.Warn("access denied in shareMiddleware - sharing not enabled", "assetID", assetID)
+				slog.Warn("access denied in ShareMiddleware - sharing not enabled", "assetID", assetID)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 
@@ -285,14 +285,14 @@ func shareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				// find the ref
 				assetVersion, err = assetVersionRepository.ReadBySlug(asset.ID, ref)
 				if err != nil {
-					slog.Error("could not find asset version by ref in shareMiddleware", "assetID", assetID, "ref", ref, "err", err)
+					slog.Error("could not find asset version by ref in ShareMiddleware", "assetID", assetID, "ref", ref, "err", err)
 					return echo.NewHTTPError(404, "could not find asset version for the provided ref")
 				}
 			} else {
 				// use the default branch
 				assetVersion, err = assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 				if err != nil {
-					slog.Error("could not find default asset version in shareMiddleware", "assetID", assetID, "err", err)
+					slog.Error("could not find default asset version in ShareMiddleware", "assetID", assetID, "err", err)
 					return echo.NewHTTPError(404, "could not find default asset version")
 				}
 			}
@@ -300,7 +300,7 @@ func shareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			if artifactName := ctx.QueryParam("artifactName"); artifactName != "" {
 				artifact, err := artifactRepository.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
 				if err != nil {
-					slog.Error("could not find artifact in shareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
+					slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
 					return echo.NewHTTPError(404, "could not find artifact for the provided artifact name")
 				}
 				shared.SetArtifact(ctx, artifact)

@@ -1,4 +1,4 @@
-package scan_test
+package tests
 
 import (
 	"bytes"
@@ -18,7 +18,6 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
@@ -29,7 +28,7 @@ import (
 )
 
 // Helper to extract artifact names from []models.Artifact
-func getArtifactNames(artifacts []models.Artifact) []string {
+func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
 	names := make([]string, 0, len(artifacts))
 	for _, a := range artifacts {
 		names = append(names, a.ArtifactName)
@@ -38,7 +37,7 @@ func getArtifactNames(artifacts []models.Artifact) []string {
 }
 
 func TestScanning(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -47,7 +46,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -251,7 +250,7 @@ func TestScanning(t *testing.T) {
 }
 
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -261,7 +260,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -336,7 +335,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -346,7 +345,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -445,7 +444,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -455,7 +454,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -679,7 +678,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -687,7 +686,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 	controller, _ := initHTTPController(t, db, false)
 
 	app := echo.New()
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("test-user")
@@ -796,7 +795,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestTicketHandling(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -806,7 +805,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -1154,7 +1153,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 
 func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
-	clientfactory, client := tests.NewTestClientFactory(t)
+	clientfactory, client := NewTestClientFactory(t)
 
 	repositories.NewExploitRepository(db)
 	// mock the openSourceInsightsService to avoid any external calls during tests
@@ -1163,19 +1162,19 @@ func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) 
 		openSourceInsightsService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{}, nil)
 	}
 
-	controller := tests.CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, openSourceInsightsService)
+	controller := CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, openSourceInsightsService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client
 }
 
 func TestUploadVEX(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	app := echo.New()
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	scanController := tests.CreateScanHTTPController(db, nil, nil, tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	scanController := CreateScanHTTPController(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	asset.ParanoidMode = false
 	if err := db.Save(&asset).Error; err != nil {
 		t.Fatalf("could not save asset: %v", err)
@@ -1332,16 +1331,16 @@ func TestIdempotency(t *testing.T) {
 	// 3. Scan that sbom
 	// 4. Download it
 	// 5. compare 2 and 4
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	controller, _ := initHTTPController(t, db, true)
 
 	app := echo.New()
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	openSourceInsightsService := mocks.OpenSourceInsightService{}
-	assetVersionController := tests.CreateAssetVersionController(db, nil, nil, tests.TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
+	assetVersionController := CreateAssetVersionController(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, &openSourceInsightsService)
 
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}
@@ -1437,7 +1436,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	smallVex, err := os.Open("testdata/small-vex-false-positive.json")
 	assert.Nil(t, err)
 	// lets scan the sbom
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	newCVE := models.CVE{
@@ -1460,7 +1459,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	ctx := app.NewContext(req, recorder)
 
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	setupContext := func(ctx shared.Context) {
 		authSession := mocks.AuthSession{}

@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -234,5 +236,66 @@ func TestBuildGitlabCiTemplate(t *testing.T) {
 		}
 		assert.True(t, hasStages, "Template should contain stages section")
 		assert.True(t, hasInclude, "Template should contain include section")
+	})
+}
+
+func TestRenderMarkdown(t *testing.T) {
+
+	baseURL := "https://devguard.example.com"
+	orgSlug := "my-org"
+	projectSlug := "my-project"
+	assetSlug := "my-asset"
+	assetVersionName := "v1.0.0"
+
+	assertVersionSlug := slug.Make(assetVersionName)
+	assert.Equal(t, "v1-0-0", assertVersionSlug)
+
+	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
+		snippetContents := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{
+				{
+					StartLine:   64,
+					EndLine:     64,
+					StartColumn: 1,
+					EndColumn:   20,
+					Snippet:     "TestSnippet",
+				},
+			},
+		}
+		snippetJSON, err := transformer.SnippetContentsToJSON(snippetContents)
+		assert.NoError(t, err)
+
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: snippetJSON,
+			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+				ID: "test-vuln-id",
+			},
+			URI: "the/uri/of/the/vuln",
+		}
+		result := RenderMarkdown(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		assert.Contains(t, result, "A detailed Message")
+		assert.Contains(t, result, "TestSnippet")
+		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
+		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
+	})
+	t.Run("vuln without snippet contents", func(t *testing.T) {
+		snippetContents := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{
+				{},
+			},
+		}
+		snippetJSON, err := transformer.SnippetContentsToJSON(snippetContents)
+		assert.NoError(t, err)
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: snippetJSON,
+			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+				ID: "test-vuln-id"},
+			URI: "the/uri/of/the/vuln",
+		}
+
+		result := RenderMarkdown(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		assert.Contains(t, result, "A detailed Message")
+		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
+		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
 	})
 }

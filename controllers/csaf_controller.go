@@ -18,6 +18,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/constants"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -420,7 +421,7 @@ func getPublicKeyFingerprint() string {
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
 func (controller *csafController) ServeCSAFReportRequest(ctx shared.Context) error {
 	// generate the report first
-	csafReport, err := generateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
+	csafReport, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
 	if err != nil {
 		return err
 	}
@@ -445,7 +446,7 @@ func (controller *csafController) ServeCSAFReportRequest(ctx shared.Context) err
 		if err != nil {
 			return err
 		}
-		signature, err := signCSAFReport(buf.Bytes())
+		signature, err := services.SignCSAFReport(buf.Bytes())
 		if err != nil {
 			return err
 		}

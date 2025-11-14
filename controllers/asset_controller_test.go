@@ -66,7 +66,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 			},
 		})
 
-		controller := &assetController{}
+		controller := &AssetController{}
 
 		err := controller.GetConfigFile(ctx)
 
@@ -101,7 +101,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 			ConfigFiles: map[string]any{},
 		})
 
-		controller := &assetController{}
+		controller := &AssetController{}
 
 		err := controller.GetConfigFile(ctx)
 
@@ -131,168 +131,13 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 			ConfigFiles: map[string]any{},
 		})
 
-		controller := &assetController{}
+		controller := &AssetController{}
 
 		err := controller.GetConfigFile(ctx)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "{\"value\":\"organization-config-content\"}\n", rec.Body.String())
-	})
-}
-
-func TestFetchMembersOfAsset(t *testing.T) {
-	e := echo.New()
-
-	t.Run("successfully fetches members with roles", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		ctx := e.NewContext(req, rec)
-
-		assetID := uuid.New()
-		asset := models.Asset{
-			Model: models.Model{ID: assetID},
-		}
-
-		mockRBAC := mocks.NewAccessControl(t)
-		mockAdminClient := mocks.NewAdminClient(t)
-
-		userID1 := "user-123"
-		userID2 := "user-456"
-
-		// Mock RBAC to return members
-		mockRBAC.On("GetAllMembersOfAsset", assetID.String()).Return([]string{userID1, userID2}, nil)
-
-		// Mock admin client to return user identities
-		identities := []client.Identity{
-			{
-				Id: userID1,
-				Traits: map[string]any{
-					"name": map[string]any{
-						"first": "John",
-						"last":  "Doe",
-					},
-				},
-			},
-			{
-				Id: userID2,
-				Traits: map[string]any{
-					"name": map[string]any{
-						"first": "Jane",
-						"last":  "Smith",
-					},
-				},
-			},
-		}
-
-		mockAdminClient.On("ListUser", mock.MatchedBy(func(req client.IdentityAPIListIdentitiesRequest) bool {
-			return true
-		})).Return(identities, nil)
-
-		// Mock RBAC to return roles
-		mockRBAC.On("GetAssetRole", userID1, assetID.String()).Return(shared.RoleMember, nil)
-		mockRBAC.On("GetAssetRole", userID2, assetID.String()).Return(shared.RoleAdmin, nil)
-
-		shared.SetAsset(ctx, asset)
-		shared.SetRBAC(ctx, mockRBAC)
-		shared.SetAuthAdminClient(ctx, mockAdminClient)
-
-		users, err := FetchMembersOfAsset(ctx)
-
-		assert.NoError(t, err)
-		assert.Len(t, users, 2)
-		assert.Equal(t, "John Doe", users[0].Name)
-		assert.Equal(t, "member", users[0].Role)
-		assert.Equal(t, "Jane Smith", users[1].Name)
-		assert.Equal(t, "admin", users[1].Role)
-	})
-
-	t.Run("returns error when RBAC fails to get members", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		ctx := e.NewContext(req, rec)
-
-		assetID := uuid.New()
-		asset := models.Asset{
-			Model: models.Model{ID: assetID},
-		}
-
-		mockRBAC := mocks.NewAccessControl(t)
-		mockRBAC.On("GetAllMembersOfAsset", assetID.String()).Return([]string{}, errors.New("rbac error"))
-
-		shared.SetAsset(ctx, asset)
-		shared.SetRBAC(ctx, mockRBAC)
-
-		users, err := FetchMembersOfAsset(ctx)
-
-		assert.Error(t, err)
-		assert.Nil(t, users)
-	})
-
-	t.Run("returns error when admin client fails", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		ctx := e.NewContext(req, rec)
-
-		assetID := uuid.New()
-		asset := models.Asset{
-			Model: models.Model{ID: assetID},
-		}
-
-		mockRBAC := mocks.NewAccessControl(t)
-		mockAdminClient := mocks.NewAdminClient(t)
-
-		mockRBAC.On("GetAllMembersOfAsset", assetID.String()).Return([]string{"user-123"}, nil)
-		mockAdminClient.On("ListUser", mock.Anything).Return([]client.Identity{}, errors.New("auth service error"))
-
-		shared.SetAsset(ctx, asset)
-		shared.SetRBAC(ctx, mockRBAC)
-		shared.SetAuthAdminClient(ctx, mockAdminClient)
-
-		users, err := FetchMembersOfAsset(ctx)
-
-		assert.Error(t, err)
-		assert.Nil(t, users)
-	})
-
-	t.Run("handles missing name fields gracefully", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		ctx := e.NewContext(req, rec)
-
-		assetID := uuid.New()
-		asset := models.Asset{
-			Model: models.Model{ID: assetID},
-		}
-
-		mockRBAC := mocks.NewAccessControl(t)
-		mockAdminClient := mocks.NewAdminClient(t)
-
-		userID1 := "user-123"
-
-		mockRBAC.On("GetAllMembersOfAsset", assetID.String()).Return([]string{userID1}, nil)
-
-		identities := []client.Identity{
-			{
-				Id: userID1,
-				Traits: map[string]any{
-					"name": map[string]any{},
-				},
-			},
-		}
-
-		mockAdminClient.On("ListUser", mock.Anything).Return(identities, nil)
-		mockRBAC.On("GetAssetRole", userID1, assetID.String()).Return(shared.RoleMember, nil)
-
-		shared.SetAsset(ctx, asset)
-		shared.SetRBAC(ctx, mockRBAC)
-		shared.SetAuthAdminClient(ctx, mockAdminClient)
-
-		users, err := FetchMembersOfAsset(ctx)
-
-		assert.NoError(t, err)
-		assert.Len(t, users, 1)
-		assert.Equal(t, "", users[0].Name)
 	})
 }
 
@@ -334,7 +179,7 @@ func TestHTTPControllerMembers(t *testing.T) {
 		shared.SetRBAC(ctx, mockRBAC)
 		shared.SetAuthAdminClient(ctx, mockAdminClient)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.Members(ctx)
 
 		assert.NoError(t, err)
@@ -381,7 +226,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		session := mocks.NewAuthSession(t)
 		session.On("GetUserID").Return("user-123")
 		shared.SetSession(ctx, session)
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.NoError(t, err)
@@ -415,7 +260,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		shared.SetRBAC(ctx, mockRBAC)
 		shared.SetSession(ctx, session)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.Error(t, err)
@@ -448,7 +293,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.InviteMembers(ctx)
 
 		assert.Error(t, err)
@@ -480,7 +325,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.NoError(t, err)
@@ -501,7 +346,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.Error(t, err)
@@ -533,7 +378,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 
-		controller := &assetController{}
+		controller := &AssetController{}
 		err := controller.RemoveMember(ctx)
 
 		assert.NoError(t, err)

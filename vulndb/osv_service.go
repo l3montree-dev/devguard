@@ -27,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -142,7 +142,7 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 	}
 
 	defer resp.Body.Close()
-	var osv common.OSV
+	var osv dtos.OSV
 	err = json.NewDecoder(resp.Body).Decode(&osv)
 
 	if err != nil {
@@ -215,7 +215,7 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
-				osv := common.OSV{}
+				osv := dtos.OSV{}
 				err = json.Unmarshal(unzippedFileBytes, &osv)
 				if err != nil {
 					slog.Error("could not unmarshal osv", "err", err)
