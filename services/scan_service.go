@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package scan
+package services
 
 import (
 	"log/slog"
@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 )
 
 type scanService struct {
@@ -37,8 +38,8 @@ type scanService struct {
 }
 
 func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, artifactService shared.ArtifactService, statisticsService shared.StatisticsService) *scanService {
-	purlComparer := NewPurlComparer(db)
-	scanner := NewSBOMScanner(purlComparer, cveRepository)
+	purlComparer := scan.NewPurlComparer(db)
+	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
 		sbomScanner:               scanner,
 		assetVersionService:       assetVersionService,

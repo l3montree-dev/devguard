@@ -14,7 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type firstPartyVulnController struct {
+type FirstPartyVulnController struct {
 	firstPartyVulnRepository shared.FirstPartyVulnRepository
 	firstPartyVulnService    shared.FirstPartyVulnService
 	projectService           shared.ProjectService
@@ -26,15 +26,15 @@ type FirstPartyVulnStatus struct {
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnRepository, firstPartyVulnService shared.FirstPartyVulnService, projectService shared.ProjectService) *firstPartyVulnController {
-	return &firstPartyVulnController{
+func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnRepository, firstPartyVulnService shared.FirstPartyVulnService, projectService shared.ProjectService) *FirstPartyVulnController {
+	return &FirstPartyVulnController{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		firstPartyVulnService:    firstPartyVulnService,
 		projectService:           projectService,
 	}
 }
 
-func (c firstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
+func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 	}))
 }
 
-func (c firstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
+func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIDPaged(
@@ -82,7 +82,7 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	}))
 }
 
-func (c firstPartyVulnController) Mitigate(ctx shared.Context) error {
+func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
@@ -115,7 +115,7 @@ func (c firstPartyVulnController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
 
-func (c firstPartyVulnController) Read(ctx shared.Context) error {
+func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
@@ -128,7 +128,7 @@ func (c firstPartyVulnController) Read(ctx shared.Context) error {
 
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
-func (c firstPartyVulnController) CreateEvent(ctx shared.Context) error {
+func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -175,7 +175,7 @@ func (c firstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
 
-func (c firstPartyVulnController) ListPaged(ctx shared.Context) error {
+func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -198,7 +198,7 @@ func (c firstPartyVulnController) ListPaged(ctx shared.Context) error {
 	}))
 }
 
-func (c firstPartyVulnController) Sarif(ctx shared.Context) error {
+func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 

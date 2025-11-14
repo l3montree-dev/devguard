@@ -31,7 +31,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type assetVersionController struct {
+type AssetVersionController struct {
 	assetVersionRepository   shared.AssetVersionRepository
 	assetVersionService      shared.AssetVersionService
 	dependencyVulnRepository shared.DependencyVulnRepository
@@ -55,8 +55,8 @@ func NewAssetVersionController(
 	componentService shared.ComponentService,
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
-) *assetVersionController {
-	return &assetVersionController{
+) *AssetVersionController {
+	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
 		assetVersionService:      assetVersionService,
 		dependencyVulnRepository: dependencyVulnRepository,
@@ -70,12 +70,12 @@ func NewAssetVersionController(
 	}
 }
 
-func (a *assetVersionController) Read(ctx shared.Context) error {
+func (a *AssetVersionController) Read(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	return ctx.JSON(200, assetVersion)
 }
 
-func (a *assetVersionController) Create(ctx shared.Context) error {
+func (a *AssetVersionController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	type requestBody struct {
@@ -102,7 +102,7 @@ func (a *assetVersionController) Create(ctx shared.Context) error {
 }
 
 // Function to delete provided asset version
-func (a *assetVersionController) Delete(ctx shared.Context) error {
+func (a *AssetVersionController) Delete(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)                //Get the asset provided in the context / URL
 	err := a.assetVersionRepository.Delete(nil, &assetVersion) //Call delete on the returned assetVersion
 	if err != nil {
@@ -112,7 +112,7 @@ func (a *assetVersionController) Delete(ctx shared.Context) error {
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 
-func (a *assetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
+func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(asset.ID)
@@ -122,7 +122,7 @@ func (a *assetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 	return ctx.JSON(200, assetVersions)
 }
 
-func (a *assetVersionController) AffectedComponents(ctx shared.Context) error {
+func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	artifactName := ctx.QueryParam("artifactName")
 
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -136,7 +136,7 @@ func (a *assetVersionController) AffectedComponents(ctx shared.Context) error {
 	}))
 }
 
-func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
 	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
@@ -149,7 +149,7 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 	return components, dependencyVulns, nil
 }
 
-func (a *assetVersionController) DependencyGraph(ctx shared.Context) error {
+func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 
@@ -171,7 +171,7 @@ func (a *assetVersionController) DependencyGraph(ctx shared.Context) error {
 }
 
 // function to return a graph of all dependencies which lead to the requested pURL
-func (a *assetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
+func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	pURL := ctx.QueryParam("purl")
@@ -191,7 +191,7 @@ func (a *assetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 
-func (a *assetVersionController) SBOMJSON(ctx shared.Context) error {
+func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
@@ -206,7 +206,7 @@ func (a *assetVersionController) SBOMJSON(ctx shared.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
 }
 
-func (a *assetVersionController) SBOMXML(ctx shared.Context) error {
+func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
@@ -219,7 +219,7 @@ func (a *assetVersionController) SBOMXML(ctx shared.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM(assetID))
 }
 
-func (a *assetVersionController) VEXXML(ctx shared.Context) error {
+func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 	sbom, err := a.buildVeX(ctx)
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (a *assetVersionController) VEXXML(ctx shared.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex(assetID))
 }
 
-func (a *assetVersionController) VEXJSON(ctx shared.Context) error {
+func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 	sbom, err := a.buildVeX(ctx)
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func (a *assetVersionController) VEXJSON(ctx shared.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
 }
 
-func (a *assetVersionController) OpenVEXJSON(ctx shared.Context) error {
+func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
 	vex, err := a.buildOpenVeX(ctx)
 	if err != nil {
 		return err
@@ -255,7 +255,7 @@ func (a *assetVersionController) OpenVEXJSON(ctx shared.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (a *assetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBom, error) {
+func (a *AssetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBom, error) {
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 	org := shared.GetOrg(ctx)
@@ -289,7 +289,7 @@ func (a *assetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBo
 	return a.assetVersionService.BuildSBOM(asset, assetVersion, artifact.ArtifactName, org.Name, components.Data)
 }
 
-func (a *assetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
+func (a *AssetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -309,7 +309,7 @@ func (a *assetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, erro
 	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	// get all associated dependencyVulns
 	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
 
@@ -345,7 +345,7 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	return dependencyVulns, nil
 }
 
-func (a *assetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom, error) {
+func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom, error) {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -366,7 +366,7 @@ func (a *assetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 	return a.assetVersionService.BuildVeX(asset, assetVersion, artifact.ArtifactName, org.Name, dependencyVulns), nil
 }
 
-func (a *assetVersionController) Metrics(ctx shared.Context) error {
+func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	//artifactName := ctx.QueryParam("artifact")
 	// get the latest events of this asset per scan type
@@ -405,7 +405,7 @@ func (a *assetVersionController) Metrics(ctx shared.Context) error {
 }
 
 // RefetchLicenses forces re-fetching license information for all components of the current asset version
-func (a *assetVersionController) RefetchLicenses(ctx shared.Context) error {
+func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
@@ -437,7 +437,7 @@ func escapeLatex(input string) string {
 	return latexReplacer.Replace(input)
 }
 
-func (a *assetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
+func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
 	// get the vex from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -649,7 +649,7 @@ func (a *assetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 	return err
 }
 
-func (a *assetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
+func (a *AssetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
 
 	//build the SBOM of this asset version
 	bom, err := a.buildSBOM(ctx)
@@ -872,7 +872,7 @@ func buildVulnReportZipInMemory(writer io.Writer, templateName string, metadata,
 	return nil
 }
 
-func (a *assetVersionController) ListArtifacts(ctx shared.Context) error {
+func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 
 	assetID := shared.GetAsset(ctx).ID
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -886,7 +886,7 @@ func (a *assetVersionController) ListArtifacts(ctx shared.Context) error {
 	return ctx.JSON(200, artifacts)
 }
 
-func (a *assetVersionController) MakeDefault(ctx shared.Context) error {
+func (a *AssetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	err := a.assetVersionRepository.UpdateAssetDefaultBranch(assetVersion.AssetID, assetVersion.Name)
@@ -921,7 +921,7 @@ func extractInformationSourceFromPurl(purl string) dtos.InformationSourceDTO {
 	return InformationSourcesDTO
 }
 
-func (a *assetVersionController) ReadRootNodes(ctx shared.Context) error {
+func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	// get the artifacts for this asset version

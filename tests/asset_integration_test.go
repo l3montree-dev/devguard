@@ -1,4 +1,4 @@
-package controllers
+package tests
 
 import (
 	"bytes"
@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ import (
 )
 
 func TestHandleLookup(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	assetRepo := repositories.NewAssetRepository(db)
@@ -29,10 +29,10 @@ func TestHandleLookup(t *testing.T) {
 	statsService := mocks.NewStatisticsService(t)
 	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
-	controller := NewAssetController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService, thirdPartyIntegration)
+	controller := controllers.NewAssetController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService, thirdPartyIntegration)
 
 	// create an organization, project, and asset1 for testing
-	_, _, asset1, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, asset1, _ := CreateOrgProjectAndAssetAssetVersion(db)
 
 	app := echo.New()
 
@@ -84,20 +84,20 @@ func TestHandleLookup(t *testing.T) {
 func TestAssetUpdate(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	t.Run("should be possible to enable the ticket range", func(t *testing.T) {
-		db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+		db, terminate := InitDatabaseContainer("../../../initdb.sql")
 		defer terminate()
 		assetRepo := repositories.NewAssetRepository(db)
 		assetService := mocks.NewAssetService(t)
 		assetVersionRepo := repositories.NewAssetVersionRepository(db)
-		vulnService := tests.CreateDependencyVulnService(db, nil, nil, nil)
+		vulnService := CreateDependencyVulnService(db, nil, nil, nil)
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
 		thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
 
-		controller := NewAssetController(assetRepo, assetVersionRepo, assetService, vulnService, nil, thirdPartyIntegration)
+		controller := controllers.NewAssetController(assetRepo, assetVersionRepo, assetService, vulnService, nil, thirdPartyIntegration)
 
 		// create an organization, project, and asset1 for testing
-		org, project, asset1, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+		org, project, asset1, _ := CreateOrgProjectAndAssetAssetVersion(db)
 
 		updateRequest := dtos.AssetPatchRequest{
 			Name:                         utils.Ptr("test-asset"),

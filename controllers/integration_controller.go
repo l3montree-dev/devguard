@@ -24,18 +24,18 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-type integrationController struct {
+type IntegrationController struct {
 	gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config
 }
 
-func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config) *integrationController {
-	return &integrationController{
+func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config) *IntegrationController {
+	return &IntegrationController{
 		gitlabOauth2Integration: gitlabOauth2Integration,
 	}
 
 }
 
-func (c *integrationController) AutoSetup(ctx shared.Context) error {
+func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
 	if gl != nil {
@@ -45,7 +45,7 @@ func (c *integrationController) AutoSetup(ctx shared.Context) error {
 	return nil
 }
 
-func (c *integrationController) ListRepositories(ctx shared.Context) error {
+func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 
 	repos, err := thirdPartyIntegration.ListRepositories(ctx)
@@ -56,7 +56,7 @@ func (c *integrationController) ListRepositories(ctx shared.Context) error {
 	return ctx.JSON(200, repos)
 }
 
-func (c *integrationController) FinishInstallation(ctx shared.Context) error {
+func (c *IntegrationController) FinishInstallation(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gh := thirdPartyIntegration.GetIntegration(shared.GitHubIntegrationID)
 	if gh != nil {
@@ -69,7 +69,7 @@ func (c *integrationController) FinishInstallation(ctx shared.Context) error {
 	return ctx.JSON(200, "Installation finished")
 }
 
-func (c *integrationController) HandleWebhook(ctx shared.Context) error {
+func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {
 		slog.Error("could not handle webhook", "err", err)
@@ -79,7 +79,7 @@ func (c *integrationController) HandleWebhook(ctx shared.Context) error {
 	return ctx.JSON(200, "Webhook handled")
 }
 
-func (c *integrationController) TestAndSaveGitlabIntegration(ctx shared.Context) error {
+func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
 	if gl == nil {
@@ -94,7 +94,7 @@ func (c *integrationController) TestAndSaveGitlabIntegration(ctx shared.Context)
 	return nil
 }
 
-func (c *integrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
+func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)
 	if gl == nil {
@@ -109,7 +109,7 @@ func (c *integrationController) TestAndSaveJiraIntegration(ctx shared.Context) e
 	return nil
 }
 
-func (c *integrationController) GitLabOauth2Callback(ctx shared.Context) error {
+func (c *IntegrationController) GitLabOauth2Callback(ctx shared.Context) error {
 	integrationName := shared.GetParam(ctx, "integrationName")
 	if integrationName == "" {
 		return ctx.JSON(400, "integrationName is missing")
@@ -127,7 +127,7 @@ func (c *integrationController) GitLabOauth2Callback(ctx shared.Context) error {
 	return nil
 }
 
-func (c *integrationController) GitLabOauth2Login(ctx shared.Context) error {
+func (c *IntegrationController) GitLabOauth2Login(ctx shared.Context) error {
 	integrationName := shared.GetParam(ctx, "integrationName")
 	if integrationName == "" {
 		return ctx.JSON(400, "integrationName is missing")
@@ -145,7 +145,7 @@ func (c *integrationController) GitLabOauth2Login(ctx shared.Context) error {
 	return nil
 }
 
-func (c *integrationController) DeleteGitLabAccessToken(ctx shared.Context) error {
+func (c *IntegrationController) DeleteGitLabAccessToken(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
 	if gl == nil {
@@ -160,7 +160,7 @@ func (c *integrationController) DeleteGitLabAccessToken(ctx shared.Context) erro
 	return nil
 }
 
-func (c *integrationController) DeleteJiraAccessToken(ctx shared.Context) error {
+func (c *IntegrationController) DeleteJiraAccessToken(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	jira := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)
 	if jira == nil {

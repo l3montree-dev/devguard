@@ -28,15 +28,15 @@ import (
 	"github.com/ory/client-go"
 )
 
-type projectController struct {
+type ProjectController struct {
 	projectRepository shared.ProjectRepository
 	assetRepository   shared.AssetRepository
 	projectService    shared.ProjectService
 	webhookRepository shared.WebhookIntegrationRepository
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository) *projectController {
-	return &projectController{
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository) *ProjectController {
+	return &ProjectController{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
 		projectService:    projectService,
@@ -44,7 +44,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 	}
 }
 
-func (projectController *projectController) Create(ctx shared.Context) error {
+func (ProjectController *ProjectController) Create(ctx shared.Context) error {
 	var req dtos.ProjectCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -59,7 +59,7 @@ func (projectController *projectController) Create(ctx shared.Context) error {
 	// add the organization id
 	newProject.OrganizationID = shared.GetOrg(ctx).GetID()
 
-	err := projectController.projectService.CreateProject(ctx, &newProject)
+	err := ProjectController.projectService.CreateProject(ctx, &newProject)
 	if err != nil {
 		return echo.NewHTTPError(409, "could not create project").WithInternal(err)
 	}
@@ -116,7 +116,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	return users, nil
 }
 
-func (projectController *projectController) Members(c shared.Context) error {
+func (ProjectController *ProjectController) Members(c shared.Context) error {
 	members, err := FetchMembersOfProject(c)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (projectController *projectController) Members(c shared.Context) error {
 	return c.JSON(200, members)
 }
 
-func (projectController *projectController) InviteMembers(c shared.Context) error {
+func (ProjectController *ProjectController) InviteMembers(c shared.Context) error {
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -157,7 +157,7 @@ func (projectController *projectController) InviteMembers(c shared.Context) erro
 	return c.NoContent(200)
 }
 
-func (projectController *projectController) RemoveMember(c shared.Context) error {
+func (ProjectController *ProjectController) RemoveMember(c shared.Context) error {
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -175,7 +175,7 @@ func (projectController *projectController) RemoveMember(c shared.Context) error
 	return c.NoContent(200)
 }
 
-func (projectController *projectController) ChangeRole(c shared.Context) error {
+func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -225,10 +225,10 @@ func (projectController *projectController) ChangeRole(c shared.Context) error {
 	return c.NoContent(200)
 }
 
-func (projectController *projectController) Delete(c shared.Context) error {
+func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
 
-	err := projectController.projectRepository.Delete(nil, project.ID)
+	err := ProjectController.projectRepository.Delete(nil, project.ID)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (projectController *projectController) Delete(c shared.Context) error {
 	return c.NoContent(200)
 }
 
-func (projectController *projectController) Read(c shared.Context) error {
+func (ProjectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
@@ -245,7 +245,7 @@ func (projectController *projectController) Read(c shared.Context) error {
 		return err
 	}
 	// lets fetch the assets related to this project
-	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (projectController *projectController) Read(c shared.Context) error {
 	}
 
 	//get the webhooks
-	webhooks, err := projectController.getWebhooks(c)
+	webhooks, err := ProjectController.getWebhooks(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch webhooks").WithInternal(err)
 	}
@@ -273,12 +273,12 @@ func (projectController *projectController) Read(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (projectController *projectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
+func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
 
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
 
-	webhooks, err := projectController.webhookRepository.GetProjectWebhooks(orgID, projectID)
+	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(orgID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
@@ -295,9 +295,9 @@ func (projectController *projectController) getWebhooks(c shared.Context) ([]dto
 	}), nil
 }
 
-func (projectController *projectController) List(c shared.Context) error {
+func (ProjectController *ProjectController) List(c shared.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
-	projects, err := projectController.projectService.ListAllowedProjectsPaged(c)
+	projects, err := ProjectController.projectService.ListAllowedProjectsPaged(c)
 
 	if err != nil {
 		return err
@@ -306,7 +306,7 @@ func (projectController *projectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
-func (projectController *projectController) Update(c shared.Context) error {
+func (ProjectController *ProjectController) Update(c shared.Context) error {
 	req := c.Request().Body
 	defer req.Close()
 	var patchRequest dtos.ProjectPatchRequest
@@ -324,7 +324,7 @@ func (projectController *projectController) Update(c shared.Context) error {
 	}
 
 	if updated {
-		err = projectController.projectRepository.Update(nil, &project)
+		err = ProjectController.projectRepository.Update(nil, &project)
 		if err != nil {
 			return fmt.Errorf("could not update project: %w", err)
 		}
@@ -337,7 +337,7 @@ func (projectController *projectController) Update(c shared.Context) error {
 	}
 
 	// lets fetch the assets related to this project
-	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func (projectController *projectController) Update(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (projectController *projectController) GetConfigFile(ctx shared.Context) error {
+func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	configID := ctx.Param("config-file")

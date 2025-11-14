@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree GmbH.
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package webhook
+package services
 
 import (
 	"bytes"
@@ -51,7 +51,7 @@ type webhookClient struct {
 	Secret *string
 }
 
-func NewWebhookClient(url string, secret *string) *webhookClient {
+func NewWebhookService(url string, secret *string) *webhookClient {
 	return &webhookClient{
 		URL:    url,
 		Secret: secret,

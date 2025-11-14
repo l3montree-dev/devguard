@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package scan
+package controllers
 
 import (
 	"log/slog"
@@ -31,7 +31,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type HTTPController struct {
+type ScanController struct {
 	componentRepository      shared.ComponentRepository
 	assetRepository          shared.AssetRepository
 	assetVersionRepository   shared.AssetVersionRepository
@@ -46,8 +46,8 @@ type HTTPController struct {
 	shared.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository) *HTTPController {
-	return &HTTPController{
+func NewScanController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository) *ScanController {
+	return &ScanController{
 		componentRepository:       componentRepository,
 		assetVersionService:       assetVersionService,
 		assetRepository:           assetRepository,
@@ -76,7 +76,7 @@ type FirstPartyScanResponse struct {
 
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
 // It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
-func (s HTTPController) UploadVEX(ctx shared.Context) error {
+func (s ScanController) UploadVEX(ctx shared.Context) error {
 	var bom cdx.BOM
 	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
 	if err := dec.Decode(&bom); err != nil {
@@ -178,7 +178,7 @@ func (s HTTPController) UploadVEX(ctx shared.Context) error {
 	return ctx.JSON(200, nil)
 }
 
-func (s *HTTPController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ScanResponse, error) {
+func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -245,7 +245,7 @@ func (s *HTTPController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (Sca
 	}, nil
 }
 
-func (s *HTTPController) FirstPartyVulnScan(ctx shared.Context) error {
+func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -317,7 +317,7 @@ func (s *HTTPController) FirstPartyVulnScan(ctx shared.Context) error {
 	})
 }
 
-func (s *HTTPController) ScanDependencyVulnFromProject(c shared.Context) error {
+func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -333,7 +333,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c shared.Context) error {
 	return c.JSON(200, scanResults)
 }
 
-func (s *HTTPController) ScanSbomFile(c shared.Context) error {
+func (s *ScanController) ScanSbomFile(c shared.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {

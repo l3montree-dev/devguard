@@ -28,7 +28,7 @@ type dependencyVulnsByPackage struct {
 	DependencyVulns []dtos.DependencyVulnDTO `json:"vulns"`
 }
 
-type dependencyVulnController struct {
+type DependencyVulnController struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	dependencyVulnService    shared.DependencyVulnService
 	projectService           shared.ProjectService
@@ -44,8 +44,8 @@ type DependencyVulnStatus struct {
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository) *dependencyVulnController {
-	return &dependencyVulnController{
+func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository) *DependencyVulnController {
+	return &DependencyVulnController{
 		dependencyVulnRepository:  dependencyVulnRepository,
 		dependencyVulnService:     dependencyVulnService,
 		projectService:            projectService,
@@ -55,7 +55,7 @@ func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnR
 	}
 }
 
-func (controller dependencyVulnController) ListByOrgPaged(ctx shared.Context) error {
+func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := controller.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -82,7 +82,7 @@ func (controller dependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 	}))
 }
 
-func (controller dependencyVulnController) ListByProjectPaged(ctx shared.Context) error {
+func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIDPaged(
@@ -104,7 +104,7 @@ func (controller dependencyVulnController) ListByProjectPaged(ctx shared.Context
 	}))
 }
 
-func (controller dependencyVulnController) ListByAssetIDWithoutHandledExternalEventsPaged(ctx shared.Context) error {
+func (controller DependencyVulnController) ListByAssetIDWithoutHandledExternalEventsPaged(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -126,7 +126,7 @@ func (controller dependencyVulnController) ListByAssetIDWithoutHandledExternalEv
 	}))
 }
 
-func (controller dependencyVulnController) ListPaged(ctx shared.Context) error {
+func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 	// check if we should list flat - this means not grouped by package
@@ -203,7 +203,7 @@ func (controller dependencyVulnController) ListPaged(ctx shared.Context) error {
 	return ctx.JSON(200, shared.NewPaged(shared.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
-func (controller dependencyVulnController) Mitigate(ctx shared.Context) error {
+func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
 		Comment string `json:"comment"`
 	}
@@ -238,7 +238,7 @@ func (controller dependencyVulnController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
-func (controller dependencyVulnController) Read(ctx shared.Context) error {
+func (controller DependencyVulnController) Read(ctx shared.Context) error {
 
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -258,7 +258,7 @@ func (controller dependencyVulnController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
-func (controller dependencyVulnController) Hints(ctx shared.Context) error {
+func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 	//if enabled in org settings we also want to send hints
 	org := shared.GetOrg(ctx)
 
@@ -279,7 +279,7 @@ func (controller dependencyVulnController) Hints(ctx shared.Context) error {
 	return ctx.JSON(200, hints)
 }
 
-func (controller dependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
+func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -344,7 +344,7 @@ func (controller dependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	return ctx.JSON(200, map[string]any{"message": "sync completed"})
 }
 
-func (controller dependencyVulnController) CreateEvent(ctx shared.Context) error {
+func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)

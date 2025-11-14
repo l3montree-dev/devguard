@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree GmbH.
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package webhook
+package controllers
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -172,16 +173,16 @@ func (w *WebhookIntegration) Test(ctx shared.Context) error {
 	}
 
 	// Validate payload type
-	var payloadType TestPayloadType
+	var payloadType services.TestPayloadType
 	switch data.PayloadType {
 	case "empty":
-		payloadType = TestPayloadTypeEmpty
+		payloadType = services.TestPayloadTypeEmpty
 	case "sampleSbom":
-		payloadType = TestPayloadTypeSampleSBOM
+		payloadType = services.TestPayloadTypeSampleSBOM
 	case "sampleDependencyVulns":
-		payloadType = TestPayloadTypeSampleDependencyVulns
+		payloadType = services.TestPayloadTypeSampleDependencyVulns
 	case "sampleFirstPartyVulns":
-		payloadType = TestPayloadTypeSampleFirstPartyVulns
+		payloadType = services.TestPayloadTypeSampleFirstPartyVulns
 	default:
 		return ctx.JSON(400, map[string]string{
 			"error": "Invalid payload type. Supported types: empty, sampleSbom, sampleDependencyVulns, sampleFirstPartyVulns",
@@ -237,7 +238,7 @@ func (w *WebhookIntegration) Test(ctx shared.Context) error {
 		secret = &data.Secret
 	}
 
-	client := NewWebhookClient(data.URL, secret)
+	client := services.NewWebhookService(data.URL, secret)
 
 	if err := client.SendTest(org, project, asset, assetVersion, payloadType); err != nil {
 		slog.Error("failed to send test webhook", "err", err)
@@ -263,7 +264,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 		}
 
 		for _, webhook := range webhooks {
-			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.SbomEnabled {
 				//send sbom
 				if err := client.SendSBOM(*event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
@@ -283,7 +284,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 		}
 
 		for _, webhook := range webhooks {
-			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.VulnEnabled {
 				//send vulnerability
 				if err := client.SendFirstPartyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
@@ -304,7 +305,7 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 		}
 
 		for _, webhook := range webhooks {
-			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.VulnEnabled {
 				//send vulnerability
 				if err := client.SendDependencyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {

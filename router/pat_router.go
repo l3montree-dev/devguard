@@ -13,41 +13,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package api
+package router
 
 import (
-	"log/slog"
-	"sort"
-
-	"go.uber.org/fx"
-
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/pubsub"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
-func BuildRouter() *echo.Echo {
-
-	server := middlewares.Server()
-
-	routes := server.Routes()
-	sort.Slice(routes, func(i, j int) bool {
-		return routes[i].Path < routes[j].Path
-	})
-	// print all registered routes
-	for _, route := range routes {
-		if route.Method != "echo_route_not_found" {
-			slog.Info(route.Path, "method", route.Method)
-		}
-	}
-	return server
+type PatRouter struct {
+	*echo.Group
 }
 
-func NewServer(lc fx.Lifecycle, db shared.DB, broker pubsub.Broker) *echo.Echo {
-	srv := BuildRouter()
-	lc.Append(fx.StartHook(func() {
-		slog.Error("failed to start server", "err", srv.Start(":8080").Error())
-	}))
-	return srv
+func NewPatRouter(
+	sessionGroup SessionRouter,
+	patController *controllers.PatController,
+) PatRouter {
+	/**
+	Personal access token router
+	This does not happen in a org or anything.
+	We only need to make sure, that the user is logged in (sessionRouter)
+	*/
+	patRouter := sessionGroup.Group.Group("/pats", middlewares.NeededScope([]string{"manage"}))
+	patRouter.GET("/", patController.List)
+	patRouter.POST("/", patController.Create)
+	patRouter.POST("/revoke-by-private-key/", patController.RevokeByPrivateKey)
+	patRouter.DELETE("/:tokenID/", patController.Delete)
+
+	return PatRouter{Group: patRouter}
 }

@@ -12,13 +12,13 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-type policyController struct {
+type PolicyController struct {
 	policyRepository  shared.PolicyRepository
 	projectRepository shared.ProjectRepository
 }
 
-func NewPolicyController(policyRepository shared.PolicyRepository, projectRepository shared.ProjectRepository) *policyController {
-	c := &policyController{
+func NewPolicyController(policyRepository shared.PolicyRepository, projectRepository shared.ProjectRepository) *PolicyController {
+	c := &PolicyController{
 		policyRepository:  policyRepository,
 		projectRepository: projectRepository,
 	}
@@ -29,7 +29,7 @@ func NewPolicyController(policyRepository shared.PolicyRepository, projectReposi
 	return c
 }
 
-func (c *policyController) migratePolicies() error {
+func (c *PolicyController) migratePolicies() error {
 	// we need to migrate the policies from the old format to the new format
 	// this is only needed for the first time we run the application
 	// after that we can remove this function
@@ -101,7 +101,7 @@ func (c *policyController) migratePolicies() error {
 	return nil
 }
 
-func (c *policyController) GetOrganizationPolicies(ctx shared.Context) error {
+func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 
 	org := shared.GetOrg(ctx)
 	policies, err := c.policyRepository.FindByOrganizationID(org.ID)
@@ -119,7 +119,7 @@ func (c *policyController) GetOrganizationPolicies(ctx shared.Context) error {
 	return ctx.JSON(200, append(policies, communityPolicies...))
 }
 
-func (c *policyController) GetProjectPolicies(ctx shared.Context) error {
+func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	policies, err := c.policyRepository.FindByProjectID(project.ID)
 
@@ -130,7 +130,7 @@ func (c *policyController) GetProjectPolicies(ctx shared.Context) error {
 	return ctx.JSON(200, policies)
 }
 
-func (c *policyController) GetPolicy(ctx shared.Context) error {
+func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
 	// parse the uuid
@@ -148,7 +148,7 @@ func (c *policyController) GetPolicy(ctx shared.Context) error {
 	return ctx.JSON(200, policy)
 }
 
-func (c *policyController) CreatePolicy(ctx shared.Context) error {
+func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
@@ -174,7 +174,7 @@ func (c *policyController) CreatePolicy(ctx shared.Context) error {
 	return ctx.JSON(201, policy)
 }
 
-func (c *policyController) UpdatePolicy(ctx shared.Context) error {
+func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
 	// parse the uuid
@@ -207,7 +207,7 @@ func (c *policyController) UpdatePolicy(ctx shared.Context) error {
 	return ctx.JSON(200, policyModel)
 }
 
-func (c *policyController) DeletePolicy(ctx shared.Context) error {
+func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
 	// parse the uuid
@@ -224,7 +224,7 @@ func (c *policyController) DeletePolicy(ctx shared.Context) error {
 	return ctx.NoContent(204)
 }
 
-func (c *policyController) EnablePolicyForProject(ctx shared.Context) error {
+func (c *PolicyController) EnablePolicyForProject(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
 	project := shared.GetProject(ctx)
@@ -243,7 +243,7 @@ func (c *policyController) EnablePolicyForProject(ctx shared.Context) error {
 	return ctx.NoContent(204)
 }
 
-func (c *policyController) DisablePolicyForProject(ctx shared.Context) error {
+func (c *PolicyController) DisablePolicyForProject(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
 	// parse the uuid

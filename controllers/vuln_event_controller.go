@@ -10,19 +10,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type vulnEventController struct {
+type VulnEventController struct {
 	vulnEventRepository    shared.VulnEventRepository
 	assetVersionRepository shared.AssetVersionRepository
 }
 
-func NewVulnEventController(vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository) *vulnEventController {
-	return &vulnEventController{
+func NewVulnEventController(vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository) *VulnEventController {
+	return &VulnEventController{
 		vulnEventRepository:    vulnEventRepository,
 		assetVersionRepository: assetVersionRepository,
 	}
 }
 
-func (c vulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
+func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 	vulnID, vulnType, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "vulnID is required").WithInternal(err)
@@ -60,7 +60,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) dtos.VulnEventDTO 
 	}
 }
 
-func (c vulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
+func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)

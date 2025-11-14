@@ -11,21 +11,21 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type attestationController struct {
+type AttestationController struct {
 	attestationRepository  shared.AttestationRepository
 	assetVersionRepository shared.AssetVersionRepository
 	artifactRepository     shared.ArtifactRepository
 }
 
-func NewAttestationController(repository shared.AttestationRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) *attestationController {
-	return &attestationController{
+func NewAttestationController(repository shared.AttestationRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) *AttestationController {
+	return &AttestationController{
 		attestationRepository:  repository,
 		assetVersionRepository: assetVersionRepository,
 		artifactRepository:     artifactRepository,
 	}
 }
 
-func (a *attestationController) List(ctx shared.Context) error {
+func (a *AttestationController) List(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -38,7 +38,7 @@ func (a *attestationController) List(ctx shared.Context) error {
 	return ctx.JSON(200, attestationList)
 }
 
-func (a *attestationController) Create(ctx shared.Context) error {
+func (a *AttestationController) Create(ctx shared.Context) error {
 
 	jsonContent := make(map[string]any)
 

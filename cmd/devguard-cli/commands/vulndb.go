@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -65,7 +64,7 @@ func migrateDB(db shared.DB) {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}

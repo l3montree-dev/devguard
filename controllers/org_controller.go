@@ -30,7 +30,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type orgController struct {
+type OrgController struct {
 	organizationRepository shared.OrganizationRepository
 	orgService             shared.OrgService
 	rbacProvider           shared.RBACProvider
@@ -38,8 +38,8 @@ type orgController struct {
 	invitationRepository   shared.InvitationRepository
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository) *orgController {
-	return &orgController{
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository) *OrgController {
+	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
 		rbacProvider:           rbacProvider,
@@ -48,7 +48,7 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 	}
 }
 
-func (controller *orgController) Create(ctx shared.Context) error {
+func (controller *OrgController) Create(ctx shared.Context) error {
 
 	var req dtos.OrgCreateRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -72,7 +72,7 @@ func (controller *orgController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, organization)
 }
 
-func (controller *orgController) Update(ctx shared.Context) error {
+func (controller *OrgController) Update(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
@@ -110,7 +110,7 @@ func (controller *orgController) Update(ctx shared.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (controller *orgController) Delete(ctx shared.Context) error {
+func (controller *OrgController) Delete(ctx shared.Context) error {
 	// get the id of the organization
 	organizationID := shared.GetOrg(ctx).GetID()
 
@@ -123,7 +123,7 @@ func (controller *orgController) Delete(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (controller *orgController) ContentTree(ctx shared.Context) error {
+func (controller *OrgController) ContentTree(ctx shared.Context) error {
 	// get the whole content tree of the organization
 	// this means all projects and their corresponding assets
 
@@ -143,7 +143,7 @@ func (controller *orgController) ContentTree(ctx shared.Context) error {
 	return ctx.JSON(200, controller.organizationRepository.ContentTree(organization.GetID(), projects))
 }
 
-func (controller *orgController) AcceptInvitation(ctx shared.Context) error {
+func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the code and the org id from the path
 	var req dtos.AcceptInvitationRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -197,7 +197,7 @@ func (controller *orgController) AcceptInvitation(ctx shared.Context) error {
 	)
 }
 
-func (controller *orgController) InviteMember(ctx shared.Context) error {
+func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	// we expect an email address in the request.
 	// afterwards we create a new invitation model and a code corresponding to the invitation
 	var req dtos.InviteRequest
@@ -227,7 +227,7 @@ func (controller *orgController) InviteMember(ctx shared.Context) error {
 	return ctx.JSON(200, model) // for now return the model - later on we should send an email
 }
 
-func (controller *orgController) ChangeRole(ctx shared.Context) error {
+func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	// get the user id from the request
 	var req dtos.OrgChangeRoleRequest
 
@@ -262,7 +262,7 @@ func (controller *orgController) ChangeRole(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (controller *orgController) RemoveMember(ctx shared.Context) error {
+func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	// get the user id from the request
 	userID := ctx.Param("userID")
 
@@ -287,7 +287,7 @@ func (controller *orgController) RemoveMember(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (controller *orgController) Metrics(ctx shared.Context) error {
+func (controller *OrgController) Metrics(ctx shared.Context) error {
 	owner, err := shared.GetRBAC(ctx).GetOwnerOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
@@ -295,7 +295,7 @@ func (controller *orgController) Metrics(ctx shared.Context) error {
 	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }
 
-func (controller *orgController) GetConfigFile(ctx shared.Context) error {
+func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
 
@@ -306,7 +306,7 @@ func (controller *orgController) GetConfigFile(ctx shared.Context) error {
 	return ctx.JSON(200, configContent)
 }
 
-func (controller *orgController) Members(ctx shared.Context) error {
+func (controller *OrgController) Members(ctx shared.Context) error {
 	users, err := services.FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -315,7 +315,7 @@ func (controller *orgController) Members(ctx shared.Context) error {
 	return ctx.JSON(200, users)
 }
 
-func (controller *orgController) Read(ctx shared.Context) error {
+func (controller *OrgController) Read(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
 	// fetch the regular members of the current organization
@@ -333,7 +333,7 @@ func (controller *orgController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (controller *orgController) List(ctx shared.Context) error {
+func (controller *OrgController) List(ctx shared.Context) error {
 	// get all organizations the user has access to
 	userID := shared.GetSession(ctx).GetUserID()
 

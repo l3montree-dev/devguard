@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type statisticsController struct {
+type StatisticsController struct {
 	statisticsService      shared.StatisticsService
 	statisticsRepository   shared.StatisticsRepository
 	assetVersionRepository shared.AssetVersionRepository
@@ -22,8 +22,8 @@ type statisticsController struct {
 	projectService         shared.ProjectService
 }
 
-func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, projectService shared.ProjectService) *statisticsController {
-	return &statisticsController{
+func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, projectService shared.ProjectService) *StatisticsController {
+	return &StatisticsController{
 		statisticsService:      statisticsService,
 		statisticsRepository:   statisticsRepository,
 		assetVersionRepository: assetVersionRepository,
@@ -32,7 +32,7 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 	}
 }
 
-func (c *statisticsController) GetAverageFixingTime(ctx shared.Context) error {
+func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	severity := ctx.QueryParam("severity")
 	if severity == "" {
@@ -85,7 +85,7 @@ func checkSeverity(severity string) error {
 	return nil
 }
 
-func (c *statisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
+func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
 	// get the start and end query params
 	start := ctx.QueryParam("start")
@@ -109,7 +109,7 @@ func (c *statisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *statisticsController) getArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
+func (c *StatisticsController) getArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -129,7 +129,7 @@ func (c *statisticsController) getArtifactRiskHistory(artifactName *string, asse
 	return c.statisticsService.GetArtifactRiskHistory(artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
-func (c *statisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
+func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
 	var cves []models.CVE
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -151,7 +151,7 @@ func (c *statisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 }
 
 // GetReleaseRiskHistory returns aggregated artifact risk history for a given release
-func (c *statisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
+func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	// parse release id from param
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
 	releaseID, err := uuid.Parse(releaseIDParam)
@@ -189,7 +189,7 @@ func (c *statisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *statisticsController) GetComponentRisk(ctx shared.Context) error {
+func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
 	results, err := c.statisticsService.GetComponentRisk(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
@@ -202,7 +202,7 @@ func (c *statisticsController) GetComponentRisk(ctx shared.Context) error {
 }
 
 // GetAverageReleaseFixingTime returns the average fixing time (seconds) for a release across all included artifacts
-func (c *statisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
+func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
 	releaseID, err := uuid.Parse(releaseIDParam)
 	if err != nil {

@@ -46,6 +46,7 @@ var Module = fx.Options(
 
 	// Integrations
 	fx.Provide(NewIntegrationController),
+	fx.Provide(NewVulnDBController),
 
 	// Release & Statistics
 	fx.Provide(NewReleaseController),
@@ -53,4 +54,5 @@ var Module = fx.Options(
 
 	// Authentication & Access
 	fx.Provide(NewPatController),
+	fx.Provide(NewScanController),
 )

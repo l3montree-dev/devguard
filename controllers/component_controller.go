@@ -11,14 +11,14 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-type componentController struct {
+type ComponentController struct {
 	componentRepository    shared.ComponentRepository
 	assetVersionRepository shared.AssetVersionRepository
 	licenseRiskRepository  shared.LicenseRiskRepository
 }
 
-func NewComponentController(componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, licenseOverwriteRepository shared.LicenseRiskRepository) *componentController {
-	return &componentController{
+func NewComponentController(componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, licenseOverwriteRepository shared.LicenseRiskRepository) *ComponentController {
+	return &ComponentController{
 		componentRepository:    componentRepository,
 		assetVersionRepository: assetVersionRepository,
 		licenseRiskRepository:  licenseOverwriteRepository,
@@ -30,7 +30,7 @@ type licenseResponse struct {
 	Count   int              `json:"count"`
 }
 
-func (componentController componentController) LicenseDistribution(ctx shared.Context) error {
+func (ComponentController ComponentController) LicenseDistribution(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 
@@ -39,13 +39,13 @@ func (componentController componentController) LicenseDistribution(ctx shared.Co
 
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = componentController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = ComponentController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 		if err != nil {
 			return ctx.JSON(404, nil)
 		}
 	}
 
-	fetchedLicenses, err := componentController.componentRepository.GetLicenseDistribution(nil,
+	fetchedLicenses, err := ComponentController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		utils.EmptyThenNil(artifactName),
@@ -78,7 +78,7 @@ func (componentController componentController) LicenseDistribution(ctx shared.Co
 	return ctx.JSON(200, res)
 }
 
-func (componentController componentController) ListPaged(ctx shared.Context) error {
+func (ComponentController ComponentController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	filter := shared.GetFilterQuery(ctx)
@@ -88,7 +88,7 @@ func (componentController componentController) ListPaged(ctx shared.Context) err
 	search := ctx.QueryParam("search")
 	sort := shared.GetSortQuery(ctx)
 
-	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	overwrittenLicense, err := ComponentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (componentController componentController) ListPaged(ctx shared.Context) err
 		Operator:   "like",
 	})
 
-	components, err := componentController.componentRepository.LoadComponentsWithProject(nil,
+	components, err := ComponentController.componentRepository.LoadComponentsWithProject(nil,
 		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,

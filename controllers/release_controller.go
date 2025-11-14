@@ -14,7 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type releaseController struct {
+type ReleaseController struct {
 	service                shared.ReleaseService
 	assetVersionService    shared.AssetVersionService
 	assetVersionRepository shared.AssetVersionRepository
@@ -24,11 +24,11 @@ type releaseController struct {
 	assetRepository        shared.AssetRepository
 }
 
-func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, compRepo shared.ComponentRepository, licRepo shared.LicenseRiskRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository) *releaseController {
-	return &releaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
+func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, compRepo shared.ComponentRepository, licRepo shared.LicenseRiskRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository) *ReleaseController {
+	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
 }
 
-func (h *releaseController) List(c shared.Context) error {
+func (h *ReleaseController) List(c shared.Context) error {
 	project := shared.GetProject(c)
 
 	filter := shared.GetFilterQuery(c)
@@ -50,7 +50,7 @@ func (h *releaseController) List(c shared.Context) error {
 }
 
 // SBOMJSON returns a merged CycloneDX BOM for a release in JSON format.
-func (h *releaseController) SBOMJSON(c shared.Context) error {
+func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -74,7 +74,7 @@ func (h *releaseController) SBOMJSON(c shared.Context) error {
 }
 
 // SBOMXML returns a merged CycloneDX BOM for a release in XML format.
-func (h *releaseController) SBOMXML(c shared.Context) error {
+func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -98,7 +98,7 @@ func (h *releaseController) SBOMXML(c shared.Context) error {
 }
 
 // VEXJSON currently returns the merged CycloneDX BOM as JSON for compatibility.
-func (h *releaseController) VEXJSON(c shared.Context) error {
+func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -122,7 +122,7 @@ func (h *releaseController) VEXJSON(c shared.Context) error {
 }
 
 // VEXXML currently returns the merged CycloneDX BOM as XML for compatibility.
-func (h *releaseController) VEXXML(c shared.Context) error {
+func (h *ReleaseController) VEXXML(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -146,7 +146,7 @@ func (h *releaseController) VEXXML(c shared.Context) error {
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
-func (h *releaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	// iterate over items and build SBOM per artifact
@@ -198,7 +198,7 @@ func (h *releaseController) buildMergedSBOM(c shared.Context, release models.Rel
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *releaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	for _, item := range release.Items {
@@ -243,7 +243,7 @@ func (h *releaseController) buildMergedVEX(c shared.Context, release models.Rele
 	return merged.EjectVex(nil), nil
 }
 
-func (h *releaseController) Read(c shared.Context) error {
+func (h *ReleaseController) Read(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -258,7 +258,7 @@ func (h *releaseController) Read(c shared.Context) error {
 	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
-func (h *releaseController) Create(c shared.Context) error {
+func (h *ReleaseController) Create(c shared.Context) error {
 	var req dtos.ReleaseCreateRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
@@ -274,7 +274,7 @@ func (h *releaseController) Create(c shared.Context) error {
 	return c.JSON(http.StatusCreated, transformer.ReleaseToDTO(model))
 }
 
-func (h *releaseController) Update(c shared.Context) error {
+func (h *ReleaseController) Update(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -300,7 +300,7 @@ func (h *releaseController) Update(c shared.Context) error {
 	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
-func (h *releaseController) Delete(c shared.Context) error {
+func (h *ReleaseController) Delete(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -315,7 +315,7 @@ func (h *releaseController) Delete(c shared.Context) error {
 }
 
 // add item to a release (artifact or child release)
-func (h *releaseController) AddItem(c shared.Context) error {
+func (h *ReleaseController) AddItem(c shared.Context) error {
 	relIDParam := shared.GetParam(c, "releaseID")
 	relID, err := uuid.Parse(relIDParam)
 	if err != nil {
@@ -344,7 +344,7 @@ func (h *releaseController) AddItem(c shared.Context) error {
 }
 
 // remove an item from a release
-func (h *releaseController) RemoveItem(c shared.Context) error {
+func (h *ReleaseController) RemoveItem(c shared.Context) error {
 	itemIDParam := shared.GetParam(c, "itemID")
 	itemID, err := uuid.Parse(itemIDParam)
 	if err != nil {
@@ -358,7 +358,7 @@ func (h *releaseController) RemoveItem(c shared.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *releaseController) ListCandidates(c shared.Context) error {
+func (h *ReleaseController) ListCandidates(c shared.Context) error {
 	project := shared.GetProject(c)
 	// check if a release id is provided
 	releaseIDParam := c.Param("releaseID")

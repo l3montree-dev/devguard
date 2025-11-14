@@ -9,21 +9,21 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-type complianceController struct {
+type ComplianceController struct {
 	assetVersionRepository shared.AssetVersionRepository
 	attestationRepository  shared.AttestationRepository
 	policyRepository       shared.PolicyRepository
 }
 
-func NewComplianceController(assetVersionRepository shared.AssetVersionRepository, attestationRepository shared.AttestationRepository, policyRepository shared.PolicyRepository) *complianceController {
-	return &complianceController{
+func NewComplianceController(assetVersionRepository shared.AssetVersionRepository, attestationRepository shared.AttestationRepository, policyRepository shared.PolicyRepository) *ComplianceController {
+	return &ComplianceController{
 		assetVersionRepository: assetVersionRepository,
 		policyRepository:       policyRepository,
 		attestationRepository:  attestationRepository,
 	}
 }
 
-func (c *complianceController) getAssetVersionCompliance(projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
+func (c *ComplianceController) getAssetVersionCompliance(projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
 	// get the attestation
 	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
@@ -56,7 +56,7 @@ foundMatch:
 	return results, nil
 }
 
-func (c *complianceController) Details(ctx shared.Context) error {
+func (c *ComplianceController) Details(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	p := ctx.Param("policy")
@@ -88,7 +88,7 @@ func (c *complianceController) Details(ctx shared.Context) error {
 	return ctx.JSON(200, compliance.Eval(policy, nil))
 }
 
-func (c *complianceController) AssetCompliance(ctx shared.Context) error {
+func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *complianceController) AssetCompliance(ctx shared.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *complianceController) ProjectCompliance(ctx shared.Context) error {
+func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {
 	// get all default asset version from the project
 	project := shared.GetProject(ctx)
 	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(project.ID)

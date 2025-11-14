@@ -278,6 +278,7 @@ type ExternalEntityProviderService interface {
 	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
+	TriggerSync(c echo.Context) error
 }
 
 type ProjectService interface {

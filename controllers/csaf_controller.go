@@ -24,7 +24,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type csafController struct {
+type CSAFController struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
@@ -35,8 +35,8 @@ type csafController struct {
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafController {
-	return &csafController{
+func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+	return &CSAFController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
@@ -49,7 +49,7 @@ func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository,
 }
 
 // builds and returns the index.txt file, listing all csaf reports currently available
-func (controller *csafController) GetIndexFile(ctx shared.Context) error {
+func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
@@ -71,7 +71,7 @@ func (controller *csafController) GetIndexFile(ctx shared.Context) error {
 }
 
 // builds and returns the changes.csv file, containing all reports ordered by release dates
-func (controller *csafController) GetChangesCSVFile(ctx shared.Context) error {
+func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
@@ -97,7 +97,7 @@ func (controller *csafController) GetChangesCSVFile(ctx shared.Context) error {
 }
 
 // returns the html to display each subdirectory present under the csaf url
-func (controller *csafController) GetCSAFIndexHTML(ctx shared.Context) error {
+func (controller *CSAFController) GetCSAFIndexHTML(ctx shared.Context) error {
 	html := `<html>
 	<head><title>Index of /csaf/</title></head>
 	<body cz-shortcut-listen="true">
@@ -112,7 +112,7 @@ func (controller *csafController) GetCSAFIndexHTML(ctx shared.Context) error {
 }
 
 // return the html used to display all openpgp related keys and hashes
-func (controller *csafController) GetOpenPGPHTML(ctx shared.Context) error {
+func (controller *CSAFController) GetOpenPGPHTML(ctx shared.Context) error {
 	fingerprint := getPublicKeyFingerprint()
 
 	type pageData struct {
@@ -173,7 +173,7 @@ func getAllYears(asset models.Asset, dependencyVulnRepository shared.DependencyV
 }
 
 // builds and returns the html used to display every directory in the tlp white folder
-func (controller *csafController) GetTLPWhiteEntriesHTML(ctx shared.Context) error {
+func (controller *CSAFController) GetTLPWhiteEntriesHTML(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	// get all years where csaf version were published and make a directory for each of these
@@ -218,7 +218,7 @@ func (controller *csafController) GetTLPWhiteEntriesHTML(ctx shared.Context) err
 }
 
 // builds and returns the html to display every csaf version of a given year as well as the signature and hash
-func (controller *csafController) GetReportsByYearHTML(ctx shared.Context) error {
+func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
@@ -277,7 +277,7 @@ func (controller *csafController) GetReportsByYearHTML(ctx shared.Context) error
 }
 
 // handles request to files placed in the openpgp directory (currently public key and the respective sha512 hash)
-func (controller *csafController) GetOpenPGPFile(ctx shared.Context) error {
+func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 	// determine which type of file is requested
 	file := ctx.Param("file")
 	file = strings.TrimSuffix(file, "/")
@@ -313,7 +313,7 @@ func (controller *csafController) GetOpenPGPFile(ctx shared.Context) error {
 }
 
 // returns the aggregator file which points to all public organizations provider-metadata files
-func (controller *csafController) GetAggregatorJSON(ctx shared.Context) error {
+func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	aggregatorObject := gocsaf.AggregatorInfo{
 		Category:       utils.Ptr(gocsaf.AggregatorLister),
 		ContactDetails: "info@l3montree.com",
@@ -367,7 +367,7 @@ func (controller *csafController) GetAggregatorJSON(ctx shared.Context) error {
 }
 
 // returns the provider-metadata file for an organization which points to each assets provider-metadata
-func (controller *csafController) GetProviderMetadataForOrganization(ctx shared.Context) error {
+func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	hostURL := os.Getenv("API_URL")
 	csafURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/", hostURL, org.Slug)
@@ -419,7 +419,7 @@ func getPublicKeyFingerprint() string {
 // from here on: code that handles the creation of csaf reports them self
 
 // handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
-func (controller *csafController) ServeCSAFReportRequest(ctx shared.Context) error {
+func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
 	// generate the report first
 	csafReport, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
 	if err != nil {

@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree GmbH.
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package webhook
+package services
 
 import (
 	"net/http"
@@ -24,7 +24,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookClient(server.URL, nil)
+		client := NewWebhookService(server.URL, nil)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest("POST", server.URL, body)
@@ -46,7 +46,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookClient(server.URL, nil)
+		client := NewWebhookService(server.URL, nil)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest("POST", server.URL, body)

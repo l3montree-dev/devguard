@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type artifactController struct {
+type ArtifactController struct {
 	artifactRepository    shared.ArtifactRepository
 	artifactService       shared.ArtifactService
 	dependencyVulnService shared.DependencyVulnService
@@ -27,8 +27,8 @@ type artifactController struct {
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService) *artifactController {
-	return &artifactController{
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService) *ArtifactController {
+	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
 		dependencyVulnService:     dependencyVulnService,
@@ -58,7 +58,7 @@ func informationSourceToString(source informationSource) string {
 	return r
 }
 
-func (c *artifactController) Create(ctx shared.Context) error {
+func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -119,7 +119,7 @@ func (c *artifactController) Create(ctx shared.Context) error {
 
 }
 
-func (c *artifactController) DeleteArtifact(ctx shared.Context) error {
+func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
 
@@ -136,7 +136,7 @@ func (c *artifactController) DeleteArtifact(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (c *artifactController) SyncExternalSources(ctx shared.Context) error {
+func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := shared.GetArtifact(ctx)
@@ -184,7 +184,7 @@ func (c *artifactController) SyncExternalSources(ctx shared.Context) error {
 	return nil
 }
 
-func (c *artifactController) UpdateArtifact(ctx shared.Context) error {
+func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)

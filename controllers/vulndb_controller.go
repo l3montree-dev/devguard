@@ -1,16 +1,17 @@
-package vulndb
+package controllers
 
 import (
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 )
 
-type cveHTTPController struct {
+type VulnDBController struct {
 	cveRepository shared.CveRepository
 }
 
-func NewHTTPController(cveRepository shared.CveRepository) *cveHTTPController {
-	return &cveHTTPController{
+func NewVulnDBController(cveRepository shared.CveRepository) *VulnDBController {
+	return &VulnDBController{
 		cveRepository: cveRepository,
 	}
 }
@@ -29,7 +30,7 @@ func NewHTTPController(cveRepository shared.CveRepository) *cveHTTPController {
 // @Success 200 {object} object{pageSize=int,page=int,total=int,data=[]models.CVE} "A paginated list of CVEs"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb [get]
-func (c cveHTTPController) ListPaged(ctx shared.Context) error {
+func (c VulnDBController) ListPaged(ctx shared.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
 		shared.GetPageInfo(ctx),
@@ -43,7 +44,7 @@ func (c cveHTTPController) ListPaged(ctx shared.Context) error {
 	env := shared.GetEnvironmental(ctx)
 
 	for i, cve := range pagedResp.Data {
-		risk, vector := RiskCalculation(cve, env)
+		risk, vector := vulndb.RiskCalculation(cve, env)
 		pagedResp.Data[i].Vector = vector
 		pagedResp.Data[i].Risk = risk
 	}
@@ -62,7 +63,7 @@ func (c cveHTTPController) ListPaged(ctx shared.Context) error {
 // @Success 200 {object} models.CVE "Details of the specified CVE"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/{cveID}/ [get]
-func (c cveHTTPController) Read(ctx shared.Context) error {
+func (c VulnDBController) Read(ctx shared.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		nil,
 		shared.GetParam(ctx, "cveID"),
@@ -74,7 +75,7 @@ func (c cveHTTPController) Read(ctx shared.Context) error {
 
 	e := shared.GetEnvironmental(ctx)
 
-	risk, vector := RiskCalculation(cve, e)
+	risk, vector := vulndb.RiskCalculation(cve, e)
 	cve.Risk = risk
 	cve.Vector = vector
 

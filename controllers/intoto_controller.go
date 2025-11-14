@@ -34,7 +34,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type inToToController struct {
+type InToToController struct {
 	linkRepository         shared.InTotoLinkRepository
 	supplyChainRepository  shared.SupplyChainRepository
 	assetVersionRepository shared.AssetVersionRepository
@@ -43,8 +43,8 @@ type inToToController struct {
 	inTotoVerifierService shared.InTotoVerifierService
 }
 
-func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, inTotoVerifierService shared.InTotoVerifierService) *inToToController {
-	return &inToToController{
+func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, inTotoVerifierService shared.InTotoVerifierService) *InToToController {
+	return &InToToController{
 		linkRepository:         repository,
 		supplyChainRepository:  supplyChainRepository,
 		assetVersionRepository: assetVersionRepository,
@@ -53,7 +53,7 @@ func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepo
 	}
 }
 
-func (a *inToToController) VerifySupplyChain(ctx shared.Context) error {
+func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
 
@@ -86,7 +86,7 @@ func (a *inToToController) VerifySupplyChain(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (a *inToToController) Create(ctx shared.Context) error {
+func (a *InToToController) Create(ctx shared.Context) error {
 	var req dtos.CreateInTotoLinkRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -182,7 +182,7 @@ func (a *inToToController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, link)
 }
 
-func (a *inToToController) RootLayout(ctx shared.Context) error {
+func (a *InToToController) RootLayout(ctx shared.Context) error {
 	// get all pats which are part of the asset
 	project := shared.GetProject(ctx)
 	accessControl := shared.GetRBAC(ctx)
@@ -309,7 +309,7 @@ func (a *inToToController) RootLayout(ctx shared.Context) error {
 	return ctx.File(tmpfile.Name())
 }
 
-func (a *inToToController) Read(ctx shared.Context) error {
+func (a *InToToController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// find a link with the corresponding opaque id
 	links, err := a.linkRepository.FindByAssetAndSupplyChainID(app.GetID(), ctx.Param("supplyChainID"))
