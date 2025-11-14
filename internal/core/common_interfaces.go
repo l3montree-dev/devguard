@@ -182,6 +182,10 @@ type DependencyVulnRepository interface {
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 }
 
+type ComponentOccurrenceRepository interface {
+	SearchComponentOccurrencesByOrg(tx DB, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
+}
+
 type FirstPartyVulnRepository interface {
 	common.Repository[string, models.FirstPartyVuln, DB]
 	SaveBatch(tx DB, vulns []models.FirstPartyVuln) error
