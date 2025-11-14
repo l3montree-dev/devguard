@@ -27,27 +27,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func BuildRouter() *echo.Echo {
-
-	server := middlewares.Server()
-
-	routes := server.Routes()
-	sort.Slice(routes, func(i, j int) bool {
-		return routes[i].Path < routes[j].Path
-	})
-	// print all registered routes
-	for _, route := range routes {
-		if route.Method != "echo_route_not_found" {
-			slog.Info(route.Path, "method", route.Method)
-		}
-	}
-	return server
-}
-
 func NewServer(lc fx.Lifecycle, db shared.DB, broker pubsub.Broker) *echo.Echo {
-	srv := BuildRouter()
+	server := middlewares.Server()
 	lc.Append(fx.StartHook(func() {
-		slog.Error("failed to start server", "err", srv.Start(":8080").Error())
+		routes := server.Routes()
+		sort.Slice(routes, func(i, j int) bool {
+			return routes[i].Path < routes[j].Path
+		})
+		// print all registered routes
+		for _, route := range routes {
+			if route.Method != "echo_route_not_found" {
+				slog.Info(route.Path, "method", route.Method)
+			}
+		}
+		slog.Error("failed to start server", "err", server.Start(":8080").Error())
 	}))
-	return srv
+	return server
 }

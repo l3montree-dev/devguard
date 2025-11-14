@@ -583,7 +583,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 
 	// create the metadata for the pdf and writing it into a buffer
 	metaDataFile := bytes.Buffer{}
-	metaData := a.assetVersionService.CreateYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
+	metaData := services.CreateYAMLMetadata(shared.GetOrg(ctx).Name, shared.GetAsset(ctx).Name, shared.GetAssetVersion(ctx).Name)
 	parsedYAML, err := yaml.Marshal(metaData)
 	if err != nil {
 		return err

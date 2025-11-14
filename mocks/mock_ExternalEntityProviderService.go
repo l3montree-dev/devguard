@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -209,6 +210,57 @@ func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Return(err error) *
 }
 
 func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) RunAndReturn(run func(c shared.Context) error) *ExternalEntityProviderService_TriggerOrgSync_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TriggerSync provides a mock function for the type ExternalEntityProviderService
+func (_mock *ExternalEntityProviderService) TriggerSync(c echo.Context) error {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TriggerSync")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(echo.Context) error); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ExternalEntityProviderService_TriggerSync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TriggerSync'
+type ExternalEntityProviderService_TriggerSync_Call struct {
+	*mock.Call
+}
+
+// TriggerSync is a helper method to define mock.On call
+//   - c echo.Context
+func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c interface{}) *ExternalEntityProviderService_TriggerSync_Call {
+	return &ExternalEntityProviderService_TriggerSync_Call{Call: _e.mock.On("TriggerSync", c)}
+}
+
+func (_c *ExternalEntityProviderService_TriggerSync_Call) Run(run func(c echo.Context)) *ExternalEntityProviderService_TriggerSync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 echo.Context
+		if args[0] != nil {
+			arg0 = args[0].(echo.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_TriggerSync_Call) Return(err error) *ExternalEntityProviderService_TriggerSync_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_TriggerSync_Call) RunAndReturn(run func(c echo.Context) error) *ExternalEntityProviderService_TriggerSync_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -62,18 +62,6 @@ func NewScanController(scanService shared.ScanService, componentRepository share
 	}
 }
 
-type ScanResponse struct {
-	AmountOpened    int                      `json:"amountOpened"`
-	AmountClosed    int                      `json:"amountClosed"`
-	DependencyVulns []dtos.DependencyVulnDTO `json:"dependencyVulns"`
-}
-
-type FirstPartyScanResponse struct {
-	AmountOpened    int                      `json:"amountOpened"`
-	AmountClosed    int                      `json:"amountClosed"`
-	FirstPartyVulns []dtos.FirstPartyVulnDTO `json:"firstPartyVulns"`
-}
-
 // UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
 // It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
 func (s ScanController) UploadVEX(ctx shared.Context) error {
@@ -178,14 +166,14 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	return ctx.JSON(200, nil)
 }
 
-func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ScanResponse, error) {
+func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dtos.ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
 		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Minutes())
 	}()
 
-	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
+	scanResults := dtos.ScanResponse{} //Initialize empty struct to return when an error happens
 
 	asset := shared.GetAsset(c)
 
@@ -238,7 +226,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (Sca
 		return scanResults, err
 	}
 
-	return ScanResponse{
+	return dtos.ScanResponse{
 		AmountOpened:    opened,
 		AmountClosed:    closed,
 		DependencyVulns: utils.Map(newState, transformer.DependencyVulnToDTO),
@@ -310,7 +298,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		slog.Error("could not save asset", "err", err)
 	}
 
-	return ctx.JSON(200, FirstPartyScanResponse{
+	return ctx.JSON(200, dtos.FirstPartyScanResponse{
 		AmountOpened:    len(opened),
 		AmountClosed:    len(closed),
 		FirstPartyVulns: utils.Map(newState, transformer.FirstPartyVulnToDto),

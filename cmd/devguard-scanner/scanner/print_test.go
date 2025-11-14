@@ -21,7 +21,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -87,7 +86,7 @@ func TestPrintScaResults(t *testing.T) {
 	webUI := "https://app.devguard.org"
 
 	t.Run("should return nil when no vulnerabilities found", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{},
 			AmountOpened:    0,
 			AmountClosed:    0,
@@ -98,7 +97,7 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should not fail when all vulnerabilities are closed/accepted - even with high risk/CVSS", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
 					CVEID:             utils.Ptr("CVE-2023-12345"),
@@ -153,7 +152,7 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := scan.ScanResponse{
+				scanResponse := dtos.ScanResponse{
 					DependencyVulns: []dtos.DependencyVulnDTO{
 						{
 							CVEID:             utils.Ptr("CVE-2023-12345"),
@@ -203,7 +202,7 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := scan.ScanResponse{
+				scanResponse := dtos.ScanResponse{
 					DependencyVulns: []dtos.DependencyVulnDTO{
 						{
 							CVEID:             utils.Ptr("CVE-2023-12345"),
@@ -234,7 +233,7 @@ func TestPrintScaResults(t *testing.T) {
 
 	// Test edge cases
 	t.Run("should handle vulnerabilities without CVE (no CVSS)", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
 					CVEID:             nil, // No CVE ID
@@ -256,7 +255,7 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should only consider OPEN vulnerabilities - mixed states scenario", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
 					CVEID:             utils.Ptr("CVE-2023-12345"),
@@ -319,7 +318,7 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should handle nil RawRiskAssessment gracefully", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
 					CVEID:             utils.Ptr("CVE-2023-12345"),
@@ -343,7 +342,7 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should handle unknown failOn values gracefully", func(t *testing.T) {
-		scanResponse := scan.ScanResponse{
+		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
 					CVEID:             utils.Ptr("CVE-2023-12345"),

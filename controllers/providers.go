@@ -19,8 +19,8 @@ import (
 	"go.uber.org/fx"
 )
 
-// Module provides all HTTP controller constructors
-var Module = fx.Options(
+// ControllerModule provides all HTTP controller constructors
+var ControllerModule = fx.Options(
 	// Asset Management
 	fx.Provide(NewAssetController),
 	fx.Provide(NewAssetVersionController),

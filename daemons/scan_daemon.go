@@ -5,18 +5,18 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/integrations/webhook"
+
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 )
 
 func ScanArtifacts(db shared.DB, rbacProvider shared.RBACProvider) error {
@@ -45,7 +45,7 @@ func ScanArtifacts(db shared.DB, rbacProvider shared.RBACProvider) error {
 		gitlabOauth2Integrations,
 	)
 
-	webhookIntegration := webhook.NewWebhookIntegration(db)
+	webhookIntegration := controllers.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
 
 	jiraIntegration := jiraint.NewJiraIntegration(db)
@@ -65,9 +65,9 @@ func ScanArtifacts(db shared.DB, rbacProvider shared.RBACProvider) error {
 	assetVersionService := services.NewAssetVersionService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
 	artifactService := services.NewArtifactService(artifactRepository, services.NewCSAFService(common.OutgoingConnectionClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewReleaseRepository(db))
-	scanService := scan.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
+	scanService := services.NewScanService(db, cveRepository, assetVersionService, dependencyVulnService, artifactService, statisticsService)
 
-	s := scan.NewHTTPController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
+	s := controllers.NewScanController(scanService, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService, dependencyVulnRepository)
 	// THIS IS MANDATORY - WE RESET THE SYNCHRONIZER.
 	// if we wont do that, the daemon would sync the issues in a goroutine without waiting for them to finish
 	// this might infer with the ticket daemon which runs next

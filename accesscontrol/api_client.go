@@ -1,4 +1,4 @@
-package auth
+package accesscontrol
 
 import (
 	"github.com/ory/client-go"

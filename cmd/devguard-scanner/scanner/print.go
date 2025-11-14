@@ -25,11 +25,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 )
 
-func PrintFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
+func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
@@ -107,7 +106,7 @@ func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, asset
 }
 
 // can be reused for container scanning as well.
-func PrintScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
+func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {

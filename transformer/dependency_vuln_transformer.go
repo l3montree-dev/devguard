@@ -103,7 +103,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 				UserID:                  ev.UserID,
 				Justification:           ev.Justification,
 				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        getAssetVersionName(dependencyVuln.Vulnerability, ev),
+				AssetVersionName:        GetAssetVersionName(dependencyVuln.Vulnerability, ev),
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
 				Upstream:                ev.Upstream,
@@ -112,7 +112,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	}
 }
 
-func getAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string {
+func GetAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string {
 	if ev.OriginalAssetVersionName != nil {
 		return *ev.OriginalAssetVersionName
 	}

@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -362,7 +362,7 @@ func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Projec
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
-			if !integrations.ShouldCreateIssues(assetVersion) || !integrations.ShouldCreateThisIssue(asset, &vulnerability) {
+			if !commonint.ShouldCreateIssues(assetVersion) || !commonint.ShouldCreateThisIssue(asset, &vulnerability) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {

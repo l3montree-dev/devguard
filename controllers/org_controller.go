@@ -74,7 +74,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 
 func (controller *OrgController) Update(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
-	members, err := FetchMembersOfOrganization(ctx)
+	members, err := services.FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}

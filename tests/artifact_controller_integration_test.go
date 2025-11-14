@@ -1,26 +1,26 @@
 // Copyright 2025 l3montree GmbH.
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package controllers
+package tests
 
 import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteArtifactIntegration(t *testing.T) {
 	// Initialize test database
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create artifact service and controller
@@ -34,10 +34,10 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 	dependencyVulnService := mocks.NewDependencyVulnService(t)
 
 	artifactService := services.NewArtifactService(artifactRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-	controller := NewArtifactController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
+	controller := controllers.NewArtifactController(artifactRepository, artifactService, nil, nil, nil, nil, nil)
 
 	// Create test organization, project, asset, and asset version
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Setup echo app
 	app := echo.New()
@@ -172,12 +172,12 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		}
 
 		// Create a separate test database connection that will be closed
-		failingDB, terminateFailingDB := tests.InitDatabaseContainer("../../../initdb.sql")
+		failingDB, terminateFailingDB := InitDatabaseContainer("../../../initdb.sql")
 		terminateFailingDB() // Close the database connection to simulate a failure
 
 		failingRepository := repositories.NewArtifactRepository(failingDB)
 		failingService := services.NewArtifactService(failingRepository, nil, cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
-		failingController := NewArtifactController(failingRepository, failingService, nil, nil, nil, nil, nil)
+		failingController := controllers.NewArtifactController(failingRepository, failingService, nil, nil, nil, nil, nil)
 
 		// Setup HTTP request and response
 		recorder := httptest.NewRecorder()

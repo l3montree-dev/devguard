@@ -330,8 +330,8 @@ func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *Int
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) Return(users []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
-	_c.Call.Return(users)
+func (_c *IntegrationAggregate_GetUsers_Call) Return(userDTOs []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
+	_c.Call.Return(userDTOs)
 	return _c
 }
 
@@ -792,8 +792,8 @@ func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx shared.Co
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) Return(repositorys []dtos.GitRepository, err error) *IntegrationAggregate_ListRepositories_Call {
-	_c.Call.Return(repositorys, err)
+func (_c *IntegrationAggregate_ListRepositories_Call) Return(gitRepositorys []dtos.GitRepository, err error) *IntegrationAggregate_ListRepositories_Call {
+	_c.Call.Return(gitRepositorys, err)
 	return _c
 }
 

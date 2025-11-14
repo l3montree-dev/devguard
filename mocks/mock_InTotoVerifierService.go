@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/in-toto/in-toto-golang/in_toto"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -33,6 +34,66 @@ type InTotoVerifierService_Expecter struct {
 
 func (_m *InTotoVerifierService) EXPECT() *InTotoVerifierService_Expecter {
 	return &InTotoVerifierService_Expecter{mock: &_m.Mock}
+}
+
+// HexPublicKeyToInTotoKey provides a mock function for the type InTotoVerifierService
+func (_mock *InTotoVerifierService) HexPublicKeyToInTotoKey(hexPubKey string) (in_toto.Key, error) {
+	ret := _mock.Called(hexPubKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HexPublicKeyToInTotoKey")
+	}
+
+	var r0 in_toto.Key
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (in_toto.Key, error)); ok {
+		return returnFunc(hexPubKey)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) in_toto.Key); ok {
+		r0 = returnFunc(hexPubKey)
+	} else {
+		r0 = ret.Get(0).(in_toto.Key)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(hexPubKey)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// InTotoVerifierService_HexPublicKeyToInTotoKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HexPublicKeyToInTotoKey'
+type InTotoVerifierService_HexPublicKeyToInTotoKey_Call struct {
+	*mock.Call
+}
+
+// HexPublicKeyToInTotoKey is a helper method to define mock.On call
+//   - hexPubKey string
+func (_e *InTotoVerifierService_Expecter) HexPublicKeyToInTotoKey(hexPubKey interface{}) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
+	return &InTotoVerifierService_HexPublicKeyToInTotoKey_Call{Call: _e.mock.On("HexPublicKeyToInTotoKey", hexPubKey)}
+}
+
+func (_c *InTotoVerifierService_HexPublicKeyToInTotoKey_Call) Run(run func(hexPubKey string)) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *InTotoVerifierService_HexPublicKeyToInTotoKey_Call) Return(key in_toto.Key, err error) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
+	_c.Call.Return(key, err)
+	return _c
+}
+
+func (_c *InTotoVerifierService_HexPublicKeyToInTotoKey_Call) RunAndReturn(run func(hexPubKey string) (in_toto.Key, error)) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // VerifySupplyChain provides a mock function for the type InTotoVerifierService

@@ -10,7 +10,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/services"
@@ -72,7 +72,7 @@ func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyI
 				continue
 			}
 			for _, asset := range assets {
-				if !integrations.IsConnectedToThirdPartyIntegration(asset) {
+				if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 					continue
 				}
 				// get all asset versions for the asset

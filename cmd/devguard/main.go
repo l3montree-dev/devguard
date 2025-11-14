@@ -24,6 +24,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -106,6 +107,21 @@ func main() {
 		fx.Provide(pubsub.BrokerFactory),
 		fx.Supply(broker),
 		fx.Provide(api.NewServer),
+		controllers.ControllerModule,
+		services.ServiceModule,
+		router.RouterModule,
+
+		// we need to invoke all routers to register their routes
+		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
+		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
+		fx.Invoke(func(SessionRouter router.SessionRouter) {}),
+		fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
+		fx.Invoke(func(AssetRouter router.AssetRouter) {}),
+		fx.Invoke(func(AssetVersionRouter router.AssetVersionRouter) {}),
+		fx.Invoke(func(FirstPartyVulnRouter router.FirstPartyVulnRouter) {}),
+		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
+		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
+		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
 		fx.Invoke(func(server *echo.Echo) {}),
 	).Run()
 }
@@ -140,6 +156,6 @@ func initSentry() {
 
 // AllModules combines all FX modules for easy import
 var AllModules = fx.Options(
-	controllers.Module,
-	services.Module,
+	controllers.ControllerModule,
+	services.ServiceModule,
 )

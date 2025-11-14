@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/integrations/webhook"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
@@ -49,7 +49,7 @@ func SyncUpstream(db shared.DB, rbacProvider shared.RBACProvider) error {
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	webhookIntegration := webhook.NewWebhookIntegration(db)
+	webhookIntegration := controllers.NewWebhookIntegration(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)

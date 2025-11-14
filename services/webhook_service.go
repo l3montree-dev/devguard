@@ -16,6 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 )
 
 type WebhookStruct struct {
@@ -324,7 +325,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 			AssetID:               "asset-12345",
 			State:                 dtos.VulnStateOpen,
 			CVEID:                 &cve,
-			CVE:                   cveData,
+			CVE:                   transformer.CVEToDTO(cveData),
 			ComponentPurl:         &purl,
 			ComponentDepth:        &depth,
 			ComponentFixedVersion: &fixedVersion,

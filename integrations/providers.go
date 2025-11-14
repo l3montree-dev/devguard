@@ -19,7 +19,6 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/integrations/webhook"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -36,9 +35,6 @@ var Module = fx.Options(
 
 	// Jira Integration
 	fx.Provide(jiraint.NewJiraIntegration),
-
-	// Webhook Integration
-	fx.Provide(webhook.NewWebhookIntegration),
 
 	// Aggregated Third Party Integration
 	fx.Provide(fx.Annotate(

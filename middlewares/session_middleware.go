@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/l3montree-dev/devguard/auth"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -70,22 +70,22 @@ func SessionMiddleware(oryAPIClient shared.AdminClient, verifier shared.Verifier
 					// set a special session - it might be that the user is still allowed todo the request
 					// since the org, project etc. is public
 					slog.Warn("could not get user ID from cookie", "err", err)
-					ctx.Set("session", auth.NoSession)
+					ctx.Set("session", accesscontrol.NoSession)
 					return next(ctx)
 				}
 				scopes = "scan manage"
 				scopesArray := strings.Fields(scopes)
-				ctx.Set("session", auth.NewSession(userID, scopesArray))
+				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
 				return next(ctx)
 			} else if adminTokenHeader != "" {
 				slog.Warn("admin token header is set, using it to create session")
-				ctx.Set("session", auth.NewSession(adminTokenHeader, []string{}))
+				ctx.Set("session", accesscontrol.NewSession(adminTokenHeader, []string{}))
 				return next(ctx)
 			} else {
 				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
 					if strings.EqualFold(err.Error(), "could not verify request") || strings.EqualFold(err.Error(), "no fingerprint provided") {
-						ctx.Set("session", auth.NoSession)
+						ctx.Set("session", accesscontrol.NoSession)
 						return next(ctx)
 					} else if strings.Contains(err.Error(), "could not get public key using fingerprint") {
 						return echo.NewHTTPError(401, "token provided but not found in database").SetInternal(err)
@@ -94,7 +94,7 @@ func SessionMiddleware(oryAPIClient shared.AdminClient, verifier shared.Verifier
 					return echo.NewHTTPError(500, "unexpected error").WithInternal(err)
 				}
 				scopesArray := strings.Fields(scopes)
-				ctx.Set("session", auth.NewSession(userID, scopesArray))
+				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
 				return next(ctx)
 			}
 		}

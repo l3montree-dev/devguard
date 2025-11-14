@@ -1,4 +1,4 @@
-package integrations
+package commonint
 
 import (
 	"github.com/l3montree-dev/devguard/database/models"

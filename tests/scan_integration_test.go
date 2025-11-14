@@ -73,7 +73,7 @@ func TestScanning(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equal(t, 200, recorder.Code)
-		var response scan.ScanResponse
+		var response dtos.ScanResponse
 
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
@@ -101,7 +101,7 @@ func TestScanning(t *testing.T) {
 		err := controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
 		assert.Equal(t, 200, recorder.Code)
-		var response scan.ScanResponse
+		var response dtos.ScanResponse
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, response.AmountOpened) // already detected with other artifact
@@ -133,7 +133,7 @@ func TestScanning(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equal(t, 200, recorder.Code)
-		var response scan.ScanResponse
+		var response dtos.ScanResponse
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
 
@@ -159,7 +159,7 @@ func TestScanning(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equal(t, 200, recorder.Code)
-		var response scan.ScanResponse
+		var response dtos.ScanResponse
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
 
@@ -966,7 +966,7 @@ func TestTicketHandling(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equal(t, 200, recorder.Code)
-		var response scan.ScanResponse
+		var response dtos.ScanResponse
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
 

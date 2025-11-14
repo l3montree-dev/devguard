@@ -19,7 +19,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -1257,7 +1256,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	}
 	labels := commonint.GetLabels(dependencyVuln)
 
-	expectedState := integrations.GetExpectedIssueState(asset, dependencyVuln)
+	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),

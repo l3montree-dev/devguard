@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -685,8 +686,8 @@ func (_c *ThirdPartyIntegration_ListRepositories_Call) Run(run func(ctx shared.C
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(repositorys []dtos.GitRepository, err error) *ThirdPartyIntegration_ListRepositories_Call {
-	_c.Call.Return(repositorys, err)
+func (_c *ThirdPartyIntegration_ListRepositories_Call) Return(gitRepositorys []dtos.GitRepository, err error) *ThirdPartyIntegration_ListRepositories_Call {
+	_c.Call.Return(gitRepositorys, err)
 	return _c
 }
 

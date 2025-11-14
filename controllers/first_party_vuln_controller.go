@@ -310,7 +310,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 				UserID:                  ev.UserID,
 				Justification:           ev.Justification,
 				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        getAssetVersionName(firstPartyVuln.Vulnerability, ev),
+				AssetVersionName:        transformer.GetAssetVersionName(firstPartyVuln.Vulnerability, ev),
 				VulnerabilityName:       firstPartyVuln.RuleName,
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,

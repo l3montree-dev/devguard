@@ -333,7 +333,6 @@ type FireAndForgetSynchronizer interface {
 }
 
 type AssetVersionService interface {
-	CreateYAMLMetadata(organizationName string, assetName string, assetVersionName string) dtos.YamlMetadata
 	BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)

@@ -28,7 +28,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -798,7 +797,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
-	expectedIssueState := integrations.GetExpectedIssueState(asset, dependencyVuln)
+	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
 	labels := commonint.GetLabels(dependencyVuln)
 	issueRequest := &github.IssueRequest{

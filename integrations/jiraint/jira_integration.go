@@ -17,7 +17,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/services"
@@ -611,7 +610,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 	return nil
 }
 
-func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState integrations.ExpectedIssueState, client *jira.Client, vulnTicketID *string) error {
+func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState commonint.ExpectedIssueState, client *jira.Client, vulnTicketID *string) error {
 
 	doUpdateStatus := false
 
@@ -644,13 +643,13 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	var stateID string
 
 	if issueStatusID == jira.StatusCategoryToDo || issueStatusID == jira.StatusCategoryInProgress {
-		if expectedIssueState != integrations.ExpectedIssueStateOpen {
+		if expectedIssueState != commonint.ExpectedIssueStateOpen {
 			doUpdateStatus = true
 			stateID = doneStatusID
 		}
 	}
 	if issueStatusID == jira.StatusCategoryDone {
-		if expectedIssueState != integrations.ExpectedIssueStateClosed {
+		if expectedIssueState != commonint.ExpectedIssueStateClosed {
 			doUpdateStatus = true
 			stateID = openStatusID
 		}
@@ -730,7 +729,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		return fmt.Errorf("failed to edit Jira issue: %w", err)
 	}
 
-	expectedIssueState := integrations.GetExpectedIssueState(asset, dependencyVuln)
+	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, dependencyVuln.GetTicketID())
 	if err != nil {
@@ -781,7 +780,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 		return fmt.Errorf("failed to edit Jira issue: %w", err)
 	}
 
-	expectedIssueState := integrations.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln)
+	expectedIssueState := commonint.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln)
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, firstPartyVuln.GetTicketID())
 	if err != nil {

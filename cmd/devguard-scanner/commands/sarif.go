@@ -31,10 +31,10 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -104,7 +104,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.FirstPartyScanResponse
+	var scanResponse dtos.FirstPartyScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
@@ -311,7 +311,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		// read and parse the body - it should be an array of dependencyVulns
 		// print the dependencyVulns to the console
-		var scanResponse scan.FirstPartyScanResponse
+		var scanResponse dtos.FirstPartyScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Tim Bastin, l3montree GmbH
+// Copyright (C) 2025 l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -11,30 +11,17 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+package dtos
 
-package auth
-
-type session struct {
-	userID string
-	scopes []string
+type ScanResponse struct {
+	AmountOpened    int                 `json:"amountOpened"`
+	AmountClosed    int                 `json:"amountClosed"`
+	DependencyVulns []DependencyVulnDTO `json:"dependencyVulns"`
 }
 
-func (a session) GetUserID() string {
-	return a.userID
-}
-
-func (a session) GetScopes() []string {
-	return a.scopes
-}
-
-func NewSession(userID string, scopes []string) session {
-	return session{
-		userID: userID,
-		scopes: scopes,
-	}
-}
-
-var NoSession session = session{
-	userID: "NO_SESSION",
+type FirstPartyScanResponse struct {
+	AmountOpened    int                 `json:"amountOpened"`
+	AmountClosed    int                 `json:"amountClosed"`
+	FirstPartyVulns []FirstPartyVulnDTO `json:"firstPartyVulns"`
 }

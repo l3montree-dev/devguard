@@ -10,7 +10,6 @@ import (
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 )
 
 func CreateLicenseRiskService(db shared.DB) shared.LicenseRiskService {
@@ -132,13 +131,13 @@ func CreateAssetVersionController(db shared.DB, oauth2 map[string]*gitlabint.Git
 	)
 }
 
-func CreateScanHTTPController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory gitlabint.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *scan.HTTPController {
+func CreateScanHTTPController(db shared.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac shared.RBACProvider, clientFactory gitlabint.GitlabClientFactory, openSourceInsightsService shared.OpenSourceInsightService) *controllers.ScanController {
 	assetVersionService := CreateAssetVersionService(db, oauth2, rbac, clientFactory, openSourceInsightsService)
 	dependencyVulnService := CreateDependencyVulnService(db, oauth2, rbac, clientFactory)
 	artifactService := CreateArtifactService(db, openSourceInsightsService)
 	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
 	statisticsService := CreateStatisticsService(db)
-	scanService := scan.NewScanService(db,
+	scanService := services.NewScanService(db,
 		repositories.NewCVERepository(db),
 		assetVersionService,
 		dependencyVulnService,
@@ -146,7 +145,7 @@ func CreateScanHTTPController(db shared.DB, oauth2 map[string]*gitlabint.GitlabO
 		statisticsService,
 	)
 	scanService.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
-	return scan.NewHTTPController(
+	return controllers.NewScanController(
 		scanService,
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRepository(db),
