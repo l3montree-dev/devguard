@@ -47,6 +47,7 @@ var ControllerModule = fx.Options(
 	// Integrations
 	fx.Provide(NewIntegrationController),
 	fx.Provide(NewVulnDBController),
+	fx.Provide(NewWebhookController),
 
 	// Release & Statistics
 	fx.Provide(NewReleaseController),

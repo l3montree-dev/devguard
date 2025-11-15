@@ -34,7 +34,7 @@ func NewProjectRouter(
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
-	webhookIntegration *controllers.WebhookIntegration,
+	webhookIntegration *controllers.WebhookController,
 	projectRepository shared.ProjectRepository,
 ) ProjectRouter {
 	/**

@@ -15,10 +15,13 @@
 
 package accesscontrol
 
-import "go.uber.org/fx"
+import (
+	"github.com/l3montree-dev/devguard/shared"
+	"go.uber.org/fx"
+)
 
-var Module = fx.Options(
+var AccessControlModule = fx.Options(
 	fx.Provide(newCasbinPubSubWatcher),
-	fx.Provide(NewCasbinRBACProvider),
+	fx.Provide(fx.Annotate(NewCasbinRBACProvider, fx.As(new(shared.RBACProvider)))),
 	fx.Provide(NewExternalEntityProviderRBAC),
 )

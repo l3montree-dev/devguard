@@ -45,7 +45,7 @@ func ScanArtifacts(db shared.DB, rbacProvider shared.RBACProvider) error {
 		gitlabOauth2Integrations,
 	)
 
-	webhookIntegration := controllers.NewWebhookIntegration(db)
+	webhookIntegration := controllers.NewWebhookController(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
 
 	jiraIntegration := jiraint.NewJiraIntegration(db)

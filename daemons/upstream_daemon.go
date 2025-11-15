@@ -49,7 +49,7 @@ func SyncUpstream(db shared.DB, rbacProvider shared.RBACProvider) error {
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	webhookIntegration := controllers.NewWebhookIntegration(db)
+	webhookIntegration := controllers.NewWebhookController(db)
 	artifactRepository := repositories.NewArtifactRepository(db)
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)

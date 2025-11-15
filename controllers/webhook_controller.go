@@ -16,20 +16,20 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-type WebhookIntegration struct {
+type WebhookController struct {
 	webhookRepository shared.WebhookIntegrationRepository
 }
 
-var _ shared.ThirdPartyIntegration = &WebhookIntegration{}
+var _ shared.ThirdPartyIntegration = &WebhookController{}
 
-func NewWebhookIntegration(db shared.DB) *WebhookIntegration {
+func NewWebhookController(db shared.DB) *WebhookController {
 	webhookRepository := repositories.NewWebhookRepository(db)
-	return &WebhookIntegration{
+	return &WebhookController{
 		webhookRepository: webhookRepository,
 	}
 }
 
-func (w *WebhookIntegration) Delete(ctx shared.Context) error {
+func (w *WebhookController) Delete(ctx shared.Context) error {
 	id := ctx.Param("id")
 	if id == "" {
 		return ctx.JSON(400, "id is required")
@@ -47,7 +47,7 @@ func (w *WebhookIntegration) Delete(ctx shared.Context) error {
 	return ctx.JSON(200, "Webhook integration deleted successfully")
 }
 
-func (w *WebhookIntegration) Update(ctx shared.Context) error {
+func (w *WebhookController) Update(ctx shared.Context) error {
 	var data struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -103,7 +103,7 @@ func (w *WebhookIntegration) Update(ctx shared.Context) error {
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})
 }
-func (w *WebhookIntegration) Save(ctx shared.Context) error {
+func (w *WebhookController) Save(ctx shared.Context) error {
 	var data struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -153,7 +153,7 @@ func (w *WebhookIntegration) Save(ctx shared.Context) error {
 	})
 }
 
-func (w *WebhookIntegration) Test(ctx shared.Context) error {
+func (w *WebhookController) Test(ctx shared.Context) error {
 	var data struct {
 		URL         string `json:"url"`
 		Secret      string `json:"secret"`
@@ -253,7 +253,7 @@ func (w *WebhookIntegration) Test(ctx shared.Context) error {
 	})
 }
 
-func (w *WebhookIntegration) HandleEvent(event any) error {
+func (w *WebhookController) HandleEvent(event any) error {
 
 	switch event := event.(type) {
 	case shared.SBOMCreatedEvent:
@@ -319,72 +319,72 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 	return nil
 }
 
-func (w *WebhookIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
+func (w *WebhookController) CreateLabels(ctx context.Context, asset models.Asset) error {
 	// Webhook integration does not support creating labels
 	return nil
 }
 
-func (w *WebhookIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
+func (w *WebhookController) WantsToHandleWebhook(ctx shared.Context) bool {
 	// Logic to determine if this integration wants to handle the webhook
 	return true
 }
 
-func (w *WebhookIntegration) HandleWebhook(ctx shared.Context) error {
+func (w *WebhookController) HandleWebhook(ctx shared.Context) error {
 	// Logic to handle the webhook
 	return nil
 }
 
-func (w *WebhookIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
+func (w *WebhookController) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	// Logic to list organizations
 	return nil, nil
 }
 
-func (w *WebhookIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
+func (w *WebhookController) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// Logic to list groups
 	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
+func (w *WebhookController) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	// Logic to list projects
 	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
+func (w *WebhookController) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	// Logic to list repositories
 	return nil, nil
 }
 
-func (w *WebhookIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+func (w *WebhookController) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// Logic to check access to external entity provider
 	return false, nil
 }
 
-func (w *WebhookIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+func (w *WebhookController) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Logic to get role in group
 	return "", nil
 }
 
-func (w *WebhookIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+func (w *WebhookController) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
 	// Logic to get role in project
 	return "", nil
 }
 
-func (w *WebhookIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	// Logic to create an issue
 	return nil
 }
 
-func (w *WebhookIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (w *WebhookController) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	// Logic to update an issue
 	return nil
 }
 
-func (w *WebhookIntegration) GetUsers(org models.Org) []dtos.UserDTO {
+func (w *WebhookController) GetUsers(org models.Org) []dtos.UserDTO {
 	// Logic to get users in an organization
 	return nil
 }
 
-func (w *WebhookIntegration) GetID() shared.IntegrationID {
+func (w *WebhookController) GetID() shared.IntegrationID {
 	// Return the integration ID for this webhook integration
 	return shared.WebhookIntegrationID
 }

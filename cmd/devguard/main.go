@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/router"
@@ -110,6 +111,7 @@ func main() {
 		controllers.ControllerModule,
 		services.ServiceModule,
 		router.RouterModule,
+		accesscontrol.AccessControlModule,
 
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),

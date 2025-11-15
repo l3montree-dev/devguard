@@ -35,7 +35,7 @@ func NewOrgRouter(
 	firstPartyVulnController *controllers.FirstPartyVulnController,
 	policyController *controllers.PolicyController,
 	integrationController *controllers.IntegrationController,
-	webhookIntegration *controllers.WebhookIntegration,
+	webhookIntegration *controllers.WebhookController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	orgService shared.OrgService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
