@@ -9,7 +9,7 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +39,7 @@ Example:
 	return secretScanningCommand
 }
 
-func secretScan(p, outputPath string) (*common.SarifResult, error) {
+func secretScan(p, outputPath string) (*dtos.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "secret-scanning")
 
@@ -75,7 +75,7 @@ func secretScan(p, outputPath string) (*common.SarifResult, error) {
 	}
 
 	// read AND parse the file
-	var sarifScan common.SarifResult
+	var sarifScan dtos.SarifResult
 	// open the file
 	file, err := os.Open(sarifFilePath)
 	if err != nil {

@@ -73,7 +73,7 @@ func TestIsAllowed(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := mocks.NewContext(t)
 			rootAccessControl := mocks.NewAccessControl(t)
-			thirdpartyIntegrationMock := mocks.NewThirdPartyIntegration(t)
+			thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 
 			// Only mock rootAccessControl if we expect it to be called
 			if tc.userID != "admin-token" && tc.object != shared.ObjectOrganization {
@@ -103,7 +103,7 @@ func TestHasAccess(t *testing.T) {
 	t.Run("admin token should have access", func(t *testing.T) {
 		ctx := mocks.NewContext(t)
 		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewThirdPartyIntegration(t)
+		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 
 		rbac := NewExternalEntityProviderRBAC(
 			ctx,
@@ -121,7 +121,7 @@ func TestHasAccess(t *testing.T) {
 	t.Run("if no admin token is provided, the third party integration should be called", func(t *testing.T) {
 		ctx := mocks.NewContext(t)
 		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewThirdPartyIntegration(t)
+		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", ctx, "external-entity-provider-id").Return(true, nil)
 
 		rbac := NewExternalEntityProviderRBAC(
@@ -140,7 +140,7 @@ func TestHasAccess(t *testing.T) {
 	t.Run("if no admin token is provided, the third party integration should be called (false)", func(t *testing.T) {
 		ctx := mocks.NewContext(t)
 		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewThirdPartyIntegration(t)
+		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", ctx, "external-entity-provider-id").Return(false, nil)
 
 		rbac := NewExternalEntityProviderRBAC(

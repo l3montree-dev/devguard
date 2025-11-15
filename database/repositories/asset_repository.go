@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -28,7 +28,7 @@ import (
 
 type assetRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.Asset, *gorm.DB]
+	utils.Repository[uuid.UUID, models.Asset, *gorm.DB]
 }
 
 func NewAssetRepository(db *gorm.DB) *assetRepository {

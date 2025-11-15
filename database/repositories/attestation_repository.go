@@ -2,15 +2,15 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type attestationRepository struct {
 	db *gorm.DB
-	common.Repository[string, models.Attestation, *gorm.DB]
+	utils.Repository[string, models.Attestation, *gorm.DB]
 }
 
 func NewAttestationRepository(db *gorm.DB) *attestationRepository {

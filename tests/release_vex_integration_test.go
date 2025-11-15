@@ -25,8 +25,6 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -35,81 +33,77 @@ import (
 
 // TestReleaseVEXMergeIntegration verifies that the release VEX endpoint returns a merged VeX (CycloneDX BOM with vulnerabilities)
 func TestReleaseVEXMergeIntegration(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		os.Setenv("FRONTEND_URL", "http://localhost:3000")
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
+		// repositories and services from FX
+		avRepo := f.App.AssetVersionRepository
+		compRepo := f.App.ComponentRepository
+		licenseRiskRepo := f.App.LicenseRiskRepository
+		dependencyVulnRepo := f.App.DependencyVulnRepository
+		assetRepository := f.App.AssetRepository
+		relService := f.App.ReleaseService
+		avService := f.App.AssetVersionService
 
-	// repositories
-	avRepo := repositories.NewAssetVersionRepository(db)
-	compRepo := repositories.NewComponentRepository(db)
-	releaseRepo := repositories.NewReleaseRepository(db)
-	licenseRiskRepo := repositories.NewLicenseRiskRepository(db)
-	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
+		// create an artifact
+		a := models.Artifact{ArtifactName: "artifact-x", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		if err := f.DB.Create(&a).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	// services using inithelper to follow repository patterns
-	avService := CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	relService := services.NewReleaseService(releaseRepo)
+		// create a CVE that the dependency vuln will reference
+		cve := models.CVE{CVE: "CVE-2025-0001", Description: "test vuln", CVSS: 7.5, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"}
+		if err := f.DB.Create(&cve).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	// create an artifact
-	a := models.Artifact{ArtifactName: "artifact-x", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
-	if err := db.Create(&a).Error; err != nil {
-		t.Fatal(err)
-	}
+		// create a dependency vuln referencing the CVE and the artifact
+		dv := models.DependencyVuln{
+			Vulnerability:  models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
+			CVEID:          &cve.CVE,
+			ComponentPurl:  utils.Ptr("pkg:maven/org.example/component-x@1.2.3"),
+			Artifacts:      []models.Artifact{a},
+			ComponentDepth: utils.Ptr(1),
+		}
+		if err := f.DB.Create(&dv).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	// create a CVE that the dependency vuln will reference
-	cve := models.CVE{CVE: "CVE-2025-0001", Description: "test vuln", CVSS: 7.5, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"}
-	if err := db.Create(&cve).Error; err != nil {
-		t.Fatal(err)
-	}
+		// create release with item referencing the artifact
+		rel := models.Release{Name: "vex-release", ProjectID: project.ID}
+		if err := f.DB.Create(&rel).Error; err != nil {
+			t.Fatal(err)
+		}
+		item := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a.ArtifactName, AssetVersionName: &a.AssetVersionName, AssetID: &a.AssetID}
+		if err := f.DB.Create(&item).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	// create a dependency vuln referencing the CVE and the artifact
-	dv := models.DependencyVuln{
-		Vulnerability:  models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
-		CVEID:          &cve.CVE,
-		ComponentPurl:  utils.Ptr("pkg:maven/org.example/component-x@1.2.3"),
-		Artifacts:      []models.Artifact{a},
-		ComponentDepth: utils.Ptr(1),
-	}
-	if err := db.Create(&dv).Error; err != nil {
-		t.Fatal(err)
-	}
+		// controller
+		releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
 
-	// create release with item referencing the artifact
-	rel := models.Release{Name: "vex-release", ProjectID: project.ID}
-	if err := db.Create(&rel).Error; err != nil {
-		t.Fatal(err)
-	}
-	item := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a.ArtifactName, AssetVersionName: &a.AssetVersionName, AssetID: &a.AssetID}
-	if err := db.Create(&item).Error; err != nil {
-		t.Fatal(err)
-	}
+		r := echo.New()
+		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)
+		rec := httptest.NewRecorder()
+		ctx := r.NewContext(req, rec)
+		ctx.SetPath("/projects/:projectSlug/releases/:releaseID/vex.json")
+		ctx.SetParamNames("projectSlug", "releaseID")
+		ctx.SetParamValues(project.Slug, rel.ID.String())
 
-	// controller
-	releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
+		shared.SetOrg(ctx, org)
+		shared.SetProject(ctx, project)
 
-	r := echo.New()
-	req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)
-	rec := httptest.NewRecorder()
-	ctx := r.NewContext(req, rec)
-	ctx.SetPath("/projects/:projectSlug/releases/:releaseID/vex.json")
-	ctx.SetParamNames("projectSlug", "releaseID")
-	ctx.SetParamValues(project.Slug, rel.ID.String())
+		if err := releaseController.VEXJSON(ctx); err != nil {
+			t.Fatalf("VEXJSON returned error: %v", err)
+		}
 
-	shared.SetOrg(ctx, org)
-	shared.SetProject(ctx, project)
+		var bom cdx.BOM
+		if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&bom); err != nil {
+			t.Fatalf("could not decode response as BOM: %v", err)
+		}
 
-	if err := releaseController.VEXJSON(ctx); err != nil {
-		t.Fatalf("VEXJSON returned error: %v", err)
-	}
-
-	var bom cdx.BOM
-	if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&bom); err != nil {
-		t.Fatalf("could not decode response as BOM: %v", err)
-	}
-
-	assert.NotNil(t, bom.Vulnerabilities)
-	assert.GreaterOrEqual(t, len(*bom.Vulnerabilities), 1)
+		assert.NotNil(t, bom.Vulnerabilities)
+		assert.GreaterOrEqual(t, len(*bom.Vulnerabilities), 1)
+	})
 }

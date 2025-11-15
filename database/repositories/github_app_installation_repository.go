@@ -17,14 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type githubAppInstallationRepository struct {
 	db *gorm.DB
-	common.Repository[int, models.GithubAppInstallation, *gorm.DB]
+	utils.Repository[int, models.GithubAppInstallation, *gorm.DB]
 }
 
 func NewGithubAppInstallationRepository(db *gorm.DB) *githubAppInstallationRepository {

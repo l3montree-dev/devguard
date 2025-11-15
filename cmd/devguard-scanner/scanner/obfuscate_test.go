@@ -19,52 +19,52 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 )
 
-var exampleSarifResult = common.SarifResult{
-	Runs: []common.Run{
+var exampleSarifResult = dtos.SarifResult{
+	Runs: []dtos.Run{
 		{
-			Tool: common.Tool{
-				Driver: common.Driver{
+			Tool: dtos.Tool{
+				Driver: dtos.Driver{
 					Name:  "ExampleTool",
-					Rules: []common.Rule{},
+					Rules: []dtos.Rule{},
 				},
 			},
-			Results: []common.Result{
+			Results: []dtos.Result{
 				{
 					RuleID: "EXAMPLE001",
-					Message: common.Text{
+					Message: dtos.Text{
 						Text: "This is an example message.",
 					},
-					Locations: []common.Location{
+					Locations: []dtos.Location{
 						{
-							PhysicalLocation: common.PhysicalLocation{
-								ArtifactLocation: common.ArtifactLocation{
+							PhysicalLocation: dtos.PhysicalLocation{
+								ArtifactLocation: dtos.ArtifactLocation{
 									URI:       "file:///example/path",
 									URIBaseID: "SRCROOT",
 								},
-								Region: common.Region{
+								Region: dtos.Region{
 									StartLine:   10,
 									StartColumn: 5,
 									EndLine:     10,
 									EndColumn:   20,
-									Snippet: common.Text{
+									Snippet: dtos.Text{
 										Text: "that is an example code snippet, which are very long and should be obfuscated",
 									},
 								},
 							},
 						},
 					},
-					Properties: &common.Properties{
+					Properties: &dtos.Properties{
 						Precision: "high",
 						Tags:      []string{"example", "test"},
 					},
-					Fingerprints: &common.Fingerprints{
+					Fingerprints: &dtos.Fingerprints{
 						MatchBasedID: "12345",
 					},
-					PartialFingerprints: &common.PartialFingerprints{
+					PartialFingerprints: &dtos.PartialFingerprints{
 						CommitSha:     "abcde12345",
 						Email:         "example@example.com",
 						Author:        "Example Author",

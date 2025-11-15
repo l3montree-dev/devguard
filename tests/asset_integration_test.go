@@ -7,8 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -19,116 +17,106 @@ import (
 )
 
 func TestHandleLookup(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Create test data using FX helper
+		_, _, asset1, _ := f.CreateOrgProjectAssetAndVersion()
 
-	assetRepo := repositories.NewAssetRepository(db)
-	assetVersionRepo := repositories.NewAssetVersionRepository(db)
-	assetService := mocks.NewAssetService(t)
-	depVulnService := mocks.NewDependencyVulnService(t)
-	statsService := mocks.NewStatisticsService(t)
-	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
+		app := echo.New()
 
-	controller := controllers.NewAssetController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService, thirdPartyIntegration)
+		t.Run("should return 404 if there is no matching entity", func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/lookup", nil)
+			query := req.URL.Query()
+			query.Add("provider", "gitlab")
+			query.Add("id", "123")
+			req.URL.RawQuery = query.Encode()
+			ctx := app.NewContext(req, rec)
 
-	// create an organization, project, and asset1 for testing
-	_, _, asset1, _ := CreateOrgProjectAndAssetAssetVersion(db)
+			// Use FX-injected controller
+			err := f.App.AssetController.HandleLookup(ctx)
+			assert.Error(t, err)
+			httpErr, ok := err.(*echo.HTTPError)
+			assert.True(t, ok)
+			assert.Equal(t, 404, httpErr.Code)
+		})
 
-	app := echo.New()
+		t.Run("should find the asset and return the correct values", func(t *testing.T) {
+			// update the asset to have a external entity provider and external entity id
+			asset1.ExternalEntityProviderID = utils.Ptr("gitlab")
+			asset1.ExternalEntityID = utils.Ptr("123")
 
-	t.Run("should return 404 if there is no matching entity", func(t *testing.T) {
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/lookup", nil)
-		query := req.URL.Query()
-		query.Add("provider", "gitlab")
-		query.Add("id", "123")
-		req.URL.RawQuery = query.Encode()
-		ctx := app.NewContext(req, rec)
+			// save the updated asset using FX-injected repository
+			assert.Nil(t, f.App.AssetRepository.Save(nil, &asset1))
 
-		// Use a shared.Context if needed by your codebase
-		err := controller.HandleLookup(ctx)
-		assert.Error(t, err)
-		httpErr, ok := err.(*echo.HTTPError)
-		assert.True(t, ok)
-		assert.Equal(t, 404, httpErr.Code)
-	})
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/lookup", nil)
+			query := req.URL.Query()
+			query.Add("provider", "gitlab")
+			query.Add("id", "123")
+			req.URL.RawQuery = query.Encode()
+			ctx := app.NewContext(req, rec)
 
-	t.Run("should find the asset and return the correct values", func(t *testing.T) {
-		// update the asset to have a external entity provider and external entity id
-		asset1.ExternalEntityProviderID = utils.Ptr("gitlab")
-		asset1.ExternalEntityID = utils.Ptr("123")
+			// Use FX-injected controller
+			err := f.App.AssetController.HandleLookup(ctx)
+			assert.Nil(t, err)
 
-		// save the updated asset
-		assert.Nil(t, assetRepo.Save(nil, &asset1))
-
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/lookup", nil)
-		query := req.URL.Query()
-		query.Add("provider", "gitlab")
-		query.Add("id", "123")
-		req.URL.RawQuery = query.Encode()
-		ctx := app.NewContext(req, rec)
-		err := controller.HandleLookup(ctx)
-		assert.Nil(t, err)
-
-		var response dtos.LookupResponse
-		json.Unmarshal(rec.Body.Bytes(), &response) // nolint:errcheck
-		// expect the values to be correct
-		assert.Equal(t, "test-org", response.Org)
-		assert.Equal(t, "test-project", response.Project)
-		assert.Equal(t, "test-asset", response.Asset)
-		assert.Equal(t, "/api/v1/organizations/test-org/projects/test-project/assets/test-asset", response.Link)
+			var response dtos.LookupResponse
+			json.Unmarshal(rec.Body.Bytes(), &response) // nolint:errcheck
+			// expect the values to be correct
+			assert.Equal(t, "test-org", response.Org)
+			assert.Equal(t, "test-project", response.Project)
+			assert.Equal(t, "test-asset", response.Asset)
+			assert.Equal(t, "/api/v1/organizations/test-org/projects/test-project/assets/test-asset", response.Link)
+		})
 	})
 }
 
 func TestAssetUpdate(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 	t.Run("should be possible to enable the ticket range", func(t *testing.T) {
-		db, terminate := InitDatabaseContainer("../../../initdb.sql")
-		defer terminate()
-		assetRepo := repositories.NewAssetRepository(db)
-		assetService := mocks.NewAssetService(t)
-		assetVersionRepo := repositories.NewAssetVersionRepository(db)
-		vulnService := CreateDependencyVulnService(db, nil, nil, nil)
-		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			// Create test data using FX helper
+			org, project, asset1, _ := f.CreateOrgProjectAssetAndVersion()
 
-		thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
+			// Mock third-party integration
+			thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+			thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
 
-		controller := controllers.NewAssetController(assetRepo, assetVersionRepo, assetService, vulnService, nil, thirdPartyIntegration)
+			updateRequest := dtos.AssetPatchRequest{
+				Name:                         utils.Ptr("test-asset"),
+				Description:                  utils.Ptr("test description"),
+				EnableTicketRange:            true,
+				CVSSAutomaticTicketThreshold: utils.Ptr(7.0),
+				RiskAutomaticTicketThreshold: utils.Ptr(5.0),
+			}
 
-		// create an organization, project, and asset1 for testing
-		org, project, asset1, _ := CreateOrgProjectAndAssetAssetVersion(db)
+			updateRequestBytes, err := json.Marshal(updateRequest)
+			assert.Nil(t, err)
 
-		updateRequest := dtos.AssetPatchRequest{
-			Name:                         utils.Ptr("test-asset"),
-			Description:                  utils.Ptr("test description"),
-			EnableTicketRange:            true,
-			CVSSAutomaticTicketThreshold: utils.Ptr(7.0),
-			RiskAutomaticTicketThreshold: utils.Ptr(5.0),
-		}
+			app := echo.New()
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest("PATCH", "/api/v1/organizations/"+org.Slug+"/projects/"+project.Slug+"/assets/"+asset1.Slug, bytes.NewBuffer(updateRequestBytes))
+			ctx := app.NewContext(req, rec)
 
-		updateRequestBytes, err := json.Marshal(updateRequest)
-		assert.Nil(t, err)
+			rbac := mocks.NewAccessControl(t)
+			rbac.On("GetAllMembersOfAsset", asset1.ID.String()).Return(nil, nil)
 
-		app := echo.New()
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest("PATCH", "/api/v1/organizations/"+org.Slug+"/projects/"+project.Slug+"/assets/"+asset1.Slug, bytes.NewBuffer(updateRequestBytes))
-		ctx := app.NewContext(req, rec)
-		rbac := mocks.NewAccessControl(t)
-		rbac.On("GetAllMembersOfAsset", asset1.ID.String()).Return(nil, nil)
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset1)
+			shared.SetRBAC(ctx, rbac)
 
-		shared.SetOrg(ctx, org)
-		shared.SetProject(ctx, project)
-		shared.SetAsset(ctx, asset1)
-		shared.SetRBAC(ctx, rbac)
+			// Use FX-injected controller
+			err = f.App.AssetController.Update(ctx)
+			assert.Nil(t, err)
 
-		err = controller.Update(ctx)
-		assert.Nil(t, err)
+			// Use FX-injected repository to verify
+			updatedAsset, err := f.App.AssetRepository.Read(asset1.ID)
+			assert.Nil(t, err)
 
-		updatedAsset, err := assetRepo.Read(asset1.ID)
-		assert.Nil(t, err)
-
-		assert.Equal(t, 7.0, *updatedAsset.CVSSAutomaticTicketThreshold)
-		assert.Equal(t, 5.0, *updatedAsset.RiskAutomaticTicketThreshold)
+			assert.Equal(t, 7.0, *updatedAsset.CVSSAutomaticTicketThreshold)
+			assert.Equal(t, 5.0, *updatedAsset.RiskAutomaticTicketThreshold)
+		})
 	})
 }

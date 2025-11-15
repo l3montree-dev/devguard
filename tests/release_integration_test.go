@@ -25,113 +25,108 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReleaseSBOMMergeIntegration(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		os.Setenv("FRONTEND_URL", "http://localhost:3000")
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
+		// repositories and services from FX
+		avRepo := f.App.AssetVersionRepository
+		compRepo := f.App.ComponentRepository
+		licenseRiskRepo := f.App.LicenseRiskRepository
+		dependencyVulnRepo := f.App.DependencyVulnRepository
+		assetRepository := f.App.AssetRepository
+		relService := f.App.ReleaseService
+		avService := f.App.AssetVersionService
 
-	// repositories
-	avRepo := repositories.NewAssetVersionRepository(db)
-	compRepo := repositories.NewComponentRepository(db)
-	releaseRepo := repositories.NewReleaseRepository(db)
-	licenseRiskRepo := repositories.NewLicenseRiskRepository(db)
-	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	// services using inithelper to follow repository patterns
-	avService := CreateAssetVersionService(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	relService := services.NewReleaseService(releaseRepo)
+		// use subtests: setup and then call SBOM endpoint
+		var (
+			a1  models.Artifact
+			a2  models.Artifact
+			rel models.Release
+			r   = echo.New()
+		)
 
-	// use subtests: setup and then call SBOM endpoint
-	var (
-		a1  models.Artifact
-		a2  models.Artifact
-		rel models.Release
-		r   = echo.New()
-	)
-
-	// create two artifacts
-	a1 = models.Artifact{ArtifactName: "artifact-a", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
-	if err := db.Create(&a1).Error; err != nil {
-		t.Fatal(err)
-	}
-	a2 = models.Artifact{ArtifactName: "artifact-b", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
-	if err := db.Create(&a2).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	// ensure Component rows exist for the dependency purls (FK to components.purl)
-	compA := models.Component{Purl: "pkg:maven/org.example/component-a@1.0.0", Version: "1.0.0"}
-	compB := models.Component{Purl: "pkg:maven/org.example/component-b@2.0.0", Version: "2.0.0"}
-	if err := db.Create(&compA).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Create(&compB).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	c1 := models.ComponentDependency{DependencyPurl: compA.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
-	c2 := models.ComponentDependency{DependencyPurl: compB.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
-	if err := db.Create(&c1).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Create(&c2).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	// create release with items referencing artifacts
-	rel = models.Release{Name: "test-release", ProjectID: project.ID}
-	if err := db.Create(&rel).Error; err != nil {
-		t.Fatal(err)
-	}
-	item1 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a1.ArtifactName, AssetVersionName: &a1.AssetVersionName, AssetID: &a1.AssetID}
-	item2 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a2.ArtifactName, AssetVersionName: &a2.AssetVersionName, AssetID: &a2.AssetID}
-	if err := db.Create(&item1).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Create(&item2).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	t.Run("sbom returns merged components", func(t *testing.T) {
-		// build controller using repo/service patterns
-		releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
-
-		// prepare context with echo request/recorder
-		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)
-		rec := httptest.NewRecorder()
-		ctx := r.NewContext(req, rec)
-
-		// inject route params expected by controller
-		ctx.SetPath("/projects/:projectSlug/releases/:releaseID/sbom.json")
-		ctx.SetParamNames("projectSlug", "releaseID")
-		ctx.SetParamValues(project.Slug, rel.ID.String())
-
-		// attach required objects into echo.Context using shared.Set helpers (shared.Context is alias to echo.Context)
-		shared.SetOrg(ctx, org)
-		shared.SetProject(ctx, project)
-
-		// call SBOMJSON directly with ctx (shared.Context is an alias of echo.Context)
-		if err := releaseController.SBOMJSON(ctx); err != nil {
-			t.Fatalf("SBOMJSON returned error: %v", err)
+		// create two artifacts
+		a1 = models.Artifact{ArtifactName: "artifact-a", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		if err := f.DB.Create(&a1).Error; err != nil {
+			t.Fatal(err)
+		}
+		a2 = models.Artifact{ArtifactName: "artifact-b", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		if err := f.DB.Create(&a2).Error; err != nil {
+			t.Fatal(err)
 		}
 
-		// parse response as CycloneDX BOM
-		var bom cdx.BOM
-		if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&bom); err != nil {
-			t.Fatalf("could not decode response as BOM: %v", err)
+		// ensure Component rows exist for the dependency purls (FK to components.purl)
+		compA := models.Component{Purl: "pkg:maven/org.example/component-a@1.0.0", Version: "1.0.0"}
+		compB := models.Component{Purl: "pkg:maven/org.example/component-b@2.0.0", Version: "2.0.0"}
+		if err := f.DB.Create(&compA).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := f.DB.Create(&compB).Error; err != nil {
+			t.Fatal(err)
 		}
 
-		// expect two components
-		assert.NotNil(t, bom.Components)
-		assert.GreaterOrEqual(t, len(*bom.Components), 2)
+		c1 := models.ComponentDependency{DependencyPurl: compA.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
+		c2 := models.ComponentDependency{DependencyPurl: compB.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
+		if err := f.DB.Create(&c1).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := f.DB.Create(&c2).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		// create release with items referencing artifacts
+		rel = models.Release{Name: "test-release", ProjectID: project.ID}
+		if err := f.DB.Create(&rel).Error; err != nil {
+			t.Fatal(err)
+		}
+		item1 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a1.ArtifactName, AssetVersionName: &a1.AssetVersionName, AssetID: &a1.AssetID}
+		item2 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a2.ArtifactName, AssetVersionName: &a2.AssetVersionName, AssetID: &a2.AssetID}
+		if err := f.DB.Create(&item1).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := f.DB.Create(&item2).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run("sbom returns merged components", func(t *testing.T) {
+			// build controller using repo/service patterns
+			releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
+
+			// prepare context with echo request/recorder
+			req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)
+			rec := httptest.NewRecorder()
+			ctx := r.NewContext(req, rec)
+
+			// inject route params expected by controller
+			ctx.SetPath("/projects/:projectSlug/releases/:releaseID/sbom.json")
+			ctx.SetParamNames("projectSlug", "releaseID")
+			ctx.SetParamValues(project.Slug, rel.ID.String())
+
+			// attach required objects into echo.Context using shared.Set helpers (shared.Context is alias to echo.Context)
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+
+			// call SBOMJSON directly with ctx (shared.Context is an alias of echo.Context)
+			if err := releaseController.SBOMJSON(ctx); err != nil {
+				t.Fatalf("SBOMJSON returned error: %v", err)
+			}
+
+			// parse response as CycloneDX BOM
+			var bom cdx.BOM
+			if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&bom); err != nil {
+				t.Fatalf("could not decode response as BOM: %v", err)
+			}
+
+			// expect two components
+			assert.NotNil(t, bom.Components)
+			assert.GreaterOrEqual(t, len(*bom.Components), 2)
+		})
 	})
 }

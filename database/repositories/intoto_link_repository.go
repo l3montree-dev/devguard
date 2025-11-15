@@ -17,14 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type inTotoLinkRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.InTotoLink, *gorm.DB]
+	utils.Repository[uuid.UUID, models.InTotoLink, *gorm.DB]
 }
 
 func NewInTotoLinkRepository(db *gorm.DB) *inTotoLinkRepository {

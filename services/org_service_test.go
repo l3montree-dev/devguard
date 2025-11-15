@@ -340,7 +340,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetOrg(ctx, models.Org{})
 		shared.SetRBAC(ctx, accesscontrol)
 
-		_, err := FetchMembersOfOrganization(ctx)
+		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err == nil {
 
 			t.Fail()
@@ -365,7 +365,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetRBAC(ctx, accesscontrol)
 		shared.SetAuthAdminClient(ctx, adminClient)
 
-		_, err := FetchMembersOfOrganization(ctx)
+		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err == nil {
 
 			t.Fail()
@@ -394,7 +394,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		_, err := FetchMembersOfOrganization(ctx)
+		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err != nil {
 			t.Fail()
 		}
@@ -422,7 +422,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		_, err := FetchMembersOfOrganization(ctx)
+		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err != nil {
 
 			t.Fail()

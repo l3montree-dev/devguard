@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/jira"
@@ -766,7 +765,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
 
-	common.AddSlashCommandsToDependencyVuln(&str)
+	utils.AddSlashCommandsToDependencyVuln(&str)
 	return str.String()
 }
 

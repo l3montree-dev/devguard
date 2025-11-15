@@ -27,7 +27,7 @@ func (m testMessage) GetPayload() map[string]interface{} {
 
 func TestPostgreSQLBroker(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../../initdb.sql")
+	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../initdb.sql")
 	defer terminate()
 
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
@@ -220,7 +220,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 
 func TestBrokerIntegration(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../../initdb.sql")
+	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../initdb.sql")
 	defer terminate()
 
 	broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)

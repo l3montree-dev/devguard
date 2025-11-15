@@ -7,13 +7,13 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type artifactRepository struct {
-	common.Repository[string, models.Artifact, *gorm.DB]
+	utils.Repository[string, models.Artifact, *gorm.DB]
 	db *gorm.DB
 }
 

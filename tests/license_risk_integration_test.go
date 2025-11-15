@@ -21,13 +21,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -36,77 +32,70 @@ import (
 )
 
 func TestLicenseRiskArtifactAssociation(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Create test org/project/asset/version using FX helper
+		_, _, _, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-	// Create test org/project/asset/version
-	_, _, _, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
-	t.Run("License risk is created and associated with multiple artifacts", func(t *testing.T) {
+		t.Run("License risk is created and associated with multiple artifacts", func(t *testing.T) {
+			// Create a component with an invalid license
+			componentWithInvalidLicense := models.Component{
+				Purl:    "pkg:npm/test-package@1.0.0",
+				Version: "1.0.0",
+				License: utils.Ptr("PROPRIETARY"),
+			}
 
-		// Create a component with an invalid license
-		componentWithInvalidLicense := models.Component{
-			Purl:    "pkg:npm/test-package@1.0.0",
-			Version: "1.0.0",
-			License: utils.Ptr("PROPRIETARY"),
-		}
+			// Persist the component
+			assert.NoError(t, f.DB.Create(&componentWithInvalidLicense).Error)
 
-		// Persist the component (not strictly required for the service call, but keeps DB consistent)
-		assert.NoError(t, db.Create(&componentWithInvalidLicense).Error)
+			// Create two artifact records
+			artifact1 := models.Artifact{
+				ArtifactName:     "artifact-1",
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+			}
+			artifact2 := models.Artifact{
+				ArtifactName:     "artifact-2",
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+			}
+			assert.NoError(t, f.DB.Create(&artifact1).Error)
+			assert.NoError(t, f.DB.Create(&artifact2).Error)
 
-		// Create two artifact records
-		artifact1 := models.Artifact{
-			ArtifactName:     "artifact-1",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          assetVersion.AssetID,
-		}
-		artifact2 := models.Artifact{
-			ArtifactName:     "artifact-2",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          assetVersion.AssetID,
-		}
-		assert.NoError(t, db.Create(&artifact1).Error)
-		assert.NoError(t, db.Create(&artifact2).Error)
+			// First run: detect risk for artifact-1 using FX-injected service
+			err := f.App.LicenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, dtos.UpstreamStateInternal)
+			assert.NoError(t, err)
 
-		// Prepare repositories and services
-		licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-		vulnEventRepository := repositories.NewVulnEventRepository(db)
-		licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+			// Verify license risk exists and is associated with artifact-1
+			var risksAfterFirst []models.LicenseRisk
+			err = f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksAfterFirst).Error
+			assert.NoError(t, err)
+			assert.Len(t, risksAfterFirst, 1)
+			assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
 
-		// First run: detect risk for artifact-1
-		err := licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName, dtos.UpstreamStateInternal)
-		assert.NoError(t, err)
+			// Second run: process same component for artifact-2
+			err = f.App.LicenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName, dtos.UpstreamStateInternal)
+			assert.NoError(t, err)
 
-		// Verify license risk exists and is associated with artifact-1
-		var risksAfterFirst []models.LicenseRisk
-		err = db.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksAfterFirst).Error
-		assert.NoError(t, err)
-		assert.Len(t, risksAfterFirst, 1)
-		assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
+			// Verify the license risk is now associated with both artifacts
+			var risksFinal []models.LicenseRisk
+			err = f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksFinal).Error
+			assert.NoError(t, err)
+			assert.Len(t, risksFinal, 1)
 
-		// Second run: process same component for artifact-2 and ensure association is created
-		err = licenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName, dtos.UpstreamStateInternal)
-		assert.NoError(t, err)
+			// Collect artifact names
+			names := make([]string, 0, len(risksFinal[0].Artifacts))
+			for _, a := range risksFinal[0].Artifacts {
+				names = append(names, a.ArtifactName)
+			}
+			assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, names)
 
-		// Verify the license risk is now associated with both artifacts
-		var risksFinal []models.LicenseRisk
-		err = db.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksFinal).Error
-		assert.NoError(t, err)
-		assert.Len(t, risksFinal, 1)
-		// Collect artifact names
-		names := make([]string, 0, len(risksFinal[0].Artifacts))
-		for _, a := range risksFinal[0].Artifacts {
-			names = append(names, a.ArtifactName)
-		}
-		assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, names)
-
-		// Sanity: ensure vuln events were created (at least one detected event)
-		var events []models.VulnEvent
-		err = db.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&events).Error
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(events))
-
+			// Sanity: ensure vuln events were created
+			var events []models.VulnEvent
+			err = f.DB.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&events).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(events))
+		})
 	})
-
 }
 
 func getSBOMWithWithLicenseRisk() io.Reader {
@@ -124,103 +113,98 @@ func getSBOMWithWithLicenseRisk() io.Reader {
 }
 
 func TestLicenseRiskLifecycleManagement(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		artifactName := "main"
 
-	artifactName := "main"
+		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	clientfactory, _ := NewTestClientFactory(t)
-	repositories.NewExploitRepository(db)
-	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{
+			Licenses: []string{},
+		}, nil)
 
-	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.OpenSourceInsightsVersionResponse{
-		Licenses: []string{},
-	}, nil)
-	controller := CreateScanHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, mockOpenSourceInsightService)
-	// do not use concurrency in this test, because we want to test the ticket creation
-	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
+		controller := f.App.ScanController
+		// do not use concurrency in this test
+		controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 
-	app := echo.New()
+		app := echo.New()
 
-	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
-	setupContext := func(ctx shared.Context) {
-		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
-		shared.SetAsset(ctx, asset)
-		shared.SetProject(ctx, project)
-		shared.SetOrg(ctx, org)
-		shared.SetSession(ctx, authSession)
-	}
-
-	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-	}
-	assert.NoError(t, db.Create(&artifact).Error)
-
-	t.Run("should copy all events when license risk is found on different branches", func(t *testing.T) {
-
-		recorder := httptest.NewRecorder()
-		sbomFile := getSBOMWithWithLicenseRisk()
-		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Artifact-Name", artifactName)
-		req.Header.Set("X-Asset-Default-Branch", "main")
-		req.Header.Set("X-Asset-Ref", assetVersion.Name)
-		ctx := app.NewContext(req, recorder)
-		setupContext(ctx)
-
-		err := controller.ScanDependencyVulnFromProject(ctx)
-		assert.Nil(t, err)
-		assert.Equal(t, 200, recorder.Code)
-
-		risks, err := licenseRiskRepository.GetByAssetID(nil, asset.ID)
-		assert.Nil(t, err)
-
-		assert.Len(t, risks, 1)
-
-		// accept the risk
-		risk := risks[0]
-		assert.Equal(t, dtos.VulnStateOpen, risk.State)
-
-		risk.State = dtos.VulnStateAccepted
-		assert.NoError(t, db.Save(&risk).Error)
-
-		// create a new asset version to simulate a scan from a different branch
-		newAssetVersion := models.AssetVersion{
-			AssetID: asset.ID,
-			Name:    "feature-branch",
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
 		}
-		assert.NoError(t, db.Create(&newAssetVersion).Error)
 
-		recorder = httptest.NewRecorder()
-		sbomFile = getSBOMWithWithLicenseRisk()
-		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Artifact-Name", artifactName)
-		req.Header.Set("X-Asset-Default-Branch", "main")
-		req.Header.Set("X-Asset-Ref", newAssetVersion.Name)
-		ctx = app.NewContext(req, recorder)
-		setupContext(ctx)
+		artifact := models.Artifact{
+			ArtifactName:     artifactName,
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+		}
+		assert.NoError(t, f.DB.Create(&artifact).Error)
 
-		err = controller.ScanDependencyVulnFromProject(ctx)
-		assert.Nil(t, err)
-		assert.Equal(t, 200, recorder.Code)
+		t.Run("should copy all events when license risk is found on different branches", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			sbomFile := getSBOMWithWithLicenseRisk()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", artifactName)
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", assetVersion.Name)
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
 
-		risks, err = licenseRiskRepository.GetByAssetID(nil, asset.ID)
-		assert.Nil(t, err)
-		assert.Len(t, risks, 2)
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
 
-		risks, err = licenseRiskRepository.GetLicenseRisksByOtherAssetVersions(nil, newAssetVersion.Name, asset.ID)
-		assert.Nil(t, err)
-		assert.Len(t, risks, 1)
-		newRisk := risks[0]
-		assert.Equal(t, dtos.VulnStateAccepted, newRisk.State)
+			// Use FX-injected repository (now with GetByAssetID in interface)
+			risks, err := f.App.LicenseRiskRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+			assert.Len(t, risks, 1)
 
+			// accept the risk
+			risk := risks[0]
+			assert.Equal(t, dtos.VulnStateOpen, risk.State)
+
+			risk.State = dtos.VulnStateAccepted
+			assert.NoError(t, f.DB.Save(&risk).Error)
+
+			// create a new asset version to simulate a scan from a different branch
+			newAssetVersion := models.AssetVersion{
+				AssetID: asset.ID,
+				Name:    "feature-branch",
+			}
+			assert.NoError(t, f.DB.Create(&newAssetVersion).Error)
+
+			recorder = httptest.NewRecorder()
+			sbomFile = getSBOMWithWithLicenseRisk()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", artifactName)
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", newAssetVersion.Name)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Use FX-injected repository (now with GetByAssetID in interface)
+			risks, err = f.App.LicenseRiskRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+			assert.Len(t, risks, 2)
+
+			risks, err = f.App.LicenseRiskRepository.GetLicenseRisksByOtherAssetVersions(nil, newAssetVersion.Name, asset.ID)
+			assert.Nil(t, err)
+			assert.Len(t, risks, 1)
+			newRisk := risks[0]
+			assert.Equal(t, dtos.VulnStateAccepted, newRisk.State)
+		})
 	})
-
 }

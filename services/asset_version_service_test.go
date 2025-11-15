@@ -9,7 +9,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -112,30 +111,30 @@ func TestFirstPartyVulnHash(t *testing.T) {
 	})
 
 	t.Run("should take the hash of the vulnerability, if it exists", func(t *testing.T) {
-		vuln := common.SarifResult{
+		vuln := dtos.SarifResult{
 			Version: "2.1.0",
 			Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
-			Runs: []common.Run{
+			Runs: []dtos.Run{
 				{
-					Results: []common.Result{
+					Results: []dtos.Result{
 						{
 							RuleID: "test-rule",
-							Locations: []common.Location{
+							Locations: []dtos.Location{
 								{
-									PhysicalLocation: common.PhysicalLocation{
-										ArtifactLocation: common.ArtifactLocation{
+									PhysicalLocation: dtos.PhysicalLocation{
+										ArtifactLocation: dtos.ArtifactLocation{
 											URI: "test-uri",
 										},
-										Region: common.Region{
+										Region: dtos.Region{
 											StartLine: 1,
-											Snippet: common.Text{
+											Snippet: dtos.Text{
 												Text: "TestSnippet",
 											},
 										},
 									},
 								},
 							},
-							Fingerprints: &common.Fingerprints{
+							Fingerprints: &dtos.Fingerprints{
 								CalculatedFingerprint: "test-fingerprint",
 							},
 						},

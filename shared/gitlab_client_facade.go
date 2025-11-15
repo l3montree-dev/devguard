@@ -1,4 +1,4 @@
-package gitlabint
+package shared
 
 import (
 	"context"

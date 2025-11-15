@@ -30,7 +30,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/services"
@@ -135,7 +134,7 @@ The command signs the request using the configured token and returns scan result
 	return cmd
 }
 
-func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -322,7 +321,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*dtos.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path, outputPath)

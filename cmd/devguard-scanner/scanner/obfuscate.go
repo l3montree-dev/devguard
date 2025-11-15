@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -61,7 +61,7 @@ func ObfuscateString(str string) string {
 }
 
 // add obfuscation function for snippet
-func ObfuscateSecretAndAddFingerprint(sarifScan *common.SarifResult) {
+func ObfuscateSecretAndAddFingerprint(sarifScan *dtos.SarifResult) {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
@@ -70,7 +70,7 @@ func ObfuscateSecretAndAddFingerprint(sarifScan *common.SarifResult) {
 			}
 			// make sure to set the result.Fingerprints
 			if result.Fingerprints == nil {
-				result.Fingerprints = &common.Fingerprints{}
+				result.Fingerprints = &dtos.Fingerprints{}
 			}
 			// obfuscate the snippet
 			for lo, location := range result.Locations {

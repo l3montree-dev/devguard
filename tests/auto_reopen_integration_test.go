@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/shared"
@@ -16,144 +15,138 @@ import (
 )
 
 func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
-	db, terminate := InitDatabaseContainer("../../../initdb.sql")
-	defer terminate()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Create test data using FX helper
+		_, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-	// Create test data
-	_, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
+		t.Run("should not reopen vulnerabilities if auto-reopen is not configured", func(t *testing.T) {
+			// Ensure asset has no auto-reopen configuration
+			asset.VulnAutoReopenAfterDays = nil
+			err := f.App.AssetRepository.Update(f.DB, &asset)
+			assert.NoError(t, err)
 
-	// Set up repositories
-	assetRepo := repositories.NewAssetRepository(db)
-	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
+			// Create a vulnerability that was accepted 2 hours ago
+			vulnerability := createTestVulnerability(t, f.DB, asset, assetVersion, 2*time.Hour)
+			acceptVulnerability(t, f.DB, &vulnerability, 2*time.Hour)
 
-	t.Run("should not reopen vulnerabilities if auto-reopen is not configured", func(t *testing.T) {
-		// Ensure asset has no auto-reopen configuration
-		asset.VulnAutoReopenAfterDays = nil
-		err := assetRepo.Update(db, &asset)
-		assert.NoError(t, err)
+			// Run auto-reopen using FX-injected repositories
+			err = daemons.AutoReopenAcceptedVulnerabilities(f.App.DependencyVulnRepository, f.App.AssetRepository)
+			assert.NoError(t, err)
 
-		// Create a vulnerability that was accepted 2 hours ago
-		vulnerability := createTestVulnerability(t, db, asset, assetVersion, 2*time.Hour)
-		acceptVulnerability(t, db, &vulnerability, 2*time.Hour)
+			// Verify vulnerability is still accepted using FX-injected repository
+			updatedVuln, err := f.App.DependencyVulnRepository.Read(vulnerability.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
+		})
 
-		// Run auto-reopen
-		err = daemons.AutoReopenAcceptedVulnerabilities(db)
-		assert.NoError(t, err)
+		t.Run("should not reopen vulnerabilities that are within the time threshold", func(t *testing.T) {
+			// Configure asset for auto-reopen after 1 day
+			autoReopenAfterDays := 1
+			asset.VulnAutoReopenAfterDays = &autoReopenAfterDays
+			err := f.App.AssetRepository.Update(f.DB, &asset)
+			assert.NoError(t, err)
 
-		// Verify vulnerability is still accepted
-		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
-	})
+			// Create a vulnerability that was accepted 1 hour ago (within threshold)
+			vulnerability := createTestVulnerability(t, f.DB, asset, assetVersion, 1*time.Hour)
+			acceptVulnerability(t, f.DB, &vulnerability, 1*time.Hour)
 
-	t.Run("should not reopen vulnerabilities that are within the time threshold", func(t *testing.T) {
-		// Configure asset for auto-reopen after 1 day
-		autoReopenAfterDays := 1
-		asset.VulnAutoReopenAfterDays = &autoReopenAfterDays
-		err := assetRepo.Update(db, &asset)
-		assert.NoError(t, err)
+			// Run auto-reopen using FX-injected repositories
+			err = daemons.AutoReopenAcceptedVulnerabilities(f.App.DependencyVulnRepository, f.App.AssetRepository)
+			assert.NoError(t, err)
 
-		// Create a vulnerability that was accepted 1 hour ago (within threshold)
-		vulnerability := createTestVulnerability(t, db, asset, assetVersion, 1*time.Hour)
-		acceptVulnerability(t, db, &vulnerability, 1*time.Hour)
+			// Verify vulnerability is still accepted using FX-injected repository
+			updatedVuln, err := f.App.DependencyVulnRepository.Read(vulnerability.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
+		})
 
-		// Run auto-reopen
-		err = daemons.AutoReopenAcceptedVulnerabilities(db)
-		assert.NoError(t, err)
+		t.Run("should reopen vulnerabilities that exceed the time threshold", func(t *testing.T) {
+			// Configure asset for auto-reopen after 1 day
+			autoReopenAfterDays := 1
+			asset.VulnAutoReopenAfterDays = &autoReopenAfterDays
+			err := f.App.AssetRepository.Update(f.DB, &asset)
+			assert.NoError(t, err)
 
-		// Verify vulnerability is still accepted
-		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State)
-	})
+			// Create a vulnerability that was accepted 2 days ago (exceeds threshold)
+			vulnerability := createTestVulnerability(t, f.DB, asset, assetVersion, 48*time.Hour)
+			acceptVulnerability(t, f.DB, &vulnerability, 48*time.Hour)
 
-	t.Run("should reopen vulnerabilities that exceed the time threshold", func(t *testing.T) {
-		// Configure asset for auto-reopen after 1 day
-		autoReopenAfterDays := 1
-		asset.VulnAutoReopenAfterDays = &autoReopenAfterDays
-		err := assetRepo.Update(db, &asset)
-		assert.NoError(t, err)
+			// Run auto-reopen using FX-injected repositories
+			err = daemons.AutoReopenAcceptedVulnerabilities(f.App.DependencyVulnRepository, f.App.AssetRepository)
+			assert.NoError(t, err)
 
-		// Create a vulnerability that was accepted 2 days ago (exceeds threshold)
-		vulnerability := createTestVulnerability(t, db, asset, assetVersion, 48*time.Hour)
-		acceptVulnerability(t, db, &vulnerability, 48*time.Hour)
+			// Verify vulnerability has been reopened using FX-injected repository
+			updatedVuln, err := f.App.DependencyVulnRepository.Read(vulnerability.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State)
 
-		// Run auto-reopen
-		err = daemons.AutoReopenAcceptedVulnerabilities(db)
-		assert.NoError(t, err)
+			// Verify a reopen event was created
+			events := updatedVuln.Events
+			assert.NotEmpty(t, events)
 
-		// Verify vulnerability has been reopened
-		updatedVuln, err := dependencyVulnRepo.Read(vulnerability.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State)
-
-		// Verify a reopen event was created
-		events := updatedVuln.Events
-		assert.NotEmpty(t, events)
-
-		// Find the reopen event
-		var reopenEvent *models.VulnEvent
-		for _, event := range events {
-			if event.Type == dtos.EventTypeReopened {
-				reopenEvent = &event
-				break
+			// Find the reopen event
+			var reopenEvent *models.VulnEvent
+			for _, event := range events {
+				if event.Type == dtos.EventTypeReopened {
+					reopenEvent = &event
+					break
+				}
 			}
-		}
 
-		assert.NotNil(t, reopenEvent, "Expected to find a reopen event")
-		assert.Equal(t, "system", reopenEvent.UserID)
-		assert.NotNil(t, reopenEvent.Justification, "Expected justification to not be nil")
-		assert.Contains(t, *reopenEvent.Justification, "Automatically reopened")
-	})
+			assert.NotNil(t, reopenEvent, "Expected to find a reopen event")
+			assert.Equal(t, "system", reopenEvent.UserID)
+			assert.NotNil(t, reopenEvent.Justification, "Expected justification to not be nil")
+			assert.Contains(t, *reopenEvent.Justification, "Automatically reopened")
+		})
 
-	t.Run("should handle multiple assets with different configurations", func(t *testing.T) {
-		// Create another asset with different auto-reopen configuration
-		asset2 := models.Asset{
-			Name:        "test-asset-2",
-			Slug:        "test-asset-2",
-			ProjectID:   project.ID,
-			Type:        models.AssetTypeApplication,
-			Description: "Test asset 2",
-		}
-		autoReopenAfter2Days := 2
-		asset2.VulnAutoReopenAfterDays = &autoReopenAfter2Days
-		err := assetRepo.Create(db, &asset2)
-		assert.NoError(t, err)
+		t.Run("should handle multiple assets with different configurations", func(t *testing.T) {
+			// Create another asset with different auto-reopen configuration
+			asset2 := models.Asset{
+				Name:        "test-asset-2",
+				Slug:        "test-asset-2",
+				ProjectID:   project.ID,
+				Type:        models.AssetTypeApplication,
+				Description: "Test asset 2",
+			}
+			autoReopenAfter2Days := 2
+			asset2.VulnAutoReopenAfterDays = &autoReopenAfter2Days
+			err := f.App.AssetRepository.Create(f.DB, &asset2)
+			assert.NoError(t, err)
 
-		assetVersion2 := models.AssetVersion{
-			AssetID:       asset2.ID,
-			Name:          "main",
-			DefaultBranch: true,
-		}
-		assetVersionRepo := repositories.NewAssetVersionRepository(db)
-		err = assetVersionRepo.Create(db, &assetVersion2)
-		assert.NoError(t, err)
+			assetVersion2 := models.AssetVersion{
+				AssetID:       asset2.ID,
+				Name:          "main",
+				DefaultBranch: true,
+			}
+			err = f.DB.Create(&assetVersion2).Error
+			assert.NoError(t, err)
 
-		// Set different auto-reopen thresholds
-		autoReopenAfter1Days := 1
-		asset.VulnAutoReopenAfterDays = &autoReopenAfter1Days
-		err = assetRepo.Update(db, &asset)
-		assert.NoError(t, err)
+			// Set different auto-reopen thresholds
+			autoReopenAfter1Days := 1
+			asset.VulnAutoReopenAfterDays = &autoReopenAfter1Days
+			err = f.App.AssetRepository.Update(f.DB, &asset)
+			assert.NoError(t, err)
 
-		// Create vulnerabilities for both assets
-		vuln1 := createTestVulnerability(t, db, asset, assetVersion, 1*time.Hour)
-		acceptVulnerability(t, db, &vuln1, 36*time.Hour) // Accepted 1.5 days ago
+			// Create vulnerabilities for both assets
+			vuln1 := createTestVulnerability(t, f.DB, asset, assetVersion, 1*time.Hour)
+			acceptVulnerability(t, f.DB, &vuln1, 36*time.Hour) // Accepted 1.5 days ago
 
-		vuln2 := createTestVulnerability(t, db, asset2, assetVersion2, 2*time.Hour)
-		acceptVulnerability(t, db, &vuln2, 72*time.Hour) // Accepted 3 days ago
+			vuln2 := createTestVulnerability(t, f.DB, asset2, assetVersion2, 2*time.Hour)
+			acceptVulnerability(t, f.DB, &vuln2, 72*time.Hour) // Accepted 3 days ago
 
-		// Run auto-reopen
-		err = daemons.AutoReopenAcceptedVulnerabilities(db)
-		assert.NoError(t, err)
+			// Run auto-reopen using FX-injected repositories
+			err = daemons.AutoReopenAcceptedVulnerabilities(f.App.DependencyVulnRepository, f.App.AssetRepository)
+			assert.NoError(t, err)
 
-		// Verify both vulnerabilities are reopened
-		updatedVuln1, err := dependencyVulnRepo.Read(vuln1.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateOpen, updatedVuln1.State)
+			// Verify both vulnerabilities are reopened using FX-injected repository
+			updatedVuln1, err := f.App.DependencyVulnRepository.Read(vuln1.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, dtos.VulnStateOpen, updatedVuln1.State)
 
-		updatedVuln2, err := dependencyVulnRepo.Read(vuln2.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateOpen, updatedVuln2.State)
+			updatedVuln2, err := f.App.DependencyVulnRepository.Read(vuln2.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, dtos.VulnStateOpen, updatedVuln2.State)
+		})
 	})
 }
 

@@ -2,14 +2,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type supplyChainRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.SupplyChain, *gorm.DB]
+	utils.Repository[uuid.UUID, models.SupplyChain, *gorm.DB]
 }
 
 func NewSupplyChainRepository(db *gorm.DB) *supplyChainRepository {

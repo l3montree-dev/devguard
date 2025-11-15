@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type eventRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.VulnEvent, *gorm.DB]
+	utils.Repository[uuid.UUID, models.VulnEvent, *gorm.DB]
 }
 
 func NewVulnEventRepository(db *gorm.DB) *eventRepository {

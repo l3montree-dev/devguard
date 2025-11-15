@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -211,10 +210,10 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
-	sarif := common.SarifResult{
+	sarif := dtos.SarifResult{
 		Version: "2.1.0",
 		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",
-		Runs:    make([]common.Run, 0),
+		Runs:    make([]dtos.Run, 0),
 	}
 
 	// group the vulns by scanner
@@ -233,35 +232,35 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 
 	// create a run for each scanner
 	for scannerID, vulns := range scannerVulns {
-		run := common.Run{
-			Tool: common.Tool{
-				Driver: common.Driver{
+		run := dtos.Run{
+			Tool: dtos.Tool{
+				Driver: dtos.Driver{
 					Name:  scannerID,
-					Rules: make([]common.Rule, 0),
+					Rules: make([]dtos.Rule, 0),
 				},
 			},
-			Results: make([]common.Result, 0),
+			Results: make([]dtos.Result, 0),
 		}
 
 		addedRuleIDs := make(map[string]bool)
 		for _, vuln := range vulns {
 			if _, exists := addedRuleIDs[vuln.RuleID]; !exists {
-				rule := common.Rule{
+				rule := dtos.Rule{
 					ID:               vuln.RuleID,
 					Name:             vuln.RuleName,
-					FullDescription:  common.Text{Text: vuln.RuleDescription},
-					Help:             common.Text{Text: vuln.RuleHelp},
+					FullDescription:  dtos.Text{Text: vuln.RuleDescription},
+					Help:             dtos.Text{Text: vuln.RuleHelp},
 					HelpURI:          vuln.RuleHelpURI,
-					ShortDescription: common.Text{Text: vuln.RuleName},
+					ShortDescription: dtos.Text{Text: vuln.RuleName},
 					Properties:       vuln.RuleProperties,
 				}
 				run.Tool.Driver.Rules = append(run.Tool.Driver.Rules, rule)
 				addedRuleIDs[vuln.RuleID] = true
 			}
-			result := common.Result{
+			result := dtos.Result{
 				Kind:   "issue",
 				RuleID: vuln.RuleID,
-				Message: common.Text{
+				Message: dtos.Text{
 					Text: vuln.RuleDescription,
 				},
 			}
@@ -270,19 +269,19 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 			if err != nil {
 				slog.Error("could not marshal snippet contents", "err", err)
 			}
-			locations := make([]common.Location, 0, len(snippet.Snippets))
+			locations := make([]dtos.Location, 0, len(snippet.Snippets))
 			for _, snippetContent := range snippet.Snippets {
-				locations = append(locations, common.Location{
-					PhysicalLocation: common.PhysicalLocation{
-						ArtifactLocation: common.ArtifactLocation{
+				locations = append(locations, dtos.Location{
+					PhysicalLocation: dtos.PhysicalLocation{
+						ArtifactLocation: dtos.ArtifactLocation{
 							URI: vuln.URI,
 						},
-						Region: common.Region{
+						Region: dtos.Region{
 							StartLine:   snippetContent.StartLine,
 							StartColumn: snippetContent.StartColumn,
 							EndLine:     snippetContent.EndLine,
 							EndColumn:   snippetContent.EndColumn,
-							Snippet: common.Text{
+							Snippet: dtos.Text{
 								Text: snippetContent.Snippet,
 							},
 						},

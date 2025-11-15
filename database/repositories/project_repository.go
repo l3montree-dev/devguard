@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -15,7 +14,7 @@ import (
 
 type projectRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.Project, *gorm.DB]
+	utils.Repository[uuid.UUID, models.Project, *gorm.DB]
 }
 
 func NewProjectRepository(db *gorm.DB) *projectRepository {

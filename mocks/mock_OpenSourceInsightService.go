@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,22 +39,22 @@ func (_m *OpenSourceInsightService) EXPECT() *OpenSourceInsightService_Expecter 
 }
 
 // GetProject provides a mock function for the type OpenSourceInsightService
-func (_mock *OpenSourceInsightService) GetProject(ctx context.Context, projectID string) (common.OpenSourceInsightsProjectResponse, error) {
+func (_mock *OpenSourceInsightService) GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error) {
 	ret := _mock.Called(ctx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProject")
 	}
 
-	var r0 common.OpenSourceInsightsProjectResponse
+	var r0 dtos.OpenSourceInsightsProjectResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (common.OpenSourceInsightsProjectResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (dtos.OpenSourceInsightsProjectResponse, error)); ok {
 		return returnFunc(ctx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) common.OpenSourceInsightsProjectResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) dtos.OpenSourceInsightsProjectResponse); ok {
 		r0 = returnFunc(ctx, projectID)
 	} else {
-		r0 = ret.Get(0).(common.OpenSourceInsightsProjectResponse)
+		r0 = ret.Get(0).(dtos.OpenSourceInsightsProjectResponse)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, projectID)
@@ -94,33 +94,33 @@ func (_c *OpenSourceInsightService_GetProject_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *OpenSourceInsightService_GetProject_Call) Return(openSourceInsightsProjectResponse common.OpenSourceInsightsProjectResponse, err error) *OpenSourceInsightService_GetProject_Call {
+func (_c *OpenSourceInsightService_GetProject_Call) Return(openSourceInsightsProjectResponse dtos.OpenSourceInsightsProjectResponse, err error) *OpenSourceInsightService_GetProject_Call {
 	_c.Call.Return(openSourceInsightsProjectResponse, err)
 	return _c
 }
 
-func (_c *OpenSourceInsightService_GetProject_Call) RunAndReturn(run func(ctx context.Context, projectID string) (common.OpenSourceInsightsProjectResponse, error)) *OpenSourceInsightService_GetProject_Call {
+func (_c *OpenSourceInsightService_GetProject_Call) RunAndReturn(run func(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error)) *OpenSourceInsightService_GetProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetVersion provides a mock function for the type OpenSourceInsightService
-func (_mock *OpenSourceInsightService) GetVersion(ctx context.Context, ecosystem string, packageName string, version string) (common.OpenSourceInsightsVersionResponse, error) {
+func (_mock *OpenSourceInsightService) GetVersion(ctx context.Context, ecosystem string, packageName string, version string) (dtos.OpenSourceInsightsVersionResponse, error) {
 	ret := _mock.Called(ctx, ecosystem, packageName, version)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVersion")
 	}
 
-	var r0 common.OpenSourceInsightsVersionResponse
+	var r0 dtos.OpenSourceInsightsVersionResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (common.OpenSourceInsightsVersionResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (dtos.OpenSourceInsightsVersionResponse, error)); ok {
 		return returnFunc(ctx, ecosystem, packageName, version)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) common.OpenSourceInsightsVersionResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) dtos.OpenSourceInsightsVersionResponse); ok {
 		r0 = returnFunc(ctx, ecosystem, packageName, version)
 	} else {
-		r0 = ret.Get(0).(common.OpenSourceInsightsVersionResponse)
+		r0 = ret.Get(0).(dtos.OpenSourceInsightsVersionResponse)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
 		r1 = returnFunc(ctx, ecosystem, packageName, version)
@@ -172,12 +172,12 @@ func (_c *OpenSourceInsightService_GetVersion_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *OpenSourceInsightService_GetVersion_Call) Return(openSourceInsightsVersionResponse common.OpenSourceInsightsVersionResponse, err error) *OpenSourceInsightService_GetVersion_Call {
+func (_c *OpenSourceInsightService_GetVersion_Call) Return(openSourceInsightsVersionResponse dtos.OpenSourceInsightsVersionResponse, err error) *OpenSourceInsightService_GetVersion_Call {
 	_c.Call.Return(openSourceInsightsVersionResponse, err)
 	return _c
 }
 
-func (_c *OpenSourceInsightService_GetVersion_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string, version string) (common.OpenSourceInsightsVersionResponse, error)) *OpenSourceInsightService_GetVersion_Call {
+func (_c *OpenSourceInsightService_GetVersion_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string, version string) (dtos.OpenSourceInsightsVersionResponse, error)) *OpenSourceInsightService_GetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }

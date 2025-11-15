@@ -17,15 +17,15 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type gitlabIntegrationRepository struct {
 	db *gorm.DB
-	common.Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
+	utils.Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
 }
 
 func NewGitLabIntegrationRepository(db *gorm.DB) *gitlabIntegrationRepository {

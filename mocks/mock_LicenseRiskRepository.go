@@ -784,6 +784,74 @@ func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) R
 	return _c
 }
 
+// GetByAssetID provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetID")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(tx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []models.LicenseRisk); ok {
+		r0 = returnFunc(tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetID'
+type LicenseRiskRepository_GetByAssetID_Call struct {
+	*mock.Call
+}
+
+// GetByAssetID is a helper method to define mock.On call
+//   - tx shared.DB
+//   - assetID uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) GetByAssetID(tx interface{}, assetID interface{}) *LicenseRiskRepository_GetByAssetID_Call {
+	return &LicenseRiskRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", tx, assetID)}
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) Run(run func(tx shared.DB, assetID uuid.UUID)) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type LicenseRiskRepository
 func (_mock *LicenseRiskRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)

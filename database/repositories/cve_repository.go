@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -15,7 +14,7 @@ import (
 
 type cveRepository struct {
 	db *gorm.DB
-	common.Repository[string, models.CVE, *gorm.DB]
+	utils.Repository[string, models.CVE, *gorm.DB]
 }
 
 func NewCVERepository(db *gorm.DB) *cveRepository {

@@ -44,7 +44,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
 	var vulnEvent models.VulnEvent
-	var client GitlabClientFacade
+	var client shared.GitlabClientFacade
 	var vuln models.Vuln
 	var issueID int
 	var projectID int

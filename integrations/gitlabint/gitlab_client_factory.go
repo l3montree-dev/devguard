@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 
 	"github.com/l3montree-dev/devguard/shared"
@@ -27,7 +26,7 @@ func NewGitlabClientFactory(gitlabIntegrationRepository shared.GitlabIntegration
 	}
 }
 
-func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (shared.GitlabClientFacade, error) {
 	// Use installation transport with client.
 	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabURL))
 	if err != nil {
@@ -40,7 +39,7 @@ func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitL
 	}, nil
 }
 
-func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.GitlabClientFacade, error) {
 	integration, err := factory.gitlabIntegrationRepository.Read(id)
 	if err != nil {
 		return nil, err
@@ -49,14 +48,14 @@ func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (Gitl
 	return factory.FromIntegration(integration)
 }
 
-func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
 	// get the correct gitlab oauth2 integration configuration
 	for _, integration := range factory.oauth2GitlabIntegration {
 		if integration.ProviderID == token.ProviderID {
 			oauth2Client := integration.client(token)
 
 			if enableClientCache {
-				common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
+				utils.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
 			}
 
 			// create a rate limiter. 10 requests per second
@@ -75,7 +74,7 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOaut
 	return nil, errors.New("could not find gitlab oauth2 integration")
 }
 
-func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseURL string) (GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseURL string) (shared.GitlabClientFacade, error) {
 	if accessToken == "" {
 		return nil, errors.New("access token is empty")
 	}

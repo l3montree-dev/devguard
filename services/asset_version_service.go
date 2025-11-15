@@ -14,7 +14,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -78,7 +77,7 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 	"open",
 }
 
-func getBestDescription(rule common.Rule) string {
+func getBestDescription(rule dtos.Rule) string {
 	if rule.FullDescription.Markdown != "" {
 		return rule.FullDescription.Markdown
 	}
@@ -92,18 +91,18 @@ func getBestDescription(rule common.Rule) string {
 	return rule.ShortDescription.Text
 }
 
-func preferMarkdown(text common.Text) string {
+func preferMarkdown(text dtos.Text) string {
 	if text.Markdown != "" {
 		return text.Markdown
 	}
 	return text.Text
 }
 
-func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan dtos.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
-	ruleMap := make(map[string]common.Rule)
+	ruleMap := make(map[string]dtos.Rule)
 	for _, run := range sarifScan.Runs {
 		for _, rule := range run.Tool.Driver.Rules {
 			ruleMap[rule.ID] = rule

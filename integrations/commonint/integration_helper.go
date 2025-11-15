@@ -20,7 +20,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/jira"
@@ -184,7 +183,7 @@ func RenderMarkdown(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, proj
 	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
 	fmt.Println("str:", str.String())
 
-	common.AddSlashCommandsToFirstPartyVuln(&str)
+	utils.AddSlashCommandsToFirstPartyVuln(&str)
 
 	return str.String()
 }

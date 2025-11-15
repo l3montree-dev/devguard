@@ -1,4 +1,4 @@
-package githubint
+package shared
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 // wrapper around the github package - which provides only the methods
 // we need
-type githubClientFacade interface {
+type GithubClientFacade interface {
 	CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
 	CreateIssueComment(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error)
 	EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error)

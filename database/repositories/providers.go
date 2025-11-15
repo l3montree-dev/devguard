@@ -33,6 +33,9 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewVulnEventRepository, fx.As(new(shared.VulnEventRepository)))),
 	fx.Provide(fx.Annotate(NewOrgRepository, fx.As(new(shared.OrganizationRepository)))),
 	fx.Provide(fx.Annotate(NewCVERepository, fx.As(new(shared.CveRepository)))),
+	fx.Provide(fx.Annotate(NewCWERepository, fx.As(new(shared.CweRepository)))),
+	fx.Provide(fx.Annotate(NewExploitRepository, fx.As(new(shared.ExploitRepository)))),
+	fx.Provide(fx.Annotate(NewAffectedComponentRepository, fx.As(new(shared.AffectedComponentRepository)))),
 	fx.Provide(fx.Annotate(NewDependencyVulnRepository, fx.As(new(shared.DependencyVulnRepository)))),
 	fx.Provide(fx.Annotate(NewFirstPartyVulnerabilityRepository, fx.As(new(shared.FirstPartyVulnRepository)))),
 	fx.Provide(fx.Annotate(NewInTotoLinkRepository, fx.As(new(shared.InTotoLinkRepository)))),
@@ -47,4 +50,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewComponentProjectRepository, fx.As(new(shared.ComponentProjectRepository)))),
 	fx.Provide(fx.Annotate(NewGitLabIntegrationRepository, fx.As(new(shared.GitlabIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewGitlabOauth2TokenRepository, fx.As(new(shared.GitLabOauth2TokenRepository)))),
+	fx.Provide(fx.Annotate(NewAggregatedVulnRepository, fx.As(new(shared.VulnRepository)))),
 )

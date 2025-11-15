@@ -2,14 +2,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type releaseRepository struct {
-	common.Repository[uuid.UUID, models.Release, *gorm.DB]
+	utils.Repository[uuid.UUID, models.Release, *gorm.DB]
 	db *gorm.DB
 }
 

@@ -16,65 +16,179 @@
 package tests
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
 )
 
 // TestApp provides access to all services and controllers via FX
 type TestApp struct {
 	fx.In
 
+	// Core infrastructure
+	DB     shared.DB
+	Broker shared.Broker
+
 	// Services
-	LicenseRiskService    shared.LicenseRiskService
-	StatisticsService     shared.StatisticsService
-	ComponentService      shared.ComponentService
-	FirstPartyVulnService shared.FirstPartyVulnService
-	DependencyVulnService shared.DependencyVulnService
-	ArtifactService       shared.ArtifactService
-	AssetVersionService   shared.AssetVersionService
-	ScanService           shared.ScanService
+	ConfigService            services.ConfigService
+	LicenseRiskService       shared.LicenseRiskService
+	StatisticsService        shared.StatisticsService
+	ComponentService         shared.ComponentService
+	FirstPartyVulnService    shared.FirstPartyVulnService
+	DependencyVulnService    shared.DependencyVulnService
+	ArtifactService          shared.ArtifactService
+	AssetVersionService      shared.AssetVersionService
+	AssetService             shared.AssetService
+	ProjectService           shared.ProjectService
+	OrgService               shared.OrgService
+	ScanService              shared.ScanService
+	CSAFService              shared.CSAFService
+	ReleaseService           shared.ReleaseService
+	OpenSourceInsightService shared.OpenSourceInsightService
 
 	// Controllers
-	AssetVersionController *controllers.AssetVersionController
-	ScanController         *controllers.ScanController
+	AssetController          *controllers.AssetController
+	AssetVersionController   *controllers.AssetVersionController
+	ScanController           *controllers.ScanController
+	ProjectController        *controllers.ProjectController
+	OrgController            *controllers.OrgController
+	DependencyVulnController *controllers.DependencyVulnController
+	FirstPartyVulnController *controllers.FirstPartyVulnController
+	ComponentController      *controllers.ComponentController
+	ArtifactController       *controllers.ArtifactController
 
 	// Repositories
-	AssetRepository          shared.AssetRepository
-	AssetVersionRepository   shared.AssetVersionRepository
-	ComponentRepository      shared.ComponentRepository
-	DependencyVulnRepository shared.DependencyVulnRepository
-	CveRepository            shared.CveRepository
+	AssetRepository             shared.AssetRepository
+	AssetVersionRepository      shared.AssetVersionRepository
+	ComponentRepository         shared.ComponentRepository
+	DependencyVulnRepository    shared.DependencyVulnRepository
+	FirstPartyVulnRepository    shared.FirstPartyVulnRepository
+	CveRepository               shared.CveRepository
+	CweRepository               shared.CweRepository
+	ExploitRepository           shared.ExploitRepository
+	AffectedComponentRepository shared.AffectedComponentRepository
+	ProjectRepository           shared.ProjectRepository
+	OrgRepository               shared.OrganizationRepository
+	ArtifactRepository          shared.ArtifactRepository
+	VulnEventRepository         shared.VulnEventRepository
+	ComponentProjectRepository  shared.ComponentProjectRepository
+	StatisticsRepository        shared.StatisticsRepository
+	LicenseRiskRepository       shared.LicenseRiskRepository
+	GitLabOauth2TokenRepository shared.GitLabOauth2TokenRepository
+	GitlabIntegrationRepository shared.GitlabIntegrationRepository
+	ExternalUserRepository      shared.ExternalUserRepository
+	AggregatedVulnRepository    shared.VulnRepository
+
+	// Access Control
+	RBACProvider shared.RBACProvider
+
+	// Integrations
+	IntegrationAggregate shared.IntegrationAggregate
+}
+
+// TestAppOptions configures the test application
+type TestAppOptions struct {
+	// Additional FX options to include
+	ExtraOptions []fx.Option
+	// Whether to suppress FX logging
+	SuppressLogs bool
+	// Custom broker (if nil, a default in-memory broker will be provided)
+	Broker shared.Broker
 }
 
 // NewTestApp creates a test application with all dependencies wired via FX
 // It uses the same FX modules as production for consistency
-func NewTestApp(db shared.DB) (*TestApp, error) {
+func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fxtest.App, error) {
+	if opts == nil {
+		opts = &TestAppOptions{SuppressLogs: true}
+	}
+
 	var app TestApp
 
-	fxApp := fx.New(
+	fxOptions := []fx.Option{
 		// Provide the database
 		fx.Provide(func() shared.DB { return db }),
+
+		// Provide broker
+		fx.Provide(func() shared.Broker {
+			if opts.Broker != nil {
+				return opts.Broker
+			}
+			// Return a no-op broker for tests
+			return &noopBroker{}
+		}),
 
 		// Use the same modules as production
 		repositories.Module,
 		services.ServiceModule,
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
+		integrations.Module,
 
 		// Populate the TestApp struct
 		fx.Populate(&app),
-
-		// Don't start the application (no servers, etc)
-		fx.NopLogger,
-	)
-
-	if err := fxApp.Err(); err != nil {
-		return nil, err
 	}
 
-	return &app, nil
+	// Add extra options if provided
+	if len(opts.ExtraOptions) > 0 {
+		fxOptions = append(fxOptions, opts.ExtraOptions...)
+	}
+
+	// Suppress logs if requested
+	if opts.SuppressLogs {
+		fxOptions = append(fxOptions, fx.NopLogger)
+	}
+
+	fxApp := fxtest.New(t, fxOptions...)
+
+	if err := fxApp.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	fxApp.RequireStart()
+
+	return &app, fxApp, nil
+}
+
+// NewTestAppWithT creates a test application tied to a testing.T
+// It automatically stops the app when the test completes
+func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) *TestApp {
+	t.Helper()
+
+	app, fxApp, err := NewTestApp(t, db, opts)
+	if err != nil {
+		t.Fatalf("Failed to create test app: %v", err)
+	}
+
+	// Ensure cleanup
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		fxApp.RequireStop()
+		_ = fxApp.Stop(ctx)
+	})
+
+	return app
+}
+
+// noopBroker is a no-op implementation of the Broker interface for testing
+type noopBroker struct{}
+
+func (n *noopBroker) Publish(ctx context.Context, message shared.Message) error {
+	return nil
+}
+
+func (n *noopBroker) Subscribe(topic shared.Channel) (<-chan map[string]interface{}, error) {
+	ch := make(chan map[string]interface{})
+	close(ch) // Return a closed channel so subscribers don't block
+	return ch, nil
 }

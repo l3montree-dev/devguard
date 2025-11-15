@@ -26,6 +26,7 @@ import (
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -119,7 +120,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 	return utils.Flat(results), nil
 }
 
-var _ githubClientFacade = &githubClient{}
+var _ shared.GithubClientFacade = &githubClient{}
 
 func (client githubClient) CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
 	return client.Issues.Create(ctx, owner, repo, issue)

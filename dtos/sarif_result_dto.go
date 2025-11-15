@@ -1,4 +1,4 @@
-package common
+package dtos
 
 type SarifResult struct {
 	Version string `json:"version"`

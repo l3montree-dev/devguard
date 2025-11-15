@@ -12,13 +12,13 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -31,7 +31,7 @@ import (
 func TestUpstreamCSAFReportIntegration(t *testing.T) {
 	// lets do that against devguard itself - so that we have data to work with
 	// Initialize test database
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
 
 	// Create artifact service and controller
@@ -55,10 +55,10 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 
 	artifactService := services.NewArtifactService(artifactRepository, services.NewCSAFService(httpsClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
-	csafController := NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
+	csafController := controllers.NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
 
 	// Create test organization, project, asset, and asset version
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	// create an artifact in this asset version
 	artifact := models.Artifact{
 		ArtifactName:     "pkg:golang/github.com/l3montree-dev/devguard",

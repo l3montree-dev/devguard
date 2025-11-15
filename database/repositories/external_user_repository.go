@@ -17,14 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type externalUserRepository struct {
 	db *gorm.DB
-	common.Repository[int, models.ExternalUser, *gorm.DB]
+	utils.Repository[int, models.ExternalUser, *gorm.DB]
 }
 
 func NewExternalUserRepository(db *gorm.DB) *externalUserRepository {

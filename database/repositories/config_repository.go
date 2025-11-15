@@ -1,13 +1,13 @@
 package repositories
 
 import (
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type configRepository struct {
-	common.Repository[string, models.Config, *gorm.DB]
+	utils.Repository[string, models.Config, *gorm.DB]
 	db *gorm.DB
 }
 

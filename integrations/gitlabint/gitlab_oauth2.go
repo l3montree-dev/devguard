@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -58,7 +57,7 @@ type gitlabOauth2Client struct {
 	gitlabClient
 }
 
-var httpClientCache = common.NewCacheTransport(1000, 5*time.Minute)
+var httpClientCache = utils.NewCacheTransport(1000, 5*time.Minute)
 
 func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	urls := make(map[string]gitlabEnvConfig)
