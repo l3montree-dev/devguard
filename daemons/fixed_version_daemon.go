@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,7 +38,10 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 	return nil, nil
 }
 
-func UpdateFixedVersions(db shared.DB) error {
+func UpdateFixedVersions(
+	db shared.DB,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
@@ -50,7 +52,6 @@ func UpdateFixedVersions(db shared.DB) error {
 	}()
 
 	purlComparer := scan.NewPurlComparer(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 
 	var dependencyVulns []models.DependencyVuln
 	// get all dependency vulns without a fixed version

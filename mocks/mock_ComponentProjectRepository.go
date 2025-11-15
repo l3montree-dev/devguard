@@ -424,6 +424,61 @@ func (_c *ComponentProjectRepository_DeleteBatch_Call) RunAndReturn(run func(tx 
 	return _c
 }
 
+// FindAllOutdatedProjects provides a mock function for the type ComponentProjectRepository
+func (_mock *ComponentProjectRepository) FindAllOutdatedProjects() ([]models.ComponentProject, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAllOutdatedProjects")
+	}
+
+	var r0 []models.ComponentProject
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() ([]models.ComponentProject, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() []models.ComponentProject); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentProject)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentProjectRepository_FindAllOutdatedProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAllOutdatedProjects'
+type ComponentProjectRepository_FindAllOutdatedProjects_Call struct {
+	*mock.Call
+}
+
+// FindAllOutdatedProjects is a helper method to define mock.On call
+func (_e *ComponentProjectRepository_Expecter) FindAllOutdatedProjects() *ComponentProjectRepository_FindAllOutdatedProjects_Call {
+	return &ComponentProjectRepository_FindAllOutdatedProjects_Call{Call: _e.mock.On("FindAllOutdatedProjects")}
+}
+
+func (_c *ComponentProjectRepository_FindAllOutdatedProjects_Call) Run(run func()) *ComponentProjectRepository_FindAllOutdatedProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ComponentProjectRepository_FindAllOutdatedProjects_Call) Return(componentProjects []models.ComponentProject, err error) *ComponentProjectRepository_FindAllOutdatedProjects_Call {
+	_c.Call.Return(componentProjects, err)
+	return _c
+}
+
+func (_c *ComponentProjectRepository_FindAllOutdatedProjects_Call) RunAndReturn(run func() ([]models.ComponentProject, error)) *ComponentProjectRepository_FindAllOutdatedProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type ComponentProjectRepository
 func (_mock *ComponentProjectRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)

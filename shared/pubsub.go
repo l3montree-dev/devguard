@@ -12,14 +12,14 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package pubsub
+package shared
 
 import "context"
 
 type Channel string
 
 const (
-	PolicyChange Channel = "policyChange"
+	PolicyChange = "policyChange"
 )
 
 type Message interface {

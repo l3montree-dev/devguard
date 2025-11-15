@@ -9,47 +9,31 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.IntegrationAggregate, casbinRBACProvider shared.RBACProvider) error {
+func SyncTickets(
+	db shared.DB,
+	thirdPartyIntegrationAggregate shared.IntegrationAggregate,
+	dependencyVulnService shared.DependencyVulnService,
+	assetVersionRepository shared.AssetVersionRepository,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	orgRepository shared.OrganizationRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+) error {
 	start := time.Now()
 	defer func() {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
 	}()
 
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-
-	dependencyVulnService := services.NewDependencyVulnService(
-		dependencyVulnRepository,
-		repositories.NewVulnEventRepository(db),
-		repositories.NewAssetRepository(db),
-		repositories.NewCVERepository(db),
-		repositories.NewOrgRepository(db),
-		repositories.NewProjectRepository(db),
-		thirdPartyIntegrationAggregate,
-		repositories.NewAssetVersionRepository(db),
-	)
-
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-
-	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
+	// Get gitlab integration from the aggregate
+	gitlabIntegration := thirdPartyIntegrationAggregate.GetIntegration("gitlab")
 
 	orgs, err := orgRepository.All()
 	if err != nil {
@@ -90,7 +74,7 @@ func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.Integration
 
 				}
 				// build new client each time for authentication
-				gitlabClient, _, err := gitlabIntegration.GetClientBasedOnAsset(asset)
+				gitlabClient, _, err := gitlabIntegration.(*gitlabint.GitlabIntegration).GetClientBasedOnAsset(asset)
 				if err != nil {
 					slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
 					continue

@@ -53,7 +53,6 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(commands.NewVulndbCommand())
-	rootCmd.AddCommand(commands.NewComponentsCommand())
 	rootCmd.AddCommand(commands.NewDaemonCommand())
 	rootCmd.AddCommand(commands.NewLicensesCommand())
 }

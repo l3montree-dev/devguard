@@ -6,17 +6,18 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/pubsub"
+	"github.com/l3montree-dev/devguard/shared"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
 
 // testMessage for testing
 type testMessage struct {
-	channel pubsub.Channel
+	channel shared.Channel
 	payload map[string]interface{}
 }
 
-func (m testMessage) GetChannel() pubsub.Channel {
+func (m testMessage) GetChannel() shared.Channel {
 	return m.channel
 }
 
@@ -36,7 +37,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := pubsub.Channel("test_topic")
+		testTopic := shared.Channel("test_topic")
 
 		// Subscribe to topic
 		messagesCh, err := broker.Subscribe(testTopic)
@@ -74,7 +75,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := pubsub.Channel("multi_topic")
+		testTopic := shared.Channel("multi_topic")
 
 		// Subscribe with multiple subscribers
 		subscriber1, err := broker.Subscribe(testTopic)
@@ -121,14 +122,14 @@ func TestPostgreSQLBroker(t *testing.T) {
 		ctx := context.Background()
 
 		// Subscribe to policy changes
-		messagesCh, err := broker.Subscribe(pubsub.PolicyChange)
+		messagesCh, err := broker.Subscribe(shared.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish simple policy change message
 		policyMsg := testMessage{
-			channel: pubsub.PolicyChange,
+			channel: shared.PolicyChange,
 			payload: map[string]interface{}{
 				"policy_id": "policy-123",
 				"action":    "updated",
@@ -161,16 +162,16 @@ func TestPostgreSQLBroker(t *testing.T) {
 		assert.Empty(t, topics)
 
 		// Subscribe to topics
-		_, err = broker.Subscribe(pubsub.Channel("topic1"))
+		_, err = broker.Subscribe(shared.Channel("topic1"))
 		assert.NoError(t, err)
 
-		_, err = broker.Subscribe(pubsub.Channel("topic2"))
+		_, err = broker.Subscribe(shared.Channel("topic2"))
 		assert.NoError(t, err)
 
 		topics = broker.GetActiveTopics()
 		assert.Len(t, topics, 2)
-		assert.Contains(t, topics, pubsub.Channel("topic1"))
-		assert.Contains(t, topics, pubsub.Channel("topic2"))
+		assert.Contains(t, topics, shared.Channel("topic1"))
+		assert.Contains(t, topics, shared.Channel("topic2"))
 	})
 
 	t.Run("Unsubscribe", func(t *testing.T) {
@@ -180,7 +181,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := pubsub.Channel("unsub_topic")
+		testTopic := shared.Channel("unsub_topic")
 
 		// Subscribe
 		messagesCh, err := broker.Subscribe(testTopic)
@@ -231,14 +232,14 @@ func TestBrokerIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		// Subscribe to policy changes to verify publication
-		messagesCh, err := broker.Subscribe(pubsub.PolicyChange)
+		messagesCh, err := broker.Subscribe(shared.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish a simple policy change
 		msg := testMessage{
-			channel: pubsub.PolicyChange,
+			channel: shared.PolicyChange,
 			payload: map[string]interface{}{
 				"policy_id": "policy-123",
 				"action":    "updated",

@@ -150,6 +150,66 @@ func (_c *AssetVersionRepository_Delete_Call) RunAndReturn(run func(tx shared.DB
 	return _c
 }
 
+// DeleteOldAssetVersions provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {
+	ret := _mock.Called(day)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteOldAssetVersions")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int) (int64, error)); ok {
+		return returnFunc(day)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int) int64); ok {
+		r0 = returnFunc(day)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
+		r1 = returnFunc(day)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionRepository_DeleteOldAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteOldAssetVersions'
+type AssetVersionRepository_DeleteOldAssetVersions_Call struct {
+	*mock.Call
+}
+
+// DeleteOldAssetVersions is a helper method to define mock.On call
+//   - day int
+func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersions(day interface{}) *AssetVersionRepository_DeleteOldAssetVersions_Call {
+	return &AssetVersionRepository_DeleteOldAssetVersions_Call{Call: _e.mock.On("DeleteOldAssetVersions", day)}
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersions_Call) Run(run func(day int)) *AssetVersionRepository_DeleteOldAssetVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersions_Call) Return(n int64, err error) *AssetVersionRepository_DeleteOldAssetVersions_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersions_Call) RunAndReturn(run func(day int) (int64, error)) *AssetVersionRepository_DeleteOldAssetVersions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindOrCreate provides a mock function for the type AssetVersionRepository
 func (_mock *AssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	ret := _mock.Called(assetVersionName, assetID, tag, defaultBranchName)

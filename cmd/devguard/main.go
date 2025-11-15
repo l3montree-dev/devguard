@@ -25,14 +25,15 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/pubsub"
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/pubsub"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -116,6 +117,7 @@ func main() {
 		router.RouterModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
+		daemons.Module,
 
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),

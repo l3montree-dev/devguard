@@ -8,66 +8,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/common"
-	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/integrations/githubint"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 )
 
-func SyncUpstream(db shared.DB, rbacProvider shared.RBACProvider) error {
+func SyncUpstream(
+	db shared.DB,
+	assetVersionService shared.AssetVersionService,
+	assetVersionRepository shared.AssetVersionRepository,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	orgRepository shared.OrganizationRepository,
+	artifactService shared.ArtifactService,
+	componentService shared.ComponentService,
+) error {
 
 	start := time.Now()
 	defer func() {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
 	}()
-
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnerabilityRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-	webhookIntegration := controllers.NewWebhookController(db)
-	artifactRepository := repositories.NewArtifactRepository(db)
-	jiraIntegration := jiraint.NewJiraIntegration(db)
-	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
-
-	githubIntegration := githubint.NewGithubIntegration(db)
-	externalUserRepository := repositories.NewExternalUserRepository(db)
-
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, githubIntegration, gitlabIntegration, jiraIntegration, webhookIntegration)
-
-	dependencyVulnService := services.NewDependencyVulnService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := services.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
-	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
-	licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-	componentService := services.NewComponentService(&openSourceInsightsService, componentProjectRepository, componentRepository, licenseRiskService, artifactRepository, utils.NewFireAndForgetSynchronizer())
-
-	assetVersionService := services.NewAssetVersionService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
-
-	artifactService := services.NewArtifactService(artifactRepository, services.NewCSAFService(common.OutgoingConnectionClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
 
 	orgs, err := orgRepository.All()
 	if err != nil {

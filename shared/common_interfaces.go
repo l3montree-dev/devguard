@@ -183,6 +183,7 @@ type ComponentRepository interface {
 type DependencyVulnRepository interface {
 	common.Repository[string, models.DependencyVuln, DB]
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllVulnsByAssetIDWithTicketIDs(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
@@ -315,6 +316,7 @@ type ArtifactService interface {
 }
 
 type DependencyVulnService interface {
+	RecalculateAllRawRiskAssessments() error
 	RecalculateRawRiskAssessment(tx DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
 	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
@@ -356,6 +358,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
+	DeleteOldAssetVersions(day int) (int64, error)
 }
 
 type FirstPartyVulnService interface {
@@ -383,6 +386,7 @@ type VulnEventRepository interface {
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(tx DB, vulnIDs []string) ([]models.VulnEvent, error)
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
+	DeleteEventsWithNotExistingVulnID() error
 }
 
 type GithubAppInstallationRepository interface {
@@ -489,6 +493,7 @@ type OpenSourceInsightService interface {
 
 type ComponentProjectRepository interface {
 	common.Repository[string, models.ComponentProject, DB]
+	FindAllOutdatedProjects() ([]models.ComponentProject, error)
 }
 
 type ComponentService interface {

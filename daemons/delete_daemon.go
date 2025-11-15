@@ -6,14 +6,13 @@ package daemons
 import (
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-func DeleteOldAssetVersions(db shared.DB) error {
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-
+func DeleteOldAssetVersions(
+	assetVersionRepository shared.AssetVersionRepository,
+	vulnEventRepository shared.VulnEventRepository,
+) error {
 	count, err := assetVersionRepository.DeleteOldAssetVersions(7)
 	if err != nil {
 		return err

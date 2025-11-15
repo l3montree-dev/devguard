@@ -21,15 +21,14 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-func AutoReopenAcceptedVulnerabilities(db shared.DB) error {
-
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
+func AutoReopenAcceptedVulnerabilities(
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	assetRepository shared.AssetRepository,
+) error {
 
 	assets, err := assetRepository.All()
 	if err != nil {

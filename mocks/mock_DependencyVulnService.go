@@ -147,6 +147,50 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run f
 	return _c
 }
 
+// RecalculateAllRawRiskAssessments provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) RecalculateAllRawRiskAssessments() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecalculateAllRawRiskAssessments")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnService_RecalculateAllRawRiskAssessments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecalculateAllRawRiskAssessments'
+type DependencyVulnService_RecalculateAllRawRiskAssessments_Call struct {
+	*mock.Call
+}
+
+// RecalculateAllRawRiskAssessments is a helper method to define mock.On call
+func (_e *DependencyVulnService_Expecter) RecalculateAllRawRiskAssessments() *DependencyVulnService_RecalculateAllRawRiskAssessments_Call {
+	return &DependencyVulnService_RecalculateAllRawRiskAssessments_Call{Call: _e.mock.On("RecalculateAllRawRiskAssessments")}
+}
+
+func (_c *DependencyVulnService_RecalculateAllRawRiskAssessments_Call) Run(run func()) *DependencyVulnService_RecalculateAllRawRiskAssessments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_RecalculateAllRawRiskAssessments_Call) Return(err error) *DependencyVulnService_RecalculateAllRawRiskAssessments_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnService_RecalculateAllRawRiskAssessments_Call) RunAndReturn(run func() error) *DependencyVulnService_RecalculateAllRawRiskAssessments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
 	ret := _mock.Called(tx, responsible, dependencyVulns, justification, asset)

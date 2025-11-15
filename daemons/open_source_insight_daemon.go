@@ -4,25 +4,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 )
 
-func UpdateOpenSourceInsightInformation(db shared.DB) error {
-	strat := time.Now()
+func UpdateOpenSourceInsightInformation(
+	componentProjectRepository shared.ComponentProjectRepository,
+	componentService shared.ComponentService,
+) error {
+	start := time.Now()
 	defer func() {
-		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(strat).Minutes())
+		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(start).Minutes())
 	}()
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
-	openSourceInsightsService := vulndb.NewOpenSourceInsightService()
-	licenseRiskService := services.NewLicenseRiskService(repositories.NewLicenseRiskRepository(db), repositories.NewVulnEventRepository(db))
-	componentService := services.NewComponentService(&openSourceInsightsService, componentProjectRepository, repositories.NewComponentRepository(db), licenseRiskService, repositories.NewArtifactRepository(db), utils.NewFireAndForgetSynchronizer())
 
+	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
 	if err != nil {
 		return err
 	}

@@ -26,18 +26,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/lib/pq"
 )
 
 type PostgreSQLMessage struct {
 	ID        string                 `json:"id"`
-	Channel   Channel                `json:"topic"`
+	Channel   shared.Channel         `json:"topic"`
 	Payload   map[string]interface{} `json:"payload"`
 	Timestamp time.Time              `json:"timestamp"`
 	SenderID  string                 `json:"sender_id,omitempty"` // Optional field for sender ID
 }
 
-func (m PostgreSQLMessage) GetChannel() Channel {
+func (m PostgreSQLMessage) GetChannel() shared.Channel {
 	return m.Channel
 }
 
@@ -49,7 +50,7 @@ func (m PostgreSQLMessage) GetPayload() map[string]interface{} {
 type PostgreSQLBroker struct {
 	db                       *sql.DB
 	listener                 *pq.Listener
-	subscribers              map[Channel][]chan map[string]interface{}
+	subscribers              map[shared.Channel][]chan map[string]interface{}
 	subscribeMux             sync.RWMutex
 	ctx                      context.Context
 	cancel                   context.CancelFunc
@@ -60,7 +61,7 @@ type PostgreSQLBroker struct {
 	shouldReceiveOwnMessages bool   // Flag to control whether to receive own messages
 }
 
-func BrokerFactory() (Broker, error) {
+func BrokerFactory() (shared.Broker, error) {
 	broker, err := NewPostgreSQLBroker(
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
@@ -103,7 +104,7 @@ func NewPostgreSQLBroker(user, password, host, port, dbname string) (*PostgreSQL
 	broker := &PostgreSQLBroker{
 		db:                       db,
 		listener:                 listener,
-		subscribers:              make(map[Channel][]chan map[string]interface{}),
+		subscribers:              make(map[shared.Channel][]chan map[string]interface{}),
 		ctx:                      ctx,
 		cancel:                   cancel,
 		ID:                       uuid.New().String(), // Unique ID for this broker instance
@@ -114,7 +115,7 @@ func NewPostgreSQLBroker(user, password, host, port, dbname string) (*PostgreSQL
 }
 
 // Publish implements the Broker interface
-func (b *PostgreSQLBroker) Publish(ctx context.Context, message Message) error {
+func (b *PostgreSQLBroker) Publish(ctx context.Context, message shared.Message) error {
 	topic := message.GetChannel()
 
 	// Create a PostgreSQL message with metadata
@@ -158,7 +159,7 @@ func (b *PostgreSQLBroker) Publish(ctx context.Context, message Message) error {
 }
 
 // Subscribe implements the Broker interface
-func (b *PostgreSQLBroker) Subscribe(topic Channel) (<-chan map[string]interface{}, error) {
+func (b *PostgreSQLBroker) Subscribe(topic shared.Channel) (<-chan map[string]interface{}, error) {
 	b.subscribeMux.Lock()
 	defer b.subscribeMux.Unlock()
 
@@ -233,7 +234,7 @@ func (b *PostgreSQLBroker) handleNotification(notification *pq.Notification) {
 		return
 	}
 
-	topic := Channel(notification.Channel)
+	topic := shared.Channel(notification.Channel)
 
 	b.subscribeMux.RLock()
 	subscribers, exists := b.subscribers[topic]
@@ -250,7 +251,7 @@ func (b *PostgreSQLBroker) handleNotification(notification *pq.Notification) {
 		case subscriber <- message.Payload:
 			// Message sent successfully
 		default:
-			// Channel is full, skip this subscriber
+			// shared.Channel is full, skip this subscriber
 			slog.Warn("subscriber channel full, dropping message", "topic", topic, "messageID", message.ID)
 		}
 	}
@@ -303,11 +304,11 @@ func (b *PostgreSQLBroker) IsHealthy() bool {
 }
 
 // GetActiveTopics returns a list of topics currently being listened to
-func (b *PostgreSQLBroker) GetActiveTopics() []Channel {
+func (b *PostgreSQLBroker) GetActiveTopics() []shared.Channel {
 	b.subscribeMux.RLock()
 	defer b.subscribeMux.RUnlock()
 
-	topics := make([]Channel, 0, len(b.subscribers))
+	topics := make([]shared.Channel, 0, len(b.subscribers))
 	for topic := range b.subscribers {
 		topics = append(topics, topic)
 	}

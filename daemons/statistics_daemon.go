@@ -4,35 +4,23 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func UpdateStatistics(db shared.DB) error {
+func UpdateStatistics(
+	statisticsService shared.StatisticsService,
+	assetVersionRepository shared.AssetVersionRepository,
+	artifactRepository shared.ArtifactRepository,
+) error {
 	start := time.Now()
 	defer func() {
 		monitoring.StatisticsUpdateDuration.Observe(time.Since(start).Minutes())
 	}()
 
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-
-	statisticsService := services.NewStatisticsService(
-		repositories.NewStatisticsRepository(db),
-		repositories.NewComponentRepository(db),
-		repositories.NewArtifactRiskHistoryRepository(db),
-		repositories.NewDependencyVulnRepository(db),
-		repositories.NewAssetVersionRepository(db),
-		repositories.NewProjectRepository(db),
-		repositories.NewReleaseRepository(db),
-	)
-
-	artifactRepo := repositories.NewArtifactRepository(db)
-
 	monitoring.AssetVersionsStatisticsAmount.Inc()
-	artifacts, err := artifactRepo.All()
+	artifacts, err := artifactRepository.All()
 	if err != nil {
 		slog.Error("could not get all artifacts", "err", err)
 		return err

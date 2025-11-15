@@ -23,7 +23,6 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/pubsub"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -402,7 +401,7 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 }
 
 // the provider can be used to create domain specific RBAC instances
-func NewCasbinRBACProvider(db *gorm.DB, broker pubsub.Broker) (casbinRBACProvider, error) {
+func NewCasbinRBACProvider(db *gorm.DB, broker shared.Broker) (casbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db, broker)
 	if err != nil {
 		return casbinRBACProvider{}, err
@@ -412,7 +411,7 @@ func NewCasbinRBACProvider(db *gorm.DB, broker pubsub.Broker) (casbinRBACProvide
 	}, nil
 }
 
-func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.SyncedEnforcer, error) {
+func buildEnforcer(db *gorm.DB, broker shared.Broker) (*casbin.SyncedEnforcer, error) {
 	if casbinEnforcer != nil {
 		return casbinEnforcer, nil
 	}

@@ -22,12 +22,11 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/pubsub"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
-func NewServer(lc fx.Lifecycle, db shared.DB, broker pubsub.Broker) *echo.Echo {
+func NewServer(lc fx.Lifecycle, db shared.DB, broker shared.Broker) *echo.Echo {
 	server := middlewares.Server()
 	lc.Append(fx.StartHook(func() {
 		routes := server.Routes()

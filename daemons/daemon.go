@@ -7,13 +7,8 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/l3montree-dev/devguard/accesscontrol"
-	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/integrations/githubint"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/leaderelection"
-	"github.com/l3montree-dev/devguard/pubsub"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
@@ -55,22 +50,32 @@ func markMirrored(configService services.ConfigService, key string) error {
 	})
 }
 
-func runDaemons(db shared.DB, broker pubsub.Broker, configService services.ConfigService) error {
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
-	if err != nil {
-		panic(err)
-	}
-
-	githubIntegration := githubint.NewGithubIntegration(db)
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	externalUserRepository := repositories.NewExternalUserRepository(db)
-
-	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(externalUserRepository, githubIntegration, gitlabIntegration)
+func runDaemons(
+	db shared.DB,
+	broker shared.Broker,
+	configService services.ConfigService,
+	rbacProvider shared.RBACProvider,
+	integrationAggregate shared.IntegrationAggregate,
+	scanController *controllers.ScanController,
+	assetVersionService shared.AssetVersionService,
+	assetVersionRepository shared.AssetVersionRepository,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	orgRepository shared.OrganizationRepository,
+	artifactService shared.ArtifactService,
+	componentRepository shared.ComponentRepository,
+	componentService shared.ComponentService,
+	dependencyVulnService shared.DependencyVulnService,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	componentProjectRepository shared.ComponentProjectRepository,
+	vulnEventRepository shared.VulnEventRepository,
+	statisticsService shared.StatisticsService,
+	artifactRepository shared.ArtifactRepository,
+	cveRepository shared.CveRepository,
+	cweRepository shared.CweRepository,
+	exploitsRepository shared.ExploitRepository,
+	affectedComponentsRepository shared.AffectedComponentRepository,
+) error {
 
 	daemonStart := time.Now()
 	defer time.Sleep(5 * time.Minute) // wait for 5 minutes before checking again - always - even in case of error
@@ -82,7 +87,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.deleteOldAssetVersions") {
 		start = time.Now()
 		// delete old asset versions
-		err := DeleteOldAssetVersions(db)
+		err := DeleteOldAssetVersions(assetVersionRepository, vulnEventRepository)
 		if err != nil {
 			slog.Error("could not delete old asset versions", "err", err)
 			return nil
@@ -95,7 +100,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 
 	// update deps dev
 	if shouldMirror(configService, "vulndb.opensourceinsights") {
-		err := UpdateOpenSourceInsightInformation(db)
+		err := UpdateOpenSourceInsightInformation(componentProjectRepository, componentService)
 		if err != nil {
 			slog.Error("could not update deps dev information", "err", err)
 			return nil
@@ -110,7 +115,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	// this will give us the latest cves, cwes, exploits and affected components
 	if shouldMirror(configService, "vulndb.vulndb") {
 		start = time.Now()
-		if err := UpdateVulnDB(db); err != nil {
+		if err := UpdateVulnDB(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService); err != nil {
 			sentry.CurrentHub().CaptureException(errors.Wrap(err, "failed to update vulndb"))
 			slog.Error("could not update vulndb", "err", err)
 			// We do not return right here! Even if the vulndb update fails, we mark it as mirrored to avoid getting stuck in an endless loop
@@ -125,7 +130,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.scan") {
 		start = time.Now()
 		// update the scan
-		if err := ScanArtifacts(db, casbinRBACProvider); err != nil {
+		if err := ScanArtifacts(db, scanController, assetVersionService, assetVersionRepository, assetRepository, projectRepository, orgRepository, artifactService, componentRepository); err != nil {
 			slog.Error("could not update scan", "err", err)
 			return nil
 		}
@@ -138,7 +143,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.upstream") {
 		start = time.Now()
 		// update the vex reports
-		if err := SyncUpstream(db, casbinRBACProvider); err != nil {
+		if err := SyncUpstream(db, assetVersionService, assetVersionRepository, assetRepository, projectRepository, orgRepository, artifactService, componentService); err != nil {
 			slog.Error("could not update vex reports", "err", err)
 			return nil
 		}
@@ -151,7 +156,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.autoReopen") {
 		start = time.Now()
 		// update the auto reopen
-		if err := AutoReopenAcceptedVulnerabilities(db); err != nil {
+		if err := AutoReopenAcceptedVulnerabilities(dependencyVulnRepository, assetRepository); err != nil {
 			slog.Error("could not update auto reopen", "err", err)
 			return nil
 		}
@@ -166,7 +171,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	// those need to be updated before recalculating the risk
 	if shouldMirror(configService, "vulndb.fixedVersions") {
 		start = time.Now()
-		if err := UpdateFixedVersions(db); err != nil {
+		if err := UpdateFixedVersions(db, dependencyVulnRepository); err != nil {
 			slog.Error("could not update fixed versions", "err", err)
 			return nil
 		}
@@ -179,7 +184,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.risk") {
 		start = time.Now()
 		// finally, recalculate the risk.
-		if err := RecalculateRisk(db, thirdPartyIntegrationAggregate); err != nil {
+		if err := RecalculateRisk(dependencyVulnService); err != nil {
 			slog.Error("could not recalculate risk", "err", err)
 			return nil
 		}
@@ -192,7 +197,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.tickets") {
 		start = time.Now()
 		// sync tickets
-		if err := SyncTickets(db, thirdPartyIntegrationAggregate, casbinRBACProvider); err != nil {
+		if err := SyncTickets(db, integrationAggregate, dependencyVulnService, assetVersionRepository, assetRepository, projectRepository, orgRepository, dependencyVulnRepository); err != nil {
 			slog.Error("could not sync tickets", "err", err)
 			return nil
 		}
@@ -205,7 +210,7 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	if shouldMirror(configService, "vulndb.statistics") {
 		start = time.Now()
 		// as a last step - update the statistics
-		if err := UpdateStatistics(db); err != nil {
+		if err := UpdateStatistics(statisticsService, assetVersionRepository, artifactRepository); err != nil {
 			slog.Error("could not update statistics", "err", err)
 			return nil
 		}
@@ -220,20 +225,44 @@ func runDaemons(db shared.DB, broker pubsub.Broker, configService services.Confi
 	return nil
 }
 
-func Start(db shared.DB, broker pubsub.Broker) {
-	configService := services.NewConfigService(db)
+func Start(
+	db shared.DB,
+	broker shared.Broker,
+	configService services.ConfigService,
+	rbacProvider shared.RBACProvider,
+	integrationAggregate shared.IntegrationAggregate,
+	scanController *controllers.ScanController,
+	assetVersionService shared.AssetVersionService,
+	assetVersionRepository shared.AssetVersionRepository,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	orgRepository shared.OrganizationRepository,
+	artifactService shared.ArtifactService,
+	componentRepository shared.ComponentRepository,
+	componentService shared.ComponentService,
+	dependencyVulnService shared.DependencyVulnService,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	componentProjectRepository shared.ComponentProjectRepository,
+	vulnEventRepository shared.VulnEventRepository,
+	statisticsService shared.StatisticsService,
+	artifactRepository shared.ArtifactRepository,
+	cveRepository shared.CveRepository,
+	cweRepository shared.CweRepository,
+	exploitsRepository shared.ExploitRepository,
+	affectedComponentsRepository shared.AffectedComponentRepository,
+) {
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	go func() {
 		// check if the vulndb is empty
 		if err := db.Raw("SELECT 1 as count FROM cves LIMIT 1;").Scan(new(int64)).Error; err != nil {
 			slog.Warn("vulndb is empty. skipping leader election and running daemons directly", "err", err)
-			if err := runDaemons(db, broker, configService); err != nil {
+			if err := runDaemons(db, broker, configService, rbacProvider, integrationAggregate, scanController, assetVersionService, assetVersionRepository, assetRepository, projectRepository, orgRepository, artifactService, componentRepository, componentService, dependencyVulnService, dependencyVulnRepository, componentProjectRepository, vulnEventRepository, statisticsService, artifactRepository, cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository); err != nil {
 				slog.Error("could not run daemons", "err", err)
 			}
 			return
 		}
 		leaderElector.IfLeader(context.Background(), func() error {
-			return runDaemons(db, broker, configService)
+			return runDaemons(db, broker, configService, rbacProvider, integrationAggregate, scanController, assetVersionService, assetVersionRepository, assetRepository, projectRepository, orgRepository, artifactService, componentRepository, componentService, dependencyVulnService, dependencyVulnRepository, componentProjectRepository, vulnEventRepository, statisticsService, artifactRepository, cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
 		})
 	}()
 
