@@ -20,7 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/auth"
+
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,7 +40,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccessControl{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
 		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
@@ -69,7 +70,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccessControl{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
 		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
@@ -99,7 +100,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccessControl{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
 		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
@@ -133,7 +134,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -173,7 +174,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -212,7 +213,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -253,7 +254,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -297,7 +298,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -337,7 +338,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -379,7 +380,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -420,7 +421,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -461,7 +462,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 
 		mockAssetRepo.On("ReadBySlug", project.ID, "nonexistent-asset").Return(models.Asset{}, errors.New("not found"))
@@ -496,7 +497,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("user-id", []string{"manage"})
+		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -544,7 +545,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := auth.NewSession("org-admin", []string{"manage"})
+		mockSession := accesscontrol.NewSession("org-admin", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -582,7 +583,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockRBAC := mocks.AccessControl{}
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := auth.NewSession("project-admin", []string{"manage"})
+		mockSession := accesscontrol.NewSession("project-admin", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},

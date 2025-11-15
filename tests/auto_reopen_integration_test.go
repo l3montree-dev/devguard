@@ -1,4 +1,4 @@
-package daemons_test
+package tests
 
 import (
 	"fmt"
@@ -11,17 +11,16 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	// Create test data
-	_, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	// Set up repositories
 	assetRepo := repositories.NewAssetRepository(db)

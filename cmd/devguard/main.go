@@ -25,6 +25,8 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -108,10 +110,12 @@ func main() {
 		fx.Provide(pubsub.BrokerFactory),
 		fx.Supply(broker),
 		fx.Provide(api.NewServer),
+		repositories.Module,
 		controllers.ControllerModule,
 		services.ServiceModule,
 		router.RouterModule,
 		accesscontrol.AccessControlModule,
+		integrations.Module,
 
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),

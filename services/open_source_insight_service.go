@@ -1,4 +1,4 @@
-package vulndb
+package services
 
 import (
 	"context"
@@ -18,8 +18,8 @@ type openSourceInsightService struct {
 	rateLimiter rate.Limiter
 }
 
-func NewOpenSourceInsightService() openSourceInsightService {
-	return openSourceInsightService{
+func NewOpenSourceInsightService() *openSourceInsightService {
+	return &openSourceInsightService{
 		httpClient:  &http.Client{},
 		rateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
 	}

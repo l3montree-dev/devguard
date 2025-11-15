@@ -9,7 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-func RecalculateRisk(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyIntegration) error {
+func RecalculateRisk(db shared.DB, thirdPartyIntegrationAggregate shared.IntegrationAggregate) error {
 	start := time.Now()
 	defer func() {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())

@@ -1,4 +1,4 @@
-package controllers
+package tests
 
 import (
 	"encoding/json"
@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -21,12 +20,12 @@ import (
 
 func TestBuildVEX(t *testing.T) {
 	//Build up a foundation for all the upcoming tests
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 	app := echo.New()
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	assetVersionController := tests.CreateAssetVersionController(db, nil, nil, tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	assetVersionController := CreateAssetVersionController(db, nil, nil, TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	artifactName := "test-artifact"
 
 	setupContext := func(ctx *shared.Context) {

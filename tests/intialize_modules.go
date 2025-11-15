@@ -1,3 +1,18 @@
+// Copyright (C) 2025 l3montree GmbH
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 package tests
 
 import (
@@ -11,6 +26,15 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
+
+// DEPRECATED: These functions manually wire dependencies, which causes import cycles
+// and maintenance burden. Use NewTestApp() from fx_test_app.go instead, which uses
+// the same FX modules as production for consistency.
+//
+// Migration example:
+//   OLD: svc := tests.CreateLicenseRiskService(db)
+//   NEW: app, _ := tests.NewTestApp(db)
+//        svc := app.LicenseRiskService
 
 func CreateLicenseRiskService(db shared.DB) shared.LicenseRiskService {
 	return services.NewLicenseRiskService(
@@ -43,7 +67,7 @@ func CreateComponentService(db shared.DB, openSourceInsightsService shared.OpenS
 	return &componentService
 }
 
-func CreateFirstPartyVulnService(db shared.DB, thirdPartyIntegration shared.ThirdPartyIntegration) shared.FirstPartyVulnService {
+func CreateFirstPartyVulnService(db shared.DB, thirdPartyIntegration shared.IntegrationAggregate) shared.FirstPartyVulnService {
 	return services.NewFirstPartyVulnService(
 		repositories.NewFirstPartyVulnerabilityRepository(db),
 		repositories.NewVulnEventRepository(db),

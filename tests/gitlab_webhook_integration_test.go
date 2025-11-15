@@ -1,4 +1,4 @@
-package gitlabint_test
+package tests
 
 import (
 	"bytes"
@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +21,11 @@ import (
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
-	factory, client := tests.NewTestClientFactory(t)
+	factory, client := NewTestClientFactory(t)
 	// Setup integration
 	gitlabInt := gitlabint.NewGitlabIntegration(
 		db,
@@ -36,7 +35,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	)
 
 	// Setup org, asset, asset version, and vuln
-	org, _, asset, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, _, asset, _ := CreateOrgProjectAndAssetAssetVersion(db)
 	// create a gitlab integration
 	integration := models.GitLabIntegration{
 		OrgID: org.ID,

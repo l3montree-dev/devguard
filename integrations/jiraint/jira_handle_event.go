@@ -12,7 +12,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -109,7 +108,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 		}
 
-		members, err := services.FetchMembersOfOrganization(event.Ctx)
+		members, err := shared.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
 			return err
 		}

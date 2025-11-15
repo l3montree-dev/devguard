@@ -655,7 +655,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 
 		_, githubTicketNumber := githubTicketIDToIDAndNumber(*vuln.GetTicketID())
 
-		members, err := services.FetchMembersOfOrganization(event.Ctx)
+		members, err := shared.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
 			return err
 		}

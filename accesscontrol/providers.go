@@ -16,7 +16,10 @@
 package accesscontrol
 
 import (
+	"os"
+
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/ory/client-go"
 	"go.uber.org/fx"
 )
 
@@ -24,4 +27,8 @@ var AccessControlModule = fx.Options(
 	fx.Provide(newCasbinPubSubWatcher),
 	fx.Provide(fx.Annotate(NewCasbinRBACProvider, fx.As(new(shared.RBACProvider)))),
 	fx.Provide(NewExternalEntityProviderRBAC),
+	fx.Provide(func() *client.APIClient {
+		return GetOryAPIClient(os.Getenv("ORY_URL"))
+	}),
+	fx.Provide(fx.Annotate(shared.NewAdminClient, fx.As(new(shared.AdminClient)))),
 )

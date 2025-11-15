@@ -43,10 +43,10 @@ type DependencyVulnService struct {
 	cveRepository          shared.CveRepository
 	projectRepository      shared.ProjectRepository
 	organizationRepository shared.OrganizationRepository
-	thirdPartyIntegration  shared.ThirdPartyIntegration
+	thirdPartyIntegration  shared.IntegrationAggregate
 }
 
-func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetRepository shared.AssetRepository, cveRepository shared.CveRepository, orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, thirdPartyIntegration shared.ThirdPartyIntegration, assetVersionRepository shared.AssetVersionRepository) *DependencyVulnService {
+func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetRepository shared.AssetRepository, cveRepository shared.CveRepository, orgRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, thirdPartyIntegration shared.IntegrationAggregate, assetVersionRepository shared.AssetVersionRepository) *DependencyVulnService {
 	return &DependencyVulnService{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,

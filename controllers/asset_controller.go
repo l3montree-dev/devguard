@@ -22,10 +22,10 @@ type AssetController struct {
 	assetService           shared.AssetService
 	dependencyVulnService  shared.DependencyVulnService
 	statisticsService      shared.StatisticsService
-	thirdPartyIntegration  shared.ThirdPartyIntegration
+	thirdPartyIntegration  shared.IntegrationAggregate
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.ThirdPartyIntegration) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate) *AssetController {
 	return &AssetController{
 		assetRepository:        repository,
 		assetVersionRepository: assetVersionRepository,

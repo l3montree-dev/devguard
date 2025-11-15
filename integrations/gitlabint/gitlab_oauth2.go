@@ -14,7 +14,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/common"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -146,7 +145,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	return urls
 }
 
-func NewGitLabOauth2Config(db shared.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
+func NewGitLabOauth2Config(id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string, gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository) *GitlabOauth2Config {
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -174,7 +173,7 @@ func NewGitLabOauth2Config(db shared.DB, id, gitlabBaseURL, gitlabOauth2ClientID
 			},
 			Scopes: strings.Fields(gitlabOauth2Scopes),
 		},
-		GitlabOauth2TokenRepository: repositories.NewGitlabOauth2TokenRepository(db),
+		GitlabOauth2TokenRepository: gitlabOauth2TokenRepository,
 	}
 }
 
@@ -238,11 +237,11 @@ func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client
 	return oauth2.NewClient(context.TODO(), newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
 }
 
-func NewGitLabOauth2Integrations(db shared.DB) map[string]*GitlabOauth2Config {
+func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
 	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
-		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret, env.scopes, env.botUserID, env.botUserAccessToken, env.adminToken)
+		gitlabIntegration := NewGitLabOauth2Config(id, env.baseURL, env.appID, env.appSecret, env.scopes, env.botUserID, env.botUserAccessToken, env.adminToken, gitlabOauth2TokenRepository)
 		gitlabIntegrations[id] = gitlabIntegration
 		slog.Info("gitlab oauth2 integration created", "id", id, "baseURL", env.baseURL, "appID", env.appID)
 	}

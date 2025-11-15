@@ -17,10 +17,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -120,31 +118,29 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
-func NewGitlabIntegration(db shared.DB, oauth2GitlabIntegration map[string]*GitlabOauth2Config, casbinRBACProvider shared.RBACProvider, clientFactory GitlabClientFactory) *GitlabIntegration {
-	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
-	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	externalUserRepository := repositories.NewExternalUserRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
-	releaseRepository := repositories.NewReleaseRepository(db)
-
-	orgRepository := repositories.NewOrgRepository(db)
-
-	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
-	orgService := services.NewOrgService(orgRepository, casbinRBACProvider)
-	projectService := services.NewProjectService(projectRepository, assetRepository)
-	assetService := services.NewAssetService(assetRepository, dependencyVulnRepository, nil)
-	licenseRiskService := services.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
-
+func NewGitlabIntegration(
+	oauth2GitlabIntegration map[string]*GitlabOauth2Config,
+	casbinRBACProvider shared.RBACProvider,
+	clientFactory GitlabClientFactory,
+	gitlabIntegrationRepository shared.GitlabIntegrationRepository,
+	aggregatedVulnRepository shared.VulnRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	vulnEventRepository shared.VulnEventRepository,
+	externalUserRepository shared.ExternalUserRepository,
+	assetRepository shared.AssetRepository,
+	assetVersionRepository shared.AssetVersionRepository,
+	projectRepository shared.ProjectRepository,
+	componentRepository shared.ComponentRepository,
+	firstPartyVulnRepository shared.FirstPartyVulnRepository,
+	gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository,
+	licenseRiskRepository shared.LicenseRiskRepository,
+	orgRepository shared.OrganizationRepository,
+	orgService shared.OrgService,
+	projectService shared.ProjectService,
+	assetService shared.AssetService,
+	licenseRiskService shared.LicenseRiskService,
+	statisticsService shared.StatisticsService,
+) *GitlabIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")

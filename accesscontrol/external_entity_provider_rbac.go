@@ -6,7 +6,7 @@ import (
 )
 
 type externalEntityProviderRBAC struct {
-	thirdPartyIntegration    shared.ThirdPartyIntegration
+	thirdPartyIntegration    shared.IntegrationAggregate
 	externalEntityProviderID string
 	adminToken               *string
 	ctx                      shared.Context
@@ -16,7 +16,7 @@ type externalEntityProviderRBAC struct {
 
 var _ shared.AccessControl = (*externalEntityProviderRBAC)(nil)
 
-func NewExternalEntityProviderRBAC(ctx shared.Context, rootAccessControl shared.AccessControl, thirdPartyIntegration shared.ThirdPartyIntegration, externalEntityProviderID string, adminToken *string) *externalEntityProviderRBAC {
+func NewExternalEntityProviderRBAC(ctx shared.Context, rootAccessControl shared.AccessControl, thirdPartyIntegration shared.IntegrationAggregate, externalEntityProviderID string, adminToken *string) *externalEntityProviderRBAC {
 	return &externalEntityProviderRBAC{
 		thirdPartyIntegration:    thirdPartyIntegration,
 		externalEntityProviderID: externalEntityProviderID,

@@ -20,10 +20,10 @@ type firstPartyVulnService struct {
 	vulnEventRepository      shared.VulnEventRepository
 	assetRepository          shared.AssetRepository
 
-	thirdPartyIntegration shared.ThirdPartyIntegration
+	thirdPartyIntegration shared.IntegrationAggregate
 }
 
-func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetRepository shared.AssetRepository, thirdPartyIntegration shared.ThirdPartyIntegration) *firstPartyVulnService {
+func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetRepository shared.AssetRepository, thirdPartyIntegration shared.IntegrationAggregate) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,

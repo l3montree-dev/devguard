@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree UG (haftungsbeschraenkt).
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package daemons_test
+package tests
 
 import (
 	"fmt"
@@ -16,7 +16,6 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/tests"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,10 +23,10 @@ import (
 )
 
 func TestDaemonAssetVersionDelete(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	_, _, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 	var err error
 	t.Run("should not delete the asset version if it is the default branch", func(t *testing.T) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -217,14 +216,14 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 }
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	casbinRBACProvider := mocks.NewRBACProvider(t)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	_, _, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should find the cve in the component dependency", func(t *testing.T) {
 
@@ -286,12 +285,12 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 }
 
 func TestDaemonSyncTickets(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error
@@ -336,7 +335,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketID)
 	assert.Nil(t, dependencyVuln.TicketURL)
 
-	clientfactory, gitlabClientFacade := tests.NewTestClientFactory(t)
+	clientfactory, gitlabClientFacade := NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -464,12 +463,12 @@ func TestDaemonSyncTickets(t *testing.T) {
 }
 
 func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug-multi"
 	err := db.Save(&org).Error
@@ -519,7 +518,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketID)
 	assert.Nil(t, dependencyVuln.TicketURL)
 
-	clientfactory, gitlabClientFacade := tests.NewTestClientFactory(t)
+	clientfactory, gitlabClientFacade := NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -581,12 +580,12 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 }
 
 func TestDaemonRecalculateRisk(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error
@@ -629,7 +628,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	assert.Nil(t, err)
 
 	//gitlabClientFacade
-	clientfactory, _ := tests.NewTestClientFactory(t)
+	clientfactory, _ := NewTestClientFactory(t)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
@@ -675,12 +674,12 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 }
 
 func TestDaemonFixedVersions(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, assetVersion := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err := db.Save(&org).Error

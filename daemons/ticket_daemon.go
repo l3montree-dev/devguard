@@ -19,7 +19,7 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.ThirdPartyIntegration, casbinRBACProvider shared.RBACProvider) error {
+func SyncTickets(db shared.DB, thirdPartyIntegrationAggregate shared.IntegrationAggregate, casbinRBACProvider shared.RBACProvider) error {
 	start := time.Now()
 	defer func() {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())

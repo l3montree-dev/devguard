@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -74,7 +73,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 
 func (controller *OrgController) Update(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
-	members, err := services.FetchMembersOfOrganization(ctx)
+	members, err := shared.FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
@@ -307,7 +306,7 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 }
 
 func (controller *OrgController) Members(ctx shared.Context) error {
-	users, err := services.FetchMembersOfOrganization(ctx)
+	users, err := shared.FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
@@ -319,7 +318,7 @@ func (controller *OrgController) Read(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
 	// fetch the regular members of the current organization
-	members, err := services.FetchMembersOfOrganization(ctx)
+	members, err := shared.FetchMembersOfOrganization(ctx)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)

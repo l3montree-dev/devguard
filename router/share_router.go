@@ -32,7 +32,7 @@ func NewShareRouter(apiV1Router APIV1Router,
 	assetRepository shared.AssetRepository,
 	assetVersionRepository shared.AssetVersionRepository,
 	artifactRepository shared.ArtifactRepository,
-	assetVersionController controllers.AssetVersionController,
+	assetVersionController *controllers.AssetVersionController,
 ) ShareRouter {
 	shareRouter := apiV1Router.Group.Group("/public/:assetID", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)

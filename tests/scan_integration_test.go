@@ -12,6 +12,7 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/common"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -19,7 +20,6 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1151,7 +1151,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
+func initHTTPController(t *testing.T, db shared.DB, mockOpenSourceInsight bool) (*controllers.ScanController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := NewTestClientFactory(t)
 

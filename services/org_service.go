@@ -4,15 +4,11 @@ package services
 
 import (
 	"fmt"
-	"maps"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
-	"github.com/ory/client-go"
 )
 
 type OrgService struct {
@@ -61,73 +57,4 @@ func (o *OrgService) ReadBySlug(slug string) (*models.Org, error) {
 
 	org, err := o.organizationRepository.ReadBySlug(slug)
 	return &org, err
-}
-
-func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.UserDTO, error) {
-	// get all members from the organization
-	organization := shared.GetOrg(ctx)
-	accessControl := shared.GetRBAC(ctx)
-
-	members, err := accessControl.GetAllMembersOfOrganization()
-
-	if err != nil {
-		return nil, err
-	}
-
-	users := make([]dtos.UserDTO, 0, len(members))
-	if len(members) > 0 {
-		// get the auth admin client from the context
-		authAdminClient := shared.GetAuthAdminClient(ctx)
-		// fetch the users from the auth service
-		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
-		if err != nil {
-			return nil, err
-		}
-
-		// get the roles for the members
-		errGroup := utils.ErrGroup[map[string]shared.Role](10)
-		for _, member := range m {
-			errGroup.Go(func() (map[string]shared.Role, error) {
-				role, err := accessControl.GetDomainRole(member.Id)
-				if err != nil {
-					return map[string]shared.Role{member.Id: shared.RoleUnknown}, nil
-				}
-				return map[string]shared.Role{member.Id: role}, nil
-			})
-		}
-
-		roles, err := errGroup.WaitAndCollect()
-		if err != nil {
-			return nil, err
-		}
-
-		roleMap := utils.Reduce(roles, func(acc map[string]shared.Role, r map[string]shared.Role) map[string]shared.Role {
-			maps.Copy(acc, r)
-			return acc
-		}, make(map[string]shared.Role))
-
-		for _, member := range m {
-			nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
-			var name string
-			if nameMap != nil {
-				if nameMap["first"] != nil {
-					name += nameMap["first"].(string)
-				}
-				if nameMap["last"] != nil {
-					name += " " + nameMap["last"].(string)
-				}
-			}
-
-			users = append(users, dtos.UserDTO{
-				ID:   member.Id,
-				Name: name,
-				Role: string(roleMap[member.Id]),
-			})
-		}
-	}
-
-	// fetch all members from third party integrations
-	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
-	users = append(users, thirdPartyIntegrations.GetUsers(organization)...)
-	return users, nil
 }

@@ -42,12 +42,12 @@ type assetVersionService struct {
 	vulnEventRepository      shared.VulnEventRepository
 	componentService         shared.ComponentService
 	httpClient               *http.Client
-	thirdPartyIntegration    shared.ThirdPartyIntegration
+	thirdPartyIntegration    shared.IntegrationAggregate
 	licenseRiskRepository    shared.LicenseRiskRepository
 	shared.FireAndForgetSynchronizer
 }
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.ThirdPartyIntegration, licenseRiskRepository shared.LicenseRiskRepository) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,

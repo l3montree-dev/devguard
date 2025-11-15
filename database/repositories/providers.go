@@ -16,33 +16,35 @@
 package repositories
 
 import (
+	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
 
-// Module provides all repository constructors
+// Module provides all repository constructors as their interfaces
 var Module = fx.Options(
-	fx.Provide(NewPATRepository),
-	fx.Provide(NewAssetRepository),
-	fx.Provide(NewArtifactRiskHistoryRepository),
-	fx.Provide(NewAssetVersionRepository),
-	fx.Provide(NewStatisticsRepository),
-	fx.Provide(NewReleaseRepository),
-	fx.Provide(NewProjectRepository),
-	fx.Provide(NewComponentRepository),
-	fx.Provide(NewVulnEventRepository),
-	fx.Provide(NewOrgRepository),
-	fx.Provide(NewCVERepository),
-	fx.Provide(NewDependencyVulnRepository),
-	fx.Provide(NewFirstPartyVulnerabilityRepository),
-	fx.Provide(NewInTotoLinkRepository),
-	fx.Provide(NewSupplyChainRepository),
-	fx.Provide(NewAttestationRepository),
-	fx.Provide(NewPolicyRepository),
-	fx.Provide(NewLicenseRiskRepository),
-	fx.Provide(NewWebhookRepository),
-	fx.Provide(NewArtifactRepository),
-	fx.Provide(NewInvitationRepository),
-	fx.Provide(NewExternalUserRepository),
-	fx.Provide(NewComponentProjectRepository),
-	fx.Provide(NewGitLabIntegrationRepository),
+	fx.Provide(fx.Annotate(NewPATRepository, fx.As(new(shared.PersonalAccessTokenRepository)))),
+	fx.Provide(fx.Annotate(NewAssetRepository, fx.As(new(shared.AssetRepository)))),
+	fx.Provide(fx.Annotate(NewArtifactRiskHistoryRepository, fx.As(new(shared.ArtifactRiskHistoryRepository)))),
+	fx.Provide(fx.Annotate(NewAssetVersionRepository, fx.As(new(shared.AssetVersionRepository)))),
+	fx.Provide(fx.Annotate(NewStatisticsRepository, fx.As(new(shared.StatisticsRepository)))),
+	fx.Provide(fx.Annotate(NewReleaseRepository, fx.As(new(shared.ReleaseRepository)))),
+	fx.Provide(fx.Annotate(NewProjectRepository, fx.As(new(shared.ProjectRepository)))),
+	fx.Provide(fx.Annotate(NewComponentRepository, fx.As(new(shared.ComponentRepository)))),
+	fx.Provide(fx.Annotate(NewVulnEventRepository, fx.As(new(shared.VulnEventRepository)))),
+	fx.Provide(fx.Annotate(NewOrgRepository, fx.As(new(shared.OrganizationRepository)))),
+	fx.Provide(fx.Annotate(NewCVERepository, fx.As(new(shared.CveRepository)))),
+	fx.Provide(fx.Annotate(NewDependencyVulnRepository, fx.As(new(shared.DependencyVulnRepository)))),
+	fx.Provide(fx.Annotate(NewFirstPartyVulnerabilityRepository, fx.As(new(shared.FirstPartyVulnRepository)))),
+	fx.Provide(fx.Annotate(NewInTotoLinkRepository, fx.As(new(shared.InTotoLinkRepository)))),
+	fx.Provide(fx.Annotate(NewSupplyChainRepository, fx.As(new(shared.SupplyChainRepository)))),
+	fx.Provide(fx.Annotate(NewAttestationRepository, fx.As(new(shared.AttestationRepository)))),
+	fx.Provide(fx.Annotate(NewPolicyRepository, fx.As(new(shared.PolicyRepository)))),
+	fx.Provide(fx.Annotate(NewLicenseRiskRepository, fx.As(new(shared.LicenseRiskRepository)))),
+	fx.Provide(fx.Annotate(NewWebhookRepository, fx.As(new(shared.WebhookIntegrationRepository)))),
+	fx.Provide(fx.Annotate(NewArtifactRepository, fx.As(new(shared.ArtifactRepository)))),
+	fx.Provide(fx.Annotate(NewInvitationRepository, fx.As(new(shared.InvitationRepository)))),
+	fx.Provide(fx.Annotate(NewExternalUserRepository, fx.As(new(shared.ExternalUserRepository)))),
+	fx.Provide(fx.Annotate(NewComponentProjectRepository, fx.As(new(shared.ComponentProjectRepository)))),
+	fx.Provide(fx.Annotate(NewGitLabIntegrationRepository, fx.As(new(shared.GitlabIntegrationRepository)))),
+	fx.Provide(fx.Annotate(NewGitlabOauth2TokenRepository, fx.As(new(shared.GitLabOauth2TokenRepository)))),
 )

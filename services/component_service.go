@@ -24,9 +24,9 @@ type ComponentService struct {
 	synchronizer               shared.FireAndForgetSynchronizer
 }
 
-func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer shared.FireAndForgetSynchronizer) ComponentService {
+func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer shared.FireAndForgetSynchronizer) *ComponentService {
 
-	return ComponentService{
+	return &ComponentService{
 		componentRepository:        componentRepository,
 		componentProjectRepository: componentProjectRepository,
 		openSourceInsightsService:  openSourceInsightsService,

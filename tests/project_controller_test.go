@@ -1,4 +1,4 @@
-package controllers
+package tests
 
 import (
 	"bytes"
@@ -18,11 +18,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/tests"
 )
 
 func TestProjectCreation(t *testing.T) {
-	db, terminate := tests.InitDatabaseContainer("../../../initdb.sql")
+	db, terminate := InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
 	controller := NewProjectController(
@@ -35,7 +34,7 @@ func TestProjectCreation(t *testing.T) {
 		repositories.NewWebhookRepository(db),
 	)
 
-	org, project, _, _ := tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, _, _ := CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should enable all community policies by default", func(t *testing.T) {
 		e := echo.New()

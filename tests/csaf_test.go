@@ -1,4 +1,4 @@
-package controllers
+package tests
 
 import (
 	"crypto/tls"

@@ -20,6 +20,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
@@ -38,9 +39,9 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := dtos.DependencyVulnDTO{}
 		v.CVEID = &cveid
-		v.CVE = &models.CVE{
+		v.CVE = transformer.CVEToDTO(&models.CVE{
 			CVSS: 7.0,
-		}
+		})
 
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
@@ -64,9 +65,9 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := dtos.DependencyVulnDTO{}
 		v.CVEID = &cveid
-		v.CVE = &models.CVE{
+		v.CVE = transformer.CVEToDTO(&models.CVE{
 			CVSS: 7.0,
-		}
+		})
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = dtos.VulnState("Example State")
@@ -105,10 +106,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "closed",       // CLOSED vulnerability should not cause failure
 					RawRiskAssessment: utils.Ptr(9.5), // High risk but closed
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 9.0, // High CVSS but closed
-					},
+					}),
 				},
 				{
 					CVEID:             utils.Ptr("CVE-2023-67890"),
@@ -116,10 +117,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "accepted",      // ACCEPTED vulnerability should not cause failure
 					RawRiskAssessment: utils.Ptr(10.0), // High risk but accepted
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-67890",
 						CVSS: 9.8, // High CVSS but accepted
-					},
+					}),
 				},
 			},
 			AmountOpened: 0,
@@ -160,10 +161,10 @@ func TestPrintScaResults(t *testing.T) {
 							State:             "open",
 							RawRiskAssessment: utils.Ptr(tc.risk),
 							AssetVersionName:  "main",
-							CVE: &models.CVE{
+							CVE: transformer.CVEToDTO(&models.CVE{
 								CVE:  "CVE-2023-12345",
 								CVSS: 5.0,
-							},
+							}),
 						},
 					},
 					AmountOpened: 1,
@@ -210,10 +211,10 @@ func TestPrintScaResults(t *testing.T) {
 							State:             "open",
 							RawRiskAssessment: utils.Ptr(1.0),
 							AssetVersionName:  "main",
-							CVE: &models.CVE{
+							CVE: transformer.CVEToDTO(&models.CVE{
 								CVE:  "CVE-2023-12345",
 								CVSS: tc.cvss,
-							},
+							}),
 						},
 					},
 					AmountOpened: 1,
@@ -263,10 +264,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "open", // OPEN - should be considered
 					RawRiskAssessment: utils.Ptr(3.0),
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 5.0,
-					},
+					}),
 				},
 				{
 					CVEID:             utils.Ptr("CVE-2023-67890"),
@@ -274,10 +275,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "open",         // OPEN - should be considered (highest values)
 					RawRiskAssessment: utils.Ptr(8.5), // Higher risk
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-67890",
 						CVSS: 7.8, // Higher CVSS
-					},
+					}),
 				},
 				{
 					CVEID:             utils.Ptr("CVE-2023-11111"),
@@ -285,10 +286,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "closed",        // CLOSED - should be IGNORED even though it has highest values
 					RawRiskAssessment: utils.Ptr(10.0), // Highest risk but closed
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-11111",
 						CVSS: 10.0, // Highest CVSS but closed
-					},
+					}),
 				},
 				{
 					CVEID:             utils.Ptr("CVE-2023-22222"),
@@ -296,10 +297,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "accepted",     // ACCEPTED - should be IGNORED even though it has highest values
 					RawRiskAssessment: utils.Ptr(9.8), // Very high risk but accepted
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-22222",
 						CVSS: 9.9, // Very high CVSS but accepted
-					},
+					}),
 				},
 			},
 			AmountOpened: 2,
@@ -326,10 +327,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "open",
 					RawRiskAssessment: nil, // Should default to 0
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 5.0,
-					},
+					}),
 				},
 			},
 			AmountOpened: 1,
@@ -350,10 +351,10 @@ func TestPrintScaResults(t *testing.T) {
 					State:             "open",
 					RawRiskAssessment: utils.Ptr(10.0),
 					AssetVersionName:  "main",
-					CVE: &models.CVE{
+					CVE: transformer.CVEToDTO(&models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 10.0,
-					},
+					}),
 				},
 			},
 			AmountOpened: 1,

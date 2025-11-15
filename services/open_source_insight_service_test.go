@@ -1,4 +1,4 @@
-package vulndb
+package services
 
 import (
 	"context"
