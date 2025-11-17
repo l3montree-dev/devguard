@@ -21,18 +21,38 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/fx"
 )
 
-// NOTE: These tests manually construct DependencyVulnService with mock IntegrationAggregate
-// because they need to verify specific integration behavior. This is a valid exception to
-// the FX pattern when mocking external integrations is necessary for test isolation.
-
 func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	// Set up mock third-party integration
+	mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+	createIssueCallCount := 0
+	mockThirdPartyIntegration.On("CreateIssue",
+		mock.Anything, // context
+		mock.Anything, // asset
+		mock.Anything, // assetVersionSlug
+		mock.Anything, // vuln
+		mock.Anything, // projectSlug
+		mock.Anything, // orgSlug
+		mock.Anything, // justification
+		mock.Anything, // userID
+	).Run(func(args mock.Arguments) {
+		createIssueCallCount++
+	}).Return(nil).Maybe()
+
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.IntegrationAggregate {
+				return mockThirdPartyIntegration
+			}),
+		},
+	}, func(f *TestFixture) {
 		// Create org, project, asset, and asset version using FX helper
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
@@ -101,20 +121,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 				createIssueCallCount++
 			}).Return(nil).Maybe()
 
-			// Manually construct service with mock IntegrationAggregate for test isolation
-			depVulnService := services.NewDependencyVulnService(
-				f.App.DependencyVulnRepository,
-				f.App.VulnEventRepository,
-				f.App.AssetRepository,
-				f.App.CveRepository,
-				f.App.OrgRepository,
-				f.App.ProjectRepository,
-				mockThirdPartyIntegration, // Inject mock here
-				f.App.AssetVersionRepository,
-			)
-
-			// Call SyncAllIssues
-			err := depVulnService.SyncAllIssues(org, project, asset, assetVersion)
+			// Call SyncAllIssues with FX-injected service
+			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion)
 			assert.NoError(t, err)
 
 			// Verify CreateIssue was called only once, not twice
@@ -196,9 +204,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
 
 			// Set up mock third-party integration for manual service construction
-			mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+			mockThirdPartyIntegration2 := mocks.NewIntegrationAggregate(t)
 			createIssueCallCount := 0
-			mockThirdPartyIntegration.On("CreateIssue",
+			mockThirdPartyIntegration2.On("CreateIssue",
 				mock.Anything,
 				mock.Anything,
 				mock.Anything,
@@ -211,21 +219,16 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 				createIssueCallCount++
 			}).Return(nil).Maybe()
 
-			// Manually construct service with mock IntegrationAggregate
-			depVulnService := services.NewDependencyVulnService(
-				f.App.DependencyVulnRepository,
-				f.App.VulnEventRepository,
-				f.App.AssetRepository,
-				f.App.CveRepository,
-				f.App.OrgRepository,
-				f.App.ProjectRepository,
-				mockThirdPartyIntegration, // Inject mock here
-				f.App.AssetVersionRepository,
-			)
+			// Temporarily replace the integration aggregate for this subtest
+			originalIntegration := f.App.IntegrationAggregate
+			f.App.IntegrationAggregate = mockThirdPartyIntegration2
 
-			// Call SyncAllIssues
-			err := depVulnService.SyncAllIssues(org, project, asset, assetVersion2)
+			// Call SyncAllIssues with FX-injected service
+			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion2)
 			assert.NoError(t, err)
+
+			// Restore original integration
+			f.App.IntegrationAggregate = originalIntegration
 
 			// Verify CreateIssue was called twice (once for each different vulnerability)
 			assert.Equal(t, 2, createIssueCallCount, "CreateIssue should be called twice for two different vulnerabilities")
@@ -234,7 +237,41 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 }
 
 func TestSyncIssuesWithExistingTickets(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	// Set up mock third-party integration
+	mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+	createIssueCallCount := 0
+	updateIssueCallCount := 0
+
+	mockThirdPartyIntegration.On("CreateIssue",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		createIssueCallCount++
+	}).Return(nil).Maybe()
+
+	mockThirdPartyIntegration.On("UpdateIssue",
+		mock.Anything, // context
+		mock.Anything, // asset
+		mock.Anything, // assetVersionSlug
+		mock.Anything, // vuln
+	).Run(func(args mock.Arguments) {
+		updateIssueCallCount++
+	}).Return(nil).Maybe()
+
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.IntegrationAggregate {
+				return mockThirdPartyIntegration
+			}),
+		},
+	}, func(f *TestFixture) {
 		// Create org, project, asset, and asset version using FX helper
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
@@ -282,47 +319,8 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
-			// Set up mock third-party integration
-			mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-			createIssueCallCount := 0
-			updateIssueCallCount := 0
-
-			mockThirdPartyIntegration.On("CreateIssue",
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-			).Run(func(args mock.Arguments) {
-				createIssueCallCount++
-			}).Return(nil).Maybe()
-
-			mockThirdPartyIntegration.On("UpdateIssue",
-				mock.Anything, // context
-				mock.Anything, // asset
-				mock.Anything, // assetVersionSlug
-				mock.Anything, // vuln
-			).Run(func(args mock.Arguments) {
-				updateIssueCallCount++
-			}).Return(nil).Maybe()
-
-			// Manually construct service with mock IntegrationAggregate
-			depVulnService := services.NewDependencyVulnService(
-				f.App.DependencyVulnRepository,
-				f.App.VulnEventRepository,
-				f.App.AssetRepository,
-				f.App.CveRepository,
-				f.App.OrgRepository,
-				f.App.ProjectRepository,
-				mockThirdPartyIntegration, // Inject mock here
-				f.App.AssetVersionRepository,
-			)
-
-			// Call SyncAllIssues
-			err := depVulnService.SyncAllIssues(org, project, asset, assetVersion)
+			// Call SyncAllIssues with FX-injected service
+			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion)
 			assert.NoError(t, err)
 
 			// Verify UpdateIssue was called once and CreateIssue was not called
