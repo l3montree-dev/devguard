@@ -40,8 +40,8 @@ func NewInTotoService(rbacProvider shared.RBACProvider, inTotoLinkRepository sha
 	}
 }
 
-func (i InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
-	supplyChains, err := i.supplyChainRepository.FindByDigest(digest)
+func (service InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
+	supplyChains, err := service.supplyChainRepository.FindByDigest(digest)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain digests")
 	}
@@ -55,7 +55,7 @@ func (i InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error
 	return false, nil
 }
 
-func (i InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {
+func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {
 	var supplyChainID string
 	var err error
 	// check if it is a supply chain id already
@@ -70,7 +70,7 @@ func (i InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainI
 		supplyChainID = imageNameOrSupplyChainID
 	}
 
-	supplyChains, err := i.supplyChainRepository.FindBySupplyChainID(supplyChainID)
+	supplyChains, err := service.supplyChainRepository.FindBySupplyChainID(supplyChainID)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain digests")
 	}
@@ -84,10 +84,10 @@ func (i InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainI
 	return false, nil
 }
 
-func (i InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
+func (service InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 
 	// get the supply chain links
-	supplyChainLinks, err := i.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
+	supplyChainLinks, err := service.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain links")
 	}
@@ -99,13 +99,13 @@ func (i InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 	}
 
 	//get projectID and organizationID from assetID
-	projectID, organizationID, err := getProjectIDAndOrganizationIDFromAssetID(assetID, i.projectRepository)
+	projectID, organizationID, err := getProjectIDAndOrganizationIDFromAssetID(assetID, service.projectRepository)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get projectID and organizationID from assetID")
 	}
 
 	// get the access control for the organization
-	access := i.rbacProvider.GetDomainRBAC(organizationID.String())
+	access := service.rbacProvider.GetDomainRBAC(organizationID.String())
 
 	// get all userUuids of the project
 	userUuids, err := getProjectUsersID(projectID, access)
@@ -114,13 +114,13 @@ func (i InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 	}
 
 	// get all pats which are part of the asset
-	pats, err := i.patRepository.FindByUserIDs(userUuids)
+	pats, err := service.patRepository.FindByUserIDs(userUuids)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get pats")
 	}
 
 	// convert the pats to in-toto keys
-	keyIDs, totoKeys, err := i.convertPatsToInTotoKeys(pats)
+	keyIDs, totoKeys, err := service.convertPatsToInTotoKeys(pats)
 	if err != nil {
 		return false, errors.Wrap(err, "could not convert pats to in-toto keys")
 	}
@@ -232,11 +232,11 @@ func getProjectUsersID(projectID uuid.UUID, accessControl shared.AccessControl) 
 	return userUuids, nil
 }
 
-func (s InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
+func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := s.HexPublicKeyToInTotoKey(pat.PubKey)
+		key, err := service.HexPublicKeyToInTotoKey(pat.PubKey)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not convert public key")
 		}
@@ -397,7 +397,7 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 	return key, nil
 }
 
-func (InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
+func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
 	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }
