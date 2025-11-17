@@ -29,17 +29,19 @@ import (
 func NewServer(lc fx.Lifecycle, db shared.DB, broker shared.Broker) *echo.Echo {
 	server := middlewares.Server()
 	lc.Append(fx.StartHook(func() {
-		routes := server.Routes()
-		sort.Slice(routes, func(i, j int) bool {
-			return routes[i].Path < routes[j].Path
-		})
-		// print all registered routes
-		for _, route := range routes {
-			if route.Method != "echo_route_not_found" {
-				slog.Info(route.Path, "method", route.Method)
+		go func() {
+			routes := server.Routes()
+			sort.Slice(routes, func(i, j int) bool {
+				return routes[i].Path < routes[j].Path
+			})
+			// print all registered routes
+			for _, route := range routes {
+				if route.Method != "echo_route_not_found" {
+					slog.Info(route.Path, "method", route.Method)
+				}
 			}
-		}
-		slog.Error("failed to start server", "err", server.Start(":8080").Error())
+			slog.Error("failed to start server", "err", server.Start(":8080").Error())
+		}()
 	}))
 	return server
 }
