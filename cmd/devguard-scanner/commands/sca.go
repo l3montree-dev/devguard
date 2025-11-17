@@ -136,10 +136,14 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 }
 
 func scanExternalImage(ctx context.Context) error {
-	// download and extract release attestation BOMs first
-	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
-	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
-		return err
+	var err error
+	var attestations = []map[string]any{}
+	if !config.RuntimeBaseConfig.IgnoreUpstreamAttestations {
+		// download and extract release attestation BOMs first
+		attestations, err = scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
+		if err != nil && !strings.Contains(err.Error(), "found no attestations") {
+			return err
+		}
 	}
 
 	// generate SBOM using Trivy
