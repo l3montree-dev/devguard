@@ -206,17 +206,12 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 }
 
 func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
-	// get all existing vulns from the database - this is the old state
-	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	// get all existing vulns from the database, which are not fixed yet - this is the old state
+	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
-		slog.Error("could not get existing vulns", "err", err)
+		slog.Error("could not get existing first party vulns", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
-
-	// remove all fixed vulns from the existing vulns
-	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State != dtos.VulnStateFixed
-	})
 
 	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -297,7 +292,13 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 		})
 	}
 
-	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
+	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		slog.Error("could not get existing first party vulns", "err", err)
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	return newDetectedVulnsNotOnOtherBranch, fixedVulns, v, nil
 }
 
 func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {

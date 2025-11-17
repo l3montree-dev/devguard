@@ -38,6 +38,22 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAs
 
 	return vulns, nil
 }
+func (repository *firstPartyVulnerabilityRepository) ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	var vulns = []models.FirstPartyVuln{}
+
+	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? AND state != ?", assetVersionName, assetID, models.VulnStateFixed)
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	}
+
+	err := query.Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return vulns, nil
+}
 
 func (repository *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	// tx *gorm.DB missing (or chosen not to be implemented) ?
