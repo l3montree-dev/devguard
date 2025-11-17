@@ -66,6 +66,7 @@ type TestApp struct {
 	FirstPartyVulnController *controllers.FirstPartyVulnController
 	ComponentController      *controllers.ComponentController
 	ArtifactController       *controllers.ArtifactController
+	CSAFController           *controllers.CSAFController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository

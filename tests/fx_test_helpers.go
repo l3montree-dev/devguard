@@ -45,7 +45,8 @@ func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *
 			SuppressLogs: true,
 		}
 	}
-	// Create FX test app
+
+	// Create FX test app without automatic cleanup
 	app, fxApp := NewTestAppWithT(t, db, options)
 
 	fixture := &TestFixture{
@@ -56,11 +57,11 @@ func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *
 
 	// Register cleanup - this will be called in LIFO order
 	t.Cleanup(func() {
-
 		// Stop FX app first (with timeout)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = fxApp.Stop(ctx)
+
 		// Then terminate database
 		terminate()
 	})

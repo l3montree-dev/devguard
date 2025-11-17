@@ -22,19 +22,18 @@ import (
 	"github.com/l3montree-dev/devguard/constants"
 )
 
-var OutgoingConnectionClient = http.Client{
+var EgressClient = http.Client{
 	Timeout: 30 * time.Second,
-	Transport: MyRoundTripper{
+	Transport: EgressRoundTripper{
 		r: http.DefaultTransport,
 	},
 }
 
-type MyRoundTripper struct {
+type EgressRoundTripper struct {
 	r http.RoundTripper
 }
 
-func (mrt MyRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("User-Agent", constants.UserAgent)
-
 	return mrt.r.RoundTrip(r)
 }

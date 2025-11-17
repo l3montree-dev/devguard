@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,164 +11,182 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/dtos"
-
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/fx"
 )
 
 func TestUpstreamCSAFReportIntegration(t *testing.T) {
-	// lets do that against devguard itself - so that we have data to work with
-	// Initialize test database
-	db, terminate := InitDatabaseContainer("../initdb.sql")
-	defer terminate()
+	// Mock services
+	mockCveRepository := mocks.NewCveRepository(t)
+	mockAssetVersionService := mocks.NewAssetVersionService(t)
+	mockDependencyVulnService := mocks.NewDependencyVulnService(t)
 
-	// Create artifact service and controller
-	artifactRepository := repositories.NewArtifactRepository(db)
-	cveRepository := mocks.NewCveRepository(t)
-	componentRepository := repositories.NewComponentRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	assetVersionService := mocks.NewAssetVersionService(t)
-	dependencyVulnService := mocks.NewDependencyVulnService(t)
-
-	httpsClient := http.Client{
-		Timeout: 30 * time.Second,
-	}
-	httpsClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.CveRepository {
+				return mockCveRepository
+			}),
+			fx.Decorate(func() shared.AssetVersionService {
+				return mockAssetVersionService
+			}),
+			fx.Decorate(func() shared.DependencyVulnService {
+				return mockDependencyVulnService
+			}),
 		},
-	}
+	}, func(f *TestFixture) {
+		// Use FX-injected services
+		artifactService := f.App.ArtifactService
+		csafController := f.App.CSAFController
 
-	artifactService := services.NewArtifactService(artifactRepository, services.NewCSAFService(httpsClient), cveRepository, componentRepository, dependencyVulnRepository, assetRepository, assetVersionRepository, assetVersionService, dependencyVulnService)
+		// Create test organization, project, asset, and asset version
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-	csafController := controllers.NewCSAFController(dependencyVulnRepository, repositories.NewVulnEventRepository(db), assetVersionRepository, assetRepository, repositories.NewProjectRepository(db), repositories.NewOrgRepository(db), cveRepository, artifactRepository)
-
-	// Create test organization, project, asset, and asset version
-	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
-	// create an artifact in this asset version
-	artifact := models.Artifact{
-		ArtifactName:     "pkg:golang/github.com/l3montree-dev/devguard",
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
-	}
-	assert.Nil(t, db.Create(&artifact).Error)
-
-	// Setup echo app
-	app := echo.New()
-
-	t.Run("should return 404 if the asset has no vuln sharing enabled (this tests the csaf middleware function)", func(t *testing.T) {
-		testserver := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := app.NewContext(r, w)
-			ctx.SetParamNames("organization", "projectSlug", "assetSlug")
-			ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
-			// set the params - we need todo that manually
-			// we can even test the csaf middleware right here.
-			assert.NotNil(t, middlewares.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.ServeCSAFReportRequest)(ctx))
-		}))
-
-		csafURL := testserver.URL + "/provider-metadata.json"
-
-		// we create a fake bom for the same artifact which has the same purl
-		_, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
-		assert.Equal(t, 1, len(invalidURLs))
-	})
-
-	// now mark the asset as having vuln sharing enabled
-	asset.SharesInformation = true
-	assert.Nil(t, db.Save(&asset).Error)
-
-	createDependencyVulns(db, asset.ID, assetVersion.Name, artifact)
-	t.Run("should consume own produced csaf reports", func(t *testing.T) {
-		csafMiddleware := middlewares.CsafMiddleware(false, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)
-
-		testserver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// lets do some routing here
-			if strings.HasSuffix(r.URL.Path, "provider-metadata.json") {
-				ctx := app.NewContext(r, w)
-				ctx.SetParamNames("organization")
-				ctx.SetParamValues(org.Slug)
-				assert.Nil(t, middlewares.CsafMiddleware(true, repositories.NewOrgRepository(db), repositories.NewProjectRepository(db), repositories.NewAssetRepository(db), repositories.NewAssetVersionRepository(db), artifactRepository)(csafController.GetProviderMetadataForOrganization)(ctx))
-				return
-			} else if strings.Contains(r.URL.Path, "/openpgp/") {
-				ctx := app.NewContext(r, w)
-				ctx.SetParamNames("organization", "projectSlug", "assetSlug", "file")
-				// extract the last part of the url as file name
-				fileName := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
-				ctx.SetParamValues(org.Slug, project.Slug, asset.Slug, fileName)
-				assert.Nil(t, csafMiddleware(csafController.GetOpenPGPFile)(ctx))
-				return
-			} else if strings.HasSuffix(r.URL.Path, "/white/changes.csv") {
-				ctx := app.NewContext(r, w)
-				ctx.SetParamNames("organization", "projectSlug", "assetSlug")
-				ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
-				assert.Nil(t, csafMiddleware(csafController.GetChangesCSVFile)(ctx))
-				return
-			} else if strings.HasSuffix(r.URL.Path, "/white/index.txt") {
-				ctx := app.NewContext(r, w)
-				ctx.SetParamNames("organization", "projectSlug", "assetSlug")
-				ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
-				assert.Nil(t, csafMiddleware(csafController.GetIndexFile)(ctx))
-			}
-
-			// the url should contain something like this: white/:year/:version/
-			// we need to set those param values manually here
-			pathParts := strings.Split(r.URL.Path, "/white/")
-			fmt.Println(r.URL.Path)
-			yearAndMaybeVersion := pathParts[1]
-			yearAndMaybeVersionParts := strings.Split(yearAndMaybeVersion, "/")
-			year := yearAndMaybeVersionParts[0]
-			version := ""
-			if len(yearAndMaybeVersionParts) > 1 {
-				version = yearAndMaybeVersionParts[1]
-			}
-
-			ctx := app.NewContext(r, w)
-			ctx.SetParamNames("organization", "projectSlug", "assetSlug", "year", "version")
-			ctx.SetParamValues(org.Slug, project.Slug, asset.Slug, year, version)
-			// set the params - we need todo that manually
-			// we can even test the csaf middleware right here.
-			assert.Nil(t, csafMiddleware(csafController.ServeCSAFReportRequest)(ctx))
-
-		}))
-		os.Setenv("API_URL", testserver.URL)
-		os.Setenv("CSAF_OPENPGP_PUBLIC_KEY_PATH", "testdata/test-openpgp-public-key.asc")
-		os.Setenv("CSAF_OPENPGP_PRIVATE_KEY_PATH", "testdata/test-openpgp-private-key.asc")
-		os.Setenv("CSAF_OPENPGP_PASSPHRASE", "Ag%cdaA&EhoM#qCHLRXqoRH%oWAg%cdaA&EhoM#qCHLRXqoRH%oW")
-		os.Setenv("CSAF_OPENPGP_FINGERPRINT", "A8725AE729DAFAF6B95761207D9096D47B06F5F4")
-
-		// we need to add the purl to the url
-		purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
-		csafURL := purl + ":" + testserver.URL + "/provider-metadata.json"
-
-		// we create a fake bom for the same artifact which has the same purl
-		boms, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
-		assert.Equal(t, 0, len(invalidURLs))
-		assert.Equal(t, 1, len(boms))
-
-		// iterate over the vulns.
-		// expect CVE-2024-0001 and CVE-2024-0002 to be present,
-		// CVE-2024-0001 should be open, CVE-2024-0002 should be marked as false positive
-		for _, vuln := range *boms[0].GetVulnerabilities() {
-			switch vuln.ID {
-			case "CVE-2024-0001":
-				assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)
-			case "CVE-2024-0002":
-				assert.Equal(t, cyclonedx.IASNotAffected, vuln.Analysis.State)
-			}
+		// create an artifact in this asset version
+		artifact := models.Artifact{
+			ArtifactName:     "pkg:golang/github.com/l3montree-dev/devguard",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          asset.ID,
 		}
+		assert.Nil(t, f.DB.Create(&artifact).Error)
+
+		// Setup echo app
+		app := echo.New()
+
+		t.Run("should return 404 if the asset has no vuln sharing enabled (this tests the csaf middleware function)", func(t *testing.T) {
+			testserver := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx := app.NewContext(r, w)
+				ctx.SetParamNames("organization", "projectSlug", "assetSlug")
+				ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
+				// set the params - we need todo that manually
+				// we can even test the csaf middleware right here.
+				csafMiddleware := middlewares.CsafMiddleware(
+					false,
+					f.App.OrgRepository,
+					f.App.ProjectRepository,
+					f.App.AssetRepository,
+					f.App.AssetVersionRepository,
+					f.App.ArtifactRepository,
+				)
+				assert.NotNil(t, csafMiddleware(csafController.ServeCSAFReportRequest)(ctx))
+			}))
+
+			csafURL := testserver.URL + "/provider-metadata.json"
+
+			// we create a fake bom for the same artifact which has the same purl
+			_, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
+			assert.Equal(t, 1, len(invalidURLs))
+		})
+
+		// now mark the asset as having vuln sharing enabled
+		asset.SharesInformation = true
+		assert.Nil(t, f.DB.Save(&asset).Error)
+
+		createDependencyVulns(f.DB, asset.ID, assetVersion.Name, artifact)
+
+		t.Run("should consume own produced csaf reports", func(t *testing.T) {
+			csafMiddleware := middlewares.CsafMiddleware(
+				false,
+				f.App.OrgRepository,
+				f.App.ProjectRepository,
+				f.App.AssetRepository,
+				f.App.AssetVersionRepository,
+				f.App.ArtifactRepository,
+			)
+
+			testserver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// lets do some routing here
+				if strings.HasSuffix(r.URL.Path, "provider-metadata.json") {
+					ctx := app.NewContext(r, w)
+					ctx.SetParamNames("organization")
+					ctx.SetParamValues(org.Slug)
+					csafMiddlewareForMetadata := middlewares.CsafMiddleware(
+						true,
+						f.App.OrgRepository,
+						f.App.ProjectRepository,
+						f.App.AssetRepository,
+						f.App.AssetVersionRepository,
+						f.App.ArtifactRepository,
+					)
+					assert.Nil(t, csafMiddlewareForMetadata(csafController.GetProviderMetadataForOrganization)(ctx))
+					return
+				} else if strings.Contains(r.URL.Path, "/openpgp/") {
+					ctx := app.NewContext(r, w)
+					ctx.SetParamNames("organization", "projectSlug", "assetSlug", "file")
+					// extract the last part of the url as file name
+					fileName := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+					ctx.SetParamValues(org.Slug, project.Slug, asset.Slug, fileName)
+					assert.Nil(t, csafMiddleware(csafController.GetOpenPGPFile)(ctx))
+					return
+				} else if strings.HasSuffix(r.URL.Path, "/white/changes.csv") {
+					ctx := app.NewContext(r, w)
+					ctx.SetParamNames("organization", "projectSlug", "assetSlug")
+					ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
+					assert.Nil(t, csafMiddleware(csafController.GetChangesCSVFile)(ctx))
+					return
+				} else if strings.HasSuffix(r.URL.Path, "/white/index.txt") {
+					ctx := app.NewContext(r, w)
+					ctx.SetParamNames("organization", "projectSlug", "assetSlug")
+					ctx.SetParamValues(org.Slug, project.Slug, asset.Slug)
+					assert.Nil(t, csafMiddleware(csafController.GetIndexFile)(ctx))
+				}
+
+				// the url should contain something like this: white/:year/:version/
+				// we need to set those param values manually here
+				pathParts := strings.Split(r.URL.Path, "/white/")
+				fmt.Println(r.URL.Path)
+				yearAndMaybeVersion := pathParts[1]
+				yearAndMaybeVersionParts := strings.Split(yearAndMaybeVersion, "/")
+				year := yearAndMaybeVersionParts[0]
+				version := ""
+				if len(yearAndMaybeVersionParts) > 1 {
+					version = yearAndMaybeVersionParts[1]
+				}
+
+				ctx := app.NewContext(r, w)
+				ctx.SetParamNames("organization", "projectSlug", "assetSlug", "year", "version")
+				ctx.SetParamValues(org.Slug, project.Slug, asset.Slug, year, version)
+				// set the params - we need todo that manually
+				// we can even test the csaf middleware right here.
+				assert.Nil(t, csafMiddleware(csafController.ServeCSAFReportRequest)(ctx))
+
+			}))
+			os.Setenv("API_URL", testserver.URL)
+			os.Setenv("CSAF_OPENPGP_PUBLIC_KEY_PATH", "testdata/test-openpgp-public-key.asc")
+			os.Setenv("CSAF_OPENPGP_PRIVATE_KEY_PATH", "testdata/test-openpgp-private-key.asc")
+			os.Setenv("CSAF_OPENPGP_PASSPHRASE", "Ag%cdaA&EhoM#qCHLRXqoRH%oWAg%cdaA&EhoM#qCHLRXqoRH%oW")
+			os.Setenv("CSAF_OPENPGP_FINGERPRINT", "A8725AE729DAFAF6B95761207D9096D47B06F5F4")
+
+			// we need to add the purl to the url
+			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
+			csafURL := purl + ":" + testserver.URL + "/provider-metadata.json"
+
+			// we create a fake bom for the same artifact which has the same purl
+			boms, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
+			assert.Equal(t, 0, len(invalidURLs))
+			assert.Equal(t, 1, len(boms))
+
+			// iterate over the vulns.
+			// expect CVE-2024-0001 and CVE-2024-0002 to be present,
+			// CVE-2024-0001 should be open, CVE-2024-0002 should be marked as false positive
+			for _, vuln := range *boms[0].GetVulnerabilities() {
+				switch vuln.ID {
+				case "CVE-2024-0001":
+					assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)
+				case "CVE-2024-0002":
+					assert.Equal(t, cyclonedx.IASNotAffected, vuln.Analysis.State)
+				}
+			}
+		})
 	})
 }
 
