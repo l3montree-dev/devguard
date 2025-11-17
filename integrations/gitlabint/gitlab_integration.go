@@ -99,16 +99,12 @@ type GitlabIntegration struct {
 	vulnEventRepository         shared.VulnEventRepository
 	frontendURL                 string
 	orgRepository               shared.OrganizationRepository
-	orgSevice                   shared.OrgService
 	projectRepository           shared.ProjectRepository
-	projectService              shared.ProjectService
 	assetRepository             shared.AssetRepository
 	assetVersionRepository      shared.AssetVersionRepository
-	assetService                shared.AssetService
 	componentRepository         shared.ComponentRepository
 	casbinRBACProvider          shared.RBACProvider
 	licenseRiskRepository       shared.LicenseRiskRepository
-	licenseRiskService          shared.LicenseRiskService
 	statisticsService           shared.StatisticsService
 }
 
@@ -135,10 +131,6 @@ func NewGitlabIntegration(
 	gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository,
 	licenseRiskRepository shared.LicenseRiskRepository,
 	orgRepository shared.OrganizationRepository,
-	orgService shared.OrgService,
-	projectService shared.ProjectService,
-	assetService shared.AssetService,
-	licenseRiskService shared.LicenseRiskService,
 	statisticsService shared.StatisticsService,
 ) *GitlabIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -161,13 +153,9 @@ func NewGitlabIntegration(
 		projectRepository:           projectRepository,
 		componentRepository:         componentRepository,
 		orgRepository:               orgRepository,
-		orgSevice:                   orgService,
-		projectService:              projectService,
-		assetService:                assetService,
 		casbinRBACProvider:          casbinRBACProvider,
 		clientFactory:               clientFactory,
 		licenseRiskRepository:       licenseRiskRepository,
-		licenseRiskService:          licenseRiskService,
 		statisticsService:           statisticsService,
 	}
 }

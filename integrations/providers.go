@@ -30,7 +30,7 @@ var Module = fx.Options(
 
 	// GitLab Integration
 	fx.Provide(gitlabint.NewGitLabOauth2Integrations),
-	fx.Provide(gitlabint.NewGitlabClientFactory),
+	fx.Provide(fx.Annotate(gitlabint.NewGitlabClientFactory, fx.As(new(shared.GitlabClientFactory)))),
 	fx.Provide(gitlabint.NewGitlabIntegration),
 
 	// Jira Integration
@@ -38,7 +38,9 @@ var Module = fx.Options(
 
 	// Aggregated Third Party Integration
 	fx.Provide(fx.Annotate(
-		NewThirdPartyIntegrations,
+		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration) shared.IntegrationAggregate {
+			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration)
+		},
 		fx.As(new(shared.IntegrationAggregate)),
 	)),
 )

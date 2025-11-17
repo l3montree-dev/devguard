@@ -28,7 +28,7 @@ var AccessControlModule = fx.Options(
 	fx.Provide(fx.Annotate(NewCasbinRBACProvider, fx.As(new(shared.RBACProvider)))),
 	fx.Provide(NewExternalEntityProviderRBAC),
 	fx.Provide(func() *client.APIClient {
-		return GetOryAPIClient(os.Getenv("ORY_URL"))
+		return GetOryAPIClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	}),
 	fx.Provide(fx.Annotate(shared.NewAdminClient, fx.As(new(shared.AdminClient)))),
 )
