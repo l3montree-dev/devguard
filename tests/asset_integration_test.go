@@ -80,11 +80,11 @@ func TestAssetUpdate(t *testing.T) {
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 		thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
 
-		WithTestAppMocks(t, "../initdb.sql", TestAppOptions{
+		WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 			SuppressLogs: true,
-			Mocks: fx.Decorate(func() shared.IntegrationAggregate {
+			ExtraOptions: []fx.Option{fx.Decorate(func() shared.IntegrationAggregate {
 				return thirdPartyIntegration
-			}),
+			})},
 		}, func(f *TestFixture) {
 			// Create test data using FX helper
 			org, project, asset1, _ := f.CreateOrgProjectAssetAndVersion()

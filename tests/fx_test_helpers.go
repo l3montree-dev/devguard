@@ -138,7 +138,7 @@ func WithTestApp(t *testing.T, sqlInitFile string, testFn func(*TestFixture)) {
 	testFn(fixture)
 }
 
-func WithTestAppMocks(t *testing.T, sqlInitFile string, options TestAppOptions, testFn func(*TestFixture)) {
+func WithTestAppOptions(t *testing.T, sqlInitFile string, options TestAppOptions, testFn func(*TestFixture)) {
 	t.Helper()
 	fixture := NewTestFixture(t, sqlInitFile, &options)
 	testFn(fixture)

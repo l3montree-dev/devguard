@@ -8,9 +8,11 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/fx"
 )
 
 func TestGetAndSaveLicenseInformation(t *testing.T) {
@@ -32,7 +34,21 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 	defer server.Close()
 
 	t.Run("should create license risk entries for components with invalid licenses", func(t *testing.T) {
-		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Mock the OpenSourceInsightService for the component without license
+		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
+
+		// Mock response for the component without license - simulate getting "unknown" license
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
+			Return(dtos.OpenSourceInsightsVersionResponse{
+				Licenses: []string{}, // No licenses returned
+			}, nil)
+
+		WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+			SuppressLogs: true,
+			ExtraOptions: []fx.Option{fx.Decorate(func() shared.OpenSourceInsightService {
+				return mockOpenSourceInsightService
+			})},
+		}, func(f *TestFixture) {
 			// Create test data using FX helper
 			_, _, _, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
@@ -103,15 +119,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 				err = f.DB.Model(&dep).Association("Artifacts").Append(&artifact)
 				assert.NoError(t, err)
 			}
-
-			// Mock the OpenSourceInsightService for the component without license
-			mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
-
-			// Mock response for the component without license - simulate getting "unknown" license
-			mockOpenSourceInsightService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
-				Return(dtos.OpenSourceInsightsVersionResponse{
-					Licenses: []string{}, // No licenses returned
-				}, nil)
 
 			// Call the function under test using FX-injected component service
 			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false, 0)

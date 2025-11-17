@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
@@ -99,8 +100,6 @@ type TestApp struct {
 type TestAppOptions struct {
 	// Additional FX options to include
 	ExtraOptions []fx.Option
-	// Use with decorate like this:  fx.Decorate(func() shared.IntegrationAggregate { return thirdPartyIntegration}) - fx.Replace doesn't work.
-	Mocks fx.Option
 	// Whether to suppress FX logging
 	SuppressLogs bool
 	// Custom broker (if nil, a default in-memory broker will be provided)
@@ -137,7 +136,9 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
-		opts.Mocks,
+		fx.Decorate(func() shared.FireAndForgetSynchronizer {
+			return utils.NewSyncFireAndForgetSynchronizer()
+		}),
 		fx.Populate(&app),
 	}
 
