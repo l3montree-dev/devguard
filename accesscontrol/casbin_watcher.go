@@ -37,8 +37,8 @@ func (policyChangePubSubMessage) GetChannel() shared.Channel {
 	return shared.PolicyChange
 }
 
-func (policyChangePubSubMessage) GetPayload() map[string]interface{} {
-	return map[string]interface{}{
+func (policyChangePubSubMessage) GetPayload() map[string]any {
+	return map[string]any{
 		"action": "update",
 	}
 }
@@ -60,14 +60,7 @@ func newCasbinPubSubWatcher(broker shared.Broker) *casbinPubSubWatcher {
 	return watcher
 }
 
-func (w *casbinPubSubWatcher) listenForUpdates(ch <-chan map[string]interface{}) {
-	defer func() {
-		if r := recover(); r != nil {
-			slog.Error("recovered from panic in casbinPubSubWatcher listener", "error", r)
-		}
-		w.listenForUpdates(ch)
-	}()
-
+func (w *casbinPubSubWatcher) listenForUpdates(ch <-chan map[string]any) {
 	slog.Debug("listening for policy change notifications")
 	for range ch {
 		slog.Debug("received policy change notification")

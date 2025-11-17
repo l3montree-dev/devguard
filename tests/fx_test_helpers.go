@@ -16,7 +16,9 @@
 package tests
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -26,10 +28,9 @@ import (
 
 // TestFixture provides a complete test environment with database and FX app
 type TestFixture struct {
-	T        *testing.T
-	App      *TestApp
-	DB       shared.DB
-	Teardown func()
+	T   *testing.T
+	App *TestApp
+	DB  shared.DB
 }
 
 // NewTestFixture creates a complete test environment with database container and FX app
@@ -40,7 +41,7 @@ func NewTestFixture(t *testing.T, sqlInitFile string) *TestFixture {
 	db, terminate := InitDatabaseContainer(sqlInitFile)
 
 	// Create FX test app
-	app := NewTestAppWithT(t, db, &TestAppOptions{
+	app, fxApp := NewTestAppWithT(t, db, &TestAppOptions{
 		SuppressLogs: true,
 	})
 
@@ -48,13 +49,18 @@ func NewTestFixture(t *testing.T, sqlInitFile string) *TestFixture {
 		T:   t,
 		App: app,
 		DB:  db,
-		Teardown: func() {
-			terminate()
-		},
 	}
 
-	// Register cleanup
-	t.Cleanup(fixture.Teardown)
+	// Register cleanup - this will be called in LIFO order
+	t.Cleanup(func() {
+
+		// Stop FX app first (with timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = fxApp.Stop(ctx)
+		// Then terminate database
+		terminate()
+	})
 
 	return fixture
 }

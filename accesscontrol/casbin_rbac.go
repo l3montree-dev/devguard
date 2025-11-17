@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/casbin/casbin/v2"
@@ -423,8 +424,12 @@ func buildEnforcer(db *gorm.DB, broker shared.Broker) (*casbin.SyncedEnforcer, e
 	if err != nil {
 		return nil, err
 	}
+	path := os.Getenv("RBAC_CONFIG_PATH")
+	if path == "" {
+		path = "config/rbac_model.conf"
+	}
 
-	e, err := casbin.NewSyncedEnforcer("config/rbac_model.conf", a)
+	e, err := casbin.NewSyncedEnforcer(path, a)
 	if err != nil {
 		return nil, err
 	}

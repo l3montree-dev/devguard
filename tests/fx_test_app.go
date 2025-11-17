@@ -17,8 +17,8 @@ package tests
 
 import (
 	"context"
+	"os"
 	"testing"
-	"time"
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
@@ -114,6 +114,8 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 
 	var app TestApp
 
+	os.Setenv("RBAC_CONFIG_PATH", "../config/rbac_model.conf")
+
 	fxOptions := []fx.Option{
 		// Provide the database
 		fx.Provide(func() shared.DB { return db }),
@@ -161,7 +163,7 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 
 // NewTestAppWithT creates a test application tied to a testing.T
 // It automatically stops the app when the test completes
-func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) *TestApp {
+func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fxtest.App) {
 	t.Helper()
 
 	app, fxApp, err := NewTestApp(t, db, opts)
@@ -169,15 +171,7 @@ func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) *TestApp 
 		t.Fatalf("Failed to create test app: %v", err)
 	}
 
-	// Ensure cleanup
-	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		fxApp.RequireStop()
-		_ = fxApp.Stop(ctx)
-	})
-
-	return app
+	return app, fxApp
 }
 
 // noopBroker is a no-op implementation of the Broker interface for testing
@@ -187,8 +181,8 @@ func (n *noopBroker) Publish(ctx context.Context, message shared.Message) error 
 	return nil
 }
 
-func (n *noopBroker) Subscribe(topic shared.Channel) (<-chan map[string]interface{}, error) {
-	ch := make(chan map[string]interface{})
+func (n *noopBroker) Subscribe(topic shared.Channel) (<-chan map[string]any, error) {
+	ch := make(chan map[string]any)
 	close(ch) // Return a closed channel so subscribers don't block
 	return ch, nil
 }
