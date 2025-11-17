@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -25,22 +25,18 @@ import (
 )
 
 func TestUpstreamCSAFReportIntegration(t *testing.T) {
-	// Mock services
-	mockCveRepository := mocks.NewCveRepository(t)
-	mockAssetVersionService := mocks.NewAssetVersionService(t)
-	mockDependencyVulnService := mocks.NewDependencyVulnService(t)
-
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
 		ExtraOptions: []fx.Option{
-			fx.Decorate(func() shared.CveRepository {
-				return mockCveRepository
-			}),
-			fx.Decorate(func() shared.AssetVersionService {
-				return mockAssetVersionService
-			}),
-			fx.Decorate(func() shared.DependencyVulnService {
-				return mockDependencyVulnService
+			// provide a custom HTTP client that skips TLS verification for the test server
+			fx.Decorate(func() http.Client {
+				return http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							InsecureSkipVerify: true,
+						},
+					},
+				}
 			}),
 		},
 	}, func(f *TestFixture) {

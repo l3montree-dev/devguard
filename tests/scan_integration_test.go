@@ -774,7 +774,7 @@ func TestTicketHandling(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-		controller, gitlabClientFacade := initHTTPController(t, f, true)
+		controller, gitlabClientFacade := initHTTPController(t, f)
 
 		// scan the vulnerable sbom
 		app := echo.New()
@@ -1126,7 +1126,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func initHTTPController(t *testing.T, f *TestFixture, mockOpenSourceInsight bool) (*controllers.ScanController, *mocks.GitlabClientFacade) {
+func initHTTPController(t *testing.T, f *TestFixture) (*controllers.ScanController, *mocks.GitlabClientFacade) {
 	// Use FX-injected controller
 	controller := f.App.ScanController
 	// do not use concurrency in this test, because we want to test the ticket creation
@@ -1304,7 +1304,7 @@ func TestIdempotency(t *testing.T) {
 	// 5. compare 2 and 4
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-		controller, _ := initHTTPController(t, f, true)
+		controller, _ := initHTTPController(t, f)
 
 		app := echo.New()
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
@@ -1413,7 +1413,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 			t.Fatalf("could not create cve 2: %v", err)
 		}
 
-		controller, _ := initHTTPController(t, f, true)
+		controller, _ := initHTTPController(t, f)
 
 		app := echo.New()
 
