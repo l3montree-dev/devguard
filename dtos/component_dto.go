@@ -59,4 +59,6 @@ type ComponentDependencyDTO struct {
 	// we use edges, which provide the information, that a component is used by another component in one asset
 	DependencyPurl string        `json:"dependencyPurl"` // will be nil, for direct dependencies
 	Artifacts      []ArtifactDTO `json:"artifacts"`
+	Component      ComponentDTO  `json:"component"`
+	Dependency     ComponentDTO  `json:"dependency"`
 }

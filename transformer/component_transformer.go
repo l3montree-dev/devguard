@@ -61,5 +61,7 @@ func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDepend
 		ComponentPurl:  utils.SafeDereference(m.ComponentPurl),
 		DependencyPurl: m.DependencyPurl,
 		Artifacts:      utils.Map(m.Artifacts, ArtifactModelToDTO),
+		Component:      ComponentModelToDTO(m.Component),
+		Dependency:     ComponentModelToDTO(m.Dependency),
 	}
 }
