@@ -3,6 +3,7 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
@@ -41,7 +42,7 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAs
 func (repository *firstPartyVulnerabilityRepository) ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	var vulns = []models.FirstPartyVuln{}
 
-	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? AND state != ?", assetVersionName, assetID, models.VulnStateFixed)
+	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? AND state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
 		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
