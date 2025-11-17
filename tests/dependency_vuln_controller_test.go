@@ -12,7 +12,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/l3montree-dev/devguard/mocks"
@@ -21,13 +20,38 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.uber.org/fx"
 )
 
 func TestDependencyVulnControllerCreateEvent(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "http://localhost:3000")
+	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
-		factory, client := NewTestClientFactory(t)
+	factory, client := NewTestClientFactory(t)
+
+	externalUserRepository := mocks.NewExternalUserRepository(t)
+	externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything).Return(nil, nil)
+
+	projectService := mocks.NewProjectService(t)
+	statisticsService := mocks.NewStatisticsService(t)
+	vulnEventRepository := mocks.NewVulnEventRepository(t)
+
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.ExternalUserRepository {
+				return externalUserRepository
+			}),
+			fx.Decorate(func() shared.ProjectService {
+				return projectService
+			}),
+			fx.Decorate(func() shared.StatisticsService {
+				return statisticsService
+			}),
+			fx.Decorate(func() shared.VulnEventRepository {
+				return vulnEventRepository
+			}),
+		},
+	}, func(f *TestFixture) {
 
 		// Create GitlabIntegration with FX-injected dependencies
 		gitlabIntegration := gitlabint.NewGitlabIntegration(
@@ -56,37 +80,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			f.App.StatisticsService,
 		)
 
-		// Create ThirdPartyIntegrations with mock ExternalUserRepository
-		externalUserRepository := mocks.NewExternalUserRepository(t)
-		externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything).Return(nil, nil)
 		thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
-
-		// Manually construct DependencyVulnService with mock ThirdPartyIntegrations
-		// This is necessary because we need specific mock behavior for ticket operations
-		depVulnService := services.NewDependencyVulnService(
-			f.App.DependencyVulnRepository,
-			f.App.VulnEventRepository,
-			f.App.AssetRepository,
-			f.App.CveRepository,
-			f.App.OrgRepository,
-			f.App.ProjectRepository,
-			thirdPartyIntegration, // Use mock integration
-			f.App.AssetVersionRepository,
-		)
-
-		// Use mock services for statistics
-		projectService := mocks.NewProjectService(t)
-		statisticsService := mocks.NewStatisticsService(t)
-		vulnEventRepository := mocks.NewVulnEventRepository(t)
-
-		// Create controller with mixed FX and mock dependencies
-		controller := controllers.NewDependencyVulnController(
-			f.App.DependencyVulnRepository,
-			depVulnService,
-			projectService,
-			statisticsService,
-			vulnEventRepository,
-		)
 
 		// Create org, project, asset, asset version using FX helper
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
@@ -155,7 +149,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			client.On("CreateIssueComment", ctx.Request().Context(), 123, 123, mock.Anything).Return(nil, nil, nil)
 			client.On("EditIssue", ctx.Request().Context(), mock.Anything, mock.Anything, mock.Anything).Return(nil, nil, nil)
 			// now reopen the dependency vuln
-			err = controller.CreateEvent(ctx)
+			err = f.App.DependencyVulnController.CreateEvent(ctx)
 			assert.Nil(t, err)
 
 			// check that the state event is reopened

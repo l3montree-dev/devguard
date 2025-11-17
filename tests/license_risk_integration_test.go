@@ -29,6 +29,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/fx"
 )
 
 func TestLicenseRiskArtifactAssociation(t *testing.T) {
@@ -113,17 +114,23 @@ func getSBOMWithWithLicenseRisk() io.Reader {
 }
 
 func TestLicenseRiskLifecycleManagement(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		artifactName := "main"
+	artifactName := "main"
 
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
+	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
+	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{
+		Licenses: []string{},
+	}, nil)
 
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{
-			Licenses: []string{},
-		}, nil)
-
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.OpenSourceInsightService {
+				return mockOpenSourceInsightService
+			}),
+		},
+	}, func(f *TestFixture) {
 		controller := f.App.ScanController
 		// do not use concurrency in this test
 		controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
