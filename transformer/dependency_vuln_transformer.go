@@ -41,6 +41,7 @@ func CVEToDTO(cve *models.CVE) *dtos.CVEDTO {
 		EPSS:                  cve.EPSS,
 		Percentile:            cve.Percentile,
 		Vector:                cve.Vector,
+		Risk:                  cve.Risk,
 	}
 }
 

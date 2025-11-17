@@ -47,6 +47,7 @@ type CVEDTO struct {
 	EPSS                  *float64        `json:"epss"`
 	Percentile            *float32        `json:"percentile"`
 	Vector                string          `json:"vector"`
+	Risk                  RiskMetrics     `json:"risk"`
 }
 
 type VulnState string
