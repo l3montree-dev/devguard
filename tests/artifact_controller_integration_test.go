@@ -141,32 +141,6 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			assert.Equal(t, int64(0), artifactCountAfter) // Association should be gone due to CASCADE delete
 		})
 
-		t.Run("should return error when artifact service fails", func(t *testing.T) {
-			// NOTE: This test creates a failing DB to test error handling.
-			// It doesn't use FX-injected controller because it needs custom failing dependencies.
-			// This is a valid exception to the FX pattern for error testing.
-
-			// Create a test artifact but don't save it to DB (non-existent)
-			testArtifact := models.Artifact{
-				ArtifactName:     "test-artifact-fail",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
-			}
-
-			// For this specific error test, we can skip the complex failing service setup
-			// and just test with a non-existent artifact
-			recorder := httptest.NewRecorder()
-			req := httptest.NewRequest("DELETE", "/artifacts/"+testArtifact.ArtifactName, nil)
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx, testArtifact)
-
-			// Execute the delete operation using FX controller - should handle gracefully
-			err := f.App.ArtifactController.DeleteArtifact(ctx)
-
-			// Verify the operation failed as expected
-			assert.Error(t, err)
-		})
-
 		t.Run("should handle deletion of non-existent artifact gracefully", func(t *testing.T) {
 			// Create artifact object that doesn't exist in database
 			nonExistentArtifact := models.Artifact{

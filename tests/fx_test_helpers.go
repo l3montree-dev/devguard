@@ -34,16 +34,19 @@ type TestFixture struct {
 }
 
 // NewTestFixture creates a complete test environment with database container and FX app
-func NewTestFixture(t *testing.T, sqlInitFile string) *TestFixture {
+func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *TestFixture {
 	t.Helper()
 
 	// Initialize database container
 	db, terminate := InitDatabaseContainer(sqlInitFile)
 
+	if options == nil {
+		options = &TestAppOptions{
+			SuppressLogs: true,
+		}
+	}
 	// Create FX test app
-	app, fxApp := NewTestAppWithT(t, db, &TestAppOptions{
-		SuppressLogs: true,
-	})
+	app, fxApp := NewTestAppWithT(t, db, options)
 
 	fixture := &TestFixture{
 		T:   t,
@@ -131,6 +134,12 @@ func (f *TestFixture) CreateAssetVersion(assetID uuid.UUID, name string, isDefau
 // WithTestApp provides a callback-based pattern for tests
 func WithTestApp(t *testing.T, sqlInitFile string, testFn func(*TestFixture)) {
 	t.Helper()
-	fixture := NewTestFixture(t, sqlInitFile)
+	fixture := NewTestFixture(t, sqlInitFile, nil)
+	testFn(fixture)
+}
+
+func WithTestAppMocks(t *testing.T, sqlInitFile string, options TestAppOptions, testFn func(*TestFixture)) {
+	t.Helper()
+	fixture := NewTestFixture(t, sqlInitFile, &options)
 	testFn(fixture)
 }

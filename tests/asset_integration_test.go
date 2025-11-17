@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/fx"
 )
 
 func TestHandleLookup(t *testing.T) {
@@ -75,13 +76,18 @@ func TestAssetUpdate(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	t.Run("should be possible to enable the ticket range", func(t *testing.T) {
-		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Mock third-party integration
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
+
+		WithTestAppMocks(t, "../initdb.sql", TestAppOptions{
+			SuppressLogs: true,
+			Mocks: fx.Decorate(func() shared.IntegrationAggregate {
+				return thirdPartyIntegration
+			}),
+		}, func(f *TestFixture) {
 			// Create test data using FX helper
 			org, project, asset1, _ := f.CreateOrgProjectAssetAndVersion()
-
-			// Mock third-party integration
-			thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-			thirdPartyIntegration.On("CreateLabels", mock.Anything, mock.Anything).Return(nil)
 
 			updateRequest := dtos.AssetPatchRequest{
 				Name:                         utils.Ptr("test-asset"),
