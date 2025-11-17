@@ -94,5 +94,5 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.PUT("/members/:userID/", orgController.ChangeRole)
 	organizationUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.Update)
 
-	return OrgRouter{Group: orgRouter}
+	return OrgRouter{Group: organizationRouter}
 }
