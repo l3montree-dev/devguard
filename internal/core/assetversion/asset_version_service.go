@@ -207,17 +207,12 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 }
 
 func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
-	// get all existing vulns from the database - this is the old state
-	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	// get all existing vulns from the database, which are not fixed yet - this is the old state
+	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
-		slog.Error("could not get existing vulns", "err", err)
+		slog.Error("could not get existing first party vulns", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
-
-	// remove all fixed vulns from the existing vulns
-	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State != models.VulnStateFixed
-	})
 
 	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
