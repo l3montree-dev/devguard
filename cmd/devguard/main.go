@@ -126,6 +126,7 @@ func main() {
 		fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
 		fx.Invoke(func(AssetRouter router.AssetRouter) {}),
 		fx.Invoke(func(AssetVersionRouter router.AssetVersionRouter) {}),
+		fx.Invoke(func(DependencyVulnRouter router.DependencyVulnRouter) {}),
 		fx.Invoke(func(FirstPartyVulnRouter router.FirstPartyVulnRouter) {}),
 		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
