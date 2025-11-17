@@ -56,8 +56,9 @@ type baseConfig struct {
 	Origin        string `json:"origin" mapstructure:"origin"`
 	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
 
-	Timeout                  int  `json:"timeout" mapstructure:"timeout"`
-	IgnoreExternalReferences bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
+	Timeout                    int  `json:"timeout" mapstructure:"timeout"`
+	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
+	IgnoreUpstreamAttestations bool `json:"ignoreUpstreamAttestations" mapstructure:"ignoreUpstreamAttestations"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 }

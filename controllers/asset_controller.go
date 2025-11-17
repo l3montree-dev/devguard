@@ -215,7 +215,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	enableTicketRangeUpdated := false
 
-	if patchRequest.EnableTicketRange {
+	if patchRequest.EnableTicketRange != nil && *patchRequest.EnableTicketRange {
 		if patchRequest.CVSSAutomaticTicketThreshold != nil {
 			if asset.CVSSAutomaticTicketThreshold != nil {
 				if !utils.CompareFirstTwoDecimals(*patchRequest.CVSSAutomaticTicketThreshold, *asset.CVSSAutomaticTicketThreshold) {
@@ -250,10 +250,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			}
 		}
 
-	} else {
+	} else if patchRequest.EnableTicketRange != nil && !*patchRequest.EnableTicketRange {
 		// if the enableTicketRange is set to false, we do need to call the ticket sync
 		asset.CVSSAutomaticTicketThreshold = nil
 		asset.RiskAutomaticTicketThreshold = nil
+
+		enableTicketRangeUpdated = true
 	}
 
 	org := shared.GetOrg(ctx)

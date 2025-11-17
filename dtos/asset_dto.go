@@ -110,7 +110,7 @@ type AssetPatchRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableTicketRange            bool     `json:"enableTicketRange"`
+	EnableTicketRange            *bool    `json:"enableTicketRange"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
