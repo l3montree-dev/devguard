@@ -1,0 +1,89 @@
+// Copyright (C) 2025 l3montree GmbH
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+package services
+
+import (
+	"log/slog"
+	"time"
+
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
+)
+
+type scanService struct {
+	sbomScanner           shared.SBOMScanner
+	assetVersionService   shared.AssetVersionService
+	dependencyVulnService shared.DependencyVulnService
+	artifactService       shared.ArtifactService
+	statisticsService     shared.StatisticsService
+	// mark public to let it be overridden in tests
+	utils.FireAndForgetSynchronizer
+}
+
+func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, artifactService shared.ArtifactService, statisticsService shared.StatisticsService, synchronizer utils.FireAndForgetSynchronizer) *scanService {
+	purlComparer := scan.NewPurlComparer(db)
+	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
+	return &scanService{
+		sbomScanner:               scanner,
+		assetVersionService:       assetVersionService,
+		dependencyVulnService:     dependencyVulnService,
+		artifactService:           artifactService,
+		statisticsService:         statisticsService,
+		FireAndForgetSynchronizer: synchronizer}
+}
+
+func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error) {
+
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
+
+	if err != nil {
+		slog.Error("could not scan file", "err", err)
+		return 0, 0, nil, err
+	}
+
+	// handle the scan result
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return 0, 0, nil, err
+	}
+
+	//Check if we want to create an issue for this assetVersion
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+		}
+
+		// save the asset
+		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
+			slog.Error("could not save artifact", "err", err)
+		}
+	})
+
+	return len(opened), len(closed), newState, nil
+}

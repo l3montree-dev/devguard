@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -93,7 +93,7 @@ func (_c *CweRepository_GetAllCWEsID_Call) RunAndReturn(run func() ([]string, er
 }
 
 // SaveBatch provides a mock function for the type CweRepository
-func (_mock *CweRepository) SaveBatch(tx core.DB, cwes []models.CWE) error {
+func (_mock *CweRepository) SaveBatch(tx shared.DB, cwes []models.CWE) error {
 	ret := _mock.Called(tx, cwes)
 
 	if len(ret) == 0 {
@@ -101,7 +101,7 @@ func (_mock *CweRepository) SaveBatch(tx core.DB, cwes []models.CWE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.CWE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CWE) error); ok {
 		r0 = returnFunc(tx, cwes)
 	} else {
 		r0 = ret.Error(0)
@@ -115,17 +115,17 @@ type CweRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - cwes []models.CWE
 func (_e *CweRepository_Expecter) SaveBatch(tx interface{}, cwes interface{}) *CweRepository_SaveBatch_Call {
 	return &CweRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, cwes)}
 }
 
-func (_c *CweRepository_SaveBatch_Call) Run(run func(tx core.DB, cwes []models.CWE)) *CweRepository_SaveBatch_Call {
+func (_c *CweRepository_SaveBatch_Call) Run(run func(tx shared.DB, cwes []models.CWE)) *CweRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.CWE
 		if args[1] != nil {
@@ -144,7 +144,7 @@ func (_c *CweRepository_SaveBatch_Call) Return(err error) *CweRepository_SaveBat
 	return _c
 }
 
-func (_c *CweRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, cwes []models.CWE) error) *CweRepository_SaveBatch_Call {
+func (_c *CweRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, cwes []models.CWE) error) *CweRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

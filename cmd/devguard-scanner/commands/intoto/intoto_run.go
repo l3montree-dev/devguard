@@ -29,8 +29,8 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

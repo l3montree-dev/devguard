@@ -24,7 +24,7 @@ import (
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lmittmann/tint"
 
 	"github.com/spf13/cobra"

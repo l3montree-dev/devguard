@@ -22,12 +22,22 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/daemon"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/pubsub"
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/pubsub"
+	"github.com/l3montree-dev/devguard/router"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/vulndb"
+
+	"github.com/l3montree-dev/devguard/database"
+
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/fx"
 
 	_ "github.com/lib/pq"
 )
@@ -48,8 +58,8 @@ var release string // Will be filled at build time
 // @BasePath	/api/v1
 func main() {
 	//os.Setenv("TZ", "UTC")
-	core.LoadConfig() // nolint: errcheck
-	core.InitLogger()
+	shared.LoadConfig() // nolint: errcheck
+	shared.InitLogger()
 
 	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
@@ -66,7 +76,7 @@ func main() {
 	}
 
 	// Initialize database connection first
-	db, err := core.DatabaseFactory()
+	db, err := shared.DatabaseFactory()
 	if err != nil {
 		slog.Error(err.Error()) // print detailed error message to stdout
 		panic(errors.New("Failed to setup database connection"))
@@ -82,7 +92,7 @@ func main() {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
@@ -96,12 +106,36 @@ func main() {
 		panic(err)
 	}
 
-	daemon.Start(db, broker)
-	api.Start(db, broker)
+	fx.New(
+		fx.Supply(db),
+		fx.Provide(pubsub.BrokerFactory),
+		fx.Supply(broker),
+		fx.Provide(api.NewServer),
+		repositories.Module,
+		controllers.ControllerModule,
+		services.ServiceModule,
+		router.RouterModule,
+		accesscontrol.AccessControlModule,
+		integrations.Module,
+		daemons.Module,
+
+		// we need to invoke all routers to register their routes
+		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
+		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
+		fx.Invoke(func(SessionRouter router.SessionRouter) {}),
+		fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
+		fx.Invoke(func(AssetRouter router.AssetRouter) {}),
+		fx.Invoke(func(AssetVersionRouter router.AssetVersionRouter) {}),
+		fx.Invoke(func(DependencyVulnRouter router.DependencyVulnRouter) {}),
+		fx.Invoke(func(FirstPartyVulnRouter router.FirstPartyVulnRouter) {}),
+		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
+		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
+		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
+		fx.Invoke(func(server *echo.Echo) {}),
+	).Run()
 }
 
 func initSentry() {
-
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "dev"
@@ -128,3 +162,9 @@ func initSentry() {
 		slog.Error("Failed to init logger", "err", err)
 	}
 }
+
+// AllModules combines all FX modules for easy import
+var AllModules = fx.Options(
+	controllers.ControllerModule,
+	services.ServiceModule,
+)

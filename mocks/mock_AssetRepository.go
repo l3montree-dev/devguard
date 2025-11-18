@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -40,7 +40,7 @@ func (_m *AssetRepository) EXPECT() *AssetRepository_Expecter {
 }
 
 // Activate provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Activate(tx core.DB, id uuid.UUID) error {
+func (_mock *AssetRepository) Activate(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -48,7 +48,7 @@ func (_mock *AssetRepository) Activate(tx core.DB, id uuid.UUID) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -62,17 +62,17 @@ type AssetRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *AssetRepository_Expecter) Activate(tx interface{}, id interface{}) *AssetRepository_Activate_Call {
 	return &AssetRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
-func (_c *AssetRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *AssetRepository_Activate_Call {
+func (_c *AssetRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *AssetRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -91,7 +91,7 @@ func (_c *AssetRepository_Activate_Call) Return(err error) *AssetRepository_Acti
 	return _c
 }
 
-func (_c *AssetRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *AssetRepository_Activate_Call {
+func (_c *AssetRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *AssetRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -152,19 +152,19 @@ func (_c *AssetRepository_All_Call) RunAndReturn(run func() ([]models.Asset, err
 }
 
 // Begin provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Begin() core.DB {
+func (_mock *AssetRepository) Begin() shared.DB {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -187,18 +187,18 @@ func (_c *AssetRepository_Begin_Call) Run(run func()) *AssetRepository_Begin_Cal
 	return _c
 }
 
-func (_c *AssetRepository_Begin_Call) Return(v core.DB) *AssetRepository_Begin_Call {
+func (_c *AssetRepository_Begin_Call) Return(v shared.DB) *AssetRepository_Begin_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *AssetRepository_Begin_Call) RunAndReturn(run func() core.DB) *AssetRepository_Begin_Call {
+func (_c *AssetRepository_Begin_Call) RunAndReturn(run func() shared.DB) *AssetRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Create(tx core.DB, t *models.Asset) error {
+func (_mock *AssetRepository) Create(tx shared.DB, t *models.Asset) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -206,7 +206,7 @@ func (_mock *AssetRepository) Create(tx core.DB, t *models.Asset) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Asset) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -220,17 +220,17 @@ type AssetRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.Asset
 func (_e *AssetRepository_Expecter) Create(tx interface{}, t interface{}) *AssetRepository_Create_Call {
 	return &AssetRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *AssetRepository_Create_Call) Run(run func(tx core.DB, t *models.Asset)) *AssetRepository_Create_Call {
+func (_c *AssetRepository_Create_Call) Run(run func(tx shared.DB, t *models.Asset)) *AssetRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Asset
 		if args[1] != nil {
@@ -249,13 +249,13 @@ func (_c *AssetRepository_Create_Call) Return(err error) *AssetRepository_Create
 	return _c
 }
 
-func (_c *AssetRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.Asset) error) *AssetRepository_Create_Call {
+func (_c *AssetRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Asset) error) *AssetRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) CreateBatch(tx core.DB, ts []models.Asset) error {
+func (_mock *AssetRepository) CreateBatch(tx shared.DB, ts []models.Asset) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -263,7 +263,7 @@ func (_mock *AssetRepository) CreateBatch(tx core.DB, ts []models.Asset) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Asset) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -277,17 +277,17 @@ type AssetRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.Asset
 func (_e *AssetRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AssetRepository_CreateBatch_Call {
 	return &AssetRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *AssetRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Asset)) *AssetRepository_CreateBatch_Call {
+func (_c *AssetRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Asset)) *AssetRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.Asset
 		if args[1] != nil {
@@ -306,13 +306,13 @@ func (_c *AssetRepository_CreateBatch_Call) Return(err error) *AssetRepository_C
 	return _c
 }
 
-func (_c *AssetRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.Asset) error) *AssetRepository_CreateBatch_Call {
+func (_c *AssetRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Asset) error) *AssetRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Delete(tx core.DB, id uuid.UUID) error {
+func (_mock *AssetRepository) Delete(tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -320,7 +320,7 @@ func (_mock *AssetRepository) Delete(tx core.DB, id uuid.UUID) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -334,17 +334,17 @@ type AssetRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id uuid.UUID
 func (_e *AssetRepository_Expecter) Delete(tx interface{}, id interface{}) *AssetRepository_Delete_Call {
 	return &AssetRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *AssetRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *AssetRepository_Delete_Call {
+func (_c *AssetRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *AssetRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -363,13 +363,13 @@ func (_c *AssetRepository_Delete_Call) Return(err error) *AssetRepository_Delete
 	return _c
 }
 
-func (_c *AssetRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *AssetRepository_Delete_Call {
+func (_c *AssetRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *AssetRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) DeleteBatch(tx core.DB, ids []models.Asset) error {
+func (_mock *AssetRepository) DeleteBatch(tx shared.DB, ids []models.Asset) error {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -377,7 +377,7 @@ func (_mock *AssetRepository) DeleteBatch(tx core.DB, ids []models.Asset) error 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Asset) error); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		r0 = ret.Error(0)
@@ -391,17 +391,17 @@ type AssetRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []models.Asset
 func (_e *AssetRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AssetRepository_DeleteBatch_Call {
 	return &AssetRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
-func (_c *AssetRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Asset)) *AssetRepository_DeleteBatch_Call {
+func (_c *AssetRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Asset)) *AssetRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.Asset
 		if args[1] != nil {
@@ -420,7 +420,7 @@ func (_c *AssetRepository_DeleteBatch_Call) Return(err error) *AssetRepository_D
 	return _c
 }
 
-func (_c *AssetRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.Asset) error) *AssetRepository_DeleteBatch_Call {
+func (_c *AssetRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Asset) error) *AssetRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -991,19 +991,19 @@ func (_c *AssetRepository_GetByProjectID_Call) RunAndReturn(run func(projectID u
 }
 
 // GetDB provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) GetDB(tx core.DB) core.DB {
+func (_mock *AssetRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -1015,16 +1015,16 @@ type AssetRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *AssetRepository_Expecter) GetDB(tx interface{}) *AssetRepository_GetDB_Call {
 	return &AssetRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *AssetRepository_GetDB_Call) Run(run func(tx core.DB)) *AssetRepository_GetDB_Call {
+func (_c *AssetRepository_GetDB_Call) Run(run func(tx shared.DB)) *AssetRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -1033,12 +1033,12 @@ func (_c *AssetRepository_GetDB_Call) Run(run func(tx core.DB)) *AssetRepository
 	return _c
 }
 
-func (_c *AssetRepository_GetDB_Call) Return(v core.DB) *AssetRepository_GetDB_Call {
+func (_c *AssetRepository_GetDB_Call) Return(v shared.DB) *AssetRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *AssetRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *AssetRepository_GetDB_Call {
+func (_c *AssetRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *AssetRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1418,7 +1418,7 @@ func (_c *AssetRepository_ReadWithAssetVersions_Call) RunAndReturn(run func(asse
 }
 
 // Save provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Save(tx core.DB, t *models.Asset) error {
+func (_mock *AssetRepository) Save(tx shared.DB, t *models.Asset) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -1426,7 +1426,7 @@ func (_mock *AssetRepository) Save(tx core.DB, t *models.Asset) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Asset) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -1440,17 +1440,17 @@ type AssetRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.Asset
 func (_e *AssetRepository_Expecter) Save(tx interface{}, t interface{}) *AssetRepository_Save_Call {
 	return &AssetRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
-func (_c *AssetRepository_Save_Call) Run(run func(tx core.DB, t *models.Asset)) *AssetRepository_Save_Call {
+func (_c *AssetRepository_Save_Call) Run(run func(tx shared.DB, t *models.Asset)) *AssetRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Asset
 		if args[1] != nil {
@@ -1469,13 +1469,13 @@ func (_c *AssetRepository_Save_Call) Return(err error) *AssetRepository_Save_Cal
 	return _c
 }
 
-func (_c *AssetRepository_Save_Call) RunAndReturn(run func(tx core.DB, t *models.Asset) error) *AssetRepository_Save_Call {
+func (_c *AssetRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Asset) error) *AssetRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) SaveBatch(tx core.DB, ts []models.Asset) error {
+func (_mock *AssetRepository) SaveBatch(tx shared.DB, ts []models.Asset) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -1483,7 +1483,7 @@ func (_mock *AssetRepository) SaveBatch(tx core.DB, ts []models.Asset) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Asset) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -1497,17 +1497,17 @@ type AssetRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.Asset
 func (_e *AssetRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *AssetRepository_SaveBatch_Call {
 	return &AssetRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *AssetRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Asset)) *AssetRepository_SaveBatch_Call {
+func (_c *AssetRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Asset)) *AssetRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.Asset
 		if args[1] != nil {
@@ -1526,13 +1526,13 @@ func (_c *AssetRepository_SaveBatch_Call) Return(err error) *AssetRepository_Sav
 	return _c
 }
 
-func (_c *AssetRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.Asset) error) *AssetRepository_SaveBatch_Call {
+func (_c *AssetRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Asset) error) *AssetRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Transaction(fn func(tx core.DB) error) error {
+func (_mock *AssetRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)
 
 	if len(ret) == 0 {
@@ -1540,7 +1540,7 @@ func (_mock *AssetRepository) Transaction(fn func(tx core.DB) error) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
 		r0 = returnFunc(fn)
 	} else {
 		r0 = ret.Error(0)
@@ -1554,16 +1554,16 @@ type AssetRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn func(tx shared.DB) error
 func (_e *AssetRepository_Expecter) Transaction(fn interface{}) *AssetRepository_Transaction_Call {
 	return &AssetRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
-func (_c *AssetRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *AssetRepository_Transaction_Call {
+func (_c *AssetRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *AssetRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
+		var arg0 func(tx shared.DB) error
 		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
+			arg0 = args[0].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
@@ -1577,13 +1577,13 @@ func (_c *AssetRepository_Transaction_Call) Return(err error) *AssetRepository_T
 	return _c
 }
 
-func (_c *AssetRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *AssetRepository_Transaction_Call {
+func (_c *AssetRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *AssetRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Update provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Update(tx core.DB, asset *models.Asset) error {
+func (_mock *AssetRepository) Update(tx shared.DB, asset *models.Asset) error {
 	ret := _mock.Called(tx, asset)
 
 	if len(ret) == 0 {
@@ -1591,7 +1591,7 @@ func (_mock *AssetRepository) Update(tx core.DB, asset *models.Asset) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Asset) error); ok {
 		r0 = returnFunc(tx, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -1605,17 +1605,17 @@ type AssetRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - asset *models.Asset
 func (_e *AssetRepository_Expecter) Update(tx interface{}, asset interface{}) *AssetRepository_Update_Call {
 	return &AssetRepository_Update_Call{Call: _e.mock.On("Update", tx, asset)}
 }
 
-func (_c *AssetRepository_Update_Call) Run(run func(tx core.DB, asset *models.Asset)) *AssetRepository_Update_Call {
+func (_c *AssetRepository_Update_Call) Run(run func(tx shared.DB, asset *models.Asset)) *AssetRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.Asset
 		if args[1] != nil {
@@ -1634,7 +1634,7 @@ func (_c *AssetRepository_Update_Call) Return(err error) *AssetRepository_Update
 	return _c
 }
 
-func (_c *AssetRepository_Update_Call) RunAndReturn(run func(tx core.DB, asset *models.Asset) error) *AssetRepository_Update_Call {
+func (_c *AssetRepository_Update_Call) RunAndReturn(run func(tx shared.DB, asset *models.Asset) error) *AssetRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

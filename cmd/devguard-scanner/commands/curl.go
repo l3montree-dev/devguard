@@ -26,8 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/constants"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/constants"
+	"github.com/l3montree-dev/devguard/services"
+
 	"github.com/spf13/cobra"
 )
 
@@ -186,7 +187,7 @@ func runCurl(opts *CurlOptions) error {
 	}
 
 	// Sign the request using DevGuard PAT
-	if err := pat.SignRequest(token, req); err != nil {
+	if err := services.SignRequest(token, req); err != nil {
 		return fmt.Errorf("failed to sign request: %v", err)
 	}
 

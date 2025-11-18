@@ -28,8 +28,8 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +43,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign request")
 	}
@@ -88,7 +88,7 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 		return nil, cancel, errors.Wrap(err, "could not create request")
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return nil, cancel, errors.Wrap(err, "could not sign request")
 	}
@@ -168,7 +168,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
