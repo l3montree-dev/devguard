@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -94,6 +95,7 @@ type TestApp struct {
 	RBACProvider shared.RBACProvider
 
 	// Integrations
+	GitlabIntegration    *gitlabint.GitlabIntegration
 	IntegrationAggregate shared.IntegrationAggregate
 }
 
@@ -137,7 +139,7 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
-		fx.Decorate(func() shared.FireAndForgetSynchronizer {
+		fx.Decorate(func() utils.FireAndForgetSynchronizer {
 			return utils.NewSyncFireAndForgetSynchronizer()
 		}),
 		fx.Populate(&app),

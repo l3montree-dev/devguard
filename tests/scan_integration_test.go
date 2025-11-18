@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -21,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.uber.org/fx"
 	"gorm.io/gorm/clause"
 )
 
@@ -770,10 +770,16 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestTicketHandling(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-
-		controller, gitlabClientFacade := initHTTPController(t, f)
-
+	testClientFactory, gitlabClientFacade := NewTestClientFactory(t)
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.GitlabClientFactory {
+				return testClientFactory
+			}),
+		},
+	}, func(f *TestFixture) {
+		controller := f.App.ScanController
 		// scan the vulnerable sbom
 		app := echo.New()
 		createCVE2025_46569(f.DB)
@@ -1124,19 +1130,6 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func initHTTPController(t *testing.T, f *TestFixture) (*controllers.ScanController, *mocks.GitlabClientFacade) {
-	// Use FX-injected controller
-	controller := f.App.ScanController
-	// do not use concurrency in this test, because we want to test the ticket creation
-	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
-
-	// Get the client factory for returning the mock
-	clientfactory, client := NewTestClientFactory(t)
-	_ = clientfactory // We get this for the client mock but controller is already wired up
-
-	return controller, client
-}
-
 func TestUploadVEX(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
@@ -1301,9 +1294,7 @@ func TestIdempotency(t *testing.T) {
 	// 4. Download it
 	// 5. compare 2 and 4
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-
-		controller, _ := initHTTPController(t, f)
-
+		controller := f.App.ScanController
 		app := echo.New()
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 		assetVersionController := f.App.AssetVersionController
@@ -1411,7 +1402,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 			t.Fatalf("could not create cve 2: %v", err)
 		}
 
-		controller, _ := initHTTPController(t, f)
+		controller := f.App.ScanController
 
 		app := echo.New()
 

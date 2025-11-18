@@ -43,10 +43,10 @@ type assetVersionService struct {
 	httpClient               *http.Client
 	thirdPartyIntegration    shared.IntegrationAggregate
 	licenseRiskRepository    shared.LicenseRiskRepository
-	shared.FireAndForgetSynchronizer
+	utils.FireAndForgetSynchronizer
 }
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
@@ -62,7 +62,7 @@ func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		licenseRiskRepository:     licenseRiskRepository,
-		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 

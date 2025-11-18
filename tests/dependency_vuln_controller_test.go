@@ -50,33 +50,18 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			fx.Decorate(func() shared.VulnEventRepository {
 				return vulnEventRepository
 			}),
+			fx.Decorate(func() shared.GitlabClientFactory {
+				return factory
+			}),
+			fx.Decorate(func() map[string]*gitlabint.GitlabOauth2Config {
+				return map[string]*gitlabint.GitlabOauth2Config{
+					"gitlab": {},
+				}
+			}),
 		},
 	}, func(f *TestFixture) {
 
-		// Create GitlabIntegration with FX-injected dependencies
-		gitlabIntegration := gitlabint.NewGitlabIntegration(
-			map[string]*gitlabint.GitlabOauth2Config{
-				"gitlab": {},
-			},
-			f.App.RBACProvider,
-			factory,
-			f.App.GitlabIntegrationRepository,
-			f.App.AggregatedVulnRepository,
-			f.App.DependencyVulnRepository,
-			f.App.VulnEventRepository,
-			f.App.ExternalUserRepository,
-			f.App.AssetRepository,
-			f.App.AssetVersionRepository,
-			f.App.ProjectRepository,
-			f.App.ComponentRepository,
-			f.App.FirstPartyVulnRepository,
-			f.App.GitLabOauth2TokenRepository,
-			f.App.LicenseRiskRepository,
-			f.App.OrgRepository,
-			f.App.StatisticsService,
-		)
-
-		thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
+		thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, f.App.GitlabIntegration)
 
 		// Create org, project, asset, asset version using FX helper
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()

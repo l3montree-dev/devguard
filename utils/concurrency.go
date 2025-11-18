@@ -109,13 +109,11 @@ func (eg *errGroup[T]) Go(fn func() (T, error)) {
 func (eg *errGroup[T]) startCollecting() {
 	// reset the result slice
 	eg.res = make([]T, 0)
-	eg.collectionDone.Add(1)
-	go func() {
-		defer eg.collectionDone.Done()
+	eg.collectionDone.Go(func() {
 		for r := range eg.ch {
 			eg.res = append(eg.res, r)
 		}
-	}()
+	})
 }
 
 func (eg *errGroup[T]) SetLimit(limit int) {
@@ -164,6 +162,12 @@ func Concurrently(fns ...func() (any, error)) concurrentResultSlice {
 	}
 
 	return res
+}
+
+// useful for integration testing - use in production to just fire and forget a function "go func()"
+// during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
+type FireAndForgetSynchronizer interface {
+	FireAndForget(fn func())
 }
 
 type GoroutineFireAndForgetSynchronizer struct{}

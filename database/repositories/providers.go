@@ -51,4 +51,6 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewGitLabIntegrationRepository, fx.As(new(shared.GitlabIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewGitlabOauth2TokenRepository, fx.As(new(shared.GitLabOauth2TokenRepository)))),
 	fx.Provide(fx.Annotate(NewAggregatedVulnRepository, fx.As(new(shared.VulnRepository)))),
+	fx.Provide(fx.Annotate(NewGithubAppInstallationRepository, fx.As(new(shared.GithubAppInstallationRepository)))),
+	fx.Provide(fx.Annotate(NewJiraIntegrationRepository, fx.As(new(shared.JiraIntegrationRepository)))),
 )

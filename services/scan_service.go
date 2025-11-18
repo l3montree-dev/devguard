@@ -34,10 +34,10 @@ type scanService struct {
 	artifactService       shared.ArtifactService
 	statisticsService     shared.StatisticsService
 	// mark public to let it be overridden in tests
-	shared.FireAndForgetSynchronizer
+	utils.FireAndForgetSynchronizer
 }
 
-func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, artifactService shared.ArtifactService, statisticsService shared.StatisticsService) *scanService {
+func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, artifactService shared.ArtifactService, statisticsService shared.StatisticsService, synchronizer utils.FireAndForgetSynchronizer) *scanService {
 	purlComparer := scan.NewPurlComparer(db)
 	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
@@ -46,8 +46,7 @@ func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersi
 		dependencyVulnService:     dependencyVulnService,
 		artifactService:           artifactService,
 		statisticsService:         statisticsService,
-		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
-	}
+		FireAndForgetSynchronizer: synchronizer}
 }
 
 func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error) {

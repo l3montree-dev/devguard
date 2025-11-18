@@ -35,7 +35,7 @@ type DependencyVulnController struct {
 	statisticsService        shared.StatisticsService
 	vulnEventRepository      shared.VulnEventRepository
 	// mark public to let it be overridden in tests
-	shared.FireAndForgetSynchronizer
+	utils.FireAndForgetSynchronizer
 }
 
 type DependencyVulnStatus struct {
@@ -44,14 +44,14 @@ type DependencyVulnStatus struct {
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository) *DependencyVulnController {
+func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
 	return &DependencyVulnController{
 		dependencyVulnRepository:  dependencyVulnRepository,
 		dependencyVulnService:     dependencyVulnService,
 		projectService:            projectService,
 		statisticsService:         statisticsService,
 		vulnEventRepository:       vulnEventRepository,
-		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 // ServiceModule provides all service-layer constructors as their interfaces
 var ServiceModule = fx.Options(
 	fx.Provide(
-		fx.Annotate(utils.NewFireAndForgetSynchronizer, fx.As(new(shared.FireAndForgetSynchronizer))),
+		fx.Annotate(utils.NewFireAndForgetSynchronizer, fx.As(new(utils.FireAndForgetSynchronizer))),
 	),
 	fx.Provide(NewConfigService),
 	fx.Provide(fx.Annotate(NewFirstPartyVulnService, fx.As(new(shared.FirstPartyVulnService)))),

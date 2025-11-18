@@ -14,13 +14,15 @@ import (
 
 type artifactRepository struct {
 	utils.Repository[string, models.Artifact, *gorm.DB]
+	utils.FireAndForgetSynchronizer
 	db *gorm.DB
 }
 
-func NewArtifactRepository(db *gorm.DB) *artifactRepository {
+func NewArtifactRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchronizer) *artifactRepository {
 	return &artifactRepository{
-		db:         db,
-		Repository: newGormRepository[string, models.Artifact](db),
+		db:                        db,
+		Repository:                newGormRepository[string, models.Artifact](db),
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
@@ -58,13 +60,13 @@ func (r *artifactRepository) DeleteArtifact(assetID uuid.UUID, assetVersionName 
 		return err
 	}
 
-	go func() {
+	r.FireAndForget(func() {
 		sql := CleanupOrphanedRecordsSQL
 		err = r.db.Exec(sql).Error
 		if err != nil {
 			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 		}
-	}() //nolint:errcheck
+	})
 
 	return err
 }

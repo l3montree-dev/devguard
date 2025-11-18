@@ -15,11 +15,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/jira"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -52,32 +50,30 @@ type JiraIntegration struct {
 	projectRepository         shared.ProjectRepository
 	frontendURL               string
 	statisticsService         shared.StatisticsService
+	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ThirdPartyIntegration = &JiraIntegration{}
 
 var DevguardCommentText = "This comment was added via DevGuard."
 
-func NewJiraIntegration(db shared.DB) *JiraIntegration {
-	jiraIntegrationRepository := repositories.NewJiraIntegrationRepository(db)
-	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	externalUserRepository := repositories.NewExternalUserRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
+func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationRepository,
+	aggregatedVulnRepository shared.VulnRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	firstPartyVulnRepository shared.FirstPartyVulnRepository,
+	componentRepository shared.ComponentRepository,
+	externalUserRepository shared.ExternalUserRepository,
+	vulnEventRepository shared.VulnEventRepository,
+	assetVersionRepository shared.AssetVersionRepository,
+	assetRepository shared.AssetRepository,
+	orgRepository shared.OrganizationRepository,
+	projectRepository shared.ProjectRepository,
+	statisticsService shared.StatisticsService,
+	synchronizer utils.FireAndForgetSynchronizer) *JiraIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
-
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	releaseRepository := repositories.NewReleaseRepository(db)
-	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 
 	return &JiraIntegration{
 		jiraIntegrationRepository: jiraIntegrationRepository,
@@ -86,13 +82,14 @@ func NewJiraIntegration(db shared.DB) *JiraIntegration {
 		firstPartyVulnRepository:  firstPartyVulnRepository,
 		vulnEventRepository:       vulnEventRepository,
 		externalUserRepository:    externalUserRepository,
-		assetRepository:           repositories.NewAssetRepository(db),
+		assetRepository:           assetRepository,
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		frontendURL:               frontendURL,
 		statisticsService:         statisticsService,
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 

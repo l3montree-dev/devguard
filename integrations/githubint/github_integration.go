@@ -26,10 +26,8 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -72,28 +70,29 @@ type GithubIntegration struct {
 	projectRepository   shared.ProjectRepository
 	githubClientFactory func(repoID string) (shared.GithubClientFacade, error)
 	statisticsService   shared.StatisticsService
+	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ThirdPartyIntegration = &GithubIntegration{}
 
 var ErrNoGithubAppInstallation = fmt.Errorf("no github app installations found")
 
-func NewGithubIntegration(db shared.DB) *GithubIntegration {
-	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
+func NewGithubIntegration(
+	githubAppInstallationRepository shared.GithubAppInstallationRepository,
+	externalUserRepository shared.ExternalUserRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	firstPartyVulnRepository shared.FirstPartyVulnRepository,
+	vulnEventRepository shared.VulnEventRepository,
+	aggregatedVulnRepository shared.VulnRepository,
+	assetRepository shared.AssetRepository,
+	assetVersionRepository shared.AssetVersionRepository,
+	componentRepository shared.ComponentRepository,
+	licenseRiskRepository shared.LicenseRiskRepository,
+	orgRepository shared.OrganizationRepository,
+	projectRepository shared.ProjectRepository,
+	statisticsService shared.StatisticsService,
+	synchronizer utils.FireAndForgetSynchronizer) *GithubIntegration {
 
-	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	assetRiskAggregationRepository := repositories.NewArtifactRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	releaseRepository := repositories.NewReleaseRepository(db)
-	statisticsService := services.NewStatisticsService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, releaseRepository)
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
@@ -101,13 +100,13 @@ func NewGithubIntegration(db shared.DB) *GithubIntegration {
 
 	return &GithubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
-		externalUserRepository:          repositories.NewExternalUserRepository(db),
+		externalUserRepository:          externalUserRepository,
 		aggregatedVulnRepository:        aggregatedVulnRepository,
 		dependencyVulnRepository:        dependencyVulnRepository,
 		firstPartyVulnRepository:        firstPartyVulnRepository,
 		vulnEventRepository:             vulnEventRepository,
 		frontendURL:                     frontendURL,
-		assetRepository:                 repositories.NewAssetRepository(db),
+		assetRepository:                 assetRepository,
 		assetVersionRepository:          assetVersionRepository,
 		componentRepository:             componentRepository,
 		projectRepository:               projectRepository,
@@ -232,7 +231,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
-		go func() {
+		githubIntegration.FireAndForget(func() {
 			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
@@ -254,7 +253,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
-		}()
+		})
 
 		switch action {
 		case "closed":
@@ -329,7 +328,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
-		go func() {
+		githubIntegration.FireAndForget(func() {
 			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
@@ -351,7 +350,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
-		}()
+		})
 
 		// the issue is a devguard issue.
 		// lets check what the comment is about

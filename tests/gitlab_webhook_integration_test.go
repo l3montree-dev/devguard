@@ -4,46 +4,35 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.uber.org/fx"
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "http://localhost:3000")
+	factory, client := NewTestClientFactory(t)
 
-		factory, client := NewTestClientFactory(t)
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.GitlabClientFactory {
+				return factory
+			}),
+		},
+	}, func(f *TestFixture) {
+
 		// Setup integration using FX-injected repositories and services
-		gitlabInt := gitlabint.NewGitlabIntegration(
-			nil, // oauth2GitlabIntegration
-			f.App.RBACProvider,
-			factory,
-			f.App.GitlabIntegrationRepository,
-			f.App.AggregatedVulnRepository,
-			f.App.DependencyVulnRepository,
-			f.App.VulnEventRepository,
-			f.App.ExternalUserRepository,
-			f.App.AssetRepository,
-			f.App.AssetVersionRepository,
-			f.App.ProjectRepository,
-			f.App.ComponentRepository,
-			f.App.FirstPartyVulnRepository,
-			f.App.GitLabOauth2TokenRepository,
-			f.App.LicenseRiskRepository,
-			f.App.OrgRepository,
-			f.App.StatisticsService,
-		)
+		gitlabInt := f.App.GitlabIntegration
 
 		// Setup org, asset, asset version, and vuln
 		org, _, asset, _ := f.CreateOrgProjectAssetAndVersion()

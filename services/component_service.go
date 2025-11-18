@@ -21,10 +21,10 @@ type ComponentService struct {
 	componentProjectRepository shared.ComponentProjectRepository
 	licenseRiskService         shared.LicenseRiskService
 	artifactRepository         shared.ArtifactRepository
-	synchronizer               shared.FireAndForgetSynchronizer
+	utils.FireAndForgetSynchronizer
 }
 
-func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer shared.FireAndForgetSynchronizer) *ComponentService {
+func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
 
 	return &ComponentService{
 		componentRepository:        componentRepository,
@@ -32,7 +32,7 @@ func NewComponentService(openSourceInsightsService shared.OpenSourceInsightServi
 		openSourceInsightsService:  openSourceInsightsService,
 		licenseRiskService:         licenseRiskService,
 		artifactRepository:         artifactRepository,
-		synchronizer:               synchronizer,
+		FireAndForgetSynchronizer:  synchronizer,
 	}
 }
 
@@ -230,7 +230,7 @@ func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.Asse
 		}
 	}
 
-	s.synchronizer.FireAndForget(func() {
+	s.FireAndForget(func() {
 
 		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
 			//check if the purl is valid and has a version

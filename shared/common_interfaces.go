@@ -331,12 +331,6 @@ type DependencyVulnService interface {
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }
 
-// useful for integration testing - use in production to just fire and forget a function "go func()"
-// during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
-type FireAndForgetSynchronizer interface {
-	FireAndForget(fn func())
-}
-
 type AssetVersionService interface {
 	BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom

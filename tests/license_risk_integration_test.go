@@ -100,7 +100,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 }
 
 func getSBOMWithWithLicenseRisk() io.Reader {
-	file, err := os.Open("../vulndb/scan/testdata/sbom-with-license-risk.json")
+	file, err := os.Open("testdata/sbom-with-license-risk.json")
 	if err != nil {
 		panic(err)
 	}
@@ -130,8 +130,6 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 		},
 	}, func(f *TestFixture) {
 		controller := f.App.ScanController
-		// do not use concurrency in this test
-		controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 
 		app := echo.New()
 

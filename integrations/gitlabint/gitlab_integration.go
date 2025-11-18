@@ -106,6 +106,7 @@ type GitlabIntegration struct {
 	casbinRBACProvider          shared.RBACProvider
 	licenseRiskRepository       shared.LicenseRiskRepository
 	statisticsService           shared.StatisticsService
+	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ThirdPartyIntegration = &GitlabIntegration{}
@@ -132,6 +133,7 @@ func NewGitlabIntegration(
 	licenseRiskRepository shared.LicenseRiskRepository,
 	orgRepository shared.OrganizationRepository,
 	statisticsService shared.StatisticsService,
+	synchronizer utils.FireAndForgetSynchronizer,
 ) *GitlabIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -157,6 +159,7 @@ func NewGitlabIntegration(
 		clientFactory:               clientFactory,
 		licenseRiskRepository:       licenseRiskRepository,
 		statisticsService:           statisticsService,
+		FireAndForgetSynchronizer:   synchronizer,
 	}
 }
 
@@ -483,12 +486,10 @@ func FetchPaginatedData[T any](
 				break
 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				// Send fetched data to the channel
 				dataChan <- pageData
-			}()
+			})
 		}
 
 	} else if response.TotalPages > 1 { // we already fetched one page.

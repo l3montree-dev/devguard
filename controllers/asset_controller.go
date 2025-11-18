@@ -23,16 +23,18 @@ type AssetController struct {
 	dependencyVulnService  shared.DependencyVulnService
 	statisticsService      shared.StatisticsService
 	thirdPartyIntegration  shared.IntegrationAggregate
+	utils.FireAndForgetSynchronizer
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer) *AssetController {
 	return &AssetController{
-		assetRepository:        repository,
-		assetVersionRepository: assetVersionRepository,
-		assetService:           assetService,
-		dependencyVulnService:  dependencyVulnService,
-		statisticsService:      statisticsService,
-		thirdPartyIntegration:  thirdPartyIntegration,
+		assetRepository:           repository,
+		assetVersionRepository:    assetVersionRepository,
+		assetService:              assetService,
+		dependencyVulnService:     dependencyVulnService,
+		statisticsService:         statisticsService,
+		thirdPartyIntegration:     thirdPartyIntegration,
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
@@ -275,7 +277,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			asset.Metadata["gitlabLabels"] = true
 		}
 
-		go func() {
+		a.FireAndForget(func() {
 			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 			if err != nil {
 				slog.Error("could not get default asset version", "err", err)
@@ -285,7 +287,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			if err := a.dependencyVulnService.SyncAllIssues(org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
-		}()
+		})
 	}
 
 	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)

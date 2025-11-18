@@ -42,10 +42,10 @@ type ScanController struct {
 	firstPartyVulnService    shared.FirstPartyVulnService
 	shared.ScanService
 	// mark public to let it be overridden in tests
-	shared.FireAndForgetSynchronizer
+	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository) *ScanController {
+func NewScanController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *ScanController {
 	return &ScanController{
 		componentRepository:       componentRepository,
 		assetVersionService:       assetVersionService,
@@ -54,7 +54,7 @@ func NewScanController(scanService shared.ScanService, componentRepository share
 		statisticsService:         statisticsService,
 		dependencyVulnService:     dependencyVulnService,
 		firstPartyVulnService:     firstPartyVulnService,
-		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		FireAndForgetSynchronizer: synchronizer,
 		artifactService:           artifactService,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,

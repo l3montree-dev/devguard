@@ -81,7 +81,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	}
 	// make sure to save the user - it might be a new user or it might have new values defined.
 	// we do not care about any error - and we want speed, thus do it on a goroutine
-	go func() {
+	i.FireAndForget(func() {
 		org, err := i.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 		if err != nil {
 			slog.Error("could not get org from dependencyVuln id", "err", err)
@@ -103,7 +103,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		if err = i.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 			slog.Error("could not append user to organization", "err", err)
 		}
-	}()
+	})
 
 	statusCategory := event.Issue.Fields.Status.StatusCategory.ID
 
