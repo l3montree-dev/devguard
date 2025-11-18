@@ -14,8 +14,8 @@
 <div align="center">
 
   <picture>
-    <source srcset="images/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
-    <img src="images/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
+    <source srcset="docs/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
+    <img src="docs/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
   </picture>
 
   <h3 align="center">DevGuard - Develop Secure Software - Backend</h3>
@@ -356,12 +356,12 @@ Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt
 
 We are proud to be supported and working together with the following organizations:
 
-[![OWASP](./images/sponsors/sp-owasp.png)](https://owasp.org/)
-[![Bonn-Rhein-Sieg University of Applied Science](./images/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
-[![WhereGroup](./images/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
-[![DigitalHub](./images/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
-[![WetterOnline](./images/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
-[![Ikor](./images/sponsors/sp-ikor.png)](https://ikor.one/)
+[![OWASP](./docs/sponsors/sp-owasp.png)](https://owasp.org/)
+[![Bonn-Rhein-Sieg University of Applied Science](./docs/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
+[![WhereGroup](./docs/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
+[![DigitalHub](./docs/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
+[![WetterOnline](./docs/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
+[![Ikor](./docs/sponsors/sp-ikor.png)](https://ikor.one/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
