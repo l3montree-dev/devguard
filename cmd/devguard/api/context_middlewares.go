@@ -124,3 +124,29 @@ func assetVersionMiddleware(repository core.AssetVersionRepository) func(next ec
 		}
 	}
 }
+
+func eventMiddleware(repository core.VulnEventRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	{
+		return func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(ctx echo.Context) error {
+				assetID := core.GetAsset(ctx).ID
+
+				eventID := ctx.Param("eventID")
+				if eventID == "" {
+					return echo.NewHTTPError(400, "eventID is required")
+				}
+
+				hasAccess, err := repository.HasAccessToEvent(assetID, eventID)
+				if err != nil {
+					return echo.NewHTTPError(500, "could not verify access to event").WithInternal(err)
+				}
+				if !hasAccess {
+					return echo.NewHTTPError(403, "you do not have access to this event")
+				}
+
+				core.SetEventID(ctx, eventID)
+				return next(ctx)
+			}
+		}
+	}
+}
