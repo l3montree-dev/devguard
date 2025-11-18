@@ -66,6 +66,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		assert.NoError(t, f.DB.Save(&asset).Error)
 
 		t.Run("should create only one ticket when vuln exists in two artifacts", func(t *testing.T) {
+			mockThirdPartyIntegration.Calls = nil // Reset calls
+			createIssueCallCount = 0
 			// Create a CVE
 			cve := models.CVE{
 				CVE:              "CVE-2024-12345",
@@ -105,22 +107,6 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
-			// Set up mock third-party integration
-			mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-			createIssueCallCount := 0
-			mockThirdPartyIntegration.On("CreateIssue",
-				mock.Anything, // context
-				mock.Anything, // asset
-				mock.Anything, // assetVersionSlug
-				mock.Anything, // vuln
-				mock.Anything, // projectSlug
-				mock.Anything, // orgSlug
-				mock.Anything, // justification
-				mock.Anything, // userID
-			).Run(func(args mock.Arguments) {
-				createIssueCallCount++
-			}).Return(nil).Maybe()
-
 			// Call SyncAllIssues with FX-injected service
 			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion)
 			assert.NoError(t, err)
@@ -139,6 +125,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		})
 
 		t.Run("should create separate tickets for different vulnerabilities", func(t *testing.T) {
+			mockThirdPartyIntegration.Calls = nil // Reset calls
+			createIssueCallCount = 0
 			// Create a new asset version for this test
 			assetVersion2 := models.AssetVersion{
 				Name:          "test-branch-2",
@@ -203,32 +191,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln1).Error)
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
 
-			// Set up mock third-party integration for manual service construction
-			mockThirdPartyIntegration2 := mocks.NewIntegrationAggregate(t)
-			createIssueCallCount := 0
-			mockThirdPartyIntegration2.On("CreateIssue",
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-				mock.Anything,
-			).Run(func(args mock.Arguments) {
-				createIssueCallCount++
-			}).Return(nil).Maybe()
-
-			// Temporarily replace the integration aggregate for this subtest
-			originalIntegration := f.App.IntegrationAggregate
-			f.App.IntegrationAggregate = mockThirdPartyIntegration2
-
 			// Call SyncAllIssues with FX-injected service
 			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion2)
 			assert.NoError(t, err)
-
-			// Restore original integration
-			f.App.IntegrationAggregate = originalIntegration
 
 			// Verify CreateIssue was called twice (once for each different vulnerability)
 			assert.Equal(t, 2, createIssueCallCount, "CreateIssue should be called twice for two different vulnerabilities")
