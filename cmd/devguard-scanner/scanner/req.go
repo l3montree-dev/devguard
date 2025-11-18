@@ -113,7 +113,10 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 }
 
 func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetName string) error {
-	devGuardClient := devguard.NewHTTPClient(token, apiURL)
+	devGuardClient, err := devguard.NewHTTPClient(token, apiURL)
+	if err != nil {
+		return err
+	}
 
 	var body = make(map[string]string)
 

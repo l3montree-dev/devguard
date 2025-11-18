@@ -86,7 +86,11 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	req.Header.Set("Content-Type", "application/json")
 	config.SetXAssetHeaders(req)
 	// send the request
-	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL).Do(req)
+	client, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to create HTTP client")
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}
