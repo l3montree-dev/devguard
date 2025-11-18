@@ -1,0 +1,89 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "github.com/l3montree-dev/devguard/cmd/devguard-scanner/iac",
+                    "rules": [
+                        {
+                            "id": "CKV_DOCKER_2",
+                            "help": {
+                                "text": "Ensure that HEALTHCHECK instructions have been added to container images\nResource: /Dockerfile.",
+                                "markdown": ""
+                            },
+                            "name": "Ensure that HEALTHCHECK instructions have been added to container images",
+                            "helpUri": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/docker-policies/docker-policy-index/ensure-that-healthcheck-instructions-have-been-added-to-container-images",
+                            "Properties": null,
+                            "fullDescription": {
+                                "text": "Ensure that HEALTHCHECK instructions have been added to container images",
+                                "markdown": ""
+                            },
+                            "shortDescription": {
+                                "text": "Ensure that HEALTHCHECK instructions have been added to container images",
+                                "markdown": ""
+                            }
+                        }
+                    ]
+                }
+            },
+            "results": [
+                {
+                    "kind": "issue",
+                    "ruleId": "CKV_DOCKER_2",
+                    "Message": {
+                        "text": "Ensure that HEALTHCHECK instructions have been added to container images",
+                        "markdown": ""
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "region": {
+                                    "endLine": 52,
+                                    "snippet": {
+                                        "text": "+++\nFROM node:22.15.0@sha256:a1f1274dadd49738bcd4cf5****************************************** as builder\nLABEL maintainer=\"Sebastian Kawelke <sebatian.kawelke****************\n# checkov:skip=************\n# Disable telemetry\nENV NEXT_TELEMETRY_DISABLED 1\nENV NODE_ENV production\nWORKDIR /usr/app/\nENV PORT 3000\nEXPOSE 3000\nCOPY package-lock.json .\nCOPY package.json .\nRUN npm ci\nCOPY . .\nENV NEXT_SHARP_PATH=/usr/a*********************\nARG NEXT_PUBLIC_UMAMI_WEBSITE_ID\nENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID\nARG NEXT_PUBLIC_UMAMI_URL\nENV NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL\nARG NEXT_PUBLIC_HONEYPOT_URL\nENV NEXT_PUBLIC_HONEYPOT_URL=$NEXT_PUBLIC_HONEYPOT_URL\n# Build\nRUN npm run build\nRUN mkdir -p /usr/app/.next/cache/images && chown -R 53111:53111 /usr/app/.next/cache/images\nFROM gcr.io/distroless/nodejs22-debian12:nonroot@sha256:7461370*********************************************************\nUSER 53111\nWORKDIR /usr/app/\nENV PORT 3000\nENV NODE_ENV production\nENV NEXT_TELEMETRY_DISABLED 1\nCOPY --from=builder --chown=53111:53111 /usr/app/.next /usr/app/.next\nCOPY --from=builder /usr/app/node_modules /usr/app/node_modules\nCOPY --from=builder /usr/app/package.json /usr/app/package.json\nCOPY --from=builder --chown=53111:53111 /usr/app/public /usr/app/public\nCMD [ \"./node_modules/next/dist/bin/next\", \"start\" ]\n+++\n",
+                                        "markdown": ""
+                                    },
+                                    "endColumn": 0,
+                                    "startLine": 1,
+                                    "startColumn": 0
+                                },
+                                "artifactLocation": {
+                                    "uri": "Dockerfile"
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kind": "issue",
+                    "ruleId": "CKV_DOCKER_2",
+                    "Message": {
+                        "text": "Ensure that HEALTHCHECK instructions have been added to container images",
+                        "markdown": ""
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "region": {
+                                    "endLine": 50,
+                                    "snippet": {
+                                        "text": "+++\nFROM node:22.15.0@sha256:a1f1274dadd49738bcd4cf5****************************************** as builder\nLABEL maintainer=\"Sebastian Kawelke <sebatian.kawelke****************\n# Disable telemetry\nENV NEXT_TELEMETRY_DISABLED 1\nENV NODE_ENV production\nWORKDIR /usr/app/\nENV PORT 3000\nEXPOSE 3000\nCOPY package-lock.json .\nCOPY package.json .\nRUN npm ci\nCOPY . .\nENV NEXT_SHARP_PATH=/usr/a*********************\nARG NEXT_PUBLIC_UMAMI_WEBSITE_ID\nENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID\nARG NEXT_PUBLIC_UMAMI_URL\nENV NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL\nARG NEXT_PUBLIC_HONEYPOT_URL\nENV NEXT_PUBLIC_HONEYPOT_URL=$NEXT_PUBLIC_HONEYPOT_URL\n# Build\nRUN npm run build\nRUN mkdir -p /usr/app/.next/cache/images && chown -R 53111:53111 /usr/app/.next/cache/images\nFROM gcr.io/distroless/nodejs22-debian12:nonroot@sha256:7461370*********************************************************\nUSER 53111\nWORKDIR /usr/app/\nENV PORT 3000\nENV NODE_ENV production\nENV NEXT_TELEMETRY_DISABLED 1\nCOPY --from=builder --chown=53111:53111 /usr/app/.next /usr/app/.next\nCOPY --from=builder /usr/app/node_modules /usr/app/node_modules\nCOPY --from=builder /usr/app/package.json /usr/app/package.json\nCOPY --from=builder --chown=53111:53111 /usr/app/public /usr/app/public\nCMD [ \"./node_modules/next/dist/bin/next\", \"start\" ]\n+++\n",
+                                        "markdown": ""
+                                    },
+                                    "endColumn": 0,
+                                    "startLine": 1,
+                                    "startColumn": 0
+                                },
+                                "artifactLocation": {
+                                    "uri": "Dockerfile"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",
+    "version": "2.1.0"
+}

@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -89,7 +89,7 @@ func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) RunAndReturn(run f
 }
 
 // Delete provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabOauth2Token) error {
+func (_mock *GitLabOauth2TokenRepository) Delete(tx shared.DB, tokens []models.GitLabOauth2Token) error {
 	ret := _mock.Called(tx, tokens)
 
 	if len(ret) == 0 {
@@ -97,7 +97,7 @@ func (_mock *GitLabOauth2TokenRepository) Delete(tx core.DB, tokens []models.Git
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.GitLabOauth2Token) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.GitLabOauth2Token) error); ok {
 		r0 = returnFunc(tx, tokens)
 	} else {
 		r0 = ret.Error(0)
@@ -111,17 +111,17 @@ type GitLabOauth2TokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - tokens []models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) Delete(tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_Delete_Call {
 	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, tokens)}
 }
 
-func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx core.DB, tokens []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Delete_Call {
+func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx shared.DB, tokens []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.GitLabOauth2Token
 		if args[1] != nil {
@@ -140,7 +140,7 @@ func (_c *GitLabOauth2TokenRepository_Delete_Call) Return(err error) *GitLabOaut
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx core.DB, tokens []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Delete_Call {
+func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, tokens []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -333,7 +333,7 @@ func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) RunAndRetu
 }
 
 // Save provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Save(tx core.DB, model ...*models.GitLabOauth2Token) error {
+func (_mock *GitLabOauth2TokenRepository) Save(tx shared.DB, model ...*models.GitLabOauth2Token) error {
 	var tmpRet mock.Arguments
 	if len(model) > 0 {
 		tmpRet = _mock.Called(tx, model)
@@ -347,7 +347,7 @@ func (_mock *GitLabOauth2TokenRepository) Save(tx core.DB, model ...*models.GitL
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, ...*models.GitLabOauth2Token) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, ...*models.GitLabOauth2Token) error); ok {
 		r0 = returnFunc(tx, model...)
 	} else {
 		r0 = ret.Error(0)
@@ -361,18 +361,18 @@ type GitLabOauth2TokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - model ...*models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) Save(tx interface{}, model ...interface{}) *GitLabOauth2TokenRepository_Save_Call {
 	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save",
 		append([]interface{}{tx}, model...)...)}
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx core.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx shared.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []*models.GitLabOauth2Token
 		var variadicArgs []*models.GitLabOauth2Token
@@ -393,7 +393,7 @@ func (_c *GitLabOauth2TokenRepository_Save_Call) Return(err error) *GitLabOauth2
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(tx core.DB, model ...*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model ...*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

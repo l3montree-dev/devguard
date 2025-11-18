@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +30,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 	// get the key from the args
 	key := args[0]
 
-	privKey, pubKey, err := pat.HexTokenToECDSA(key)
+	privKey, pubKey, err := services.HexTokenToECDSA(key)
 	if err != nil {
 		return errors.Wrap(err, "could not parse key")
 	}

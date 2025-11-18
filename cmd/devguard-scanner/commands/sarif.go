@@ -30,10 +30,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
+
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -70,7 +70,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.FirstPartyScanResponse
+	var scanResponse dtos.FirstPartyScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
@@ -134,7 +134,7 @@ The command signs the request using the configured token and returns scan result
 	return cmd
 }
 
-func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -280,7 +280,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not create request")
 		}
 
-		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
 		}
@@ -310,7 +310,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		// read and parse the body - it should be an array of dependencyVulns
 		// print the dependencyVulns to the console
-		var scanResponse scan.FirstPartyScanResponse
+		var scanResponse dtos.FirstPartyScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {
@@ -321,7 +321,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*dtos.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path, outputPath)

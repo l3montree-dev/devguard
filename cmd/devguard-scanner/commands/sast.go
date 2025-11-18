@@ -9,12 +9,12 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func sastScan(p, outputPath string) (*common.SarifResult, error) {
+func sastScan(p, outputPath string) (*dtos.SarifResult, error) {
 	dir := os.TempDir()
 	dir = path.Join(dir, "sast")
 
@@ -57,7 +57,7 @@ func sastScan(p, outputPath string) (*common.SarifResult, error) {
 	}
 	defer file.Close()
 	// parse the file
-	var sarifScan common.SarifResult
+	var sarifScan dtos.SarifResult
 	err = json.NewDecoder(file).Decode(&sarifScan)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse sarif file")

@@ -5,8 +5,9 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -182,7 +183,7 @@ func (_c *FirstPartyVulnService_SyncIssues_Call) RunAndReturn(run func(org model
 }
 
 // UpdateFirstPartyVulnState provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 
 	if len(ret) == 0 {
@@ -191,15 +192,15 @@ func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.FirstPartyVuln, string, string, models.MechanicalJustificationType) (models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType) (models.VulnEvent, error)); ok {
 		return returnFunc(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.FirstPartyVuln, string, string, models.MechanicalJustificationType) models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType) models.VulnEvent); ok {
 		r0 = returnFunc(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, *models.FirstPartyVuln, string, string, models.MechanicalJustificationType) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType) error); ok {
 		r1 = returnFunc(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 	} else {
 		r1 = ret.Error(1)
@@ -213,21 +214,21 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 }
 
 // UpdateFirstPartyVulnState is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - userID string
 //   - firstPartyVuln *models.FirstPartyVuln
 //   - statusType string
 //   - justification string
-//   - mechanicalJustification models.MechanicalJustificationType
+//   - mechanicalJustification dtos.MechanicalJustificationType
 func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)}
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -245,9 +246,9 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx 
 		if args[4] != nil {
 			arg4 = args[4].(string)
 		}
-		var arg5 models.MechanicalJustificationType
+		var arg5 dtos.MechanicalJustificationType
 		if args[5] != nil {
-			arg5 = args[5].(models.MechanicalJustificationType)
+			arg5 = args[5].(dtos.MechanicalJustificationType)
 		}
 		run(
 			arg0,
@@ -266,13 +267,13 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Return(vulnEvent
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserDetectedExistingFirstPartyVulnOnDifferentBranch provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
 	ret := _mock.Called(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
 
 	if len(ret) == 0 {
@@ -280,7 +281,7 @@ func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferen
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.FirstPartyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.FirstPartyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
 		r0 = returnFunc(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
 	} else {
 		r0 = ret.Error(0)
@@ -294,7 +295,7 @@ type FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_C
 }
 
 // UserDetectedExistingFirstPartyVulnOnDifferentBranch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - scannerID string
 //   - firstPartyVulns []models.FirstPartyVuln
 //   - alreadyExistingEvents [][]models.VulnEvent
@@ -304,11 +305,11 @@ func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDi
 	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -347,13 +348,13 @@ func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBra
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) RunAndReturn(run func(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) RunAndReturn(run func(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserDetectedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	ret := _mock.Called(tx, userID, scannerID, firstPartyVulns)
 
 	if len(ret) == 0 {
@@ -361,7 +362,7 @@ func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, user
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, string, []models.FirstPartyVuln) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, string, []models.FirstPartyVuln) error); ok {
 		r0 = returnFunc(tx, userID, scannerID, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
@@ -375,7 +376,7 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 }
 
 // UserDetectedFirstPartyVulns is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - userID string
 //   - scannerID string
 //   - firstPartyVulns []models.FirstPartyVuln
@@ -383,11 +384,11 @@ func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interfa
 	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerID, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -416,13 +417,13 @@ func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Return(err err
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserFixedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (_mock *FirstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
 	ret := _mock.Called(tx, userID, firstPartyVulns)
 
 	if len(ret) == 0 {
@@ -430,7 +431,7 @@ func (_mock *FirstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.FirstPartyVuln) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.FirstPartyVuln) error); ok {
 		r0 = returnFunc(tx, userID, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
@@ -444,18 +445,18 @@ type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
 }
 
 // UserFixedFirstPartyVulns is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - userID string
 //   - firstPartyVulns []models.FirstPartyVuln
 func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(tx interface{}, userID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", tx, userID, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -479,7 +480,7 @@ func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Return(err error)
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

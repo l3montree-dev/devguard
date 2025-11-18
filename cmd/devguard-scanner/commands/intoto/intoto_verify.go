@@ -67,7 +67,10 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	// download the layout
-	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
+	c, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
+	if err != nil {
+		return err
+	}
 
 	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), nil)
 	if err != nil {

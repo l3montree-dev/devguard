@@ -33,8 +33,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
 	"github.com/pkg/errors"
@@ -136,10 +136,14 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 }
 
 func scanExternalImage(ctx context.Context) error {
-	// download and extract release attestation BOMs first
-	attestations, err := scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
-	if err != nil && !strings.Contains(err.Error(), "found no attestations") {
-		return err
+	var err error
+	var attestations = []map[string]any{}
+	if !config.RuntimeBaseConfig.IgnoreUpstreamAttestations {
+		// download and extract release attestation BOMs first
+		attestations, err = scanner.DiscoverAttestations(config.RuntimeBaseConfig.Image, "")
+		if err != nil && !strings.Contains(err.Error(), "found no attestations") {
+			return err
+		}
 	}
 
 	// generate SBOM using Trivy
@@ -272,7 +276,7 @@ func scanExternalImage(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.ScanResponse
+	var scanResponse dtos.ScanResponse
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
 		return errors.Wrap(err, "could not parse response")
@@ -322,7 +326,7 @@ func scanLocalFilePath(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.ScanResponse
+	var scanResponse dtos.ScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {

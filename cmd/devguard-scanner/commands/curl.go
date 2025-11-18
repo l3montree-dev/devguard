@@ -26,8 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/constants"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/config"
+	"github.com/l3montree-dev/devguard/services"
+
 	"github.com/spf13/cobra"
 )
 
@@ -177,7 +178,7 @@ func runCurl(opts *CurlOptions) error {
 	if opts.userAgent != "" {
 		req.Header.Set("User-Agent", opts.userAgent)
 	} else {
-		req.Header.Set("User-Agent", constants.UserAgent)
+		req.Header.Set("User-Agent", config.UserAgent)
 	}
 
 	// Set Content-Type for POST data if not already set
@@ -186,7 +187,7 @@ func runCurl(opts *CurlOptions) error {
 	}
 
 	// Sign the request using DevGuard PAT
-	if err := pat.SignRequest(token, req); err != nil {
+	if err := services.SignRequest(token, req); err != nil {
 		return fmt.Errorf("failed to sign request: %v", err)
 	}
 

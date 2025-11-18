@@ -29,8 +29,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -59,7 +59,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.ScanResponse
+	var scanResponse dtos.ScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {

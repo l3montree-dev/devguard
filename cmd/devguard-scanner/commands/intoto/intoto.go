@@ -158,7 +158,7 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 	}, nil
 }
 
-func downloadSupplyChainLinks(ctx context.Context, c devguard.HTTPClient, linkDir, apiURL, assetName, supplyChainID string) error {
+func downloadSupplyChainLinks(ctx context.Context, c *devguard.HTTPClient, linkDir, apiURL, assetName, supplyChainID string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiURL, assetName, supplyChainID), nil)
 
 	if err != nil {
@@ -261,7 +261,10 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return errors.New("token is required")
 			}
 
-			c := devguard.NewHTTPClient(token, apiURL)
+			c, err := devguard.NewHTTPClient(token, apiURL)
+			if err != nil {
+				return errors.Wrap(err, "failed to create HTTP client")
+			}
 
 			return downloadSupplyChainLinks(cmd.Context(), c, "links", apiURL, assetName, supplyChainID)
 		},
