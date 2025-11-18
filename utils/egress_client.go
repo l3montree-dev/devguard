@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/l3montree-dev/devguard/constants"
+	"github.com/l3montree-dev/devguard/config"
 )
 
 var EgressClient = http.Client{
@@ -34,6 +34,6 @@ type EgressRoundTripper struct {
 }
 
 func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Add("User-Agent", constants.UserAgent)
+	r.Header.Add("User-Agent", config.UserAgent)
 	return mrt.r.RoundTrip(r)
 }

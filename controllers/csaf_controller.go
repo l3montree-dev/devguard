@@ -16,7 +16,7 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 
-	"github.com/l3montree-dev/devguard/constants"
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -363,7 +363,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 		})
 	}
 
-	return ctx.JSONPretty(200, aggregator, constants.PrettyJSONIndent)
+	return ctx.JSONPretty(200, aggregator, config.PrettyJSONIndent)
 }
 
 // returns the provider-metadata file for an organization which points to each assets provider-metadata
@@ -409,7 +409,7 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 	}
 	metadata.Distributions = distributions
 
-	return ctx.JSONPretty(200, metadata, constants.PrettyJSONIndent)
+	return ctx.JSONPretty(200, metadata, config.PrettyJSONIndent)
 }
 
 func getPublicKeyFingerprint() string {
@@ -436,12 +436,12 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	switch mode {
 	case "json":
 		// just return the csaf report
-		return ctx.JSONPretty(200, csafReport, constants.PrettyJSONIndent)
+		return ctx.JSONPretty(200, csafReport, config.PrettyJSONIndent)
 	case "asc":
 		// return the signature of the json encoding of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", constants.PrettyJSONIndent)
+		encoder.SetIndent("", config.PrettyJSONIndent)
 		err = encoder.Encode(csafReport)
 		if err != nil {
 			return err
@@ -455,7 +455,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		// return the hash of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", constants.PrettyJSONIndent)
+		encoder.SetIndent("", config.PrettyJSONIndent)
 		err = encoder.Encode(csafReport)
 		if err != nil {
 			return err
@@ -467,7 +467,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		// return the hash of the report
 		buf := bytes.Buffer{}
 		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", constants.PrettyJSONIndent)
+		encoder.SetIndent("", config.PrettyJSONIndent)
 		err = encoder.Encode(csafReport)
 		if err != nil {
 			return err
