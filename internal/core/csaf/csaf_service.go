@@ -67,7 +67,6 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 	}
 
 	cdxVulns := make([]cyclonedx.Vulnerability, 0)
-
 	for _, advisory := range advisories {
 		// collect all purls and map to product ids
 		productIDtoPurl := map[string]packageurl.PackageURL{}
@@ -1071,11 +1070,6 @@ func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent)
 	default:
 		return "", fmt.Errorf("unknown event type: %s", event.Type)
 	}
-}
-
-// small helper function to eliminate seconds by rounding up to the next minute
-func convertTimeToDateHourMinute(t time.Time) time.Time {
-	return t.Add(time.Second * time.Duration(60-t.Second()))
 }
 
 // signs data and returns the resulting signature
