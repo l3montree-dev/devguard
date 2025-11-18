@@ -28,7 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/pubsub"
+
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -100,7 +100,6 @@ func main() {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
-	broker, err := pubsub.BrokerFactory()
 	if err != nil {
 		slog.Error("failed to create broker", "err", err)
 		panic(err)
@@ -108,8 +107,7 @@ func main() {
 
 	fx.New(
 		fx.Supply(db),
-		fx.Provide(pubsub.BrokerFactory),
-		fx.Supply(broker),
+		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),
 		repositories.Module,
 		controllers.ControllerModule,

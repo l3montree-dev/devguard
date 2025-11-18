@@ -22,6 +22,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
@@ -38,7 +39,7 @@ type TestApp struct {
 
 	// Core infrastructure
 	DB     shared.DB
-	Broker shared.Broker
+	Broker database.Broker
 
 	// Services
 	ConfigService            services.ConfigService
@@ -106,7 +107,7 @@ type TestAppOptions struct {
 	// Whether to suppress FX logging
 	SuppressLogs bool
 	// Custom broker (if nil, a default in-memory broker will be provided)
-	Broker shared.Broker
+	Broker database.Broker
 }
 
 // NewTestApp creates a test application with all dependencies wired via FX
@@ -125,7 +126,7 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 		fx.Provide(func() shared.DB { return db }),
 
 		// Provide broker
-		fx.Provide(func() shared.Broker {
+		fx.Provide(func() database.Broker {
 			if opts.Broker != nil {
 				return opts.Broker
 			}
@@ -182,11 +183,11 @@ func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp
 // noopBroker is a no-op implementation of the Broker interface for testing
 type noopBroker struct{}
 
-func (n *noopBroker) Publish(ctx context.Context, message shared.Message) error {
+func (n *noopBroker) Publish(ctx context.Context, message database.Message) error {
 	return nil
 }
 
-func (n *noopBroker) Subscribe(topic shared.Channel) (<-chan map[string]any, error) {
+func (n *noopBroker) Subscribe(topic database.Channel) (<-chan map[string]any, error) {
 	ch := make(chan map[string]any)
 	close(ch) // Return a closed channel so subscribers don't block
 	return ch, nil

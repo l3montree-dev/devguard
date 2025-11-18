@@ -8,9 +8,10 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/pubsub"
+
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
@@ -41,13 +42,13 @@ func newTriggerCommand() *cobra.Command {
 		Short: "Will trigger the background jobs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			database, err := shared.DatabaseFactory()
+			db, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return err
 			}
 
-			broker, err := pubsub.BrokerFactory()
+			broker, err := database.BrokerFactory()
 			if err != nil {
 				slog.Error("failed to create broker", "err", err)
 				panic(err)
@@ -55,7 +56,7 @@ func newTriggerCommand() *cobra.Command {
 
 			daemons, _ := cmd.Flags().GetStringArray("daemons")
 
-			return triggerDaemon(database, broker, daemons)
+			return triggerDaemon(db, broker, daemons)
 		},
 	}
 
@@ -64,7 +65,7 @@ func newTriggerCommand() *cobra.Command {
 	return trigger
 }
 
-func triggerDaemon(db shared.DB, broker shared.Broker, selectedDaemons []string) error {
+func triggerDaemon(db shared.DB, broker database.Broker, selectedDaemons []string) error {
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		// Provide the already-created db and broker

@@ -21,11 +21,11 @@ import (
 	"log/slog"
 
 	"github.com/casbin/casbin/v2/persist"
-	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/database"
 )
 
 type casbinPubSubWatcher struct {
-	broker   shared.Broker
+	broker   database.Broker
 	callback func(string)
 	cancel   context.CancelFunc
 }
@@ -33,8 +33,8 @@ type casbinPubSubWatcher struct {
 type policyChangePubSubMessage struct {
 }
 
-func (policyChangePubSubMessage) GetChannel() shared.Channel {
-	return shared.PolicyChange
+func (policyChangePubSubMessage) GetChannel() database.Channel {
+	return database.PolicyChange
 }
 
 func (policyChangePubSubMessage) GetPayload() map[string]any {
@@ -45,9 +45,9 @@ func (policyChangePubSubMessage) GetPayload() map[string]any {
 
 var _ persist.Watcher = &casbinPubSubWatcher{}
 
-func newCasbinPubSubWatcher(broker shared.Broker) *casbinPubSubWatcher {
+func newCasbinPubSubWatcher(broker database.Broker) *casbinPubSubWatcher {
 	// start listening to the policy change topic
-	ch, err := broker.Subscribe(shared.PolicyChange)
+	ch, err := broker.Subscribe(database.PolicyChange)
 	if err != nil {
 		log.Fatalf("could not subscribe to policy change topic: %v", err)
 	}

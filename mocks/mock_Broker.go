@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/database"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +39,7 @@ func (_m *Broker) EXPECT() *Broker_Expecter {
 }
 
 // Publish provides a mock function for the type Broker
-func (_mock *Broker) Publish(ctx context.Context, message shared.Message) error {
+func (_mock *Broker) Publish(ctx context.Context, message database.Message) error {
 	ret := _mock.Called(ctx, message)
 
 	if len(ret) == 0 {
@@ -47,7 +47,7 @@ func (_mock *Broker) Publish(ctx context.Context, message shared.Message) error 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.Message) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, database.Message) error); ok {
 		r0 = returnFunc(ctx, message)
 	} else {
 		r0 = ret.Error(0)
@@ -62,20 +62,20 @@ type Broker_Publish_Call struct {
 
 // Publish is a helper method to define mock.On call
 //   - ctx context.Context
-//   - message shared.Message
+//   - message database.Message
 func (_e *Broker_Expecter) Publish(ctx interface{}, message interface{}) *Broker_Publish_Call {
 	return &Broker_Publish_Call{Call: _e.mock.On("Publish", ctx, message)}
 }
 
-func (_c *Broker_Publish_Call) Run(run func(ctx context.Context, message shared.Message)) *Broker_Publish_Call {
+func (_c *Broker_Publish_Call) Run(run func(ctx context.Context, message database.Message)) *Broker_Publish_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 shared.Message
+		var arg1 database.Message
 		if args[1] != nil {
-			arg1 = args[1].(shared.Message)
+			arg1 = args[1].(database.Message)
 		}
 		run(
 			arg0,
@@ -90,13 +90,13 @@ func (_c *Broker_Publish_Call) Return(err error) *Broker_Publish_Call {
 	return _c
 }
 
-func (_c *Broker_Publish_Call) RunAndReturn(run func(ctx context.Context, message shared.Message) error) *Broker_Publish_Call {
+func (_c *Broker_Publish_Call) RunAndReturn(run func(ctx context.Context, message database.Message) error) *Broker_Publish_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Subscribe provides a mock function for the type Broker
-func (_mock *Broker) Subscribe(topic shared.Channel) (<-chan map[string]interface{}, error) {
+func (_mock *Broker) Subscribe(topic database.Channel) (<-chan map[string]interface{}, error) {
 	ret := _mock.Called(topic)
 
 	if len(ret) == 0 {
@@ -105,17 +105,17 @@ func (_mock *Broker) Subscribe(topic shared.Channel) (<-chan map[string]interfac
 
 	var r0 <-chan map[string]interface{}
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Channel) (<-chan map[string]interface{}, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(database.Channel) (<-chan map[string]interface{}, error)); ok {
 		return returnFunc(topic)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Channel) <-chan map[string]interface{}); ok {
+	if returnFunc, ok := ret.Get(0).(func(database.Channel) <-chan map[string]interface{}); ok {
 		r0 = returnFunc(topic)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(<-chan map[string]interface{})
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.Channel) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(database.Channel) error); ok {
 		r1 = returnFunc(topic)
 	} else {
 		r1 = ret.Error(1)
@@ -129,16 +129,16 @@ type Broker_Subscribe_Call struct {
 }
 
 // Subscribe is a helper method to define mock.On call
-//   - topic shared.Channel
+//   - topic database.Channel
 func (_e *Broker_Expecter) Subscribe(topic interface{}) *Broker_Subscribe_Call {
 	return &Broker_Subscribe_Call{Call: _e.mock.On("Subscribe", topic)}
 }
 
-func (_c *Broker_Subscribe_Call) Run(run func(topic shared.Channel)) *Broker_Subscribe_Call {
+func (_c *Broker_Subscribe_Call) Run(run func(topic database.Channel)) *Broker_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.Channel
+		var arg0 database.Channel
 		if args[0] != nil {
-			arg0 = args[0].(shared.Channel)
+			arg0 = args[0].(database.Channel)
 		}
 		run(
 			arg0,
@@ -152,7 +152,7 @@ func (_c *Broker_Subscribe_Call) Return(stringToIfaceValCh <-chan map[string]int
 	return _c
 }
 
-func (_c *Broker_Subscribe_Call) RunAndReturn(run func(topic shared.Channel) (<-chan map[string]interface{}, error)) *Broker_Subscribe_Call {
+func (_c *Broker_Subscribe_Call) RunAndReturn(run func(topic database.Channel) (<-chan map[string]interface{}, error)) *Broker_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }

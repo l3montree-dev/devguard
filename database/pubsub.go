@@ -12,7 +12,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package shared
+package database
 
 import "context"
 
@@ -24,29 +24,29 @@ const (
 
 type Message interface {
 	GetChannel() Channel
-	GetPayload() map[string]interface{}
+	GetPayload() map[string]any
 }
 
 type Broker interface {
 	Publish(ctx context.Context, message Message) error
-	Subscribe(topic Channel) (<-chan map[string]interface{}, error)
+	Subscribe(topic Channel) (<-chan map[string]any, error)
 }
 
 type SimpleMessage struct {
 	Channel Channel
-	Payload map[string]interface{}
+	Payload map[string]any
 }
 
 func (m SimpleMessage) GetChannel() Channel {
 	return m.Channel
 }
 
-func (m SimpleMessage) GetPayload() map[string]interface{} {
+func (m SimpleMessage) GetPayload() map[string]any {
 	return m.Payload
 }
 
 // NewSimpleMessage creates a new SimpleMessage instance.
-func NewSimpleMessage(channel Channel, payload map[string]interface{}) *SimpleMessage {
+func NewSimpleMessage(channel Channel, payload map[string]any) *SimpleMessage {
 	return &SimpleMessage{
 		Channel: channel,
 		Payload: payload,

@@ -402,7 +402,7 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:apk/crypto@0.0.32",
 			FixedVersion:  utils.Ptr("0"),
-		}
+		}.GenerateCommandsToFixPackage()
 
 		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0\n```", result)
 	})

@@ -8,6 +8,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/database"
 
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -52,7 +53,7 @@ func markMirrored(configService services.ConfigService, key string) error {
 
 func runDaemons(
 	db shared.DB,
-	broker shared.Broker,
+	broker database.Broker,
 	configService services.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
@@ -227,7 +228,7 @@ func runDaemons(
 
 func Start(
 	db shared.DB,
-	broker shared.Broker,
+	broker database.Broker,
 	configService services.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,

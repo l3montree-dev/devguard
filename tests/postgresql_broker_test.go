@@ -5,19 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/pubsub"
-	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/database"
+
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
 
 // testMessage for testing
 type testMessage struct {
-	channel shared.Channel
+	channel database.Channel
 	payload map[string]interface{}
 }
 
-func (m testMessage) GetChannel() shared.Channel {
+func (m testMessage) GetChannel() database.Channel {
 	return m.channel
 }
 
@@ -31,13 +31,13 @@ func TestPostgreSQLBroker(t *testing.T) {
 	defer terminate()
 
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
-		broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := shared.Channel("test_topic")
+		testTopic := database.Channel("test_topic")
 
 		// Subscribe to topic
 		messagesCh, err := broker.Subscribe(testTopic)
@@ -69,13 +69,13 @@ func TestPostgreSQLBroker(t *testing.T) {
 	})
 
 	t.Run("MultipleSubscribers", func(t *testing.T) {
-		broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := shared.Channel("multi_topic")
+		testTopic := database.Channel("multi_topic")
 
 		// Subscribe with multiple subscribers
 		subscriber1, err := broker.Subscribe(testTopic)
@@ -114,7 +114,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 	})
 
 	t.Run("PolicyChangeChannel", func(t *testing.T) {
-		broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 		defer broker.Close()
@@ -122,14 +122,14 @@ func TestPostgreSQLBroker(t *testing.T) {
 		ctx := context.Background()
 
 		// Subscribe to policy changes
-		messagesCh, err := broker.Subscribe(shared.PolicyChange)
+		messagesCh, err := broker.Subscribe(database.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish simple policy change message
 		policyMsg := testMessage{
-			channel: shared.PolicyChange,
+			channel: database.PolicyChange,
 			payload: map[string]interface{}{
 				"policy_id": "policy-123",
 				"action":    "updated",
@@ -152,7 +152,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 	})
 
 	t.Run("GetActiveTopics", func(t *testing.T) {
-		broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 		defer broker.Close()
@@ -162,26 +162,26 @@ func TestPostgreSQLBroker(t *testing.T) {
 		assert.Empty(t, topics)
 
 		// Subscribe to topics
-		_, err = broker.Subscribe(shared.Channel("topic1"))
+		_, err = broker.Subscribe(database.Channel("topic1"))
 		assert.NoError(t, err)
 
-		_, err = broker.Subscribe(shared.Channel("topic2"))
+		_, err = broker.Subscribe(database.Channel("topic2"))
 		assert.NoError(t, err)
 
 		topics = broker.GetActiveTopics()
 		assert.Len(t, topics, 2)
-		assert.Contains(t, topics, shared.Channel("topic1"))
-		assert.Contains(t, topics, shared.Channel("topic2"))
+		assert.Contains(t, topics, database.Channel("topic1"))
+		assert.Contains(t, topics, database.Channel("topic2"))
 	})
 
 	t.Run("Unsubscribe", func(t *testing.T) {
-		broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := shared.Channel("unsub_topic")
+		testTopic := database.Channel("unsub_topic")
 
 		// Subscribe
 		messagesCh, err := broker.Subscribe(testTopic)
@@ -223,7 +223,7 @@ func TestBrokerIntegration(t *testing.T) {
 	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../initdb.sql")
 	defer terminate()
 
-	broker, err := pubsub.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+	broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
 	assert.NoError(t, err)
 	broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 	defer broker.Close()
@@ -232,14 +232,14 @@ func TestBrokerIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		// Subscribe to policy changes to verify publication
-		messagesCh, err := broker.Subscribe(shared.PolicyChange)
+		messagesCh, err := broker.Subscribe(database.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish a simple policy change
 		msg := testMessage{
-			channel: shared.PolicyChange,
+			channel: database.PolicyChange,
 			payload: map[string]interface{}{
 				"policy_id": "policy-123",
 				"action":    "updated",
