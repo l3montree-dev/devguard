@@ -81,19 +81,19 @@ func (_c *Message_GetChannel_Call) RunAndReturn(run func() database.Channel) *Me
 }
 
 // GetPayload provides a mock function for the type Message
-func (_mock *Message) GetPayload() map[string]interface{} {
+func (_mock *Message) GetPayload() map[string]any {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPayload")
 	}
 
-	var r0 map[string]interface{}
-	if returnFunc, ok := ret.Get(0).(func() map[string]interface{}); ok {
+	var r0 map[string]any
+	if returnFunc, ok := ret.Get(0).(func() map[string]any); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(map[string]any)
 		}
 	}
 	return r0
@@ -116,12 +116,12 @@ func (_c *Message_GetPayload_Call) Run(run func()) *Message_GetPayload_Call {
 	return _c
 }
 
-func (_c *Message_GetPayload_Call) Return(stringToIfaceVal map[string]interface{}) *Message_GetPayload_Call {
-	_c.Call.Return(stringToIfaceVal)
+func (_c *Message_GetPayload_Call) Return(stringToV map[string]any) *Message_GetPayload_Call {
+	_c.Call.Return(stringToV)
 	return _c
 }
 
-func (_c *Message_GetPayload_Call) RunAndReturn(run func() map[string]interface{}) *Message_GetPayload_Call {
+func (_c *Message_GetPayload_Call) RunAndReturn(run func() map[string]any) *Message_GetPayload_Call {
 	_c.Call.Return(run)
 	return _c
 }

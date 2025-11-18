@@ -155,3 +155,21 @@ func (r *eventRepository) GetLastEventBeforeTimestamp(tx *gorm.DB, vulnID string
 	}
 	return event, nil
 }
+
+func (r *eventRepository) DeleteEventByID(tx shared.DB, eventID string) error {
+	return r.Repository.GetDB(tx).Delete(&models.VulnEvent{}, "id = ?", eventID).Error
+}
+
+func (r *eventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error) {
+	var count int64
+	err := r.db.Table("vuln_events AS ve").
+		Joins("LEFT JOIN dependency_vulns dv ON ve.vuln_id = dv.id").
+		Joins("LEFT JOIN first_party_vulnerabilities fv ON ve.vuln_id = fv.id").
+		Joins("LEFT JOIN license_risks lv ON ve.vuln_id = lv.id").
+		Where("ve.id = ? AND (dv.asset_id = ? OR fv.asset_id = ? OR lv.asset_id = ?)", eventID, assetID, assetID, assetID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

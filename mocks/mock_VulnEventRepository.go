@@ -41,6 +41,63 @@ func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
+// DeleteEventByID provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) DeleteEventByID(tx shared.DB, eventID string) error {
+	ret := _mock.Called(tx, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteEventByID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
+		r0 = returnFunc(tx, eventID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnEventRepository_DeleteEventByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteEventByID'
+type VulnEventRepository_DeleteEventByID_Call struct {
+	*mock.Call
+}
+
+// DeleteEventByID is a helper method to define mock.On call
+//   - tx shared.DB
+//   - eventID string
+func (_e *VulnEventRepository_Expecter) DeleteEventByID(tx interface{}, eventID interface{}) *VulnEventRepository_DeleteEventByID_Call {
+	return &VulnEventRepository_DeleteEventByID_Call{Call: _e.mock.On("DeleteEventByID", tx, eventID)}
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) Run(run func(tx shared.DB, eventID string)) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) Return(err error) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) RunAndReturn(run func(tx shared.DB, eventID string) error) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteEventsWithNotExistingVulnID provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) DeleteEventsWithNotExistingVulnID() error {
 	ret := _mock.Called()
@@ -221,6 +278,72 @@ func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Return(v
 }
 
 func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndReturn(run func(tx shared.DB, vulnIDs []string) ([]models.VulnEvent, error)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HasAccessToEvent provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error) {
+	ret := _mock.Called(assetID, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasAccessToEvent")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) (bool, error)); ok {
+		return returnFunc(assetID, eventID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) bool); ok {
+		r0 = returnFunc(assetID, eventID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetID, eventID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_HasAccessToEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToEvent'
+type VulnEventRepository_HasAccessToEvent_Call struct {
+	*mock.Call
+}
+
+// HasAccessToEvent is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - eventID string
+func (_e *VulnEventRepository_Expecter) HasAccessToEvent(assetID interface{}, eventID interface{}) *VulnEventRepository_HasAccessToEvent_Call {
+	return &VulnEventRepository_HasAccessToEvent_Call{Call: _e.mock.On("HasAccessToEvent", assetID, eventID)}
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Run(run func(assetID uuid.UUID, eventID string)) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Return(b bool, err error) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) RunAndReturn(run func(assetID uuid.UUID, eventID string) (bool, error)) *VulnEventRepository_HasAccessToEvent_Call {
 	_c.Call.Return(run)
 	return _c
 }

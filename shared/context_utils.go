@@ -306,6 +306,18 @@ func SetAssetVersion(ctx Context, assetVersion models.AssetVersion) {
 	ctx.Set("assetVersion", assetVersion)
 }
 
+func GetEventID(ctx Context) (string, error) {
+	eventID := ctx.Param("eventID")
+	if eventID == "" {
+		return "", fmt.Errorf("could not get event id")
+	}
+	return eventID, nil
+}
+
+func SetEventID(ctx Context, eventID string) {
+	ctx.Set("eventID", eventID)
+}
+
 func SetProject(ctx Context, project models.Project) {
 	ctx.Set("project", project)
 }

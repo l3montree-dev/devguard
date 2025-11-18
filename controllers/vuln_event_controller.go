@@ -83,3 +83,17 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 		return convertSingleToDetailedDTO(ved)
 	}))
 }
+
+func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
+	eventID, err := shared.GetEventID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "eventID is required").WithInternal(err)
+	}
+
+	err = c.vulnEventRepository.DeleteEventByID(nil, eventID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete event").WithInternal(err)
+	}
+
+	return ctx.NoContent(204)
+}

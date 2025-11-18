@@ -39,6 +39,7 @@ func NewAssetVersionRouter(
 	artifactController *controllers.ArtifactController,
 	assetVersionRepository shared.AssetVersionRepository,
 	assetRepository shared.AssetRepository,
+	vulnEventRepository shared.VulnEventRepository,
 ) AssetVersionRouter {
 	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
@@ -75,6 +76,7 @@ func NewAssetVersionRouter(
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, middlewares.NeededScope([]string{"manage"}))
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, middlewares.EventMiddleware(vulnEventRepository), middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	return AssetVersionRouter{Group: assetVersionRouter}
 }

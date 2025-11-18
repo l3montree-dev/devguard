@@ -102,7 +102,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		mockAdminClient := mocks.NewAdminClient(t)
+		mockAdminClient := mocks.NewPublicClient(t)
 		mockAdminClient.On("GetIdentityFromCookie", mock.Anything, "ory_kratos_session=session_cookie_value").Return(client.Identity{
 			Id: "user2",
 		}, nil)

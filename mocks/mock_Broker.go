@@ -96,23 +96,23 @@ func (_c *Broker_Publish_Call) RunAndReturn(run func(ctx context.Context, messag
 }
 
 // Subscribe provides a mock function for the type Broker
-func (_mock *Broker) Subscribe(topic database.Channel) (<-chan map[string]interface{}, error) {
+func (_mock *Broker) Subscribe(topic database.Channel) (<-chan map[string]any, error) {
 	ret := _mock.Called(topic)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Subscribe")
 	}
 
-	var r0 <-chan map[string]interface{}
+	var r0 <-chan map[string]any
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(database.Channel) (<-chan map[string]interface{}, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(database.Channel) (<-chan map[string]any, error)); ok {
 		return returnFunc(topic)
 	}
-	if returnFunc, ok := ret.Get(0).(func(database.Channel) <-chan map[string]interface{}); ok {
+	if returnFunc, ok := ret.Get(0).(func(database.Channel) <-chan map[string]any); ok {
 		r0 = returnFunc(topic)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan map[string]interface{})
+			r0 = ret.Get(0).(<-chan map[string]any)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(database.Channel) error); ok {
@@ -147,12 +147,12 @@ func (_c *Broker_Subscribe_Call) Run(run func(topic database.Channel)) *Broker_S
 	return _c
 }
 
-func (_c *Broker_Subscribe_Call) Return(stringToIfaceValCh <-chan map[string]interface{}, err error) *Broker_Subscribe_Call {
-	_c.Call.Return(stringToIfaceValCh, err)
+func (_c *Broker_Subscribe_Call) Return(stringToVCh <-chan map[string]any, err error) *Broker_Subscribe_Call {
+	_c.Call.Return(stringToVCh, err)
 	return _c
 }
 
-func (_c *Broker_Subscribe_Call) RunAndReturn(run func(topic database.Channel) (<-chan map[string]interface{}, error)) *Broker_Subscribe_Call {
+func (_c *Broker_Subscribe_Call) RunAndReturn(run func(topic database.Channel) (<-chan map[string]any, error)) *Broker_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }
