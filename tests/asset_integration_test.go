@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -73,7 +72,6 @@ func TestHandleLookup(t *testing.T) {
 }
 
 func TestAssetUpdate(t *testing.T) {
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	t.Run("should be possible to enable the ticket range", func(t *testing.T) {
 		// Mock third-party integration

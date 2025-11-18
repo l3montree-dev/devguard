@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -21,7 +20,7 @@ import (
 func TestBuildVEX(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 		artifactName := "test-artifact"
 

@@ -5,7 +5,6 @@ package tests
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -13,8 +12,6 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/integrations"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -30,7 +27,6 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		var err error
 
 		t.Run("should not delete the asset version if it is the default branch", func(t *testing.T) {
-			os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 			assetVersion.DefaultBranch = true
 			err = f.DB.Save(&assetVersion).Error
 			assert.Nil(t, err)
@@ -54,7 +50,6 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		})
 
 		t.Run("should delete the asset version", func(t *testing.T) {
-			os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 			artifact := models.Artifact{
 				ArtifactName:     "artifact1",
@@ -91,7 +86,6 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		})
 
 		t.Run("should not delete the asset version if it was updated in the last 7 days", func(t *testing.T) {
-			os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 			assetVersion := models.AssetVersion{
 				Name:          "test",
@@ -119,7 +113,6 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		})
 
 		t.Run("should delete the asset version with all related data", func(t *testing.T) {
-			os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 			assetVersion := models.AssetVersion{
 				Name:           "test-dependency",
@@ -224,7 +217,6 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 		_, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
@@ -303,15 +295,19 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 }
 
 func TestDaemonSyncTickets(t *testing.T) {
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
+
+	clientfactory, gitlabClientFacade := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
 		ExtraOptions: []fx.Option{
 			fx.Decorate(func() shared.ExternalUserRepository {
 				return externalUserRepository
+			}),
+			fx.Decorate(func() shared.GitlabClientFactory {
+				return clientfactory
 			}),
 		},
 	}, func(f *TestFixture) {
@@ -364,37 +360,8 @@ func TestDaemonSyncTickets(t *testing.T) {
 		assert.Nil(t, dependencyVuln.TicketID)
 		assert.Nil(t, dependencyVuln.TicketURL)
 
-		clientfactory, gitlabClientFacade := NewTestClientFactory(t)
-
-		// Create GitlabIntegration with FX-injected dependencies
-		gitlabIntegration := gitlabint.NewGitlabIntegration(
-			map[string]*gitlabint.GitlabOauth2Config{},
-			f.App.RBACProvider,
-			clientfactory,
-			f.App.GitlabIntegrationRepository,
-			f.App.AggregatedVulnRepository,
-			f.App.DependencyVulnRepository,
-			f.App.VulnEventRepository,
-			f.App.ExternalUserRepository,
-			f.App.AssetRepository,
-			f.App.AssetVersionRepository,
-			f.App.ProjectRepository,
-			f.App.ComponentRepository,
-			f.App.FirstPartyVulnRepository,
-			f.App.GitLabOauth2TokenRepository,
-			f.App.LicenseRiskRepository,
-			f.App.OrgRepository,
-			f.App.OrgService,
-			f.App.ProjectService,
-			f.App.AssetService,
-			f.App.LicenseRiskService,
-			f.App.StatisticsService,
-		)
-
-		thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
-
 		// Capture the create issue call to verify the artifact name is included in the description
-		gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+		gitlabClientFacade.On("CreateIssue", mock.Anything, 456, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
 			// Verify that the issue description contains the artifact name
 			if opt.Description == nil {
 				return false
@@ -411,10 +378,11 @@ func TestDaemonSyncTickets(t *testing.T) {
 			Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
 		}).Return(nil, nil, nil)
 
+		gitlabClientFacade.On("GetProjectIssues", 456, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil)
 		// Call SyncTickets daemon with FX-injected dependencies
 		err = daemons.SyncTickets(
 			f.DB,
-			thirdPartyIntegration,
+			f.App.IntegrationAggregate,
 			f.App.DependencyVulnService,
 			f.App.AssetVersionRepository,
 			f.App.AssetRepository,
@@ -435,7 +403,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 			assert.NotNil(t, updatedDependencyVuln.TicketURL)
 
 			// Verify that CreateIssue was called with the artifact name in the description
-			gitlabClientFacade.AssertCalled(t, "CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
+			gitlabClientFacade.AssertCalled(t, "CreateIssue", mock.Anything, 456, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
 				if opt.Description == nil {
 					return false
 				}
@@ -458,7 +426,8 @@ func TestDaemonSyncTickets(t *testing.T) {
 			err = f.DB.Save(&dependencyVuln).Error
 			assert.Nil(t, err)
 
-			gitlabClientFacade.On("EditIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+			gitlabClientFacade.On("GetProjectIssues", 456, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil)
+			gitlabClientFacade.On("EditIssue", mock.Anything, 456, mock.Anything, mock.Anything).Return(
 				&gitlab.Issue{
 					ID:    12345,
 					State: "opened",
@@ -466,7 +435,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 			err = daemons.SyncTickets(
 				f.DB,
-				thirdPartyIntegration,
+				f.App.IntegrationAggregate,
 				f.App.DependencyVulnService,
 				f.App.AssetVersionRepository,
 				f.App.AssetRepository,
@@ -502,7 +471,8 @@ func TestDaemonSyncTickets(t *testing.T) {
 			err = f.DB.Save(&dependencyVuln).Error
 			assert.Nil(t, err)
 
-			gitlabClientFacade.On("EditIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+			gitlabClientFacade.On("GetProjectIssues", 456, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil)
+			gitlabClientFacade.On("EditIssue", mock.Anything, 456, mock.Anything, mock.Anything).Return(
 				&gitlab.Issue{
 					ID:    12345,
 					State: "closed",
@@ -510,7 +480,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 			err = daemons.SyncTickets(
 				f.DB,
-				thirdPartyIntegration,
+				f.App.IntegrationAggregate,
 				f.App.DependencyVulnService,
 				f.App.AssetVersionRepository,
 				f.App.AssetRepository,
@@ -536,15 +506,18 @@ func TestDaemonSyncTickets(t *testing.T) {
 }
 
 func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
+	clientfactory, gitlabClientFacade := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
 		ExtraOptions: []fx.Option{
 			fx.Decorate(func() shared.ExternalUserRepository {
 				return externalUserRepository
+			}),
+			fx.Decorate(func() shared.GitlabClientFactory {
+				return clientfactory
 			}),
 		},
 	}, func(f *TestFixture) {
@@ -597,36 +570,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 
 		assert.Nil(t, dependencyVuln.TicketID)
 		assert.Nil(t, dependencyVuln.TicketURL)
-
-		clientfactory, gitlabClientFacade := NewTestClientFactory(t)
-
-		// Create GitlabIntegration with FX-injected dependencies
-		gitlabIntegration := gitlabint.NewGitlabIntegration(
-			map[string]*gitlabint.GitlabOauth2Config{},
-			f.App.RBACProvider,
-			clientfactory,
-			f.App.GitlabIntegrationRepository,
-			f.App.AggregatedVulnRepository,
-			f.App.DependencyVulnRepository,
-			f.App.VulnEventRepository,
-			f.App.ExternalUserRepository,
-			f.App.AssetRepository,
-			f.App.AssetVersionRepository,
-			f.App.ProjectRepository,
-			f.App.ComponentRepository,
-			f.App.FirstPartyVulnRepository,
-			f.App.GitLabOauth2TokenRepository,
-			f.App.LicenseRiskRepository,
-			f.App.OrgRepository,
-			f.App.OrgService,
-			f.App.ProjectService,
-			f.App.AssetService,
-			f.App.LicenseRiskService,
-			f.App.StatisticsService,
-		)
-
-		thirdPartyIntegration := integrations.NewThirdPartyIntegrations(externalUserRepository, gitlabIntegration)
-
+		gitlabClientFacade.On("GetProjectIssues", 456, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil)
 		// Capture the create issue call to verify all artifact names are included in the description
 		gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.MatchedBy(func(opt *gitlab.CreateIssueOptions) bool {
 			if opt.Description == nil {
@@ -651,7 +595,7 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 		// Run the ticket daemon with FX-injected dependencies
 		err = daemons.SyncTickets(
 			f.DB,
-			thirdPartyIntegration,
+			f.App.IntegrationAggregate,
 			f.App.DependencyVulnService,
 			f.App.AssetVersionRepository,
 			f.App.AssetRepository,
@@ -687,9 +631,8 @@ func TestTicketDaemonWithMultipleArtifacts(t *testing.T) {
 }
 
 func TestDaemonRecalculateRisk(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		org.Slug = "org-slug"
@@ -773,7 +716,6 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 func TestDaemonFixedVersions(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 

@@ -35,7 +35,7 @@ func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
 
 func TestScanning(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		controller := f.App.ScanController
 
 		// scan the vulnerable sbom
@@ -237,7 +237,7 @@ func TestScanning(t *testing.T) {
 
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		controller := f.App.ScanController
 
 		// scan the vulnerable sbom
@@ -319,7 +319,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 
 func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		controller := f.App.ScanController
 
 		// scan the vulnerable sbom
@@ -425,7 +425,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		controller := f.App.ScanController
 
 		// scan the vulnerable sbom
@@ -657,7 +657,6 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 		controller := f.App.ScanController
 		firstPartyVulnRepository := f.App.FirstPartyVulnRepository
@@ -772,7 +771,6 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 
 func TestTicketHandling(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 		controller, gitlabClientFacade := initHTTPController(t, f)
 
@@ -1142,7 +1140,7 @@ func initHTTPController(t *testing.T, f *TestFixture) (*controllers.ScanControll
 func TestUploadVEX(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		scanController := f.App.ScanController
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 		asset.ParanoidMode = false
@@ -1303,7 +1301,7 @@ func TestIdempotency(t *testing.T) {
 	// 4. Download it
 	// 5. compare 2 and 4
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		controller, _ := initHTTPController(t, f)
 
 		app := echo.New()
@@ -1396,7 +1394,7 @@ func TestIdempotency(t *testing.T) {
 
 func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 		// load small-sbom.json
 		smallSbom, err := os.Open("testdata/small-sbom.json")
 		assert.Nil(t, err)

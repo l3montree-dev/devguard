@@ -73,10 +73,6 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			f.App.GitLabOauth2TokenRepository,
 			f.App.LicenseRiskRepository,
 			f.App.OrgRepository,
-			f.App.OrgService,
-			f.App.ProjectService,
-			f.App.AssetService,
-			f.App.LicenseRiskService,
 			f.App.StatisticsService,
 		)
 

@@ -1183,6 +1183,80 @@ func (_c *FirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(ass
 	return _c
 }
 
+// ListUnfixedByAssetAndAssetVersionAndScanner provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(assetVersionName, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUnfixedByAssetAndAssetVersionAndScanner")
+	}
+
+	var r0 []models.FirstPartyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(assetVersionName, assetID, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnfixedByAssetAndAssetVersionAndScanner'
+type FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call struct {
+	*mock.Call
+}
+
+// ListUnfixedByAssetAndAssetVersionAndScanner is a helper method to define mock.On call
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
+func (_e *FirstPartyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+	return &FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScanner", assetVersionName, assetID, scannerID)}
+}
+
+func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+	_c.Call.Return(firstPartyVulns, err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) Read(id string) (models.FirstPartyVuln, error) {
 	ret := _mock.Called(id)

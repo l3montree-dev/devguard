@@ -116,8 +116,6 @@ func getSBOMWithWithLicenseRisk() io.Reader {
 func TestLicenseRiskLifecycleManagement(t *testing.T) {
 	artifactName := "main"
 
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-
 	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 	mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{
 		Licenses: []string{},

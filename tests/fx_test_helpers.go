@@ -17,6 +17,7 @@ package tests
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -46,6 +47,7 @@ func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *
 		}
 	}
 
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	// Create FX test app without automatic cleanup
 	app, fxApp := NewTestAppWithT(t, db, options)
 
