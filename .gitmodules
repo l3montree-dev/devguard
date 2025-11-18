@@ -1,3 +1,6 @@
 [submodule "compliance/attestation-compliance-policies"]
-	path = rego/attestation-compliance-policies
+   path = internal/core/compliance/attestation-compliance-policies
+   url = git@github.com:l3montree-dev/attestation-compliance-policies.git
+[submodule "internal/core/compliance/attestation-compliance-policies"]
+	path = internal/core/compliance/attestation-compliance-policies
 	url = git@github.com:l3montree-dev/attestation-compliance-policies.git
