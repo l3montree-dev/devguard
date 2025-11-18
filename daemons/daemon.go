@@ -8,7 +8,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/leaderelection"
+
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
@@ -251,7 +251,7 @@ func Start(
 	exploitsRepository shared.ExploitRepository,
 	affectedComponentsRepository shared.AffectedComponentRepository,
 ) {
-	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
+	leaderElector := services.NewDatabaseLeaderElector(configService)
 	go func() {
 		// check if the vulndb is empty
 		if err := db.Raw("SELECT 1 as count FROM cves LIMIT 1;").Scan(new(int64)).Error; err != nil {

@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
+
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )

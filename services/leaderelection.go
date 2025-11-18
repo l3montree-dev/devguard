@@ -1,4 +1,4 @@
-package leaderelection
+package services
 
 import (
 	"context"
