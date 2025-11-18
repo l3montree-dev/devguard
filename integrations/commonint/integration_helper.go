@@ -22,7 +22,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -71,70 +70,6 @@ func getLanguage(URI string) string {
 		extension = "txt"
 	}
 	return extension
-}
-
-func RenderADF(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) jira.ADF {
-	snippets, err := transformer.FromJSONSnippetContents(firstPartyVuln)
-	if err != nil {
-		slog.Error("could not parse snippet contents", "error", err)
-		return jira.ADF{}
-	}
-
-	adf := jira.ADF{
-		Version: 1,
-		Type:    "doc",
-		Content: []jira.ADFContent{
-			{
-				Type: "paragraph",
-				Content: []jira.ADFContent{
-					{
-						Type: "text",
-						Text: *firstPartyVuln.Message,
-					},
-				},
-			},
-		},
-	}
-
-	for _, snippet := range snippets.Snippets {
-		adf.Content = append(adf.Content, jira.ADFContent{
-			Type: "codeBlock",
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: snippet.Snippet,
-				},
-			},
-		})
-	}
-
-	if firstPartyVuln.URI != "" {
-		link := strings.TrimPrefix(firstPartyVuln.URI, "/")
-		adf.Content = append(adf.Content, jira.ADFContent{
-			Type: "paragraph",
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "File: " + link,
-				},
-			},
-		})
-	}
-
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "paragraph",
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID),
-			},
-		},
-	})
-
-	//add slash commands
-	jira.AddSlashCommandsToToFirstPartyVulnADF(&adf)
-
-	return adf
 }
 
 func RenderMarkdown(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {

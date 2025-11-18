@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -29,7 +28,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	}
 
 	defer req.Body.Close()
-	event, err := jira.ParseWebhook(payload)
+	event, err := ParseWebhook(payload)
 	if err != nil {
 		return nil
 	}
@@ -108,7 +107,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	statusCategory := event.Issue.Fields.Status.StatusCategory.ID
 
 	switch event.Event {
-	case jira.CommentCreated:
+	case CommentCreated:
 		// Handle comment created event
 
 		//check if the event is triggered by a DevGuard
@@ -167,11 +166,11 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-	case jira.EventIssueUpdated:
+	case EventIssueUpdated:
 
 		// Handle issue updated event
 		switch statusCategory {
-		case jira.StatusCategoryDone:
+		case StatusCategoryDone:
 			if vuln.GetState() != dtos.VulnStateOpen {
 				return nil
 			}
@@ -182,7 +181,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 			doUpdateArtifactRiskHistory = true
-		case jira.StatusCategoryToDo, jira.StatusCategoryInProgress:
+		case StatusCategoryToDo, StatusCategoryInProgress:
 			if vuln.GetState() == dtos.VulnStateOpen {
 				return nil
 			}
@@ -195,7 +194,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			doUpdateArtifactRiskHistory = true
 
 		}
-	case jira.EventIssueDeleted:
+	case EventIssueDeleted:
 		if vuln.GetState() == dtos.VulnStateFalsePositive {
 			return nil
 		}

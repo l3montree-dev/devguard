@@ -23,6 +23,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -354,39 +355,69 @@ func TestCalculateRisk(t *testing.T) {
 
 func TestGenerateCommandsToFixPackage(t *testing.T) {
 	t.Run("invalid package URL should result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pk:golang/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pk:golang/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:golang/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:golang/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get crypto@0 \n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:npm/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:npm/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
+
 		assert.Equal(t, "```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install crypto@0 \n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:crates.io/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:crates.io/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# crypto = \"=0\"\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:pypi/crypto@0.0.32", "0")
+
+		result := Explanation{
+			ComponentPurl: "pkg:pypi/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install crypto==0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:apk/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:apk/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}
+
 		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:deb/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:deb/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install crypto=0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:NuGet/crypto@0.0.32", "0")
+		result := Explanation{
+			ComponentPurl: "pkg:NuGet/crypto@0.0.32",
+			FixedVersion:  utils.Ptr("0"),
+		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package crypto --version 0\n```", result)
 	})
 
@@ -412,26 +443,26 @@ func TestExplanationMarkdown(t *testing.T) {
 				WithThreatIntelligence:               7.2,
 				WithEnvironmentAndThreatIntelligence: 6.5,
 			},
-			exploitMessage: struct {
+			ExploitMessage: struct {
 				Short string
 				Long  string
 			}{
 				Short: "Proof of Concept",
 				Long:  "A proof of concept is available for this vulnerability",
 			},
-			epssMessage:            "The exploit probability is moderate. The vulnerability is likely to be exploited in the next 30 days.",
-			cvssBEMessage:          "- Exploiting this vulnerability significantly impacts availability.",
-			componentDepthMessage:  "The vulnerability is in a direct dependency of your project.",
-			cvssMessage:            "- The vulnerability can be exploited over the network without needing physical access.",
-			dependencyVulnID:       "test-vuln-id",
-			risk:                   7.5,
-			depth:                  1,
-			epss:                   0.35,
-			cveID:                  "CVE-2023-1234",
-			cveDescription:         "This is a test vulnerability description with potential security implications.",
+			EPSSMessage:            "The exploit probability is moderate. The vulnerability is likely to be exploited in the next 30 days.",
+			CVSSBEMessage:          "- Exploiting this vulnerability significantly impacts availability.",
+			ComponentDepthMessage:  "The vulnerability is in a direct dependency of your project.",
+			CVSSMessage:            "- The vulnerability can be exploited over the network without needing physical access.",
+			DependencyVulnID:       "test-vuln-id",
+			Risk:                   7.5,
+			Depth:                  1,
+			EPSS:                   0.35,
+			CVEID:                  "CVE-2023-1234",
+			CVEDescription:         "This is a test vulnerability description with potential security implications.",
 			ComponentPurl:          "pkg:npm/test-package@1.0.0",
 			ArtifactNames:          "artifact1 artifact2",
-			fixedVersion:           ptr("1.2.3"),
+			FixedVersion:           ptr("1.2.3"),
 			ShortenedComponentPurl: "npm/test-package@1.0.0",
 		}
 
@@ -487,13 +518,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 5.0,
 			},
-			cveID:                  "CVE-2023-5678",
-			cveDescription:         "Another test vulnerability",
+			CVEID:                  "CVE-2023-5678",
+			CVEDescription:         "Another test vulnerability",
 			ComponentPurl:          "pkg:pypi/vulnerable-package@2.0.0",
 			ArtifactNames:          "single-artifact",
-			fixedVersion:           nil,
+			FixedVersion:           nil,
 			ShortenedComponentPurl: "pypi/vulnerable-package@2.0.0",
-			risk:                   5.0,
+			Risk:                   5.0,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
@@ -508,13 +539,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 9.5,
 			},
-			cveID:                  "CVE-2023-9999",
-			cveDescription:         "Critical vulnerability",
+			CVEID:                  "CVE-2023-9999",
+			CVEDescription:         "Critical vulnerability",
 			ComponentPurl:          "pkg:golang/critical-package@1.0.0",
 			ArtifactNames:          "critical-artifact",
-			fixedVersion:           ptr("2.0.0"),
+			FixedVersion:           ptr("2.0.0"),
 			ShortenedComponentPurl: "golang/critical-package@1.0.0",
-			risk:                   9.5,
+			Risk:                   9.5,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
@@ -528,13 +559,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 2.1,
 			},
-			cveID:                  "CVE-2023-0001",
-			cveDescription:         "Low severity vulnerability",
+			CVEID:                  "CVE-2023-0001",
+			CVEDescription:         "Low severity vulnerability",
 			ComponentPurl:          "pkg:deb/low-risk-package@1.0.0",
 			ArtifactNames:          "low-risk-artifact",
-			fixedVersion:           ptr("1.0.1"),
+			FixedVersion:           ptr("1.0.1"),
 			ShortenedComponentPurl: "deb/low-risk-package@1.0.0",
-			risk:                   2.1,
+			Risk:                   2.1,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
@@ -548,13 +579,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 6.0,
 			},
-			cveID:                  "CVE-2023-1111",
-			cveDescription:         "Multi-artifact vulnerability",
+			CVEID:                  "CVE-2023-1111",
+			CVEDescription:         "Multi-artifact vulnerability",
 			ComponentPurl:          "pkg:npm/multi-package@1.0.0",
 			ArtifactNames:          "artifact1 artifact2 artifact3",
-			fixedVersion:           ptr("1.1.0"),
+			FixedVersion:           ptr("1.1.0"),
 			ShortenedComponentPurl: "npm/multi-package@1.0.0",
-			risk:                   6.0,
+			Risk:                   6.0,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
@@ -567,13 +598,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 0,
 			},
-			cveID:                  "CVE-2023-0000",
-			cveDescription:         "Zero risk vulnerability",
+			CVEID:                  "CVE-2023-0000",
+			CVEDescription:         "Zero risk vulnerability",
 			ComponentPurl:          "pkg:npm/zero-risk@1.0.0",
 			ArtifactNames:          "test-artifact",
-			fixedVersion:           nil,
+			FixedVersion:           nil,
 			ShortenedComponentPurl: "npm/zero-risk@1.0.0",
-			risk:                   0,
+			Risk:                   0,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
@@ -586,13 +617,13 @@ func TestExplanationMarkdown(t *testing.T) {
 			RiskMetrics: dtos.RiskMetrics{
 				BaseScore: 5.5,
 			},
-			cveID:                  "CVE-2023-FORMAT",
-			cveDescription:         "Formatting test vulnerability",
+			CVEID:                  "CVE-2023-FORMAT",
+			CVEDescription:         "Formatting test vulnerability",
 			ComponentPurl:          "pkg:maven/format-test@1.0.0",
 			ArtifactNames:          "format-artifact",
-			fixedVersion:           ptr("1.1.0"),
+			FixedVersion:           ptr("1.1.0"),
 			ShortenedComponentPurl: "maven/format-test@1.0.0",
-			risk:                   5.5,
+			Risk:                   5.5,
 		}
 
 		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)

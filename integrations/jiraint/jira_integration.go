@@ -17,14 +17,14 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/jira"
+
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
 
 type jiraRepository struct {
-	*jira.Project
+	*Project
 	JiraIntegrationID uuid.UUID `json:"jiraIntegrationID"`
 }
 
@@ -202,18 +202,18 @@ func (i *JiraIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitReposi
 
 }
 
-func (i *JiraIntegration) createADFComment(author string, commentText string, justification string) jira.ADF {
+func (i *JiraIntegration) createADFComment(author string, commentText string, justification string) ADF {
 
-	adfComment := jira.ADF{
+	adfComment := ADF{
 		Version: 1,
 		Type:    "doc",
-		Content: []jira.ADFContent{},
+		Content: []ADFContent{},
 	}
 
 	if author != "" && commentText != "" {
-		adfComment.Content = append(adfComment.Content, jira.ADFContent{
+		adfComment.Content = append(adfComment.Content, ADFContent{
 			Type: "paragraph",
-			Content: []jira.ADFContent{
+			Content: []ADFContent{
 				{
 					Type: "text",
 					Text: fmt.Sprintf("%s %s:", author, commentText),
@@ -224,9 +224,9 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	}
 
 	if justification != "" {
-		adfComment.Content = append(adfComment.Content, jira.ADFContent{
+		adfComment.Content = append(adfComment.Content, ADFContent{
 			Type: "paragraph",
-			Content: []jira.ADFContent{
+			Content: []ADFContent{
 				{
 					Type: "text",
 					Text: justification,
@@ -236,16 +236,16 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	}
 
 	// Add DevGuard comment, this is to indicate by webhook that this comment was added by DevGuard
-	adfComment.Content = append(adfComment.Content, jira.ADFContent{
+	adfComment.Content = append(adfComment.Content, ADFContent{
 		Type: "paragraph",
-		Content: []jira.ADFContent{
+		Content: []ADFContent{
 			{
 				Type: "text",
 				Text: DevguardCommentText,
-				Marks: []jira.ADFMark{
+				Marks: []ADFMark{
 					{
 						Type: "subsup",
-						Attrs: &jira.ADFMarkAttributes{
+						Attrs: &ADFMarkAttributes{
 							Type: "sup",
 						},
 					},
@@ -289,7 +289,7 @@ func extractProjectIDFromRepoID(repoID string) (int, error) {
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
 }
 
-func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Client, int, error) {
+func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*Client, int, error) {
 	if asset.RepositoryID == nil || !strings.HasPrefix(*asset.RepositoryID, "jira:") {
 		return nil, 0, fmt.Errorf("asset %s is not a Jira repository", asset.ID)
 	}
@@ -309,7 +309,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Clien
 		return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
 	}
 
-	client, err := jira.NewJiraClient(
+	client, err := NewJiraClient(
 		jiraIntegration.AccessToken,
 		jiraIntegration.URL,
 		jiraIntegration.UserEmail,
@@ -323,7 +323,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Clien
 	return client, projectID, nil
 }
 
-func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
+func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
 	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
@@ -346,17 +346,17 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
-	description := exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
+	description := GenerateADF(exp, i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
 
-	issue := &jira.Issue{
-		Fields: &jira.IssueFields{
-			Project: jira.Project{
+	issue := &Issue{
+		Fields: &IssueFields{
+			Project: Project{
 				ID: strconv.Itoa(projectID),
 			},
-			Type: jira.IssueType{
+			Type: IssueType{
 				Name: "Task",
 			},
-			Reporter: &jira.User{
+			Reporter: &User{
 				AccountID: jiraIntegration.AccountID,
 			},
 			Description: description,
@@ -375,7 +375,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	}
 
 	if riskSeverity == "Critical" || riskSeverity == "High" {
-		issue.Fields.Priority = &jira.Priority{
+		issue.Fields.Priority = &Priority{
 			ID: "1",
 		}
 	}
@@ -395,7 +395,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	return createdIssue, nil
 }
 
-func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*jira.CreateIssueResponse, error) {
+func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
 	labels := commonint.GetLabels(firstPartyVuln)
 
@@ -408,18 +408,18 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
-	description := commonint.RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)
+	description := RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)
 	summary := firstPartyVuln.Title()
 
-	issue := &jira.Issue{
-		Fields: &jira.IssueFields{
-			Project: jira.Project{
+	issue := &Issue{
+		Fields: &IssueFields{
+			Project: Project{
 				ID: strconv.Itoa(projectID),
 			},
-			Type: jira.IssueType{
+			Type: IssueType{
 				Name: "Task",
 			},
-			Reporter: &jira.User{
+			Reporter: &User{
 				AccountID: jiraIntegration.AccountID,
 			},
 			Description: description,
@@ -453,7 +453,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 	if err != nil {
 		return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 	}
-	var createdIssue *jira.CreateIssueResponse
+	var createdIssue *CreateIssueResponse
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
@@ -493,7 +493,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 	return nil
 }
 
-func getOpenAndDoneStatusIDs(transitions []jira.Transition) (openStatusID, doneStatusID string, err error) {
+func getOpenAndDoneStatusIDs(transitions []Transition) (openStatusID, doneStatusID string, err error) {
 
 	openIDs := []struct {
 		ID  string
@@ -507,7 +507,7 @@ func getOpenAndDoneStatusIDs(transitions []jira.Transition) (openStatusID, doneS
 	var doneID string
 
 	for _, transition := range transitions {
-		if transition.To.StatusCategory.ID == jira.StatusCategoryToDo {
+		if transition.To.StatusCategory.ID == StatusCategoryToDo {
 			openIDs = append(openIDs, struct {
 				ID  string
 				Key string
@@ -516,7 +516,7 @@ func getOpenAndDoneStatusIDs(transitions []jira.Transition) (openStatusID, doneS
 				Key: transition.To.StatusCategory.Key,
 			})
 		}
-		if transition.To.StatusCategory.ID == jira.StatusCategoryDone {
+		if transition.To.StatusCategory.ID == StatusCategoryDone {
 			doneIDs = append(doneIDs, struct {
 				ID  string
 				Key string
@@ -607,7 +607,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 	return nil
 }
 
-func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState commonint.ExpectedIssueState, client *jira.Client, vulnTicketID *string) error {
+func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueState commonint.ExpectedIssueState, client *Client, vulnTicketID *string) error {
 
 	doUpdateStatus := false
 
@@ -639,13 +639,13 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 
 	var stateID string
 
-	if issueStatusID == jira.StatusCategoryToDo || issueStatusID == jira.StatusCategoryInProgress {
+	if issueStatusID == StatusCategoryToDo || issueStatusID == StatusCategoryInProgress {
 		if expectedIssueState != commonint.ExpectedIssueStateOpen {
 			doUpdateStatus = true
 			stateID = doneStatusID
 		}
 	}
-	if issueStatusID == jira.StatusCategoryDone {
+	if issueStatusID == StatusCategoryDone {
 		if expectedIssueState != commonint.ExpectedIssueStateClosed {
 			doUpdateStatus = true
 			stateID = openStatusID
@@ -666,7 +666,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	return nil
 }
 
-func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
+func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
 	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
@@ -692,19 +692,19 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 	}
 
 	//edit issue
-	issue := &jira.Issue{
+	issue := &Issue{
 		ID: ticketID,
-		Fields: &jira.IssueFields{
-			Project: jira.Project{
+		Fields: &IssueFields{
+			Project: Project{
 				ID: jiraProjectID,
 			},
-			Type: jira.IssueType{
+			Type: IssueType{
 				Name: "Task",
 			},
-			Reporter: &jira.User{
+			Reporter: &User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree),
+			Description: GenerateADF(exp, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree),
 			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
 		},
 	}
@@ -715,7 +715,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		return fmt.Errorf("failed to convert risk assessment to severity: %w", err)
 	}
 	if riskSeverity == "Critical" || riskSeverity == "High" {
-		issue.Fields.Priority = &jira.Priority{
+		issue.Fields.Priority = &Priority{
 			ID: "1",
 		}
 	}
@@ -737,7 +737,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 	return nil
 }
 
-func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
+func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
 
 	jiraProjectID, ticketID, err := jiraTicketIDToProjectIDAndIssueID(utils.SafeDereference(firstPartyVuln.GetTicketID()))
 	if err != nil {
@@ -754,19 +754,19 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	}
 
 	//edit issue
-	issue := &jira.Issue{
+	issue := &Issue{
 		ID: ticketID,
-		Fields: &jira.IssueFields{
-			Project: jira.Project{
+		Fields: &IssueFields{
+			Project: Project{
 				ID: jiraProjectID,
 			},
-			Type: jira.IssueType{
+			Type: IssueType{
 				Name: "Task",
 			},
-			Reporter: &jira.User{
+			Reporter: &User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: commonint.RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug),
+			Description: RenderADF(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug),
 			Summary:     firstPartyVuln.Title(),
 		},
 	}
@@ -819,7 +819,7 @@ func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 	}
 
 	// check if the token valid and get the account ID
-	client, err := jira.NewJiraClient(data.Token, data.URL, data.UserEmail)
+	client, err := NewJiraClient(data.Token, data.URL, data.UserEmail)
 	if err != nil {
 		slog.Error("failed to create Jira client", "err", err)
 		return ctx.JSON(400, fmt.Sprintf("invalid Jira integration data: %v", err))

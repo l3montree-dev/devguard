@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/jira"
+
 	"github.com/l3montree-dev/devguard/utils"
 )
 
 type jiraBatchClient struct {
-	clients []jira.Client
+	clients []Client
 }
 
 var ErrNoJiraIntegration = fmt.Errorf("no Jira integration found")
@@ -23,9 +23,9 @@ func NewJiraBatchClient(jiraIntegrations []models.JiraIntegration) (*jiraBatchCl
 		return nil, ErrNoJiraIntegration
 	}
 
-	clients := make([]jira.Client, 0)
+	clients := make([]Client, 0)
 	for _, jiraIntegration := range jiraIntegrations {
-		client := jira.Client{
+		client := Client{
 			JiraIntegrationID: jiraIntegration.ID,
 			AccessToken:       jiraIntegration.AccessToken,
 			BaseURL:           jiraIntegration.URL,
@@ -52,12 +52,12 @@ func (c *jiraBatchClient) ListRepositories(search string) ([]jiraRepository, err
 
 			// filter the result set based on the search query
 			if search != "" {
-				result = utils.Filter(result, func(el *jira.Project) bool {
+				result = utils.Filter(result, func(el *Project) bool {
 					return strings.Contains(el.Name, search)
 				})
 			}
 
-			return utils.Map(result, func(el *jira.Project) jiraRepository {
+			return utils.Map(result, func(el *Project) jiraRepository {
 				return jiraRepository{el, client.JiraIntegrationID}
 			}), nil
 

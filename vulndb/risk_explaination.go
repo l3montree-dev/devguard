@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/jira"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
@@ -214,520 +213,47 @@ func describeCVSS(cvss map[string]string) string {
 type Explanation struct {
 	dtos.RiskMetrics
 
-	exploitMessage struct {
+	ExploitMessage struct {
 		Short string
 		Long  string
 	}
-	epssMessage           string
-	cvssBEMessage         string
-	componentDepthMessage string
-	cvssMessage           string
-	dependencyVulnID      string
-	risk                  float64
+	EPSSMessage           string
+	CVSSBEMessage         string
+	ComponentDepthMessage string
+	CVSSMessage           string
+	DependencyVulnID      string
+	Risk                  float64
 
-	depth int
-	epss  float64
+	Depth int
+	EPSS  float64
 
-	cveID          string
-	cveDescription string
+	CVEID          string
+	CVEDescription string
 
 	ComponentPurl string
 	ArtifactNames string
-	fixedVersion  *string
+	FixedVersion  *string
 
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
-func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) jira.ADF {
-
-	artifactNames := strings.Fields(e.ArtifactNames)
-	for i, s := range artifactNames {
-		artifactNames[i] = fmt.Sprintf("`%s`", s)
-	}
-
-	//add the description of the vulnerability
-	adf := jira.ADF{
-		Version: 1,
-		Type:    "doc",
-		Content: []jira.ADFContent{
-			{
-				Type: "paragraph",
-				Content: []jira.ADFContent{
-					{
-						Type: "text",
-						Text: e.cveDescription,
-					},
-				},
-			},
-		},
-	}
-
-	//add the affected component
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "heading",
-		Attrs: &jira.ADFMarkAttributes{
-			Level: 3,
-		},
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: "Affected component",
-			},
-		},
-	})
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "paragraph",
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: fmt.Sprintf("The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")),
-			},
-		},
-	})
-
-	//add fixed version and commands to fix the package
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "heading",
-		Attrs: &jira.ADFMarkAttributes{
-			Level: 3,
-		},
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: "Recommended fix",
-			},
-		},
-	})
-	if e.fixedVersion != nil {
-		adf.Content = append(adf.Content, jira.ADFContent{
-			Type: "paragraph",
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion),
-				},
-			},
-		})
-
-		adf.Content = append(adf.Content, jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: generateCommandsToFixPackage(e.ComponentPurl, *e.fixedVersion),
-				},
-			},
-		})
-
-	} else {
-		adf.Content = append(adf.Content, jira.ADFContent{
-			Type: "paragraph",
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "No fix is available.\n",
-				},
-			},
-		})
-
-	}
-	//add additional guidance for mitigating vulnerabilities
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "heading",
-		Attrs: &jira.ADFMarkAttributes{
-			Level: 3,
-		},
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: "Additional guidance for mitigating vulnerabilities",
-			},
-		},
-	})
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "paragraph",
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: "Visit our guides on ",
-			},
-			{
-				Type: "text",
-				Text: "devguard.org",
-				Marks: []jira.ADFMark{
-					{
-						Type: "link",
-						Attrs: &jira.ADFMarkAttributes{
-							Href: "https://devguard.org/risk-mitigation-guides/software-composition-analysis",
-						},
-					},
-					{
-						Type: "underline",
-					},
-				},
-			},
-		},
-	})
-
-	//add table with risk factors
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type:  "table",
-		Attrs: &jira.ADFMarkAttributes{},
-		Content: []jira.ADFContent{
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type:  "tableHeader",
-						Attrs: &jira.ADFMarkAttributes{},
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "Risk Factor",
-										Marks: []jira.ADFMark{
-											{
-												Type: "strong",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						Type:  "tableHeader",
-						Attrs: &jira.ADFMarkAttributes{},
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "Value",
-										Marks: []jira.ADFMark{
-											{
-												Type: "strong",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						Type:  "tableHeader",
-						Attrs: &jira.ADFMarkAttributes{},
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "Description",
-										Marks: []jira.ADFMark{
-											{
-												Type: "strong",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "Vulnerability Depth",
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: fmt.Sprintf("`%d`", e.depth),
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: e.componentDepthMessage,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "EPSS",
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: fmt.Sprintf("`%.2f %%`", e.epss*100),
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: e.epssMessage,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "EXPLOIT",
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: fmt.Sprintf("`%s`", e.exploitMessage.Short),
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: e.exploitMessage.Long,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "CVSS-BE",
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: fmt.Sprintf("`%.1f`", e.WithEnvironment),
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: e.cvssBEMessage,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Type: "tableRow",
-				Content: []jira.ADFContent{
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: "CVSS-B",
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: fmt.Sprintf("`%.1f`", e.BaseScore),
-									},
-								},
-							},
-						},
-					},
-					{
-						Type: "tableCell",
-						Content: []jira.ADFContent{
-							{
-								Type: "paragraph",
-								Content: []jira.ADFContent{
-									{
-										Type: "text",
-										Text: e.cvssMessage,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	})
-
-	// add information about the path to the component
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "paragraph",
-		Content: []jira.ADFContent{
-			{
-				Type: "text",
-				Text: "More details can be found in ",
-			},
-			{
-				Type: "text",
-				Text: "DevGuard",
-				Marks: []jira.ADFMark{
-					{
-						Type: "link",
-						Attrs: &jira.ADFMarkAttributes{
-							Href: fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID),
-						},
-					},
-					{
-						Type: "underline",
-					},
-				},
-			},
-		},
-	})
-
-	// add the commands to interact with the vulnerability
-	jira.AddSlashCommandsToDependencyVulnADF(&adf)
-	return adf
-}
-
 func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveID, e.ShortenedComponentPurl))
+	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.CVEID, e.ShortenedComponentPurl))
 
 	str.WriteString("> [!important] \n")
 
-	severity, err := RiskToSeverity(e.risk)
+	severity, err := RiskToSeverity(e.Risk)
 	if err != nil {
-		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, "Unknown"))
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.Risk, "Unknown"))
 	} else {
-		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, severity))
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.Risk, severity))
 	}
 
 	str.WriteString(fmt.Sprintf("> **CVSS**: `%.1f` \n", e.BaseScore))
 
 	str.WriteString("### Description\n")
-	str.WriteString(e.cveDescription)
+	str.WriteString(e.CVEDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
 	artifactNames := strings.Fields(e.ArtifactNames)
@@ -736,9 +262,9 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	}
 	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")))
 	str.WriteString("### Recommended fix\n")
-	if e.fixedVersion != nil {
-		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
-		str.WriteString(generateCommandsToFixPackage(e.ComponentPurl, *e.fixedVersion))
+	if e.FixedVersion != nil {
+		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.FixedVersion))
+		str.WriteString(e.GenerateCommandsToFixPackage())
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
@@ -752,14 +278,14 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 
 	str.WriteString("| Risk Factor  | Value | Description | \n")
 	str.WriteString("| ---- | ----- | ----------- | \n")
-	str.WriteString(fmt.Sprintf("| Vulnerability Depth | `%d` | %s | \n", e.depth, e.componentDepthMessage))
-	str.WriteString(fmt.Sprintf("| EPSS | `%.2f %%` | %s | \n", e.epss*100, e.epssMessage))
-	str.WriteString(fmt.Sprintf("| EXPLOIT | `%s` | %s | \n", e.exploitMessage.Short, e.exploitMessage.Long))
-	str.WriteString(fmt.Sprintf("| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.cvssBEMessage))
-	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
+	str.WriteString(fmt.Sprintf("| Vulnerability Depth | `%d` | %s | \n", e.Depth, e.ComponentDepthMessage))
+	str.WriteString(fmt.Sprintf("| EPSS | `%.2f %%` | %s | \n", e.EPSS*100, e.EPSSMessage))
+	str.WriteString(fmt.Sprintf("| EXPLOIT | `%s` | %s | \n", e.ExploitMessage.Short, e.ExploitMessage.Long))
+	str.WriteString(fmt.Sprintf("| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.CVSSBEMessage))
+	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.CVSSMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.dependencyVulnID))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.DependencyVulnID))
 	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
@@ -777,56 +303,56 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	componentPurl := utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")
 
 	return Explanation{
-		exploitMessage: struct {
+		ExploitMessage: struct {
 			Short string
 			Long  string
 		}{
 			Short: shortMsg,
 			Long:  longMsg,
 		},
-		epssMessage:           epssMessage(utils.OrDefault(dependencyVuln.CVE.EPSS, 0)),
-		cvssBEMessage:         cvssBE(asset, cvss),
-		componentDepthMessage: componentDepthMessages(utils.OrDefault(dependencyVuln.ComponentDepth, 0)),
-		cvssMessage:           describeCVSS(cvss),
-		dependencyVulnID:      dependencyVuln.ID,
+		EPSSMessage:           epssMessage(utils.OrDefault(dependencyVuln.CVE.EPSS, 0)),
+		CVSSBEMessage:         cvssBE(asset, cvss),
+		ComponentDepthMessage: componentDepthMessages(utils.OrDefault(dependencyVuln.ComponentDepth, 0)),
+		CVSSMessage:           describeCVSS(cvss),
+		DependencyVulnID:      dependencyVuln.ID,
 
-		risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
-		epss:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),
-		depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
+		Risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
+		EPSS:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),
+		Depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		cveID:          utils.SafeDereference(dependencyVuln.CVEID),
-		cveDescription: dependencyVuln.CVE.Description,
+		CVEID:          utils.SafeDereference(dependencyVuln.CVEID),
+		CVEDescription: dependencyVuln.CVE.Description,
 
 		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),
 		ArtifactNames: dependencyVuln.GetScannerIDsOrArtifactNames(),
-		fixedVersion:  dependencyVuln.ComponentFixedVersion,
+		FixedVersion:  dependencyVuln.ComponentFixedVersion,
 
 		ShortenedComponentPurl: componentPurl,
 	}
 }
 
-func generateCommandsToFixPackage(pURL string, fixedVersion string) string {
-	parsedPurl, err := packageurl.FromString(pURL)
+func (e Explanation) GenerateCommandsToFixPackage() string {
+	parsedPurl, err := packageurl.FromString(e.ComponentPurl)
 	if err != nil {
 		return ""
 	}
 	ecosystem := parsedPurl.Type
 	switch ecosystem {
 	case "golang":
-		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, *e.FixedVersion)
 	case "npm":
-		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, *e.FixedVersion)
 	case "pypi":
-		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, *e.FixedVersion)
 	case "crates.io":
-		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, *e.FixedVersion)
 	case "nuget":
-		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, *e.FixedVersion)
 	case "apk":
-		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, *e.FixedVersion)
 	case "deb":
-		return fmt.Sprintf("```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install %s=%s\n```", parsedPurl.Name, fixedVersion)
+		return fmt.Sprintf("```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install %s=%s\n```", parsedPurl.Name, *e.FixedVersion)
 	}
 	return ""
 }
