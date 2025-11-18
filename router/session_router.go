@@ -35,7 +35,7 @@ func whoami(ctx echo.Context) error {
 
 func NewSessionRouter(
 	apiV1Router APIV1Router,
-	adminClient shared.AdminClient,
+	adminClient shared.PublicClient,
 	patService shared.PersonalAccessTokenService,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	integrationController *controllers.IntegrationController,

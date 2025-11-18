@@ -37,7 +37,7 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func cookieAuth(ctx context.Context, oryAPIClient shared.AdminClient, oryKratosSessionCookie string) (string, error) {
+func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
 	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
@@ -52,7 +52,7 @@ func cookieAuth(ctx context.Context, oryAPIClient shared.AdminClient, oryKratosS
 	return session.Id, nil
 }
 
-func SessionMiddleware(oryAPIClient shared.AdminClient, verifier shared.Verifier) echo.MiddlewareFunc {
+func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())

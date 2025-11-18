@@ -5,7 +5,6 @@ import (
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
-	"github.com/ory/client-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -34,7 +33,7 @@ func health(ctx echo.Context) error {
 
 func NewAPIV1Router(srv *echo.Echo,
 	thirdPartyIntegration shared.IntegrationAggregate,
-	oryAdmin *client.APIClient,
+	oryAdmin shared.AdminClient,
 	assetController *controllers.AssetController,
 	intotoController *controllers.InToToController,
 	csafController *controllers.CSAFController,
@@ -56,7 +55,7 @@ func NewAPIV1Router(srv *echo.Echo,
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
 			// set the ory admin client to the context
-			shared.SetAuthAdminClient(ctx, shared.NewAdminClient(oryAdmin))
+			shared.SetAuthAdminClient(ctx, oryAdmin)
 			return next(ctx)
 		}
 	})

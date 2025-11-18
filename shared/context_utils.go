@@ -44,9 +44,22 @@ func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
 
 type AdminClient interface {
 	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
-	GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error)
 	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
 	GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error)
+}
+
+type PublicClient interface {
+	GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error)
+}
+
+type PublicClientImplementation struct {
+	apiClient *client.APIClient
+}
+
+func NewPublicClient(client *client.APIClient) PublicClientImplementation {
+	return PublicClientImplementation{
+		apiClient: client,
+	}
 }
 
 type AdminClientImplementation struct {
@@ -59,7 +72,7 @@ func NewAdminClient(client *client.APIClient) AdminClientImplementation {
 	}
 }
 
-func (a AdminClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
+func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
 	session, _, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
 	if err != nil {
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
