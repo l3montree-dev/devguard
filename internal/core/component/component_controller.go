@@ -10,10 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type componentOccurrenceHTTPController struct {
-	repository core.ComponentOccurrenceRepository
-}
-
 type httpController struct {
 	componentRepository    core.ComponentRepository
 	assetVersionRepository core.AssetVersionRepository
@@ -126,24 +122,58 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, core.NewPaged(pageInfo, components.Total, componentsDTO))
 }
 
-func NewComponentOccurrenceHTTPController(repository core.ComponentOccurrenceRepository) *componentOccurrenceHTTPController {
-	return &componentOccurrenceHTTPController{repository: repository}
-}
-
-func (controller componentOccurrenceHTTPController) SearchByOrg(ctx core.Context) error {
+func (controller httpController) SearchComponentOccurrences(ctx core.Context) error {
 	org := core.GetOrg(ctx)
 
-	pagedResp, err := controller.repository.SearchComponentOccurrencesByOrg(
+	pagedResp, err := controller.componentRepository.SearchComponentOccurrencesByOrg(
 		nil,
 		org.GetID(),
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not search component occurrences").WithInternal(err)
+		return echo.NewHTTPError(500, "could not search components").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(occurrence models.ComponentOccurrence) any {
-		return convertComponentOccurrenceToDTO(occurrence)
+		return componentOccurrenceToDTO(occurrence)
 	}))
+}
+
+type componentOccurrenceDTO struct {
+	ComponentDependencyID string  `json:"componentDependencyId"`
+	DependencyPurl        *string `json:"dependencyPurl"`
+	OrganizationID        string  `json:"organizationId"`
+	OrganizationName      string  `json:"organizationName"`
+	ProjectID             string  `json:"projectId"`
+	ProjectName           string  `json:"projectName"`
+	ProjectSlug           string  `json:"projectSlug"`
+	AssetID               string  `json:"assetId"`
+	AssetName             string  `json:"assetName"`
+	AssetSlug             string  `json:"assetSlug"`
+	AssetVersionName      string  `json:"assetVersionName"`
+	ComponentPurl         *string `json:"componentPurl"`
+	ComponentVersion      *string `json:"componentVersion"`
+	ArtifactName          *string `json:"artifactName"`
+	ArtifactAssetVersion  *string `json:"artifactAssetVersion"`
+}
+
+func componentOccurrenceToDTO(m models.ComponentOccurrence) componentOccurrenceDTO {
+	return componentOccurrenceDTO{
+		ComponentDependencyID: m.ComponentDependencyID.String(),
+		DependencyPurl:        m.DependencyPurl,
+		OrganizationID:        m.OrganizationID.String(),
+		OrganizationName:      m.OrganizationName,
+		ProjectID:             m.ProjectID.String(),
+		ProjectName:           m.ProjectName,
+		ProjectSlug:           m.ProjectSlug,
+		AssetID:               m.AssetID.String(),
+		AssetName:             m.AssetName,
+		AssetSlug:             m.AssetSlug,
+		AssetVersionName:      m.AssetVersionName,
+		ComponentPurl:         m.ComponentPurl,
+		ComponentVersion:      m.ComponentVersion,
+		ArtifactName:          m.ArtifactName,
+		ArtifactAssetVersion:  m.ArtifactAssetVersion,
+	}
 }
