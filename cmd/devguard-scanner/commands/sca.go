@@ -250,6 +250,7 @@ func scanExternalImage(ctx context.Context) error {
 			return err
 		}
 
+		config.RuntimeBaseConfig.Origin = "vex:" + config.RuntimeBaseConfig.Origin
 		// upload the vex
 		// but it is not from upstream - it is the image we are currently looking at.
 		vexResp, err := scanner.UploadVEX(vexBuff)
