@@ -538,7 +538,7 @@ func (c *componentRepository) SearchComponentOccurrencesByOrg(tx core.DB, orgID 
 		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
 		Where("projects.organization_id = ?", orgID).
 		Where("component_dependencies.dependency_purl ILIKE ?", "%"+search+"%").
-		Order("component_dependencies.component_purl ASC, component_dependencies.asset_version_name ASC")
+		Order("component_dependencies.dependency_purl ASC, component_dependencies.asset_version_name ASC")
 
 	if pageInfo.PageSize > 0 {
 		page := pageInfo.Page
