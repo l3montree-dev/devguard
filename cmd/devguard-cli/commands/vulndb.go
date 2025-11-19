@@ -9,13 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +53,7 @@ func isValidCVE(cveID string) bool {
 	return r.MatchString(cveID)
 }
 
-func migrateDB(db core.DB) {
+func migrateDB(db shared.DB) {
 	// Run database migrations using the existing database connection
 	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
@@ -65,7 +64,7 @@ func migrateDB(db core.DB) {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
@@ -80,8 +79,8 @@ func newImportCVECommand() *cobra.Command {
 		Short: "Will import the vulnerability database",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			core.LoadConfig() // nolint
-			db, err := core.DatabaseFactory()
+			shared.LoadConfig() // nolint
+			db, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return
@@ -128,8 +127,8 @@ func newImportCommand() *cobra.Command {
 		Short: "Will import the vulnerability database",
 		Args:  cobra.MaximumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
+			shared.LoadConfig() // nolint
+			database, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "error", err)
 				return
@@ -140,7 +139,7 @@ func newImportCommand() *cobra.Command {
 			cweRepository := repositories.NewCWERepository(database)
 			exploitsRepository := repositories.NewExploitRepository(database)
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-			configService := config.NewService(database)
+			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 			for _, arg := range args {
 				slog.Info(arg)
@@ -166,9 +165,9 @@ func newSyncCommand() *cobra.Command {
 			after, _ := cmd.Flags().GetString("after")
 			startIndex, _ := cmd.Flags().GetInt("startIndex")
 
-			core.LoadConfig() // nolint
+			shared.LoadConfig() // nolint
 
-			db, err := core.DatabaseFactory()
+			db, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return
@@ -302,10 +301,10 @@ func newExportIncrementalCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			// first import the new state
-			core.LoadConfig() // nolint
+			shared.LoadConfig() // nolint
 			os.RemoveAll("diffs-tmp/")
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
+			shared.LoadConfig() // nolint
+			database, err := shared.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "error", err)
 				return
@@ -316,7 +315,7 @@ func newExportIncrementalCommand() *cobra.Command {
 			cweRepository := repositories.NewCWERepository(database)
 			exploitsRepository := repositories.NewExploitRepository(database)
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
-			configService := config.NewService(database)
+			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 			for _, arg := range args {
 				slog.Info(arg)

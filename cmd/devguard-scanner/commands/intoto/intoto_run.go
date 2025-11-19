@@ -29,8 +29,8 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -86,7 +86,11 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	req.Header.Set("Content-Type", "application/json")
 	config.SetXAssetHeaders(req)
 	// send the request
-	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL).Do(req)
+	client, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to create HTTP client")
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}

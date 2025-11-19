@@ -23,9 +23,10 @@ import (
 	"net/http"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/utils"
+
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/zalando/go-keyring"
@@ -54,6 +55,10 @@ type baseConfig struct {
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
 	Origin        string `json:"origin" mapstructure:"origin"`
 	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
+
+	Timeout                    int  `json:"timeout" mapstructure:"timeout"`
+	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
+	IgnoreUpstreamAttestations bool `json:"ignoreUpstreamAttestations" mapstructure:"ignoreUpstreamAttestations"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 }
@@ -129,6 +134,10 @@ func ParseBaseConfig(runningCMD string) {
 	if RuntimeBaseConfig.ArtifactName == "" {
 		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
 	}
+
+	if RuntimeBaseConfig.Timeout <= 0 {
+		RuntimeBaseConfig.Timeout = 300
+	}
 }
 
 func StoreTokenInKeyring(assetName, token string) error {
@@ -152,7 +161,7 @@ func getTokenFromKeyring(assetName string) (string, error) {
 }
 
 func tokenToInTotoKey(token string) (toto.Key, error) {
-	privKey, _, err := pat.HexTokenToECDSA(token)
+	privKey, _, err := services.HexTokenToECDSA(token)
 	if err != nil {
 		return toto.Key{}, err
 	}

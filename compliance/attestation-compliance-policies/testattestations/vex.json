@@ -1,0 +1,490 @@
+{
+    "version": 1,
+    "metadata": {
+        "component": {
+            "name": "L3montree-Website",
+            "type": "application",
+            "author": "L3montree Cybersecurity",
+            "bom-ref": "main",
+            "version": "main",
+            "publisher": "github.com/l3montree-dev/devguard"
+        },
+        "timestamp": "2025-06-20T06:25:55Z"
+    },
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.5",
+    "vulnerabilities": [
+        {
+            "id": "CVE-2024-6119",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-6119",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 7.5,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                    "severity": "high"
+                },
+                {
+                    "score": 3.45,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-9143",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-9143",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 4.3,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":4.300000190734863,\"confidentialityRequirement\":\"M\",\"epss\":0.00044,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2023-4039",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4039",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/gcc-12@12.2.0"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 4.8,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2.2,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":4.800000190734863,\"confidentialityRequirement\":\"M\",\"epss\":0.00064,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.2,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-17T23:01:05Z",
+                "lastUpdated": "2025-05-17T23:01:05Z"
+            }
+        },
+        {
+            "id": "CVE-2025-4575",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-4575",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 6.5,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+                    "severity": "medium"
+                },
+                {
+                    "score": 3,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":6.5,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-23T12:59:26Z",
+                "lastUpdated": "2025-05-23T12:59:26Z"
+            }
+        },
+        {
+            "id": "CVE-2025-27587",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-27587",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 0,
+                    "method": "CVSSv4",
+                    "severity": "low"
+                },
+                {
+                    "score": 0,
+                    "method": "DevGuard",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":0,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-06-17T13:33:23Z",
+                "lastUpdated": "2025-06-17T13:33:23Z"
+            }
+        },
+        {
+            "id": "CVE-2023-6129",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6129",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 6.5,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:H",
+                    "severity": "medium"
+                },
+                {
+                    "score": 3,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":6.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00106,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-5535",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-5535",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 9.1,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:H",
+                    "severity": "critical"
+                },
+                {
+                    "score": 4.3,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:H/E:P/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "medium",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":9.100000381469727,\"confidentialityRequirement\":\"M\",\"epss\":0.00044,\"exploitExists\":true,\"integrityRequirement\":\"M\",\"risk\":4.3,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:H/E:P/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-4741",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-4741",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 7.5,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                    "severity": "high"
+                },
+                {
+                    "score": 3.45,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00044,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2025-27789",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-27789",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:npm/@babel/runtime@7.22.5"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 6.2,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2.85,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":6.199999809265137,\"confidentialityRequirement\":\"M\",\"epss\":0.00043,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.85,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2023-6237",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6237",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 5.9,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2.7,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"M\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.7,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-0727",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-0727",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 5.5,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2.55,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":5.5,\"confidentialityRequirement\":\"M\",\"epss\":0.00228,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.55,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-12797",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-12797",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 0,
+                    "method": "CVSSv4",
+                    "severity": "low"
+                },
+                {
+                    "score": 0,
+                    "method": "DevGuard",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":0,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-13176",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-13176",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 0,
+                    "method": "CVSSv4",
+                    "severity": "low"
+                },
+                {
+                    "score": 0,
+                    "method": "DevGuard",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":0,\"confidentialityRequirement\":\"M\",\"epss\":0.00044,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-2511",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-2511",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 0,
+                    "method": "CVSSv4",
+                    "severity": "low"
+                },
+                {
+                    "score": 0,
+                    "method": "DevGuard",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":0,\"confidentialityRequirement\":\"M\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        },
+        {
+            "id": "CVE-2024-4603",
+            "source": {
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-4603",
+                "name": "NVD"
+            },
+            "affects": [
+                {
+                    "ref": "pkg:deb/debian/openssl@3.0.15"
+                }
+            ],
+            "ratings": [
+                {
+                    "score": 5.3,
+                    "method": "CVSSv31",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                    "severity": "medium"
+                },
+                {
+                    "score": 2.45,
+                    "method": "DevGuard",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M",
+                    "severity": "low",
+                    "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":5.300000190734863,\"confidentialityRequirement\":\"M\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+                }
+            ],
+            "analysis": {
+                "state": "in_triage",
+                "firstIssued": "2025-05-05T13:34:52Z",
+                "lastUpdated": "2025-05-05T13:34:52Z"
+            }
+        }
+    ]
+}

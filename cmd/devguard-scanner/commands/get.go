@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ Example:
 			if err != nil {
 				return err
 			}
-			err = pat.SignRequest(token, req)
+			err = services.SignRequest(token, req)
 
 			if err != nil {
 				return err

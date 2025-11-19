@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -40,8 +41,109 @@ func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
+// DeleteEventByID provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) DeleteEventByID(tx shared.DB, eventID string) error {
+	ret := _mock.Called(tx, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteEventByID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
+		r0 = returnFunc(tx, eventID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnEventRepository_DeleteEventByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteEventByID'
+type VulnEventRepository_DeleteEventByID_Call struct {
+	*mock.Call
+}
+
+// DeleteEventByID is a helper method to define mock.On call
+//   - tx shared.DB
+//   - eventID string
+func (_e *VulnEventRepository_Expecter) DeleteEventByID(tx interface{}, eventID interface{}) *VulnEventRepository_DeleteEventByID_Call {
+	return &VulnEventRepository_DeleteEventByID_Call{Call: _e.mock.On("DeleteEventByID", tx, eventID)}
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) Run(run func(tx shared.DB, eventID string)) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) Return(err error) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventByID_Call) RunAndReturn(run func(tx shared.DB, eventID string) error) *VulnEventRepository_DeleteEventByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteEventsWithNotExistingVulnID provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) DeleteEventsWithNotExistingVulnID() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteEventsWithNotExistingVulnID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteEventsWithNotExistingVulnID'
+type VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call struct {
+	*mock.Call
+}
+
+// DeleteEventsWithNotExistingVulnID is a helper method to define mock.On call
+func (_e *VulnEventRepository_Expecter) DeleteEventsWithNotExistingVulnID() *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
+	return &VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call{Call: _e.mock.On("DeleteEventsWithNotExistingVulnID")}
+}
+
+func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) Run(run func()) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) Return(err error) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) RunAndReturn(run func() error) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetLastEventBeforeTimestamp provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID string, time1 time.Time) (models.VulnEvent, error) {
+func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(tx shared.DB, vulnID string, time1 time.Time) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, vulnID, time1)
 
 	if len(ret) == 0 {
@@ -50,15 +152,15 @@ func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(tx core.DB, vulnID
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, time.Time) (models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, time.Time) (models.VulnEvent, error)); ok {
 		return returnFunc(tx, vulnID, time1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, time.Time) models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, time.Time) models.VulnEvent); ok {
 		r0 = returnFunc(tx, vulnID, time1)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string, time.Time) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, time.Time) error); ok {
 		r1 = returnFunc(tx, vulnID, time1)
 	} else {
 		r1 = ret.Error(1)
@@ -72,18 +174,18 @@ type VulnEventRepository_GetLastEventBeforeTimestamp_Call struct {
 }
 
 // GetLastEventBeforeTimestamp is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - vulnID string
 //   - time1 time.Time
 func (_e *VulnEventRepository_Expecter) GetLastEventBeforeTimestamp(tx interface{}, vulnID interface{}, time1 interface{}) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
 	return &VulnEventRepository_GetLastEventBeforeTimestamp_Call{Call: _e.mock.On("GetLastEventBeforeTimestamp", tx, vulnID, time1)}
 }
 
-func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) Run(run func(tx core.DB, vulnID string, time1 time.Time)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) Run(run func(tx shared.DB, vulnID string, time1 time.Time)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -107,13 +209,13 @@ func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) Return(vulnEvent
 	return _c
 }
 
-func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) RunAndReturn(run func(tx core.DB, vulnID string, time1 time.Time) (models.VulnEvent, error)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+func (_c *VulnEventRepository_GetLastEventBeforeTimestamp_Call) RunAndReturn(run func(tx shared.DB, vulnID string, time1 time.Time) (models.VulnEvent, error)) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetSecurityRelevantEventsForVulnIDs provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error) {
+func (_mock *VulnEventRepository) GetSecurityRelevantEventsForVulnIDs(tx shared.DB, vulnIDs []string) ([]models.VulnEvent, error) {
 	ret := _mock.Called(tx, vulnIDs)
 
 	if len(ret) == 0 {
@@ -122,17 +224,17 @@ func (_mock *VulnEventRepository) GetSecurityRelevantEventsForVulnIDs(tx core.DB
 
 	var r0 []models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) ([]models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) ([]models.VulnEvent, error)); ok {
 		return returnFunc(tx, vulnIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) []models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) []models.VulnEvent); ok {
 		r0 = returnFunc(tx, vulnIDs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnEvent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, []string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, []string) error); ok {
 		r1 = returnFunc(tx, vulnIDs)
 	} else {
 		r1 = ret.Error(1)
@@ -146,17 +248,17 @@ type VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call struct {
 }
 
 // GetSecurityRelevantEventsForVulnIDs is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - vulnIDs []string
 func (_e *VulnEventRepository_Expecter) GetSecurityRelevantEventsForVulnIDs(tx interface{}, vulnIDs interface{}) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	return &VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call{Call: _e.mock.On("GetSecurityRelevantEventsForVulnIDs", tx, vulnIDs)}
 }
 
-func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Run(run func(tx core.DB, vulnIDs []string)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Run(run func(tx shared.DB, vulnIDs []string)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []string
 		if args[1] != nil {
@@ -175,13 +277,79 @@ func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) Return(v
 	return _c
 }
 
-func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndReturn(run func(tx core.DB, vulnIDs []string) ([]models.VulnEvent, error)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+func (_c *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call) RunAndReturn(run func(tx shared.DB, vulnIDs []string) ([]models.VulnEvent, error)) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HasAccessToEvent provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error) {
+	ret := _mock.Called(assetID, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasAccessToEvent")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) (bool, error)); ok {
+		return returnFunc(assetID, eventID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) bool); ok {
+		r0 = returnFunc(assetID, eventID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetID, eventID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_HasAccessToEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToEvent'
+type VulnEventRepository_HasAccessToEvent_Call struct {
+	*mock.Call
+}
+
+// HasAccessToEvent is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - eventID string
+func (_e *VulnEventRepository_Expecter) HasAccessToEvent(assetID interface{}, eventID interface{}) *VulnEventRepository_HasAccessToEvent_Call {
+	return &VulnEventRepository_HasAccessToEvent_Call{Call: _e.mock.On("HasAccessToEvent", assetID, eventID)}
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Run(run func(assetID uuid.UUID, eventID string)) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) Return(b bool, err error) *VulnEventRepository_HasAccessToEvent_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_HasAccessToEvent_Call) RunAndReturn(run func(assetID uuid.UUID, eventID string) (bool, error)) *VulnEventRepository_HasAccessToEvent_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadAssetEventsByVulnID provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
+func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error) {
 	ret := _mock.Called(vulnID, vulnType)
 
 	if len(ret) == 0 {
@@ -190,17 +358,17 @@ func (_mock *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnTyp
 
 	var r0 []models.VulnEventDetail
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, models.VulnType) ([]models.VulnEventDetail, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, dtos.VulnType) ([]models.VulnEventDetail, error)); ok {
 		return returnFunc(vulnID, vulnType)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, models.VulnType) []models.VulnEventDetail); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, dtos.VulnType) []models.VulnEventDetail); ok {
 		r0 = returnFunc(vulnID, vulnType)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnEventDetail)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, models.VulnType) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, dtos.VulnType) error); ok {
 		r1 = returnFunc(vulnID, vulnType)
 	} else {
 		r1 = ret.Error(1)
@@ -215,20 +383,20 @@ type VulnEventRepository_ReadAssetEventsByVulnID_Call struct {
 
 // ReadAssetEventsByVulnID is a helper method to define mock.On call
 //   - vulnID string
-//   - vulnType models.VulnType
+//   - vulnType dtos.VulnType
 func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(vulnID interface{}, vulnType interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", vulnID, vulnType)}
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType models.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType dtos.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 models.VulnType
+		var arg1 dtos.VulnType
 		if args[1] != nil {
-			arg1 = args[1].(models.VulnType)
+			arg1 = args[1].(dtos.VulnType)
 		}
 		run(
 			arg0,
@@ -243,30 +411,30 @@ func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Return(vulnEventDeta
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadEventsByAssetIDAndAssetVersionName provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error) {
+func (_mock *VulnEventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
 	ret := _mock.Called(assetID, assetVersionName, pageInfo, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadEventsByAssetIDAndAssetVersionName")
 	}
 
-	var r0 core.Paged[models.VulnEventDetail]
+	var r0 shared.Paged[models.VulnEventDetail]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, core.PageInfo, []core.FilterQuery) (core.Paged[models.VulnEventDetail], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)); ok {
 		return returnFunc(assetID, assetVersionName, pageInfo, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, core.PageInfo, []core.FilterQuery) core.Paged[models.VulnEventDetail]); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) shared.Paged[models.VulnEventDetail]); ok {
 		r0 = returnFunc(assetID, assetVersionName, pageInfo, filter)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.VulnEventDetail])
+		r0 = ret.Get(0).(shared.Paged[models.VulnEventDetail])
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string, core.PageInfo, []core.FilterQuery) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) error); ok {
 		r1 = returnFunc(assetID, assetVersionName, pageInfo, filter)
 	} else {
 		r1 = ret.Error(1)
@@ -282,13 +450,13 @@ type VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call struct {
 // ReadEventsByAssetIDAndAssetVersionName is a helper method to define mock.On call
 //   - assetID uuid.UUID
 //   - assetVersionName string
-//   - pageInfo core.PageInfo
-//   - filter []core.FilterQuery
+//   - pageInfo shared.PageInfo
+//   - filter []shared.FilterQuery
 func (_e *VulnEventRepository_Expecter) ReadEventsByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}, pageInfo interface{}, filter interface{}) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	return &VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("ReadEventsByAssetIDAndAssetVersionName", assetID, assetVersionName, pageInfo, filter)}
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -298,13 +466,13 @@ func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(r
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 core.PageInfo
+		var arg2 shared.PageInfo
 		if args[2] != nil {
-			arg2 = args[2].(core.PageInfo)
+			arg2 = args[2].(shared.PageInfo)
 		}
-		var arg3 []core.FilterQuery
+		var arg3 []shared.FilterQuery
 		if args[3] != nil {
-			arg3 = args[3].([]core.FilterQuery)
+			arg3 = args[3].([]shared.FilterQuery)
 		}
 		run(
 			arg0,
@@ -316,18 +484,18 @@ func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(r
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Return(paged core.Paged[models.VulnEventDetail], err error) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Return(paged shared.Paged[models.VulnEventDetail], err error) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) Save(db core.DB, event *models.VulnEvent) error {
+func (_mock *VulnEventRepository) Save(db shared.DB, event *models.VulnEvent) error {
 	ret := _mock.Called(db, event)
 
 	if len(ret) == 0 {
@@ -335,7 +503,7 @@ func (_mock *VulnEventRepository) Save(db core.DB, event *models.VulnEvent) erro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.VulnEvent) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.VulnEvent) error); ok {
 		r0 = returnFunc(db, event)
 	} else {
 		r0 = ret.Error(0)
@@ -349,17 +517,17 @@ type VulnEventRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db core.DB
+//   - db shared.DB
 //   - event *models.VulnEvent
 func (_e *VulnEventRepository_Expecter) Save(db interface{}, event interface{}) *VulnEventRepository_Save_Call {
 	return &VulnEventRepository_Save_Call{Call: _e.mock.On("Save", db, event)}
 }
 
-func (_c *VulnEventRepository_Save_Call) Run(run func(db core.DB, event *models.VulnEvent)) *VulnEventRepository_Save_Call {
+func (_c *VulnEventRepository_Save_Call) Run(run func(db shared.DB, event *models.VulnEvent)) *VulnEventRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.VulnEvent
 		if args[1] != nil {
@@ -378,13 +546,13 @@ func (_c *VulnEventRepository_Save_Call) Return(err error) *VulnEventRepository_
 	return _c
 }
 
-func (_c *VulnEventRepository_Save_Call) RunAndReturn(run func(db core.DB, event *models.VulnEvent) error) *VulnEventRepository_Save_Call {
+func (_c *VulnEventRepository_Save_Call) RunAndReturn(run func(db shared.DB, event *models.VulnEvent) error) *VulnEventRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) SaveBatch(db core.DB, events []models.VulnEvent) error {
+func (_mock *VulnEventRepository) SaveBatch(db shared.DB, events []models.VulnEvent) error {
 	ret := _mock.Called(db, events)
 
 	if len(ret) == 0 {
@@ -392,7 +560,7 @@ func (_mock *VulnEventRepository) SaveBatch(db core.DB, events []models.VulnEven
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.VulnEvent) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VulnEvent) error); ok {
 		r0 = returnFunc(db, events)
 	} else {
 		r0 = ret.Error(0)
@@ -406,17 +574,17 @@ type VulnEventRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - db core.DB
+//   - db shared.DB
 //   - events []models.VulnEvent
 func (_e *VulnEventRepository_Expecter) SaveBatch(db interface{}, events interface{}) *VulnEventRepository_SaveBatch_Call {
 	return &VulnEventRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", db, events)}
 }
 
-func (_c *VulnEventRepository_SaveBatch_Call) Run(run func(db core.DB, events []models.VulnEvent)) *VulnEventRepository_SaveBatch_Call {
+func (_c *VulnEventRepository_SaveBatch_Call) Run(run func(db shared.DB, events []models.VulnEvent)) *VulnEventRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.VulnEvent
 		if args[1] != nil {
@@ -435,7 +603,7 @@ func (_c *VulnEventRepository_SaveBatch_Call) Return(err error) *VulnEventReposi
 	return _c
 }
 
-func (_c *VulnEventRepository_SaveBatch_Call) RunAndReturn(run func(db core.DB, events []models.VulnEvent) error) *VulnEventRepository_SaveBatch_Call {
+func (_c *VulnEventRepository_SaveBatch_Call) RunAndReturn(run func(db shared.DB, events []models.VulnEvent) error) *VulnEventRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

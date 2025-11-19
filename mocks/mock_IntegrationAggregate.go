@@ -7,8 +7,9 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -190,18 +191,18 @@ func (_c *IntegrationAggregate_CreateLabels_Call) RunAndReturn(run func(ctx cont
 }
 
 // GetID provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetID() core.IntegrationID {
+func (_mock *IntegrationAggregate) GetID() shared.IntegrationID {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetID")
 	}
 
-	var r0 core.IntegrationID
-	if returnFunc, ok := ret.Get(0).(func() core.IntegrationID); ok {
+	var r0 shared.IntegrationID
+	if returnFunc, ok := ret.Get(0).(func() shared.IntegrationID); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(core.IntegrationID)
+		r0 = ret.Get(0).(shared.IntegrationID)
 	}
 	return r0
 }
@@ -223,30 +224,30 @@ func (_c *IntegrationAggregate_GetID_Call) Run(run func()) *IntegrationAggregate
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetID_Call) Return(integrationID core.IntegrationID) *IntegrationAggregate_GetID_Call {
+func (_c *IntegrationAggregate_GetID_Call) Return(integrationID shared.IntegrationID) *IntegrationAggregate_GetID_Call {
 	_c.Call.Return(integrationID)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetID_Call) RunAndReturn(run func() core.IntegrationID) *IntegrationAggregate_GetID_Call {
+func (_c *IntegrationAggregate_GetID_Call) RunAndReturn(run func() shared.IntegrationID) *IntegrationAggregate_GetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetIntegration provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetIntegration(id core.IntegrationID) core.ThirdPartyIntegration {
+func (_mock *IntegrationAggregate) GetIntegration(id shared.IntegrationID) shared.ThirdPartyIntegration {
 	ret := _mock.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetIntegration")
 	}
 
-	var r0 core.ThirdPartyIntegration
-	if returnFunc, ok := ret.Get(0).(func(core.IntegrationID) core.ThirdPartyIntegration); ok {
+	var r0 shared.ThirdPartyIntegration
+	if returnFunc, ok := ret.Get(0).(func(shared.IntegrationID) shared.ThirdPartyIntegration); ok {
 		r0 = returnFunc(id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.ThirdPartyIntegration)
+			r0 = ret.Get(0).(shared.ThirdPartyIntegration)
 		}
 	}
 	return r0
@@ -258,16 +259,16 @@ type IntegrationAggregate_GetIntegration_Call struct {
 }
 
 // GetIntegration is a helper method to define mock.On call
-//   - id core.IntegrationID
+//   - id shared.IntegrationID
 func (_e *IntegrationAggregate_Expecter) GetIntegration(id interface{}) *IntegrationAggregate_GetIntegration_Call {
 	return &IntegrationAggregate_GetIntegration_Call{Call: _e.mock.On("GetIntegration", id)}
 }
 
-func (_c *IntegrationAggregate_GetIntegration_Call) Run(run func(id core.IntegrationID)) *IntegrationAggregate_GetIntegration_Call {
+func (_c *IntegrationAggregate_GetIntegration_Call) Run(run func(id shared.IntegrationID)) *IntegrationAggregate_GetIntegration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.IntegrationID
+		var arg0 shared.IntegrationID
 		if args[0] != nil {
-			arg0 = args[0].(core.IntegrationID)
+			arg0 = args[0].(shared.IntegrationID)
 		}
 		run(
 			arg0,
@@ -276,30 +277,30 @@ func (_c *IntegrationAggregate_GetIntegration_Call) Run(run func(id core.Integra
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetIntegration_Call) Return(thirdPartyIntegration core.ThirdPartyIntegration) *IntegrationAggregate_GetIntegration_Call {
+func (_c *IntegrationAggregate_GetIntegration_Call) Return(thirdPartyIntegration shared.ThirdPartyIntegration) *IntegrationAggregate_GetIntegration_Call {
 	_c.Call.Return(thirdPartyIntegration)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id core.IntegrationID) core.ThirdPartyIntegration) *IntegrationAggregate_GetIntegration_Call {
+func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id shared.IntegrationID) shared.ThirdPartyIntegration) *IntegrationAggregate_GetIntegration_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetUsers provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetUsers(org models.Org) []core.User {
+func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.UserDTO {
 	ret := _mock.Called(org)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUsers")
 	}
 
-	var r0 []core.User
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []core.User); ok {
+	var r0 []dtos.UserDTO
+	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.UserDTO); ok {
 		r0 = returnFunc(org)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]core.User)
+			r0 = ret.Get(0).([]dtos.UserDTO)
 		}
 	}
 	return r0
@@ -329,12 +330,12 @@ func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *Int
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) Return(users []core.User) *IntegrationAggregate_GetUsers_Call {
-	_c.Call.Return(users)
+func (_c *IntegrationAggregate_GetUsers_Call) Return(userDTOs []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
+	_c.Call.Return(userDTOs)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []core.User) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -391,7 +392,7 @@ func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(event any
 }
 
 // HandleWebhook provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HandleWebhook(ctx core.Context) error {
+func (_mock *IntegrationAggregate) HandleWebhook(ctx shared.Context) error {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -399,7 +400,7 @@ func (_mock *IntegrationAggregate) HandleWebhook(ctx core.Context) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) error); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
@@ -413,16 +414,16 @@ type IntegrationAggregate_HandleWebhook_Call struct {
 }
 
 // HandleWebhook is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *IntegrationAggregate_Expecter) HandleWebhook(ctx interface{}) *IntegrationAggregate_HandleWebhook_Call {
 	return &IntegrationAggregate_HandleWebhook_Call{Call: _e.mock.On("HandleWebhook", ctx)}
 }
 
-func (_c *IntegrationAggregate_HandleWebhook_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_HandleWebhook_Call {
+func (_c *IntegrationAggregate_HandleWebhook_Call) Run(run func(ctx shared.Context)) *IntegrationAggregate_HandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -436,13 +437,13 @@ func (_c *IntegrationAggregate_HandleWebhook_Call) Return(err error) *Integratio
 	return _c
 }
 
-func (_c *IntegrationAggregate_HandleWebhook_Call) RunAndReturn(run func(ctx core.Context) error) *IntegrationAggregate_HandleWebhook_Call {
+func (_c *IntegrationAggregate_HandleWebhook_Call) RunAndReturn(run func(ctx shared.Context) error) *IntegrationAggregate_HandleWebhook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // HasAccessToExternalEntityProvider provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
@@ -451,15 +452,15 @@ func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Co
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string) (bool, error)); ok {
 		return returnFunc(ctx, externalEntityProviderID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string) bool); ok {
 		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, string) error); ok {
 		r1 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r1 = ret.Error(1)
@@ -473,17 +474,17 @@ type IntegrationAggregate_HasAccessToExternalEntityProvider_Call struct {
 }
 
 // HasAccessToExternalEntityProvider is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 //   - externalEntityProviderID string
 func (_e *IntegrationAggregate_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	return &IntegrationAggregate_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
 }
 
-func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Run(run func(ctx core.Context, externalEntityProviderID string)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Run(run func(ctx shared.Context, externalEntityProviderID string)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -502,13 +503,13 @@ func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Return(b 
 	return _c
 }
 
-func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) (bool, error)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx shared.Context, externalEntityProviderID string) (bool, error)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListGroups provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+func (_mock *IntegrationAggregate) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID)
 
 	if len(ret) == 0 {
@@ -516,9 +517,9 @@ func (_mock *IntegrationAggregate) ListGroups(ctx context.Context, userID string
 	}
 
 	var r0 []models.Project
-	var r1 []core.Role
+	var r1 []shared.Role
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.Project, []core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.Project, []shared.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []models.Project); ok {
@@ -528,11 +529,11 @@ func (_mock *IntegrationAggregate) ListGroups(ctx context.Context, userID string
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) []core.Role); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) []shared.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]core.Role)
+			r1 = ret.Get(1).([]shared.Role)
 		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
@@ -579,18 +580,18 @@ func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListGroups_Call) Return(projects []models.Project, roles []core.Role, err error) *IntegrationAggregate_ListGroups_Call {
+func (_c *IntegrationAggregate_ListGroups_Call) Return(projects []models.Project, roles []shared.Role, err error) *IntegrationAggregate_ListGroups_Call {
 	_c.Call.Return(projects, roles, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListGroups_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error)) *IntegrationAggregate_ListGroups_Call {
+func (_c *IntegrationAggregate_ListGroups_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error)) *IntegrationAggregate_ListGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListOrgs provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (_mock *IntegrationAggregate) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -599,17 +600,17 @@ func (_mock *IntegrationAggregate) ListOrgs(ctx core.Context) ([]models.Org, err
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]models.Org, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]models.Org, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []models.Org); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []models.Org); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -623,16 +624,16 @@ type IntegrationAggregate_ListOrgs_Call struct {
 }
 
 // ListOrgs is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *IntegrationAggregate_Expecter) ListOrgs(ctx interface{}) *IntegrationAggregate_ListOrgs_Call {
 	return &IntegrationAggregate_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
 }
 
-func (_c *IntegrationAggregate_ListOrgs_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_ListOrgs_Call {
+func (_c *IntegrationAggregate_ListOrgs_Call) Run(run func(ctx shared.Context)) *IntegrationAggregate_ListOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -646,13 +647,13 @@ func (_c *IntegrationAggregate_ListOrgs_Call) Return(orgs []models.Org, err erro
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListOrgs_Call) RunAndReturn(run func(ctx core.Context) ([]models.Org, error)) *IntegrationAggregate_ListOrgs_Call {
+func (_c *IntegrationAggregate_ListOrgs_Call) RunAndReturn(run func(ctx shared.Context) ([]models.Org, error)) *IntegrationAggregate_ListOrgs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListProjects provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+func (_mock *IntegrationAggregate) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID, groupID)
 
 	if len(ret) == 0 {
@@ -660,9 +661,9 @@ func (_mock *IntegrationAggregate) ListProjects(ctx context.Context, userID stri
 	}
 
 	var r0 []models.Asset
-	var r1 []core.Role
+	var r1 []shared.Role
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) ([]models.Asset, []core.Role, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) ([]models.Asset, []shared.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID, groupID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) []models.Asset); ok {
@@ -672,11 +673,11 @@ func (_mock *IntegrationAggregate) ListProjects(ctx context.Context, userID stri
 			r0 = ret.Get(0).([]models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) []core.Role); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) []shared.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID, groupID)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]core.Role)
+			r1 = ret.Get(1).([]shared.Role)
 		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, string) error); ok {
@@ -729,37 +730,37 @@ func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListProjects_Call) Return(assets []models.Asset, roles []core.Role, err error) *IntegrationAggregate_ListProjects_Call {
+func (_c *IntegrationAggregate_ListProjects_Call) Return(assets []models.Asset, roles []shared.Role, err error) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Return(assets, roles, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error)) *IntegrationAggregate_ListProjects_Call {
+func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error)) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListRepositories provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListRepositories(ctx core.Context) ([]core.Repository, error) {
+func (_mock *IntegrationAggregate) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListRepositories")
 	}
 
-	var r0 []core.Repository
+	var r0 []dtos.GitRepository
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]core.Repository, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]dtos.GitRepository, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []core.Repository); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []dtos.GitRepository); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]core.Repository)
+			r0 = ret.Get(0).([]dtos.GitRepository)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -773,16 +774,16 @@ type IntegrationAggregate_ListRepositories_Call struct {
 }
 
 // ListRepositories is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *IntegrationAggregate_Expecter) ListRepositories(ctx interface{}) *IntegrationAggregate_ListRepositories_Call {
 	return &IntegrationAggregate_ListRepositories_Call{Call: _e.mock.On("ListRepositories", ctx)}
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_ListRepositories_Call {
+func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx shared.Context)) *IntegrationAggregate_ListRepositories_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -791,12 +792,12 @@ func (_c *IntegrationAggregate_ListRepositories_Call) Run(run func(ctx core.Cont
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) Return(repositorys []core.Repository, err error) *IntegrationAggregate_ListRepositories_Call {
-	_c.Call.Return(repositorys, err)
+func (_c *IntegrationAggregate_ListRepositories_Call) Return(gitRepositorys []dtos.GitRepository, err error) *IntegrationAggregate_ListRepositories_Call {
+	_c.Call.Return(gitRepositorys, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx core.Context) ([]core.Repository, error)) *IntegrationAggregate_ListRepositories_Call {
+func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx shared.Context) ([]dtos.GitRepository, error)) *IntegrationAggregate_ListRepositories_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -871,7 +872,7 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(ctx conte
 }
 
 // WantsToHandleWebhook provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) WantsToHandleWebhook(ctx core.Context) bool {
+func (_mock *IntegrationAggregate) WantsToHandleWebhook(ctx shared.Context) bool {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -879,7 +880,7 @@ func (_mock *IntegrationAggregate) WantsToHandleWebhook(ctx core.Context) bool {
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(core.Context) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) bool); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -893,16 +894,16 @@ type IntegrationAggregate_WantsToHandleWebhook_Call struct {
 }
 
 // WantsToHandleWebhook is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *IntegrationAggregate_Expecter) WantsToHandleWebhook(ctx interface{}) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	return &IntegrationAggregate_WantsToHandleWebhook_Call{Call: _e.mock.On("WantsToHandleWebhook", ctx)}
 }
 
-func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_WantsToHandleWebhook_Call {
+func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) Run(run func(ctx shared.Context)) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -916,7 +917,7 @@ func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) Return(b bool) *Integr
 	return _c
 }
 
-func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) RunAndReturn(run func(ctx core.Context) bool) *IntegrationAggregate_WantsToHandleWebhook_Call {
+func (_c *IntegrationAggregate_WantsToHandleWebhook_Call) RunAndReturn(run func(ctx shared.Context) bool) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	_c.Call.Return(run)
 	return _c
 }

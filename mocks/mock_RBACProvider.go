@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -99,19 +99,19 @@ func (_c *RBACProvider_DomainsOfUser_Call) RunAndReturn(run func(user string) ([
 }
 
 // GetDomainRBAC provides a mock function for the type RBACProvider
-func (_mock *RBACProvider) GetDomainRBAC(domain string) core.AccessControl {
+func (_mock *RBACProvider) GetDomainRBAC(domain string) shared.AccessControl {
 	ret := _mock.Called(domain)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDomainRBAC")
 	}
 
-	var r0 core.AccessControl
-	if returnFunc, ok := ret.Get(0).(func(string) core.AccessControl); ok {
+	var r0 shared.AccessControl
+	if returnFunc, ok := ret.Get(0).(func(string) shared.AccessControl); ok {
 		r0 = returnFunc(domain)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.AccessControl)
+			r0 = ret.Get(0).(shared.AccessControl)
 		}
 	}
 	return r0
@@ -141,12 +141,12 @@ func (_c *RBACProvider_GetDomainRBAC_Call) Run(run func(domain string)) *RBACPro
 	return _c
 }
 
-func (_c *RBACProvider_GetDomainRBAC_Call) Return(accessControl core.AccessControl) *RBACProvider_GetDomainRBAC_Call {
+func (_c *RBACProvider_GetDomainRBAC_Call) Return(accessControl shared.AccessControl) *RBACProvider_GetDomainRBAC_Call {
 	_c.Call.Return(accessControl)
 	return _c
 }
 
-func (_c *RBACProvider_GetDomainRBAC_Call) RunAndReturn(run func(domain string) core.AccessControl) *RBACProvider_GetDomainRBAC_Call {
+func (_c *RBACProvider_GetDomainRBAC_Call) RunAndReturn(run func(domain string) shared.AccessControl) *RBACProvider_GetDomainRBAC_Call {
 	_c.Call.Return(run)
 	return _c
 }

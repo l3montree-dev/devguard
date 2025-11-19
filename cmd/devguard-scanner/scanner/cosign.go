@@ -24,12 +24,12 @@ import (
 	"path"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/services"
 )
 
 func TokenToKey(token string) (string, string, error) {
 	// transform the hex private key to an ecdsa private key
-	privKey, _, err := pat.HexTokenToECDSA(token)
+	privKey, _, err := services.HexTokenToECDSA(token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		os.Exit(1)

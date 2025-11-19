@@ -23,22 +23,20 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
 
-func PrintFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
+func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
 	}
 
 	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v vuln.FirstPartyVulnDTO) bool {
-		return v.State == models.VulnStateOpen
+	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) bool {
+		return v.State == dtos.VulnStateOpen
 	})
 
 	switch scannerID {
@@ -55,7 +53,7 @@ func PrintFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	return nil
 }
 
-func PrintSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
+func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
 	tw.SetAllowedRowLength(130)
 
@@ -85,7 +83,7 @@ func PrintSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 	fmt.Println(tw.Render())
 }
 
-func PrintSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
+func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
 	tw.SetAllowedRowLength(130)
 
@@ -108,7 +106,7 @@ func PrintSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 }
 
 // can be reused for container scanning as well.
-func PrintScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
+func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
@@ -116,20 +114,20 @@ func PrintScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 	}
 
 	// order the vulns by their risk
-	slices.SortFunc(scanResponse.DependencyVulns, func(a, b vuln.DependencyVulnDTO) int {
+	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dtos.DependencyVulnDTO) int {
 		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
 
 	// get the max risk of open!!! dependencyVulns
-	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
+	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dtos.DependencyVulnDTO) bool {
 		return f.State == "open"
-	}), func(f vuln.DependencyVulnDTO) float64 {
+	}), func(f dtos.DependencyVulnDTO) float64 {
 		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
-	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
+	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dtos.DependencyVulnDTO) bool {
 		return f.State == "open" && f.CVE != nil
-	}), func(f vuln.DependencyVulnDTO) float32 {
+	}), func(f dtos.DependencyVulnDTO) float32 {
 		return f.CVE.CVSS
 	})
 
@@ -152,7 +150,7 @@ func PrintScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
-		func(v vuln.DependencyVulnDTO) table.Row {
+		func(v dtos.DependencyVulnDTO) table.Row {
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(*v.ComponentPurl)
@@ -214,7 +212,7 @@ func PrintScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO) table.Row {
 	var cvss float32 = 0.0
 	if v.CVE != nil {
 		cvss = v.CVE.CVSS

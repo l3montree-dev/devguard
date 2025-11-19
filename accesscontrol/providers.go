@@ -1,0 +1,35 @@
+// Copyright (C) 2025 l3montree GmbH
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+package accesscontrol
+
+import (
+	"os"
+
+	"github.com/l3montree-dev/devguard/shared"
+	"go.uber.org/fx"
+)
+
+var AccessControlModule = fx.Options(
+	fx.Provide(newCasbinPubSubWatcher),
+	fx.Provide(fx.Annotate(NewCasbinRBACProvider, fx.As(new(shared.RBACProvider)))),
+	fx.Provide(NewExternalEntityProviderRBAC),
+	fx.Provide(func() shared.PublicClient {
+		return shared.NewPublicClient(GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC")))
+	}),
+	fx.Provide(func() shared.AdminClient {
+		return shared.NewAdminClient(GetOryAPIClient(os.Getenv("ORY_KRATOS_ADMIN")))
+	}),
+)

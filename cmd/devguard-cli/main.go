@@ -34,7 +34,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
-	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -53,12 +53,11 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(commands.NewVulndbCommand())
-	rootCmd.AddCommand(commands.NewComponentsCommand())
 	rootCmd.AddCommand(commands.NewDaemonCommand())
 	rootCmd.AddCommand(commands.NewLicensesCommand())
 }
 
 func main() {
-	core.InitLogger()
+	shared.InitLogger()
 	Execute()
 }

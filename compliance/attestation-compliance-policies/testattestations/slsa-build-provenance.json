@@ -1,0 +1,2390 @@
+{
+    "_type": "https://in-toto.io/Statement/v0.1",
+    "predicate": {
+        "buildDefinition": {
+            "buildType": "",
+            "externalParameters": {
+                "author": "Sebastian Kawelke",
+                "authoremail": "sebastian.kawelke@l3montree.com",
+                "branch": "HEAD",
+                "ciconfigpath": ".gitlab-ci.yml",
+                "cihost": "gitlab.com",
+                "ciserverurl": "https://gitlab.com",
+                "commitdate": "2025-06-20 08:19:12 +0200 +0200",
+                "commitdigest": {
+                    "sha1": "192fe87d511f2c6bcbdaa6b2116c597d5f3af40a"
+                },
+                "commithash": "192fe87d511f2c6bcbdaa6b2116c597d5f3af40a",
+                "commitmessage": "Adds new publication\n\nSigned-off-by: Sebastian Kawelke <sebastian.kawelke@l3montree.com>\n",
+                "committeremail": "sebastian.kawelke@l3montree.com",
+                "committername": "Sebastian Kawelke",
+                "gittool": "go-git",
+                "hostname": "runner-t2yqjbl1-project-68918618-concurrent-0-76w4fu0t",
+                "jobid": "10410263196",
+                "jobimage": "registry.gitlab.com/l3montree/devguard/kaniko-crane@sha256:034bde4e093de194f142c813f00bbee7e78083f2f08d582875b6f969ee32f0db",
+                "jobname": "devguard:build-image",
+                "jobstage": "build",
+                "joburl": "https://gitlab.com/l3montree/l3montree-website/-/jobs/10410263196",
+                "os": "linux",
+                "parenthashes": [
+                    "881bc8598f40e9ddc6404f79b97628935b127e6b"
+                ],
+                "pipelineid": "1879807914",
+                "pipelineurl": "https://gitlab.com/l3montree/l3montree-website/-/pipelines/1879807914",
+                "projectid": "68918618",
+                "projecturl": "https://gitlab.com/l3montree/l3montree-website",
+                "refs": [
+                    "HEAD",
+                    "refs/pipelines/1879807914",
+                    "refs/remotes/origin/main"
+                ],
+                "remotes": [
+                    "https://gitlab.com/l3montree/l3montree-website.git"
+                ],
+                "runnerid": "43199238",
+                "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgCsFojn/az66rweDeyAXQGSPSBt\ncK/LZC+c4LU0vlnwkAAAADZ2l0AAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5\nAAAAQNEGaPdp5yXXC78NKOGewQ7/cQYkFI4i0N7SNoCRcKKCJDga8O7E14xtajI4bS4XBW\nqfJzwSpucpYWISTa5tGws=\n-----END SSH SIGNATURE-----\n",
+                "status": {
+                    "image-digest.txt": {
+                        "staging": "untracked",
+                        "worktree": "untracked"
+                    },
+                    "image-tag.txt": {
+                        "staging": "untracked",
+                        "worktree": "untracked"
+                    },
+                    "image.tar": {
+                        "staging": "untracked",
+                        "worktree": "untracked"
+                    }
+                },
+                "treehash": "253001b5692f2d621c9e00d82a09c004ce65d365",
+                "username": "root",
+                "variables": {
+                    "CI": "true",
+                    "CI_API_GRAPHQL_URL": "https://gitlab.com/api/graphql",
+                    "CI_API_V4_URL": "https://gitlab.com/api/v4",
+                    "CI_BUILDS_DIR": "/builds",
+                    "CI_COMMIT_AUTHOR": "Sebastian Kawelke <sebastian.kawelke@l3montree.com>",
+                    "CI_COMMIT_BEFORE_SHA": "881bc8598f40e9ddc6404f79b97628935b127e6b",
+                    "CI_COMMIT_BRANCH": "main",
+                    "CI_COMMIT_DESCRIPTION": "\nSigned-off-by: Sebastian Kawelke <sebastian.kawelke@l3montree.com>",
+                    "CI_COMMIT_MESSAGE": "Adds new publication\n\nSigned-off-by: Sebastian Kawelke <sebastian.kawelke@l3montree.com>\n",
+                    "CI_COMMIT_REF_NAME": "main",
+                    "CI_COMMIT_REF_PROTECTED": "true",
+                    "CI_COMMIT_REF_SLUG": "main",
+                    "CI_COMMIT_SHA": "192fe87d511f2c6bcbdaa6b2116c597d5f3af40a",
+                    "CI_COMMIT_SHORT_SHA": "192fe87d",
+                    "CI_COMMIT_TIMESTAMP": "2025-06-20T08:19:12+02:00",
+                    "CI_COMMIT_TITLE": "Adds new publication",
+                    "CI_CONCURRENT_ID": "0",
+                    "CI_CONCURRENT_PROJECT_ID": "0",
+                    "CI_CONFIG_PATH": ".gitlab-ci.yml",
+                    "CI_DEFAULT_BRANCH": "main",
+                    "CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX": "gitlab.com:443/l3montree/dependency_proxy/containers",
+                    "CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX": "gitlab.com:443/l3montree/dependency_proxy/containers",
+                    "CI_DEPENDENCY_PROXY_PASSWORD": "******",
+                    "CI_DEPENDENCY_PROXY_SERVER": "gitlab.com:443",
+                    "CI_DEPENDENCY_PROXY_USER": "gitlab-ci-token",
+                    "CI_DISPOSABLE_ENVIRONMENT": "true",
+                    "CI_JOB_GROUP_NAME": "devguard:build-image",
+                    "CI_JOB_ID": "10410263196",
+                    "CI_JOB_IMAGE": "registry.gitlab.com/l3montree/devguard/kaniko-crane@sha256:034bde4e093de194f142c813f00bbee7e78083f2f08d582875b6f969ee32f0db",
+                    "CI_JOB_NAME": "devguard:build-image",
+                    "CI_JOB_NAME_SLUG": "devguard-build-image",
+                    "CI_JOB_STAGE": "build",
+                    "CI_JOB_STARTED_AT": "2025-06-20T06:19:25Z",
+                    "CI_JOB_STATUS": "running",
+                    "CI_JOB_TIMEOUT": "3600",
+                    "CI_JOB_TOKEN": "******",
+                    "CI_JOB_URL": "https://gitlab.com/l3montree/l3montree-website/-/jobs/10410263196",
+                    "CI_NODE_TOTAL": "1",
+                    "CI_PAGES_DOMAIN": "gitlab.io",
+                    "CI_PAGES_HOSTNAME": "l3montree-website-148102.gitlab.io",
+                    "CI_PAGES_URL": "https://l3montree-website-148102.gitlab.io",
+                    "CI_PIPELINE_CREATED_AT": "2025-06-20T06:19:24Z",
+                    "CI_PIPELINE_ID": "1879807914",
+                    "CI_PIPELINE_IID": "17",
+                    "CI_PIPELINE_NAME": "",
+                    "CI_PIPELINE_SOURCE": "push",
+                    "CI_PIPELINE_URL": "https://gitlab.com/l3montree/l3montree-website/-/pipelines/1879807914",
+                    "CI_PROJECT_CLASSIFICATION_LABEL": "",
+                    "CI_PROJECT_DESCRIPTION": "WIP: L3montree Website (Nextra based)",
+                    "CI_PROJECT_DIR": "/builds/l3montree/l3montree-website",
+                    "CI_PROJECT_ID": "68918618",
+                    "CI_PROJECT_NAME": "l3montree-website",
+                    "CI_PROJECT_NAMESPACE": "l3montree",
+                    "CI_PROJECT_NAMESPACE_ID": "6150100",
+                    "CI_PROJECT_NAMESPACE_SLUG": "l3montree",
+                    "CI_PROJECT_PATH": "l3montree/l3montree-website",
+                    "CI_PROJECT_PATH_SLUG": "l3montree-l3montree-website",
+                    "CI_PROJECT_REPOSITORY_LANGUAGES": "tsx,mdx,typescript,css,dockerfile",
+                    "CI_PROJECT_ROOT_NAMESPACE": "l3montree",
+                    "CI_PROJECT_TITLE": "L3montree Website",
+                    "CI_PROJECT_URL": "https://gitlab.com/l3montree/l3montree-website",
+                    "CI_PROJECT_VISIBILITY": "private",
+                    "CI_REGISTRY": "registry.gitlab.com",
+                    "CI_REGISTRY_IMAGE": "registry.gitlab.com/l3montree/l3montree-website",
+                    "CI_REGISTRY_PASSWORD": "******",
+                    "CI_REGISTRY_USER": "gitlab-ci-token",
+                    "CI_REPOSITORY_URL": "https://gitlab-ci-REDACTED@gitlab.com/l3montree/l3montree-website.git",
+                    "CI_RUNNER_DESCRIPTION": "BÃ¼ro",
+                    "CI_RUNNER_EXECUTABLE_ARCH": "linux/amd64",
+                    "CI_RUNNER_ID": "43199238",
+                    "CI_RUNNER_REVISION": "0731d300",
+                    "CI_RUNNER_SHORT_TOKEN": "******",
+                    "CI_RUNNER_TAGS": "[]",
+                    "CI_RUNNER_VERSION": "18.1.0",
+                    "CI_SERVER": "yes",
+                    "CI_SERVER_FQDN": "gitlab.com",
+                    "CI_SERVER_HOST": "gitlab.com",
+                    "CI_SERVER_NAME": "GitLab",
+                    "CI_SERVER_PORT": "443",
+                    "CI_SERVER_PROTOCOL": "https",
+                    "CI_SERVER_REVISION": "60413bc8e78",
+                    "CI_SERVER_SHELL_SSH_HOST": "gitlab.com",
+                    "CI_SERVER_SHELL_SSH_PORT": "22",
+                    "CI_SERVER_TLS_CA_FILE": "/builds/l3montree/l3montree-website.tmp/CI_SERVER_TLS_CA_FILE",
+                    "CI_SERVER_URL": "https://gitlab.com",
+                    "CI_SERVER_VERSION": "18.2.0-pre",
+                    "CI_SERVER_VERSION_MAJOR": "18",
+                    "CI_SERVER_VERSION_MINOR": "2",
+                    "CI_SERVER_VERSION_PATCH": "0",
+                    "CI_TEMPLATE_REGISTRY_HOST": "registry.gitlab.com",
+                    "CONTAINER_IMAGE_REGISTRY_PASSWORD": "******",
+                    "CONTAINER_IMAGE_REGISTRY_USER": "l3montree",
+                    "COSIGN_PASSWORD": "******",
+                    "COSIGN_PRIVATE_KEY": "/builds/l3montree/l3montree-website.tmp/COSIGN_PRIVATE_KEY",
+                    "DEVGUARD_TOKEN": "******",
+                    "DOCKER_CONFIG": "/kaniko/.docker/",
+                    "DOCKER_CREDENTIAL_GCR_CONFIG": "/kaniko/.config/gcloud/docker_credential_gcr_config.json",
+                    "FF_CLEAN_UP_FAILED_CACHE_EXTRACT": "false",
+                    "FF_DISABLE_AUTOMATIC_TOKEN_ROTATION": "******",
+                    "FF_DISABLE_POWERSHELL_STDIN": "false",
+                    "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR": "false",
+                    "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR": "false",
+                    "FF_ENABLE_BASH_EXIT_CODE_CHECK": "false",
+                    "FF_ENABLE_JOB_CLEANUP": "false",
+                    "FF_EXPORT_HIGH_CARDINALITY_METRICS": "false",
+                    "FF_GIT_URLS_WITHOUT_TOKENS": "******",
+                    "FF_KUBERNETES_HONOR_ENTRYPOINT": "false",
+                    "FF_LOG_IMAGES_CONFIGURED_FOR_JOB": "false",
+                    "FF_MASK_ALL_DEFAULT_TOKENS": "******",
+                    "FF_NETWORK_PER_BUILD": "false",
+                    "FF_POSIXLY_CORRECT_ESCAPES": "false",
+                    "FF_PRINT_POD_EVENTS": "false",
+                    "FF_RESOLVE_FULL_TLS_CHAIN": "false",
+                    "FF_SCRIPT_SECTIONS": "false",
+                    "FF_SECRET_RESOLVING_FAILS_IF_MISSING": "******",
+                    "FF_SET_PERMISSIONS_BEFORE_CLEANUP": "true",
+                    "FF_SKIP_NOOP_BUILD_STAGES": "true",
+                    "FF_TEST_FEATURE": "false",
+                    "FF_TIMESTAMPS": "false",
+                    "FF_USE_ADAPTIVE_REQUEST_CONCURRENCY": "true",
+                    "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION": "false",
+                    "FF_USE_DIRECT_DOWNLOAD": "true",
+                    "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO": "true",
+                    "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR": "false",
+                    "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL": "false",
+                    "FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY": "true",
+                    "FF_USE_FASTZIP": "false",
+                    "FF_USE_FLEETING_ACQUIRE_HEARTBEATS": "false",
+                    "FF_USE_GITALY_CORRELATION_ID": "true",
+                    "FF_USE_GIT_BUNDLE_URIS": "true",
+                    "FF_USE_GIT_NATIVE_CLONE": "false",
+                    "FF_USE_INIT_WITH_DOCKER_EXECUTOR": "false",
+                    "FF_USE_LEGACY_GCS_CACHE_ADAPTER": "false",
+                    "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY": "false",
+                    "FF_USE_LEGACY_S3_CACHE_ADAPTER": "false",
+                    "FF_USE_NATIVE_STEPS": "true",
+                    "FF_USE_NEW_BASH_EVAL_STRATEGY": "false",
+                    "FF_USE_POD_ACTIVE_DEADLINE_SECONDS": "true",
+                    "FF_USE_POWERSHELL_PATH_RESOLVER": "false",
+                    "FF_USE_WINDOWS_JOB_OBJECT": "false",
+                    "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY": "false",
+                    "FF_WAIT_FOR_POD_TO_BE_REACHABLE": "false",
+                    "GITGUARDIAN_API_KEY": "******",
+                    "GITLAB_CI": "true",
+                    "GITLAB_ENV": "/builds/l3montree/l3montree-website.tmp/gitlab_runner_env",
+                    "GITLAB_FEATURES": "ldap_group_sync,multiple_ldap_servers,seat_link,seat_usage_quotas,pipelines_usage_quotas,transfer_usage_quotas,product_analytics_usage_quotas,zoekt_code_search,repository_size_limit,elastic_search,admin_audit_log,auditor_user,custom_file_templates,custom_project_templates,db_load_balancing,default_branch_protection_restriction_in_groups,extended_audit_events,external_authorization_service_api_management,geo,instance_level_scim,ldap_group_sync_filter,object_storage,pages_size_limit,project_aliases,disable_private_profiles,REDACTED,amazon_q,enterprise_templates,git_abuse_rate_limit,integrations_allow_list,required_ci_templates,runner_maintenance_note,runner_performance_insights,runner_upgrade_management,observability_alerts",
+                    "GITLAB_USER_EMAIL": "kawelkesebastian@gmail.com",
+                    "GITLAB_USER_ID": "4682959",
+                    "GITLAB_USER_LOGIN": "******",
+                    "GITLAB_USER_NAME": "Sebastian Kawelke",
+                    "GIT_DEPTH": "0",
+                    "GIT_STRATEGY": "clone",
+                    "HOME": "/root",
+                    "HOSTNAME": "runner-t2yqjbl1-project-68918618-concurrent-0-76w4fu0t",
+                    "K8S_API_URL": "https://control-lb.l3montree.com:6440",
+                    "K8S_CERTIFICATE": "-----BEGIN CERTIFICATE-----\nMIIC5zCCAc+gAwIBAgIBADANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwprdWJl\ncm5ldGVzMB4XDTIxMDExNTE2MTEyOFoXDTMxMDExMzE2MTEyOFowFTETMBEGA1UE\nAxMKa3ViZXJuZXRlczCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALfh\nZemUwgsWAyGZkutW2J/sgULc0WdwoFFW5vDqhpx7ikrWuu2cMsG1IdesiUTFly+x\nXnwxT+17ZNBVU12SE3dInSEDTbBrZuDaCe8mORjhlXU5i8R59x8nXFOf0txs31Ub\nMwqDdmn3eyvdFGTC3Zp/0f6zyJanaEWNDrXjlQZGDEtVMaINyXhhHwaotspym5Uk\nHTLxuH84v7+F/iiO6F1VmYD6hNzQGSQdEOzz3PKKdasH0XU0old3mNBWCpdRwVi9\nbAtyLCewTdtfeHcb9mcwJNvQSIZ0Ys9pZ4suOVJEAq7LcPJkVtLzaNqJXzx/x8vU\ntRr7rF1KsDdFBUbmMBMCAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB\n/wQFMAMBAf8wHQYDVR0OBBYEFKmLv3ti6/A+i4X3Xf6UliALxhecMA0GCSqGSIb3\nDQEBCwUAA4IBAQA6nYOTmDn4ctPQ570D6gN7m5BPJxk+WJbvmyRRv3o5svoccDUR\n/vM+n/p9CZCDNOxH1gJSxb7cpAawc487ijYMaviruO7gPR1756Rii5xlR/kggX46\n7z148ZOns7y5zzvIp/okNzJzQ1RaRv3D/n38RDzrzGc/LvXZlU2atelkjTdLo08b\nZenssxrNwtI2cszM+myfjQEKnNGpUZKBqw1FDyApa3bt6j4DcIdUdBUBUin9WuSU\nPdgN1P89nVFWdVXQXa+BG3gX+HE/ELByPrynQ17iOOJJhjbhcFczXFwuX12oyw8F\nfSVWQNKXI2j1+msokqgU39jTmkpgRzTjnvrp\n-----END CERTIFICATE-----",
+                    "K8S_DEVELOPMENT_API_URL": "https://185.242.112.34:6443",
+                    "K8S_DEVELOPMENT_CERTIFICATE": "-----BEGIN CERTIFICATE-----\nMIIC5zCCAc+gAwIBAgIBADANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwprdWJl\ncm5ldGVzMB4XDTIxMTExNjEwNTQyOVoXDTMxMTExNDEwNTQyOVowFTETMBEGA1UE\nAxMKa3ViZXJuZXRlczCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM/w\n5L/gCjbG25RVBft6ij1CIiz1TPgWAfCQFMpiw79bCxDDhsgamXc3x88lxIv2YPt+\nwIBo8lKB0eVXoF96X+S9H6d2/c8j4IY/eMxhQ4DEuAvNv3KZ/7enKcv/ckVuWmhb\nMHJLkakB3vRJuEvfPnpkk2kx+/HVUOJJj5vYts7nd/qQQW7Lit3NjTaex8Qqn640\nkjeA+dWMxwaCtscWFrZPSofJIZH9M2DQSG4gpKPwarl86pXji3WhY9EQQ4vlbEEn\nTP92NcRBgPSNM28Tok/OGQeH02Drk92iu/fgtmGJYJgrQhsJGsaqFtJ9z9bNQQid\nmLvGkEr63mmgM2tx1F8CAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB\n/wQFMAMBAf8wHQYDVR0OBBYEFAgc1iEs1NuLB9yItptmFrKSxBDcMA0GCSqGSIb3\nDQEBCwUAA4IBAQAxgG3VIKXuk/ubypHy0amJmx0Pi2Fh8hnVtZwcV7hQ5KENbNZw\njwaPGm23N5A5BWw6BobP6rFtznadrw4+bgRXV+LpLRSu3A33D91qGN6u84UAhOA1\nFieqnTfESpEmKyfCFSxVWSxxoKmZzONBIuZqsDmw8FWoG0VHRjOj2Q2duoSszT3/\nUyBqTCGfFKQajeN2oV7DHA/eySWn+c6KyPvgmzKg11wT4nf1ICxNqL3TqxMwaK1K\nGsRJ/d6JgDFirjwK7BRNp5qS6Jy2ZlGLlnq1KwTNJRvY+F2wQgLZvTQyw0cMuEwg\nRosqMFEOka6tjMlJS/JL1/cIIFg7kXpSrnt2\n-----END CERTIFICATE-----",
+                    "K8S_DEVELOPMENT_TOKEN": "******",
+                    "K8S_TOKEN": "******",
+                    "KUBERNETES_PORT": "tcp://10.96.0.1:443",
+                    "KUBERNETES_PORT_443_TCP": "tcp://10.96.0.1:443",
+                    "KUBERNETES_PORT_443_TCP_ADDR": "10.96.0.1",
+                    "KUBERNETES_PORT_443_TCP_PORT": "443",
+                    "KUBERNETES_PORT_443_TCP_PROTO": "tcp",
+                    "KUBERNETES_SERVICE_HOST": "10.96.0.1",
+                    "KUBERNETES_SERVICE_PORT": "443",
+                    "KUBERNETES_SERVICE_PORT_HTTPS": "443",
+                    "OLDPWD": "/workspace",
+                    "PATH": "/usr/local/bin:/kaniko:/busybox",
+                    "PWD": "/builds/l3montree/l3montree-website",
+                    "RUNNER_TEMP_PROJECT_DIR": "/builds/l3montree/l3montree-website.tmp",
+                    "SENTRY_AUTH_TOKEN": "******",
+                    "SHLVL": "5",
+                    "SSL_CERT_DIR": "/kaniko/ssl/certs",
+                    "USER": "root"
+                }
+            },
+            "resolvedDependencies": [
+                {
+                    "digest": {
+                        "sha256": "dc235e342106aeea8707f45c5eba59d6b08e7bcd720822c23b962857283aea71"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/3.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "cf6bf644aa10d6c1b853d6d51e1b7f6a5c006170686ab6d7344a148a53a247e8"
+                    },
+                    "uri": "file://public/assets/partners-customers/bcg.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "00985eff4e3867cb908386e0def966debcd812c334ea13739b430d8d43f5da90"
+                    },
+                    "uri": "file://src/components/blocks/secure-software-dev/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "5cd5e32328d17ce568096c6f093e7bfa9df68079a1f2aab9568a7874bd0e3284"
+                    },
+                    "uri": "file://.git/refs/remotes/origin/events"
+                },
+                {
+                    "digest": {
+                        "sha256": "dca68611eef4401f4da8a075c30a9c7b5496607a378748f6f56920a44461a8ad"
+                    },
+                    "uri": "file://app/blog/chatgpt-code-qualitaet-und-sicherheitsrisiken/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "cbe1d941b28277f7985907c468ce1e1e8221c7992ca6870dd346ada6de8c50e1"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/tls.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "66cc7f41ef4e0f3ccb18cc20e29cddf8e442739a7c7784360df7d50dcf3f7a4d"
+                    },
+                    "uri": "file://app/blog/schwachstellen-priorisierung/assets/sankey.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3fc28b3468ecd2f09a395dfd858e4b4e45122b22eb9ab0a91e79a71100b7540f"
+                    },
+                    "uri": "file://public/assets/partners-customers/zendis.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3899287d19eabf338dfdf0efd5fbae71680b5329fd764ca4f5e66ef6b1777bac"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-yvonne.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f3178a01b5f1150043e271c15a4264e98921aebdb48f837d2f025d1df38922bd"
+                    },
+                    "uri": "file://public/assets/testimonials/krueger.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "b5512bef1015b1b9069579a21e91dca6956746b63ce726b12ed535ff8c644989"
+                    },
+                    "uri": "file://public/fonts/Optika-LightItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "1fe1f3379c16cec90739e8a60933a29087b3f76196a1aa57ce6ca7ac459ac3f7"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-16.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "d3afb56f41934c9e247ff2d9620c058247e00335f3a4982a63bb437f6c9e531a"
+                    },
+                    "uri": "file://public/assets/hero/screenshot-honeypot.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "e4eb2f0b04aa5300aecae59c90bb58ef06eaa2d8bbe0b60e257b108088ddaca6"
+                    },
+                    "uri": "file://public/sitemap.xml"
+                },
+                {
+                    "digest": {
+                        "sha256": "5ef69b7a3a78c352725020a00ee25f93fc95409ebe060b1e901fbb87f6c9addf"
+                    },
+                    "uri": "file://src/components/blocks/phishing-link-check/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "01bfd48dcf3f1150c7c8f129ec12753167e537baad1f2bbddd2710fdea55518a"
+                    },
+                    "uri": "file://src/components/honeypot/charts/CredentialChart.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "83d292a6930a317ea31ef48e220097d2ca10c6c505f41d5954795acef48ca3b9"
+                    },
+                    "uri": "file://tsconfig.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "00e45ccd4a50189f237c7037b77f1b95cdbf86b5202ed8e68bbbf851077b1f2e"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/4.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "956e3aa6d81f5a33cd2c3066f22f2b6abf502f42fa26bb618fa3c0d615844815"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-10.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "fba98baa665cc45e0aac62d94e71f6ca0870174339fed1b4a967da7a530ac20c"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-14.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4cfe7f69c3c2b6268f51e63c62cce35ff7c2af0888678e717892dca38dec075b"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-18.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "aa1762651b95ea2c23ffc7e245cd62fed41a3f0fbc81e8929705b3b66825fdf2"
+                    },
+                    "uri": "file://public/assets/engagement/oss-event-nina.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "e18172c9eed03a551e8683f88df16de51011dca5bd0c0faaa73d526fc87edc58"
+                    },
+                    "uri": "file://public/assets/publikationen/cyber-recon.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3742e983581528ed80216156bec5a9590296e4f3fd66bf0ad786e59f5b291412"
+                    },
+                    "uri": "file://app/it-sicherheitsmanagement/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "910a952da246b918ff06346f97808b608739972e477a107817549e660742f5ac"
+                    },
+                    "uri": "file://eslint.config.mjs"
+                },
+                {
+                    "digest": {
+                        "sha256": "a84ccec929c2ca137e7d3f1861fd1e7fed239893dcb11afc33a57b0a1c08011d"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-2.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "a3147d6d8c669fd122fcec13ec9b450adb4b62d6fbf76506fd83fe8d76a33e3d"
+                    },
+                    "uri": "file://public/assets/open-source-sec/screenshot-dwt.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "2b354e2f30f71f3258a63ddbce1c1ec4518d48cd74689c9f4d8df4c312a283c8"
+                    },
+                    "uri": "file://public/assets/services-bento/kubernetes-logo.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "c2ed28b5cf3a80e2cca6f61c4a512917c3131bbc0f92e9d39690f405da62fe2d"
+                    },
+                    "uri": "file://public/assets/testimonials/lo-iacono.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "8f446687a8b0b2dcd8791667770fdae40a1262b162af44bd2ad09fde31cb0785"
+                    },
+                    "uri": "file://public/fonts/Optika-Bold.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "3562bdd73c9d91f2c90679045cf5a8e6560e0ab290a97e4a6593b59242bf31a4"
+                    },
+                    "uri": "file://public/fonts/Optika-ThinItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "d61a33cab7974dbd1ab0e60793b165b4cd089ad425fe5118ea3841550cc92583"
+                    },
+                    "uri": "file://.git/index"
+                },
+                {
+                    "digest": {
+                        "sha256": "afaef12f50c0493634f4a3e8dcfd2148b1d6a307b84d14b72c7d6887f32197d8"
+                    },
+                    "uri": "file://app/blog/git-commit-signing-eine-detaillierte-anleitung/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "9384568eb0953b114bc30898528911839ebe006ca97fefccd115bf17454dca3e"
+                    },
+                    "uri": "file://app/blog/ransomware-milliardenverluste-und-kein-ende-in-sicht/assets/bitkom.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "ae1d46f456be307acfcdce2615fc4a24dc9172c388678e2baa7807c1e26bf65e"
+                    },
+                    "uri": "file://app/blog/splitting-monolithic-systems-into-microservices/assets/splitting.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "0e279f876e32b2888ede23cc26bbb10848955b4003f7ec66ebdf4b3e6d21c567"
+                    },
+                    "uri": "file://public/assets/engagement/racing.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "2a45408652d0c0ea1e8ce99dc94f3c06b494ca0e6f03a2f03664be0c74fea0d8"
+                    },
+                    "uri": "file://src/components/bento-card.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "04d100c2f6c7868ea20dd5f7722b1e7d3a6e66b0cea654b240b3ff43136540fb"
+                    },
+                    "uri": "file://src/components/blocks/Footer.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "2c65f4fc1ceb1919df4439fb771501d235eb7caca8875bba6d6011e91728831e"
+                    },
+                    "uri": "file://src/components/container.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "38cc3833a8cd77ab8849d685ee6a3b899a768c5f163cc724d191193d164da1ff"
+                    },
+                    "uri": "file://package.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "53ab986c5285e5ca1a904c7530b7be882202328084dc30657985cb67863d8994"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-8.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "bd8af322ee477f423c6e6fa0d0afabd76ca798edf14d767546b924af955d5170"
+                    },
+                    "uri": "file://src/components/honeypot/charts/UrlTable.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "225f926d31bef7024d3a395abb53b026ff423619bdfd7e315a39d73680473732"
+                    },
+                    "uri": "file://src/components/lead.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "d7348a39d6b5f027aecdda1790103c0669bdb2d90e328d9976031ba5fb0382e4"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-2-2/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3b1116623d456bf9516ed4880985298cb7838432e3ea3edc2684a638f4b12184"
+                    },
+                    "uri": "file://public/assets/partners-customers/ikor.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "1dcf31f1d6fe7de449d200ff621bd8a5545226c60e8db79b0c2ff90df9a707cf"
+                    },
+                    "uri": "file://public/assets/team-listing/charly.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "caa0649c2ee6b7cedd16e40d9819fef95d3d83e289a1ea4fd738715a13c46ddf"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-sebastian.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6e24335cc5331226257b276423af616c5a0f6ffd54eaaea2f586ecd19837c1f"
+                    },
+                    "uri": "file://src/components/blocks/phishing-link-check/Quote.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e65427b1fff9cfac34556104236451a64403cd478594e0c8a6afdb9397409d5d"
+                    },
+                    "uri": "file://src/components/honeypot/charts/WeeklyChart.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "f3c6b190e24b4633d700ec72160cd13f92c3cf0bf917b9f03e3245e0b41f954f"
+                    },
+                    "uri": "file://src/components/text-flip.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "16e203237f42fc334fa7ee79add1fd946a0e4eadaf8a810c2b79959b0f738a54"
+                    },
+                    "uri": "file://src/services/attack.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "6cad3fe482cec8e3bae96449761f3014bd518e0521253ff1792100c401b08daf"
+                    },
+                    "uri": "file://public/assets/partners-customers/nextgov-it.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "39b2768192266e2d6cbea7a06ed79255a6917f3f754afc2178ca6bd0b101e9ad"
+                    },
+                    "uri": "file://public/assets/partners-customers/sta.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "7e92ae7f89bc1058eaf43e70ec507c17f86b5f26206f0c6945d527f646203e3f"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Events.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "734376436c79ee270b4b40904e7afd8cce03d2917c37119fcad4291e5fd3fc31"
+                    },
+                    "uri": "file://app/blog/eckpfeiler-der-digitalen-souveraenitaet-open-source-loesungen-in-der-oeffentlichen-verwaltung-eupl-opencode/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "662a0640417e425dfe0799555b12c6e5089a798ba794250d2fe3b3d3ea7810a5"
+                    },
+                    "uri": "file://app/blog/security-by-design-in-der-softwareentwicklung-devsecops-als-nachhaltige-herangehensweise/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "272309606804b099816791632a8328b98676ee08f2042086beeb7ea11df4b4ff"
+                    },
+                    "uri": "file://public/apple-touch-icon.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "41730a2783729f4d00a630d019f8816aff50cb208d4b2bbbdcc7d33b4e5ba3fc"
+                    },
+                    "uri": "file://public/assets/partners-customers/wetteronline.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "91b7f635400d88173f1c598b86214c71806ce4169e2512b265ed4752aa8345d9"
+                    },
+                    "uri": "file://public/fonts/Optika-Thin.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "217ad9fcbdaedf2b81b5189f243c883d7a3e2c2aacd45f8e5f3e04758a12ae62"
+                    },
+                    "uri": "file://public/l3montree-logo.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "c5588b08b37372e5b48f6d543c42f153f75c6c9958e90297054678492d19c918"
+                    },
+                    "uri": "file://public/icons/opencode-icon-white.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "f8ff09e2a83de84dbd815d8da506181e5c6b29d078767478a496d60555906c08"
+                    },
+                    "uri": "file://src/services/honeypot_service.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6fef9f989443aca49375ae29c46a0be9981d9e774230a8af6688115687bf9e8"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-2-2/assets/sbom.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "0a9f9ae7aed9ce52e6eed5bcae58e45724f1fd3d2bb095cec7e6bafef8076add"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-15.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "83faf8f3273bf9d6294a5039c3454ba29e5c77c8ea1f13a954c59b74f2f59819"
+                    },
+                    "uri": "file://src/components/blocks/open-source-sec/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "8e5044b4205b423904a15ac27b2dd1b487164ecd6672ca58ec43e100591c1fff"
+                    },
+                    "uri": "file://app/kubernetes-security/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "59accc81fcebf722cc340ad1205fedc7e621bceca9eb4ca8873cdeaf323e5a6e"
+                    },
+                    "uri": "file://public/assets/partners-customers/wheregroup.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "bbb9850434018d86fa1909c934b8116c22ddae082535b39e4906483a809139c3"
+                    },
+                    "uri": "file://public/assets/publikationen/l3montree-open-source-sca-scanner.pdf"
+                },
+                {
+                    "digest": {
+                        "sha256": "12c1f5fec1ff180640760eacf9bc0dabc919446d6b0af938f159d604e9149fc7"
+                    },
+                    "uri": "file://app/blog/was-ist-schatten-it-ein-verborgenes-risiko/assets/article-header.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "ff30df554f382c1fb4266db61e9983fb0a3068b92cc9aa0ad1ba367793a6f9a5"
+                    },
+                    "uri": "file://.git/FETCH_HEAD"
+                },
+                {
+                    "digest": {
+                        "sha256": "d253c14b1f4bf7a63b07df638c0ce0485b01cc1acccb814cedbae75b9c8437ec"
+                    },
+                    "uri": "file://public/googleddba2f9d548a6089.html"
+                },
+                {
+                    "digest": {
+                        "sha256": "866bad405ccff2f0b12fa1d0e33c3a461fcfd1ffc7bd398110d352221e0c1695"
+                    },
+                    "uri": "file://public/assets/partners-customers/jlu.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "f019974763cf6a02de3b73f677fc3023c5e13be82c990fb655c1244df820304f"
+                    },
+                    "uri": "file://Dockerfile"
+                },
+                {
+                    "digest": {
+                        "sha256": "e495b5521b419eeb643520e122afb3d050c2b82b9b950b80585099cf05b982b6"
+                    },
+                    "uri": "file://app/blog/chatgpt-code-qualitaet-und-sicherheitsrisiken/assets/apiresults.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "815e5afe194ae12bff29f6597e87797e16bdf0b20c2cee8e8062950463d31ee2"
+                    },
+                    "uri": "file://app/blog/ki-und-phishing-hoch-entwickeltes-phishing-fuer-jedermann/assets/gpt-code.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "ca846549960ed12b53c219ce28e20e1cffbf3bde2cf0af4f8739272618024da6"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/2.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "86725cd26b51db574712a7423802e4c7153ff69c2c8b88614d689372b0a33697"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-1.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "de7510fe7266186773798fefa06ad935d33b66768075ae4f19dcd609e153e1de"
+                    },
+                    "uri": "file://public/assets/open-source-sec/screenshot-devguard.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3740b3f7cf09c053d836250fed78bc5348d725b35ad54c8e1dcb043dfdc786d9"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "1331187420ca704b0d5088bf9efd801744e32a0d9a696201a7cb1a52395f27e0"
+                    },
+                    "uri": "file://app/blog/was-ist-die-software-lieferkette/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "7d99cc5b35b729460e46b3713c14d286582d13632b54f6f28dc2c676781ad0d9"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/assets/2.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "fab00c2d598c56cb4838603981b66e3490ebe27ea56fb188120a7e6d4ca46970"
+                    },
+                    "uri": "file://public/icons/github-icon-white.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "d4d8515c4094ceaabac1777f9aab8f9f491c8dcbe7dc42d484de7d302fe90926"
+                    },
+                    "uri": "file://src/components/honeypot/AttackGlobe.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c2da50209a7b5fd1edf1a5901c95b98bd3f39d17294fe052cc34d392d55f5181"
+                    },
+                    "uri": "file://app/not-found.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "1d5d6157fc9f95d727f06d77df31f44a4240264094a592c3498ba8095be4dde2"
+                    },
+                    "uri": "file://public/.well-known/security.txt"
+                },
+                {
+                    "digest": {
+                        "sha256": "8728aac971af51a27a1f800e4522392efaad6b5bf8476925326565d1b75ea5b1"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-21.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "76d7145f7091c5b1c181bc8f62f7b7a4865ba332241f7268b7cbef19925bb5f7"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-1-2/assets/dependency-baum.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "ab32ad9924a4e9f11460078ae0bea34c245f701d83f3f63626c66f491adef239"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/1.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "815f4c3eccdb83065b25e24ee32c718dcde001976e4a6e91ee241667d057380e"
+                    },
+                    "uri": "file://app/blog/schwachstellen-priorisierung/assets/vulns.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f1219d16bc27842ebc30a213edd3b2cb7e70a8a0085b33223dcd93ca6d3a260e"
+                    },
+                    "uri": "file://public/assets/badge-programm/screenshot-repo.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "076f23362dc752f9388bb03719c0bfe17f03cbd900a355b5f3489603409023cf"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-12.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "a6ca7eb7cbb6922e3da15dee1d54c66f344d492af6edefdd500680875fd1dd07"
+                    },
+                    "uri": "file://public/assets/engagement/view-of-bonn.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "b20c83ec223ffef0e7aa8d26639dbbcc0411a656093f203551e351609d48066b"
+                    },
+                    "uri": "file://src/components/blocks/it-sec-management/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "37ebda2f57a57d6716f9975ed6129d94379df40ec386bd0e176a770b2007ccf7"
+                    },
+                    "uri": "file://src/components/blocks/team/TeamCta.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "0588391007ed9b56537c4a81b97279a17f615d8ab437acb1bfa98831fe711663"
+                    },
+                    "uri": "file://public/assets/partners-customers/pvs-rs.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "61076a9dae5aceb27467754cbb545ea6086e07cee9a424a88fcf550c6a57fa1a"
+                    },
+                    "uri": "file://public/sitemap-0.xml"
+                },
+                {
+                    "digest": {
+                        "sha256": "6ced8636a9d4ad2e26f018e9ed7323cc2405eb4446f224d76ad191c66159b668"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "07be1a59967579e0116b62fd2b24c65ca9d5bd9ec314af3fcad395e072cada9e"
+                    },
+                    "uri": "file://src/components/services-bento/container-lines.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "acf3d4e311c5a61886e3a218c7ec3363e35a3c82e23c18a35a497d8aabe1d115"
+                    },
+                    "uri": "file://src/components/youtube-video.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c303c0ee1f4e5a960c5a26863bf5f2cf192ddaa0e9105c19f6f89580be95a942"
+                    },
+                    "uri": "file://app/blog/was-ist-devsecops/assets/devsecops-controls.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "dabf2e99d3b6242a9582425ae640ee70b4c0b8b31da8923ca23a5d75ad08d096"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/assets/4.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "0177535507864a2e37ae8fb42b4e45280fb832cf22d434038f04f190ed7fb27e"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-9.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "d7348a39d6b5f027aecdda1790103c0669bdb2d90e328d9976031ba5fb0382e4"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "98395199ec3a61c6519675f7075eadf3f0764bdd72d849bfcc85842b2bddf9ca"
+                    },
+                    "uri": "file://public/assets/testimonials/pvs.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "3d4701a7256b01bf6d5f662f270e4ac1daf6e504f7872f04801ebe12311399aa"
+                    },
+                    "uri": "file://public/fonts/Optika-SemiBoldItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "d38487788eedc2d43dcb2910837f4517174d214151c08d2e23186e14225b0b3d"
+                    },
+                    "uri": "file://src/components/blocks/it-sec-management/Procedure.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "100a696f05baaf5a01027cffb2f2b012f116bcd79da6c12bc1d930d4b02b3789"
+                    },
+                    "uri": "file://src/components/blocks/phishing-link-check/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "af11be78f79be73f429b505101fbe8b459334a51f58e727b44d0fcd3004aa744"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/AcsPub.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c1f66a99899920da2c9476867b36212f615b59e38049b148e49dfb9b762f5ca7"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-1-2/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f83941b3e9b3665bd59efd321685db21c961c91a2acd87cb8f88f78770a43e78"
+                    },
+                    "uri": "file://.git/objects/pack/pack-f9db4e328fab5668f5676770a984216cd6d319bc.pack"
+                },
+                {
+                    "digest": {
+                        "sha256": "b32eed10200fadc4d375ecc737bf0c58787cb961e84114f4cd0d22a24bedbb80"
+                    },
+                    "uri": "file://components.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "2047ccdb6b030e78946fb7d7190b46d534a88369ab94d206fef73108c8f71de8"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-6.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3bc623a81c2bcf2d16f9b72da50b94155e2a24c254129ca3ebaedfa34e37da45"
+                    },
+                    "uri": "file://public/assets/engagement/hackathon-2.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "b079703c53d8cc41814266b8782bb87d9a8348625593904bc4565e43ed59a35e"
+                    },
+                    "uri": "file://public/favicon-16x16.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "1a1375dc43e5db9fefb273a24a20b230f7d753048a9b3ed3f3f468a143bb19bd"
+                    },
+                    "uri": "file://app/_meta.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "f02fef710213ef861221b27cbfa23ee03871c2876da95499531b44b4a8709dac"
+                    },
+                    "uri": "file://app/blog/ransomware-milliardenverluste-und-kein-ende-in-sicht/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "90d53d61acdc684acba87f4a09d42dc433f646487d83d84d49ade5bae82c5bc9"
+                    },
+                    "uri": "file://public/assets/hero/digital-software-world-1.mp4"
+                },
+                {
+                    "digest": {
+                        "sha256": "5fbfa78d172c3f357f8bec1e3dc770609cf659e8be204a7cb385d36ce9202fd5"
+                    },
+                    "uri": "file://public/assets/publikationen/l3montree-honeypot-threat-detection.pdf"
+                },
+                {
+                    "digest": {
+                        "sha256": "626e411547d999821c119e6e523c5b6b8bad1d9d6f286ee612af24e3e8d8a04b"
+                    },
+                    "uri": "file://public/fonts/Optika-Regular.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "b232d9a7e58918ecb6aaea8be0c06baf085d9c6d0b28be2979834ef93641f5bf"
+                    },
+                    "uri": "file://src/components/blocks/phishing-link-check/Procedure.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "572f399025da9c9b3f35cb18eb2f76ce0bb4dfed31a993c94074e4ecd8aeb468"
+                    },
+                    "uri": "file://app/blog/chatgpt-code-qualitaet-und-sicherheitsrisiken/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "7acd70f57c0c56b1a72d5146ae0cd157a83b4dcced7b86f559e5dcacf16a03e2"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-2-2/assets/security-txt.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3289b0100f6dd877a80e34eb7987ac9c14d050fbb38648f4509dfb687c6623b8"
+                    },
+                    "uri": "file://app/blog/ransomware-ablauf-eines-angriffs-und-gegenmassnahmen/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "29dab8718b4e327c7aa88a93fd794ac5e0b59cb40d7af10829ac3b9fa28896be"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/assets/3.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "39ea6a541fac1f1c41361edc17c3ed10d1fd6e960cef3b4c1e062dac0a82b81f"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-17.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "2887c8b17ff4110239b3047841b1cd5914799b4da70d5d955cc47edeb5e4c8b9"
+                    },
+                    "uri": "file://public/assets/engagement/hackathon-4.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "6507609f0fcbb351e657973918705dd6c1fd28b0da6d163470a691949b8cf503"
+                    },
+                    "uri": "file://public/assets/partners-customers/kpmg.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "df73a7ad8b25b4f9db71c022bce80b0c5d356f112946bfef071c292250f361f8"
+                    },
+                    "uri": "file://public/fonts/Optika-Italic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "b4567a288f56e7fc25a880b922d051742f1e2376a3aea5ffd36aa706cc010f31"
+                    },
+                    "uri": "file://.gitlab-ci.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "08978604336e520831953cc77ca253b6f1a359c0b5a426c9656238212ae38076"
+                    },
+                    "uri": "file://app/blog/ki-und-phishing-hoch-entwickeltes-phishing-fuer-jedermann/assets/gpt-text.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4faf6819ff40113c72069211c5f952f1e2cef9192f45e76e96c5cdda8ba3d9b9"
+                    },
+                    "uri": "file://app/blog/open-source-security-schluesselrolle-in-der-it-sicherheitsstrategie/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "aaaf71da7ef87b0754ba08e45e182324eb8e1e0c128507ab24c3205829fae6d8"
+                    },
+                    "uri": "file://app/open-source-security-technische-souveraenitaet/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "0d1f1caebbf412b5acf6340b7127a34092c2653bd0f00636d3d9a037148aff5a"
+                    },
+                    "uri": "file://public/fonts/Optika-MediumItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "909df155fc3877a4bd27bf3461d13bdec29fed7e850beb2d617d13ce6271aa71"
+                    },
+                    "uri": "file://public/icons/youtube-icon-white.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "0826eceeeee3676d796ff59c7ff2679cb8aa24504af24c82093a757b1ae03d66"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Hackathons.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "4cbfd2b00dde4fe8c2743f673e400562a19188e2925e1757e8b400512a6a2f17"
+                    },
+                    "uri": "file://src/components/honeypot/charts/CountryChart.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "b446d5421f1cdd0692f30128e6dccd7237a96bf210bee8d419ccd465fe500329"
+                    },
+                    "uri": "file://app/blog/_meta.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "a02d338b74df25841f1f5ebf931975ee26a18ecc6f21dc1a1426e6352853748d"
+                    },
+                    "uri": "file://app/blog/was-ist-devsecops/assets/devsecops.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "a2e44fad16e702be377934d87d5578fe237b9660eab753616fe86716c71d91af"
+                    },
+                    "uri": "file://public/assets/partners-customers/hbrs.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "5a3665809dac1bb8312755730e66e5b20490b1fef3811ab80886c807e1c475f6"
+                    },
+                    "uri": "file://public/assets/team-hero/1.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "723d008c6c41ff3448d6745516adf0f085ee6c03c9b66fc91a480878ffb5d260"
+                    },
+                    "uri": "file://public/countries.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "7a9e07ce1f7386689917602ddc5a75750ad842e605ff764f67173529c181bf04"
+                    },
+                    "uri": "file://public/site.webmanifest"
+                },
+                {
+                    "digest": {
+                        "sha256": "32190da984f41e4ad24dabab1a800d28c79ce38e5729659d52ff96f7a18e7dc4"
+                    },
+                    "uri": "file://src/components/blocks/secure-software-dev/Quote.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e2ba17c6d986bb3616b5cd070c01a72cdcccc0bcbbc55b1da47f8f711ca0f340"
+                    },
+                    "uri": "file://.git/config"
+                },
+                {
+                    "digest": {
+                        "sha256": "1f80cf6d1f0b056ed0f370d2540167299063633746d5092b9ebfa33a250e91a6"
+                    },
+                    "uri": "file://app/datenschutz/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "9808d63b2f8b54887722ff6f584aaa02fb2ee3bfa8e571b56ffa54e8bf9aeea7"
+                    },
+                    "uri": "file://public/assets/hero/dot-texture.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "6037831a205b186025e34f9e85a024c51987b2847fb0eb05c3534bfe279914ca"
+                    },
+                    "uri": "file://public/assets/testimonials/redlich.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "d909d0d49e1495c170b57202a769971b105ea3a9d78bae99961bad5cbb990e9c"
+                    },
+                    "uri": "file://src/components/blocks/badge-programm/TryItCta.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "bffae102f900d0ef46ce7ffc7e12f0d450695cdf120d4d110f9769db78777836"
+                    },
+                    "uri": "file://src/components/honeypot/charts/Table.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "4d6fa2365076efcc79198795f6359613e2c1d2f4677f8f035cd12dcd6a38709b"
+                    },
+                    "uri": "file://src/components/honeypot/charts/chartUtils.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "302d2cfc437d615de077a94bb6dd438dadd47a13627c75d76b21426e3c02cd46"
+                    },
+                    "uri": "file://src/lib/utils.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "0adcbd055baad1ec9514d20c4f029b1d02b1ea99471b935e57cfd3b6d5e5cada"
+                    },
+                    "uri": "file://.git/refs/remotes/origin/publications"
+                },
+                {
+                    "digest": {
+                        "sha256": "79e0da72bb7685d2b2a845888b669aa27adbd563408f4557aecd4d33f2dfcfd6"
+                    },
+                    "uri": "file://app/blog/chatgpt-code-qualitaet-und-sicherheitsrisiken/assets/cwes.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f64e5ac5b062ca1e6d8caca0750a7db93bfc501b8981ffe1e58aa50eded60c7f"
+                    },
+                    "uri": "file://app/blog/schwachstellen-priorisierung/assets/severity-trend.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4f268ba43981b5bff101fc659d51e4b1e3b2955db689b0cba49c63e8b63b50f8"
+                    },
+                    "uri": "file://public/assets/engagement/hackathon-1.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "4a1d999aea4a3ea9cb5cf01c93e7619babf60fd1474855a6403bb7e17db0faa1"
+                    },
+                    "uri": "file://public/favicon.ico"
+                },
+                {
+                    "digest": {
+                        "sha256": "4fad50566cf04ad67073b3fda492fe4ef6c533ee5c7b7b804e79506d812baace"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/ContainerSec.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "3e0e434153929a71a1f1c0298094992cbe3d067e8847cbd9e3c1449606b88cc3"
+                    },
+                    "uri": "file://src/components/stagger.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e69532f5267c81b216d763da33795edd589be291187ae3f3aacc828e1c2ed6d4"
+                    },
+                    "uri": "file://src/components/ui/button.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "56a216fe68c8df6e874027e8a585ec0966b943561f7efd5104ea87601a78e2ad"
+                    },
+                    "uri": "file://.env.example"
+                },
+                {
+                    "digest": {
+                        "sha256": "2fdbef15fb447c33155c50672a58a8b5826ffeeb132cf42d716cc646fe74a1c9"
+                    },
+                    "uri": "file://app/blog/security-by-design-in-der-softwareentwicklung-devsecops-als-nachhaltige-herangehensweise/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "04b1401a660744c1590ef3732669f8f79787f29e37d7a1a8319e3ee11c5a8b37"
+                    },
+                    "uri": "file://app/blog/was-ist-devsecops/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "c876ea65eac66affa0bd524e93c8c86162471c00924bf28fd6ffda5254e0c3c5"
+                    },
+                    "uri": "file://app/blog/was-ist-die-software-lieferkette/assets/software-supply-chain-attack-vectors.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "ac6fe2853dc3e63c977c7d6c7be252e1be0690732bade10d9327a99e1d20abab"
+                    },
+                    "uri": "file://app/honeypot/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "141ef24ca27a99d08962210fdf20212d3435fdcfa21b46cd88b44d22f751dfae"
+                    },
+                    "uri": "file://postcss.config.mjs"
+                },
+                {
+                    "digest": {
+                        "sha256": "1b8c7586f46c85ddacff3eff9cf5c103d741bf8417eb8514617718836a618121"
+                    },
+                    "uri": "file://public/assets/hero/deps.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4f8813db80a3b636666c22ebe83db76517fc9f7a5bc6941f7162589d7758a286"
+                    },
+                    "uri": "file://src/components/blocks/Testiomonials.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "6d8eead37b859116196b790e4a72e09b26443a96a5384ca78ba00a48831bd774"
+                    },
+                    "uri": "file://.git/logs/refs/remotes/origin/events"
+                },
+                {
+                    "digest": {
+                        "sha256": "59493b16b9948c591257c35b83b5fed6a45a89b6f292036e8cff01e3a54b0549"
+                    },
+                    "uri": "file://.git/objects/pack/pack-f9db4e328fab5668f5676770a984216cd6d319bc.rev"
+                },
+                {
+                    "digest": {
+                        "sha256": "f7e66c34681854c11fcd1e30d1bfc44b40f6df98fd5042c0483f1dfe28a06598"
+                    },
+                    "uri": "file://.gitignore"
+                },
+                {
+                    "digest": {
+                        "sha256": "fba4218e053140cc7fb995bc8540631d127e3444723173a041581d02335c3353"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/5.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "1ec3e472ac5f7b8c4c8662ae942045a3a161c20eeec76cc9658b4c3ebe3a4475"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-13.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "de98813c9ee602f4d85374a3f72e0e7831ebf4d152389d42f14b3034706b809a"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/8.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "c834185c01d70fb009ce5b12d535193d96883e0fb40313e1073f2885d40e60e5"
+                    },
+                    "uri": "file://public/assets/engagement/oss-event-audience.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "7507e773b51cd441bbf405bb1917ec190fd7d8c680ad86540be7ea27827b473e"
+                    },
+                    "uri": "file://public/assets/open-source-sec/background-16.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "699d3c25c6b80edff4a27675669bd15bada725201f2b71f510c63b889f0e9e11"
+                    },
+                    "uri": "file://app/blog/die-solarwinds-affaere-ein-wendepunkt-in-der-software-supply-chain-security/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ccbdf68736807118e8a2c43de8164baad8266db0c6f020079bc195ff67c1375d"
+                    },
+                    "uri": "file://app/blog/ransomware-ablauf-eines-angriffs-und-gegenmassnahmen/assets/ransomware_killchain_d.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "6ad03b6e5e3bd7a48d76deead20d47d5bad21c13a255dd73ebc3a27a06ba55ce"
+                    },
+                    "uri": "file://app/blog/splitting-monolithic-systems-into-microservices/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6369de556ee42b1683928af16a88de7c64c961f0e3bc9cd659d2eabfe8f0c0a"
+                    },
+                    "uri": "file://public/fonts/Optika-Medium.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "7bfb025800194671f3843cfc8cc46aee409046843adff370c776a129d4737cb7"
+                    },
+                    "uri": "file://src/components/animated-number.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "b657aa742e1c1379315377130b6d01bd88f35f5fc4d19d2b26793a00161fe971"
+                    },
+                    "uri": "file://src/components/blocks/open-source-sec/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "be022fd0a57774b733033e8e7e8cde9b3fefd26e2d831138577d9f8d709f99e1"
+                    },
+                    "uri": "file://README.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "25d0d337910ac2edc4184a9355889b3c2fe47d0b4d2341e0f4ff95e0a6e4c573"
+                    },
+                    "uri": "file://.dockerignore"
+                },
+                {
+                    "digest": {
+                        "sha256": "4e362db43e4cf789da3dd8716839594fdc28c1ba842fa96e4854284403f16620"
+                    },
+                    "uri": "file://.git/HEAD"
+                },
+                {
+                    "digest": {
+                        "sha256": "5acbc76e14f335ab15d317aacd9627b4d3d36d8c8f6d251a3af1d114f939ace7"
+                    },
+                    "uri": "file://public/assets/hero/logo_inverse_horizontal.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "0a4a7e489af6f6a6719a92047f926441446f600955aeb18b48d958056dfb8f5b"
+                    },
+                    "uri": "file://public/assets/k8s/cloud_stack.mp4"
+                },
+                {
+                    "digest": {
+                        "sha256": "bc44aa8aafe1589699f21c304d1a623f4ca6b6e6fab044cc74fd8ec0f9c26898"
+                    },
+                    "uri": "file://public/assets/team-hero/4.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "070c9961293654685cfd331ada9e871eb026d03e829316076f6b132afd9f54c3"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-frederic-noppe.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f717665e7105cf2ebb9b95bf9f8deb6284c4b37e678587a0c9307b8fee569a0b"
+                    },
+                    "uri": "file://src/services/assets/countrycode-latlong.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "57b5aee6bd1e9a1fdc2f65859885e19b114062d463d44d8d48050bb9591cfb95"
+                    },
+                    "uri": "file://.git/logs/refs/remotes/origin/impressum"
+                },
+                {
+                    "digest": {
+                        "sha256": "40e6fd1f55fd9981f0dd66711e16971d21334bac2291f81df8f32f529b1d3492"
+                    },
+                    "uri": "file://.git/logs/refs/remotes/origin/main"
+                },
+                {
+                    "digest": {
+                        "sha256": "df5692722ffb88145e022235f660462536bd6e9acb9cdb16ea945c3e4756ba6e"
+                    },
+                    "uri": "file://public/assets/k8s/acs-preview.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f76654f1a7b6ed12c26d4e46470dbdc5cab9c32b5bef7e1cee7ca00488e923c1"
+                    },
+                    "uri": "file://public/fonts/Optika-SemiBold.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "50396e628e7ddf5dd17ef36a2941c9982c7ff4d3cdfc0597b23a00914c772b16"
+                    },
+                    "uri": "file://app/blog/open-source-security-schluesselrolle-in-der-it-sicherheitsstrategie/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "72771cac6b277a8a9a7e3c1548b53900b3a87370bfd7bf107913953edd15e3f2"
+                    },
+                    "uri": "file://app/opencode-badge-programm/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e6bdf09cbab869615e99fe236b8bd8ffd0e50829532981e20a82e2006831c631"
+                    },
+                    "uri": "file://app/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "7a26483ae0d829d17617c7a849d511c55e8ce1a5b49d58ebb792ab0fdd682190"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-refaei.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "8eb95bcbc154530931e15fc418c8b1fe991095671409552099ea1aa596999ede"
+                    },
+                    "uri": "file://.vscode/settings.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "a55ed553721f094b224191855a642a47e89a0eea879c54f098bbc5beefdcb612"
+                    },
+                    "uri": "file://app/api/check-phishing-url/route.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "c0c1fc6dbaaf61848727671f32efc5fef2af25522b1ccceae8264379307ae3cd"
+                    },
+                    "uri": "file://app/blog/was-ist-die-software-lieferkette/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "c0b8f710857c5e1410df4ff88c8b1772c3ccfd8910f7a0e75ea985019a53de38"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-7.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "a60f0b0e0d3dc32e4951c86880afa767709193671cede8c16973dac73a43f28f"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-jan.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "b14d058242da041ecd3aa2b7dc37d74edbf801917ad4a721eb8403c2cf3c42b7"
+                    },
+                    "uri": "file://src/components/blocks/AnimatedLogoCloud.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "5d5dc5fdf0a939d40720a453abef9b754ab742eccda373591b0bf0f803467f83"
+                    },
+                    "uri": "file://src/components/blocks/team/TeamListing.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "64e54b461545164b1d53c8c34e235ef45366c2d09d138894b4d6d624677b7b9d"
+                    },
+                    "uri": "file://src/components/fade-in.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "9d2b172304014635b1d5d5be372d36efd4acfd9f5f79f31d32fec237b6de2552"
+                    },
+                    "uri": "file://src/components/honeypot/Globe.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "5df5b47d87214fd0293e19e757bec2d24983e6ab02dbd61bd89c2c092208663d"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "be7032712e192524854c2c0121c650cd63194cb56472acd3e65564269fa02bc9"
+                    },
+                    "uri": "file://app/blog/splitting-monolithic-systems-into-microservices/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "27f18ab3b4a4c60ebea538f87767a2a6a979b76387870eca9e98d7ac52d28fd3"
+                    },
+                    "uri": "file://app/blog/was-ist-devsecops/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "b2b14e4c03a71a8234818e589bad75433ab6856c7be5d508cac332115d26b821"
+                    },
+                    "uri": "file://app/layout.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "4f9e32fd05a4527ea2df65cdfbbf0da4d4f694d8e094a6e1d7d6b52c8a25c28e"
+                    },
+                    "uri": "file://public/android-chrome-512x512.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "625d639ace257bd22e51e8f1e5a55914498fac96400a2f22cb2724b2856bf364"
+                    },
+                    "uri": "file://public/assets/partners-customers/uni-bonn.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "b8d714929f4204e58bbbe43f7fd6b0e2d84a5e0e2bb16db41b8ff58d053d88ee"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-dominik.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "6dfff1043fbd9e706b1edb9d17450f0fe18a0363c121eaba07c37c84db55c287"
+                    },
+                    "uri": "file://src/components/blocks/secure-software-dev/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "69c02b1fdb5f82c032d9a47752a989ceec7a44f2a70ae1ba8b29bf88e6b56b74"
+                    },
+                    "uri": "file://public/assets/partners-customers/bitkom-akademie.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "8672c62601c2d7e0367239ebb837efb6c3fe1692f4d62f2355e1b44be8351020"
+                    },
+                    "uri": "file://public/assets/services-bento/2-hands.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "dc54766a5445b4309c1dd354938cd8fda7ea1eac3e33a078dc0dc953b9d91a74"
+                    },
+                    "uri": "file://src/components/services-bento/circle-background.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "4be484294d0507376cf8a133c6751fbfd3ccadbb94e72973ea4b29f03a9177b9"
+                    },
+                    "uri": "file://src/hooks/useWindowSize.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "1d1af8e5255a027b31c84cd6279903038b1515ee3102c1d0dd869511f2a7ae55"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-tim.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "cd4d078c7555c76384adbd5e16dfbb0c6923b7b1ed5b960d672668269b27a133"
+                    },
+                    "uri": "file://src/components/blocks/open-source-sec/Stat.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ead40436753435e366297a83ed90ce70896b4793942c19bf91fb25eedd3266f7"
+                    },
+                    "uri": "file://src/components/headings.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "497f5e988cde783c59f68d910454e21c9b1b35a59093ede5d16c9c48b32baf1f"
+                    },
+                    "uri": "file://app/phishing-link-check/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "97875ebf3be91de49401974569fe86628b205f47546fe04ba8f3133ea2a91efb"
+                    },
+                    "uri": "file://public/icons/gitlab-icon-white.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "b5ae1cd151023701b7bb23fc4c55a30e3d52faf0e38ff328490d3cb5476de18b"
+                    },
+                    "uri": "file://src/components/blocks/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "6a37ba6cd5170c092afbae770eed99a5207a0a0c879f071747b9262b4fa23d06"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Cluster.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "66e87c1eb5105bc084e93a920198d8968e6ad58ad8ee88cecf579afc804d0698"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/9.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "2e53c2776dad276ab3f48bc79e9961f6799066ea748c075f581946c7c25ceb6c"
+                    },
+                    "uri": "file://public/assets/partners-customers/laokoon-security.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "5b5bef9ebdd7d7acffdd6b257ac2adad0c79e7768e6de7f8dfbf402d08c1d164"
+                    },
+                    "uri": "file://public/assets/team-hero/5.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "e4997bc4d333538336e4aa8dfecafc110440136ba9dbb53d4be880ec5469c7cd"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-patrick.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f3ee18c8d52238645cef438df9b923c4b12acf8039a9bf491d2e9c338f96e485"
+                    },
+                    "uri": "file://public/fonts/Optika-Light.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "4505838e1c79813f94f09e46c411963870a8a8f577c9bf07c1d9f1d2b10efbe2"
+                    },
+                    "uri": "file://app/blog/git-commit-signing-eine-detaillierte-anleitung/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "d75a9f9f794f45e853f1961f82cf07b5e050920762df003e131773b7a3ec9bcd"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "38bb20d365fea91c8e0bfdb87a86e1d27a23ff7382d498742ea374952a9b5587"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-3.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "c7a02c2b89f2013d0efec9c626f07819000b39cd05aeacb1e14b9ea309fca90c"
+                    },
+                    "uri": "file://public/assets/hero/devguard-developers.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "60646871ac54646cb979605a03911a989f504cfd3abd09aafab99677c3210b75"
+                    },
+                    "uri": "file://public/assets/publikationen/sca-scanner.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f69e4ae0b075631bbeae216010da13a4b116a1b48b19e361f173e714baa0a605"
+                    },
+                    "uri": "file://src/components/blocks/phishing-link-check/PhishingLinkCheck.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "14d693dcd9ec105cd64ca642241f8912201decf7e2ac832890b142227c8736af"
+                    },
+                    "uri": "file://mdx-components.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "247005ce78feed41c0a8fabcf7a7866fefda16bc3018e6b37c17cdf0c3cea839"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-20.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "2dd05476e93caeda36eb6d5f9a26a81a93eaa637ec51527042b2abfc5846244b"
+                    },
+                    "uri": "file://public/robots.txt"
+                },
+                {
+                    "digest": {
+                        "sha256": "c387d8140ecc5854d068d1c24ba63bb986cac476be82918dfc62077747409754"
+                    },
+                    "uri": "file://src/components/blocks/it-sec-management/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "d3655d04217a937fab26aa5adaf35fd1609c43ce684548907dce7512f441d384"
+                    },
+                    "uri": "file://src/components/honeypot/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "61b3cfcd4595c61f618cc448faa2c7191a5ac428d12ee470c8528ff05273e070"
+                    },
+                    "uri": "file://app/publikationen/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "75153d971784e405d1e7a98466170a1aa583d75a858c129660eb5f5cda6d4ad3"
+                    },
+                    "uri": "file://package-lock.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "ec96d2070eebe849b89a71b63159efdc992bef10d7fb6386dff0f86395a5c6b1"
+                    },
+                    "uri": "file://public/fonts/Optika-Black.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "c8a4b0f6f27218368636b85354a528060e62b367f03aa264dd85f32d03301d66"
+                    },
+                    "uri": "file://public/icons/linkedin-icon-white.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "6aee2d20ce656b780e2a2e9cbabd330fefcde9bb17c6e02be89a7ee385b653e9"
+                    },
+                    "uri": "file://src/components/blocks/References.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "95ac51d1a6b3462dca3dbc002dc4f81d44999501fb63e585fbc359a3c74743bb"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/Quote.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "8c15b450ea464e4b78b38d6eaf1bf1908b6b993dfdf85c81cbb6cec44f476dec"
+                    },
+                    "uri": "file://.git/logs/HEAD"
+                },
+                {
+                    "digest": {
+                        "sha256": "de6dae7c347ac48494a7d62d939ef94e67b8c16f8b66e845b3f0e275b8370d32"
+                    },
+                    "uri": "file://public/assets/k8s/allianz.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "b2fd772497c4ab57555a7ad959963da13052740969a1dcb8affd5c8c147ab031"
+                    },
+                    "uri": "file://app/team/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "7fbcc775d8e96d34f8f7c3c972b3489d220ca4c400e79d16f67552863bf64b03"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-11.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6ebbf904ba01bab702d520a1052e63a2c1b3b82af853365d2a844f629d02fd8"
+                    },
+                    "uri": "file://public/assets/publikationen/profilbild-ji.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3dbbd4e1003f0a404f567fa8ef79fc8cb8725c851ed5391ac5fabce0cb4d401f"
+                    },
+                    "uri": "file://src/components/blocks/it-sec-management/Quote.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ea080f6fe1a70289e7ad39e18f9396a0b7c067396b31d37a8e403ed90eeeed1d"
+                    },
+                    "uri": "file://src/components/border.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "a841b2f5254b27150260a0c9f6f80eff2a57a6901df378b2f035a1e8b59f13b0"
+                    },
+                    "uri": "file://app/blog/was-ist-schatten-it-ein-verborgenes-risiko/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "a2c8e479c8c556c450cf394e6bb44bb780e82503464f7537504bccd0a0635d9a"
+                    },
+                    "uri": "file://public/assets/badge-programm/screenshot-test-it.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "88f0d723a893a89b2a5ff1a505f46f8d079a4c7ff219f7534cfafa99f8b06f90"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-david.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "c332cdada97b59f12c2bfc0afda2c2f262afcf06b0ecd1a46208f00cd0a54ecd"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-lars.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "2ab5ab88130b4b1862588963d2548fdff2d86c5a2cf7e1c09fc2ffbc1df0b929"
+                    },
+                    "uri": "file://src/components/honeypot/HoneypotStats.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "a46ba5189cc411fc9dea14d285e6d3ed67aad99aa9f887d77838ef978ece729b"
+                    },
+                    "uri": "file://src/services/honeypot_loader.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "48ab5fd2d4e0268cd605ef32b0720c05eb8d3691e0ba1490002de36ffbf011da"
+                    },
+                    "uri": "file://next-sitemap.config.js"
+                },
+                {
+                    "digest": {
+                        "sha256": "4afe92ee725974f786b6e168b371989e4f1964585ed07e10882494c327cb405f"
+                    },
+                    "uri": "file://public/assets/publikationen/profilbild-refaei-small.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "1cb281576bbf90e3b8f077c16cc2c20508d749fe8b4875bdc959cbf385fe9527"
+                    },
+                    "uri": "file://public/l3montree-logo-lemon.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "5804f92d5eb2d8ad23567b323cbca517908c43a2e17834238265ad1c6fb3acc7"
+                    },
+                    "uri": "file://src/components/blocks/BlogOverview.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ea088aa3f16fce60a9f6f68d19574943a4b8378000b32547956275b289d38f2d"
+                    },
+                    "uri": "file://src/components/honeypot/charts/PortChart.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "be21143194581c0c4403dfa7fb3f923a309516f20c3d110fe4db33c7e551f23f"
+                    },
+                    "uri": "file://src/components/honeypot/charts/RealTimeTable.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "7ce42888c24640af62ab341ff4b576f2c66b694c1783e0f90522a0ddb84bcabd"
+                    },
+                    "uri": "file://app/blog/die-revolution-in-der-softwareentwicklung-container-sicherheit-und-ihre-bedeutung/assets/container-process-host.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "005d6270e5bfef122ecd919f0645af27c5e00baa761d6e0547e036e8f7f8898f"
+                    },
+                    "uri": "file://app/blog/die-revolution-in-der-softwareentwicklung-container-sicherheit-und-ihre-bedeutung/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "9fcd42d64848806f0a09838d3a7ff9024a6a18ce237dcdae87f48f02b11a294e"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/7.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "fcf778bf6942067942c0abe909fb036027437c3102197dbc8e2f31824a4a71c0"
+                    },
+                    "uri": "file://next.config.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "37e5d1731dbec530597097f4cfcddb35ec675a753f054175f174a15c46030e5e"
+                    },
+                    "uri": "file://public/assets/engagement/hackathon-3.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "84f6555a2b81286b50d9926f37212a8893867e0af0d292f52139ee0676a9c17b"
+                    },
+                    "uri": "file://public/assets/team-hero/3.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "859b5f205b29b8ff0425216b249599c5d689b34a3cd8e3e1847d39a023647fa7"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/assets/1.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "23ac5cfa204435a6043cc8a6f4349c440f44eee75cc7aa72f758bc9d753e6291"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-4.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "1bd13a4de765033b5902f00e4f8a81f5ffbc855e2201d4f5ea8483497949854d"
+                    },
+                    "uri": "file://public/assets/engagement/oss-week-offsite.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "86858825b4c490f91b37973394ac69e8679609a7487ec867fde033f7c2dc831d"
+                    },
+                    "uri": "file://public/fonts/Optika-BlackItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "17840c74b6bcb3c11e4e7129e5c7899d85ca057febfd7b3f6c386f67ad472930"
+                    },
+                    "uri": "file://src/config.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "9ab569a61b72562115d2d09b25cca431377a8209fffc8f85f3694e4a6a9f6ec6"
+                    },
+                    "uri": "file://styles/honeypot.css"
+                },
+                {
+                    "digest": {
+                        "sha256": "55a85a82fbaf738bba224bdb7c66bc4b77c2f3d6216b9bbf8ec69ff7b91b340e"
+                    },
+                    "uri": "file://app/blog/die-revolution-in-der-softwareentwicklung-container-sicherheit-und-ihre-bedeutung/assets/evolution_virtualisierung.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6ebbf904ba01bab702d520a1052e63a2c1b3b82af853365d2a844f629d02fd8"
+                    },
+                    "uri": "file://public/assets/team-listing/profilbild-ji.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "aa99db582201dc1982854e67d10658f4153a71104830b1f4c702d1f2f8966794"
+                    },
+                    "uri": "file://public/assets/testimonials/kugler.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "16adb44ae4d7ddf0380fc0e6d8c9dec9c46b644d73801ee0b2f1d617998c8ce2"
+                    },
+                    "uri": "file://src/components/honeypot/charts/IPTable.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ba7c61b446dd882028a5a1ae1d8ac0c7051c6c1496f46d32a71af9500e456e64"
+                    },
+                    "uri": "file://app/api/health/route.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "0ac971f067ed343d79451492d0a5762a2e4833185a5e1f51b2645acde1bf1802"
+                    },
+                    "uri": "file://.git/logs/refs/remotes/origin/publications"
+                },
+                {
+                    "digest": {
+                        "sha256": "0861d172ebe3fe20d57a877f121a6e0501b9502ce3bf25f35ea2f11fd1dc58bf"
+                    },
+                    "uri": "file://app/blog/ki-und-phishing-hoch-entwickeltes-phishing-fuer-jedermann/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "359416e335d1eadfce7cb43f9fe9be2b31665c444f765e3507dc34cea0ad2c4d"
+                    },
+                    "uri": "file://app/blog/ransomware-milliardenverluste-und-kein-ende-in-sicht/assets/article-header.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "e905b811267e286c1b23c25407f887884765ec2014bbc86979d46bce2b7e5e3b"
+                    },
+                    "uri": "file://app/blog/schwachstellen-in-der-it-ein-ueberblick/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "1ee5dc92f7e09c1ec1240301909e57821fdd2765d65bfd5a1a709d880f5c2132"
+                    },
+                    "uri": "file://public/android-chrome-192x192.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "1451114d0ab42945ba8a2b1c838a9759d1e409a362a18f7ec32a52cf0112791f"
+                    },
+                    "uri": "file://public/assets/k8s/hacker.mp4"
+                },
+                {
+                    "digest": {
+                        "sha256": "dfa1ad6e3061c19174f6c7103e5200ac6b82b5c20d11c0ae10aee3e239f0e5b4"
+                    },
+                    "uri": "file://public/l3montree-logo-single.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "db85bb77deda832d3e848b6ff9bca8d5b590c3c8ad9ea3939cce6a48674fe287"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "0df18f9c9ef1cd55a8b1a7274703416e866cb35f10e2f18337902125bbcc0095"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-19.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "95d4f1eb216fa969b977eb3dbae84d58ed7e6ce22139a8ff6fc7676a7e66ef1b"
+                    },
+                    "uri": "file://public/assets/hero/devsecops.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "7bf53ef33b6aac1b00a03b042a09eedd29883624e84c88276c8b783d52754521"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "5fcb2872d8180260a6c58961c7454b0fd44fff262fb7da24c07a284a55754e22"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "825233e08170fd6896f4ccdc38371691329f9efe47e7bbe8211346d61ff9edd0"
+                    },
+                    "uri": "file://src/components/blocks/kubernetes-security/Procedure.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e467e4f8996dfa905ea414451d8758a0fe86b37f1aaa3b6f9efe3dde31285194"
+                    },
+                    "uri": "file://src/components/honeypot/charts/Card.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "7175b447e6f5f2a37f827e494d833a07cdc1bc2342a6f47700a62d4398b2345b"
+                    },
+                    "uri": "file://src/components/ui/input.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "085757176b437c747ff179f248ae84e3345616c02ebffdf516fd2978bbea28f7"
+                    },
+                    "uri": "file://app/blog/die-revolution-in-der-softwareentwicklung-container-sicherheit-und-ihre-bedeutung/assets/container.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "973f36f2a24b34149a177b3d81f3fbe54c701019852593f67039d42a14c313ab"
+                    },
+                    "uri": "file://app/sichere-softwareentwicklung/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c8efdad76e58161fefc6c768602d7df2e97da98e1b8dce0199232f8774df85b6"
+                    },
+                    "uri": "file://public/favicon-32x32.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "e5df458c223a0478100a0705a6a9f5a64b100f873202d5ce0fd8b90c04f86f8e"
+                    },
+                    "uri": "file://app/blog/die-solarwinds-affaere-ein-wendepunkt-in-der-software-supply-chain-security/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "9a7b495a54d1e887e014418a2a4c9661877a5aed7b7e9ba7dd1ee52ab246614e"
+                    },
+                    "uri": "file://app/blog/kubernetes-perform-a-task-only-in-one-instance-of-a-multi-instance-microservice-deployment/assets/article-header.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "2c7b7ba30c10c530c7da2056232a45f705505ffa50171026f2e80477ee3c3cdd"
+                    },
+                    "uri": "file://app/blog/wie-erkennt-man-phishing-angriffe-e-mail-header-ueberpruefung/assets/article-header.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "b500c264592316fe74bd60831b9455d40d9d55a95a562970c4ea272d7b03c67d"
+                    },
+                    "uri": "file://public/assets/publikationen/profilbild-sebastian-small.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "785a42f1258341cfc4ee45fa4933f50c90ad0e5263e6fe54e1e3e4bc8c44d427"
+                    },
+                    "uri": "file://public/assets/team-hero/2.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "ed016046935b821a9318f0f2a7b5ab6d4437b758eca30081d6d8152bc0dacff1"
+                    },
+                    "uri": "file://src/components/blocks/DevGuardTeaser.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "f25d398059c7306fa2a191dadff9d90ce43c6aa3049e8eca64ae2fe1e37cb261"
+                    },
+                    "uri": "file://styles/globals.css"
+                },
+                {
+                    "digest": {
+                        "sha256": "4e362db43e4cf789da3dd8716839594fdc28c1ba842fa96e4854284403f16620"
+                    },
+                    "uri": "file://.git/refs/remotes/origin/main"
+                },
+                {
+                    "digest": {
+                        "sha256": "666b77aeec90343d48f9da2fd8ebf162c667d9fdfe7863590a11a32206ae41ea"
+                    },
+                    "uri": "file://public/assets/blog-teasers/article-header-5.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "3fc7c6f19abde7f179da76d527135962819abe22c0f3fa193f921c08a1f37d0f"
+                    },
+                    "uri": "file://public/assets/engagement/oss-event-crowd.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "a921b2b4ae5f48ded47b9362714311d05e4ab80bc8ac2fe3f93f8ef17ad3478a"
+                    },
+                    "uri": "file://public/assets/partners-customers/digitalhub.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "53ef286e4513ad1d936538fee63e25827820b697986939463e0b1972111a846e"
+                    },
+                    "uri": "file://public/assets/publikationen/cauthn.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "591c67d4aab759ab6e263f3cec8c211be75115c83baa37d170f904e549d90933"
+                    },
+                    "uri": "file://public/fonts/Optika-BoldItalic.woff2"
+                },
+                {
+                    "digest": {
+                        "sha256": "b7ae9356bd9d1b14b4e9813dfc4ff135fe6b60c1d90d180ed69776369eb8f5b4"
+                    },
+                    "uri": "file://src/components/blocks/badge-programm/Introduction.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "ba1b0ff2d6b7132ca3b99b760b76bbffd83c0ec57a8104f136597d5b0aa299ed"
+                    },
+                    "uri": "file://src/components/blocks/engagement/Racing.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "4e362db43e4cf789da3dd8716839594fdc28c1ba842fa96e4854284403f16620"
+                    },
+                    "uri": "file://.git/refs/pipelines/1879807914"
+                },
+                {
+                    "digest": {
+                        "sha256": "c06913a58a7ba61a40e9f5e59e6010bda781842f1c18d4472bd4b7d0360ba996"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-2-2/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "6bfe639ccc3d22726d1f105f261f0f3efd3eb2bd5bf131a1bb434174beae3416"
+                    },
+                    "uri": "file://app/blog/schwachstellen-priorisierung/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "2f2d79d919dec8db7d37a1920dc54a78f743919e94b89e8a539de0026c26faf1"
+                    },
+                    "uri": "file://public/.well-known/security.txt.asc"
+                },
+                {
+                    "digest": {
+                        "sha256": "1cdabf5df43e3b7ebcb2d9f78cf2fb3e2923e286cc63fb008f2f8c8619336750"
+                    },
+                    "uri": "file://public/assets/testimonials/zimmermann.webp"
+                },
+                {
+                    "digest": {
+                        "sha256": "eff9a4e84a9718dc7712cc9667f7fcfe974e7177e9c9dd39484ff8892777b406"
+                    },
+                    "uri": "file://src/services/tracking.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "d5859f910623ffe5192f9c105761bce6cffcc0a02c786ea101e15e37d8eb83db"
+                    },
+                    "uri": "file://.git/objects/pack/pack-f9db4e328fab5668f5676770a984216cd6d319bc.idx"
+                },
+                {
+                    "digest": {
+                        "sha256": "2250598210a17f31b2a3b189fe5ea13e177d853a3371991b1199e7ef9886bf78"
+                    },
+                    "uri": "file://.git/refs/remotes/origin/impressum"
+                },
+                {
+                    "digest": {
+                        "sha256": "2b36a73f9a588795955ad129920c97b029e1d237b71c2f7f2b5208e066a1be21"
+                    },
+                    "uri": "file://app/blog/chatgpt-code-qualitaet-und-sicherheitsrisiken/assets/apichecker.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "5960c743be0ad6a20ec508971a2b3131f16b69339cf875a6d53b3a907a39f1d8"
+                    },
+                    "uri": "file://app/blog/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "3412ec60f3a4def0bbf93db75359bcbe492543774b455afea0b7aa99b36a0e53"
+                    },
+                    "uri": "file://app/blog/schwachstellen-priorisierung/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "b256e9bea312c9fcf24a01c6665bfb42d9e6475d3a6e960d0748967c6a0be985"
+                    },
+                    "uri": "file://public/assets/open-source-sec/hands.mp4"
+                },
+                {
+                    "digest": {
+                        "sha256": "f54e9866b4658cbcbd22412364fa01c96c3cd30c0e0c0a1fe496b21c3a325ee3"
+                    },
+                    "uri": "file://public/assets/partners-customers/cscb.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "cea9d53a5321dc584461b5b83eac690e2d0510237909f9bbba803549c0c37361"
+                    },
+                    "uri": "file://public/assets/partners-customers/saltrock.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "34946a61de63a179a5013a8b3832137aec6f7357a3ad79501e0bf0fc0c3b52fb"
+                    },
+                    "uri": "file://src/components/blocks/secure-software-dev/Procedure.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "290369925f09e75b1b06f9efe9edf07ff168fb7b199e5ce22274337c360b5847"
+                    },
+                    "uri": "file://src/components/blocks/team/TeamHero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "00f4f25f0c8a442288c5633e8970f353eee5773d64645882e154269be80a26c2"
+                    },
+                    "uri": "file://app/cybersecurity-bonn-engagement/page.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c6de1ad797b8134591bdc81653b0bd67cd38fff0b20f0296f2e01140050f40f1"
+                    },
+                    "uri": "file://app/impressum/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "57ee9dfdaf27e01b417282a05de3a7a956ae4242d7d3dc56873bd3ceed25602b"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-1-2/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "321bee817fb6738387664b732f5c112b52d55c1e6f08cab07247c40fced4501d"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/experiment.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "d84430662c4cf1da1ec0c9d663f18ba310d92b854238c878793c2014fa0163da"
+                    },
+                    "uri": "file://app/blog/schwachstellen-in-der-it-ein-ueberblick/assets/article-header.jpeg"
+                },
+                {
+                    "digest": {
+                        "sha256": "0020085fd60a44e92d4f6c569291813ab2c6198e9bce8df386e3836cc662a2d6"
+                    },
+                    "uri": "file://public/assets/team-listing/fido.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "c1676862436b0ef37517fc2d6b4a7cbf4902e91f7d27e46d2960de33ccc19d7b"
+                    },
+                    "uri": "file://public/developer@l3montree.com-0xA71508222B6168D5-pub.asc"
+                },
+                {
+                    "digest": {
+                        "sha256": "4aa856c41a164971837fb8c0b4351664dfbde00f47783a9a35cedeec3135ff9a"
+                    },
+                    "uri": "file://src/components/blocks/badge-programm/Hero.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "c2d592172ac7375478fac77250493d7805710cd72bc0dc98372f06c5885be0cc"
+                    },
+                    "uri": "file://app/blog/ransomware-ablauf-eines-angriffs-und-gegenmassnahmen/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "39d412c09cd35a51d0c3e18ec2b4de4f9ec63bd2759f9f882cb92ee40935b125"
+                    },
+                    "uri": "file://app/blog/eckpfeiler-der-digitalen-souveraenitaet-open-source-loesungen-in-der-oeffentlichen-verwaltung-eupl-opencode/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "e14c2bdb926263a1706dbbaee64fa36e7310eef00db50125701f51494a1bb595"
+                    },
+                    "uri": "file://app/blog/performance-comparison-rest-vs-grpc-vs-asynchronous-communication/assets/6.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "2188f3f4d93f6333bb2d78c9b7f5419ba700b789b373c18848af00cbde567cd4"
+                    },
+                    "uri": "file://public/assets/publikationen/anonymous.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "f160aee948b13b2d43a52a199d288137993d464028373ce163d9c2190214d71d"
+                    },
+                    "uri": "file://src/components/honeypot/charts/DailyChart.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "e89621deb426258f73ea48730093f113ccb2fc099290d176a846b8f36b5f2c88"
+                    },
+                    "uri": "file://app/blog/die-revolution-in-der-softwareentwicklung-container-sicherheit-und-ihre-bedeutung/assets/article-header.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "71c39e7af146f943f345d69a541fb83e2190c327dfbb7843bc48ff720fb52f9e"
+                    },
+                    "uri": "file://app/blog/ki-und-phishing-hoch-entwickeltes-phishing-fuer-jedermann/assets/article-header.jpg"
+                },
+                {
+                    "digest": {
+                        "sha256": "42a0fb7e64dc79656b8bd475c8235b48136326295b49847d7dc1da3fd194fe26"
+                    },
+                    "uri": "file://app/blog/kubernetes-perform-a-task-only-in-one-instance-of-a-multi-instance-microservice-deployment/page.mdx"
+                },
+                {
+                    "digest": {
+                        "sha256": "749d293c10a0a2977cf1126ac251f1784600d00594d1acb1d0be4a354d8a1bb7"
+                    },
+                    "uri": "file://app/blog/was-ist-die-software-lieferkette/assets/supplychaindiagram.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "55e994b12403b7397384237850003f8cbdaa544c0b79bbbff9860fa087e773b9"
+                    },
+                    "uri": "file://public/assets/engagement/frederic.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4158ba9b49c5232b406ce80a104bfa55d1702c4e62fa20d6e44f03589ac4b8db"
+                    },
+                    "uri": "file://public/assets/partners-customers/owasp.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "3aa241e6157750cd66df4778901a3483f0f2506cc752c59a36b9d484a621bc16"
+                    },
+                    "uri": "file://src/components/blocks/ServicesBento.tsx"
+                },
+                {
+                    "digest": {
+                        "sha256": "58563f8987d8f689708aec852c5d9a67c710486a59863dc8f37bc063ba25421f"
+                    },
+                    "uri": "file://src/services/phishingService.ts"
+                },
+                {
+                    "digest": {
+                        "sha256": "d16723a331684e9ca9aecd5b8f93377145ba26f1ff1b26bb5869676ba4df9f12"
+                    },
+                    "uri": "file://app/blog/open-source-security-management-und-compliance-iso-18974-erklaert-1-2/assets/owasp-devsecops-pipeline.png"
+                }
+            ]
+        },
+        "runDetails": {
+            "builder": {
+                "id": "devguard.org"
+            },
+            "metadata": {}
+        }
+    },
+    "predicateType": "https://slsa.dev/provenance/v1",
+    "subject": [
+        {
+            "digest": {
+                "sha256": "9c3cfc9cea0e00ab1c973e140d5d0718a570ba6e1c64f57a3b971ff768358df9"
+            },
+            "name": "image-digest.txt"
+        },
+        {
+            "digest": {
+                "sha256": "b590bc9de317fa411a903e91770f98137d2af3bd338b1cb90af324eee5453613"
+            },
+            "name": "image-tag.txt"
+        }
+    ]
+}

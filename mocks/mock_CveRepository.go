@@ -7,8 +7,8 @@ package mocks
 import (
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
 )
@@ -41,7 +41,7 @@ func (_m *CveRepository) EXPECT() *CveRepository_Expecter {
 }
 
 // Activate provides a mock function for the type CveRepository
-func (_mock *CveRepository) Activate(tx core.DB, id string) error {
+func (_mock *CveRepository) Activate(tx shared.DB, id string) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -49,7 +49,7 @@ func (_mock *CveRepository) Activate(tx core.DB, id string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -63,17 +63,17 @@ type CveRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id string
 func (_e *CveRepository_Expecter) Activate(tx interface{}, id interface{}) *CveRepository_Activate_Call {
 	return &CveRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
-func (_c *CveRepository_Activate_Call) Run(run func(tx core.DB, id string)) *CveRepository_Activate_Call {
+func (_c *CveRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *CveRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -92,7 +92,7 @@ func (_c *CveRepository_Activate_Call) Return(err error) *CveRepository_Activate
 	return _c
 }
 
-func (_c *CveRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id string) error) *CveRepository_Activate_Call {
+func (_c *CveRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *CveRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -153,19 +153,19 @@ func (_c *CveRepository_All_Call) RunAndReturn(run func() ([]models.CVE, error))
 }
 
 // Begin provides a mock function for the type CveRepository
-func (_mock *CveRepository) Begin() core.DB {
+func (_mock *CveRepository) Begin() shared.DB {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -188,18 +188,18 @@ func (_c *CveRepository_Begin_Call) Run(run func()) *CveRepository_Begin_Call {
 	return _c
 }
 
-func (_c *CveRepository_Begin_Call) Return(v core.DB) *CveRepository_Begin_Call {
+func (_c *CveRepository_Begin_Call) Return(v shared.DB) *CveRepository_Begin_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *CveRepository_Begin_Call) RunAndReturn(run func() core.DB) *CveRepository_Begin_Call {
+func (_c *CveRepository_Begin_Call) RunAndReturn(run func() shared.DB) *CveRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type CveRepository
-func (_mock *CveRepository) Create(tx core.DB, t *models.CVE) error {
+func (_mock *CveRepository) Create(tx shared.DB, t *models.CVE) error {
 	ret := _mock.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -207,7 +207,7 @@ func (_mock *CveRepository) Create(tx core.DB, t *models.CVE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.CVE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVE) error); ok {
 		r0 = returnFunc(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -221,17 +221,17 @@ type CveRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - t *models.CVE
 func (_e *CveRepository_Expecter) Create(tx interface{}, t interface{}) *CveRepository_Create_Call {
 	return &CveRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *CveRepository_Create_Call) Run(run func(tx core.DB, t *models.CVE)) *CveRepository_Create_Call {
+func (_c *CveRepository_Create_Call) Run(run func(tx shared.DB, t *models.CVE)) *CveRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.CVE
 		if args[1] != nil {
@@ -250,13 +250,13 @@ func (_c *CveRepository_Create_Call) Return(err error) *CveRepository_Create_Cal
 	return _c
 }
 
-func (_c *CveRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.CVE) error) *CveRepository_Create_Call {
+func (_c *CveRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.CVE) error) *CveRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) CreateBatch(tx core.DB, ts []models.CVE) error {
+func (_mock *CveRepository) CreateBatch(tx shared.DB, ts []models.CVE) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -264,7 +264,7 @@ func (_mock *CveRepository) CreateBatch(tx core.DB, ts []models.CVE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.CVE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVE) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -278,17 +278,17 @@ type CveRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.CVE
 func (_e *CveRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *CveRepository_CreateBatch_Call {
 	return &CveRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *CveRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.CVE)) *CveRepository_CreateBatch_Call {
+func (_c *CveRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.CVE)) *CveRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.CVE
 		if args[1] != nil {
@@ -307,13 +307,13 @@ func (_c *CveRepository_CreateBatch_Call) Return(err error) *CveRepository_Creat
 	return _c
 }
 
-func (_c *CveRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.CVE) error) *CveRepository_CreateBatch_Call {
+func (_c *CveRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.CVE) error) *CveRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type CveRepository
-func (_mock *CveRepository) Delete(tx core.DB, id string) error {
+func (_mock *CveRepository) Delete(tx shared.DB, id string) error {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -321,7 +321,7 @@ func (_mock *CveRepository) Delete(tx core.DB, id string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -335,17 +335,17 @@ type CveRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id string
 func (_e *CveRepository_Expecter) Delete(tx interface{}, id interface{}) *CveRepository_Delete_Call {
 	return &CveRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
-func (_c *CveRepository_Delete_Call) Run(run func(tx core.DB, id string)) *CveRepository_Delete_Call {
+func (_c *CveRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *CveRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -364,13 +364,13 @@ func (_c *CveRepository_Delete_Call) Return(err error) *CveRepository_Delete_Cal
 	return _c
 }
 
-func (_c *CveRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id string) error) *CveRepository_Delete_Call {
+func (_c *CveRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *CveRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) DeleteBatch(tx core.DB, ids []models.CVE) error {
+func (_mock *CveRepository) DeleteBatch(tx shared.DB, ids []models.CVE) error {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -378,7 +378,7 @@ func (_mock *CveRepository) DeleteBatch(tx core.DB, ids []models.CVE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.CVE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVE) error); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		r0 = ret.Error(0)
@@ -392,17 +392,17 @@ type CveRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []models.CVE
 func (_e *CveRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *CveRepository_DeleteBatch_Call {
 	return &CveRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
-func (_c *CveRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.CVE)) *CveRepository_DeleteBatch_Call {
+func (_c *CveRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.CVE)) *CveRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.CVE
 		if args[1] != nil {
@@ -421,30 +421,30 @@ func (_c *CveRepository_DeleteBatch_Call) Return(err error) *CveRepository_Delet
 	return _c
 }
 
-func (_c *CveRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.CVE) error) *CveRepository_DeleteBatch_Call {
+func (_c *CveRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.CVE) error) *CveRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindAllListPaged provides a mock function for the type CveRepository
-func (_mock *CveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
+func (_mock *CveRepository) FindAllListPaged(tx shared.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	ret := _mock.Called(tx, pageInfo, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindAllListPaged")
 	}
 
-	var r0 core.Paged[models.CVE]
+	var r0 shared.Paged[models.CVE]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) (core.Paged[models.CVE], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, shared.PageInfo, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.CVE], error)); ok {
 		return returnFunc(tx, pageInfo, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) core.Paged[models.CVE]); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, shared.PageInfo, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.CVE]); ok {
 		r0 = returnFunc(tx, pageInfo, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.CVE])
+		r0 = ret.Get(0).(shared.Paged[models.CVE])
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, shared.PageInfo, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(tx, pageInfo, filter, sort)
 	} else {
 		r1 = ret.Error(1)
@@ -458,31 +458,31 @@ type CveRepository_FindAllListPaged_Call struct {
 }
 
 // FindAllListPaged is a helper method to define mock.On call
-//   - tx core.DB
-//   - pageInfo core.PageInfo
-//   - filter []core.FilterQuery
-//   - sort []core.SortQuery
+//   - tx shared.DB
+//   - pageInfo shared.PageInfo
+//   - filter []shared.FilterQuery
+//   - sort []shared.SortQuery
 func (_e *CveRepository_Expecter) FindAllListPaged(tx interface{}, pageInfo interface{}, filter interface{}, sort interface{}) *CveRepository_FindAllListPaged_Call {
 	return &CveRepository_FindAllListPaged_Call{Call: _e.mock.On("FindAllListPaged", tx, pageInfo, filter, sort)}
 }
 
-func (_c *CveRepository_FindAllListPaged_Call) Run(run func(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery)) *CveRepository_FindAllListPaged_Call {
+func (_c *CveRepository_FindAllListPaged_Call) Run(run func(tx shared.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery)) *CveRepository_FindAllListPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
-		var arg1 core.PageInfo
+		var arg1 shared.PageInfo
 		if args[1] != nil {
-			arg1 = args[1].(core.PageInfo)
+			arg1 = args[1].(shared.PageInfo)
 		}
-		var arg2 []core.FilterQuery
+		var arg2 []shared.FilterQuery
 		if args[2] != nil {
-			arg2 = args[2].([]core.FilterQuery)
+			arg2 = args[2].([]shared.FilterQuery)
 		}
-		var arg3 []core.SortQuery
+		var arg3 []shared.SortQuery
 		if args[3] != nil {
-			arg3 = args[3].([]core.SortQuery)
+			arg3 = args[3].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -494,12 +494,12 @@ func (_c *CveRepository_FindAllListPaged_Call) Run(run func(tx core.DB, pageInfo
 	return _c
 }
 
-func (_c *CveRepository_FindAllListPaged_Call) Return(paged core.Paged[models.CVE], err error) *CveRepository_FindAllListPaged_Call {
+func (_c *CveRepository_FindAllListPaged_Call) Return(paged shared.Paged[models.CVE], err error) *CveRepository_FindAllListPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *CveRepository_FindAllListPaged_Call) RunAndReturn(run func(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error)) *CveRepository_FindAllListPaged_Call {
+func (_c *CveRepository_FindAllListPaged_Call) RunAndReturn(run func(tx shared.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error)) *CveRepository_FindAllListPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -565,7 +565,7 @@ func (_c *CveRepository_FindByID_Call) RunAndReturn(run func(id string) (models.
 }
 
 // FindCVE provides a mock function for the type CveRepository
-func (_mock *CveRepository) FindCVE(tx core.DB, id string) (models.CVE, error) {
+func (_mock *CveRepository) FindCVE(tx shared.DB, id string) (models.CVE, error) {
 	ret := _mock.Called(tx, id)
 
 	if len(ret) == 0 {
@@ -574,15 +574,15 @@ func (_mock *CveRepository) FindCVE(tx core.DB, id string) (models.CVE, error) {
 
 	var r0 models.CVE
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) (models.CVE, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) (models.CVE, error)); ok {
 		return returnFunc(tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string) models.CVE); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) models.CVE); ok {
 		r0 = returnFunc(tx, id)
 	} else {
 		r0 = ret.Get(0).(models.CVE)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string) error); ok {
 		r1 = returnFunc(tx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -596,17 +596,17 @@ type CveRepository_FindCVE_Call struct {
 }
 
 // FindCVE is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - id string
 func (_e *CveRepository_Expecter) FindCVE(tx interface{}, id interface{}) *CveRepository_FindCVE_Call {
 	return &CveRepository_FindCVE_Call{Call: _e.mock.On("FindCVE", tx, id)}
 }
 
-func (_c *CveRepository_FindCVE_Call) Run(run func(tx core.DB, id string)) *CveRepository_FindCVE_Call {
+func (_c *CveRepository_FindCVE_Call) Run(run func(tx shared.DB, id string)) *CveRepository_FindCVE_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -625,13 +625,13 @@ func (_c *CveRepository_FindCVE_Call) Return(cVE models.CVE, err error) *CveRepo
 	return _c
 }
 
-func (_c *CveRepository_FindCVE_Call) RunAndReturn(run func(tx core.DB, id string) (models.CVE, error)) *CveRepository_FindCVE_Call {
+func (_c *CveRepository_FindCVE_Call) RunAndReturn(run func(tx shared.DB, id string) (models.CVE, error)) *CveRepository_FindCVE_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindCVEs provides a mock function for the type CveRepository
-func (_mock *CveRepository) FindCVEs(tx core.DB, ids []string) ([]models.CVE, error) {
+func (_mock *CveRepository) FindCVEs(tx shared.DB, ids []string) ([]models.CVE, error) {
 	ret := _mock.Called(tx, ids)
 
 	if len(ret) == 0 {
@@ -640,17 +640,17 @@ func (_mock *CveRepository) FindCVEs(tx core.DB, ids []string) ([]models.CVE, er
 
 	var r0 []models.CVE
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) ([]models.CVE, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) ([]models.CVE, error)); ok {
 		return returnFunc(tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []string) []models.CVE); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) []models.CVE); ok {
 		r0 = returnFunc(tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.CVE)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, []string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, []string) error); ok {
 		r1 = returnFunc(tx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -664,17 +664,17 @@ type CveRepository_FindCVEs_Call struct {
 }
 
 // FindCVEs is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ids []string
 func (_e *CveRepository_Expecter) FindCVEs(tx interface{}, ids interface{}) *CveRepository_FindCVEs_Call {
 	return &CveRepository_FindCVEs_Call{Call: _e.mock.On("FindCVEs", tx, ids)}
 }
 
-func (_c *CveRepository_FindCVEs_Call) Run(run func(tx core.DB, ids []string)) *CveRepository_FindCVEs_Call {
+func (_c *CveRepository_FindCVEs_Call) Run(run func(tx shared.DB, ids []string)) *CveRepository_FindCVEs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []string
 		if args[1] != nil {
@@ -693,7 +693,7 @@ func (_c *CveRepository_FindCVEs_Call) Return(cVEs []models.CVE, err error) *Cve
 	return _c
 }
 
-func (_c *CveRepository_FindCVEs_Call) RunAndReturn(run func(tx core.DB, ids []string) ([]models.CVE, error)) *CveRepository_FindCVEs_Call {
+func (_c *CveRepository_FindCVEs_Call) RunAndReturn(run func(tx shared.DB, ids []string) ([]models.CVE, error)) *CveRepository_FindCVEs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -754,19 +754,19 @@ func (_c *CveRepository_GetAllCVEsID_Call) RunAndReturn(run func() ([]string, er
 }
 
 // GetDB provides a mock function for the type CveRepository
-func (_mock *CveRepository) GetDB(tx core.DB) core.DB {
+func (_mock *CveRepository) GetDB(tx shared.DB) shared.DB {
 	ret := _mock.Called(tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
 		r0 = returnFunc(tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
+			r0 = ret.Get(0).(shared.DB)
 		}
 	}
 	return r0
@@ -778,16 +778,16 @@ type CveRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 func (_e *CveRepository_Expecter) GetDB(tx interface{}) *CveRepository_GetDB_Call {
 	return &CveRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
-func (_c *CveRepository_GetDB_Call) Run(run func(tx core.DB)) *CveRepository_GetDB_Call {
+func (_c *CveRepository_GetDB_Call) Run(run func(tx shared.DB)) *CveRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		run(
 			arg0,
@@ -796,12 +796,12 @@ func (_c *CveRepository_GetDB_Call) Run(run func(tx core.DB)) *CveRepository_Get
 	return _c
 }
 
-func (_c *CveRepository_GetDB_Call) Return(v core.DB) *CveRepository_GetDB_Call {
+func (_c *CveRepository_GetDB_Call) Return(v shared.DB) *CveRepository_GetDB_Call {
 	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *CveRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *CveRepository_GetDB_Call {
+func (_c *CveRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *CveRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -982,7 +982,7 @@ func (_c *CveRepository_Read_Call) RunAndReturn(run func(id string) (models.CVE,
 }
 
 // Save provides a mock function for the type CveRepository
-func (_mock *CveRepository) Save(tx core.DB, cve *models.CVE) error {
+func (_mock *CveRepository) Save(tx shared.DB, cve *models.CVE) error {
 	ret := _mock.Called(tx, cve)
 
 	if len(ret) == 0 {
@@ -990,7 +990,7 @@ func (_mock *CveRepository) Save(tx core.DB, cve *models.CVE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.CVE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVE) error); ok {
 		r0 = returnFunc(tx, cve)
 	} else {
 		r0 = ret.Error(0)
@@ -1004,17 +1004,17 @@ type CveRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - cve *models.CVE
 func (_e *CveRepository_Expecter) Save(tx interface{}, cve interface{}) *CveRepository_Save_Call {
 	return &CveRepository_Save_Call{Call: _e.mock.On("Save", tx, cve)}
 }
 
-func (_c *CveRepository_Save_Call) Run(run func(tx core.DB, cve *models.CVE)) *CveRepository_Save_Call {
+func (_c *CveRepository_Save_Call) Run(run func(tx shared.DB, cve *models.CVE)) *CveRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 *models.CVE
 		if args[1] != nil {
@@ -1033,13 +1033,13 @@ func (_c *CveRepository_Save_Call) Return(err error) *CveRepository_Save_Call {
 	return _c
 }
 
-func (_c *CveRepository_Save_Call) RunAndReturn(run func(tx core.DB, cve *models.CVE) error) *CveRepository_Save_Call {
+func (_c *CveRepository_Save_Call) RunAndReturn(run func(tx shared.DB, cve *models.CVE) error) *CveRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) SaveBatch(tx core.DB, ts []models.CVE) error {
+func (_mock *CveRepository) SaveBatch(tx shared.DB, ts []models.CVE) error {
 	ret := _mock.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -1047,7 +1047,7 @@ func (_mock *CveRepository) SaveBatch(tx core.DB, ts []models.CVE) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.CVE) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVE) error); ok {
 		r0 = returnFunc(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -1061,17 +1061,17 @@ type CveRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - ts []models.CVE
 func (_e *CveRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *CveRepository_SaveBatch_Call {
 	return &CveRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *CveRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.CVE)) *CveRepository_SaveBatch_Call {
+func (_c *CveRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.CVE)) *CveRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 []models.CVE
 		if args[1] != nil {
@@ -1090,13 +1090,13 @@ func (_c *CveRepository_SaveBatch_Call) Return(err error) *CveRepository_SaveBat
 	return _c
 }
 
-func (_c *CveRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.CVE) error) *CveRepository_SaveBatch_Call {
+func (_c *CveRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.CVE) error) *CveRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveCveAffectedComponents provides a mock function for the type CveRepository
-func (_mock *CveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, affectedComponentHashes []string) error {
+func (_mock *CveRepository) SaveCveAffectedComponents(tx shared.DB, cveID string, affectedComponentHashes []string) error {
 	ret := _mock.Called(tx, cveID, affectedComponentHashes)
 
 	if len(ret) == 0 {
@@ -1104,7 +1104,7 @@ func (_mock *CveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, 
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []string) error); ok {
 		r0 = returnFunc(tx, cveID, affectedComponentHashes)
 	} else {
 		r0 = ret.Error(0)
@@ -1118,18 +1118,18 @@ type CveRepository_SaveCveAffectedComponents_Call struct {
 }
 
 // SaveCveAffectedComponents is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx shared.DB
 //   - cveID string
 //   - affectedComponentHashes []string
 func (_e *CveRepository_Expecter) SaveCveAffectedComponents(tx interface{}, cveID interface{}, affectedComponentHashes interface{}) *CveRepository_SaveCveAffectedComponents_Call {
 	return &CveRepository_SaveCveAffectedComponents_Call{Call: _e.mock.On("SaveCveAffectedComponents", tx, cveID, affectedComponentHashes)}
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(tx core.DB, cveID string, affectedComponentHashes []string)) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(tx shared.DB, cveID string, affectedComponentHashes []string)) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(core.DB)
+			arg0 = args[0].(shared.DB)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -1153,13 +1153,13 @@ func (_c *CveRepository_SaveCveAffectedComponents_Call) Return(err error) *CveRe
 	return _c
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(tx core.DB, cveID string, affectedComponentHashes []string) error) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(tx shared.DB, cveID string, affectedComponentHashes []string) error) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type CveRepository
-func (_mock *CveRepository) Transaction(fn func(tx core.DB) error) error {
+func (_mock *CveRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)
 
 	if len(ret) == 0 {
@@ -1167,7 +1167,7 @@ func (_mock *CveRepository) Transaction(fn func(tx core.DB) error) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
 		r0 = returnFunc(fn)
 	} else {
 		r0 = ret.Error(0)
@@ -1181,16 +1181,16 @@ type CveRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn func(tx shared.DB) error
 func (_e *CveRepository_Expecter) Transaction(fn interface{}) *CveRepository_Transaction_Call {
 	return &CveRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
-func (_c *CveRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *CveRepository_Transaction_Call {
+func (_c *CveRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *CveRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
+		var arg0 func(tx shared.DB) error
 		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
+			arg0 = args[0].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
@@ -1204,7 +1204,7 @@ func (_c *CveRepository_Transaction_Call) Return(err error) *CveRepository_Trans
 	return _c
 }
 
-func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *CveRepository_Transaction_Call {
+func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *CveRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -30,10 +30,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/dtos"
+
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -60,7 +60,8 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 	}
 
-	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
@@ -69,7 +70,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
@@ -81,6 +82,10 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		// check for timeout
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
+		}
 		return err
 	}
 
@@ -98,7 +103,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse scan.FirstPartyScanResponse
+	var scanResponse dtos.FirstPartyScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
@@ -129,7 +134,7 @@ The command signs the request using the configured token and returns scan result
 	return cmd
 }
 
-func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -241,13 +246,15 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
 		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
+		slog.Info("Completed code scan", "scannerID", scannerID)
+
+		timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
 		// expand snippet and obfuscate it
 		expandAndObfuscateSnippet(sarifResult, config.RuntimeBaseConfig.Path)
@@ -266,12 +273,14 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 		}
 
+		slog.Info("Uploading SARIF report", "scannerID", scannerID)
+
 		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
 
-		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
 		}
@@ -282,6 +291,10 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
+			// check for timeout
+			if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
+				slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
+			}
 			return errors.Wrap(err, "could not send request")
 		}
 
@@ -297,7 +310,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		// read and parse the body - it should be an array of dependencyVulns
 		// print the dependencyVulns to the console
-		var scanResponse scan.FirstPartyScanResponse
+		var scanResponse dtos.FirstPartyScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {
@@ -308,7 +321,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*common.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*dtos.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path, outputPath)

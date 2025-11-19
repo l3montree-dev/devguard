@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +39,7 @@ func (_m *ProjectService) EXPECT() *ProjectService_Expecter {
 }
 
 // BootstrapProject provides a mock function for the type ProjectService
-func (_mock *ProjectService) BootstrapProject(rbac core.AccessControl, project *models.Project) error {
+func (_mock *ProjectService) BootstrapProject(rbac shared.AccessControl, project *models.Project) error {
 	ret := _mock.Called(rbac, project)
 
 	if len(ret) == 0 {
@@ -47,7 +47,7 @@ func (_mock *ProjectService) BootstrapProject(rbac core.AccessControl, project *
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, *models.Project) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.AccessControl, *models.Project) error); ok {
 		r0 = returnFunc(rbac, project)
 	} else {
 		r0 = ret.Error(0)
@@ -61,17 +61,17 @@ type ProjectService_BootstrapProject_Call struct {
 }
 
 // BootstrapProject is a helper method to define mock.On call
-//   - rbac core.AccessControl
+//   - rbac shared.AccessControl
 //   - project *models.Project
 func (_e *ProjectService_Expecter) BootstrapProject(rbac interface{}, project interface{}) *ProjectService_BootstrapProject_Call {
 	return &ProjectService_BootstrapProject_Call{Call: _e.mock.On("BootstrapProject", rbac, project)}
 }
 
-func (_c *ProjectService_BootstrapProject_Call) Run(run func(rbac core.AccessControl, project *models.Project)) *ProjectService_BootstrapProject_Call {
+func (_c *ProjectService_BootstrapProject_Call) Run(run func(rbac shared.AccessControl, project *models.Project)) *ProjectService_BootstrapProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.AccessControl
+		var arg0 shared.AccessControl
 		if args[0] != nil {
-			arg0 = args[0].(core.AccessControl)
+			arg0 = args[0].(shared.AccessControl)
 		}
 		var arg1 *models.Project
 		if args[1] != nil {
@@ -90,13 +90,13 @@ func (_c *ProjectService_BootstrapProject_Call) Return(err error) *ProjectServic
 	return _c
 }
 
-func (_c *ProjectService_BootstrapProject_Call) RunAndReturn(run func(rbac core.AccessControl, project *models.Project) error) *ProjectService_BootstrapProject_Call {
+func (_c *ProjectService_BootstrapProject_Call) RunAndReturn(run func(rbac shared.AccessControl, project *models.Project) error) *ProjectService_BootstrapProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateProject provides a mock function for the type ProjectService
-func (_mock *ProjectService) CreateProject(ctx core.Context, project *models.Project) error {
+func (_mock *ProjectService) CreateProject(ctx shared.Context, project *models.Project) error {
 	ret := _mock.Called(ctx, project)
 
 	if len(ret) == 0 {
@@ -104,7 +104,7 @@ func (_mock *ProjectService) CreateProject(ctx core.Context, project *models.Pro
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, *models.Project) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, *models.Project) error); ok {
 		r0 = returnFunc(ctx, project)
 	} else {
 		r0 = ret.Error(0)
@@ -118,17 +118,17 @@ type ProjectService_CreateProject_Call struct {
 }
 
 // CreateProject is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 //   - project *models.Project
 func (_e *ProjectService_Expecter) CreateProject(ctx interface{}, project interface{}) *ProjectService_CreateProject_Call {
 	return &ProjectService_CreateProject_Call{Call: _e.mock.On("CreateProject", ctx, project)}
 }
 
-func (_c *ProjectService_CreateProject_Call) Run(run func(ctx core.Context, project *models.Project)) *ProjectService_CreateProject_Call {
+func (_c *ProjectService_CreateProject_Call) Run(run func(ctx shared.Context, project *models.Project)) *ProjectService_CreateProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		var arg1 *models.Project
 		if args[1] != nil {
@@ -147,7 +147,7 @@ func (_c *ProjectService_CreateProject_Call) Return(err error) *ProjectService_C
 	return _c
 }
 
-func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx core.Context, project *models.Project) error) *ProjectService_CreateProject_Call {
+func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx shared.Context, project *models.Project) error) *ProjectService_CreateProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -215,7 +215,7 @@ func (_c *ProjectService_GetDirectChildProjects_Call) RunAndReturn(run func(proj
 }
 
 // ListAllowedProjects provides a mock function for the type ProjectService
-func (_mock *ProjectService) ListAllowedProjects(ctx core.Context) ([]models.Project, error) {
+func (_mock *ProjectService) ListAllowedProjects(ctx shared.Context) ([]models.Project, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -224,17 +224,17 @@ func (_mock *ProjectService) ListAllowedProjects(ctx core.Context) ([]models.Pro
 
 	var r0 []models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]models.Project, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) ([]models.Project, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) []models.Project); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) []models.Project); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -248,16 +248,16 @@ type ProjectService_ListAllowedProjects_Call struct {
 }
 
 // ListAllowedProjects is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 func (_e *ProjectService_Expecter) ListAllowedProjects(ctx interface{}) *ProjectService_ListAllowedProjects_Call {
 	return &ProjectService_ListAllowedProjects_Call{Call: _e.mock.On("ListAllowedProjects", ctx)}
 }
 
-func (_c *ProjectService_ListAllowedProjects_Call) Run(run func(ctx core.Context)) *ProjectService_ListAllowedProjects_Call {
+func (_c *ProjectService_ListAllowedProjects_Call) Run(run func(ctx shared.Context)) *ProjectService_ListAllowedProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -271,30 +271,30 @@ func (_c *ProjectService_ListAllowedProjects_Call) Return(projects []models.Proj
 	return _c
 }
 
-func (_c *ProjectService_ListAllowedProjects_Call) RunAndReturn(run func(ctx core.Context) ([]models.Project, error)) *ProjectService_ListAllowedProjects_Call {
+func (_c *ProjectService_ListAllowedProjects_Call) RunAndReturn(run func(ctx shared.Context) ([]models.Project, error)) *ProjectService_ListAllowedProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListAllowedProjectsPaged provides a mock function for the type ProjectService
-func (_mock *ProjectService) ListAllowedProjectsPaged(c core.Context) (core.Paged[models.Project], error) {
+func (_mock *ProjectService) ListAllowedProjectsPaged(c shared.Context) (shared.Paged[models.Project], error) {
 	ret := _mock.Called(c)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListAllowedProjectsPaged")
 	}
 
-	var r0 core.Paged[models.Project]
+	var r0 shared.Paged[models.Project]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context) (core.Paged[models.Project], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) (shared.Paged[models.Project], error)); ok {
 		return returnFunc(c)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context) core.Paged[models.Project]); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) shared.Paged[models.Project]); ok {
 		r0 = returnFunc(c)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Project])
+		r0 = ret.Get(0).(shared.Paged[models.Project])
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
 		r1 = returnFunc(c)
 	} else {
 		r1 = ret.Error(1)
@@ -308,16 +308,16 @@ type ProjectService_ListAllowedProjectsPaged_Call struct {
 }
 
 // ListAllowedProjectsPaged is a helper method to define mock.On call
-//   - c core.Context
+//   - c shared.Context
 func (_e *ProjectService_Expecter) ListAllowedProjectsPaged(c interface{}) *ProjectService_ListAllowedProjectsPaged_Call {
 	return &ProjectService_ListAllowedProjectsPaged_Call{Call: _e.mock.On("ListAllowedProjectsPaged", c)}
 }
 
-func (_c *ProjectService_ListAllowedProjectsPaged_Call) Run(run func(c core.Context)) *ProjectService_ListAllowedProjectsPaged_Call {
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) Run(run func(c shared.Context)) *ProjectService_ListAllowedProjectsPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -326,12 +326,12 @@ func (_c *ProjectService_ListAllowedProjectsPaged_Call) Run(run func(c core.Cont
 	return _c
 }
 
-func (_c *ProjectService_ListAllowedProjectsPaged_Call) Return(paged core.Paged[models.Project], err error) *ProjectService_ListAllowedProjectsPaged_Call {
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) Return(paged shared.Paged[models.Project], err error) *ProjectService_ListAllowedProjectsPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *ProjectService_ListAllowedProjectsPaged_Call) RunAndReturn(run func(c core.Context) (core.Paged[models.Project], error)) *ProjectService_ListAllowedProjectsPaged_Call {
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) RunAndReturn(run func(c shared.Context) (shared.Paged[models.Project], error)) *ProjectService_ListAllowedProjectsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -399,7 +399,7 @@ func (_c *ProjectService_ListProjectsByOrganizationID_Call) RunAndReturn(run fun
 }
 
 // ReadBySlug provides a mock function for the type ProjectService
-func (_mock *ProjectService) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
+func (_mock *ProjectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
 	ret := _mock.Called(ctx, organizationID, slug)
 
 	if len(ret) == 0 {
@@ -408,15 +408,15 @@ func (_mock *ProjectService) ReadBySlug(ctx core.Context, organizationID uuid.UU
 
 	var r0 models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) (models.Project, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, uuid.UUID, string) (models.Project, error)); ok {
 		return returnFunc(ctx, organizationID, slug)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) models.Project); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, uuid.UUID, string) models.Project); ok {
 		r0 = returnFunc(ctx, organizationID, slug)
 	} else {
 		r0 = ret.Get(0).(models.Project)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, uuid.UUID, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, uuid.UUID, string) error); ok {
 		r1 = returnFunc(ctx, organizationID, slug)
 	} else {
 		r1 = ret.Error(1)
@@ -430,18 +430,18 @@ type ProjectService_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx shared.Context
 //   - organizationID uuid.UUID
 //   - slug string
 func (_e *ProjectService_Expecter) ReadBySlug(ctx interface{}, organizationID interface{}, slug interface{}) *ProjectService_ReadBySlug_Call {
 	return &ProjectService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, organizationID, slug)}
 }
 
-func (_c *ProjectService_ReadBySlug_Call) Run(run func(ctx core.Context, organizationID uuid.UUID, slug string)) *ProjectService_ReadBySlug_Call {
+func (_c *ProjectService_ReadBySlug_Call) Run(run func(ctx shared.Context, organizationID uuid.UUID, slug string)) *ProjectService_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		var arg1 uuid.UUID
 		if args[1] != nil {
@@ -465,7 +465,7 @@ func (_c *ProjectService_ReadBySlug_Call) Return(project models.Project, err err
 	return _c
 }
 
-func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx core.Context, organizationID uuid.UUID, slug string) (models.Project, error)) *ProjectService_ReadBySlug_Call {
+func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error)) *ProjectService_ReadBySlug_Call {
 	_c.Call.Return(run)
 	return _c
 }
