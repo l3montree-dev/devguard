@@ -481,7 +481,7 @@ func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName st
 
 func (c *componentRepository) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	var result []models.ComponentDependency
-	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_purl IS NULL AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
+	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_purl IS NULL AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id AND component_dependency_id = id)", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
 		return nil, err
 	}
 	return result, nil
