@@ -60,6 +60,23 @@ func organizationAccessControlMiddleware(obj core.Object, act core.Action) echo.
 	}
 }
 
+func organizationOwnerAdminMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			role, err := core.GetRBAC(ctx).GetDomainRole(core.GetSession(ctx).GetUserID())
+			if err != nil {
+				return echo.NewHTTPError(500, "could not determine user role").WithInternal(err)
+			}
+
+			if role != core.RoleOwner && role != core.RoleAdmin {
+				return echo.NewHTTPError(403, "owners or admins only")
+			}
+
+			return next(ctx)
+		}
+	}
+}
+
 func neededScope(neededScopes []string) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {

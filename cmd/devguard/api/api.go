@@ -335,6 +335,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	All routes below this line are scoped to a specific organization.
 	*/
 	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionRead), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationOwnerRouter := organizationRouter.Group("", organizationOwnerAdminMiddleware())
 
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), organizationAccessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 
@@ -345,7 +346,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.GET("/metrics/", orgController.Metrics)
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
-	organizationRouter.GET("/dependency-components/", componentController.SearchComponentOccurrences)
+	organizationOwnerRouter.GET("/dependency-components/", componentController.SearchComponentOccurrences)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
