@@ -16,7 +16,6 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,7 +29,6 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -42,39 +40,21 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// read the file
-	file, err := os.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	// check for errors
 	if err != nil {
 		slog.Error("could not read file", "err", err)
 		return err
 	}
 
-	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
-	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+	// upload the bom to the scan endpoint
+	resp, cancel, err := scanner.UploadBOM(file)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
-
-	if err != nil {
-		return err
-	}
-
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return err
-	}
-
-	// set the headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
-	config.SetXAssetHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// check for timeout
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
-			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
+			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", time.Duration(config.RuntimeBaseConfig.Timeout)*time.Second)
 		}
 		return err
 	}
