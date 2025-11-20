@@ -49,10 +49,10 @@ func secretScan(p, outputPath string) (*dtos.SarifResult, error) {
 	} else {
 		// create new directory
 		err := os.MkdirAll(dir, 0755)
-		defer os.RemoveAll(dir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create temp file")
 		}
+		defer os.RemoveAll(dir)
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 

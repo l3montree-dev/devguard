@@ -29,6 +29,7 @@ func iacScan(p, outputPath string) (*dtos.SarifResult, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create directory")
 		}
+		defer os.RemoveAll(dir)
 		outputDir = dir
 		sarifFilePath = path.Join(dir, "results_sarif.sarif")
 	}
