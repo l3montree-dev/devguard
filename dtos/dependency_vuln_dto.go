@@ -48,6 +48,7 @@ type CVEDTO struct {
 	Percentile            *float32        `json:"percentile"`
 	Vector                string          `json:"vector"`
 	Risk                  RiskMetrics     `json:"risk"`
+	Exploits              []ExploitDTO    `json:"exploits"`
 }
 
 type VulnState string
@@ -59,6 +60,23 @@ const (
 	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
 	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
 )
+
+type ExploitDTO struct {
+	ID          string     `json:"id"`
+	Published   *time.Time `json:"pushed_at"`
+	Updated     *time.Time `json:"updated_at"`
+	Author      string     `json:"author"`
+	Type        string     `json:"type"`
+	Verified    bool       `json:"verified"`
+	SourceURL   string     `json:"sourceURL"`
+	Description string     `json:"description"`
+	CVEID       string     `json:"cveID"`
+	Tags        string     `json:"tags"`
+	Forks       int        `json:"forks"`
+	Watchers    int        `json:"watchers"`
+	Subscribers int        `json:"subscribers_count"`
+	Stars       int        `json:"stargazers_count"`
+}
 
 type DependencyVulnDTO struct {
 	ID                    string        `json:"id"`
@@ -81,6 +99,7 @@ type DependencyVulnDTO struct {
 	TicketURL             *string       `json:"ticketUrl"`
 	ManualTicketCreation  bool          `json:"manualTicketCreation"`
 	Artifacts             []ArtifactDTO `json:"artifacts"`
+	Exploits              []ExploitDTO  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
