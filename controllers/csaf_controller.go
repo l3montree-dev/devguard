@@ -115,6 +115,14 @@ func (controller *CSAFController) GetCSAFIndexHTML(ctx shared.Context) error {
 // return the html used to display all openpgp related keys and hashes
 func (controller *CSAFController) GetOpenPGPHTML(ctx shared.Context) error {
 	fingerprint := getPublicKeyFingerprint()
+	if fingerprint == "" {
+		return ctx.HTML(200, `<html>
+	<head><title>Index of /csaf/openpgp/</title></head>
+	<body cz-shortcut-listen="true">
+	<p>No openpgp key set<p>
+	</body>
+	</html>`)
+	}
 
 	type pageData struct {
 		Fingerprint string
@@ -237,10 +245,11 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
 	})
 	type pageData struct {
-		Year      int
-		Filenames []string
+		Year           int
+		Filenames      []string
+		HasOpenPGPKeys bool
 	}
-	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear))}
+	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
 	for _, entry := range vulnsOfThatYear {
 		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(utils.SafeDereference(entry.CVEID))))
 	}
@@ -256,7 +265,9 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 <a href="../">../</a>
 {{ range .Filenames }}
 <a href="{{ . }}" >{{ . }}</a>
+{{ if $.HasOpenPGPKeys }}
 <a href="{{ . }}.asc" >{{ . }}.asc</a>
+{{ end -}}
 <a href="{{ . }}.sha256" >{{ . }}.sha256</a>
 <a href="{{ . }}.sha512">{{ . }}.sha512</a>
 {{ end }}
@@ -382,7 +393,6 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 		ListOnCSAFAggregators:   utils.Ptr(true), // TODO check if reports are published
 		MirrorOnCSAFAggregators: utils.Ptr(true), // TODO check if reports are published
 		MetadataVersion:         utils.Ptr(gocsaf.MetadataVersion20),
-		PGPKeys:                 []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}},
 		Role:                    utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
 		Publisher: &gocsaf.Publisher{
 			Category:       utils.Ptr(gocsaf.CSAFCategoryVendor),
@@ -390,6 +400,10 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 			Name:           &org.Name,
 			Namespace:      utils.Ptr(os.Getenv("API_URL")), // TODO add option to add namespace to an org
 		},
+	}
+
+	if fingerprint != "" {
+		metadata.PGPKeys = []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}}
 	}
 	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(org.ID)
 	if err != nil {
