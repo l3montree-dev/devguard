@@ -17,3 +17,10 @@ package config
 
 const UserAgent = "DevGuard"
 const PrettyJSONIndent = "    "
+
+var (
+	Version   string
+	Commit    string
+	Branch    string
+	BuildDate string
+)

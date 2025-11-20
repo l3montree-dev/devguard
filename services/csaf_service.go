@@ -41,6 +41,7 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/gocsaf/csaf/v3/util"
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -60,6 +61,120 @@ func NewCSAFService(client http.Client) *csafService {
 	}
 }
 
+func convertAdvisoryToCdxVulnerability(advisory gocsaf.Advisory, purl packageurl.PackageURL) ([]cyclonedx.Vulnerability, error) {
+	cdxVulns := make([]cyclonedx.Vulnerability, 0)
+	// collect all purls and map to product ids
+	productIDtoPurl := map[string]packageurl.PackageURL{}
+	// get the product id for the given purl in this advisory
+	products := advisory.ProductTree.FullProductNames
+	for _, product := range *products {
+		// check if product identifier matches the purl
+		if product.ProductIdentificationHelper == nil || product.ProductIdentificationHelper.PURL == nil {
+			continue
+		}
+
+		p, err := packageurl.FromString(string(*product.ProductIdentificationHelper.PURL))
+		if err != nil {
+			continue
+		}
+		productIDtoPurl[string(*product.ProductID)] = p
+	}
+
+	for _, vuln := range advisory.Vulnerabilities {
+		// for now, only cve's
+		if vuln.CVE == nil {
+			continue
+		}
+
+		var upperBound *packageurl.PackageURL
+		var lowerBound *packageurl.PackageURL
+		var lowerBoundProductID *gocsaf.ProductID
+
+		if vuln.ProductStatus == nil {
+			continue
+		}
+
+		if vuln.ProductStatus.FirstAffected != nil {
+			for _, productRef := range *(*vuln).ProductStatus.FirstAffected {
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSamePackage(purl, vulnPurl) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				// this is our lower bound
+				lowerBound = &vulnPurl
+				lowerBoundProductID = productRef
+			}
+		}
+
+		if vuln.ProductStatus.FirstFixed != nil {
+			for _, productRef := range *(*vuln).ProductStatus.FirstFixed {
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSamePackage(purl, vulnPurl) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				// this is our upper bound
+				upperBound = &vulnPurl
+			}
+		}
+
+		if lowerBound != nil && upperBound != nil {
+			// we can check if the given purl version is in between the bounds
+			inRange := isInVersionRange(purl, *lowerBound, *upperBound)
+			if inRange {
+				// add this vulnerability to the list
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*lowerBoundProductID, purl, cyclonedx.IASExploitable, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.KnownAffected != nil {
+			// check if it is not a range but it just says, this purl is under investigation, fixed or affected
+			for _, productRef := range *(*vuln).ProductStatus.KnownAffected {
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASExploitable, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.KnownNotAffected != nil {
+			for _, productRef := range *(*vuln).ProductStatus.KnownNotAffected {
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASNotAffected, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.UnderInvestigation != nil {
+			for _, productRef := range *(*vuln).ProductStatus.UnderInvestigation {
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASInTriage, vuln))
+			}
+		}
+	}
+	return cdxVulns, nil
+}
+
 func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, realURL, domain string) (*normalize.CdxBom, error) {
 	// download all advisories
 	advisories, err := service.downloadCsafReports(domain)
@@ -69,115 +184,11 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 
 	cdxVulns := make([]cyclonedx.Vulnerability, 0)
 	for _, advisory := range advisories {
-		// collect all purls and map to product ids
-		productIDtoPurl := map[string]packageurl.PackageURL{}
-		// get the product id for the given purl in this advisory
-		products := advisory.ProductTree.FullProductNames
-		for _, product := range *products {
-			// check if product identifier matches the purl
-			if product.ProductIdentificationHelper == nil || product.ProductIdentificationHelper.PURL == nil {
-				continue
-			}
-
-			p, err := packageurl.FromString(string(*product.ProductIdentificationHelper.PURL))
-			if err != nil {
-				continue
-			}
-			productIDtoPurl[string(*product.ProductID)] = p
+		vulns, err := convertAdvisoryToCdxVulnerability(advisory, purl)
+		if err != nil {
+			return nil, err
 		}
-
-		for _, vuln := range advisory.Vulnerabilities {
-			// for now, only cve's
-			if vuln.CVE == nil {
-				continue
-			}
-
-			var upperBound *packageurl.PackageURL
-			var lowerBound *packageurl.PackageURL
-			var lowerBoundProductID *gocsaf.ProductID
-
-			if vuln.ProductStatus == nil {
-				continue
-			}
-
-			if vuln.ProductStatus.FirstAffected != nil {
-				for _, productRef := range *(*vuln).ProductStatus.FirstAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					// this is our lower bound
-					lowerBound = &vulnPurl
-					lowerBoundProductID = productRef
-				}
-			}
-
-			if vuln.ProductStatus.FirstFixed != nil {
-				for _, productRef := range *(*vuln).ProductStatus.FirstFixed {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					// this is our upper bound
-					upperBound = &vulnPurl
-				}
-			}
-
-			if lowerBound != nil && upperBound != nil {
-				// we can check if the given purl version is in between the bounds
-				inRange := isInVersionRange(purl, *lowerBound, *upperBound)
-				if inRange {
-					// add this vulnerability to the list
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*lowerBoundProductID, purl, cyclonedx.IASExploitable, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.KnownAffected != nil {
-				// check if it is not a range but it just says, this purl is under investigation, fixed or affected
-				for _, productRef := range *(*vuln).ProductStatus.KnownAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASExploitable, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.KnownNotAffected != nil {
-				for _, productRef := range *(*vuln).ProductStatus.KnownNotAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASNotAffected, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.UnderInvestigation != nil {
-				for _, productRef := range *(*vuln).ProductStatus.UnderInvestigation {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASInTriage, vuln))
-				}
-			}
-		}
+		cdxVulns = append(cdxVulns, vulns...)
 	}
 
 	// now build a simple cyclonedx vex bom
@@ -1011,7 +1022,8 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 
 	tracking.Generator = &gocsaf.Generator{
 		Engine: &gocsaf.Engine{
-			Name: utils.Ptr("DevGuard CSAF Generator"),
+			Name:    utils.Ptr("DevGuard CSAF Generator"),
+			Version: &config.Version,
 		},
 		Date: tracking.CurrentReleaseDate,
 	}

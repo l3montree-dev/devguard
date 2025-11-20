@@ -16,6 +16,7 @@
 package services
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gocsaf/csaf/v3/csaf"
@@ -66,4 +67,14 @@ func TestGetVulnerabilitiesObject(t *testing.T) {
 		assert.Contains(t, labels, csaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
 	})
 
+}
+
+func TestConvertAdvisoryToCdxVulnerability(t *testing.T) {
+	t.Run("should build the vulnerabilities correctly", func(t *testing.T) {
+		// read the advisory in the testdata folder
+		advisory, err := csaf.LoadAdvisory("testdata/csaf_report.json")
+		assert.Nil(t, err)
+
+		fmt.Println(advisory)
+	})
 }

@@ -1,7 +1,15 @@
-FLAGS=-ldflags -w -trimpath
+GIT_DESCRIBE=$(shell git describe --tags --dirty --always)
+GIT_COMMIT=$(shell git rev-parse HEAD)
+GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+DATE=$(shell date +%Y-%m-%dT%H:%M:%S%z)
+VERSION_FLAGS=-ldflags="-X github.com/l3montree-dev/devguard/config.Version=$(GIT_DESCRIBE) \
+                        -X github.com/l3montree-dev/devguard/config.Commit=$(GIT_COMMIT) \
+                        -X github.com/l3montree-dev/devguard/config.Branch=$(GIT_BRANCH) \
+                        -X github.com/l3montree-dev/devguard/config.BuildDate=$(DATE)"
+FLAGS=$(VERSION_FLAGS) -w -trimpath
 
 run::
-	go run ./cmd/devguard/main.go
+	go run $(VERSION_FLAGS) ./cmd/devguard/main.go
 
 clean::
 	docker compose down -v && docker compose up -d
@@ -10,7 +18,6 @@ mocks::
 	mockery --config=.mockery.yaml
 
 lint::
-	# golangci-lint run ./... # golangci-lint 1.X is currently not compatible with Golang 1.24
 	docker run --rm -v ./:/app:ro -w /app golangci/golangci-lint:v2.1.6 golangci-lint run
 
 lint-fix::
