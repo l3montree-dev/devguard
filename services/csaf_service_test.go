@@ -76,9 +76,12 @@ func TestConvertAdvisoryToCdxVulnerability(t *testing.T) {
 		assert.Nil(t, err)
 
 		purl, _ := packageurl.FromString("pkg:npm/super-logging@v1.0.0")
-		vulns, err := convertAdvisoryToCdxVulnerability(*advisory, purl)
+		vulns, err := convertAdvisoryToCdxVulnerability(advisory, purl)
 		assert.Nil(t, err)
 
 		assert.Equal(t, 1, len(vulns))
+		// expect the single vuln to have pkg:npm/debug@3.0.0 as affected package
+		assert.Equal(t, "pkg:npm/debug@3.0.0", (*vulns[0].Affects)[0].Ref)
+		assert.Equal(t, "Marked as false positive: This doesnt affect us, since we are not using the vulnerable function at all.", vulns[0].Analysis.Detail)
 	})
 }

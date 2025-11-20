@@ -584,26 +584,6 @@ func filterVulnerabilities(vulns []models.DependencyVuln, removeHashes []string,
 	return filtered
 }
 
-// redistributeCsafPurlVulns rewrites vulnerability PURLs when better SBOM information is available.
-// It handles two cases:
-// 1. New scans with generic PURLs that can be rewritten to more specific existing PURLs
-// 2. Existing CSAF root PURLs that can be updated with more specific PURLs from new scans
-func redistributeCsafPurlVulns(sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []map[string]string) {
-	csafPurls := sbom.GetCsafRootPurls()
-
-	// Phase 1: Rewrite new PURLs to use more specific existing PURLs
-	rewriteNewPurlsToExisting(sbom, dependencyVulns, existingDependencyVulns, csafPurls)
-
-	// Phase 2: Update existing CSAF root PURLs with better information from new scan
-	updateIDs, removeNewIDs, removeExistingIDs := updateCsafRootPurls(dependencyVulns, existingDependencyVulns, csafPurls)
-
-	// Filter out vulnerabilities that are being updated or covered
-	filteredNew := filterVulnerabilities(dependencyVulns, removeNewIDs, nil)
-	filteredExisting := filterVulnerabilities(existingDependencyVulns, nil, removeExistingIDs)
-
-	return filteredNew, filteredExisting, updateIDs
-}
-
 func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -624,9 +604,6 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
 		return dependencyVuln.State != dtos.VulnStateFixed
 	})
-
-	var updateExistingVulns []map[string]string
-	dependencyVulns, existingDependencyVulns, updateExistingVulns = redistributeCsafPurlVulns(sbom, dependencyVulns, existingDependencyVulns)
 
 	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
@@ -671,42 +648,6 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
 			slog.Error("error when trying to add fix event")
 			return err
-		}
-
-		if len(updateExistingVulns) > 0 {
-			// do it all in a single query - update the id and purl columns
-			var valueClauses []string
-			for _, uv := range updateExistingVulns {
-				valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s', '%s')", uv["oldID"], uv["newID"], uv["newPurl"]))
-			}
-			// Join the value clauses with commas
-			values := strings.Join(valueClauses, ",")
-			// Construct the SQL query
-			query := fmt.Sprintf(`
-				UPDATE dependency_vulns
-				SET id = data.new_id,
-				    component_purl = data.new_purl
-				FROM (VALUES %s) AS data(old_id, new_id, new_purl)
-				WHERE dependency_vulns.asset_id = ?
-				AND dependency_vulns.asset_version_name = ?
-				AND dependency_vulns.id = data.old_id
-			`, values)
-			if err := s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error; err != nil {
-				slog.Error("could not update dependency vuln ids and purls", "err", err)
-				return err
-			}
-
-			// update the vuln_events table as well
-			queryEvents := fmt.Sprintf(`
-				UPDATE vuln_events
-				SET vuln_id = data.new_id
-				FROM (VALUES %s) AS data(old_id, new_id, new_purl)	
-				WHERE vuln_events.vuln_id = data.old_id
-			`, values)
-			if err := s.dependencyVulnRepository.GetDB(tx).Exec(queryEvents).Error; err != nil {
-				slog.Error("could not update vuln event vuln ids", "err", err)
-				return err
-			}
 		}
 
 		if len(nothingChanged) > 0 {
