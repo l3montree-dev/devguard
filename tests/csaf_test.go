@@ -222,7 +222,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		panic(err)
 	}
 	vuln2 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "falsePositive"},
 		ComponentPurl:     utils.Ptr("pkg:npm/axios@1.7.7"),
 		CVE:               &cve2,
 		CVEID:             &cve2.CVE,
