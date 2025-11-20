@@ -15,13 +15,16 @@
 
 FROM golang:1.25.4-trixie@sha256:27e1c927a07ed2c7295d39941d6d881424739dbde9ae3055d0d3013699ed35e8 AS golang-builder
 
+ARG GITHUB_SHA
 ARG GITHUB_REF_NAME
+
+ENV GITHUB_REF_NAME=${GITHUB_REF_NAME}
+ENV GITHUB_SHA=${GITHUB_SHA}
 
 WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
-ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 

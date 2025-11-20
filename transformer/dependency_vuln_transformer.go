@@ -42,6 +42,7 @@ func CVEToDTO(cve *models.CVE) *dtos.CVEDTO {
 		Percentile:            cve.Percentile,
 		Vector:                cve.Vector,
 		Risk:                  cve.Risk,
+		Exploits:              utils.Map(cve.Exploits, ExploitModelToDTO),
 	}
 }
 

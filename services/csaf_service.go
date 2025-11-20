@@ -41,6 +41,7 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/gocsaf/csaf/v3/util"
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -60,6 +61,194 @@ func NewCSAFService(client http.Client) *csafService {
 	}
 }
 
+// not only the root product id is what we are interested in, but also all children in the tree
+func getInterestedProductIDs(advisory *gocsaf.Advisory, productID string) []string {
+	deps := []string{productID}
+
+	for _, rel := range *advisory.ProductTree.RelationShips {
+		if rel.RelatesToProductReference != nil && rel.ProductReference != nil && rel.FullProductName != nil {
+			relatesReference := string(*rel.RelatesToProductReference)
+
+			if productID == relatesReference {
+				// add to tree
+				// relatesToPurl -> productPurl
+				if slices.Contains((deps), string(*rel.FullProductName.ProductID)) {
+					continue
+				}
+
+				deps = append(deps, getInterestedProductIDs(advisory, string(*rel.FullProductName.ProductID))...)
+			}
+		}
+	}
+	return deps
+}
+
+func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageurl.PackageURL) ([]cyclonedx.Vulnerability, error) {
+	cdxVulns := make([]cyclonedx.Vulnerability, 0)
+
+	// we need to convert the purl to the product id to find all relationships
+	// those are done using product ids
+	rootProductID := ""
+
+	// collect all purls and map to product ids
+	productIDtoPurl := map[string]packageurl.PackageURL{}
+	// get the product id for the given purl in this advisory
+	products := advisory.ProductTree.FullProductNames
+	for _, product := range *products {
+		// check if product identifier matches the purl
+		if product.ProductIdentificationHelper == nil || product.ProductIdentificationHelper.PURL == nil {
+			continue
+		}
+
+		p, err := packageurl.FromString(string(*product.ProductIdentificationHelper.PURL))
+		if err != nil {
+			continue
+		}
+
+		productIDtoPurl[string(*product.ProductID)] = p
+		if p.ToString() == purl.ToString() {
+			rootProductID = string(*product.ProductID)
+		}
+	}
+	if rootProductID == "" {
+		// this advisory does not concern the given purl
+		return cdxVulns, nil
+	}
+
+	if advisory.ProductTree.RelationShips != nil {
+		// add all product ids from relationships as well
+		for _, ref := range *advisory.ProductTree.RelationShips {
+			if ref.ProductReference != nil && ref.FullProductName != nil {
+				productIDtoPurl[string(*ref.FullProductName.ProductID)] = productIDtoPurl[string(*ref.ProductReference)]
+			}
+		}
+	}
+
+	// get all interested product ids (children in the tree)
+	// those are the product ids which relate to the given purl
+	// any vulnerability affecting those product ids is relevant
+	interestedProductIDs := getInterestedProductIDs(advisory, rootProductID)
+	interestedPurls := make([]packageurl.PackageURL, 0)
+	for _, pid := range interestedProductIDs {
+		if p, ok := productIDtoPurl[pid]; ok {
+			interestedPurls = append(interestedPurls, p)
+		}
+	}
+
+	for _, vuln := range advisory.Vulnerabilities {
+		// for now, only cve's
+		if vuln.CVE == nil {
+			continue
+		}
+
+		var upperBound *packageurl.PackageURL
+		var lowerBound *packageurl.PackageURL
+		var lowerBoundProductID *gocsaf.ProductID
+
+		if vuln.ProductStatus == nil {
+			continue
+		}
+
+		if vuln.ProductStatus.FirstAffected != nil {
+			for _, productRef := range *(*vuln).ProductStatus.FirstAffected {
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					continue
+				}
+				// check if this product ref is of the same package compared to what we are looking for
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSomeSamePackage(vulnPurl, interestedPurls) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				// this is our lower bound
+				lowerBound = &vulnPurl
+				lowerBoundProductID = productRef
+			}
+		}
+
+		if vuln.ProductStatus.FirstFixed != nil {
+			for _, productRef := range *(*vuln).ProductStatus.FirstFixed {
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					continue
+				}
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !belongsToSomeSamePackage(vulnPurl, interestedPurls) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				// this is our upper bound
+				upperBound = &vulnPurl
+			}
+		}
+
+		if lowerBound != nil && upperBound != nil {
+			// we can check if the given purl version is in between the bounds
+			affectedPurl, err := isInVersionRange(interestedPurls, *lowerBound, *upperBound)
+			if err == nil {
+				// add this vulnerability to the list
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*lowerBoundProductID, affectedPurl, cyclonedx.IASExploitable, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.KnownAffected != nil {
+			// check if it is not a range but it just says, this purl is under investigation, fixed or affected
+			for _, productRef := range *(*vuln).ProductStatus.KnownAffected {
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					continue
+				}
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !hasExactFit(vulnPurl, interestedPurls) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, vulnPurl, cyclonedx.IASExploitable, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.KnownNotAffected != nil {
+			for _, productRef := range *(*vuln).ProductStatus.KnownNotAffected {
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					continue
+				}
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !hasExactFit(vulnPurl, interestedPurls) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, vulnPurl, cyclonedx.IASNotAffected, vuln))
+			}
+		}
+
+		if vuln.ProductStatus.UnderInvestigation != nil {
+			for _, productRef := range *(*vuln).ProductStatus.UnderInvestigation {
+				if !slices.Contains(interestedProductIDs, string(*productRef)) {
+					continue
+				}
+				// check if this product ref is of the same package compared to what we are looking for
+				vulnPurl := productIDtoPurl[string(*productRef)]
+				if !hasExactFit(vulnPurl, interestedPurls) {
+					// we do not care about any vulnerabilities not affecting the same package
+					continue
+				}
+				// its the same package!
+				cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, vulnPurl, cyclonedx.IASInTriage, vuln))
+			}
+		}
+	}
+	return cdxVulns, nil
+}
+
 func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, realURL, domain string) (*normalize.CdxBom, error) {
 	// download all advisories
 	advisories, err := service.downloadCsafReports(domain)
@@ -68,118 +257,22 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 	}
 
 	cdxVulns := make([]cyclonedx.Vulnerability, 0)
-
 	for _, advisory := range advisories {
-		// collect all purls and map to product ids
-		productIDtoPurl := map[string]packageurl.PackageURL{}
-		// get the product id for the given purl in this advisory
-		products := advisory.ProductTree.FullProductNames
-		for _, product := range *products {
-			// check if product identifier matches the purl
-			if product.ProductIdentificationHelper == nil || product.ProductIdentificationHelper.PURL == nil {
-				continue
-			}
-
-			p, err := packageurl.FromString(string(*product.ProductIdentificationHelper.PURL))
-			if err != nil {
-				continue
-			}
-			productIDtoPurl[string(*product.ProductID)] = p
+		vulns, err := convertAdvisoryToCdxVulnerability(&advisory, purl)
+		if err != nil {
+			return nil, err
 		}
-
-		for _, vuln := range advisory.Vulnerabilities {
-			// for now, only cve's
-			if vuln.CVE == nil {
-				continue
-			}
-
-			var upperBound *packageurl.PackageURL
-			var lowerBound *packageurl.PackageURL
-			var lowerBoundProductID *gocsaf.ProductID
-
-			if vuln.ProductStatus == nil {
-				continue
-			}
-
-			if vuln.ProductStatus.FirstAffected != nil {
-				for _, productRef := range *(*vuln).ProductStatus.FirstAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					// this is our lower bound
-					lowerBound = &vulnPurl
-					lowerBoundProductID = productRef
-				}
-			}
-
-			if vuln.ProductStatus.FirstFixed != nil {
-				for _, productRef := range *(*vuln).ProductStatus.FirstFixed {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					// this is our upper bound
-					upperBound = &vulnPurl
-				}
-			}
-
-			if lowerBound != nil && upperBound != nil {
-				// we can check if the given purl version is in between the bounds
-				inRange := isInVersionRange(purl, *lowerBound, *upperBound)
-				if inRange {
-					// add this vulnerability to the list
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*lowerBoundProductID, purl, cyclonedx.IASExploitable, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.KnownAffected != nil {
-				// check if it is not a range but it just says, this purl is under investigation, fixed or affected
-				for _, productRef := range *(*vuln).ProductStatus.KnownAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASExploitable, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.KnownNotAffected != nil {
-				for _, productRef := range *(*vuln).ProductStatus.KnownNotAffected {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASNotAffected, vuln))
-				}
-			}
-
-			if vuln.ProductStatus.UnderInvestigation != nil {
-				for _, productRef := range *(*vuln).ProductStatus.UnderInvestigation {
-					// check if this product ref is of the same package compared to what we are looking for
-					vulnPurl := productIDtoPurl[string(*productRef)]
-					if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
-						// we do not care about any vulnerabilities not affecting the same package
-						continue
-					}
-					// its the same package!
-					cdxVulns = append(cdxVulns, convertCsafVulnToCdxVuln(*productRef, purl, cyclonedx.IASInTriage, vuln))
-				}
-			}
-		}
+		cdxVulns = append(cdxVulns, vulns...)
 	}
+
+	dependencyPurls := utils.Flat(utils.Map(cdxVulns, func(el cyclonedx.Vulnerability) []string {
+		if el.Affects == nil {
+			return []string{}
+		}
+		return utils.Map(*el.Affects, func(aff cyclonedx.Affects) string {
+			return aff.Ref
+		})
+	}))
 
 	// now build a simple cyclonedx vex bom
 	bom := &cyclonedx.BOM{
@@ -212,6 +305,10 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 					purl.ToString(),
 				},
 			},
+			{
+				Ref:          purl.ToString(),
+				Dependencies: &dependencyPurls,
+			},
 		},
 	}
 
@@ -225,13 +322,23 @@ func purlToStringWithoutVersion(purl packageurl.PackageURL) string {
 	return purlWithoutVersion.ToString()
 }
 
-func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, purl packageurl.PackageURL, analysisState cyclonedx.ImpactAnalysisState, vuln *gocsaf.Vulnerability) cyclonedx.Vulnerability {
+func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, affectedPurl packageurl.PackageURL, analysisState cyclonedx.ImpactAnalysisState, vuln *gocsaf.Vulnerability) cyclonedx.Vulnerability {
 	remediation := ""
 	for _, rem := range vuln.Remediations {
 		// check if the productID is related to the remediation
 		for _, productRef := range *rem.ProductIds {
 			if productID == *productRef {
 				remediation = *rem.Details
+			}
+		}
+	}
+
+	if remediation == "" {
+		// check if we find a note which has a title: "Justification for <product combination>"
+		expectedTitle := fmt.Sprintf("Justification for %s", productID)
+		for _, note := range vuln.Notes {
+			if note.Title != nil && *note.Title == expectedTitle && note.Text != nil {
+				remediation = *note.Text
 			}
 		}
 	}
@@ -253,7 +360,7 @@ func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, purl packageurl.Packag
 		ID: string(*vuln.CVE),
 		Affects: utils.Ptr([]cyclonedx.Affects{
 			{
-				Ref: purl.ToString(),
+				Ref: affectedPurl.ToString(),
 			},
 		}),
 		Analysis: &cyclonedx.VulnerabilityAnalysis{
@@ -267,26 +374,32 @@ func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, purl packageurl.Packag
 	return cdxVuln
 }
 
-func isInVersionRange(purl packageurl.PackageURL, lowerBound, upperBound packageurl.PackageURL) bool {
+func isInVersionRange(purls []packageurl.PackageURL, lowerBound, upperBound packageurl.PackageURL) (packageurl.PackageURL, error) {
 	// upper bound EXCLUSIVE
 	// we can only do that, if the versions are semver versions
 	// check if valid semver
-	if !semver.IsValid(purl.Version) ||
-		!semver.IsValid(lowerBound.Version) ||
-		!semver.IsValid(upperBound.Version) {
-		return false
-	}
+	for _, purl := range purls {
+		if !semver.IsValid(purl.Version) ||
+			!semver.IsValid(lowerBound.Version) ||
+			!semver.IsValid(upperBound.Version) {
+			continue
+		}
 
-	result := semver.Compare(lowerBound.Version, purl.Version)
-	if result > 0 {
-		return false
-	} else if result == 0 {
-		return true
-	}
+		result := semver.Compare(lowerBound.Version, purl.Version)
+		if result > 0 {
+			continue
+		} else if result == 0 {
+			return purl, nil
+		}
 
-	// now check upper bound
-	result = semver.Compare(upperBound.Version, purl.Version)
-	return result > 0
+		// now check upper bound
+		result = semver.Compare(upperBound.Version, purl.Version)
+
+		if result > 0 {
+			return purl, nil
+		}
+	}
+	return packageurl.PackageURL{}, fmt.Errorf("doesnt fit in version range")
 }
 
 func (service csafService) downloadCsafReports(domain string) ([]gocsaf.Advisory, error) {
@@ -649,6 +762,25 @@ func belongsToSamePackage(purl1, purl2 packageurl.PackageURL) bool {
 		strings.EqualFold(purl1.Name, purl2.Name)
 }
 
+func belongsToSomeSamePackage(purl packageurl.PackageURL, purls []packageurl.PackageURL) bool {
+	for _, p := range purls {
+		if belongsToSamePackage(purl, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasExactFit(vulnPurl packageurl.PackageURL, purls []packageurl.PackageURL) bool {
+	for _, purl := range purls {
+		if !belongsToSamePackage(purl, vulnPurl) || semver.Compare(vulnPurl.Version, purl.Version) != 0 {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // generate a specific csaf report version
 func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
@@ -674,7 +806,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	// now we can start building the document
 	// just use the first vulnerability - if there are multiple, we do not currently support that
 	// TODO support multiple vulnerabilities in one csaf report?
-	vuln := vulns[0]
+
 	// build trivial parts of the document field
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
@@ -695,24 +827,19 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 		},
 	}
 
-	tracking, err := generateTrackingObject(asset, vuln)
+	tracking, err := generateTrackingObject(asset, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
 	csafDoc.Document.Tracking = &tracking
 
-	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository)
+	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
 	csafDoc.ProductTree = &tree
 
-	// get the timestamp of the last revision which we need to time travel to
-	lastRevisionTimestamp, err := time.Parse(time.RFC3339, *tracking.RevisionHistory[len(tracking.RevisionHistory)-1].Date)
-	if err != nil {
-		return csafDoc, err
-	}
-	vulnerabilities, err := generateVulnerabilityObjects(lastRevisionTimestamp, vulns)
+	vulnerabilities, err := generateVulnerabilityObjects(vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -731,7 +858,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(asset models.Asset, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) (gocsaf.ProductTree, error) {
+func generateProductTree(asset models.Asset, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
 	tree := gocsaf.ProductTree{}
 	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
 	if err != nil {
@@ -748,56 +875,69 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 	}
 
 	productNames := make([]*gocsaf.FullProductName, 0)
+	relationships := make([]*gocsaf.Relationship, 0)
 	// append each relevant asset version
 	for _, artifact := range artifacts {
-		purl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+		artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
 		productName := &gocsaf.FullProductName{
-			Name:      &purl,
-			ProductID: utils.Ptr(gocsaf.ProductID(purl)),
+			Name:      &artifactPurl,
+			ProductID: utils.Ptr(gocsaf.ProductID(artifactPurl)),
 			ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-				PURL: utils.Ptr(gocsaf.PURL(purl)),
+				PURL: utils.Ptr(gocsaf.PURL(artifactPurl)),
 			},
 		}
 		productNames = append(productNames, productName)
 	}
+	// append each vulnerable component as well as their relationship to the affected artifact
+	for _, vuln := range vulnsForCVE {
+		// first append the component itself
+		productName := &gocsaf.FullProductName{
+			Name:      vuln.ComponentPurl,
+			ProductID: utils.Ptr(gocsaf.ProductID(*vuln.ComponentPurl)),
+			ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
+				PURL: utils.Ptr(gocsaf.PURL(*vuln.ComponentPurl)),
+			},
+		}
+		productNames = append(productNames, productName)
+		// then each affected artifact
+		for _, artifact := range vuln.Artifacts {
+			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+			relationship := gocsaf.Relationship{
+				Category:                  utils.Ptr(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
+				ProductReference:          utils.Ptr(gocsaf.ProductID(*vuln.ComponentPurl)),
+				RelatesToProductReference: utils.Ptr(gocsaf.ProductID(artifactPurl)),
+				FullProductName: &gocsaf.FullProductName{
+					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
+						PURL: (*gocsaf.PURL)(vuln.ComponentPurl),
+					},
+					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, "", *vuln.ComponentPurl)),
+					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", *vuln.ComponentPurl, artifactPurl)),
+				},
+			}
+			relationships = append(relationships, &relationship)
+		}
+	}
+
 	tree.FullProductNames = utils.Ptr(gocsaf.FullProductNames(productNames))
+	tree.RelationShips = utils.Ptr(gocsaf.Relationships(relationships))
 
 	return tree, nil
 }
 
-// generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.DependencyVuln) ([]*gocsaf.Vulnerability, error) {
-	vulnerabilities := []*gocsaf.Vulnerability{}
-	timeStamp = convertTimeToDateHourMinute(timeStamp)
-	// first get all vulns
-	filteredVulns := make([]models.DependencyVuln, 0, len(allVulnsOfAsset))
-	for _, vuln := range allVulnsOfAsset {
-		if vuln.CreatedAt.Before(timeStamp) {
-			filteredVulns = append(filteredVulns, vuln)
-		}
+func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
+	if assetVersionName == "" {
+		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
 	}
-	if len(filteredVulns) == 0 {
-		return vulnerabilities, nil
-	}
+	return gocsaf.ProductID(fmt.Sprintf("%s@%s|%s", artifactName, assetVersionName, componentPurl))
+}
 
-	lastEvents := map[string]models.VulnEvent{}
-	// then time travel each vuln to the state at timeStamp using the latest events
-	for i, vuln := range filteredVulns {
-		var lastEvent models.VulnEvent
-		for i := len(vuln.Events) - 1; i >= 0; i-- {
-			event := vuln.Events[i]
-			if event.CreatedAt.Before(timeStamp) || event.CreatedAt.Equal(timeStamp) {
-				lastEvent = event
-				break
-			}
-		}
-		lastEvent.Apply(&filteredVulns[i])
-		lastEvents[vuln.ID] = lastEvent
-	}
+// generates the vulnerability object for a specific asset at a certain timeStamp in time
+func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*gocsaf.Vulnerability, error) {
+	vulnerabilities := []*gocsaf.Vulnerability{}
 
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
 	cveGroups := make(map[string][]models.DependencyVuln)
-	for _, vuln := range filteredVulns {
+	for _, vuln := range allVulnsOfAsset {
 		cveGroups[utils.SafeDereference(vuln.CVEID)] = append(cveGroups[utils.SafeDereference(vuln.CVEID)], vuln)
 	}
 
@@ -805,7 +945,7 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 	for cve, vulnsInGroup := range cveGroups {
 		vulnObject := gocsaf.Vulnerability{
 			CVE:   utils.Ptr(gocsaf.CVE(cve)),
-			Title: &cve,
+			Title: utils.Ptr(fmt.Sprintf("Additional information about %s", cve)),
 		}
 		affected := map[string]struct{}{}
 		notAffected := map[string]struct{}{}
@@ -826,9 +966,10 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 				}
 			}
 
-			productIDs := utils.Map(vuln.Artifacts, func(v models.Artifact) *gocsaf.ProductID {
-				return utils.Ptr(gocsaf.ProductID(fmt.Sprintf("%s@%s", v.ArtifactName, v.AssetVersionName)))
-			})
+			productIDs := make([]*gocsaf.ProductID, 0)
+			for _, artifact := range vuln.Artifacts {
+				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, *vuln.ComponentPurl))))
+			}
 
 			switch vuln.State {
 			case dtos.VulnStateOpen:
@@ -836,10 +977,13 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 					underInvestigation[string(*pid)] = struct{}{}
 				}
 			case dtos.VulnStateAccepted:
-				threats = append(threats, &gocsaf.Threat{
-					Category: utils.Ptr(gocsaf.CSAFThreatCategoryImpact),
-					Details:  lastEvents[vuln.ID].Justification,
+				lastEvent := vuln.Events[len(vuln.Events)-1]
+				vulnObject.Remediations = append(vulnObject.Remediations, &gocsaf.Remediation{
+					Details:    utils.Ptr(fmt.Sprintf("Accepted the risk of this vulnerability. %s", utils.SafeDereference(lastEvent.Justification))),
+					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
+					Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
 				})
+
 				for _, pid := range productIDs {
 					affected[string(*pid)] = struct{}{}
 				}
@@ -848,10 +992,16 @@ func generateVulnerabilityObjects(timeStamp time.Time, allVulnsOfAsset []models.
 					fixed[string(*pid)] = struct{}{}
 				}
 			case dtos.VulnStateFalsePositive:
-				justification := string(lastEvents[vuln.ID].MechanicalJustification)
-				if lastEvents[vuln.ID].MechanicalJustification == "" {
+				lastEvent := vuln.Events[len(vuln.Events)-1]
+				justification := string(lastEvent.MechanicalJustification)
+				if lastEvent.MechanicalJustification == "" {
 					justification = string(gocsaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
 				}
+				vulnObject.Remediations = append(vulnObject.Remediations, &gocsaf.Remediation{
+					Details:    utils.Ptr(fmt.Sprintf("Marked as false positive: %s", utils.SafeDereference(lastEvent.Justification))),
+					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
+					Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryMitigation),
+				})
 
 				flags = append(flags, &gocsaf.Flag{
 					Label:      utils.Ptr(gocsaf.FlagLabel(justification)),
@@ -920,10 +1070,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 	if len(vulns) == 0 {
 		return nil, nil
 	}
-	vulnDetails := gocsaf.Note{
-		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
-		Title:        utils.Ptr("state of the vulnerability in the product"),
-	}
+	notes := []*gocsaf.Note{}
 
 	cve := vulns[0].CVE
 	cveDescription := gocsaf.Note{
@@ -932,9 +1079,18 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 		Text:         &cve.Description,
 	}
 
+	notes = append(notes, &cveDescription)
+
+	vulnDetails := gocsaf.Note{
+
+		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
+		Title:        utils.Ptr("state of the vulnerability in the product"),
+	}
+
 	// group vulnerabilities by artifact
 	artifactToVulns := map[string][]models.DependencyVuln{}
 	for _, vuln := range vulns {
+
 		for _, artifact := range vuln.Artifacts {
 			key := fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)
 			artifactToVulns[key] = append(artifactToVulns[key], vuln)
@@ -946,13 +1102,25 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 	for artifact, vulns := range artifactToVulns {
 		var vulnStates []string
 		for _, vuln := range vulns {
+			recentJustification := vuln.Events[len(vuln.Events)-1].Justification
+			eventType := vuln.Events[len(vuln.Events)-1].Type
+			if recentJustification != nil && eventType != dtos.EventTypeMitigate {
+				id := string(artifactNameAndComponentPurlToProductID(artifact, "", *vuln.ComponentPurl))
+				notes = append(notes, &gocsaf.Note{
+					Title:        utils.Ptr(fmt.Sprintf("Justification for %s", id)),
+					NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
+					Text:         recentJustification,
+				})
+			}
 			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), *vuln.ComponentPurl))
 		}
-		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(vulnStates, ", ")))
+		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(normalize.SortStringsSlice(vulnStates), ", ")))
 	}
 
-	vulnDetails.Text = utils.Ptr(strings.Join(summaryParts, " | "))
-	return gocsaf.Notes{&vulnDetails, &cveDescription}, nil
+	vulnDetails.Text = utils.Ptr(strings.Join(normalize.SortStringsSlice(summaryParts), ", "))
+	notes = append(notes, &vulnDetails)
+
+	return notes, nil
 }
 
 // Helper function to map state to human-readable string
@@ -972,35 +1140,48 @@ func stateToString(state dtos.VulnState) string {
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, vuln models.DependencyVuln) (gocsaf.Tracking, error) {
+func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
-
-	// sort them by their creation timestamp
-	slices.SortFunc(vuln.Events, func(event1 models.VulnEvent, event2 models.VulnEvent) int {
-		return event1.CreatedAt.Compare(event2.CreatedAt)
-	})
-
-	// now we can extract the first release and current release timestamp that being the first and last event
-	tracking.InitialReleaseDate = utils.Ptr(asset.CreatedAt.Format(time.RFC3339))
-	if len(vuln.Events) != 0 {
-		tracking.CurrentReleaseDate = utils.Ptr(vuln.Events[len(vuln.Events)-1].CreatedAt.Format(time.RFC3339))
-	} else {
-		tracking.CurrentReleaseDate = tracking.InitialReleaseDate
+	allEvents := make([]vulnEventWithVuln, 0)
+	for _, vuln := range vulns {
+		for _, event := range vuln.Events {
+			allEvents = append(allEvents, vulnEventWithVuln{
+				VulnEvent: event,
+				Vuln:      vuln,
+			})
+		}
 	}
 
+	// sort them by their creation timestamp
+	slices.SortFunc(allEvents, func(event1 vulnEventWithVuln, event2 vulnEventWithVuln) int {
+		return event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
+	})
+
+	engineVersion := config.Version
+	if engineVersion == "" {
+		engineVersion = "debug"
+	}
 	tracking.Generator = &gocsaf.Generator{
 		Engine: &gocsaf.Engine{
-			Name: utils.Ptr("DevGuard CSAF Generator"),
+			Name:    utils.Ptr("DevGuard CSAF Generator"),
+			Version: &engineVersion,
 		},
 		Date: tracking.CurrentReleaseDate,
 	}
 
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(asset, vuln)
+	revisions, err := buildRevisionHistory(asset, allEvents)
 	if err != nil {
 		return tracking, err
 	}
+	if len(revisions) == 0 {
+		return tracking, fmt.Errorf("missing Revision entries")
+	}
 	tracking.RevisionHistory = revisions
+
+	// now we can extract the first release and current release timestamp that being the dates of the first and last revision entry
+	tracking.InitialReleaseDate = revisions[0].Date
+	tracking.CurrentReleaseDate = revisions[len(revisions)-1].Date
 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
@@ -1010,46 +1191,54 @@ func generateTrackingObject(asset models.Asset, vuln models.DependencyVuln) (goc
 	return tracking, nil
 }
 
+type vulnEventWithVuln struct {
+	VulnEvent models.VulnEvent
+	Vuln      models.DependencyVuln
+}
+
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, vuln models.DependencyVuln) ([]*gocsaf.Revision, error) {
+func buildRevisionHistory(asset models.Asset, vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, error) {
 	var revisions []*gocsaf.Revision
 	// then just create a revision entry for every event group
-	for i, ev := range vuln.Events {
+	version := 0
+	for _, event := range vulnEvents {
 		revisionObject := gocsaf.Revision{
-			Date: utils.Ptr(ev.CreatedAt.Format(time.RFC3339)),
+			Date: utils.Ptr(event.VulnEvent.CreatedAt.Format(time.RFC3339)),
 		}
-		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(i + 1)))
-		summary, err := generateSummaryForEvent(vuln, ev)
+		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version + 1)))
+		summary, err := generateSummaryForEvent(event.Vuln, event.VulnEvent)
 		if err != nil {
 			continue
 		}
 		revisionObject.Summary = &summary
 		revisions = append(revisions, &revisionObject)
+		version++
 	}
 
 	return revisions, nil
 }
 
 func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
+	artifactNames := make([]string, 0)
+	for _, artifact := range vuln.Artifacts {
+		artifactNames = append(artifactNames, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
+	}
+	artifactNameString := strings.Join(normalize.SortStringsSlice(artifactNames), ", ")
+
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected vulnerability %s.", *vuln.CVEID), nil
+		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened vulnerability %s.", *vuln.CVEID), nil
+		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed vulnerability %s.", *vuln.CVEID), nil
+		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted vulnerability %s.", *vuln.CVEID), nil
+		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked vulnerability %s as false positive.", *vuln.CVEID), nil
+		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	default:
-		return "", fmt.Errorf("unknown event type: %s", event.Type)
+		return "", fmt.Errorf("unknown event type: %s (%s)", event.Type, artifactNameString)
 	}
-}
-
-// small helper function to eliminate seconds by rounding up to the next minute
-func convertTimeToDateHourMinute(t time.Time) time.Time {
-	return t.Add(time.Second * time.Duration(60-t.Second()))
 }
 
 // signs data and returns the resulting signature
