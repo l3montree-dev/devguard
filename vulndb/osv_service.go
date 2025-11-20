@@ -75,6 +75,7 @@ var importEcosystems = []string{
 	// "SwiftURL",
 	// "Ubuntu",
 	// "Wolfi",
+	"Red Hat",
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
