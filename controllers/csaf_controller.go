@@ -464,10 +464,6 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		}
 		return ctx.String(200, string(signature))
 	case "sha256":
-		if strings.Contains(fileName, "cve-2017-20165") {
-			fmt.Println("HASH")
-			// fmt.Println(string(cjsonData))
-		}
 		hash := sha256.Sum256(cjsonData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
