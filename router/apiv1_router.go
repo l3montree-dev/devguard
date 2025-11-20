@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
@@ -58,6 +59,15 @@ func NewAPIV1Router(srv *echo.Echo,
 			shared.SetAuthAdminClient(ctx, oryAdmin)
 			return next(ctx)
 		}
+	})
+
+	apiV1Router.GET("/info/", func(c echo.Context) error {
+		return c.JSON(200, map[string]any{
+			"version":   config.Version,
+			"commit":    config.Commit,
+			"branch":    config.Branch,
+			"buildDate": config.BuildDate,
+		})
 	})
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
