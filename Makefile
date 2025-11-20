@@ -7,7 +7,7 @@ VERSION_FLAGS=-ldflags="-X github.com/l3montree-dev/devguard/config.Version=$(GI
                         -X github.com/l3montree-dev/devguard/config.Commit=$(GIT_COMMIT) \
                         -X github.com/l3montree-dev/devguard/config.Branch=$(GIT_BRANCH) \
                         -X github.com/l3montree-dev/devguard/config.BuildDate=$(DATE)"
-FLAGS=$(VERSION_FLAGS) -w -trimpath
+FLAGS=$(VERSION_FLAGS) -trimpath
 
 run::
 	go run $(VERSION_FLAGS) ./cmd/devguard/main.go
