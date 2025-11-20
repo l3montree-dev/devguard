@@ -788,6 +788,13 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 	return tree, nil
 }
 
+func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
+	if assetVersionName == "" {
+		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
+	}
+	return gocsaf.ProductID(fmt.Sprintf("%s@%s|%s", artifactName, assetVersionName, componentPurl))
+}
+
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
 func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*gocsaf.Vulnerability, error) {
 	vulnerabilities := []*gocsaf.Vulnerability{}
@@ -825,7 +832,7 @@ func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*g
 
 			productIDs := make([]*gocsaf.ProductID, 0)
 			for _, artifact := range vuln.Artifacts {
-				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(fmt.Sprintf("%s@%s:%s", artifact.ArtifactName, artifact.AssetVersionName, *vuln.ComponentPurl))))
+				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, *vuln.ComponentPurl))))
 			}
 
 			switch vuln.State {
@@ -927,6 +934,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 	notes = append(notes, &cveDescription)
 
 	vulnDetails := gocsaf.Note{
+
 		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
 		Title:        utils.Ptr("state of the vulnerability in the product"),
 	}
@@ -949,8 +957,9 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 			recentJustification := vuln.Events[len(vuln.Events)-1].Justification
 			eventType := vuln.Events[len(vuln.Events)-1].Type
 			if recentJustification != nil && eventType != dtos.EventTypeMitigate {
+				id := string(artifactNameAndComponentPurlToProductID(artifact, "", *vuln.ComponentPurl))
 				notes = append(notes, &gocsaf.Note{
-					Title:        utils.Ptr("justification"),
+					Title:        utils.Ptr(fmt.Sprintf("justification for %s", id)),
 					NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
 					Text:         utils.Ptr(fmt.Sprintf("Justification for package %s: %s.", *vuln.ComponentPurl, *recentJustification)),
 				})
@@ -960,7 +969,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(vulnStates, ", ")))
 	}
 
-	vulnDetails.Text = utils.Ptr(strings.Join(summaryParts, " | "))
+	vulnDetails.Text = utils.Ptr(strings.Join(summaryParts, ", "))
 	notes = append(notes, &vulnDetails)
 
 	return notes, nil
@@ -1057,19 +1066,25 @@ func buildRevisionHistory(asset models.Asset, vulnEvents []vulnEventWithVuln) ([
 }
 
 func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
+	artifactNames := make([]string, 0)
+	for _, artifact := range vuln.Artifacts {
+		artifactNames = append(artifactNames, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
+	}
+	artifactNameString := strings.Join(artifactNames, ", ")
+
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected vulnerability %s in package %s.", *vuln.CVEID, *vuln.ComponentPurl), nil
+		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened vulnerability %s in package %s.", *vuln.CVEID, *vuln.ComponentPurl), nil
+		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed vulnerability %s in package %s.", *vuln.CVEID, *vuln.ComponentPurl), nil
+		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted vulnerability %s in package %s.", *vuln.CVEID, *vuln.ComponentPurl), nil
+		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s.", *vuln.CVEID, *vuln.ComponentPurl), nil
+		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
 	default:
-		return "", fmt.Errorf("unknown event type: %s", event.Type)
+		return "", fmt.Errorf("unknown event type: %s (%s)", event.Type, artifactNameString)
 	}
 }
 
