@@ -175,7 +175,7 @@ func (s *DependencyVulnService) RecalculateAllRawRiskAssessments() error {
 			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
 		}
 
-		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
+		_, err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
@@ -245,9 +245,9 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 	return nil
 }
 
-func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
+func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	if len(dependencyVulns) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	env := shared.Environmental{
@@ -292,21 +292,21 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
+			return nil, fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-		return nil
+		return dependencyVulns, nil
 	}
 
 	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
 	if err != nil {
-		return fmt.Errorf("could not save dependencyVulns: %v", err)
+		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
 
 	err = s.vulnEventRepository.SaveBatch(tx, events)
 	if err != nil {
-		return fmt.Errorf("could not save events: %v", err)
+		return nil, fmt.Errorf("could not save events: %v", err)
 	}
-	return nil
+	return dependencyVulns, nil
 }
 
 func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error) {
@@ -331,7 +331,9 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, userID str
 	case dtos.EventTypeFalsePositive:
 		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 	case dtos.EventTypeDetected:
-		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{}, "", upstream)
+		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{
+			Risk: utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
+		}, "", upstream)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, upstream)
 	case dtos.EventTypeComment:

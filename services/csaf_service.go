@@ -265,6 +265,15 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 		cdxVulns = append(cdxVulns, vulns...)
 	}
 
+	dependencyPurls := utils.Flat(utils.Map(cdxVulns, func(el cyclonedx.Vulnerability) []string {
+		if el.Affects == nil {
+			return []string{}
+		}
+		return utils.Map(*el.Affects, func(aff cyclonedx.Affects) string {
+			return aff.Ref
+		})
+	}))
+
 	// now build a simple cyclonedx vex bom
 	bom := &cyclonedx.BOM{
 		SpecVersion:     cyclonedx.SpecVersion1_6,
@@ -295,6 +304,10 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 				Dependencies: &[]string{
 					purl.ToString(),
 				},
+			},
+			{
+				Ref:          purl.ToString(),
+				Dependencies: &dependencyPurls,
 			},
 		},
 	}
@@ -1101,10 +1114,10 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 			}
 			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), *vuln.ComponentPurl))
 		}
-		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(vulnStates, ", ")))
+		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(normalize.SortStringsSlice(vulnStates), ", ")))
 	}
 
-	vulnDetails.Text = utils.Ptr(strings.Join(summaryParts, ", "))
+	vulnDetails.Text = utils.Ptr(strings.Join(normalize.SortStringsSlice(summaryParts), ", "))
 	notes = append(notes, &vulnDetails)
 
 	return notes, nil
@@ -1144,10 +1157,14 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 		return event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
 	})
 
+	engineVersion := config.Version
+	if engineVersion == "" {
+		engineVersion = "debug"
+	}
 	tracking.Generator = &gocsaf.Generator{
 		Engine: &gocsaf.Engine{
 			Name:    utils.Ptr("DevGuard CSAF Generator"),
-			Version: &config.Version,
+			Version: &engineVersion,
 		},
 		Date: tracking.CurrentReleaseDate,
 	}
@@ -1206,7 +1223,7 @@ func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent)
 	for _, artifact := range vuln.Artifacts {
 		artifactNames = append(artifactNames, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
 	}
-	artifactNameString := strings.Join(artifactNames, ", ")
+	artifactNameString := strings.Join(normalize.SortStringsSlice(artifactNames), ", ")
 
 	switch event.Type {
 	case dtos.EventTypeDetected:

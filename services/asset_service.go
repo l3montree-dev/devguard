@@ -110,7 +110,7 @@ func (s *assetService) UpdateAssetRequirements(asset models.Asset, responsible s
 			return fmt.Errorf("could not get dependencyVulns: %v", err)
 		}
 
-		err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
+		_, err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
 		if err != nil {
 			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)

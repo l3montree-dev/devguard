@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -15,9 +14,11 @@ import (
 	"time"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
+	"github.com/secure-systems-lab/go-securesystemslib/cjson"
 
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -426,8 +427,13 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		return err
 	}
 
+	cjsonData, err := cjson.EncodeCanonical(normalize.DeepSort(csafReport))
+	if err != nil {
+		return err
+	}
 	// then choose which type of requested needs to be served
 	fileName := strings.TrimRight(ctx.Param("version"), "/")
+
 	index := strings.LastIndex(fileName, ".")
 	if index == -1 {
 		return fmt.Errorf("invalid file name syntax")
@@ -436,43 +442,23 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	switch mode {
 	case "json":
 		// just return the csaf report
-		return ctx.JSONPretty(200, csafReport, config.PrettyJSONIndent)
+		return ctx.JSONBlob(200, cjsonData)
 	case "asc":
-		// return the signature of the json encoding of the report
-		buf := bytes.Buffer{}
-		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", config.PrettyJSONIndent)
-		err = encoder.Encode(csafReport)
-		if err != nil {
-			return err
-		}
-		signature, err := services.SignCSAFReport(buf.Bytes())
+		signature, err := services.SignCSAFReport(cjsonData)
 		if err != nil {
 			return err
 		}
 		return ctx.String(200, string(signature))
 	case "sha256":
-		// return the hash of the report
-		buf := bytes.Buffer{}
-		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", config.PrettyJSONIndent)
-		err = encoder.Encode(csafReport)
-		if err != nil {
-			return err
+		if strings.Contains(fileName, "cve-2017-20165") {
+			fmt.Println("HASH")
+			// fmt.Println(string(cjsonData))
 		}
-		hash := sha256.Sum256(buf.Bytes())
+		hash := sha256.Sum256(cjsonData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
 	case "sha512":
-		// return the hash of the report
-		buf := bytes.Buffer{}
-		encoder := json.NewEncoder(&buf)
-		encoder.SetIndent("", config.PrettyJSONIndent)
-		err = encoder.Encode(csafReport)
-		if err != nil {
-			return err
-		}
-		hash := sha512.Sum512(buf.Bytes())
+		hash := sha512.Sum512(cjsonData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
 	default:
