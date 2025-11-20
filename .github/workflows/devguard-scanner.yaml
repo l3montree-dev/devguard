@@ -66,7 +66,7 @@ jobs:
       continue-on-open-code-risk: true
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}       
-      build-args: "--context=. --dockerfile=Dockerfile --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME"       
+      build-args: "--context=. --dockerfile=Dockerfile --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME --build-arg GITHUB_SHA=$GITHUB_SHA"       
 
 
   build-scanner-image:
@@ -78,7 +78,7 @@ jobs:
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
-      build-args: "--context=. --dockerfile=Dockerfile.scanner"
+      build-args: "--context=. --dockerfile=Dockerfile.scanner --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME --build-arg GITHUB_SHA=$GITHUB_SHA"
 
 
   # Image scanning job to detect vulnerabilities in the built Docker image

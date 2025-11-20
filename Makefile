@@ -1,7 +1,8 @@
-GIT_DESCRIBE=$(shell git describe --tags --dirty --always)
-GIT_COMMIT=$(shell git rev-parse HEAD)
-GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
-DATE=$(shell date +%Y-%m-%dT%H:%M:%S%z)
+# Use GitHub Actions environment variables if available, otherwise use git commands
+GIT_DESCRIBE ?= $(or $(GITHUB_REF_NAME),$(shell git describe --tags --dirty --always))
+GIT_COMMIT ?= $(or $(GITHUB_SHA),$(shell git rev-parse HEAD))
+GIT_BRANCH ?= $(or $(GITHUB_REF_NAME),$(shell git rev-parse --abbrev-ref HEAD))
+DATE ?= $(shell date +%Y-%m-%dT%H:%M:%S%z)
 VERSION_FLAGS=-ldflags="-X github.com/l3montree-dev/devguard/config.Version=$(GIT_DESCRIBE) \
                         -X github.com/l3montree-dev/devguard/config.Commit=$(GIT_COMMIT) \
                         -X github.com/l3montree-dev/devguard/config.Branch=$(GIT_BRANCH) \
