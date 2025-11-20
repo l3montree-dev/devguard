@@ -16,13 +16,13 @@
 package services
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,6 +75,10 @@ func TestConvertAdvisoryToCdxVulnerability(t *testing.T) {
 		advisory, err := csaf.LoadAdvisory("testdata/csaf_report.json")
 		assert.Nil(t, err)
 
-		fmt.Println(advisory)
+		purl, _ := packageurl.FromString("pkg:npm/super-logging@v1.0.0")
+		vulns, err := convertAdvisoryToCdxVulnerability(*advisory, purl)
+		assert.Nil(t, err)
+
+		assert.Equal(t, 1, len(vulns))
 	})
 }

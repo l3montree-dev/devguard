@@ -19,7 +19,8 @@
             "current_release_date": "2025-11-20T11:07:40+01:00",
             "generator": {
                 "engine": {
-                    "name": "DevGuard CSAF Generator"
+                    "name": "DevGuard CSAF Generator",
+                    "version": "v0.19.2-176-g8a1e4f21-dirty"
                 }
             },
             "id": "2",
@@ -28,12 +29,12 @@
                 {
                     "date": "2025-11-12T10:39:48+01:00",
                     "number": "1",
-                    "summary": "Detected vulnerability CVE-2017-16137 in package pkg:npm/debug@3.0.0 (pkg:npm/super-logging@main, pkg:devguard/super-logging@main)."
+                    "summary": "Detected vulnerability CVE-2017-16137 in package pkg:npm/debug@3.0.0 (pkg:npm/super-logging@v1.0.0, pkg:devguard/super-logging@v1.0.0)."
                 },
                 {
                     "date": "2025-11-20T11:07:40+01:00",
                     "number": "2",
-                    "summary": "Marked vulnerability CVE-2017-16137 as false positive in package pkg:npm/debug@3.0.0 (pkg:npm/super-logging@main, pkg:devguard/super-logging@main)."
+                    "summary": "Marked vulnerability CVE-2017-16137 as false positive in package pkg:npm/debug@3.0.0 (pkg:npm/super-logging@v1.0.0, pkg:devguard/super-logging@v1.0.0)."
                 }
             ],
             "status": "interim",
@@ -43,17 +44,17 @@
     "product_tree": {
         "full_product_names": [
             {
-                "name": "pkg:npm/super-logging@main",
-                "product_id": "pkg:npm/super-logging@main",
+                "name": "pkg:npm/super-logging@v1.0.0",
+                "product_id": "pkg:npm/super-logging@v1.0.0",
                 "product_identification_helper": {
-                    "purl": "pkg:npm/super-logging@main"
+                    "purl": "pkg:npm/super-logging@v1.0.0"
                 }
             },
             {
-                "name": "pkg:devguard/super-logging@main",
-                "product_id": "pkg:devguard/super-logging@main",
+                "name": "pkg:devguard/super-logging@v1.0.0",
+                "product_id": "pkg:devguard/super-logging@v1.0.0",
                 "product_identification_helper": {
-                    "purl": "pkg:devguard/super-logging@main"
+                    "purl": "pkg:devguard/super-logging@v1.0.0"
                 }
             },
             {
@@ -68,20 +69,20 @@
             {
                 "category": "default_component_of",
                 "full_product_name": {
-                    "name": "Package pkg:npm/debug@3.0.0 is a default component of artifact pkg:npm/super-logging@main",
-                    "product_id": "pkg:npm/super-logging@main:pkg:npm/debug@3.0.0"
+                    "name": "Package pkg:npm/debug@3.0.0 is a default component of artifact pkg:npm/super-logging@v1.0.0",
+                    "product_id": "pkg:npm/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                 },
                 "product_reference": "pkg:npm/debug@3.0.0",
-                "relates_to_product_reference": "pkg:npm/super-logging@main"
+                "relates_to_product_reference": "pkg:npm/super-logging@v1.0.0"
             },
             {
                 "category": "default_component_of",
                 "full_product_name": {
-                    "name": "Package pkg:npm/debug@3.0.0 is a default component of artifact pkg:devguard/super-logging@main",
-                    "product_id": "pkg:devguard/super-logging@main:pkg:npm/debug@3.0.0"
+                    "name": "Package pkg:npm/debug@3.0.0 is a default component of artifact pkg:devguard/super-logging@v1.0.0",
+                    "product_id": "pkg:devguard/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                 },
                 "product_reference": "pkg:npm/debug@3.0.0",
-                "relates_to_product_reference": "pkg:devguard/super-logging@main"
+                "relates_to_product_reference": "pkg:devguard/super-logging@v1.0.0"
             }
         ]
     },
@@ -93,8 +94,8 @@
                 {
                     "label": "vulnerable_code_not_in_execute_path",
                     "product_ids": [
-                        "pkg:npm/super-logging@main|pkg:npm/debug@3.0.0",
-                        "pkg:devguard/super-logging@main|pkg:npm/debug@3.0.0"
+                        "pkg:npm/super-logging@v1.0.0|pkg:npm/debug@3.0.0",
+                        "pkg:devguard/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                     ]
                 }
             ],
@@ -107,23 +108,23 @@
                 {
                     "category": "details",
                     "text": "Justification for package pkg:npm/debug@3.0.0: This doesnt affect us, since we are not using the vulnerable function at all..",
-                    "title": "justification for pkg:npm/super-logging@main|pkg:npm/debug@3.0.0"
+                    "title": "justification for pkg:npm/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                 },
                 {
                     "category": "details",
                     "text": "Justification for package pkg:npm/debug@3.0.0: This doesnt affect us, since we are not using the vulnerable function at all..",
-                    "title": "justification for pkg:devguard/super-logging@main|pkg:npm/debug@3.0.0"
+                    "title": "justification for pkg:devguard/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                 },
                 {
                     "category": "details",
-                    "text": "ProductID pkg:npm/super-logging@main: marked as false positive for package pkg:npm/debug@3.0.0, ProductID pkg:devguard/super-logging@main: marked as false positive for package pkg:npm/debug@3.0.0",
+                    "text": "ProductID pkg:npm/super-logging@v1.0.0: marked as false positive for package pkg:npm/debug@3.0.0, ProductID pkg:devguard/super-logging@v1.0.0: marked as false positive for package pkg:npm/debug@3.0.0",
                     "title": "state of the vulnerability in the product"
                 }
             ],
             "product_status": {
                 "known_not_affected": [
-                    "pkg:npm/super-logging@main|pkg:npm/debug@3.0.0",
-                    "pkg:devguard/super-logging@main|pkg:npm/debug@3.0.0"
+                    "pkg:npm/super-logging@v1.0.0|pkg:npm/debug@3.0.0",
+                    "pkg:devguard/super-logging@v1.0.0|pkg:npm/debug@3.0.0"
                 ]
             },
             "title": "Additional information about CVE-2017-16137"

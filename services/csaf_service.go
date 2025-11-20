@@ -785,7 +785,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 				ProductReference:          utils.Ptr(gocsaf.ProductID(*vuln.ComponentPurl)),
 				RelatesToProductReference: utils.Ptr(gocsaf.ProductID(artifactPurl)),
 				FullProductName: &gocsaf.FullProductName{
-					ProductID: utils.Ptr(gocsaf.ProductID(fmt.Sprintf("%s:%s", artifactPurl, *vuln.ComponentPurl))),
+					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, "", *vuln.ComponentPurl)),
 					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", *vuln.ComponentPurl, artifactPurl)),
 				},
 			}
