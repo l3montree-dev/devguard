@@ -79,6 +79,14 @@ for dir in "${secondtrain[@]}"; do
                 sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:main-latest|ghcr.io/l3montree-dev/devguard/scanner:$TAG|g" "$file"
             fi
         done
+        
+        # Replace version default in all full.yml files (at any depth)
+        for fullfile in $dir/**/full.yml(D); do
+            if [[ -f $fullfile ]]; then
+                echo "Replacing version default in $fullfile"
+                sed -i '' "/version:/,/default:/ s/default: \"main\"/default: \"$TAG\"/" "$fullfile"
+            fi
+        done
     fi
 done
 
@@ -112,6 +120,14 @@ for dir in "${secondtrain[@]}"; do
             echo "Replacing back in $file"
             if [[ -f $file ]]; then
                 sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main-latest|g" "$file"
+            fi
+        done
+        
+        # Replace version default back to "main" in all full.yml files (at any depth)
+        for fullfile in $dir/**/full.yml(D); do
+            if [[ -f $fullfile ]]; then
+                echo "Replacing version default back in $fullfile"
+                sed -i '' "/version:/,/default:/ s/default: \"$TAG\"/default: \"main\"/" "$fullfile"
             fi
         done
     fi
