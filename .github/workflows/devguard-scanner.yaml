@@ -72,7 +72,7 @@ jobs:
   build-scanner-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
-      artifact-name: "scanner"
+      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
       image-suffix: "scanner"
@@ -89,7 +89,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "scanner"
+      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
@@ -121,7 +121,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "scanner"
+      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
@@ -136,7 +136,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "scanner"
+      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
