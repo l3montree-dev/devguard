@@ -52,6 +52,7 @@ func secretScan(p, outputPath string) (*dtos.SarifResult, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create temp file")
 		}
+		defer os.RemoveAll(dir)
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
@@ -59,19 +60,14 @@ func secretScan(p, outputPath string) (*dtos.SarifResult, error) {
 
 	slog.Info("Starting secret scanning", "path", p, "result-path", sarifFilePath)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
 	err := scannerCmd.Run()
 	if err != nil {
-		exitErr, ok := err.(*exec.ExitError)
-		if ok && exitErr.ExitCode() == 1 {
-			slog.Warn("Leaks found, but continuing execution.", "stderr", stderr.String())
-		} else {
-			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
-		}
+		return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 	}
 
 	// read AND parse the file

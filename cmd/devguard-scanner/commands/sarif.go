@@ -236,16 +236,6 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		// allow passing path or image as the first positional argument (like sca)
-		if len(args) > 0 && args[0] != "" {
-			// if it looks like an OCI image (contains ':'), set Image, if it's a tar file set Path, otherwise treat as Path
-			if strings.Contains(args[0], ":") {
-				config.RuntimeBaseConfig.Image = args[0]
-			} else {
-				config.RuntimeBaseConfig.Path = args[0]
-			}
-		}
-
 		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")

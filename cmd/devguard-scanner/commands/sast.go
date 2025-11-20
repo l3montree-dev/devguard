@@ -27,6 +27,7 @@ func sastScan(p, outputPath string) (*dtos.SarifResult, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create temp file")
 		}
+		defer os.RemoveAll(dir)
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
