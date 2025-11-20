@@ -2,13 +2,13 @@
 TAG=$1
 
 # check if TAG starts with 'v' and strip it for semver validation
-if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
     SEMVER="${TAG#v}"  # Remove 'v' prefix for validation
-elif [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0)."
+elif [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
+    echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0 or v1.0.0-rc.1)."
     exit 1
 else
-    echo "Error: Invalid version number. Please use semantic versioning with 'v' prefix (e.g., v1.0.0)."
+    echo "Error: Invalid version number. Please use semantic versioning with 'v' prefix (e.g., v1.0.0 or v1.0.0-rc.1)."
     exit 1
 fi
 
