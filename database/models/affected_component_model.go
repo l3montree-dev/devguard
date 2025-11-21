@@ -144,6 +144,9 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 			}
 		}
 
+		redhatEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat")
+		shouldConvertToSemver := false
+
 		if affected.Package.Purl != "" {
 
 			purl, err := packageurl.FromString(affected.Package.Purl)
@@ -158,6 +161,8 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 			for _, r := range affected.Ranges {
 				if r.Type == "SEMVER" {
 					containsSemver = true
+				} else if r.Type == "ECOSYSTEM" && redhatEcosystem {
+					shouldConvertToSemver = true
 				} else {
 					continue
 				}
@@ -167,6 +172,7 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 					if i%2 != 0 {
 						continue
 					}
+					introduced := tmpE.Introduced
 
 					// check if a fix does even exist
 					fixed := ""
@@ -175,9 +181,20 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 						fixed = r.Events[i+1].Fixed
 					}
 
+					if shouldConvertToSemver {
+						introduced, err = normalize.ConvertRPMtoSemVer(introduced)
+						if err != nil {
+							continue
+						}
+						fixed, err = normalize.ConvertRPMtoSemVer(fixed)
+						if err != nil {
+							continue
+						}
+					}
+
 					var semverIntroducedPtr *string
 					var semverFixedPtr *string
-					semverIntroduced, err := normalize.SemverFix(tmpE.Introduced)
+					semverIntroduced, err := normalize.SemverFix(introduced)
 					if err == nil {
 						semverIntroducedPtr = &semverIntroduced
 					}

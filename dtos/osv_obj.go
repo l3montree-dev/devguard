@@ -37,6 +37,7 @@ type OSV struct {
 	Published     time.Time  `json:"published"`
 	Related       []string   `json:"related"`
 	Aliases       []string   `json:"aliases"`
+	Upstream      []string   `json:"upstream"`
 	Affected      []Affected `json:"affected"`
 	SchemaVersion string     `json:"schema_version"`
 }
@@ -48,6 +49,13 @@ func (osv OSV) GetCVE() []string {
 			cves = append(cves, alias)
 		}
 	}
+
+	for _, upstream := range osv.Upstream {
+		if strings.HasPrefix(upstream, "CVE-") {
+			cves = append(cves, upstream)
+		}
+	}
+
 	// check if the osv itself is a cve
 	if strings.HasPrefix(osv.ID, "CVE-") {
 		cves = append(cves, osv.ID)
