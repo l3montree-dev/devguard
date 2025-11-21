@@ -10,6 +10,57 @@ import (
 // 20.160.635.721
 const max31BitValue = 2_147_483_647 // 2^31 - 1
 
+func ConvertRPMtoSemVer(rpm string) (string, error) {
+	// Handle empty string
+	if rpm == "" {
+		return "", fmt.Errorf("empty RPM version string")
+	}
+
+	var version string
+	var release string
+
+	// Split out epoch if present
+	if strings.Contains(rpm, ":") {
+		parts := strings.SplitN(rpm, ":", 2)
+		rpm = parts[1]
+	}
+
+	// Split version-release (only on first hyphen)
+	if strings.Contains(rpm, "-") {
+		parts := strings.SplitN(rpm, "-", 2)
+		version = parts[0]
+		release = parts[1]
+	} else {
+		version = rpm
+	}
+
+	//check if there are any invalid characters in version
+	reInvalidChars := regexp.MustCompile(`[^0-9.]`)
+	if reInvalidChars.MatchString(version) {
+		return "", fmt.Errorf("version contains invalid characters: %s", version)
+	}
+
+	// Split into segments
+	segments := strings.Split(version, ".")
+
+	// If we have more than 3 segments, take only the first 3
+	if len(segments) > 3 {
+		return "", fmt.Errorf("version has more than 3 segments: %s", version)
+	}
+
+	// If version is missing segments, pad them
+	for len(segments) < 3 {
+		segments = append(segments, "0")
+	}
+
+	semver := strings.Join(segments, ".")
+	if release != "" {
+		semver += "-" + release
+	}
+
+	return semver, nil
+}
+
 // ConvertToSemver converts any versioning scheme to a semver-like versioning scheme
 func ConvertToSemver(originalVersion string) string {
 	if originalVersion == "" {
