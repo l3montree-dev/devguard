@@ -33,6 +33,133 @@ func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
 	return names
 }
 
+func TestMultipleOrigins(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+
+		controller := f.App.ScanController
+
+		// scan the vulnerable sbom
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("should close vulnerability for specific origin", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "origin-1")           // set the origin header
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			var response dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+			assert.Equal(t, 1, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 1)
+			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
+
+			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "origin-1")           // set the same origin header
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 0, response.AmountOpened)
+			assert.Equal(t, 1, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 0)
+		})
+
+		t.Run("should not close vulnerability for different origin", func(t *testing.T) {
+
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "origin-1")           // set the origin header
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			var response dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+			assert.Equal(t, 1, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 1)
+			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
+
+			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "origin-2")           // set a different origin header
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 0, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 1)
+			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
+
+		})
+
+	})
+}
+
 func TestScanning(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
@@ -1033,6 +1160,11 @@ func createCVE2025_46569(db shared.DB) {
 	}
 }
 
+func emptySbom() io.Reader {
+	content := getEmptySBOMContent()
+	return bytes.NewReader(content)
+}
+
 func sbomWithVulnerability() io.Reader {
 	content := getSBOMWithVulnerabilityContent()
 	return bytes.NewReader(content)
@@ -1041,6 +1173,19 @@ func sbomWithVulnerability() io.Reader {
 func sbomWithoutVulnerability() io.Reader {
 	content := getSBOMWithoutVulnerabilityContent()
 	return bytes.NewReader(content)
+}
+
+func getEmptySBOMContent() []byte {
+	file, err := os.Open("./testdata/empty-sbom.json")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	content, err := io.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+	return content
 }
 
 func getSBOMWithVulnerabilityContent() []byte {
