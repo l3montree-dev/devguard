@@ -67,6 +67,7 @@ func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
 	return event.arbitraryJSONData
 }
 
+// adds additional arbitrary JSON data
 func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
 	event.arbitraryJSONData = data
 	// parse the additional data

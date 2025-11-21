@@ -51,6 +51,9 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+// maybe we should move this to csaf dto?
+const ProductIDDelimiter string = "|"
+
 type csafService struct {
 	client http.Client
 }
@@ -926,9 +929,9 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 
 func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
 	if assetVersionName == "" {
-		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
+		return gocsaf.ProductID(fmt.Sprintf("%s%s%s", strings.TrimSpace(artifactName), ProductIDDelimiter, componentPurl))
 	}
-	return gocsaf.ProductID(fmt.Sprintf("%s@%s|%s", artifactName, assetVersionName, componentPurl))
+	return gocsaf.ProductID(fmt.Sprintf("%s@%s%s%s", strings.TrimSpace(artifactName), assetVersionName, ProductIDDelimiter, componentPurl))
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
@@ -1143,12 +1146,16 @@ func stateToString(state dtos.VulnState) string {
 func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
 	allEvents := make([]vulnEventWithVuln, 0)
+
 	for _, vuln := range vulns {
 		for _, event := range vuln.Events {
-			allEvents = append(allEvents, vulnEventWithVuln{
-				VulnEvent: event,
-				Vuln:      vuln,
-			})
+			// only handle relevant vuln events
+			if isVulnEventCSAFRelevant(event) {
+				allEvents = append(allEvents, vulnEventWithVuln{
+					VulnEvent: event,
+					Vuln:      vuln,
+				})
+			}
 		}
 	}
 
@@ -1206,9 +1213,9 @@ func buildRevisionHistory(asset models.Asset, vulnEvents []vulnEventWithVuln) ([
 			Date: utils.Ptr(event.VulnEvent.CreatedAt.Format(time.RFC3339)),
 		}
 		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version + 1)))
-		summary, err := generateSummaryForEvent(event.Vuln, event.VulnEvent)
-		if err != nil {
-			continue
+		summary := generateSummaryForEvent(event.Vuln, event.VulnEvent)
+		if summary == "" {
+			slog.Error("could not generate summary for revision entry")
 		}
 		revisionObject.Summary = &summary
 		revisions = append(revisions, &revisionObject)
@@ -1218,26 +1225,45 @@ func buildRevisionHistory(asset models.Asset, vulnEvents []vulnEventWithVuln) ([
 	return revisions, nil
 }
 
-func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
-	artifactNames := make([]string, 0)
-	for _, artifact := range vuln.Artifacts {
-		artifactNames = append(artifactNames, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
+// generates a textual summary of the given event, returns an empty summary if the event is not relevant for the revision
+func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) string {
+	// set of all unique affected artifacts for this vuln event
+	uniqueArtifacts := make([]string, 0)
+
+	// retrieve artifact information from arbitrary json data from keys artifactNames and scannerID
+	jsonData := event.GetArbitraryJSONData()
+	artifact, ok := jsonData["artifactNames"].(string)
+	if ok {
+		uniqueArtifacts = append(uniqueArtifacts, artifact)
 	}
-	artifactNameString := strings.Join(normalize.SortStringsSlice(artifactNames), ", ")
+	artifact, ok = jsonData["scannerID"].(string)
+	if ok {
+		if !slices.Contains(uniqueArtifacts, artifact) {
+			uniqueArtifacts = append(uniqueArtifacts, artifact)
+		}
+	}
+
+	// then build the ProductID for each of the found artifacts
+	for i := range uniqueArtifacts {
+		uniqueArtifacts[i] = string(artifactNameAndComponentPurlToProductID(artifact, vuln.AssetVersionName, *vuln.ComponentPurl))
+	}
+
+	productIDsString := strings.Join(normalize.SortStringsSlice(uniqueArtifacts), ", ")
 
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Detected vulnerability %s in product %s.", *vuln.CVEID, productIDsString)
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Reopened vulnerability %s in product %s.", *vuln.CVEID, productIDsString)
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Fixed vulnerability %s in product %s.", *vuln.CVEID, productIDsString)
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Accepted vulnerability %s in product %s.", *vuln.CVEID, productIDsString)
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Marked vulnerability %s as false positive in product %s.", *vuln.CVEID, productIDsString)
 	default:
-		return "", fmt.Errorf("unknown event type: %s (%s)", event.Type, artifactNameString)
+		slog.Error(fmt.Sprintf("Cannot create summary for event with type: %s, should have been filtered out already!", event.Type))
+		return ""
 	}
 }
 
@@ -1281,4 +1307,12 @@ func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 		return nil, err
 	}
 	return signature, nil
+}
+
+func isVulnEventCSAFRelevant(event models.VulnEvent) bool {
+	return event.Type == dtos.EventTypeDetected ||
+		event.Type == dtos.EventTypeReopened ||
+		event.Type == dtos.EventTypeFixed ||
+		event.Type == dtos.EventTypeAccepted ||
+		event.Type == dtos.EventTypeFalsePositive
 }
