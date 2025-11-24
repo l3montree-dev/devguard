@@ -278,6 +278,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
 					continue
 				}
+
 				// check if we already have seen this event from upstream
 				for j := len(newState[i].Events) - 1; j >= 0; j-- {
 					event := newState[i].Events[j]
@@ -292,9 +293,6 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 						if vulnState == expectedVulnState && utils.SafeDereference(event.Justification) == expected.justification {
 							// we already have seen this event
 							continue outer
-						} else {
-							// we need todo it
-							break
 						}
 					}
 				}
