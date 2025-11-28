@@ -326,11 +326,25 @@ func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 
 // returns the aggregator file which points to all public organizations provider-metadata files
 func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
+
+	contactDetails := os.Getenv("CSAF_AGGREGATOR_CONTACT_DETAILS")
+	if contactDetails != "" {
+		contactDetails = "info@l3montree.com"
+	}
+	name := os.Getenv("CSAF_AGGREGATOR_NAME")
+	if name == "" {
+		name = "L3montree GmbH"
+	}
+	namespace := os.Getenv("CSAF_AGGREGATOR_NAMESPACE")
+	if namespace == "" {
+		namespace = "L3montree.com"
+	}
+
 	aggregatorObject := gocsaf.AggregatorInfo{
 		Category:       utils.Ptr(gocsaf.AggregatorLister),
-		ContactDetails: "info@l3montree.com",
-		Name:           "L3montree GmbH",
-		Namespace:      "L3montree.com",
+		ContactDetails: contactDetails,
+		Name:           name,
+		Namespace:      namespace,
 	}
 
 	hostURL := os.Getenv("API_URL")
