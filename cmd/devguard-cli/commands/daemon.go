@@ -69,8 +69,8 @@ func triggerDaemon(db shared.DB, broker database.Broker, selectedDaemons []strin
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		// Provide the already-created db and broker
-		fx.Supply(db, broker),
-
+		fx.Supply(db),
+		fx.Provide(database.BrokerFactory),
 		// Include all the standard modules
 		repositories.Module,
 		services.ServiceModule,
