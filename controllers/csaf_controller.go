@@ -328,7 +328,7 @@ func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 
 	contactDetails := os.Getenv("CSAF_AGGREGATOR_CONTACT_DETAILS")
-	if contactDetails != "" {
+	if contactDetails == "" {
 		contactDetails = "info@l3montree.com"
 	}
 	name := os.Getenv("CSAF_AGGREGATOR_NAME")
