@@ -62,3 +62,21 @@ type ComponentDependencyDTO struct {
 	Component      ComponentDTO  `json:"component"`
 	Dependency     ComponentDTO  `json:"dependency"`
 }
+
+type ComponentOccurrenceDTO struct {
+	ComponentDependencyID string  `json:"componentDependencyId"`
+	DependencyPurl        *string `json:"dependencyPurl"`
+	OrganizationID        string  `json:"organizationId"`
+	OrganizationName      string  `json:"organizationName"`
+	ProjectID             string  `json:"projectId"`
+	ProjectName           string  `json:"projectName"`
+	ProjectSlug           string  `json:"projectSlug"`
+	AssetID               string  `json:"assetId"`
+	AssetName             string  `json:"assetName"`
+	AssetSlug             string  `json:"assetSlug"`
+	AssetVersionName      string  `json:"assetVersionName"`
+	ComponentPurl         *string `json:"componentPurl"`
+	ComponentVersion      *string `json:"componentVersion"`
+	ArtifactName          *string `json:"artifactName"`
+	ArtifactAssetVersion  *string `json:"artifactAssetVersion"`
+}

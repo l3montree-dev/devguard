@@ -4,24 +4,29 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type ComponentController struct {
 	componentRepository    shared.ComponentRepository
 	assetVersionRepository shared.AssetVersionRepository
 	licenseRiskRepository  shared.LicenseRiskRepository
+	projectRepository      shared.ProjectRepository
 }
 
-func NewComponentController(componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, licenseOverwriteRepository shared.LicenseRiskRepository) *ComponentController {
+func NewComponentController(componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, licenseOverwriteRepository shared.LicenseRiskRepository, projectRepository shared.ProjectRepository) *ComponentController {
 	return &ComponentController{
 		componentRepository:    componentRepository,
 		assetVersionRepository: assetVersionRepository,
 		licenseRiskRepository:  licenseOverwriteRepository,
+		projectRepository:      projectRepository,
 	}
 }
 
@@ -121,4 +126,35 @@ func (ComponentController ComponentController) ListPaged(ctx shared.Context) err
 	}
 
 	return ctx.JSON(200, shared.NewPaged(pageInfo, components.Total, componentsDTO))
+}
+
+func (controller ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
+	project := shared.GetProject(ctx)
+
+	// get all child projects as well
+	projects, err := controller.projectRepository.RecursivelyGetChildProjects(project.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch child projects").WithInternal(err)
+	}
+
+	var projectIDs []uuid.UUID = []uuid.UUID{
+		project.ID,
+	}
+	for _, p := range projects {
+		projectIDs = append(projectIDs, p.ID)
+	}
+
+	pagedResp, err := controller.componentRepository.SearchComponentOccurrencesByProject(
+		nil,
+		projectIDs,
+		shared.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+	)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not search components").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(occurrence models.ComponentOccurrence) any {
+		return transformer.ComponentOccurrenceToDTO(occurrence)
+	}))
 }

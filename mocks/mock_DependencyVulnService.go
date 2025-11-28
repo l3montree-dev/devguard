@@ -192,20 +192,31 @@ func (_c *DependencyVulnService_RecalculateAllRawRiskAssessments_Call) RunAndRet
 }
 
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
-	ret := _mock.Called(tx, responsible, dependencyVulns, justification, asset)
+func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, userID, dependencyVulns, justification, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RecalculateRawRiskAssessment")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.DependencyVuln, string, models.Asset) error); ok {
-		r0 = returnFunc(tx, responsible, dependencyVulns, justification, asset)
-	} else {
-		r0 = ret.Error(0)
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.DependencyVuln, string, models.Asset) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, userID, dependencyVulns, justification, asset)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.DependencyVuln, string, models.Asset) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, userID, dependencyVulns, justification, asset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, []models.DependencyVuln, string, models.Asset) error); ok {
+		r1 = returnFunc(tx, userID, dependencyVulns, justification, asset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // DependencyVulnService_RecalculateRawRiskAssessment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecalculateRawRiskAssessment'
@@ -215,15 +226,15 @@ type DependencyVulnService_RecalculateRawRiskAssessment_Call struct {
 
 // RecalculateRawRiskAssessment is a helper method to define mock.On call
 //   - tx shared.DB
-//   - responsible string
+//   - userID string
 //   - dependencyVulns []models.DependencyVuln
 //   - justification string
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) RecalculateRawRiskAssessment(tx interface{}, responsible interface{}, dependencyVulns interface{}, justification interface{}, asset interface{}) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
-	return &DependencyVulnService_RecalculateRawRiskAssessment_Call{Call: _e.mock.On("RecalculateRawRiskAssessment", tx, responsible, dependencyVulns, justification, asset)}
+func (_e *DependencyVulnService_Expecter) RecalculateRawRiskAssessment(tx interface{}, userID interface{}, dependencyVulns interface{}, justification interface{}, asset interface{}) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
+	return &DependencyVulnService_RecalculateRawRiskAssessment_Call{Call: _e.mock.On("RecalculateRawRiskAssessment", tx, userID, dependencyVulns, justification, asset)}
 }
 
-func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) Run(run func(tx shared.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset)) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
+func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) Run(run func(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset)) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -256,12 +267,12 @@ func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) Run(run func(
 	return _c
 }
 
-func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) Return(err error) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
-	_c.Call.Return(err)
+func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) Return(dependencyVulns1 []models.DependencyVuln, err error) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
+	_c.Call.Return(dependencyVulns1, err)
 	return _c
 }
 
-func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) RunAndReturn(run func(tx shared.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
+func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) RunAndReturn(run func(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
 	_c.Call.Return(run)
 	return _c
 }

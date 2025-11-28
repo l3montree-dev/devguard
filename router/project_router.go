@@ -36,6 +36,7 @@ func NewProjectRouter(
 	statisticsController *controllers.StatisticsController,
 	webhookIntegration *controllers.WebhookController,
 	projectRepository shared.ProjectRepository,
+	componentController *controllers.ComponentController,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -60,6 +61,7 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/candidates/", releaseController.ListCandidates)
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
+	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 

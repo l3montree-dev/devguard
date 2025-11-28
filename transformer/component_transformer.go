@@ -65,3 +65,19 @@ func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDepend
 		Dependency:     ComponentModelToDTO(m.Dependency),
 	}
 }
+
+func ComponentOccurrenceToDTO(m models.ComponentOccurrence) dtos.ComponentOccurrenceDTO {
+	return dtos.ComponentOccurrenceDTO{
+		ComponentDependencyID: m.ComponentDependencyID.String(),
+		DependencyPurl:        m.DependencyPurl,
+		ProjectID:             m.ProjectID.String(),
+		ProjectName:           m.ProjectName,
+		ProjectSlug:           m.ProjectSlug,
+		AssetID:               m.AssetID.String(),
+		AssetName:             m.AssetName,
+		AssetSlug:             m.AssetSlug,
+		AssetVersionName:      m.AssetVersionName,
+		ArtifactName:          m.ArtifactName,
+		ArtifactAssetVersion:  m.ArtifactAssetVersion,
+	}
+}

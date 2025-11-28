@@ -171,6 +171,7 @@ type ComponentRepository interface {
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)
+	SearchComponentOccurrencesByProject(tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)

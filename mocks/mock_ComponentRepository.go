@@ -1394,6 +1394,84 @@ func (_c *ComponentRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB
 	return _c
 }
 
+// SearchComponentOccurrencesByProject provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) SearchComponentOccurrencesByProject(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
+	ret := _mock.Called(tx, projectIDs, pageInfo, search)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchComponentOccurrencesByProject")
+	}
+
+	var r0 shared.Paged[models.ComponentOccurrence]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []uuid.UUID, shared.PageInfo, string) (shared.Paged[models.ComponentOccurrence], error)); ok {
+		return returnFunc(tx, projectIDs, pageInfo, search)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []uuid.UUID, shared.PageInfo, string) shared.Paged[models.ComponentOccurrence]); ok {
+		r0 = returnFunc(tx, projectIDs, pageInfo, search)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[models.ComponentOccurrence])
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, []uuid.UUID, shared.PageInfo, string) error); ok {
+		r1 = returnFunc(tx, projectIDs, pageInfo, search)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentRepository_SearchComponentOccurrencesByProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchComponentOccurrencesByProject'
+type ComponentRepository_SearchComponentOccurrencesByProject_Call struct {
+	*mock.Call
+}
+
+// SearchComponentOccurrencesByProject is a helper method to define mock.On call
+//   - tx shared.DB
+//   - projectIDs []uuid.UUID
+//   - pageInfo shared.PageInfo
+//   - search string
+func (_e *ComponentRepository_Expecter) SearchComponentOccurrencesByProject(tx interface{}, projectIDs interface{}, pageInfo interface{}, search interface{}) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
+	return &ComponentRepository_SearchComponentOccurrencesByProject_Call{Call: _e.mock.On("SearchComponentOccurrencesByProject", tx, projectIDs, pageInfo, search)}
+}
+
+func (_c *ComponentRepository_SearchComponentOccurrencesByProject_Call) Run(run func(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string)) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].([]uuid.UUID)
+		}
+		var arg2 shared.PageInfo
+		if args[2] != nil {
+			arg2 = args[2].(shared.PageInfo)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentRepository_SearchComponentOccurrencesByProject_Call) Return(paged shared.Paged[models.ComponentOccurrence], err error) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ComponentRepository_SearchComponentOccurrencesByProject_Call) RunAndReturn(run func(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error)) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type ComponentRepository
 func (_mock *ComponentRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)

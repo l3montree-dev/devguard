@@ -124,3 +124,17 @@ type VulnInPackage struct {
 	Purl         string
 	FixedVersion *string
 }
+
+type ComponentOccurrence struct {
+	ComponentDependencyID uuid.UUID `json:"componentDependencyId" gorm:"column:component_dependency_id"`
+	DependencyPurl        *string   `json:"dependencyPurl" gorm:"column:dependency_purl"`
+	ProjectID             uuid.UUID `json:"projectId" gorm:"column:project_id"`
+	ProjectName           string    `json:"projectName" gorm:"column:project_name"`
+	ProjectSlug           string    `json:"projectSlug" gorm:"column:project_slug"`
+	AssetID               uuid.UUID `json:"assetId" gorm:"column:asset_id"`
+	AssetName             string    `json:"assetName" gorm:"column:asset_name"`
+	AssetSlug             string    `json:"assetSlug" gorm:"column:asset_slug"`
+	AssetVersionName      string    `json:"assetVersionName" gorm:"column:asset_version_name"`
+	ArtifactName          *string   `json:"artifactName" gorm:"column:artifact_name"`
+	ArtifactAssetVersion  *string   `json:"artifactAssetVersion" gorm:"column:artifact_asset_version_name"`
+}

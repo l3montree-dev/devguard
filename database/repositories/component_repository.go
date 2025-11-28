@@ -490,3 +490,63 @@ func (c *componentRepository) FetchInformationSources(artifact *models.Artifact)
 func (c *componentRepository) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
 	return c.GetDB(nil).Where("component_purl IS NULL AND dependency_purl IN (?) AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", rootNodePurls, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }
+
+func (c *componentRepository) SearchComponentOccurrencesByProject(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
+	occurrences := []models.ComponentOccurrence{}
+	search = strings.TrimSpace(search)
+
+	db := c.GetDB(tx)
+
+	base := db.Table("component_dependencies").
+		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
+		Joins("JOIN projects ON assets.project_id = projects.id").
+		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
+		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
+		Where("projects.id IN ?", projectIDs).
+		Where("component_dependencies.dependency_purl ILIKE ?", "%"+search+"%").Where("component_dependencies.dependency_purl LIKE ?", "pkg:%")
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return shared.Paged[models.ComponentOccurrence]{}, err
+	}
+
+	if total == 0 {
+		return shared.NewPaged(pageInfo, 0, occurrences), nil
+	}
+
+	query := db.Table("component_dependencies").
+		Select(`component_dependencies.id AS component_dependency_id,
+            projects.id AS project_id,
+            projects.name AS project_name,
+            projects.slug AS project_slug,
+            assets.id AS asset_id,
+            assets.name AS asset_name,
+            assets.slug AS asset_slug,
+            component_dependencies.asset_version_name AS asset_version_name,
+            component_dependencies.dependency_purl AS dependency_purl,
+            artifact_component_dependencies.artifact_artifact_name AS artifact_name,
+            artifact_component_dependencies.artifact_asset_version_name AS artifact_asset_version_name`).
+		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
+		Joins("JOIN projects ON assets.project_id = projects.id").
+		Joins("LEFT JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
+		Joins("LEFT JOIN components ON component_dependencies.component_purl = components.purl").
+		Where("projects.id IN ?", projectIDs).
+		Where("component_dependencies.dependency_purl ILIKE ?", "%"+search+"%").
+		Where("component_dependencies.dependency_purl LIKE ?", "pkg:%").
+		Order("component_dependencies.dependency_purl ASC, component_dependencies.asset_version_name ASC")
+
+	if pageInfo.PageSize > 0 {
+		page := pageInfo.Page
+		if page < 1 {
+			page = 1
+		}
+		offset := (page - 1) * pageInfo.PageSize
+		query = query.Limit(pageInfo.PageSize).Offset(offset)
+	}
+
+	if err := query.Scan(&occurrences).Error; err != nil {
+		return shared.Paged[models.ComponentOccurrence]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, total, occurrences), nil
+}
