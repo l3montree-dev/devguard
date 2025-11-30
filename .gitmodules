@@ -4,3 +4,4 @@
 [submodule "malicious-packages"]
 	path = malicious-packages
 	url = https://github.com/ossf/malicious-packages.git
+    ignore = all
