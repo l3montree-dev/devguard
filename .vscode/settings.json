@@ -14,5 +14,17 @@
         "pypi",
         "sarif",
         "Vulns"
+    ],
+    "files.watcherExclude": {
+        "**/malicious-packages/**": true
+    },
+    "files.exclude": {
+        "**/malicious-packages/**": true
+    },
+    "search.exclude": {
+        "**/malicious-packages/**": true
+    },
+    "git.ignoredRepositories": [
+        "malicious-packages"
     ]
 }
