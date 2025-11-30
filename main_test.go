@@ -167,10 +167,12 @@ func TestProxyServerBlocksMaliciousPackages(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return a simple package metadata
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"name":    "evil-package",
 			"version": "1.0.0",
-		})
+		}); err != nil {
+			t.Fatalf("Failed to write upstream response: %v", err)
+		}
 	}))
 	defer upstream.Close()
 

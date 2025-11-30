@@ -446,12 +446,15 @@ func (p *ProxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	// Handle root/health check
 	if requestPath == "/" || requestPath == "/health" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"status":   "ok",
 			"service":  fmt.Sprintf("%s-proxy", p.proxyType),
 			"upstream": p.upstreamURL,
 			"version":  "1.0.0",
-		})
+		}); err != nil {
+			slog.Warn("Failed to write health check response", "proxy", p.proxyType, "error", err)
+		}
+
 		return
 	}
 
@@ -620,7 +623,9 @@ func (p *ProxyServer) blockMaliciousPackage(w http.ResponseWriter, path, reason 
 		"blocked": true,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Warn("Failed to write malicious block response", "proxy", p.proxyType, "error", err)
+	}
 }
 
 func (p *ProxyServer) getContentType(path string) string {
