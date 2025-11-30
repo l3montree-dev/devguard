@@ -1,0 +1,14 @@
+{
+  "name": "test-malicious-package-detection",
+  "version": "1.0.0",
+  "description": "Test project to demonstrate malicious package blocking - USES FAKE PACKAGE",
+  "scripts": {
+    "test": "echo 'Testing malicious package detection'"
+  },
+  "dependencies": {
+    "test-fake-malicious-npm-package": "1.0.0",
+    "lodash": "^4.17.21"
+  },
+  "author": "",
+  "license": "ISC"
+}

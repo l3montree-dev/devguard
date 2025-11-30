@@ -128,23 +128,23 @@ func (ComponentController ComponentController) ListPaged(ctx shared.Context) err
 	return ctx.JSON(200, shared.NewPaged(pageInfo, components.Total, componentsDTO))
 }
 
-func (controller ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
+func (ComponentController ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	// get all child projects as well
-	projects, err := controller.projectRepository.RecursivelyGetChildProjects(project.ID)
+	projects, err := ComponentController.projectRepository.RecursivelyGetChildProjects(project.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch child projects").WithInternal(err)
 	}
 
-	var projectIDs []uuid.UUID = []uuid.UUID{
+	var projectIDs = []uuid.UUID{
 		project.ID,
 	}
 	for _, p := range projects {
 		projectIDs = append(projectIDs, p.ID)
 	}
 
-	pagedResp, err := controller.componentRepository.SearchComponentOccurrencesByProject(
+	pagedResp, err := ComponentController.componentRepository.SearchComponentOccurrencesByProject(
 		nil,
 		projectIDs,
 		shared.GetPageInfo(ctx),
