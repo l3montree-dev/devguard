@@ -11,6 +11,7 @@
         "ghinstallation",
         "gorm",
         "montree",
+        "pypi",
         "sarif",
         "Vulns"
     ]

@@ -1,3 +1,6 @@
 [submodule "internal/core/compliance/attestation-compliance-policies"]
 	path = compliance/attestation-compliance-policies
 	url = git@github.com:l3montree-dev/attestation-compliance-policies.git
+[submodule "malicious-packages"]
+	path = malicious-packages
+	url = https://github.com/ossf/malicious-packages.git
