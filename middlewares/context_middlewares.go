@@ -125,6 +125,40 @@ func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next 
 	}
 }
 
+func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+
+			asset := shared.GetAsset(ctx)
+			assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
+			if assetVersionName == "" {
+				return echo.NewHTTPError(400, "no X-Asset-Ref header provided")
+			}
+			assetVersion, err := assetVersionRepository.Read(assetVersionName, asset.ID)
+			if err != nil {
+				// if the asset version is not found, we do not return an error here, because the asset version might not exist yet
+				return next(ctx)
+			}
+
+			// Update LastAccessedAt in a goroutine to avoid blocking the request
+			if !shared.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
+				go func() {
+					now := time.Now()
+					assetVersion.LastAccessedAt = now
+					// Use nil for tx to use the default database connection
+					if err := assetVersionRepository.Save(nil, &assetVersion); err != nil {
+						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
+					}
+				}()
+			}
+
+			shared.SetAssetVersion(ctx, assetVersion)
+
+			return next(ctx)
+		}
+	}
+}
+
 func EventMiddleware(repository shared.VulnEventRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	{
 		return func(next echo.HandlerFunc) echo.HandlerFunc {

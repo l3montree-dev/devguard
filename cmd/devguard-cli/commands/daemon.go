@@ -48,15 +48,9 @@ func newTriggerCommand() *cobra.Command {
 				return err
 			}
 
-			broker, err := database.BrokerFactory()
-			if err != nil {
-				slog.Error("failed to create broker", "err", err)
-				panic(err)
-			}
-
 			daemons, _ := cmd.Flags().GetStringArray("daemons")
 
-			return triggerDaemon(db, broker, daemons)
+			return triggerDaemon(db, daemons)
 		},
 	}
 
@@ -65,12 +59,12 @@ func newTriggerCommand() *cobra.Command {
 	return trigger
 }
 
-func triggerDaemon(db shared.DB, broker database.Broker, selectedDaemons []string) error {
+func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		// Provide the already-created db and broker
-		fx.Supply(db, broker),
-
+		fx.Supply(db),
+		fx.Provide(database.BrokerFactory),
 		// Include all the standard modules
 		repositories.Module,
 		services.ServiceModule,
