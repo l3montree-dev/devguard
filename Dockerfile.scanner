@@ -16,13 +16,13 @@ ENV OS=Linux
 ENV ARCH=x86_64
 ENV TRIVY_VERSION=v0.67.0
 ENV COSIGN_VERSION=v2.6.1
-ENV GITLEAKS_VERSION=v8.28.0
+ENV GITLEAKS_VERSION=v8.30.0
 
 # Expected checksums for security verification
 ENV CRANE_CHECKSUM=8ef3564d264e6b5ca93f7b7f5652704c4dd29d33935aff6947dd5adefd05953e
 ENV TRIVY_CHECKSUM=5b10e9bba00a508b0f3bcb98e78f1039f7eee26b57c9266961a415642a9208ab
 ENV COSIGN_CHECKSUM=064954c5d8c7e3b28188eee5b1727b31c411550bc5fefd41aa672d3c761d103a
-ENV GITLEAKS_CHECKSUM=a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb
+ENV GITLEAKS_CHECKSUM=79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
 
 # install crane with checksum verification
 RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_${OS}_${ARCH}.tar.gz" > go-containerregistry.tar.gz && \
