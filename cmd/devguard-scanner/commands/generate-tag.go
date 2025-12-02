@@ -61,9 +61,9 @@ func generateTag(upstreamVersion string, architecture string, imagePath string, 
 
 	// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
 	if upstreamVersion == "0" || upstreamVersion == "" {
-		tag = refFlag + "+" + architecture
+		tag = refFlag + "-" + architecture
 	} else {
-		tag = upstreamVersion + "+" + refFlag + "-" + architecture
+		tag = upstreamVersion + "-" + refFlag + "-" + architecture
 	}
 
 	imagePathWithSuffix := imagePath
