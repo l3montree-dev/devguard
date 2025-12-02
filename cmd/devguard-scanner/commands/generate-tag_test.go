@@ -28,11 +28,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "main",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:main-amd64") {
-					t.Errorf("expected TAGS to contain 'example/image:main-amd64', got: %s", output)
-				}
 				if !strings.Contains(output, "IMAGE_TAG=example/image:main-amd64") {
 					t.Errorf("expected IMAGE_TAG to contain 'example/image:main-amd64', got: %s", output)
+				}
+				if !strings.Contains(output, "ARTIFACT_NAME=pkg:oci/image") {
+					t.Errorf("expected ARTIFACT_NAME to contain 'pkg:oci/image', got: %s", output)
 				}
 			},
 		},
@@ -46,11 +46,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "main",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:main-1.0.0-amd64") {
-					t.Errorf("expected TAGS to contain 'example/image:main-1.0.0-amd64', got: %s", output)
-				}
 				if !strings.Contains(output, "IMAGE_TAG=example/image:main-1.0.0-amd64") {
 					t.Errorf("expected IMAGE_TAG to contain 'example/image:main-1.0.0-amd64', got: %s", output)
+				}
+				if !strings.Contains(output, "ARTIFACT_NAME=pkg:oci/image") {
+					t.Errorf("expected ARTIFACT_NAME to contain 'pkg:oci/image', got: %s", output)
 				}
 			},
 		},
@@ -64,11 +64,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "feature/test-branch",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:feature-test-branch-2.1.3-amd64,example/image:feature-test-branch-2.1.3-arm64") {
-					t.Errorf("expected TAGS to contain both architectures, got: %s", output)
-				}
 				if !strings.Contains(output, "IMAGE_TAG=example/image:feature-test-branch-2.1.3-amd64") {
-					t.Errorf("expected IMAGE_TAG to be first architecture, got: %s", output)
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:feature-test-branch-2.1.3-amd64', got: %s", output)
+				}
+				if !strings.Contains(output, "example/image:feature-test-branch-2.1.3-arm64") {
+					t.Errorf("expected output to contain 'example/image:feature-test-branch-2.1.3-arm64', got: %s", output)
 				}
 			},
 		},
@@ -82,11 +82,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:3.2.1-amd64+oc-") {
-					t.Errorf("expected TAGS to contain 'example/image:3.2.1-amd64+oc-', got: %s", output)
-				}
 				if !strings.Contains(output, "IMAGE_TAG=example/image:3.2.1-amd64+oc-") {
 					t.Errorf("expected IMAGE_TAG to contain 'example/image:3.2.1-amd64+oc-', got: %s", output)
+				}
+				if !strings.Contains(output, "ARTIFACT_NAME=pkg:oci/image") {
+					t.Errorf("expected ARTIFACT_NAME to contain 'pkg:oci/image', got: %s", output)
 				}
 			},
 		},
@@ -100,11 +100,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:1.2.3-arm64") {
-					t.Errorf("expected TAGS to contain 'example/image:1.2.3-arm64', got: %s", output)
-				}
 				if !strings.Contains(output, "IMAGE_TAG=example/image:1.2.3-arm64") {
 					t.Errorf("expected IMAGE_TAG to contain 'example/image:1.2.3-arm64', got: %s", output)
+				}
+				if !strings.Contains(output, "ARTIFACT_NAME=pkg:oci/image") {
+					t.Errorf("expected ARTIFACT_NAME to contain 'pkg:oci/image', got: %s", output)
 				}
 			},
 		},
@@ -138,18 +138,14 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=example/image:4.5.6-amd64+oc-") {
-					t.Errorf("expected TAGS to contain 'example/image:4.5.6-amd64+oc-', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG=example/image:4.5.6-amd64+oc-") {
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:4.5.6-amd64+oc-', got: %s", output)
 				}
 				if !strings.Contains(output, "example/image:4.5.6-arm64+oc-") {
-					t.Errorf("expected tags to contain 'example/image:4.5.6-arm64+oc-', got: %s", output)
+					t.Errorf("expected output to contain 'example/image:4.5.6-arm64+oc-', got: %s", output)
 				}
 				if !strings.Contains(output, "example/image:4.5.6-s390x+oc-") {
-					t.Errorf("expected tags to contain 'example/image:4.5.6-s390x+oc-', got: %s", output)
-				}
-
-				if !strings.Contains(output, "IMAGE_TAG=example/image:4.5.6-amd64+oc-") {
-					t.Errorf("expected IMAGE_TAG to be first architecture, got: %s", output)
+					t.Errorf("expected output to contain 'example/image:4.5.6-s390x+oc-', got: %s", output)
 				}
 			},
 		},
@@ -476,92 +472,93 @@ func TestCheckSemverFormat(t *testing.T) {
 	}
 }
 
-func TestGenerateArtifactPURL(t *testing.T) {
+func TestGenerateArtifactName(t *testing.T) {
 	tests := []struct {
-		name     string
-		imageTag string
-		wantPURL string
-		wantErr  bool
+		name                   string
+		imageTag               string
+		wantArtifactName       string
+		wantArtifactURLEncoded bool
+		wantErr                bool
 	}{
 		{
-			name:     "simple registry with namespace and name",
-			imageTag: "registry.example.com/namespace/image:1.0.0",
-			wantPURL: "pkg:oci/image?repository_url=registry.example.com%2Fnamespace%2Fimage",
-			wantErr:  false,
+			name:             "simple registry with namespace and name",
+			imageTag:         "registry.example.com/namespace/image:1.0.0",
+			wantArtifactName: "pkg:oci/image?repository_url=registry.example.com/namespace/image",
+			wantErr:          false,
 		},
 		{
-			name:     "docker hub with namespace",
-			imageTag: "docker.io/library/nginx:latest",
-			wantPURL: "pkg:oci/nginx?repository_url=docker.io%2Flibrary%2Fnginx",
-			wantErr:  false,
+			name:             "docker hub with namespace",
+			imageTag:         "docker.io/library/nginx:latest",
+			wantArtifactName: "pkg:oci/nginx?repository_url=docker.io/library/nginx",
+			wantErr:          false,
 		},
 		{
-			name:     "ghcr with multiple path segments",
-			imageTag: "ghcr.io/owner/repo/image:v1.2.3",
-			wantPURL: "pkg:oci/image?repository_url=ghcr.io%2Fowner%2Frepo%2Fimage",
-			wantErr:  false,
+			name:             "ghcr with multiple path segments",
+			imageTag:         "ghcr.io/owner/repo/image:v1.2.3",
+			wantArtifactName: "pkg:oci/image?repository_url=ghcr.io/owner/repo/image",
+			wantErr:          false,
 		},
 		{
-			name:     "localhost registry",
-			imageTag: "localhost:5000/myapp:dev",
-			wantPURL: "pkg:oci/myapp?repository_url=localhost%3A5000%2Fmyapp",
-			wantErr:  false,
+			name:             "localhost registry",
+			imageTag:         "localhost:5000/myapp:dev",
+			wantArtifactName: "pkg:oci/myapp?repository_url=localhost:5000/myapp",
+			wantErr:          false,
 		},
 		{
-			name:     "registry with port and nested namespace",
-			imageTag: "registry.example.com:443/org/team/project/image:sha256-abcdef",
-			wantPURL: "pkg:oci/image?repository_url=registry.example.com%3A443%2Forg%2Fteam%2Fproject%2Fimage",
-			wantErr:  false,
+			name:             "registry with port and nested namespace",
+			imageTag:         "registry.example.com:443/org/team/project/image:sha256-abcdef",
+			wantArtifactName: "pkg:oci/image?repository_url=registry.example.com:443/org/team/project/image",
+			wantErr:          false,
 		},
 		{
-			name:     "gcr registry",
-			imageTag: "gcr.io/project-id/image-name:1.0.0-amd64",
-			wantPURL: "pkg:oci/image-name?repository_url=gcr.io%2Fproject-id%2Fimage-name",
-			wantErr:  false,
+			name:             "gcr registry",
+			imageTag:         "gcr.io/project-id/image-name:1.0.0-amd64",
+			wantArtifactName: "pkg:oci/image-name?repository_url=gcr.io/project-id/image-name",
+			wantErr:          false,
 		},
 		{
 			name:     "missing colon separator",
 			imageTag: "registry.example.com/namespace/image",
-			wantPURL: "",
 			wantErr:  true,
 		},
 		{
 			name:     "missing slash after registry",
 			imageTag: "registry.example.com:latest",
-			wantPURL: "",
 			wantErr:  true,
 		},
 		{
 			name:     "empty image tag",
 			imageTag: "",
-			wantPURL: "",
 			wantErr:  true,
 		},
 		{
 			name:     "only registry name",
 			imageTag: "registry.example.com:",
-			wantPURL: "",
 			wantErr:  true,
 		},
 		{
-			name:     "tag with special characters",
-			imageTag: "registry.io/my-namespace/my-image:v1.0.0-rc.1+build.123",
-			wantPURL: "pkg:oci/my-image?repository_url=registry.io%2Fmy-namespace%2Fmy-image",
-			wantErr:  false,
+			name:             "tag with special characters",
+			imageTag:         "registry.io/my-namespace/my-image:v1.0.0-rc.1+build.123",
+			wantArtifactName: "pkg:oci/my-image?repository_url=registry.io/my-namespace/my-image",
+			wantErr:          false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateArtifactPURL(tt.imageTag)
+			artifactName, artifactURLEncoded, err := generateArtifactName(tt.imageTag)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("generateArtifactPURL() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("generateArtifactName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
-			if !tt.wantErr && got != tt.wantPURL {
-				t.Errorf("generateArtifactPURL() = %v, want %v", got, tt.wantPURL)
+			if !tt.wantErr && artifactName != tt.wantArtifactName {
+				t.Errorf("generateArtifactName() = %v, want %v", artifactName, tt.wantArtifactName)
+			}
+
+			if !tt.wantErr && artifactURLEncoded == "" {
+				t.Errorf("generateArtifactName() artifactURLEncoded should not be empty for valid input")
 			}
 		})
 	}

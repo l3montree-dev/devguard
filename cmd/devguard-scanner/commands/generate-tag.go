@@ -55,7 +55,12 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 }
 
 func generateTag(upstreamVersion string, architecture []string, imageType string, imagePath string, isTag bool, refFlag string) (string, error) {
-	var tags []string
+
+	outPut := []struct {
+		ImageTag           string
+		ArtifactName       string
+		ArtifactURLEncoded string
+	}{}
 
 	for _, arch := range architecture {
 		var tag string
@@ -75,30 +80,33 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 			default:
 				return "", fmt.Errorf("unknown image type: %s", imageType)
 			}
-			tag = imagePath + ":" + tag
-
-			tags = append(tags, tag)
 
 		} else {
-			tag := imagePath + ":" + generateDevelopmentTag(refFlag, upstreamVersion, arch)
-			tags = append(tags, tag)
-
+			tag = generateDevelopmentTag(refFlag, upstreamVersion, arch)
 		}
+
+		tag = imagePath + ":" + tag
+		artifactName, artifactURLEncoded, err := generateArtifactName(tag)
+		if err != nil {
+			return "", err
+		}
+		outPut = append(outPut, struct {
+			ImageTag           string
+			ArtifactName       string
+			ArtifactURLEncoded string
+		}{
+			ImageTag:           tag,
+			ArtifactName:       artifactName,
+			ArtifactURLEncoded: artifactURLEncoded,
+		})
 	}
 
-	artifactPURL, err := generateArtifactPURL(tags[0])
-	if err != nil {
-		return "", err
+	output := ""
+	for _, o := range outPut {
+		output += fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag)
+		output += fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName)
+		output += fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded)
 	}
-
-	output := `
-	TAGS=` + strings.Join(tags, ",") +
-		`
-	IMAGE_TAG=` + tags[0] +
-		`
-	ARTIFACT_PURL=` + artifactPURL +
-		`
-	`
 
 	return output, nil
 }
@@ -140,19 +148,19 @@ func checkSemverFormat(version string) bool {
 	return semverRegex.MatchString(version)
 }
 
-func generateArtifactPURL(imageTag string) (string, error) {
+func generateArtifactName(imageTag string) (string, string, error) {
 
 	// Split registry/image and version
 	colonIndex := strings.LastIndex(imageTag, ":")
 	if colonIndex == -1 {
-		return "", fmt.Errorf("invalid image tag format, missing ':' in %s", imageTag)
+		return "", "", fmt.Errorf("invalid image tag format, missing ':' in %s", imageTag)
 	}
 	registryAndImage := imageTag[:colonIndex]
 
 	// Extract namespace/name
 	slashIndex := strings.Index(registryAndImage, "/")
 	if slashIndex == -1 || slashIndex == len(registryAndImage)-1 {
-		return "", fmt.Errorf("invalid registry/image format: %s", registryAndImage)
+		return "", "", fmt.Errorf("invalid registry/image format: %s", registryAndImage)
 	}
 	namespaceAndName := registryAndImage[slashIndex+1:]
 
@@ -160,11 +168,15 @@ func generateArtifactPURL(imageTag string) (string, error) {
 	nameParts := strings.Split(namespaceAndName, "/")
 	name := nameParts[len(nameParts)-1]
 
-	// URL encode registry for repository_url
-	repositoryURL := url.QueryEscape(registryAndImage)
+	// URL encode repository_url (same behavior as bash)
+	//repositoryURL := url.QueryEscape(registryAndImage)
 
-	// Generate PURL
-	purl := fmt.Sprintf("pkg:oci/%s?repository_url=%s", name, repositoryURL)
+	// Generate artifactNameURLEncoded → artifact-artifactNameURLEncoded.txt
+	artifactName := fmt.Sprintf("pkg:oci/%s?repository_url=%s", name, registryAndImage)
 
-	return purl, nil
+	// Generate SAFE version → artifact-name-safe.txt
+	// Equivalent to: echo -n "$artifactNameURLEncoded" | jq -s -R -r @uri
+	artifactNameURLEncoded := url.QueryEscape(artifactName)
+
+	return artifactName, artifactNameURLEncoded, nil
 }
