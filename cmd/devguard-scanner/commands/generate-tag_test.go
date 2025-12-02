@@ -7,60 +7,60 @@ import (
 
 func TestGenerateTag(t *testing.T) {
 	tests := []struct {
-		name             string
-		upstreamVersions []string
-		architecture     []string
-		imagePath        string
-		refFlag          string
-		wantErr          bool
-		validateOutput   func(t *testing.T, output string)
+		name            string
+		upstreamVersion string
+		architecture    []string
+		imagePath       string
+		refFlag         string
+		wantErr         bool
+		validateOutput  func(t *testing.T, output string)
 	}{
 
 		{
-			name:             "development tag with correct version prefix",
-			upstreamVersions: []string{"10.11.14"},
-			architecture:     []string{"amd64"},
-			imagePath:        "registry.opencode.de/open-code/oci/mariadb",
-			refFlag:          "main",
-			wantErr:          false,
+			name:            "development tag with correct version prefix",
+			upstreamVersion: "10.11.14",
+			architecture:    []string{"amd64"},
+			imagePath:       "registry.opencode.de/open-code/oci/mariadb",
+			refFlag:         "main",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "IMAGE_TAG_10.11.14_AMD64=registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64") {
-					t.Errorf("expected IMAGE_TAG_10.11.14_AMD64 to contain 'registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_AMD64=registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64") {
+					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_10.11.14_AMD64=pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14+main-amd64") {
-					t.Errorf("expected ARTIFACT_NAME_10.11.14_AMD64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_AMD64=pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14+main-amd64") {
+					t.Errorf("expected ARTIFACT_NAME_AMD64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_10.11.14_AMD64=pkg:oci%2Fmariadb%3Frepository_url=registry.opencode.de%2Fopen-code%2Foci%2Fmariadb&arch=amd64&tag=10.11.14+main-amd64") {
-					t.Errorf("expected ARTIFACT_URL_ENCODED_10.11.14_AMD64 to be present with correct encoding, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_AMD64=pkg:oci%2Fmariadb%3Frepository_url=registry.opencode.de%2Fopen-code%2Foci%2Fmariadb&arch=amd64&tag=10.11.14+main-amd64") {
+					t.Errorf("expected ARTIFACT_URL_ENCODED_AMD64 to be present with correct encoding, got: %s", output)
 				}
 			},
 		},
 		{
-			name:             "tag with version and ref",
-			upstreamVersions: []string{"10.11.14"},
-			architecture:     []string{"amd64"},
-			imagePath:        "registry.opencode.de/open-code/oci/mariadb",
-			refFlag:          "main",
-			wantErr:          false,
+			name:            "tag with version and ref",
+			upstreamVersion: "10.11.14",
+			architecture:    []string{"amd64"},
+			imagePath:       "registry.opencode.de/open-code/oci/mariadb",
+			refFlag:         "main",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "IMAGE_TAG_10.11.14_AMD64=registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64") {
-					t.Errorf("expected IMAGE_TAG_10.11.14_AMD64 to contain 'registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_AMD64=registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64") {
+					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'registry.opencode.de/open-code/oci/mariadb:10.11.14+main-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_10.11.14_AMD64=pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14+main-amd64") {
-					t.Errorf("expected ARTIFACT_NAME_10.11.14_AMD64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_AMD64=pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14+main-amd64") {
+					t.Errorf("expected ARTIFACT_NAME_AMD64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_10.11.14_AMD64=pkg:oci%2Fmariadb%3Frepository_url=registry.opencode.de%2Fopen-code%2Foci%2Fmariadb&arch=amd64&tag=10.11.14+main-amd64") {
-					t.Errorf("expected ARTIFACT_URL_ENCODED_10.11.14_AMD64 to be present with correct encoding, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_AMD64=pkg:oci%2Fmariadb%3Frepository_url=registry.opencode.de%2Fopen-code%2Foci%2Fmariadb&arch=amd64&tag=10.11.14+main-amd64") {
+					t.Errorf("expected ARTIFACT_URL_ENCODED_AMD64 to be present with correct encoding, got: %s", output)
 				}
 			},
 		},
 		{
-			name:             "tag with version 0 and ref",
-			upstreamVersions: []string{"0"},
-			architecture:     []string{"amd64"},
-			imagePath:        "example/image",
-			refFlag:          "main",
-			wantErr:          false,
+			name:            "tag with version 0 and ref",
+			upstreamVersion: "0",
+			architecture:    []string{"amd64"},
+			imagePath:       "example/image",
+			refFlag:         "main",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
 				if !strings.Contains(output, "IMAGE_TAG_AMD64=example/image:main+amd64") {
 					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'example/image:main+amd64', got: %s", output)
@@ -74,71 +74,71 @@ func TestGenerateTag(t *testing.T) {
 			},
 		},
 		{
-			name:             "single architecture",
-			upstreamVersions: []string{"1.0.0"},
-			architecture:     []string{"amd64"},
-			imagePath:        "example/image",
-			refFlag:          "main",
-			wantErr:          false,
+			name:            "single architecture",
+			upstreamVersion: "1.0.0",
+			architecture:    []string{"amd64"},
+			imagePath:       "example/image",
+			refFlag:         "main",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "IMAGE_TAG_1.0.0_AMD64=example/image:1.0.0+main-amd64") {
-					t.Errorf("expected IMAGE_TAG_1.0.0_AMD64 to contain 'example/image:1.0.0+main-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_AMD64=example/image:1.0.0+main-amd64") {
+					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'example/image:1.0.0+main-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_1.0.0_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=1.0.0+main-amd64") {
-					t.Errorf("expected ARTIFACT_NAME_1.0.0_AMD64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=1.0.0+main-amd64") {
+					t.Errorf("expected ARTIFACT_NAME_AMD64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_1.0.0_AMD64=pkg:oci%2Fimage%3Frepository_url=example%2Fimage&arch=amd64&tag=1.0.0+main-amd64") {
-					t.Errorf("expected ARTIFACT_URL_ENCODED_1.0.0_AMD64 to be present with correct encoding, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_URL_ENCODED_AMD64=pkg:oci%2Fimage%3Frepository_url=example%2Fimage&arch=amd64&tag=1.0.0+main-amd64") {
+					t.Errorf("expected ARTIFACT_URL_ENCODED_AMD64 to be present with correct encoding, got: %s", output)
 				}
 			},
 		},
 		{
-			name:             "multiple architectures",
-			upstreamVersions: []string{"2.1.3"},
-			architecture:     []string{"amd64", "arm64"},
-			imagePath:        "example/image",
-			refFlag:          "feature/test-branch",
-			wantErr:          false,
+			name:            "multiple architectures",
+			upstreamVersion: "2.1.3",
+			architecture:    []string{"amd64", "arm64"},
+			imagePath:       "example/image",
+			refFlag:         "feature/test-branch",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "IMAGE_TAG_2.1.3_AMD64=example/image:2.1.3+feature/test-branch-amd64") {
-					t.Errorf("expected IMAGE_TAG_2.1.3_AMD64 to contain 'example/image:2.1.3+feature/test-branch-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_AMD64=example/image:2.1.3+feature/test-branch-amd64") {
+					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'example/image:2.1.3+feature/test-branch-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG_2.1.3_ARM64=example/image:2.1.3+feature/test-branch-arm64") {
-					t.Errorf("expected IMAGE_TAG_2.1.3_ARM64 to contain 'example/image:2.1.3+feature/test-branch-arm64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_ARM64=example/image:2.1.3+feature/test-branch-arm64") {
+					t.Errorf("expected IMAGE_TAG_ARM64 to contain 'example/image:2.1.3+feature/test-branch-arm64', got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_2.1.3_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=2.1.3+feature/test-branch-amd64") {
-					t.Errorf("expected ARTIFACT_NAME_2.1.3_AMD64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=2.1.3+feature/test-branch-amd64") {
+					t.Errorf("expected ARTIFACT_NAME_AMD64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_2.1.3_ARM64=pkg:oci/image?repository_url=example/image&arch=arm64&tag=2.1.3+feature/test-branch-arm64") {
-					t.Errorf("expected ARTIFACT_NAME_2.1.3_ARM64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_ARM64=pkg:oci/image?repository_url=example/image&arch=arm64&tag=2.1.3+feature/test-branch-arm64") {
+					t.Errorf("expected ARTIFACT_NAME_ARM64 to contain full purl, got: %s", output)
 				}
 			},
 		},
 		{
-			name:             "three architectures",
-			upstreamVersions: []string{"4.5.6"},
-			architecture:     []string{"amd64", "arm64", "s390x"},
-			imagePath:        "example/image",
-			refFlag:          "main",
-			wantErr:          false,
+			name:            "three architectures",
+			upstreamVersion: "4.5.6",
+			architecture:    []string{"amd64", "arm64", "s390x"},
+			imagePath:       "example/image",
+			refFlag:         "main",
+			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "IMAGE_TAG_4.5.6_AMD64=example/image:4.5.6+main-amd64") {
-					t.Errorf("expected IMAGE_TAG_4.5.6_AMD64 to contain 'example/image:4.5.6+main-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_AMD64=example/image:4.5.6+main-amd64") {
+					t.Errorf("expected IMAGE_TAG_AMD64 to contain 'example/image:4.5.6+main-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG_4.5.6_ARM64=example/image:4.5.6+main-arm64") {
-					t.Errorf("expected IMAGE_TAG_4.5.6_ARM64 to contain 'example/image:4.5.6+main-arm64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_ARM64=example/image:4.5.6+main-arm64") {
+					t.Errorf("expected IMAGE_TAG_ARM64 to contain 'example/image:4.5.6+main-arm64', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG_4.5.6_S390X=example/image:4.5.6+main-s390x") {
-					t.Errorf("expected IMAGE_TAG_4.5.6_S390X to contain 'example/image:4.5.6+main-s390x', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG_S390X=example/image:4.5.6+main-s390x") {
+					t.Errorf("expected IMAGE_TAG_S390X to contain 'example/image:4.5.6+main-s390x', got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_4.5.6_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=4.5.6+main-amd64") {
-					t.Errorf("expected ARTIFACT_NAME_4.5.6_AMD64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_AMD64=pkg:oci/image?repository_url=example/image&arch=amd64&tag=4.5.6+main-amd64") {
+					t.Errorf("expected ARTIFACT_NAME_AMD64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_4.5.6_ARM64=pkg:oci/image?repository_url=example/image&arch=arm64&tag=4.5.6+main-arm64") {
-					t.Errorf("expected ARTIFACT_NAME_4.5.6_ARM64 to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_ARM64=pkg:oci/image?repository_url=example/image&arch=arm64&tag=4.5.6+main-arm64") {
+					t.Errorf("expected ARTIFACT_NAME_ARM64 to contain full purl, got: %s", output)
 				}
-				if !strings.Contains(output, "ARTIFACT_NAME_4.5.6_S390X=pkg:oci/image?repository_url=example/image&arch=s390x&tag=4.5.6+main-s390x") {
-					t.Errorf("expected ARTIFACT_NAME_4.5.6_S390X to contain full purl, got: %s", output)
+				if !strings.Contains(output, "ARTIFACT_NAME_S390X=pkg:oci/image?repository_url=example/image&arch=s390x&tag=4.5.6+main-s390x") {
+					t.Errorf("expected ARTIFACT_NAME_S390X to contain full purl, got: %s", output)
 				}
 			},
 		},
@@ -146,7 +146,7 @@ func TestGenerateTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, err := generateTag(tt.upstreamVersions, tt.architecture, tt.imagePath, tt.refFlag, "")
+			output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imagePath, tt.refFlag, "")
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateTag() error = %v, wantErr %v", err, tt.wantErr)

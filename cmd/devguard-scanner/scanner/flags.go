@@ -34,7 +34,7 @@ func AddAssetRefFlags(cmd *cobra.Command) {
 
 func AddGenerateTagFlags(cmd *cobra.Command) {
 	cmd.Flags().String("imagePath", "", "Path to the image file (required)")
-	cmd.Flags().StringSlice("upstreamVersions", []string{"0"}, "Upstream version(s) of the image (required). Can be specified multiple times or as comma-separated values.")
+	cmd.Flags().String("upstreamVersion", "", "Upstream version of the software")
 	cmd.Flags().StringSlice("architecture", []string{}, "Target architecture(s) for the image (required). Can be specified multiple times or as comma-separated values.")
 	cmd.Flags().String("imageSuffix", "", "Suffix to append to the image tag")
 
