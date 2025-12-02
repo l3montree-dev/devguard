@@ -38,12 +38,7 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArray("architecture", []string{}, "Target architecture(s) for the image (required)")
 	cmd.Flags().String("image-type", "", "Type of the image (required)")
 
-	err := cmd.MarkFlagRequired("upstream-version")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkFlagRequired("architecture")
+	err := cmd.MarkFlagRequired("architecture")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
 		return

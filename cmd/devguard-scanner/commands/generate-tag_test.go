@@ -19,6 +19,24 @@ func TestGenerateTag(t *testing.T) {
 		validateOutput  func(t *testing.T, output string)
 	}{
 		{
+			name:            "development tag without version prefix",
+			upstreamVersion: "",
+			architecture:    []string{"amd64"},
+			imageType:       "runtime",
+			imagePath:       "example/image",
+			isTag:           false,
+			refFlag:         "main",
+			wantErr:         false,
+			validateOutput: func(t *testing.T, output string) {
+				if !strings.Contains(output, "TAGS=example/image:main-amd64") {
+					t.Errorf("expected TAGS to contain 'example/image:main-amd64', got: %s", output)
+				}
+				if !strings.Contains(output, "IMAGE_TAG=example/image:main-amd64") {
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:main-amd64', got: %s", output)
+				}
+			},
+		},
+		{
 			name:            "development tag single architecture",
 			upstreamVersion: "1.0.0",
 			architecture:    []string{"amd64"},
@@ -28,11 +46,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "main",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=main-1.0.0-amd64") {
-					t.Errorf("expected TAGS to contain 'main-1.0.0-amd64', got: %s", output)
+				if !strings.Contains(output, "TAGS=example/image:main-1.0.0-amd64") {
+					t.Errorf("expected TAGS to contain 'example/image:main-1.0.0-amd64', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG=main-1.0.0-amd64") {
-					t.Errorf("expected IMAGE_TAG to contain 'main-1.0.0-amd64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG=example/image:main-1.0.0-amd64") {
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:main-1.0.0-amd64', got: %s", output)
 				}
 			},
 		},
@@ -46,10 +64,10 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "feature/test-branch",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=feature-test-branch-2.1.3-amd64,feature-test-branch-2.1.3-arm64") {
+				if !strings.Contains(output, "TAGS=example/image:feature-test-branch-2.1.3-amd64,example/image:feature-test-branch-2.1.3-arm64") {
 					t.Errorf("expected TAGS to contain both architectures, got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG=feature-test-branch-2.1.3-amd64") {
+				if !strings.Contains(output, "IMAGE_TAG=example/image:feature-test-branch-2.1.3-amd64") {
 					t.Errorf("expected IMAGE_TAG to be first architecture, got: %s", output)
 				}
 			},
@@ -64,11 +82,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=3.2.1-amd64-") {
-					t.Errorf("expected TAGS to contain '3.2.1-amd64-', got: %s", output)
+				if !strings.Contains(output, "TAGS=example/image:3.2.1-amd64+oc-") {
+					t.Errorf("expected TAGS to contain 'example/image:3.2.1-amd64+oc-', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG=3.2.1-amd64-") {
-					t.Errorf("expected IMAGE_TAG to contain '3.2.1-amd64-', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG=example/image:3.2.1-amd64+oc-") {
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:3.2.1-amd64+oc-', got: %s", output)
 				}
 			},
 		},
@@ -82,11 +100,11 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=1.2.3-arm64") {
-					t.Errorf("expected TAGS to contain '1.2.3-arm64', got: %s", output)
+				if !strings.Contains(output, "TAGS=example/image:1.2.3-arm64") {
+					t.Errorf("expected TAGS to contain 'example/image:1.2.3-arm64', got: %s", output)
 				}
-				if !strings.Contains(output, "IMAGE_TAG=1.2.3-arm64-arm64") {
-					t.Errorf("expected IMAGE_TAG to contain '1.2.3-arm64-arm64', got: %s", output)
+				if !strings.Contains(output, "IMAGE_TAG=example/image:1.2.3-arm64") {
+					t.Errorf("expected IMAGE_TAG to contain 'example/image:1.2.3-arm64', got: %s", output)
 				}
 			},
 		},
@@ -120,17 +138,17 @@ func TestGenerateTag(t *testing.T) {
 			refFlag:         "",
 			wantErr:         false,
 			validateOutput: func(t *testing.T, output string) {
-				if !strings.Contains(output, "TAGS=4.5.6-amd64-") {
-					t.Errorf("expected TAGS to contain '4.5.6-amd64-', got: %s", output)
+				if !strings.Contains(output, "TAGS=example/image:4.5.6-amd64+oc-") {
+					t.Errorf("expected TAGS to contain 'example/image:4.5.6-amd64+oc-', got: %s", output)
 				}
-				if !strings.Contains(output, "4.5.6-arm64-") {
-					t.Errorf("expected tags to contain '4.5.6-arm64-', got: %s", output)
+				if !strings.Contains(output, "example/image:4.5.6-arm64+oc-") {
+					t.Errorf("expected tags to contain 'example/image:4.5.6-arm64+oc-', got: %s", output)
 				}
-				if !strings.Contains(output, "4.5.6-s390x-") {
-					t.Errorf("expected tags to contain '4.5.6-s390x-', got: %s", output)
+				if !strings.Contains(output, "example/image:4.5.6-s390x+oc-") {
+					t.Errorf("expected tags to contain 'example/image:4.5.6-s390x+oc-', got: %s", output)
 				}
 
-				if !strings.Contains(output, "IMAGE_TAG=4.5.6-amd64-") {
+				if !strings.Contains(output, "IMAGE_TAG=example/image:4.5.6-amd64+oc-") {
 					t.Errorf("expected IMAGE_TAG to be first architecture, got: %s", output)
 				}
 			},
@@ -139,11 +157,15 @@ func TestGenerateTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := generateTag(tt.upstreamVersion, tt.architecture, tt.imageType, tt.imagePath, tt.isTag, tt.refFlag)
+			output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imageType, tt.imagePath, tt.isTag, tt.refFlag)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+
+			if !tt.wantErr && tt.validateOutput != nil {
+				tt.validateOutput(t, output)
 			}
 		})
 	}
@@ -247,8 +269,8 @@ func TestGenerateRuntimeTag(t *testing.T) {
 			architecture:    "amd64",
 			wantErr:         false,
 			validateTag: func(t *testing.T, tag string) {
-				if !strings.HasPrefix(tag, "1.2.3-amd64-") {
-					t.Errorf("expected tag to start with '1.2.3-amd64-', got: %s", tag)
+				if !strings.HasPrefix(tag, "1.2.3-amd64+oc-") {
+					t.Errorf("expected tag to start with '1.2.3-amd64+oc-', got: %s", tag)
 				}
 				// Verify timestamp format (should end with Z)
 				if !strings.HasSuffix(tag, "Z") {
@@ -268,8 +290,8 @@ func TestGenerateRuntimeTag(t *testing.T) {
 			architecture:    "s390x",
 			wantErr:         false,
 			validateTag: func(t *testing.T, tag string) {
-				if !strings.HasPrefix(tag, "2.0.0-s390x-") {
-					t.Errorf("expected tag to start with '2.0.0-s390x-', got: %s", tag)
+				if !strings.HasPrefix(tag, "2.0.0-s390x+oc-") {
+					t.Errorf("expected tag to start with '2.0.0-s390x+oc-', got: %s", tag)
 				}
 			},
 		},

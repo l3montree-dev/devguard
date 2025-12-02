@@ -46,10 +46,15 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return generateTag(upstreamVersion, architecture, imageType, imagePath, isTag, refFlag)
+	output, err := generateTag(upstreamVersion, architecture, imageType, imagePath, isTag, refFlag)
+	if err != nil {
+		return err
+	}
+	fmt.Print(output)
+	return nil
 }
 
-func generateTag(upstreamVersion string, architecture []string, imageType string, imagePath string, isTag bool, refFlag string) error {
+func generateTag(upstreamVersion string, architecture []string, imageType string, imagePath string, isTag bool, refFlag string) (string, error) {
 	var tags []string
 
 	for _, arch := range architecture {
@@ -60,15 +65,15 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 			case "runtime":
 				tag, err = generateRuntimeTag(upstreamVersion, arch)
 				if err != nil {
-					return err
+					return "", err
 				}
 			case "composed":
 				tag, err = generateComposedTags(upstreamVersion, arch)
 				if err != nil {
-					return err
+					return "", err
 				}
 			default:
-				return fmt.Errorf("unknown image type: %s", imageType)
+				return "", fmt.Errorf("unknown image type: %s", imageType)
 			}
 			tag = imagePath + ":" + tag
 
@@ -83,23 +88,27 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 
 	artifactPURL, err := generateArtifactPURL(tags[0])
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Println(`
+	output := `
 	TAGS=` + strings.Join(tags, ",") +
 		`
 	IMAGE_TAG=` + tags[0] +
 		`
 	ARTIFACT_PURL=` + artifactPURL +
 		`
-	`)
+	`
 
-	return nil
+	return output, nil
 }
 
 func generateDevelopmentTag(branchName, upstreamVersion, architecture string) string {
 	branchNameSanitized := sanitizeBranchName(branchName)
+	//check if upstreamVersion is empty
+	if upstreamVersion == "" {
+		return fmt.Sprintf("%s-%s", branchNameSanitized, architecture)
+	}
 	return fmt.Sprintf("%s-%s-%s", branchNameSanitized, upstreamVersion, architecture)
 }
 
@@ -114,7 +123,7 @@ func generateRuntimeTag(upstreamVersion, architecture string) (string, error) {
 	if upstreamVersion == "" {
 		return "", fmt.Errorf("upstream version is required for runtime tag generation")
 	}
-	return fmt.Sprintf("%s-%s-%s", upstreamVersion, architecture, timestamp), nil
+	return fmt.Sprintf("%s-%s+oc-%s", upstreamVersion, architecture, timestamp), nil
 }
 
 func generateComposedTags(version, arch string) (string, error) {
