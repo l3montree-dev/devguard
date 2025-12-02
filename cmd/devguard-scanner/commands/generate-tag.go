@@ -27,7 +27,7 @@ func NewGenerateTagCommand() *cobra.Command {
 }
 
 func generateTagRun(cmd *cobra.Command, args []string) error {
-	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
+	upstreamVersions := config.RuntimeBaseConfig.UpstreamVersions
 	architecture := config.RuntimeBaseConfig.Architecture
 	imagePath := config.RuntimeBaseConfig.ImagePath
 	imageSuffix := config.RuntimeBaseConfig.ImageSuffix
@@ -37,7 +37,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	output, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageSuffix)
+	output, err := generateTag(upstreamVersions, architecture, imagePath, refFlag, imageSuffix)
 	if err != nil {
 		return err
 	}
@@ -45,59 +45,64 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string, imageSuffix string) (string, error) {
+func generateTag(upstreamVersions []string, architecture []string, imagePath string, refFlag string, imageSuffix string) (string, error) {
 
-	if len(architecture) == 0 {
-		return "", fmt.Errorf("architecture list cannot be empty")
+	if len(architecture) == 0 || len(upstreamVersions) == 0 {
+		return "", fmt.Errorf("architecture and upstreamVersions lists cannot be empty")
 	}
 
 	output := []struct {
 		ImageTag           string
 		ArtifactName       string
 		ArtifactURLEncoded string
-		Architecture       string
+		ImageInfos         string
 	}{}
 
 	for _, arch := range architecture {
-		var tag string
+		for _, upstreamVersion := range upstreamVersions {
 
-		// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
-		if upstreamVersion == "0" || upstreamVersion == "" {
-			tag = refFlag + "+" + arch
-		} else {
-			tag = upstreamVersion + "+" + refFlag + "-" + arch
-		}
+			var tag string
+			var imageInfo string
 
-		imagePathWithSuffix := imagePath
-		// only append suffix when it is set and not "default"
-		if imageSuffix != "" && imageSuffix != "default" {
-			imagePathWithSuffix += "/" + imageSuffix
-		}
+			// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
+			if upstreamVersion == "0" || upstreamVersion == "" {
+				tag = refFlag + "+" + arch
+				imageInfo = strings.ToUpper(arch)
+			} else {
+				tag = upstreamVersion + "+" + refFlag + "-" + arch
+				imageInfo = strings.ToUpper(upstreamVersion + "_" + arch)
+			}
 
-		tag = imagePathWithSuffix + ":" + tag
-		artifactName, artifactURLEncoded, err := generateArtifactName(tag, arch)
-		if err != nil {
-			return "", err
+			imagePathWithSuffix := imagePath
+			// only append suffix when it is set and not "default"
+			if imageSuffix != "" && imageSuffix != "default" {
+				imagePathWithSuffix += "/" + imageSuffix
+			}
+
+			tag = imagePathWithSuffix + ":" + tag
+			artifactName, artifactURLEncoded, err := generateArtifactName(tag, arch)
+			if err != nil {
+				return "", err
+			}
+			output = append(output, struct {
+				ImageTag           string
+				ArtifactName       string
+				ArtifactURLEncoded string
+				ImageInfos         string
+			}{
+				ImageTag:           tag,
+				ArtifactName:       artifactName,
+				ArtifactURLEncoded: artifactURLEncoded,
+				ImageInfos:         imageInfo,
+			})
 		}
-		output = append(output, struct {
-			ImageTag           string
-			ArtifactName       string
-			ArtifactURLEncoded string
-			Architecture       string
-		}{
-			ImageTag:           tag,
-			ArtifactName:       artifactName,
-			ArtifactURLEncoded: artifactURLEncoded,
-			// uppercase the architecture for the output variable
-			Architecture: strings.ToUpper(arch),
-		})
 	}
 
 	var outputString strings.Builder
 	for _, o := range output {
-		outputString.WriteString(fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.Architecture, o.ImageTag))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.Architecture, o.ArtifactName))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.Architecture, o.ArtifactURLEncoded))
+		outputString.WriteString(fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.ImageInfos, o.ImageTag))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.ImageInfos, o.ArtifactName))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.ImageInfos, o.ArtifactURLEncoded))
 	}
 
 	return outputString.String(), nil
