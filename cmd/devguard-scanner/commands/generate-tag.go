@@ -46,6 +46,10 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 
 func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string) (string, error) {
 
+	if len(architecture) == 0 {
+		return "", fmt.Errorf("architecture list cannot be empty")
+	}
+
 	output := []struct {
 		ImageTag           string
 		ArtifactName       string
@@ -111,9 +115,6 @@ func generateArtifactName(imageTag string, architecture string) (string, string,
 	// Extract name only (without namespace)
 	nameParts := strings.Split(namespaceAndName, "/")
 	name := nameParts[len(nameParts)-1]
-
-	// URL encode repository_url (same behavior as bash)
-	//repositoryURL := url.QueryEscape(registryAndImage)
 
 	// Generate artifactNameURLEncoded → artifact-artifactNameURLEncoded.txt
 	artifactName := fmt.Sprintf("pkg:oci/%s?repository_url=%s&arch=%s&tag=%s", name, registryAndImage, architecture, imageTag[colonIndex+1:])
