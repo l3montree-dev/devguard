@@ -61,6 +61,10 @@ type baseConfig struct {
 	IgnoreUpstreamAttestations bool `json:"ignoreUpstreamAttestations" mapstructure:"ignoreUpstreamAttestations"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
+
+	ImagePath       string   `json:"imagePath" mapstructure:"imagePath"`
+	UpstreamVersion string   `json:"upstreamVersion" mapstructure:"upstreamVersion"`
+	Architecture    []string `json:"architecture" mapstructure:"architecture"`
 }
 
 type InTotoConfig struct {

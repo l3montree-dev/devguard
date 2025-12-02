@@ -143,6 +143,7 @@ func init() {
 		NewMergeSBOMSCommand(),
 		NewDiscoverBaseImageAttestationsCommand(),
 		NewVexCommand(),
+		NewGenerateTagCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

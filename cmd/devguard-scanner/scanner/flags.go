@@ -32,6 +32,24 @@ func AddAssetRefFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
 }
 
+func AddGenerateTagFlags(cmd *cobra.Command) {
+	cmd.Flags().String("imagePath", "", "Path to the image file (required)")
+	cmd.Flags().String("upstreamVersion", "", "Upstream version of the software")
+	cmd.Flags().StringSlice("architecture", []string{}, "Target architecture(s) for the image (required). Can be specified multiple times or as comma-separated values.")
+
+	err := cmd.MarkFlagRequired("imagePath")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		return
+	}
+
+	err = cmd.MarkFlagRequired("architecture")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		return
+	}
+}
+
 func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)
 	AddAssetRefFlags(cmd)
