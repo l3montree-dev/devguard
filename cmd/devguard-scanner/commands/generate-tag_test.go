@@ -146,7 +146,7 @@ func TestGenerateTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imagePath, tt.refFlag)
+			output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imagePath, tt.refFlag, "")
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateTag() error = %v, wantErr %v", err, tt.wantErr)

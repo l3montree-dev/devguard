@@ -30,13 +30,14 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
 	architecture := config.RuntimeBaseConfig.Architecture
 	imagePath := config.RuntimeBaseConfig.ImagePath
+	imageSuffix := config.RuntimeBaseConfig.ImageSuffix
 
 	refFlag, err := cmd.Flags().GetString("ref")
 	if err != nil {
 		return err
 	}
 
-	output, err := generateTag(upstreamVersion, architecture, imagePath, refFlag)
+	output, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageSuffix)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string) (string, error) {
+func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string, imageSuffix string) (string, error) {
 
 	if len(architecture) == 0 {
 		return "", fmt.Errorf("architecture list cannot be empty")
@@ -67,7 +68,13 @@ func generateTag(upstreamVersion string, architecture []string, imagePath string
 			tag = upstreamVersion + "+" + refFlag + "-" + arch
 		}
 
-		tag = imagePath + ":" + tag
+		imagePathWithSuffix := imagePath
+		// only append suffix when it is set and not "default"
+		if imageSuffix != "" && imageSuffix != "default" {
+			imagePathWithSuffix += "/" + imageSuffix
+		}
+
+		tag = imagePathWithSuffix + ":" + tag
 		artifactName, artifactURLEncoded, err := generateArtifactName(tag, arch)
 		if err != nil {
 			return "", err
