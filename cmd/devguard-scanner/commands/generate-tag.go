@@ -45,7 +45,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string, imageSuffix string) (string, error) {
+func generateTag(upstreamVersion string, architecture string, imagePath string, refFlag string, imageSuffix string) (string, error) {
 
 	if len(architecture) == 0 {
 		return "", fmt.Errorf("architecture list cannot be empty")
@@ -55,49 +55,43 @@ func generateTag(upstreamVersion string, architecture []string, imagePath string
 		ImageTag           string
 		ArtifactName       string
 		ArtifactURLEncoded string
-		Architecture       string
 	}{}
 
-	for _, arch := range architecture {
-		var tag string
+	var tag string
 
-		// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
-		if upstreamVersion == "0" || upstreamVersion == "" {
-			tag = refFlag + "+" + arch
-		} else {
-			tag = upstreamVersion + "+" + refFlag + "-" + arch
-		}
-
-		imagePathWithSuffix := imagePath
-		// only append suffix when it is set and not "default"
-		if imageSuffix != "" && imageSuffix != "default" {
-			imagePathWithSuffix += "/" + imageSuffix
-		}
-
-		tag = imagePathWithSuffix + ":" + tag
-		artifactName, artifactURLEncoded, err := generateArtifactName(tag, arch)
-		if err != nil {
-			return "", err
-		}
-		output = append(output, struct {
-			ImageTag           string
-			ArtifactName       string
-			ArtifactURLEncoded string
-			Architecture       string
-		}{
-			ImageTag:           tag,
-			ArtifactName:       artifactName,
-			ArtifactURLEncoded: artifactURLEncoded,
-			// uppercase the architecture for the output variable
-			Architecture: strings.ToUpper(arch),
-		})
+	// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
+	if upstreamVersion == "0" || upstreamVersion == "" {
+		tag = refFlag + "+" + architecture
+	} else {
+		tag = upstreamVersion + "+" + refFlag + "-" + architecture
 	}
+
+	imagePathWithSuffix := imagePath
+	// only append suffix when it is set and not "default"
+	if imageSuffix != "" && imageSuffix != "default" {
+		imagePathWithSuffix += "/" + imageSuffix
+	}
+
+	tag = imagePathWithSuffix + ":" + tag
+	artifactName, artifactURLEncoded, err := generateArtifactName(tag, architecture)
+	if err != nil {
+		return "", err
+	}
+	output = append(output, struct {
+		ImageTag           string
+		ArtifactName       string
+		ArtifactURLEncoded string
+	}{
+		ImageTag:           tag,
+		ArtifactName:       artifactName,
+		ArtifactURLEncoded: artifactURLEncoded,
+	})
 
 	var outputString strings.Builder
 	for _, o := range output {
-		outputString.WriteString(fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.Architecture, o.ImageTag))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.Architecture, o.ArtifactName))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.Architecture, o.ArtifactURLEncoded))
+		outputString.WriteString(fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded))
 	}
 
 	return outputString.String(), nil
