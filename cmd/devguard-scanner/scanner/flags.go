@@ -34,16 +34,16 @@ func AddAssetRefFlags(cmd *cobra.Command) {
 
 func AddGenerateTagFlags(cmd *cobra.Command) {
 	cmd.Flags().String("imagePath", "", "Path to the image file")
-	cmd.Flags().String("upstream-version", "", "Upstream version of the software (required)")
+	cmd.Flags().String("upstreamVersion", "", "Upstream version of the software (required)")
 	cmd.Flags().StringSlice("architecture", []string{}, "Target architecture(s) for the image (required). Can be specified multiple times or as comma-separated values.")
-	cmd.Flags().String("image-type", "", "Type of the image (required)")
+	cmd.Flags().String("imageType", "", "Type of the image (required)")
 
 	err := cmd.MarkFlagRequired("architecture")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
 		return
 	}
-	err = cmd.MarkFlagRequired("image-type")
+	err = cmd.MarkFlagRequired("imageType")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
 		return

@@ -16,9 +16,7 @@ func NewGenerateTagCommand() *cobra.Command {
 	generateTagCmd := &cobra.Command{
 		Use:   "generate-tag",
 		Short: "Generate a tag for an image based on its contents",
-		Long: `Generate a tag for an image based on its contents.
-
-`,
+		Long:  "This command generates a tag, artifact name, and URL-encoded artifact name for a given image based on its contents and the provided parameters such as upstream version, architecture, and image type.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generateTagRun(cmd, args)
 		},
@@ -56,7 +54,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 
 func generateTag(upstreamVersion string, architecture []string, imageType string, imagePath string, isTag bool, refFlag string) (string, error) {
 
-	outPut := []struct {
+	output := []struct {
 		ImageTag           string
 		ArtifactName       string
 		ArtifactURLEncoded string
@@ -90,7 +88,7 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 		if err != nil {
 			return "", err
 		}
-		outPut = append(outPut, struct {
+		output = append(output, struct {
 			ImageTag           string
 			ArtifactName       string
 			ArtifactURLEncoded string
@@ -101,19 +99,19 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 		})
 	}
 
-	output := ""
-	for _, o := range outPut {
-		output += fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag)
-		output += fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName)
-		output += fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded)
+	outputString := ""
+	for _, o := range output {
+		outputString += fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag)
+		outputString += fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName)
+		outputString += fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded)
 	}
 
-	return output, nil
+	return outputString, nil
 }
 
 func generateDevelopmentTag(branchName, upstreamVersion, architecture string) string {
 	branchNameSanitized := sanitizeBranchName(branchName)
-	//check if upstreamVersion is empty
+	// check if upstreamVersion is empty
 	if upstreamVersion == "" {
 		return fmt.Sprintf("%s-%s", branchNameSanitized, architecture)
 	}
