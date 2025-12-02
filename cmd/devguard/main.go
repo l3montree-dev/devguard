@@ -129,6 +129,7 @@ func main() {
 		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
+		fx.Invoke(func(DependencyProxyRouter router.DependencyProxyRouter) {}),
 		fx.Invoke(func(server *echo.Echo) {}),
 	).Run()
 }
