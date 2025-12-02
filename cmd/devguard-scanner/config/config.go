@@ -65,7 +65,6 @@ type baseConfig struct {
 	ImagePath       string   `json:"imagePath" mapstructure:"imagePath"`
 	UpstreamVersion string   `json:"upstreamVersion" mapstructure:"upstreamVersion"`
 	Architecture    []string `json:"architecture" mapstructure:"architecture"`
-	ImageType       string   `json:"imageType" mapstructure:"imageType"`
 }
 
 type InTotoConfig struct {

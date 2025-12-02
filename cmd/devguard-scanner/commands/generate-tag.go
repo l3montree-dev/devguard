@@ -3,9 +3,7 @@ package commands
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
-	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
@@ -31,20 +29,14 @@ func NewGenerateTagCommand() *cobra.Command {
 func generateTagRun(cmd *cobra.Command, args []string) error {
 	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
 	architecture := config.RuntimeBaseConfig.Architecture
-	imageType := config.RuntimeBaseConfig.ImageType
 	imagePath := config.RuntimeBaseConfig.ImagePath
-
-	isTag, err := cmd.Flags().GetBool("isTag")
-	if err != nil {
-		return err
-	}
 
 	refFlag, err := cmd.Flags().GetString("ref")
 	if err != nil {
 		return err
 	}
 
-	output, err := generateTag(upstreamVersion, architecture, imageType, imagePath, isTag, refFlag)
+	output, err := generateTag(upstreamVersion, architecture, imagePath, refFlag)
 	if err != nil {
 		return err
 	}
@@ -52,39 +44,27 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTag(upstreamVersion string, architecture []string, imageType string, imagePath string, isTag bool, refFlag string) (string, error) {
+func generateTag(upstreamVersion string, architecture []string, imagePath string, refFlag string) (string, error) {
 
 	output := []struct {
 		ImageTag           string
 		ArtifactName       string
 		ArtifactURLEncoded string
+		Architecture       string
 	}{}
 
 	for _, arch := range architecture {
 		var tag string
-		if isTag {
-			var err error
-			switch imageType {
-			case "runtime":
-				tag, err = generateRuntimeTag(upstreamVersion, arch)
-				if err != nil {
-					return "", err
-				}
-			case "composed":
-				tag, err = generateComposedTags(upstreamVersion, arch)
-				if err != nil {
-					return "", err
-				}
-			default:
-				return "", fmt.Errorf("unknown image type: %s", imageType)
-			}
 
+		// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
+		if upstreamVersion == "0" || upstreamVersion == "" {
+			tag = refFlag + "+" + arch
 		} else {
-			tag = generateDevelopmentTag(refFlag, upstreamVersion, arch)
+			tag = upstreamVersion + "+" + refFlag + "-" + arch
 		}
 
 		tag = imagePath + ":" + tag
-		artifactName, artifactURLEncoded, err := generateArtifactName(tag)
+		artifactName, artifactURLEncoded, err := generateArtifactName(tag, arch)
 		if err != nil {
 			return "", err
 		}
@@ -92,61 +72,27 @@ func generateTag(upstreamVersion string, architecture []string, imageType string
 			ImageTag           string
 			ArtifactName       string
 			ArtifactURLEncoded string
+			Architecture       string
 		}{
 			ImageTag:           tag,
 			ArtifactName:       artifactName,
 			ArtifactURLEncoded: artifactURLEncoded,
+			// uppercase the architecture for the output variable
+			Architecture: strings.ToUpper(arch),
 		})
 	}
 
 	outputString := ""
 	for _, o := range output {
-		outputString += fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag)
-		outputString += fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName)
-		outputString += fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded)
+		outputString += fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.Architecture, o.ImageTag)
+		outputString += fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.Architecture, o.ArtifactName)
+		outputString += fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.Architecture, o.ArtifactURLEncoded)
 	}
 
 	return outputString, nil
 }
 
-func generateDevelopmentTag(branchName, upstreamVersion, architecture string) string {
-	branchNameSanitized := sanitizeBranchName(branchName)
-	// check if upstreamVersion is empty
-	if upstreamVersion == "" {
-		return fmt.Sprintf("%s-%s", branchNameSanitized, architecture)
-	}
-	return fmt.Sprintf("%s-%s-%s", branchNameSanitized, upstreamVersion, architecture)
-}
-
-func sanitizeBranchName(branchName string) string {
-	// Replace all "/" with "-"
-	sanitized := strings.ReplaceAll(branchName, "/", "-")
-	return sanitized
-}
-
-func generateRuntimeTag(upstreamVersion, architecture string) (string, error) {
-	timestamp := time.Now().UTC().Format("20060102T150405Z")
-	if upstreamVersion == "" {
-		return "", fmt.Errorf("upstream version is required for runtime tag generation")
-	}
-	return fmt.Sprintf("%s-%s+oc-%s", upstreamVersion, architecture, timestamp), nil
-}
-
-func generateComposedTags(version, arch string) (string, error) {
-	// Validate semantic version format
-	if !checkSemverFormat(version) {
-		return "", fmt.Errorf("version %s is not in valid semantic version format", version)
-	}
-
-	return fmt.Sprintf("%s-%s", version, arch), nil
-}
-
-func checkSemverFormat(version string) bool {
-	semverRegex := regexp.MustCompile(`^([0-9]+)\.([0-9]+)\.([0-9]+)$`)
-	return semverRegex.MatchString(version)
-}
-
-func generateArtifactName(imageTag string) (string, string, error) {
+func generateArtifactName(imageTag string, architecture string) (string, string, error) {
 
 	// Split registry/image and version
 	colonIndex := strings.LastIndex(imageTag, ":")
@@ -170,11 +116,11 @@ func generateArtifactName(imageTag string) (string, string, error) {
 	//repositoryURL := url.QueryEscape(registryAndImage)
 
 	// Generate artifactNameURLEncoded → artifact-artifactNameURLEncoded.txt
-	artifactName := fmt.Sprintf("pkg:oci/%s?repository_url=%s", name, registryAndImage)
+	artifactName := fmt.Sprintf("pkg:oci/%s?repository_url=%s&arch=%s&tag=%s", name, registryAndImage, architecture, imageTag[colonIndex+1:])
 
 	// Generate SAFE version → artifact-name-safe.txt
 	// Equivalent to: echo -n "$artifactNameURLEncoded" | jq -s -R -r @uri
-	artifactNameURLEncoded := url.QueryEscape(artifactName)
+	artifactNameURLEncoded := url.PathEscape(artifactName)
 
 	return artifactName, artifactNameURLEncoded, nil
 }
