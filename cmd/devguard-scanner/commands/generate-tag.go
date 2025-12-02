@@ -86,14 +86,14 @@ func generateTag(upstreamVersion string, architecture []string, imagePath string
 		})
 	}
 
-	outputString := ""
+	var outputString strings.Builder
 	for _, o := range output {
-		outputString += fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.Architecture, o.ImageTag)
-		outputString += fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.Architecture, o.ArtifactName)
-		outputString += fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.Architecture, o.ArtifactURLEncoded)
+		outputString.WriteString(fmt.Sprintf("IMAGE_TAG_%s=%s\n", o.Architecture, o.ImageTag))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME_%s=%s\n", o.Architecture, o.ArtifactName))
+		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED_%s=%s\n", o.Architecture, o.ArtifactURLEncoded))
 	}
 
-	return outputString, nil
+	return outputString.String(), nil
 }
 
 func generateArtifactName(imageTag string, architecture string) (string, string, error) {
