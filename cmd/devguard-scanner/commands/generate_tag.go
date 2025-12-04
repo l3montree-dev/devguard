@@ -30,7 +30,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
 	architecture := config.RuntimeBaseConfig.Architecture
 	imagePath := config.RuntimeBaseConfig.ImagePath
-	imageVariant := config.RuntimeBaseConfig.imageVariant
+	imageVariant := config.RuntimeBaseConfig.ImageVariant
 	imageSuffix := config.RuntimeBaseConfig.ImagePathSuffix
 
 	refFlag, err := cmd.Flags().GetString("ref")
