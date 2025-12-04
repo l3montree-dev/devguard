@@ -1,4 +1,4 @@
-FROM golang:1.25.4-trixie@sha256:27e1c927a07ed2c7295d39941d6d881424739dbde9ae3055d0d3013699ed35e8 AS golang-builder
+FROM golang:1.25.5-trixie@sha256:4f9d98ebaa759f776496d850e0439c48948d587b191fc3949b5f5e4667abef90 AS golang-builder
 
 # set the working directory
 WORKDIR /app
@@ -14,14 +14,14 @@ ARG TARGETPLATFORM
 ENV CRANE_VERSION=v0.20.7
 ENV OS=Linux
 ENV ARCH=x86_64
-ENV TRIVY_VERSION=v0.67.2
-ENV COSIGN_VERSION=v2.6.1
+ENV TRIVY_VERSION=v0.68.1
+ENV COSIGN_VERSION=v3.0.2
 ENV GITLEAKS_VERSION=v8.30.0
 
 # Expected checksums for security verification
 ENV CRANE_CHECKSUM=8ef3564d264e6b5ca93f7b7f5652704c4dd29d33935aff6947dd5adefd05953e
-ENV TRIVY_CHECKSUM=546511a5514afc813c0b72e4abeea2c16a32228a13a1e5114d927c190e76b1f9
-ENV COSIGN_CHECKSUM=064954c5d8c7e3b28188eee5b1727b31c411550bc5fefd41aa672d3c761d103a
+ENV TRIVY_CHECKSUM=63e37242088e418651931f891963c19554faa19f0591fe6b40b606152051df2f
+ENV COSIGN_CHECKSUM=46dbdcb5467a3dfec2526923d0b3365e40c8d9dc00ec23d5aca3437449e8cbfd
 ENV GITLEAKS_CHECKSUM=79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
 
 # install crane with checksum verification
@@ -58,7 +58,7 @@ COPY . .
 RUN CGO_ENABLED=0 make devguard-scanner
 # ----------------------
 # create final image with node:alpine
-FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
+FROM alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
 
 RUN apk update && apk add --no-cache git python3 dbus dbus-x11
 # Create virtualenvs

@@ -1,2 +1,6 @@
 node_modules
 Dockerfile*
+.git
+**/*.md
+.kratos
+.vscode
