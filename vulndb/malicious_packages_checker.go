@@ -18,6 +18,7 @@ package vulndb
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +29,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/services"
+
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 const (
@@ -85,7 +92,7 @@ type MaliciousPackageCheckerConfig struct {
 	SkipInitialUpdate bool // Skip initial download, useful for tests
 }
 
-func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig) (*MaliciousPackageChecker, error) {
+func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, configService shared.ConfigService) (*MaliciousPackageChecker, error) {
 	// Set defaults
 	if config.RepoURL == "" {
 		config.RepoURL = DefaultMaliciousPackageRepo
@@ -114,15 +121,17 @@ func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig) (*Maliciou
 
 	// Initial fetch/update of the database
 	if !config.SkipInitialUpdate {
-		// Production mode: async initialization with background updater
-		go func() {
+		leaderElector := services.NewDatabaseLeaderElector(configService)
+
+		leaderElector.IfLeader(context.Background(), func() error {
 			if err := checker.updateDatabase(); err != nil {
 				slog.Error("Failed to initialize malicious package database", "error", err)
-				return
+				return err
 			}
 			// Start background updater
-			go checker.backgroundUpdater()
-		}()
+			checker.backgroundUpdater()
+			return nil
+		})
 	} else {
 		// Test mode: synchronous initialization, no background updater
 		if err := checker.loadDatabase(checker.dbPath); err != nil {
@@ -253,7 +262,6 @@ func (c *MaliciousPackageChecker) downloadAndExtract() error {
 // backgroundUpdater periodically updates the database
 func (c *MaliciousPackageChecker) backgroundUpdater() {
 	slog.Info("Background database updater started", "interval", c.updateInterval)
-
 	for {
 		select {
 		case <-c.updateTicker.C:
@@ -274,10 +282,7 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 	ecosystems := []string{"npm", "go", "maven", "pypi", "crates.io"}
 	totalLoaded := 0
 
-	// Use goroutines to load ecosystems in parallel
-	var wg sync.WaitGroup
-	resultChan := make(chan int, len(ecosystems))
-	errorChan := make(chan error, len(ecosystems))
+	errGroup := utils.ErrGroup[int](5)
 
 	for _, ecosystem := range ecosystems {
 		ecosystemPath := filepath.Join(dbPath, ecosystem)
@@ -285,34 +290,27 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 			continue
 		}
 
-		wg.Add(1)
-		go func(eco, ecoPath string) {
-			defer wg.Done()
-			count, err := c.loadEcosystem(ecoPath)
+		errGroup.Go(func() (int, error) {
+			count, err := c.loadEcosystem(ecosystemPath)
 			if err != nil {
-				errorChan <- err
-				return
+				return 0, fmt.Errorf("failed to load ecosystem %s: %w", ecosystem, err)
 			}
-			resultChan <- count
 			if count > 0 {
-				slog.Info("Loaded malicious packages", "ecosystem", eco, "count", count)
+				slog.Info("Loaded malicious packages", "ecosystem", ecosystem, "count", count)
 			}
-		}(ecosystem, ecosystemPath)
+			return count, nil
+		})
 	}
 
-	// Wait for all goroutines to finish
-	wg.Wait()
-	close(resultChan)
-	close(errorChan)
-
-	// Collect results
-	for count := range resultChan {
-		totalLoaded += count
+	results, err := errGroup.WaitAndCollect()
+	if err != nil {
+		return err
 	}
 
-	// Log any errors
-	for err := range errorChan {
-		slog.Warn("Error loading ecosystem", "error", err)
+	for _, res := range results {
+		if res != 0 {
+			totalLoaded += res
+		}
 	}
 
 	slog.Info("Malicious package database loaded", "total", totalLoaded)
@@ -337,50 +335,50 @@ func (c *MaliciousPackageChecker) loadEcosystem(ecosystemPath string) (int, erro
 
 	// Process files in parallel batches
 	const batchSize = 100
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit concurrent file reads
+	errGroup := utils.ErrGroup[any](10)
 
 	for i := 0; i < len(files); i += batchSize {
-		end := i + batchSize
-		if end > len(files) {
-			end = len(files)
-		}
-
-		batch := files[i:end]
-		for _, path := range batch {
-			wg.Add(1)
-			semaphore <- struct{}{} // Acquire semaphore
-
-			go func(p string) {
-				defer wg.Done()
-				defer func() { <-semaphore }() // Release semaphore
-
-				if err := c.loadPackageEntry(p); err != nil {
-					slog.Debug("Failed to load malicious package entry", "path", p, "error", err)
+		end := min(i+batchSize, len(files))
+		errGroup.Go(func() (any, error) {
+			batch := files[i:end]
+			for _, path := range batch {
+				if err := c.loadPackageEntryPath(path); err != nil {
+					slog.Debug("Failed to load malicious package entry", "path", path, "error", err)
 				}
-			}(path)
-		}
+
+			}
+			return nil, nil
+		})
+	}
+	if _, err := errGroup.WaitAndCollect(); err != nil {
+		return 0, fmt.Errorf("failed to load ecosystem entries: %w", err)
 	}
 
-	wg.Wait()
+	// create a fake package entry for testing purposes
+	fakeEntry := MaliciousPackageEntry{
+		ID:      "FAKE-TEST-001",
+		Summary: "Fake malicious package for testing",
+		Details: "This is a fake malicious package entry used for testing the dependency proxy",
+		Affected: []Affected{
+			{
+				Package: Package{
+					Ecosystem: strings.ToLower(ecosystemPath),
+					Name:      "fake-malicious-package",
+				},
+				Versions: []string{}, // All versions affected
+			},
+		},
+		Published: time.Now().Format(time.RFC3339),
+	}
+	c.loadEntry(fakeEntry)
+
 	return len(files), nil
 }
 
-func (c *MaliciousPackageChecker) loadPackageEntry(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	var entry MaliciousPackageEntry
-	if err := json.Unmarshal(data, &entry); err != nil {
-		return err
-	}
-
+func (c *MaliciousPackageChecker) loadEntry(entry MaliciousPackageEntry) {
 	if len(entry.Affected) == 0 {
-		return nil
+		return
 	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -394,33 +392,25 @@ func (c *MaliciousPackageChecker) loadPackageEntry(path string) error {
 
 		c.packages[pkgEcosystem][pkgName] = &entry
 	}
+}
 
+func (c *MaliciousPackageChecker) loadPackageEntryPath(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var entry MaliciousPackageEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return err
+	}
+	c.loadEntry(entry)
 	return nil
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *MaliciousPackageEntry) {
 	ecosystemKey := strings.ToLower(ecosystem)
 	packageKey := strings.ToLower(packageName)
-
-	// Check for fake malicious packages used in testing
-	if packageKey == "fake-malicious-package" {
-		fakeEntry := &MaliciousPackageEntry{
-			ID:      "FAKE-TEST-001",
-			Summary: "Fake malicious package for testing",
-			Details: "This is a fake malicious package entry used for testing the dependency proxy",
-			Affected: []Affected{
-				{
-					Package: Package{
-						Ecosystem: ecosystemKey,
-						Name:      packageKey,
-					},
-					Versions: []string{}, // All versions affected
-				},
-			},
-			Published: time.Now().Format(time.RFC3339),
-		}
-		return true, fakeEntry
-	}
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -454,11 +444,21 @@ func (c *MaliciousPackageChecker) isVersionAffected(affected Affected, version s
 
 	// Check ranges
 	for _, r := range affected.Ranges {
-		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
+		if r.Type == "SEMVER" {
 			for _, event := range r.Events {
 				if event.Introduced == "0" && event.Fixed == "" {
+					// all versions are affected
 					return true
 				}
+				if normalize.SemverCompare(version, event.Introduced) < 0 {
+					continue
+				}
+				if event.Fixed != "" {
+					if normalize.SemverCompare(version, event.Fixed) >= 0 {
+						continue
+					}
+				}
+				return true
 			}
 		}
 	}

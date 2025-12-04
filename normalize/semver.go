@@ -64,8 +64,20 @@ var (
 
 func SemverSort(versions []string) {
 	slices.SortStableFunc(versions, func(a, b string) int {
-		return semver.Compare("v"+a, "v"+b)
+		return SemverCompare(a, b)
 	})
+}
+
+func SemverCompare(v1, v2 string) int {
+	// check if "v" prefix is present, if not add it for comparison
+	if !strings.HasPrefix(v1, "v") {
+		v1 = "v" + v1
+	}
+	if !strings.HasPrefix(v2, "v") {
+		v2 = "v" + v2
+	}
+
+	return semver.Compare(v1, v2)
 }
 
 func SemverFix(version string) (string, error) {
