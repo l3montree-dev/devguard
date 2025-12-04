@@ -13,7 +13,7 @@ func TestGenerateTag(t *testing.T) {
 		upstreamVersion      string
 		architecture         string
 		imagePath            string
-		imageType            string
+		imageVariant         string
 		imageSuffix          string
 		refFlag              string
 		wantErr              bool
@@ -25,7 +25,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "10.11.14",
 			architecture:         "amd64",
 			imagePath:            "registry.opencode.de/open-code/oci/mariadb",
-			imageType:            "minimal",
+			imageVariant:         "minimal",
 			refFlag:              "main",
 			expectedImageTagName: "registry.opencode.de/open-code/oci/mariadb:10.11.14-main-minimal-amd64",
 			expectedArtifactName: "pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14-main-minimal-amd64",
@@ -36,7 +36,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "1.2.3",
 			architecture:         "arm64",
 			imagePath:            "docker.io/library/nginx",
-			imageType:            "full",
+			imageVariant:         "full",
 			refFlag:              "",
 			expectedImageTagName: "docker.io/library/nginx:1.2.3-full-arm64",
 			expectedArtifactName: "pkg:oci/nginx?repository_url=docker.io/library/nginx&arch=arm64&tag=1.2.3-full-arm64",
@@ -47,7 +47,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "2.0.0",
 			architecture:         "amd64",
 			imagePath:            "ghcr.io/org/app",
-			imageType:            "alpine",
+			imageVariant:         "alpine",
 			imageSuffix:          "debug",
 			refFlag:              "develop",
 			expectedImageTagName: "ghcr.io/org/app/debug:2.0.0-develop-alpine-amd64",
@@ -59,7 +59,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "3.14.159",
 			architecture:         "arm64",
 			imagePath:            "gcr.io/project/service",
-			imageType:            "standard",
+			imageVariant:         "standard",
 			refFlag:              "release",
 			expectedImageTagName: "gcr.io/project/service:3.14.159-release-standard-arm64",
 			expectedArtifactName: "pkg:oci/service?repository_url=gcr.io/project/service&arch=arm64&tag=3.14.159-release-standard-arm64",
@@ -70,7 +70,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "0.1.0",
 			architecture:         "amd64",
 			imagePath:            "localhost:5000/myapp",
-			imageType:            "dev",
+			imageVariant:         "dev",
 			refFlag:              "feature-123",
 			expectedImageTagName: "localhost:5000/myapp:0.1.0-feature-123-dev-amd64",
 			expectedArtifactName: "pkg:oci/myapp?repository_url=localhost:5000/myapp&arch=amd64&tag=0.1.0-feature-123-dev-amd64",
@@ -81,7 +81,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "4.0.0-rc.1",
 			architecture:         "amd64",
 			imagePath:            "registry.io/namespace/image",
-			imageType:            "slim",
+			imageVariant:         "slim",
 			refFlag:              "staging",
 			expectedImageTagName: "registry.io/namespace/image:4.0.0-rc.1-staging-slim-amd64",
 			expectedArtifactName: "pkg:oci/image?repository_url=registry.io/namespace/image&arch=amd64&tag=4.0.0-rc.1-staging-slim-amd64",
@@ -92,7 +92,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "1.0.0",
 			architecture:         "arm64",
 			imagePath:            "registry.com/app",
-			imageType:            "",
+			imageVariant:         "",
 			refFlag:              "main",
 			expectedImageTagName: "registry.com/app:1.0.0-main-arm64",
 			expectedArtifactName: "pkg:oci/app?repository_url=registry.com/app&arch=arm64&tag=1.0.0-main-arm64",
@@ -103,7 +103,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "5.6.7",
 			architecture:         "amd64",
 			imagePath:            "registry.example.com/org/team/project/service",
-			imageType:            "production",
+			imageVariant:         "production",
 			refFlag:              "v1",
 			expectedImageTagName: "registry.example.com/org/team/project/service:5.6.7-v1-production-amd64",
 			expectedArtifactName: "pkg:oci/service?repository_url=registry.example.com/org/team/project/service&arch=amd64&tag=5.6.7-v1-production-amd64",
@@ -114,7 +114,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "1.0.0+build.123",
 			architecture:         "arm64",
 			imagePath:            "docker.io/myorg/myimage",
-			imageType:            "test",
+			imageVariant:         "test",
 			refFlag:              "ci",
 			expectedImageTagName: "docker.io/myorg/myimage:1.0.0+build.123-ci-test-arm64",
 			expectedArtifactName: "pkg:oci/myimage?repository_url=docker.io/myorg/myimage&arch=arm64&tag=1.0.0+build.123-ci-test-arm64",
@@ -125,7 +125,7 @@ func TestGenerateTag(t *testing.T) {
 			upstreamVersion:      "2.3.4",
 			architecture:         "amd64",
 			imagePath:            "example.com/image",
-			imageType:            "",
+			imageVariant:         "",
 			imageSuffix:          "",
 			refFlag:              "",
 			expectedImageTagName: "example.com/image:2.3.4-amd64",
@@ -136,7 +136,7 @@ func TestGenerateTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imagePath, tt.refFlag, tt.imageType, tt.imageSuffix)
+			_, output, err := generateTag(tt.upstreamVersion, tt.architecture, tt.imagePath, tt.refFlag, tt.imageVariant, tt.imageSuffix)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateTag() error = %v, wantErr %v", err, tt.wantErr)

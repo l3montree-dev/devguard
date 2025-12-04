@@ -30,7 +30,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
 	architecture := config.RuntimeBaseConfig.Architecture
 	imagePath := config.RuntimeBaseConfig.ImagePath
-	imageType := config.RuntimeBaseConfig.ImageType
+	imageVariant := config.RuntimeBaseConfig.imageVariant
 	imageSuffix := config.RuntimeBaseConfig.ImagePathSuffix
 
 	refFlag, err := cmd.Flags().GetString("ref")
@@ -38,7 +38,7 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	output, _, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageType, imageSuffix)
+	output, _, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageVariant, imageSuffix)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ type tagOutput struct {
 	ArtifactURLEncoded string
 }
 
-func generateTag(upstreamVersion string, architecture string, imagePath string, refFlag string, imageType string, imageSuffix string) (string, tagOutput, error) {
+func generateTag(upstreamVersion string, architecture string, imagePath string, refFlag string, imageVariant string, imageSuffix string) (string, tagOutput, error) {
 
 	var tagElements = []string{}
 	if refFlag != "" {
@@ -70,11 +70,11 @@ func generateTag(upstreamVersion string, architecture string, imagePath string, 
 	}
 
 	// check if we have a image type, if so, should be second last element
-	if imageType != "" {
+	if imageVariant != "" {
 		// insert as second last
 		lastElement := tagElements[len(tagElements)-1]
 		tagElements = tagElements[:len(tagElements)-1]
-		tagElements = append(tagElements, imageType)
+		tagElements = append(tagElements, imageVariant)
 		tagElements = append(tagElements, lastElement)
 	}
 
