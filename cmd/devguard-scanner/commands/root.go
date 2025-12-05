@@ -136,6 +136,7 @@ func init() {
 		NewLoginCommand(),
 		NewIaCCommand(),
 		NewSarifCommand(),
+		newSarifMarkdownCommand(),
 		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
