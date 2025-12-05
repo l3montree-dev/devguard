@@ -16,10 +16,10 @@
 package commands
 
 import (
-	"bytes"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
@@ -28,92 +28,62 @@ import (
 )
 
 func attestationsCmd(cmd *cobra.Command, args []string) error {
-	err := scanner.MaybeLoginIntoOciRegistry(cmd.Context())
+	image := args[0]
+
+	if err := scanner.MaybeLoginIntoOciRegistry(cmd.Context()); err != nil {
+		return err
+	}
+
+	policyPath, _ := cmd.Flags().GetString("policy")
+
+	attestations, err := scanner.DiscoverAttestations(image, "")
 	if err != nil {
 		return err
 	}
 
-	// transform the hex private key to an ecdsa private key
-	keyPath, _, err := scanner.TokenToKey(config.RuntimeBaseConfig.Token)
-	if err != nil {
-		slog.Error("could not convert hex token to ecdsa private key", "err", err)
+	if policyPath == "" {
+		output, err := json.MarshalIndent(attestations, "", "  ")
+		if err != nil {
+			return fmt.Errorf("could not marshal attestations: %w", err)
+		}
+
+		if config.RuntimeBaseConfig.OutputPath != "" {
+			if err := os.WriteFile(config.RuntimeBaseConfig.OutputPath, output, 0o644); err != nil {
+				return fmt.Errorf("could not write attestation report: %w", err)
+			}
+			slog.Info("Attestation report saved", "path", config.RuntimeBaseConfig.OutputPath)
+		}
+
+		_, err = os.Stdout.Write(output)
 		return err
 	}
 
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-
-	defer func() {
-		// even remove the key file if a panic occurs
-		err := recover()
-		slog.Debug("removing key file", "keyPath", keyPath)
-		os.Remove(keyPath)
-
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	// check if the file does exist
-	predicate := args[0]
-	if _, err := os.Stat(predicate); os.IsNotExist(err) {
-		// print an error message if the file does not exist
-		slog.Error("file does not exist", "file", predicate)
-		return err
-	}
-
-	// check if an image name is provided
-	if len(args) == 2 {
-		slog.Info("attesting image", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType, "image", args[1])
-		imageName := args[1]
-
-		// use the cosign cli to sign the file
-		attestCmd := exec.Command("cosign", "attest", "--type", config.RuntimeAttestationConfig.PredicateType, "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
-		attestCmd.Stdout = &out
-		attestCmd.Stderr = &errOut
-		attestCmd.Env = []string{
-			"PATH=" + os.Getenv("PATH"),
-			"HOME=" + os.Getenv("HOME"),
-			"DOCKER_CONFIG=" + os.Getenv("DOCKER_CONFIG"),
-			"COSIGN_PASSWORD=",
-		}
-
-		err = attestCmd.Run()
-		if err != nil {
-			slog.Error("could not attest predicate", "predicate", predicate, "image", imageName, "err", err, "out", out.String(), "errOut", errOut.String())
-		}
-	}
-
-	// upload the attestation to the backend
-	return scanner.UploadAttestation(cmd.Context(), predicate)
+	return fmt.Errorf("test")
 }
 
 func NewAttestationCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestations <oci@SHA> [optional flags] ",
-		Short: "Run check against attestated image",
-		Long: `retrieving and validating security attestations for container images used in Helm charts or other deployment workflows.
-It automates what is normally a manual, time-consuming process of verifying that each image is properly hardened and accompanied by essential metadata such as SBOM, VEX, and SARIF.
+		Use:   "attestations <oci@SHA>",
+		Short: "Discover attestations for an image and optionally evaluate a Rego policy",
+		Long: `Discover and inspect security attestations (e.g. SBOM, VEX, SARIF) attached to an OCI image.
+
+Without --policy the command prints all discovered attestations as JSON. With --policy (implemented in following steps)
+attestations can be evaluated against a local Rego policy.
 
 Examples:
-	devguard-scanner attestations <oci@SHA> ghcr.io/org/image:tag
-	devguard-scanner attestations <oci@SHA> --policy path/to/file.rego
+	devguard-scanner attestations ghcr.io/org/image:tag
+	devguard-scanner attestations ghcr.io/org/image:tag --outputPath attestations.json
 `,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestationsCmd(cmd, args)
-		},
-		PreRun: func(cmd *cobra.Command, args []string) {
-			config.ParseAttestationConfig()
 		},
 	}
 
 	scanner.AddDefaultFlags(cmd)
 	scanner.AddAssetRefFlags(cmd)
-	cmd.Flags().StringP("policy", "p", "", "check the images attestations against policy")
-	cmd.MarkFlagRequired("policy") //nolint:errcheck
-
-	// allow username, password and registry to be provided as well as flags
+	cmd.Flags().StringP("policy", "p", "", "Optional path to a Rego policy file to evaluate against discovered attestations (coming in a later step).")
+	cmd.Flags().String("outputPath", "", "Path to save the discovered attestations JSON. If not provided, the result is only printed.")
 
 	return cmd
 }
