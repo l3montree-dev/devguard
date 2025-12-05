@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SARIF structure definitions
@@ -185,6 +187,7 @@ func generateSummaryMarkdown(doc *sarifDoc) string {
 
 func generateDetailedMarkdown(doc *sarifDoc) string {
 	var sb strings.Builder
+	titleCaser := cases.Title(language.English)
 	for _, run := range doc.Runs {
 		sb.WriteString(fmt.Sprintf("# %s Security Scan Results (Detailed)\n\n", run.Tool.Driver.Name))
 		if run.Tool.Driver.InformationURI != "" {
@@ -197,7 +200,7 @@ func generateDetailedMarkdown(doc *sarifDoc) string {
 			if !exists || len(results) == 0 {
 				continue
 			}
-			sb.WriteString(fmt.Sprintf("## %s Severity Issues\n\n", strings.Title(level)))
+			sb.WriteString(fmt.Sprintf("## %s Severity Issues\n\n", titleCaser.String(level)))
 			sb.WriteString("| Status | Resource | Policy | Rule | Message |\n")
 			sb.WriteString("|--------|----------|--------|------|----------|\n")
 			for _, result := range results {
