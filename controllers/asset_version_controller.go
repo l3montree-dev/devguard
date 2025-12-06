@@ -103,13 +103,12 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 
 // Function to delete provided asset version
 func (a *AssetVersionController) Delete(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)                //Get the asset provided in the context / URL
-	err := a.assetVersionRepository.Delete(nil, &assetVersion) //Call delete on the returned assetVersion
+	assetVersion := shared.GetAssetVersion(ctx)
+	err := a.assetVersionRepository.Delete(nil, &assetVersion)
 	if err != nil {
-		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
 	}
-	return ctx.JSON(200, "deleted asset version successfully")
+	return ctx.JSON(200, "successfully deleted asset version ")
 }
 
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {

@@ -1225,6 +1225,10 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 
 func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, orgSlug, projectSlug string, projectID int) error {
 
+	if dependencyVuln.CVE == nil {
+		slog.Warn("avoided nil pointer dereference")
+		return fmt.Errorf("no CVE object found in vulnerability object")
+	}
 	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)

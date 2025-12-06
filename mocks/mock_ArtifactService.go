@@ -38,17 +38,80 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 	return &ArtifactService_Expecter{mock: &_m.Mock}
 }
 
+// CloseAllTicketsForArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) CloseAllTicketsForArtifact(org models.Org, project models.Project, artifact *models.Artifact) error {
+	ret := _mock.Called(org, project, artifact)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CloseAllTicketsForArtifact")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, *models.Artifact) error); ok {
+		r0 = returnFunc(org, project, artifact)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactService_CloseAllTicketsForArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseAllTicketsForArtifact'
+type ArtifactService_CloseAllTicketsForArtifact_Call struct {
+	*mock.Call
+}
+
+// CloseAllTicketsForArtifact is a helper method to define mock.On call
+//   - org models.Org
+//   - project models.Project
+//   - artifact *models.Artifact
+func (_e *ArtifactService_Expecter) CloseAllTicketsForArtifact(org interface{}, project interface{}, artifact interface{}) *ArtifactService_CloseAllTicketsForArtifact_Call {
+	return &ArtifactService_CloseAllTicketsForArtifact_Call{Call: _e.mock.On("CloseAllTicketsForArtifact", org, project, artifact)}
+}
+
+func (_c *ArtifactService_CloseAllTicketsForArtifact_Call) Run(run func(org models.Org, project models.Project, artifact *models.Artifact)) *ArtifactService_CloseAllTicketsForArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		var arg1 models.Project
+		if args[1] != nil {
+			arg1 = args[1].(models.Project)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_CloseAllTicketsForArtifact_Call) Return(err error) *ArtifactService_CloseAllTicketsForArtifact_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactService_CloseAllTicketsForArtifact_Call) RunAndReturn(run func(org models.Org, project models.Project, artifact *models.Artifact) error) *ArtifactService_CloseAllTicketsForArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	ret := _mock.Called(assetID, assetVersionName, artifactName)
+func (_mock *ArtifactService) DeleteArtifact(org models.Org, project models.Project, artifact models.Artifact) error {
+	ret := _mock.Called(org, project, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Artifact) error); ok {
+		r0 = returnFunc(org, project, artifact)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,26 +124,26 @@ type ArtifactService_DeleteArtifact_Call struct {
 }
 
 // DeleteArtifact is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-//   - artifactName string
-func (_e *ArtifactService_Expecter) DeleteArtifact(assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactService_DeleteArtifact_Call {
-	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", assetID, assetVersionName, artifactName)}
+//   - org models.Org
+//   - project models.Project
+//   - artifact models.Artifact
+func (_e *ArtifactService_Expecter) DeleteArtifact(org interface{}, project interface{}, artifact interface{}) *ArtifactService_DeleteArtifact_Call {
+	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", org, project, artifact)}
 }
 
-func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactService_DeleteArtifact_Call {
+func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(org models.Org, project models.Project, artifact models.Artifact)) *ArtifactService_DeleteArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 models.Org
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(models.Org)
 		}
-		var arg1 string
+		var arg1 models.Project
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(models.Project)
 		}
-		var arg2 string
+		var arg2 models.Artifact
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(models.Artifact)
 		}
 		run(
 			arg0,
@@ -96,7 +159,7 @@ func (_c *ArtifactService_DeleteArtifact_Call) Return(err error) *ArtifactServic
 	return _c
 }
 
-func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactService_DeleteArtifact_Call {
+func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(org models.Org, project models.Project, artifact models.Artifact) error) *ArtifactService_DeleteArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }

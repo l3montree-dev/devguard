@@ -466,7 +466,7 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx
 
 func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx *gorm.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	var vulns []models.DependencyVuln
-	err := repository.Repository.GetDB(tx).Raw(`
+	err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Raw(`
 		SELECT vulns.* FROM dependency_vulns vulns 
 		LEFT JOIN artifact_dependency_vulns adv ON vulns.id = adv.dependency_vuln_id
 		WHERE adv.artifact_artifact_name = ? 
