@@ -63,8 +63,13 @@ func (s *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 	return s.artifactRepository.Save(nil, artifact)
 }
 
-func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	return s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
+func (s *ArtifactService) DeleteArtifact(org models.Org, project models.Project, asset models.Asset, artifact models.Artifact) error {
+	err := s.CloseAllTicketsForArtifact(org, project, asset, artifact)
+	if err != nil {
+		// swallow error to still serve deletion request
+		slog.Error("could not close existing tickets")
+	}
+	return s.artifactRepository.DeleteArtifact(artifact)
 }
 
 func (s *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
@@ -314,4 +319,25 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 	}
 
 	return allVulns, nil
+}
+
+// this function should only be used when deleting the artifact passed to the function
+func (s *ArtifactService) CloseAllTicketsForArtifact(org models.Org, project models.Project, asset models.Asset, artifact models.Artifact) error {
+	// get all vulns associated with this artifact
+	vulnsInArtifact, err := s.dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	if err != nil {
+		return err
+	}
+
+	vulnsWithTickets := make([]models.DependencyVuln, 0, len(vulnsInArtifact))
+	// get all vulnerabilities with an associated ticket and set their state to fixed in order for Sync Issues to close them
+	for _, vuln := range vulnsInArtifact {
+		// we only want to delete the ticket if this is the only remaining artifact associated with the vulnerability
+		if vuln.TicketID != nil && len(vuln.Artifacts) == 1 {
+			vuln.State = dtos.VulnStateFixed
+			vulnsWithTickets = append(vulnsWithTickets, vuln)
+		}
+	}
+
+	return s.dependencyVulnService.SyncIssues(org, project, asset, artifact.AssetVersion, vulnsWithTickets)
 }

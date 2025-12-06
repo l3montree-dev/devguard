@@ -120,7 +120,7 @@ type ArtifactRepository interface {
 	utils.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	DeleteArtifact(artifact models.Artifact) error
 	GetAllArtifactAffectedByDependencyVuln(tx DB, vulnID string) ([]models.Artifact, error)
 	GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 }
@@ -313,10 +313,11 @@ type AssetService interface {
 type ArtifactService interface {
 	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
-	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	DeleteArtifact(org models.Org, project models.Project, asset models.Asset, artifact models.Artifact) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)
 	SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
+	CloseAllTicketsForArtifact(org models.Org, project models.Project, asset models.Asset, artifact models.Artifact) error
 }
 
 type DependencyVulnService interface {
