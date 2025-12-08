@@ -339,6 +339,19 @@ func TestMergeCdxBoms(t *testing.T) {
 	})
 }
 
+func TestShouldNotCrashWithEmptyMetadataComponent(t *testing.T) {
+	b1 := &cdx.BOM{
+		Metadata: &cdx.Metadata{},
+		Components: &[]cdx.Component{{
+			Name:       "comp-a",
+			PackageURL: "pkg:maven/org.example/comp-a@1.0.0",
+		}},
+	}
+
+	normalized := normalize.FromCdxBom(b1, "test", "")
+	assert.NotNil(t, normalized)
+}
+
 func TestMergeCdxBomsSimple(t *testing.T) {
 	b1 := &cdx.BOM{
 		Metadata: rootMetadata,
@@ -857,5 +870,74 @@ func TestCalculateDepth(t *testing.T) {
 				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, actual[node])
 			}
 		}
+	})
+}
+
+func TestAddFakeMetadataRootComponent(t *testing.T) {
+	t.Run("all unreferenced components become root dependencies", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{},
+			Components: &[]cdx.Component{
+				{BOMRef: "pkg:npm/a@1.0.0", PackageURL: "pkg:npm/a@1.0.0"},
+				{BOMRef: "pkg:npm/b@1.0.0", PackageURL: "pkg:npm/b@1.0.0"},
+			},
+			Dependencies: &[]cdx.Dependency{},
+		}
+
+		result := normalize.FromNormalizedCdxBom(bom, "app")
+		deps := result.GetDependencies()
+
+		var rootDep *cdx.Dependency
+		for _, dep := range *deps {
+			if dep.Ref == "app" {
+				rootDep = &dep
+				break
+			}
+		}
+
+		assert.NotNil(t, rootDep)
+		assert.ElementsMatch(t, []string{"pkg:npm/a@1.0.0", "pkg:npm/b@1.0.0"}, *rootDep.Dependencies)
+	})
+
+	t.Run("only top-level unreferenced components become root dependencies", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{},
+			Components: &[]cdx.Component{
+				{BOMRef: "pkg:npm/parent@1.0.0", PackageURL: "pkg:npm/parent@1.0.0"},
+				{BOMRef: "pkg:npm/child@1.0.0", PackageURL: "pkg:npm/child@1.0.0"},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/parent@1.0.0", Dependencies: &[]string{"pkg:npm/child@1.0.0"}},
+			},
+		}
+
+		result := normalize.FromNormalizedCdxBom(bom, "app")
+		deps := result.GetDependencies()
+
+		var rootDep *cdx.Dependency
+		for _, dep := range *deps {
+			if dep.Ref == "app" {
+				rootDep = &dep
+				break
+			}
+		}
+
+		assert.NotNil(t, rootDep)
+		assert.Equal(t, []string{"pkg:npm/parent@1.0.0"}, *rootDep.Dependencies)
+	})
+
+	t.Run("empty BOM creates root with no dependencies", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata:     &cdx.Metadata{},
+			Components:   &[]cdx.Component{},
+			Dependencies: &[]cdx.Dependency{},
+		}
+
+		result := normalize.FromNormalizedCdxBom(bom, "app")
+		metadata := result.GetMetadata()
+
+		assert.NotNil(t, metadata.Component)
+		assert.Equal(t, "app", metadata.Component.BOMRef)
+		assert.Equal(t, cdx.ComponentType("application"), metadata.Component.Type)
 	})
 }
