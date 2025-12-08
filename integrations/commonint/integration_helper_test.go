@@ -272,7 +272,7 @@ func TestRenderMarkdown(t *testing.T) {
 			},
 			URI: "the/uri/of/the/vuln",
 		}
-		result := RenderMarkdown(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "TestSnippet")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
@@ -293,7 +293,7 @@ func TestRenderMarkdown(t *testing.T) {
 			URI: "the/uri/of/the/vuln",
 		}
 
-		result := RenderMarkdown(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
 		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))

@@ -775,7 +775,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  github.String(expectedIssueState),
 		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(commonint.RenderMarkdown(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   github.String(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -841,6 +841,13 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 		if err != nil {
 			return err
 		}
+	case *models.LicenseRisk:
+		createdIssue, err = githubIntegration.createLicenseRiskIssue(ctx, v, asset, client, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("vuln type is currently not supported")
 	}
 
 	// save the issue id to the dependencyVuln
@@ -873,7 +880,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	labels := commonint.GetLabels(firstPartyVuln)
 	issue := &github.IssueRequest{
 		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(commonint.RenderMarkdown(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   github.String(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -888,6 +895,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	})
 	if err != nil {
 		slog.Error("could not update label", "err", err)
+		return nil, err
 	}
 
 	// create comment with the justification
@@ -896,6 +904,42 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
+		return nil, err
+	}
+
+	return createdIssue, nil
+}
+
+func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
+	labels := commonint.GetLabels(licenseRisk)
+
+	issue := &github.IssueRequest{
+		Title:  github.String(licenseRisk.Title()),
+		Body:   github.String(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Labels: &labels,
+	}
+
+	createdIssue, _, err := client.CreateIssue(ctx, owner, repo, issue)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
+		Description: github.String("DevGuard"),
+		Color:       github.String("182654"),
+	})
+	if err != nil {
+		slog.Error("could not update label", "err", err)
+		return nil, err
+	}
+
+	// create comment with the justification
+	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
+		Body: github.String(justification),
+	})
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+		return nil, err
 	}
 
 	return createdIssue, nil
@@ -935,6 +979,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 		if err != nil {
 			slog.Error("could not update label", "err", err)
+			return nil, err
 		}
 	}
 
@@ -947,11 +992,13 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 		if err != nil {
 			slog.Error("could not update label", "err", err)
+			return nil, err
 		}
 	}
 
 	if err != nil {
 		slog.Error("could not update label", "err", err)
+		return nil, err
 	}
 	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
 		Description: github.String("DevGuard"),
@@ -959,6 +1006,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	})
 	if err != nil {
 		slog.Error("could not update label", "err", err)
+		return nil, err
 	}
 
 	// create comment with the justification
@@ -968,6 +1016,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
+		return nil, err
 	}
 
 	return createdIssue, nil
