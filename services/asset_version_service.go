@@ -496,6 +496,9 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 	vulnsToUpdate := make([]models.DependencyVuln, 0)
 
 	for _, newVuln := range newVulns {
+		if newVuln.ComponentPurl == nil {
+			continue
+		}
 		fullPurl := newVuln.ComponentPurl
 		purl := strings.SplitN(*fullPurl, "?", 2)[0]
 
@@ -512,10 +515,14 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
 				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
 				existingVulnsOnOtherBranch[i].ComponentPurl = fullPurl
-				vulnsToUpdate = append(vulnsToUpdate, existingVuln)
+				vulnsToUpdate = append(vulnsToUpdate, existingVulnsOnOtherBranch[i])
 			}
 
 		}
+	}
+
+	if len(vulnsToUpdate) == 0 {
+		return existingVulns, existingVulnsOnOtherBranch, nil
 	}
 
 	db, err := shared.DatabaseFactory()
@@ -544,7 +551,11 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 				return existingVulns, existingVulnsOnOtherBranch, err
 			}
 
-			db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln)
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
+			if err != nil {
+				slog.Error("could not delete old dependencyVuln during merge", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
 
 		}
 

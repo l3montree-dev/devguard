@@ -77,7 +77,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 			Find(&affectedComponents)
 	} else {
 		// Version is semantic versioning - check version ranges
-		comparer.db.Debug().Model(&models.AffectedComponent{}).
+		comparer.db.Model(&models.AffectedComponent{}).
 			Where("purl = ?", searchPurl).
 			Where(comparer.buildVersionRangeQuery(targetVersion, parsedPurl.Version, normalizedVersion)).
 			Where(qualifierQuery).
@@ -95,14 +95,14 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 			continue
 		}
 		distro := qualifier.Value
-		// debian to Debian
+		//letter (debian -> Debian)
 		distro = cases.Title(language.English).String(distro)
 
 		// Parse distro string (e.g., "debian-13.2" -> "Debian:13")
 		// Split by '-' to get distribution name and version
 		parts := strings.Split(distro, "-")
 		if len(parts) >= 2 {
-			distroName := parts[0]                              // Capitalize first letter (debian -> Debian)
+			distroName := parts[0]                              // Capitalize first
 			majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
 			ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
 
