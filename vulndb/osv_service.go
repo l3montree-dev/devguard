@@ -228,20 +228,13 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
-				if !osv.IsCVE() {
-					continue
-				}
-				osv.GetCVE()
-				// the osv itself is a cve
-				if strings.HasPrefix(osv.ID, "CVE-") {
-					newCVE, err := OSVToCVE(osv)
-					//swallow error so we can still run other instructions on this OSV
-					if err == nil {
-						// if cve does not yet exist we create a new one if it does we overwrite it with the new values
-						err = s.cveRepository.Save(nil, &newCVE)
-						if err != nil {
-							slog.Error("could not save OSV %s: %w", newCVE.CVE, err)
-						}
+				newCVE, err := OSVToCVE(osv)
+				// swallow error so we can still create affected components
+				if err == nil {
+					err = s.cveRepository.Save(nil, &newCVE)
+					if err != nil {
+						// swallow error so we can still create affected components
+						slog.Error("could not save CVE to db")
 					}
 				}
 
@@ -265,21 +258,36 @@ func (s osvService) Mirror() error {
 	return nil
 }
 
-var missingCounter int
+var osvWithMissingCVSSScores int
+var totalAmountOfAssociations int
+var numberOfIterations int
 
 func OSVToCVE(osv dtos.OSV) (models.CVE, error) {
 	cve := models.CVE{}
-	if !strings.HasPrefix(osv.ID, "CVE-") {
-		return cve, fmt.Errorf("this OSV is not a CVE")
-	}
 
 	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
 	if !ok {
-		missingCounter++
-		if missingCounter%100 == 0 {
-			slog.Info("CVSS Error", "total errors", missingCounter)
+		// if we cannot parse a CVSS score we are currently not saving the CVE
+		osvWithMissingCVSSScores++
+		if osvWithMissingCVSSScores%30000 == 0 {
+			slog.Warn("CVSS Error", "total errors", osvWithMissingCVSSScores)
 		}
 		return cve, fmt.Errorf("could not parse CVSS Score")
+	}
+
+	if !strings.HasPrefix(osv.ID, "CVE-") {
+		// if its not a CVE itself we need want to add additional information about related CVEs
+		associatedCVEs := osv.GetCVE()
+		// clean up statistics by removing entries with no associations
+		if len(associatedCVEs) > 0 {
+			totalAmountOfAssociations += len(associatedCVEs)
+			numberOfIterations++
+			if numberOfIterations%700 == 0 {
+				avg := float32(totalAmountOfAssociations) / float32(numberOfIterations)
+				slog.Info("Current average", "avg", avg)
+			}
+			cve.References = strings.Join(associatedCVEs, ",")
+		}
 	}
 
 	cve.CVSS = float32(cvssScore)

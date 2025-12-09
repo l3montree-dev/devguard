@@ -114,7 +114,7 @@ func (s epssService) Mirror() error {
 					return nil
 				},
 			)
-			if i > 0 && i%1000 == 0 {
+			if i > 0 && i%10000 == 0 {
 				slog.Info("Processed CVEs", "amount", i, "duration", time.Since(start))
 			}
 		}
