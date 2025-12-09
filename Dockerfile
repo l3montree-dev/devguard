@@ -28,7 +28,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM registry.opencode.de/open-code/oci/static:latest@sha256:cb21f441936c41b2f2fec8f29a10f2e9b8cb32ab3530e78e33a34479d4fa177d
+FROM registry.opencode.de/open-code/oci/static:1.0.0-rc.2-minimal@sha256:471da4212f4fe8764de350afdd32e17f411d879500cadfd4b7a8bd45af3e1140
 
 USER 53111
 
