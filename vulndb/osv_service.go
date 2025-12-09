@@ -31,18 +31,21 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	gocvss30 "github.com/pandatix/go-cvss/30"
 	"github.com/pkg/errors"
 )
 
 type osvService struct {
 	httpClient            *http.Client
 	affectedCmpRepository shared.AffectedComponentRepository
+	cveRepository         shared.CveRepository
 }
 
-func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository) osvService {
+func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,
+		cveRepository:         cveRepository,
 	}
 }
 
@@ -176,6 +179,7 @@ func (s osvService) Mirror() error {
 		if ecosystem == "" {
 			continue
 		}
+
 		wg.Add(1)
 		go func(ecosystem string) {
 			defer wg.Done()
@@ -227,6 +231,19 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
+				// the osv itself is a cve
+				if strings.HasPrefix(osv.ID, "CVE-") {
+					newCVE, err := OSVToCVE(osv)
+					//swallow error so we can still run other instructions on this OSV
+					if err == nil {
+						// if cve does not yet exist we create a new one if it does we overwrite it with the new values
+						err = s.cveRepository.Save(nil, &newCVE)
+						if err != nil {
+							slog.Error("could not save OSV %s: %w", newCVE.CVE, err)
+						}
+					}
+				}
+
 				// convert the osv to affected packages
 				affectedComponents := models.AffectedComponentFromOSV(osv)
 				// save the affected packages
@@ -245,4 +262,32 @@ func (s osvService) Mirror() error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func OSVToCVE(osv dtos.OSV) (models.CVE, error) {
+	cve := models.CVE{}
+	if !strings.HasPrefix(osv.ID, "CVE-") {
+		return cve, fmt.Errorf("this OSV is not a CVE")
+	}
+
+	if osv.Severity.Type != "CVSS_V3" {
+		// either empty or severity type not supported
+		return cve, fmt.Errorf("could not parse CVSS value")
+	}
+
+	if osv.Severity.Score == "" {
+		return cve, fmt.Errorf("could not parse CVSS value")
+	}
+
+	cvssScore, err := gocvss30.ParseVector(osv.Severity.Score)
+	if err != nil {
+		return cve, err
+	}
+
+	cve.CVSS = float32(cvssScore.BaseScore())
+	cve.Vector = cvssScore.Vector()
+	cve.CVE = osv.ID
+	cve.Description = osv.Summary
+
+	return cve, nil
 }

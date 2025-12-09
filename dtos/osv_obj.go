@@ -40,6 +40,10 @@ type OSV struct {
 	Upstream      []string   `json:"upstream"`
 	Affected      []Affected `json:"affected"`
 	SchemaVersion string     `json:"schema_version"`
+	Severity      struct {
+		Type  string `json:"type"`
+		Score string `json:"score"`
+	} `json:"severity"`
 }
 
 func (osv OSV) GetCVE() []string {

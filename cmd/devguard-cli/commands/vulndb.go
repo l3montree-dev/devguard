@@ -98,7 +98,7 @@ func newImportCVECommand() *cobra.Command {
 
 			cveRepository := repositories.NewCVERepository(db)
 			nvdService := vulndb.NewNVDService(cveRepository)
-			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db))
+			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db), repositories.NewCVERepository(db))
 
 			cve, err := nvdService.ImportCVE(cveID)
 
@@ -183,7 +183,7 @@ func newSyncCommand() *cobra.Command {
 			nvdService := vulndb.NewNVDService(cveRepository)
 			mitreService := vulndb.NewMitreService(cweRepository)
 			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-			osvService := vulndb.NewOSVService(affectedCmpRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository)
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
