@@ -929,8 +929,8 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 		Color:       github.String("182654"),
 	})
 	if err != nil {
+		// nevertheless try to create the comment, thus not returning here
 		slog.Error("could not update label", "err", err)
-		return nil, err
 	}
 
 	// create comment with the justification
@@ -979,7 +979,6 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 		if err != nil {
 			slog.Error("could not update label", "err", err)
-			return nil, err
 		}
 	}
 
@@ -991,26 +990,25 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 		})
 
 		if err != nil {
+			// nevertheless try to create the comment, thus not returning here
 			slog.Error("could not update label", "err", err)
-			return nil, err
 		}
 	}
 
 	if err != nil {
+		// nevertheless try to create the comment, thus not returning here
 		slog.Error("could not update label", "err", err)
-		return nil, err
 	}
 	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
 		Description: github.String("DevGuard"),
 		Color:       github.String("182654"),
 	})
 	if err != nil {
+		// nevertheless try to create the comment, thus not returning here
 		slog.Error("could not update label", "err", err)
-		return nil, err
 	}
 
 	// create comment with the justification
-
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
 		Body: github.String(justification),
 	})
