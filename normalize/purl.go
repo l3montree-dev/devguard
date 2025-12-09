@@ -30,9 +30,6 @@ func normalizePurl(purl string) string {
 	if err != nil {
 		return purl
 	}
-
-	// remove any query parameters
-	purl = strings.Split(purl, "?")[0]
 	return purl
 }
 

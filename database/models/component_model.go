@@ -44,7 +44,7 @@ func (c ComponentProject) TableName() string {
 }
 
 type Component struct {
-	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
+	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"`
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
 	Version       string                `json:"version"`
