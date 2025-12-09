@@ -40,7 +40,7 @@ type OSV struct {
 	Upstream      []string   `json:"upstream"`
 	Affected      []Affected `json:"affected"`
 	SchemaVersion string     `json:"schema_version"`
-	Severity      struct {
+	Severity      []struct {
 		Type  string `json:"type"`
 		Score string `json:"score"`
 	} `json:"severity"`

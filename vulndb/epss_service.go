@@ -17,14 +17,12 @@ import (
 )
 
 type epssService struct {
-	nvdService    NVDService
 	cveRepository shared.CveRepository
 	httpClient    *http.Client
 }
 
-func NewEPSSService(nvdService NVDService, cveRepository shared.CveRepository) epssService {
+func NewEPSSService(cveRepository shared.CveRepository) epssService {
 	return epssService{
-		nvdService:    nvdService,
 		cveRepository: cveRepository,
 		httpClient:    &http.Client{},
 	}

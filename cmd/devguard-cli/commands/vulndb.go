@@ -96,16 +96,7 @@ func newImportCVECommand() *cobra.Command {
 				return
 			}
 
-			cveRepository := repositories.NewCVERepository(db)
-			nvdService := vulndb.NewNVDService(cveRepository)
 			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db), repositories.NewCVERepository(db))
-
-			cve, err := nvdService.ImportCVE(cveID)
-
-			if err != nil {
-				slog.Error("could not import cve", "err", err)
-				return
-			}
 
 			// the osv database provides additional information about affected packages
 			affectedPackages, err := osvService.ImportCVE(cveID)
@@ -114,7 +105,7 @@ func newImportCVECommand() *cobra.Command {
 				return
 			}
 
-			slog.Info("successfully imported affected packages", "cveID", cve.CVE, "affectedPackages", len(affectedPackages))
+			slog.Info("successfully imported affected packages", "cveID", cveID, "affectedPackages", len(affectedPackages))
 		},
 	}
 
@@ -161,9 +152,6 @@ func newSyncCommand() *cobra.Command {
 		Short: "Will sync the vulnerability database",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			// check if after flag is set
-			after, _ := cmd.Flags().GetString("after")
-			startIndex, _ := cmd.Flags().GetInt("startIndex")
 
 			shared.LoadConfig() // nolint
 
@@ -180,14 +168,15 @@ func newSyncCommand() *cobra.Command {
 			cveRepository := repositories.NewCVERepository(db)
 			cweRepository := repositories.NewCWERepository(db)
 			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
-			nvdService := vulndb.NewNVDService(cveRepository)
 			mitreService := vulndb.NewMitreService(cweRepository)
-			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
+
+			epssService := vulndb.NewEPSSService(cveRepository)
+
 			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository)
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(db))
+			exploitDBService := vulndb.NewExploitDBService(repositories.NewExploitRepository(db))
 
 			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
 
@@ -199,46 +188,6 @@ func newSyncCommand() *cobra.Command {
 				}
 				slog.Info("finished cwe database sync", "duration", time.Since(now))
 			}
-
-			if emptyOrContains(databasesToSync, "nvd") {
-				slog.Info("starting nvd database sync")
-				now := time.Now()
-				if after != "" {
-					// we do a partial sync
-					// try to parse the date
-					afterDate, err := time.Parse("2006-01-02", after)
-					if err != nil {
-						slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-					}
-					err = nvdService.FetchAfter(afterDate)
-					if err != nil {
-						slog.Error("could not fetch after date", "err", err)
-					}
-				} else {
-					if startIndex != 0 {
-						err = nvdService.FetchAfterIndex(startIndex)
-						if err != nil {
-							slog.Error("could not fetch after index", "err", err)
-						}
-					} else {
-						err = nvdService.Sync()
-						if err != nil {
-							slog.Error("could not do initial sync", "err", err)
-						}
-					}
-				}
-				slog.Info("finished nvd database sync", "duration", time.Since(now))
-			}
-
-			/*if emptyOrContains(databasesToSync, "cvelist") {
-				slog.Info("starting cvelist database sync")
-				now := time.Now()
-
-				if err := cvelistService.Mirror(); err != nil {
-					slog.Error("could not mirror cvelist database", "err", err)
-				}
-				slog.Info("finished cvelist database sync", "duration", time.Since(now))
-			}*/
 
 			if emptyOrContains(databasesToSync, "epss") {
 				slog.Info("starting epss database sync")
@@ -262,7 +211,7 @@ func newSyncCommand() *cobra.Command {
 			if emptyOrContains(databasesToSync, "exploitdb") {
 				slog.Info("starting exploitdb database sync")
 				now := time.Now()
-				if err := expoitDBService.Mirror(); err != nil {
+				if err := exploitDBService.Mirror(); err != nil {
 					slog.Error("could not sync exploitdb database", "err", err)
 				}
 				slog.Info("finished exploitdb database sync", "duration", time.Since(now))

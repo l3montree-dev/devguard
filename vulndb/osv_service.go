@@ -32,6 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	gocvss30 "github.com/pandatix/go-cvss/30"
+	gocvss40 "github.com/pandatix/go-cvss/40"
 	"github.com/pkg/errors"
 )
 
@@ -230,7 +231,7 @@ func (s osvService) Mirror() error {
 				if !osv.IsCVE() {
 					continue
 				}
-
+				osv.GetCVE()
 				// the osv itself is a cve
 				if strings.HasPrefix(osv.ID, "CVE-") {
 					newCVE, err := OSVToCVE(osv)
@@ -264,30 +265,51 @@ func (s osvService) Mirror() error {
 	return nil
 }
 
+var missingCounter int
+
 func OSVToCVE(osv dtos.OSV) (models.CVE, error) {
 	cve := models.CVE{}
 	if !strings.HasPrefix(osv.ID, "CVE-") {
 		return cve, fmt.Errorf("this OSV is not a CVE")
 	}
 
-	if osv.Severity.Type != "CVSS_V3" {
-		// either empty or severity type not supported
-		return cve, fmt.Errorf("could not parse CVSS value")
+	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
+	if !ok {
+		missingCounter++
+		if missingCounter%100 == 0 {
+			slog.Info("CVSS Error", "total errors", missingCounter)
+		}
+		return cve, fmt.Errorf("could not parse CVSS Score")
 	}
 
-	if osv.Severity.Score == "" {
-		return cve, fmt.Errorf("could not parse CVSS value")
-	}
+	cve.CVSS = float32(cvssScore)
+	cve.Vector = cvssVector
 
-	cvssScore, err := gocvss30.ParseVector(osv.Severity.Score)
-	if err != nil {
-		return cve, err
-	}
-
-	cve.CVSS = float32(cvssScore.BaseScore())
-	cve.Vector = cvssScore.Vector()
 	cve.CVE = osv.ID
 	cve.Description = osv.Summary
 
 	return cve, nil
+}
+
+// checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
+func hasValidCVSSScore(osv dtos.OSV) (float64, string, bool) {
+	for _, severity := range osv.Severity {
+		// currently only supporting CVSS Version 3
+		switch severity.Type {
+		case "CVSS_V3":
+			cvssScore, err := gocvss30.ParseVector(severity.Score)
+			if err == nil {
+				return cvssScore.BaseScore(), cvssScore.Vector(), true
+			}
+		case "CVSS_V4":
+			cvssScore, err := gocvss40.ParseVector(severity.Score)
+			if err == nil {
+				return cvssScore.Score(), cvssScore.Vector(), true
+			}
+		default:
+			// Debug purpose can be deleted in deployment
+			slog.Info("We do not support severity type: %s with Score: %s", severity.Type, severity.Score)
+		}
+	}
+	return 0, "", false
 }
