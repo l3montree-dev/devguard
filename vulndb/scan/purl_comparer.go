@@ -16,11 +16,15 @@
 package scan
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
 
@@ -56,14 +60,19 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 	// Step 4: Create search key (purl without version)
 	parsedPurl.Version = ""
+	parsedPurl.Qualifiers = nil
 	searchPurl := parsedPurl.ToString()
 
 	var affectedComponents []models.AffectedComponent
+
+	// Build the qualifier query
+	qualifierQuery := comparer.buildQualifierQuery(parsedPurl.Qualifiers)
 
 	if versionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
 		comparer.db.Model(&models.AffectedComponent{}).
 			Where("purl = ? AND version = ?", searchPurl, targetVersion).
+			Where(qualifierQuery).
 			Preload("CVE").Preload("CVE.Exploits").
 			Find(&affectedComponents)
 	} else {
@@ -71,11 +80,37 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 		comparer.db.Model(&models.AffectedComponent{}).
 			Where("purl = ?", searchPurl).
 			Where(comparer.buildVersionRangeQuery(targetVersion, parsedPurl.Version, normalizedVersion)).
+			Where(qualifierQuery).
 			Preload("CVE").Preload("CVE.Exploits").
 			Find(&affectedComponents)
 	}
 
 	return affectedComponents, nil
+}
+func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifiers) *gorm.DB {
+	query := comparer.db
+
+	for _, qualifier := range qualifiers {
+		if qualifier.Key != "distro" {
+			continue
+		}
+		distro := qualifier.Value
+		//letter (debian -> Debian)
+		distro = cases.Title(language.English).String(distro)
+
+		// Parse distro string (e.g., "debian-13.2" -> "Debian:13")
+		// Split by '-' to get distribution name and version
+		parts := strings.Split(distro, "-")
+		if len(parts) >= 2 {
+			distroName := parts[0]                              // Capitalize first
+			majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
+			ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
+
+			query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
+		}
+	}
+
+	return query
 }
 
 // buildVersionRangeQuery creates the database query for version range matching

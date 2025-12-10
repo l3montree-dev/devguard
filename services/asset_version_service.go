@@ -498,6 +498,88 @@ func diffVulnsBetweenBranches[T Diffable](foundVulnerabilities []T, existingVuln
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
+func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, existingVulnsOnOtherBranch []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, error) {
+
+	vulnsToUpdate := make([]models.DependencyVuln, 0)
+
+	for _, newVuln := range newVulns {
+		if newVuln.ComponentPurl == nil {
+			continue
+		}
+		fullPurl := newVuln.ComponentPurl
+		purl := strings.SplitN(*fullPurl, "?", 2)[0]
+
+		for i, existingVuln := range existingVulns {
+			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
+				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
+				existingVulns[i].ComponentPurl = fullPurl
+				vulnsToUpdate = append(vulnsToUpdate, existingVulns[i])
+			}
+
+		}
+
+		for i, existingVuln := range existingVulnsOnOtherBranch {
+			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
+				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
+				existingVulnsOnOtherBranch[i].ComponentPurl = fullPurl
+				vulnsToUpdate = append(vulnsToUpdate, existingVulnsOnOtherBranch[i])
+			}
+
+		}
+	}
+
+	if len(vulnsToUpdate) == 0 {
+		return existingVulns, existingVulnsOnOtherBranch, nil
+	}
+
+	db := s.dependencyVulnRepository.GetDB(nil)
+
+	//save all updated vulns back to the database
+	for _, dependencyVuln := range vulnsToUpdate {
+		oldHash := dependencyVuln.ID
+		newHash := dependencyVuln.CalculateHash()
+
+		if oldHash == newHash {
+			continue
+		}
+
+		// Update the hash in the database
+		err := db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
+		if err != nil {
+			// Handle duplicate key error by merging
+			var otherVuln models.DependencyVuln
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
+			if err != nil {
+				slog.Error("could not fetch other dependencyVuln", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
+			if err != nil {
+				slog.Error("could not delete old dependencyVuln during merge", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+		}
+
+		err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("component_purl", dependencyVuln.ComponentPurl).Error
+		if err != nil {
+			slog.Error("could not update component purl during dependencyVuln merge", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+
+		// Update all vuln events
+		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
+		if err != nil {
+			slog.Error("could not update vuln events", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+	}
+
+	return existingVulns, existingVulnsOnOtherBranch, nil
+
+}
+
 func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -510,6 +592,15 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
+
+	// this is just for migration.
+	// the call can be removed after all assets were scanned again
+	existingDependencyVulns, existingVulnsOnOtherBranch, err = s.migrateToPurlsWithQualifiers(dependencyVulns, existingDependencyVulns, existingVulnsOnOtherBranch)
+	if err != nil {
+		slog.Error("could not migrate dependencyVulns to purls with qualifiers", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.DependencyVuln) bool {
 		return dependencyVuln.State != dtos.VulnStateFixed
 	})
