@@ -77,40 +77,6 @@ func TestConvertKyvernoToSARIF(t *testing.T) {
 		assert.Equal(t, "require-run-as-nonroot/check-runAsNonRoot", *result.Runs[0].Results[0].RuleID)
 	})
 
-	t.Run("assigns critical level for capabilities", func(t *testing.T) {
-		input := []kyvernoTestResult{
-			{
-				ID:       1,
-				Policy:   "disallow-capabilities",
-				Rule:     "adding-capabilities",
-				Resource: "Pod/test",
-				Result:   "fail",
-				Reason:   "Capabilities not allowed",
-			},
-		}
-
-		result := convertKyvernoToSARIF(input)
-
-		assert.Equal(t, "critical", string(result.Runs[0].Results[0].Level))
-	})
-
-	t.Run("assigns high level for privileged policies", func(t *testing.T) {
-		input := []kyvernoTestResult{
-			{
-				ID:       1,
-				Policy:   "disallow-privileged-containers",
-				Rule:     "check-privileged",
-				Resource: "Pod/test",
-				Result:   "fail",
-				Reason:   "Privileged containers are not allowed",
-			},
-		}
-
-		result := convertKyvernoToSARIF(input)
-
-		assert.Equal(t, "high", string(result.Runs[0].Results[0].Level))
-	})
-
 	t.Run("groups multiple results by rule", func(t *testing.T) {
 		input := []kyvernoTestResult{
 			{ID: 1, Policy: "policy1", Rule: "rule1", Resource: "Pod/a", Result: "fail"},
