@@ -110,20 +110,13 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) sarif.SarifSchema
 			}
 		}
 
-		level := "medium"
-		if strings.Contains(kr.Policy, "privileged") ||
-			strings.Contains(kr.Policy, "privilege-escalation") ||
-			strings.Contains(kr.Rule, "privileged") {
-			level = "high"
-		}
-		if strings.Contains(kr.Rule, "adding-capabilities") ||
-			strings.Contains(kr.Policy, "disallow-capabilities") {
-			level = "critical"
+		if kr.Result == "Pass" {
+			continue
 		}
 
 		result := sarif.Result{
 			RuleID: &ruleID,
-			Level:  sarif.ResultLevel(level),
+			Level:  sarif.ResultLevelWarning,
 			Message: sarif.Message{
 				Text: fmt.Sprintf("%s (Resource: %s)", kr.Reason, kr.Resource),
 			},
