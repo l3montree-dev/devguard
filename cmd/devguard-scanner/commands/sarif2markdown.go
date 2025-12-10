@@ -15,7 +15,7 @@ import (
 
 func newSarifMarkdownCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sarif-markdown",
+		Use:   "sarif2markdown",
 		Short: "Convert a SARIF JSON file into a markdown report",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inputFile, _ := cmd.Flags().GetString("input")
@@ -194,8 +194,8 @@ func aggregateResults(results []sarif.Result) []summary {
 	for _, summary := range summaryMap {
 		summaries = append(summaries, *summary)
 	}
+	severityOrder := map[string]int{"critical": 0, "high": 1, "medium": 2, "low": 3, "note": 4}
 	sort.Slice(summaries, func(i, j int) bool {
-		severityOrder := map[string]int{"critical": 0, "high": 1, "medium": 2, "low": 3, "note": 4}
 		if severityOrder[summaries[i].Level] != severityOrder[summaries[j].Level] {
 			return severityOrder[summaries[i].Level] < severityOrder[summaries[j].Level]
 		}

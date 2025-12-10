@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -18,85 +20,9 @@ type kyvernoTestResult struct {
 	Rule     string `json:"RULE"`
 }
 
-type kyvernoSarifReport struct {
-	Version string       `json:"version"`
-	Schema  string       `json:"$schema"`
-	Runs    []kyvernoRun `json:"runs"`
-}
-
-type kyvernoRun struct {
-	Tool    kyvernoTool     `json:"tool"`
-	Results []kyvernoResult `json:"results"`
-}
-
-type kyvernoTool struct {
-	Driver kyvernoDriver `json:"driver"`
-}
-
-type kyvernoDriver struct {
-	Name            string        `json:"name"`
-	InformationURI  string        `json:"informationUri,omitempty"`
-	Version         string        `json:"version,omitempty"`
-	SemanticVersion string        `json:"semanticVersion,omitempty"`
-	Rules           []kyvernoRule `json:"rules,omitempty"`
-}
-
-type kyvernoRule struct {
-	ID               string                 `json:"id"`
-	Name             string                 `json:"name,omitempty"`
-	ShortDescription kyvernoMessageString   `json:"shortDescription,omitempty"`
-	FullDescription  kyvernoMessageString   `json:"fullDescription,omitempty"`
-	Help             kyvernoMessageString   `json:"help,omitempty"`
-	Properties       *kyvernoRuleProperties `json:"properties,omitempty"`
-}
-
-type kyvernoRuleProperties struct {
-	Tags []string `json:"tags,omitempty"`
-}
-
-type kyvernoMessageString struct {
-	Text string `json:"text"`
-}
-
-type kyvernoResult struct {
-	RuleID     string                   `json:"ruleId"`
-	Level      string                   `json:"level"`
-	Message    kyvernoMessage           `json:"message"`
-	Locations  []kyvernoLocation        `json:"locations,omitempty"`
-	Properties *kyvernoResultProperties `json:"properties,omitempty"`
-}
-
-type kyvernoResultProperties struct {
-	KyvernoID int    `json:"kyvernoId,omitempty"`
-	Resource  string `json:"resource,omitempty"`
-	Policy    string `json:"policy,omitempty"`
-}
-
-type kyvernoMessage struct {
-	Text string `json:"text"`
-}
-
-type kyvernoLocation struct {
-	PhysicalLocation kyvernoPhysicalLocation  `json:"physicalLocation,omitempty"`
-	LogicalLocations []kyvernoLogicalLocation `json:"logicalLocations,omitempty"`
-}
-
-type kyvernoPhysicalLocation struct {
-	ArtifactLocation kyvernoArtifactLocation `json:"artifactLocation"`
-}
-
-type kyvernoArtifactLocation struct {
-	URI string `json:"uri"`
-}
-
-type kyvernoLogicalLocation struct {
-	Name string `json:"name,omitempty"`
-	Kind string `json:"kind,omitempty"`
-}
-
 func newKyvernoSarifCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kyverno-sarif",
+		Use:   "kyverno2sarif",
 		Short: "Convert Kyverno test output to SARIF",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inputPath, _ := cmd.Flags().GetString("input")
@@ -161,24 +87,24 @@ func extractKyvernoJSON(content string) (string, error) {
 	return content[start : end+1], nil
 }
 
-func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) kyvernoSarifReport {
-	rulesMap := make(map[string]kyvernoRule)
-	var results []kyvernoResult
+func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) sarif.SarifSchema210Json {
+	rulesMap := make(map[string]sarif.ReportingDescriptor)
+	var results []sarif.Result
 
 	for _, kr := range kyvernoResults {
 		ruleID := fmt.Sprintf("%s/%s", kr.Policy, kr.Rule)
 
 		if _, exists := rulesMap[ruleID]; !exists {
-			rulesMap[ruleID] = kyvernoRule{
+			rulesMap[ruleID] = sarif.ReportingDescriptor{
 				ID:   ruleID,
-				Name: kr.Rule,
-				ShortDescription: kyvernoMessageString{
+				Name: &kr.Rule,
+				ShortDescription: &sarif.MultiformatMessageString{
 					Text: fmt.Sprintf("%s - %s", kr.Policy, kr.Rule),
 				},
-				FullDescription: kyvernoMessageString{
+				FullDescription: &sarif.MultiformatMessageString{
 					Text: fmt.Sprintf("Kyverno policy '%s' rule '%s'", kr.Policy, kr.Rule),
 				},
-				Properties: &kyvernoRuleProperties{
+				Properties: &sarif.PropertyBag{
 					Tags: []string{"kyverno", "security", "kubernetes"},
 				},
 			}
@@ -195,16 +121,18 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) kyvernoSarifRepor
 			level = "critical"
 		}
 
-		result := kyvernoResult{
-			RuleID: ruleID,
-			Level:  level,
-			Message: kyvernoMessage{
+		result := sarif.Result{
+			RuleID: &ruleID,
+			Level:  sarif.ResultLevel(level),
+			Message: sarif.Message{
 				Text: fmt.Sprintf("%s (Resource: %s)", kr.Reason, kr.Resource),
 			},
-			Properties: &kyvernoResultProperties{
-				KyvernoID: kr.ID,
-				Resource:  kr.Resource,
-				Policy:    kr.Policy,
+			Properties: &sarif.PropertyBag{
+				AdditionalProperties: map[string]any{
+					"kyvernoId": kr.ID,
+					"resource":  kr.Resource,
+					"policy":    kr.Policy,
+				},
 			},
 		}
 
@@ -215,12 +143,12 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) kyvernoSarifRepor
 				resourceName = parts[len(parts)-1]
 			}
 
-			result.Locations = []kyvernoLocation{
+			result.Locations = []sarif.Location{
 				{
-					LogicalLocations: []kyvernoLogicalLocation{
+					LogicalLocations: []sarif.LogicalLocation{
 						{
-							Name: resourceName,
-							Kind: "resource",
+							Name: &resourceName,
+							Kind: utils.Ptr("resource"),
 						},
 					},
 				},
@@ -230,22 +158,22 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) kyvernoSarifRepor
 		results = append(results, result)
 	}
 
-	var rules []kyvernoRule
+	var rules []sarif.ReportingDescriptor
 	for _, rule := range rulesMap {
 		rules = append(rules, rule)
 	}
 
-	return kyvernoSarifReport{
+	return sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-		Runs: []kyvernoRun{
+		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"),
+		Runs: []sarif.Run{
 			{
-				Tool: kyvernoTool{
-					Driver: kyvernoDriver{
+				Tool: sarif.Tool{
+					Driver: sarif.ToolComponent{
 						Name:            "Kyverno",
-						InformationURI:  "https://kyverno.io/",
-						Version:         "1.0.0",
-						SemanticVersion: "1.0.0",
+						InformationURI:  utils.Ptr("https://kyverno.io/"),
+						Version:         utils.Ptr("1.0.0"),
+						SemanticVersion: utils.Ptr("1.0.0"),
 						Rules:           rules,
 					},
 				},

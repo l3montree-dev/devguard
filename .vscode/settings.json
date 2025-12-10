@@ -10,7 +10,9 @@
         "devguard",
         "ghinstallation",
         "gorm",
+        "Kyverno",
         "montree",
+        "nolint",
         "sarif",
         "Vulns"
     ]
