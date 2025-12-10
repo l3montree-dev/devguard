@@ -118,6 +118,11 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 
 			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
 
+			ruleProperties := map[string]any{}
+			if rule.Properties != nil {
+				ruleProperties = rule.Properties.AdditionalProperties
+			}
+
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
@@ -130,7 +135,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 				RuleName:        utils.OrDefault(rule.Name, ""),
 				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
 				RuleDescription: getBestDescription(rule),
-				RuleProperties:  database.JSONB(rule.Properties.AdditionalProperties),
+				RuleProperties:  database.JSONB(ruleProperties),
 			}
 			if result.PartialFingerprints != nil {
 				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
