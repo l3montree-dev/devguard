@@ -7,93 +7,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
-
-// SARIF structure definitions
-type sarifDoc struct {
-	Version string     `json:"version"`
-	Runs    []sarifRun `json:"runs"`
-}
-
-type sarifRun struct {
-	Tool    sarifTool     `json:"tool"`
-	Results []sarifResult `json:"results"`
-}
-
-type sarifTool struct {
-	Driver sarifDriver `json:"driver"`
-}
-
-type sarifDriver struct {
-	Name           string      `json:"name"`
-	InformationURI string      `json:"informationUri,omitempty"`
-	Version        string      `json:"version,omitempty"`
-	Rules          []sarifRule `json:"rules,omitempty"`
-}
-
-type sarifRule struct {
-	ID               string         `json:"id"`
-	Name             string         `json:"name"`
-	ShortDescription sarifText      `json:"shortDescription"`
-	FullDescription  sarifText      `json:"fullDescription"`
-	Help             sarifText      `json:"help"`
-	Properties       sarifRuleProps `json:"properties,omitempty"`
-}
-
-type sarifText struct {
-	Text string `json:"text"`
-}
-
-type sarifRuleProps struct {
-	Tags []string `json:"tags,omitempty"`
-}
-
-type sarifResult struct {
-	RuleID     string           `json:"ruleId"`
-	Level      string           `json:"level"`
-	Message    sarifText        `json:"message"`
-	Locations  []sarifLocation  `json:"locations"`
-	Properties sarifResultProps `json:"properties,omitempty"`
-}
-
-type sarifLocation struct {
-	PhysicalLocation sarifPhysicalLocation  `json:"physicalLocation"`
-	LogicalLocations []sarifLogicalLocation `json:"logicalLocations,omitempty"`
-}
-
-type sarifPhysicalLocation struct {
-	ArtifactLocation sarifArtifactLocation `json:"artifactLocation"`
-}
-
-type sarifArtifactLocation struct {
-	URI string `json:"uri"`
-}
-
-type sarifLogicalLocation struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
-}
-
-type sarifResultProps struct {
-	KyvernoID int    `json:"kyvernoId,omitempty"`
-	Resource  string `json:"resource,omitempty"`
-	Policy    string `json:"policy,omitempty"`
-}
-
-// Summary structure for aggregation
-type sarifSummary struct {
-	RuleID    string
-	Policy    string
-	Rule      string
-	Level     string
-	PassCount int
-	FailCount int
-	SkipCount int
-	Resources []string
-}
 
 func newSarifMarkdownCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -113,7 +31,7 @@ func newSarifMarkdownCommand() *cobra.Command {
 				return fmt.Errorf("error reading file: %w", err)
 			}
 
-			var doc sarifDoc
+			var doc sarif.SarifSchema210Json
 			if err := json.Unmarshal(data, &doc); err != nil {
 				return fmt.Errorf("error parsing SARIF JSON: %w", err)
 			}
@@ -145,11 +63,11 @@ func newSarifMarkdownCommand() *cobra.Command {
 	return cmd
 }
 
-func generateSummaryMarkdown(doc *sarifDoc) string {
+func generateSummaryMarkdown(doc *sarif.SarifSchema210Json) string {
 	var sb strings.Builder
 	for _, run := range doc.Runs {
 		sb.WriteString(fmt.Sprintf("# %s Security Scan Results\n\n", run.Tool.Driver.Name))
-		if run.Tool.Driver.InformationURI != "" {
+		if run.Tool.Driver.InformationURI != nil {
 			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", run.Tool.Driver.InformationURI))
 		}
 		summaries := aggregateResults(run.Results)
@@ -185,12 +103,12 @@ func generateSummaryMarkdown(doc *sarifDoc) string {
 	return sb.String()
 }
 
-func generateDetailedMarkdown(doc *sarifDoc) string {
+func generateDetailedMarkdown(doc *sarif.SarifSchema210Json) string {
 	var sb strings.Builder
 	titleCaser := cases.Title(language.English)
 	for _, run := range doc.Runs {
 		sb.WriteString(fmt.Sprintf("# %s Security Scan Results (Detailed)\n\n", run.Tool.Driver.Name))
-		if run.Tool.Driver.InformationURI != "" {
+		if run.Tool.Driver.InformationURI != nil {
 			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", run.Tool.Driver.InformationURI))
 		}
 
@@ -206,11 +124,11 @@ func generateDetailedMarkdown(doc *sarifDoc) string {
 			for _, result := range results {
 				status := getResultStatus(result.Message.Text)
 				resource := extractResourceName(result)
-				policy := result.Properties.Policy
+				policy := result.Properties.AdditionalProperties["policy"].(string)
 				if policy == "" {
-					policy = extractPolicyFromRuleID(result.RuleID)
+					policy = extractPolicyFromRuleID(*result.RuleID)
 				}
-				rule := extractRuleFromRuleID(result.RuleID)
+				rule := extractRuleFromRuleID(*result.RuleID)
 				sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n",
 					status,
 					escapeMarkdown(resource),
@@ -224,21 +142,33 @@ func generateDetailedMarkdown(doc *sarifDoc) string {
 	return sb.String()
 }
 
-func aggregateResults(results []sarifResult) []sarifSummary {
-	summaryMap := make(map[string]*sarifSummary)
+type summary struct {
+	RuleID    string
+	Policy    string
+	Rule      string
+	Level     string
+	Resources []string
+
+	PassCount int
+	FailCount int
+	SkipCount int
+}
+
+func aggregateResults(results []sarif.Result) []summary {
+	summaryMap := make(map[string]*summary)
 	for _, result := range results {
-		key := result.RuleID
+		key := *result.RuleID
 		if _, exists := summaryMap[key]; !exists {
-			policy := result.Properties.Policy
+			policy := (*result.Properties).AdditionalProperties["policy"].(string)
 			if policy == "" {
-				policy = extractPolicyFromRuleID(result.RuleID)
+				policy = extractPolicyFromRuleID(key)
 			}
-			rule := extractRuleFromRuleID(result.RuleID)
-			summaryMap[key] = &sarifSummary{
-				RuleID:    result.RuleID,
+			rule := extractRuleFromRuleID(key)
+			summaryMap[key] = &summary{
+				RuleID:    *result.RuleID,
 				Policy:    policy,
 				Rule:      rule,
-				Level:     result.Level,
+				Level:     string(result.Level),
 				Resources: []string{},
 			}
 		}
@@ -260,7 +190,7 @@ func aggregateResults(results []sarifResult) []sarifSummary {
 		}
 	}
 
-	summaries := make([]sarifSummary, 0, len(summaryMap))
+	summaries := make([]summary, 0, len(summaryMap))
 	for _, summary := range summaryMap {
 		summaries = append(summaries, *summary)
 	}
@@ -275,10 +205,10 @@ func aggregateResults(results []sarifResult) []sarifSummary {
 	return summaries
 }
 
-func groupBySeverity(results []sarifResult) map[string][]sarifResult {
-	grouped := make(map[string][]sarifResult)
+func groupBySeverity(results []sarif.Result) map[string][]sarif.Result {
+	grouped := make(map[string][]sarif.Result)
 	for _, result := range results {
-		level := strings.ToLower(result.Level)
+		level := strings.ToLower(string(result.Level))
 		grouped[level] = append(grouped[level], result)
 	}
 	return grouped
@@ -328,14 +258,14 @@ func getSeverityBadge(level string) string {
 	}
 }
 
-func extractResourceName(result sarifResult) string {
-	if result.Properties.Resource != "" {
-		return result.Properties.Resource
+func extractResourceName(result sarif.Result) string {
+	if result.Properties != nil && (*result.Properties).AdditionalProperties["resource"] != "" {
+		return (*result.Properties).AdditionalProperties["resource"].(string)
 	}
 	for _, loc := range result.Locations {
 		for _, logLoc := range loc.LogicalLocations {
-			if logLoc.Name != "" {
-				return logLoc.Name
+			if logLoc.Name != nil {
+				return *logLoc.Name
 			}
 		}
 	}

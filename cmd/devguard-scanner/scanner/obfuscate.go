@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -61,7 +61,7 @@ func ObfuscateString(str string) string {
 }
 
 // add obfuscation function for snippet
-func ObfuscateSecretAndAddFingerprint(sarifScan *dtos.SarifResult) {
+func ObfuscateSecretAndAddFingerprint(sarifScan *sarif.SarifSchema210Json) {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
@@ -70,22 +70,22 @@ func ObfuscateSecretAndAddFingerprint(sarifScan *dtos.SarifResult) {
 			}
 			// make sure to set the result.Fingerprints
 			if result.Fingerprints == nil {
-				result.Fingerprints = &dtos.Fingerprints{}
+				result.Fingerprints = map[string]string{}
 			}
 			// obfuscate the snippet
 			for lo, location := range result.Locations {
-				snippet := location.PhysicalLocation.Region.Snippet.Text
+				snippet := *location.PhysicalLocation.Region.Snippet.Text
 				snippetMax := 20
 				if len(snippet) < snippetMax {
 					snippetMax = len(snippet) / 2
 				}
 				snippet = snippet[:snippetMax] + strings.Repeat("*", len(snippet)-snippetMax)
 				// set the snippet
-				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = snippet
+				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = &snippet
 			}
 
 			//set the fingerprint to the calculated fingerprint if it exists
-			result.Fingerprints.CalculatedFingerprint = result.PartialFingerprints.CommitSha + ":" + result.Locations[0].PhysicalLocation.ArtifactLocation.URI + ":" + result.RuleID + ":" + strconv.Itoa(result.Locations[0].PhysicalLocation.Region.StartLine)
+			result.Fingerprints["calculatedFingerprint"] = result.PartialFingerprints["commitSha"] + ":" + *result.Locations[0].PhysicalLocation.ArtifactLocation.URI + ":" + *result.RuleID + ":" + strconv.Itoa(*result.Locations[0].PhysicalLocation.Region.StartLine)
 
 		}
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -77,32 +78,32 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 	"open",
 }
 
-func getBestDescription(rule dtos.Rule) string {
-	if rule.FullDescription.Markdown != "" {
-		return rule.FullDescription.Markdown
+func getBestDescription(rule sarif.ReportingDescriptor) string {
+	if rule.FullDescription.Markdown != nil {
+		return *rule.FullDescription.Markdown
 	}
 	if rule.FullDescription.Text != "" {
 		return rule.FullDescription.Text
 	}
-	if rule.ShortDescription.Markdown != "" {
-		return rule.ShortDescription.Markdown
+	if rule.ShortDescription.Markdown != nil {
+		return *rule.ShortDescription.Markdown
 	}
 
 	return rule.ShortDescription.Text
 }
 
-func preferMarkdown(text dtos.Text) string {
-	if text.Markdown != "" {
-		return text.Markdown
+func preferMarkdown(text sarif.MultiformatMessageString) string {
+	if text.Markdown != nil {
+		return *text.Markdown
 	}
 	return text.Text
 }
 
-func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan dtos.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
-	ruleMap := make(map[string]dtos.Rule)
+	ruleMap := make(map[string]sarif.ReportingDescriptor)
 	for _, run := range sarifScan.Runs {
 		for _, rule := range run.Tool.Driver.Rules {
 			ruleMap[rule.ID] = rule
@@ -111,11 +112,11 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
-			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, result.Kind) {
+			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, string(result.Kind)) {
 				continue
 			}
 
-			rule := ruleMap[result.RuleID]
+			rule := ruleMap[*result.RuleID]
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
@@ -124,36 +125,36 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 					Message:          &result.Message.Text,
 				},
 				ScannerIDs:      scannerID,
-				RuleID:          result.RuleID,
-				RuleHelp:        preferMarkdown(rule.Help),
-				RuleName:        rule.Name,
-				RuleHelpURI:     rule.HelpURI,
+				RuleID:          *result.RuleID,
+				RuleHelp:        preferMarkdown(*rule.Help),
+				RuleName:        *rule.Name,
+				RuleHelpURI:     *rule.HelpURI,
 				RuleDescription: getBestDescription(rule),
-				RuleProperties:  database.JSONB(rule.Properties),
+				RuleProperties:  database.JSONB(rule.Properties.AdditionalProperties),
 			}
 			if result.PartialFingerprints != nil {
-				firstPartyVulnerability.Commit = result.PartialFingerprints.CommitSha
-				firstPartyVulnerability.Email = result.PartialFingerprints.Email
-				firstPartyVulnerability.Author = result.PartialFingerprints.Author
-				firstPartyVulnerability.Date = result.PartialFingerprints.Date
+				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
+				firstPartyVulnerability.Email = result.PartialFingerprints["email"]
+				firstPartyVulnerability.Author = result.PartialFingerprints["author"]
+				firstPartyVulnerability.Date = result.PartialFingerprints["date"]
 			}
 
 			var hash string
 			if result.Fingerprints != nil {
-				if result.Fingerprints.CalculatedFingerprint != "" {
-					firstPartyVulnerability.Fingerprint = result.Fingerprints.CalculatedFingerprint
+				if result.Fingerprints["calculatedFingerprint"] != "" {
+					firstPartyVulnerability.Fingerprint = result.Fingerprints["calculatedFingerprint"]
 				}
 			}
 
 			if len(result.Locations) > 0 {
-				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
+				firstPartyVulnerability.URI = *result.Locations[0].PhysicalLocation.ArtifactLocation.URI
 
 				snippetContent := dtos.SnippetContent{
-					StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
-					EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
-					StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
-					EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
-					Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
+					StartLine:   *result.Locations[0].PhysicalLocation.Region.StartLine,
+					EndLine:     *result.Locations[0].PhysicalLocation.Region.EndLine,
+					StartColumn: *result.Locations[0].PhysicalLocation.Region.StartColumn,
+					EndColumn:   *result.Locations[0].PhysicalLocation.Region.EndColumn,
+					Snippet:     *result.Locations[0].PhysicalLocation.Region.Snippet.Text,
 				}
 
 				hash = firstPartyVulnerability.CalculateHash()

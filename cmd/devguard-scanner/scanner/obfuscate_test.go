@@ -19,57 +19,60 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-var exampleSarifResult = dtos.SarifResult{
-	Runs: []dtos.Run{
+var exampleSarifResult = sarif.SarifSchema210Json{
+	Runs: []sarif.Run{
 		{
-			Tool: dtos.Tool{
-				Driver: dtos.Driver{
+			Tool: sarif.Tool{
+				Driver: sarif.ToolComponent{
 					Name:  "ExampleTool",
-					Rules: []dtos.Rule{},
+					Rules: []sarif.ReportingDescriptor{},
 				},
 			},
-			Results: []dtos.Result{
+			Results: []sarif.Result{
 				{
-					RuleID: "EXAMPLE001",
-					Message: dtos.Text{
+					RuleID: utils.Ptr("EXAMPLE001"),
+					Message: sarif.Message{
 						Text: "This is an example message.",
 					},
-					Locations: []dtos.Location{
+					Locations: []sarif.Location{
 						{
-							PhysicalLocation: dtos.PhysicalLocation{
-								ArtifactLocation: dtos.ArtifactLocation{
-									URI:       "file:///example/path",
-									URIBaseID: "SRCROOT",
+							PhysicalLocation: sarif.PhysicalLocation{
+								ArtifactLocation: sarif.ArtifactLocation{
+									URI:       utils.Ptr("file:///example/path"),
+									URIBaseID: utils.Ptr("SRCROOT"),
 								},
-								Region: dtos.Region{
-									StartLine:   10,
-									StartColumn: 5,
-									EndLine:     10,
-									EndColumn:   20,
-									Snippet: dtos.Text{
-										Text: "that is an example code snippet, which are very long and should be obfuscated",
+								Region: &sarif.Region{
+									StartLine:   utils.Ptr(10),
+									StartColumn: utils.Ptr(5),
+									EndLine:     utils.Ptr(10),
+									EndColumn:   utils.Ptr(20),
+									Snippet: &sarif.ArtifactContent{
+										Text: utils.Ptr("that is an example code snippet, which are very long and should be obfuscated"),
 									},
 								},
 							},
 						},
 					},
-					Properties: &dtos.Properties{
-						Precision: "high",
-						Tags:      []string{"example", "test"},
+					Properties: &sarif.PropertyBag{
+						AdditionalProperties: map[string]any{
+							"precision": "high",
+						},
+						Tags: []string{"example", "test"},
 					},
-					Fingerprints: &dtos.Fingerprints{
-						MatchBasedID: "12345",
+					Fingerprints: map[string]string{
+						"MatchBasedID": "12345",
 					},
-					PartialFingerprints: &dtos.PartialFingerprints{
-						CommitSha:     "abcde12345",
-						Email:         "example@example.com",
-						Author:        "Example Author",
-						Date:          "2023-01-01",
-						CommitMessage: "Initial commit",
+					PartialFingerprints: map[string]string{
+						"commitSha":     "abcde12345",
+						"email":         "example@example.com",
+						"author":        "Example Author",
+						"date":          "2023-01-01",
+						"commitMessage": "Initial commit",
 					},
 				},
 			},
@@ -106,7 +109,7 @@ func TestObfuscateSnippet(t *testing.T) {
 		expectedSnippet := "short *******"
 
 		//override the original snippet
-		exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text = originalSnippet
+		exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text = &originalSnippet
 
 		// Call the function with the example data
 		ObfuscateSecretAndAddFingerprint(&exampleSarifResult)
