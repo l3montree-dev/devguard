@@ -586,6 +586,8 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
+	// this is just for migration.
+	// the call can be removed after all assets were scanned again
 	existingDependencyVulns, existingVulnsOnOtherBranch, err = s.migrateToPurlsWithQualifiers(dependencyVulns, existingDependencyVulns, existingVulnsOnOtherBranch)
 	if err != nil {
 		slog.Error("could not migrate dependencyVulns to purls with qualifiers", "err", err)

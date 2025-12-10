@@ -60,8 +60,8 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 	// Step 4: Create search key (purl without version)
 	parsedPurl.Version = ""
+	parsedPurl.Qualifiers = nil
 	searchPurl := parsedPurl.ToString()
-	searchPurl = strings.Split(searchPurl, "?")[0]
 
 	var affectedComponents []models.AffectedComponent
 

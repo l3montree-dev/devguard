@@ -28,6 +28,10 @@ func normalizePurl(purl string) string {
 
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
+		purl, err := url.PathUnescape(purl)
+		if err != nil {
+			return purl
+		}
 		return purl
 	}
 
