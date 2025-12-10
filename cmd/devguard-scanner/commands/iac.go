@@ -10,12 +10,12 @@ import (
 	"path"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func iacScan(p, outputPath string) (*dtos.SarifResult, error) {
+func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	var sarifFilePath string
 	var outputDir string
 	if outputPath != "" {
@@ -54,7 +54,7 @@ func iacScan(p, outputPath string) (*dtos.SarifResult, error) {
 	}
 
 	// parse the file
-	var sarifScan dtos.SarifResult
+	var sarifScan sarif.SarifSchema210Json
 	err = json.Unmarshal(b, &sarifScan)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse sarif file")

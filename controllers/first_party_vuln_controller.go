@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -210,10 +211,10 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
-	sarif := dtos.SarifResult{
+	report := sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",
-		Runs:    make([]dtos.Run, 0),
+		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
+		Runs:    make([]sarif.Run, 0),
 	}
 
 	// group the vulns by scanner
@@ -232,35 +233,37 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 
 	// create a run for each scanner
 	for scannerID, vulns := range scannerVulns {
-		run := dtos.Run{
-			Tool: dtos.Tool{
-				Driver: dtos.Driver{
+		run := sarif.Run{
+			Tool: sarif.Tool{
+				Driver: sarif.ToolComponent{
 					Name:  scannerID,
-					Rules: make([]dtos.Rule, 0),
+					Rules: make([]sarif.ReportingDescriptor, 0),
 				},
 			},
-			Results: make([]dtos.Result, 0),
+			Results: make([]sarif.Result, 0),
 		}
 
 		addedRuleIDs := make(map[string]bool)
 		for _, vuln := range vulns {
 			if _, exists := addedRuleIDs[vuln.RuleID]; !exists {
-				rule := dtos.Rule{
+				rule := sarif.ReportingDescriptor{
 					ID:               vuln.RuleID,
-					Name:             vuln.RuleName,
-					FullDescription:  dtos.Text{Text: vuln.RuleDescription},
-					Help:             dtos.Text{Text: vuln.RuleHelp},
-					HelpURI:          vuln.RuleHelpURI,
-					ShortDescription: dtos.Text{Text: vuln.RuleName},
-					Properties:       vuln.RuleProperties,
+					Name:             &vuln.RuleName,
+					FullDescription:  &sarif.MultiformatMessageString{Text: vuln.RuleDescription},
+					Help:             &sarif.MultiformatMessageString{Text: vuln.RuleHelp},
+					HelpURI:          &vuln.RuleHelpURI,
+					ShortDescription: &sarif.MultiformatMessageString{Text: vuln.RuleName},
+					Properties: &sarif.PropertyBag{
+						AdditionalProperties: vuln.RuleProperties,
+					},
 				}
 				run.Tool.Driver.Rules = append(run.Tool.Driver.Rules, rule)
 				addedRuleIDs[vuln.RuleID] = true
 			}
-			result := dtos.Result{
+			result := sarif.Result{
 				Kind:   "issue",
-				RuleID: vuln.RuleID,
-				Message: dtos.Text{
+				RuleID: &vuln.RuleID,
+				Message: sarif.Message{
 					Text: vuln.RuleDescription,
 				},
 			}
@@ -269,20 +272,20 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 			if err != nil {
 				slog.Error("could not marshal snippet contents", "err", err)
 			}
-			locations := make([]dtos.Location, 0, len(snippet.Snippets))
+			locations := make([]sarif.Location, 0, len(snippet.Snippets))
 			for _, snippetContent := range snippet.Snippets {
-				locations = append(locations, dtos.Location{
-					PhysicalLocation: dtos.PhysicalLocation{
-						ArtifactLocation: dtos.ArtifactLocation{
-							URI: vuln.URI,
+				locations = append(locations, sarif.Location{
+					PhysicalLocation: sarif.PhysicalLocation{
+						ArtifactLocation: sarif.ArtifactLocation{
+							URI: &vuln.URI,
 						},
-						Region: dtos.Region{
-							StartLine:   snippetContent.StartLine,
-							StartColumn: snippetContent.StartColumn,
-							EndLine:     snippetContent.EndLine,
-							EndColumn:   snippetContent.EndColumn,
-							Snippet: dtos.Text{
-								Text: snippetContent.Snippet,
+						Region: &sarif.Region{
+							StartLine:   &snippetContent.StartLine,
+							StartColumn: &snippetContent.StartColumn,
+							EndLine:     &snippetContent.EndLine,
+							EndColumn:   &snippetContent.EndColumn,
+							Snippet: &sarif.ArtifactContent{
+								Text: &snippetContent.Snippet,
 							},
 						},
 					},
@@ -292,10 +295,10 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 
 			run.Results = append(run.Results, result)
 		}
-		sarif.Runs = append(sarif.Runs, run)
+		report.Runs = append(report.Runs, run)
 	}
 
-	return ctx.JSON(200, sarif)
+	return ctx.JSON(200, report)
 }
 
 func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dtos.DetailedFirstPartyVulnDTO {

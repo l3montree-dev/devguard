@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -110,31 +111,32 @@ func TestFirstPartyVulnHash(t *testing.T) {
 	})
 
 	t.Run("should take the hash of the vulnerability, if it exists", func(t *testing.T) {
-		vuln := dtos.SarifResult{
+		vuln := sarif.SarifSchema210Json{
 			Version: "2.1.0",
-			Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
-			Runs: []dtos.Run{
+			Schema:  utils.Ptr("https://json.schemastore.org/sarif-2.1.0.json"),
+			Runs: []sarif.Run{
 				{
-					Results: []dtos.Result{
+					Results: []sarif.Result{
 						{
-							RuleID: "test-rule",
-							Locations: []dtos.Location{
+							RuleID: utils.Ptr("test-rule"),
+							Locations: []sarif.Location{
 								{
-									PhysicalLocation: dtos.PhysicalLocation{
-										ArtifactLocation: dtos.ArtifactLocation{
-											URI: "test-uri",
+									PhysicalLocation: sarif.PhysicalLocation{
+										ArtifactLocation: sarif.ArtifactLocation{
+											URI: utils.Ptr("test-uri"),
 										},
-										Region: dtos.Region{
-											StartLine: 1,
-											Snippet: dtos.Text{
-												Text: "TestSnippet",
+										Region: &sarif.Region{
+											StartLine: utils.Ptr(1),
+											Snippet: &sarif.ArtifactContent{
+
+												Text: utils.Ptr("TestSnippet"),
 											},
 										},
 									},
 								},
 							},
-							Fingerprints: &dtos.Fingerprints{
-								CalculatedFingerprint: "test-fingerprint",
+							Fingerprints: map[string]string{
+								"calculatedFingerprint": "test-fingerprint",
 							},
 						},
 					},
