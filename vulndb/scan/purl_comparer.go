@@ -46,6 +46,8 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 		return nil, errors.Wrap(err, "invalid package URL")
 	}
 
+	qualifier := parsedPurl.Qualifiers
+
 	// Step 2: Determine which version to use
 	targetVersion := version
 	if targetVersion == "" {
@@ -66,7 +68,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 	var affectedComponents []models.AffectedComponent
 
 	// Build the qualifier query
-	qualifierQuery := comparer.buildQualifierQuery(parsedPurl.Qualifiers)
+	qualifierQuery := comparer.buildQualifierQuery(qualifier)
 
 	if versionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
