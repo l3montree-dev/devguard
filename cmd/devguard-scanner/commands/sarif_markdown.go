@@ -68,7 +68,7 @@ func generateSummaryMarkdown(doc *sarif.SarifSchema210Json) string {
 	for _, run := range doc.Runs {
 		sb.WriteString(fmt.Sprintf("# %s Security Scan Results\n\n", run.Tool.Driver.Name))
 		if run.Tool.Driver.InformationURI != nil {
-			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", run.Tool.Driver.InformationURI))
+			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", *run.Tool.Driver.InformationURI))
 		}
 		summaries := aggregateResults(run.Results)
 		sb.WriteString("## Summary by Policy Rule\n\n")
@@ -109,7 +109,7 @@ func generateDetailedMarkdown(doc *sarif.SarifSchema210Json) string {
 	for _, run := range doc.Runs {
 		sb.WriteString(fmt.Sprintf("# %s Security Scan Results (Detailed)\n\n", run.Tool.Driver.Name))
 		if run.Tool.Driver.InformationURI != nil {
-			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", run.Tool.Driver.InformationURI))
+			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", *run.Tool.Driver.InformationURI))
 		}
 
 		resultsBySeverity := groupBySeverity(run.Results)
