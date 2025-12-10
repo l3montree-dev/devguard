@@ -25,18 +25,18 @@ func BeautifyPURL(pURL string) (string, error) {
 
 // returns the normalized purl AND the component type
 func normalizePurl(purl string) string {
-	// unescape the purl
-	purl, err := url.PathUnescape(purl)
-	if err != nil {
-		return purl
-	}
 
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
 		return purl
 	}
 
-	return parsedPurl.ToString()
+	// unescape the purl
+	purl, err = url.PathUnescape(parsedPurl.ToString())
+	if err != nil {
+		return purl
+	}
+	return purl
 }
 
 func Purl(component cdx.Component) string {
