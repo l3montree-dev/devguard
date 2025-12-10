@@ -3,6 +3,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -69,11 +70,11 @@ func TestConvertKyvernoToSARIF(t *testing.T) {
 
 		result := convertKyvernoToSARIF(input)
 
-		assert.Equal(t, "2.1.0", result.Version)
+		assert.Equal(t, sarif.SarifSchema210JsonVersionA210, result.Version)
 		assert.Len(t, result.Runs, 1)
 		assert.Equal(t, "Kyverno", result.Runs[0].Tool.Driver.Name)
 		assert.Len(t, result.Runs[0].Results, 1)
-		assert.Equal(t, "require-run-as-nonroot/check-runAsNonRoot", result.Runs[0].Results[0].RuleID)
+		assert.Equal(t, "require-run-as-nonroot/check-runAsNonRoot", *result.Runs[0].Results[0].RuleID)
 	})
 
 	t.Run("assigns critical level for capabilities", func(t *testing.T) {
@@ -90,7 +91,7 @@ func TestConvertKyvernoToSARIF(t *testing.T) {
 
 		result := convertKyvernoToSARIF(input)
 
-		assert.Equal(t, "critical", result.Runs[0].Results[0].Level)
+		assert.Equal(t, "critical", string(result.Runs[0].Results[0].Level))
 	})
 
 	t.Run("assigns high level for privileged policies", func(t *testing.T) {
@@ -107,7 +108,7 @@ func TestConvertKyvernoToSARIF(t *testing.T) {
 
 		result := convertKyvernoToSARIF(input)
 
-		assert.Equal(t, "high", result.Runs[0].Results[0].Level)
+		assert.Equal(t, "high", string(result.Runs[0].Results[0].Level))
 	})
 
 	t.Run("groups multiple results by rule", func(t *testing.T) {
@@ -138,7 +139,7 @@ func TestConvertKyvernoToSARIF(t *testing.T) {
 
 		require.Len(t, result.Runs[0].Results[0].Locations, 1)
 		require.Len(t, result.Runs[0].Results[0].Locations[0].LogicalLocations, 1)
-		assert.Equal(t, "nginx", result.Runs[0].Results[0].Locations[0].LogicalLocations[0].Name)
-		assert.Equal(t, "resource", result.Runs[0].Results[0].Locations[0].LogicalLocations[0].Kind)
+		assert.Equal(t, "nginx", *result.Runs[0].Results[0].Locations[0].LogicalLocations[0].Name)
+		assert.Equal(t, "resource", *result.Runs[0].Results[0].Locations[0].LogicalLocations[0].Kind)
 	})
 }
