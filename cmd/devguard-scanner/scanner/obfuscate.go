@@ -74,7 +74,7 @@ func ObfuscateSecretAndAddFingerprint(sarifScan *sarif.SarifSchema210Json) {
 			}
 			// obfuscate the snippet
 			for lo, location := range result.Locations {
-				snippet := *location.PhysicalLocation.Region.Snippet.Text
+				snippet := utils.OrDefault(location.PhysicalLocation.Region.Snippet.Text, "")
 				snippetMax := 20
 				if len(snippet) < snippetMax {
 					snippetMax = len(snippet) / 2
@@ -85,7 +85,7 @@ func ObfuscateSecretAndAddFingerprint(sarifScan *sarif.SarifSchema210Json) {
 			}
 
 			//set the fingerprint to the calculated fingerprint if it exists
-			result.Fingerprints["calculatedFingerprint"] = result.PartialFingerprints["commitSha"] + ":" + *result.Locations[0].PhysicalLocation.ArtifactLocation.URI + ":" + *result.RuleID + ":" + strconv.Itoa(*result.Locations[0].PhysicalLocation.Region.StartLine)
+			result.Fingerprints["calculatedFingerprint"] = result.PartialFingerprints["commitSha"] + ":" + utils.OrDefault(result.Locations[0].PhysicalLocation.ArtifactLocation.URI, "") + ":" + utils.OrDefault(result.RuleID, "") + ":" + strconv.Itoa(utils.OrDefault(result.Locations[0].PhysicalLocation.Region.StartLine, 0))
 
 		}
 	}

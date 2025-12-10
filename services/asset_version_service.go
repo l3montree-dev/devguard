@@ -80,13 +80,13 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 
 func getBestDescription(rule sarif.ReportingDescriptor) string {
 	if rule.FullDescription.Markdown != nil {
-		return *rule.FullDescription.Markdown
+		return utils.OrDefault(rule.FullDescription.Markdown, "")
 	}
 	if rule.FullDescription.Text != "" {
 		return rule.FullDescription.Text
 	}
 	if rule.ShortDescription.Markdown != nil {
-		return *rule.ShortDescription.Markdown
+		return utils.OrDefault(rule.ShortDescription.Markdown, "")
 	}
 
 	return rule.ShortDescription.Text
@@ -94,7 +94,7 @@ func getBestDescription(rule sarif.ReportingDescriptor) string {
 
 func preferMarkdown(text sarif.MultiformatMessageString) string {
 	if text.Markdown != nil {
-		return *text.Markdown
+		return utils.OrDefault(text.Markdown, "")
 	}
 	return text.Text
 }
@@ -116,7 +116,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 				continue
 			}
 
-			rule := ruleMap[*result.RuleID]
+			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
@@ -125,10 +125,10 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 					Message:          &result.Message.Text,
 				},
 				ScannerIDs:      scannerID,
-				RuleID:          *result.RuleID,
-				RuleHelp:        preferMarkdown(*rule.Help),
-				RuleName:        *rule.Name,
-				RuleHelpURI:     *rule.HelpURI,
+				RuleID:          utils.OrDefault(result.RuleID, ""),
+				RuleHelp:        preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),
+				RuleName:        utils.OrDefault(rule.Name, ""),
+				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  database.JSONB(rule.Properties.AdditionalProperties),
 			}
@@ -147,14 +147,15 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 			}
 
 			if len(result.Locations) > 0 {
-				firstPartyVulnerability.URI = *result.Locations[0].PhysicalLocation.ArtifactLocation.URI
+				loc := result.Locations[0]
+				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
 				snippetContent := dtos.SnippetContent{
-					StartLine:   *result.Locations[0].PhysicalLocation.Region.StartLine,
-					EndLine:     *result.Locations[0].PhysicalLocation.Region.EndLine,
-					StartColumn: *result.Locations[0].PhysicalLocation.Region.StartColumn,
-					EndColumn:   *result.Locations[0].PhysicalLocation.Region.EndColumn,
-					Snippet:     *result.Locations[0].PhysicalLocation.Region.Snippet.Text,
+					StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
+					EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
+					StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
+					EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
+					Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
 				}
 
 				hash = firstPartyVulnerability.CalculateHash()
@@ -961,10 +962,10 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 				ID: cve.CVE,
 				Source: &cdx.Source{
 					Name: "NVD",
-					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", *dependencyVuln.CVEID),
+					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", utils.OrDefault(dependencyVuln.CVEID, "")),
 				},
 				Affects: &[]cdx.Affects{{
-					Ref: *dependencyVuln.ComponentPurl,
+					Ref: utils.OrDefault(dependencyVuln.ComponentPurl, ""),
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
 					State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
@@ -988,7 +989,7 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 
 			cvss := math.Round(float64(cve.CVSS)*100) / 100
 
-			risk := vulndb.RawRisk(*cve, shared.GetEnvironmentalFromAsset(asset), *dependencyVuln.ComponentDepth)
+			risk := vulndb.RawRisk(*cve, shared.GetEnvironmentalFromAsset(asset), utils.OrDefault(dependencyVuln.ComponentDepth, 1))
 
 			vuln.Ratings = &[]cdx.VulnerabilityRating{
 				{
