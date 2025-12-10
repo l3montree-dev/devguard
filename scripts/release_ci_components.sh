@@ -14,10 +14,10 @@ TAG=$1
 if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
     SEMVER="${TAG#v}"  # Remove 'v' prefix for validation
 elif [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
-    echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0 or v1.0.0-rc.1)."
+    echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0 or main)."
     exit 1
 else
-    echo "Error: Invalid version number. Please use semantic versioning with 'v' prefix (e.g., v1.0.0 or v1.0.0-rc.1)."
+    echo "Error: Invalid version number. Please use semantic versioning with 'v' prefix (e.g., v1.0.0 or main)."
     exit 1
 fi
 
@@ -105,7 +105,7 @@ done
 # great lets do the tagging
 for dir in "${secondtrain[@]}"; do
     if [ -d "$dir/.git" ]; then
-        (cd "$dir" && git tag -s "$TAG" -m "$TAG" && git push --tags)
+        (cd "$dir" && git tag -s "$TAG" -m "$TAG" && (git push --tags || true))
         if [ $? -ne 0 ]; then
             echo "Error: Failed to tag $dir with $TAG."
             exit 1
@@ -119,7 +119,7 @@ for dir in "${secondtrain[@]}"; do
         for file in $dir/**/*.yml(D); do
             echo "Replacing back in $file"
             if [[ -f $file ]]; then
-                sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main-latest|g" "$file"
+                sed -i '' "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main-latest-latest|g" "$file"
             fi
         done
         

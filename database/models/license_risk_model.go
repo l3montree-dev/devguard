@@ -66,3 +66,7 @@ func (licenseRisk LicenseRisk) GetAssetVersionName() string {
 func (licenseRisk LicenseRisk) GetEvents() []VulnEvent {
 	return licenseRisk.Events
 }
+
+func (licenseRisk LicenseRisk) Title() string {
+	return fmt.Sprintf("License risk found in %s", licenseRisk.ComponentPurl)
+}
