@@ -144,7 +144,7 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 			}
 		}
 
-		isRedHatOrDebianEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian")
+		isRedHatOrDebianOrAlpineEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian") || strings.Contains(affected.Package.Ecosystem, "Alpine")
 		shouldConvertToSemver := false
 
 		if affected.Package.Purl != "" {
@@ -161,7 +161,7 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 			for _, r := range affected.Ranges {
 				if r.Type == "SEMVER" {
 					containsSemver = true
-				} else if r.Type == "ECOSYSTEM" && isRedHatOrDebianEcosystem {
+				} else if r.Type == "ECOSYSTEM" && isRedHatOrDebianOrAlpineEcosystem {
 					shouldConvertToSemver = true
 				} else {
 					continue
@@ -190,6 +190,7 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 						if err != nil {
 							continue
 						}
+						containsSemver = true
 					}
 
 					var semverIntroducedPtr *string
