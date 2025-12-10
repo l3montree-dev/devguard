@@ -525,11 +525,7 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 		return existingVulns, existingVulnsOnOtherBranch, nil
 	}
 
-	db, err := shared.DatabaseFactory()
-	if err != nil {
-		slog.Error("could not get database for dependency vuln purl migration", "err", err)
-		return existingVulns, existingVulnsOnOtherBranch, err
-	}
+	db := s.dependencyVulnRepository.GetDB(nil)
 
 	//save all updated vulns back to the database
 	for _, dependencyVuln := range vulnsToUpdate {

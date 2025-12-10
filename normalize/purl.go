@@ -30,7 +30,13 @@ func normalizePurl(purl string) string {
 	if err != nil {
 		return purl
 	}
-	return purl
+
+	parsedPurl, err := packageurl.FromString(purl)
+	if err != nil {
+		return purl
+	}
+
+	return parsedPurl.ToString()
 }
 
 func Purl(component cdx.Component) string {
