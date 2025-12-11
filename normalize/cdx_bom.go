@@ -426,7 +426,7 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	component = replaceTrivyProperties(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
 	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:/deb") || strings.Contains(component.PackageURL, "pkg:/apk")) && component.Version != "" {
-		version, err := ConvertRPMtoSemVer(component.Version)
+		version, err := ConvertToSemver(component.Version)
 		if err == nil && version != "" {
 			component.Version = version
 		}

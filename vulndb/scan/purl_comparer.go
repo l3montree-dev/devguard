@@ -58,7 +58,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 	}
 
 	// Step 3: Try to normalize the version to semantic versioning format
-	normalizedVersion, versionIsValid := normalize.SemverFix(targetVersion)
+	normalizedVersion, versionIsValid := normalize.ConvertToSemver(targetVersion)
 
 	// Step 4: Create search key (purl without version)
 	parsedPurl.Version = ""
