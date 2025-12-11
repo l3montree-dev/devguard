@@ -156,8 +156,8 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 			}
 
 			// it is only an affected component, if the version is smaller than the fixed version
-			v := normalize.ConvertToSemver(v)
-			fixedSemver := normalize.ConvertToSemver(cve.FixedVersion)
+			v, _ := normalize.ConvertToSemver(v)
+			fixedSemver, _ := normalize.ConvertToSemver(cve.FixedVersion)
 
 			if cve.FixedVersion != "" && semver.Compare("v"+v, "v"+fixedSemver) != -1 {
 				continue
