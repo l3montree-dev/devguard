@@ -16,10 +16,8 @@
 package normalize
 
 import (
-	"fmt"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -47,20 +45,6 @@ func FixFixedVersion(purl string, fixedVersion *string) *string {
 
 // Regex for validating a correct semver.
 var ValidSemverRegex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
-
-// normalizeVersionPart removes leading zeros from a version part.
-func normalizeVersionPart(versionPart string) string {
-	normalized, err := strconv.Atoi(versionPart)
-	if err != nil {
-		// In case of error (which should not happen with numeric parts), return original.
-		return versionPart
-	}
-	return strconv.Itoa(normalized)
-}
-
-var (
-	ErrInvalidVersion = fmt.Errorf("invalid version")
-)
 
 func SemverSort(versions []string) {
 	slices.SortStableFunc(versions, func(a, b string) int {

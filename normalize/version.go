@@ -6,9 +6,6 @@ import (
 	"strings"
 )
 
-// 20.160.635.721
-const max31BitValue = 2_147_483_647 // 2^31 - 1
-
 func ConvertToSemver(originalVersion string) (string, error) {
 	// Handle empty string
 	if originalVersion == "" {
