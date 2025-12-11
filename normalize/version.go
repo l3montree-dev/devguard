@@ -6,79 +6,93 @@ import (
 	"strings"
 )
 
+// versionInvalidCharsRe is compiled once for performance
+var versionInvalidCharsRe = regexp.MustCompile(`[^0-9.]`)
+
+// ConvertToSemver converts various version formats to semantic versioning format.
+// It handles:
+// - Epoch prefixes (e.g., "2:1.2.3" -> "1.2.3")
+// - "v" prefixes (e.g., "v1.2.3" -> "1.2.3")
+// - Pre-release identifiers with "-" (e.g., "1.2.3-rc1")
+// - Build metadata with "+" (e.g., "1.2.3+build1")
+// - Tilde versions "~" (e.g., "1.2.3~rc1" -> "1.2.3-rc1")
+// - Missing version segments (e.g., "1.2" -> "1.2.0")
+//
+// Returns an error if:
+// - Version contains invalid characters (only 0-9 and . allowed in version part)
+// - Version has more than 3 numeric segments
 func ConvertToSemver(originalVersion string) (string, error) {
-	// Handle empty string
 	if originalVersion == "" {
 		return "", nil
 	}
 
-	var version string
-	var release string
+	version := originalVersion
 
-	// Split out epoch if present
-	if strings.Contains(originalVersion, ":") {
-		parts := strings.SplitN(originalVersion, ":", 2)
-		originalVersion = parts[1]
+	// Remove epoch prefix if present (e.g., "2:1.2.3" -> "1.2.3")
+	if idx := strings.Index(version, ":"); idx != -1 {
+		version = version[idx+1:]
 	}
 
-	//check if the version start with v
-	if after, ok := strings.CutPrefix(originalVersion, "v"); ok {
-		originalVersion = after
+	// Remove "v" prefix if present
+	version = strings.TrimPrefix(version, "v")
+
+	// Process build metadata and pre-release in correct order
+	var buildMetadata string
+	var preRelease string
+
+	// Extract build metadata (after "+") first, as per semver spec
+	if idx := strings.Index(version, "+"); idx != -1 {
+		buildMetadata = version[idx+1:]
+		version = version[:idx]
 	}
 
-	// Split version-release (only on first hyphen)
-	if strings.Contains(originalVersion, "-") {
-		parts := strings.SplitN(originalVersion, "-", 2)
-		version = parts[0]
-		release = parts[1]
-	} else {
-		version = originalVersion
+	// Handle tilde versions (convert to pre-release)
+	if idx := strings.Index(version, "~"); idx != -1 {
+		preRelease = version[idx+1:]
+		version = version[:idx]
 	}
 
-	// Split version-release (only on first hyphen)
-	if strings.Contains(version, "+") {
-		parts := strings.SplitN(version, "+", 2)
-		version = parts[0]
-		if release != "" {
-			release = parts[1] + "-" + release
+	// Extract pre-release (after "-")
+	if idx := strings.Index(version, "-"); idx != -1 {
+		if preRelease != "" {
+			preRelease = version[idx+1:] + "-" + preRelease
 		} else {
-			release = parts[1]
+			preRelease = version[idx+1:]
+		}
+		version = version[:idx]
+	}
+
+	// Combine build metadata with pre-release if both exist
+	if buildMetadata != "" {
+		if preRelease != "" {
+			preRelease = buildMetadata + "-" + preRelease
+		} else {
+			preRelease = buildMetadata
 		}
 	}
 
-	// remove anything after "~"
-	if strings.Contains(version, "~") {
-		parts := strings.SplitN(version, "~", 2)
-		version = parts[0]
-		if release != "" {
-			release = parts[1] + "-" + release
-		} else {
-			release = parts[1]
-		}
+	// Validate that version contains only digits and dots
+	if versionInvalidCharsRe.MatchString(version) {
+		return "", fmt.Errorf("version contains invalid characters (only 0-9 and . allowed): %s", version)
 	}
 
-	//check if there are any invalid characters in version
-	reInvalidChars := regexp.MustCompile(`[^0-9.]`)
-	if reInvalidChars.MatchString(version) {
-		return "", fmt.Errorf("version contains invalid characters: %s", version)
-	}
-
-	// Split into segments
+	// Split version into major.minor.patch segments
 	segments := strings.Split(version, ".")
 
-	// If we have more than 3 segments, take only the first 3
+	// Semver allows max 3 segments: major, minor, patch
 	if len(segments) > 3 {
-		return "", fmt.Errorf("version has more than 3 segments: %s", version)
+		return "", fmt.Errorf("version has more than 3 segments (expected major.minor.patch): %s", version)
 	}
 
-	// If version is missing segments, pad them
+	// Pad missing segments with "0"
 	for len(segments) < 3 {
 		segments = append(segments, "0")
 	}
 
+	// Build final semver string
 	semver := strings.Join(segments, ".")
-	if release != "" {
-		semver += "-" + release
+	if preRelease != "" {
+		semver += "-" + preRelease
 	}
 
 	return semver, nil

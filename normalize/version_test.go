@@ -103,7 +103,6 @@ func TestConvertRPMtoSemVer(t *testing.T) {
 	t.Run("version with underscores", func(t *testing.T) {
 		_, err := normalize.ConvertToSemver("1_2_3-10.fc38")
 		assert.Error(t, err)
-
 	})
 
 	t.Run("version with multiple dots", func(t *testing.T) {
