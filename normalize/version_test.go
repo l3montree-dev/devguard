@@ -15,6 +15,12 @@ func TestConvertToSemver(t *testing.T) {
 		assert.Equal(t, "", semver)
 	})
 
+	t.Run("redheat versions", func(t *testing.T) {
+		semver, err := normalize.ConvertToSemver("31.4.0-1.el5_11")
+		assert.NoError(t, err)
+		assert.Equal(t, "31.4.0-1.el5.11", semver)
+	})
+
 	t.Run("valid semver", func(t *testing.T) {
 		semver, err := normalize.ConvertToSemver("1.2.3")
 		assert.NoError(t, err)
@@ -124,7 +130,7 @@ func TestConvertToSemverVariousFormats(t *testing.T) {
 	t.Run("complex real-world example - kernel", func(t *testing.T) {
 		result, err := normalize.ConvertToSemver("5.14.0-284.11.1.el9_2")
 		assert.NoError(t, err)
-		assert.Equal(t, "5.14.0-284.11.1.el9_2", result)
+		assert.Equal(t, "5.14.0-284.11.1.el9.2", result)
 	})
 
 	t.Run("version with only release number", func(t *testing.T) {
