@@ -574,6 +574,14 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 			slog.Error("could not update vuln events", "err", err)
 			return existingVulns, existingVulnsOnOtherBranch, err
 		}
+
+		// update dependencyVuln in artifacts dependencyVuln table
+		err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
+		if err != nil {
+			slog.Error("could not update artifact dependency vulns", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+
 	}
 
 	return existingVulns, existingVulnsOnOtherBranch, nil

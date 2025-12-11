@@ -425,8 +425,8 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
 	component = replaceTrivyProperties(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
-	if strings.Contains(component.PackageURL, "pkg:rpm/") && component.Version != "" {
-		version, err := ConvertRPMtoSemVer(component.Version)
+	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:deb/") || strings.Contains(component.PackageURL, "pkg:apk/")) && component.Version != "" {
+		version, err := ConvertToSemver(component.Version)
 		if err == nil && version != "" {
 			component.Version = version
 		}

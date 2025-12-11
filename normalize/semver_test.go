@@ -22,21 +22,20 @@ import (
 
 func TestSemverFix(t *testing.T) {
 	t.Run("empty string", func(t *testing.T) {
-		semver, err := SemverFix("")
-		if err == nil {
-			t.Errorf("Expected invalid version, got %s", semver)
-		}
+		semver, err := ConvertToSemver("")
+		assert.NoError(t, err)
+		assert.Equal(t, "", semver)
 	})
 
 	t.Run("v Prefix should be removed", func(t *testing.T) {
-		semver, _ := SemverFix("v1.14.14")
+		semver, _ := ConvertToSemver("v1.14.14")
 		if semver != "1.14.14" {
 			t.Errorf("Expected 1.14.14, got %s", semver)
 		}
 	})
 
 	t.Run("valid semver", func(t *testing.T) {
-		semver, _ := SemverFix("1.14.14")
+		semver, _ := ConvertToSemver("1.14.14")
 		if semver != "1.14.14" {
 			t.Errorf("Expected 1.14.14, got %s", semver)
 		}
@@ -54,7 +53,7 @@ func TestSemverFix(t *testing.T) {
 			{"3.0-beta1", "3.0.0-beta1"},
 		}
 		for _, tt := range invalidSemvers {
-			semver, _ := SemverFix(tt.input)
+			semver, _ := ConvertToSemver(tt.input)
 
 			if semver != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, semver)
@@ -63,7 +62,7 @@ func TestSemverFix(t *testing.T) {
 	})
 
 	t.Run("test 2.4.27-10.sarge1.040815-1", func(t *testing.T) {
-		semver, err := SemverFix("2.4.27-10.sarge1.040815-1")
+		semver, err := ConvertToSemver("2.4.27-10.sarge1.040815-1")
 		if err != nil {
 			t.Errorf("Expected no error, got %s", err)
 		}
