@@ -143,8 +143,8 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 				}
 			}
 		}
-
-		isRedHatOrDebianOrAlpineEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian") || strings.Contains(affected.Package.Ecosystem, "Alpine")
+		// Red Hat, Debian, Alpine ecosystems can be converted to semver ranges
+		isConvertibleEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian") || strings.Contains(affected.Package.Ecosystem, "Alpine")
 		shouldConvertToSemver := false
 
 		if affected.Package.Purl != "" {
@@ -161,7 +161,7 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 			for _, r := range affected.Ranges {
 				if r.Type == "SEMVER" {
 					containsSemver = true
-				} else if r.Type == "ECOSYSTEM" && isRedHatOrDebianOrAlpineEcosystem {
+				} else if r.Type == "ECOSYSTEM" && isConvertibleEcosystem {
 					shouldConvertToSemver = true
 				} else {
 					continue

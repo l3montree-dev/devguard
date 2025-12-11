@@ -97,7 +97,7 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 			continue
 		}
 		distro := qualifier.Value
-		//letter (debian -> Debian)
+		// Capitalize the first letter of each word in the distro string (e.g., "debian-13.2" -> "Debian-13.2")
 		distro = cases.Title(language.English).String(distro)
 
 		switch namespace {
@@ -107,7 +107,7 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 			// Split by '-' to get distribution name and version
 			parts := strings.Split(distro, "-")
 			if len(parts) >= 2 {
-				distroName := parts[0]                              // Capitalize first
+				distroName := parts[0]
 				majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
 				ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
 
