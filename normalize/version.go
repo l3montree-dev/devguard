@@ -36,24 +36,20 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	// Remove "v" prefix if present
 	version = strings.TrimPrefix(version, "v")
 
-	// Process build metadata and pre-release in correct order
+	// Process in correct order: version core, pre-release, build metadata
 	var buildMetadata string
 	var preRelease string
 
 	// Extract build metadata (after "+") first, as per semver spec
+	// Build metadata MUST be denoted by appending a plus sign
 	if idx := strings.Index(version, "+"); idx != -1 {
 		buildMetadata = version[idx+1:]
 		version = version[:idx]
 	}
 
 	// Handle tilde versions (convert to pre-release)
+	// This is common in Debian/RPM versioning
 	if idx := strings.Index(version, "~"); idx != -1 {
-		preRelease = version[idx+1:]
-		version = version[:idx]
-	}
-
-	// Extract pre-release (after "-")
-	if idx := strings.Index(version, "-"); idx != -1 {
 		if preRelease != "" {
 			preRelease = version[idx+1:] + "-" + preRelease
 		} else {
@@ -62,13 +58,15 @@ func ConvertToSemver(originalVersion string) (string, error) {
 		version = version[:idx]
 	}
 
-	// Combine build metadata with pre-release if both exist
-	if buildMetadata != "" {
+	// Extract pre-release (after "-")
+	// Pre-release MUST be denoted by appending a hyphen
+	if idx := strings.Index(version, "-"); idx != -1 {
 		if preRelease != "" {
-			preRelease = buildMetadata + "-" + preRelease
+			preRelease = version[idx+1:] + "-" + preRelease
 		} else {
-			preRelease = buildMetadata
+			preRelease = version[idx+1:]
 		}
+		version = version[:idx]
 	}
 
 	// Validate that version contains only digits and dots
@@ -84,6 +82,18 @@ func ConvertToSemver(originalVersion string) (string, error) {
 		return "", fmt.Errorf("version has more than 3 segments (expected major.minor.patch): %s", version)
 	}
 
+	// Remove leading zeros from each segment (e.g., "03" -> "3")
+	// This is required by semver specification for numeric identifiers
+	for i, segment := range segments {
+		if segment != "" && segment != "0" {
+			segments[i] = strings.TrimLeft(segment, "0")
+			// If segment was all zeros (e.g., "00"), keep single "0"
+			if segments[i] == "" {
+				segments[i] = "0"
+			}
+		}
+	}
+
 	// Pad missing segments with "0"
 	for len(segments) < 3 {
 		segments = append(segments, "0")
@@ -93,6 +103,9 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	semver := strings.Join(segments, ".")
 	if preRelease != "" {
 		semver += "-" + preRelease
+	}
+	if buildMetadata != "" {
+		semver += "+" + buildMetadata
 	}
 
 	return semver, nil

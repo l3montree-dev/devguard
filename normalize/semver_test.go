@@ -49,7 +49,7 @@ func TestSemverFix(t *testing.T) {
 		}{
 			{"1.14", "1.14.0"},
 			{"1.0", "1.0.0"},
-			{"19.03.9", "19.03.9"},
+			{"19.03.9", "19.3.9"},
 			{"3.0-beta1", "3.0.0-beta1"},
 		}
 		for _, tt := range invalidSemvers {

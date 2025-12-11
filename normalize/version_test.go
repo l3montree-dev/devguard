@@ -45,7 +45,7 @@ func TestConvertToSemver(t *testing.T) {
 	})
 }
 
-func TestConvertRPMtoSemVer(t *testing.T) {
+func TestConvertToSemverVariousFormats(t *testing.T) {
 	//this is important for introducing semver sorting
 	t.Run("zero version", func(t *testing.T) {
 		result, err := normalize.ConvertToSemver("0")
