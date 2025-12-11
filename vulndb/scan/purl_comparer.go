@@ -117,14 +117,21 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 			// Only major and minor versions are used from the distro qualifier.
 			// Example: "pkg:apk/alpine/curl@8.14.1-r2?arch=aarch64&distro=3.22.2" -> "Alpine:v3.22"
 			parts := strings.Split(distro, ".")
-			if len(parts) >= 2 {
-				majorVersion := parts[0] // Get major version (3.22.2 -> 3)
-				minorVersion := parts[1] // Get minor version (3.22.2 -> 22)
-
-				ecosystemPattern := "Alpine:v" + majorVersion + "." + minorVersion // "Alpine:v3.22"
-
-				query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
+			majorVersion := ""
+			minorVersion := ""
+			if len(parts) == 1 {
+				// Alpine version only has major version
+				majorVersion = parts[0] // Get major version (3 -> 3)
+			} else if len(parts) >= 2 {
+				majorVersion = parts[0] // Get major version (3.22.2 -> 3)
+				minorVersion = parts[1] // Get minor version (3.22.2 -> 22)
 			}
+			ecosystemPattern := "Alpine:v" + majorVersion
+			if minorVersion != "" {
+				ecosystemPattern += "." + minorVersion
+			}
+
+			query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
 		default:
 			return query
 		}
