@@ -356,23 +356,44 @@ func (s *DependencyVulnService) SyncAllIssues(org models.Org, project models.Pro
 		return nil
 	}
 
+	// Check for duplicate vulnerability IDs in the list
+	seen := make(map[string]int)
+	for _, vuln := range vulnList {
+		seen[vuln.ID]++
+	}
+	for id, count := range seen {
+		if count > 1 {
+			slog.Warn("duplicate vulnerability detected in vulnList", "vulnID", id, "count", count, "assetVersion", assetVersion.Name)
+		}
+	}
+
 	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
 }
 
 func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
+	vulnMap := make(map[string]models.DependencyVuln)
+	for _, vuln := range vulnList {
+		if _, exists := vulnMap[vuln.ID]; !exists {
+			vulnMap[vuln.ID] = vuln
+		}
+	}
+
 	errgroup := utils.ErrGroup[any](10)
-	for _, vulnerability := range vulnList {
+	for _, vulnerability := range vulnMap {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
 			if !commonint.ShouldCreateIssues(assetVersion) || !commonint.ShouldCreateThisIssue(asset, &vulnerability) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {
-				return s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system"), nil
+				err := s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
+				return nil, err
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(asset, assetVersion.Slug, vulnerability), nil
+				err := s.updateIssue(asset, assetVersion.Slug, vulnerability)
+				return nil, err
 			})
 		}
 	}
