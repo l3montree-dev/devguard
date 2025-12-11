@@ -58,7 +58,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 	}
 
 	// Step 3: Try to normalize the version to semantic versioning format
-	normalizedVersion, versionIsValid := normalize.SemverFix(targetVersion)
+	normalizedVersion, versionIsValid := normalize.ConvertToSemver(targetVersion)
 
 	// Step 4: Create search key (purl without version)
 	parsedPurl.Version = ""
@@ -68,7 +68,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 	var affectedComponents []models.AffectedComponent
 
 	// Build the qualifier query
-	qualifierQuery := comparer.buildQualifierQuery(qualifier)
+	qualifierQuery := comparer.buildQualifierQuery(qualifier, parsedPurl.Namespace)
 
 	if versionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
@@ -89,7 +89,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 	return affectedComponents, nil
 }
-func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifiers) *gorm.DB {
+func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifiers, namespace string) *gorm.DB {
 	query := comparer.db
 
 	for _, qualifier := range qualifiers {
@@ -97,18 +97,42 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 			continue
 		}
 		distro := qualifier.Value
-		//letter (debian -> Debian)
-		distro = cases.Title(language.English).String(distro)
 
-		// Parse distro string (e.g., "debian-13.2" -> "Debian:13")
-		// Split by '-' to get distribution name and version
-		parts := strings.Split(distro, "-")
-		if len(parts) >= 2 {
-			distroName := parts[0]                              // Capitalize first
-			majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
-			ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
+		switch namespace {
+		case "debian":
+			// Capitalize the first letter of each word in the distro string (e.g., "debian-13.2" -> "Debian-13.2")
+			distro = cases.Title(language.English).String(distro)
+			// Parse distro string (e.g., "debian-13.2" -> "Debian:13")
+			// Split by '-' to get distribution name and version
+			parts := strings.Split(distro, "-")
+			if len(parts) >= 2 {
+				distroName := parts[0]
+				majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
+				ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
+
+				query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
+			}
+		case "alpine":
+			// Only major and minor versions are used from the distro qualifier.
+			// Example: "pkg:apk/alpine/curl@8.14.1-r2?arch=aarch64&distro=3.22.2" -> "Alpine:v3.22"
+			parts := strings.Split(distro, ".")
+			majorVersion := ""
+			minorVersion := ""
+			if len(parts) == 1 {
+				// Alpine version only has major version
+				majorVersion = parts[0] // Get major version (3 -> 3)
+			} else if len(parts) >= 2 {
+				majorVersion = parts[0] // Get major version (3.22.2 -> 3)
+				minorVersion = parts[1] // Get minor version (3.22.2 -> 22)
+			}
+			ecosystemPattern := "Alpine:v" + majorVersion
+			if minorVersion != "" {
+				ecosystemPattern += "." + minorVersion
+			}
 
 			query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
+		default:
+			return query
 		}
 	}
 

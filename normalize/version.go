@@ -3,135 +3,112 @@ package normalize
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
-// 20.160.635.721
-const max31BitValue = 2_147_483_647 // 2^31 - 1
+// versionInvalidCharsRe is compiled once for performance
+var versionInvalidCharsRe = regexp.MustCompile(`[^0-9.]`)
 
-func ConvertRPMtoSemVer(rpm string) (string, error) {
-	// Handle empty string
-	if rpm == "" {
-		return "", fmt.Errorf("empty RPM version string")
+// ConvertToSemver converts various version formats to semantic versioning format.
+// It handles:
+// - Epoch prefixes (e.g., "2:1.2.3" -> "1.2.3")
+// - "v" prefixes (e.g., "v1.2.3" -> "1.2.3")
+// - Pre-release identifiers with "-" (e.g., "1.2.3-rc1")
+// - Build metadata with "+" (e.g., "1.2.3+build1")
+// - Tilde versions "~" (e.g., "1.2.3~rc1" -> "1.2.3-rc1")
+// - Missing version segments (e.g., "1.2" -> "1.2.0")
+//
+// Returns an error if:
+// - Version contains invalid characters (only 0-9 and . allowed in version part)
+// - Version has more than 3 numeric segments
+func ConvertToSemver(originalVersion string) (string, error) {
+	if originalVersion == "" {
+		return "", nil
 	}
 
-	var version string
-	var release string
+	version := originalVersion
 
-	// Split out epoch if present
-	if strings.Contains(rpm, ":") {
-		parts := strings.SplitN(rpm, ":", 2)
-		rpm = parts[1]
+	// Remove epoch prefix if present (e.g., "2:1.2.3" -> "1.2.3")
+	if idx := strings.Index(version, ":"); idx != -1 {
+		version = version[idx+1:]
 	}
 
-	// Split version-release (only on first hyphen)
-	if strings.Contains(rpm, "-") {
-		parts := strings.SplitN(rpm, "-", 2)
-		version = parts[0]
-		release = parts[1]
-	} else {
-		version = rpm
+	// Remove "v" prefix if present
+	version = strings.TrimPrefix(version, "v")
+
+	// Process in correct order: version core, pre-release, build metadata
+	var buildMetadata string
+	var preRelease string
+
+	// Extract build metadata (after "+") first, as per semver spec
+	// Build metadata MUST be denoted by appending a plus sign
+	if idx := strings.Index(version, "+"); idx != -1 {
+		buildMetadata = version[idx+1:]
+		version = version[:idx]
 	}
 
-	//check if there are any invalid characters in version
-	reInvalidChars := regexp.MustCompile(`[^0-9.]`)
-	if reInvalidChars.MatchString(version) {
-		return "", fmt.Errorf("version contains invalid characters: %s", version)
+	// Handle tilde versions (convert to pre-release)
+	// This is common in Debian/RPM versioning
+	if idx := strings.Index(version, "~"); idx != -1 {
+		if preRelease != "" {
+			preRelease = version[idx+1:] + "-" + preRelease
+		} else {
+			preRelease = version[idx+1:]
+		}
+		version = version[:idx]
 	}
 
-	// Split into segments
+	// Extract pre-release (after "-")
+	// Pre-release MUST be denoted by appending a hyphen
+	if idx := strings.Index(version, "-"); idx != -1 {
+		if preRelease != "" {
+			preRelease = version[idx+1:] + "-" + preRelease
+		} else {
+			preRelease = version[idx+1:]
+		}
+		version = version[:idx]
+	}
+
+	// Validate that version contains only digits and dots
+	if versionInvalidCharsRe.MatchString(version) {
+		return "", fmt.Errorf("version contains invalid characters (only 0-9 and . allowed): %s", version)
+	}
+
+	// Split version into major.minor.patch segments
 	segments := strings.Split(version, ".")
 
-	// If we have more than 3 segments, take only the first 3
+	// Semver allows max 3 segments: major, minor, patch
 	if len(segments) > 3 {
-		return "", fmt.Errorf("version has more than 3 segments: %s", version)
+		return "", fmt.Errorf("version has more than 3 segments (expected major.minor.patch): %s", version)
 	}
 
-	// If version is missing segments, pad them
+	// Remove leading zeros from each segment (e.g., "03" -> "3")
+	// This is required by semver specification for numeric identifiers
+	for i, segment := range segments {
+		if segment != "" && segment != "0" {
+			segments[i] = strings.TrimLeft(segment, "0")
+			// If segment was all zeros (e.g., "00"), keep single "0"
+			if segments[i] == "" {
+				segments[i] = "0"
+			}
+		}
+	}
+
+	// Pad missing segments with "0"
 	for len(segments) < 3 {
 		segments = append(segments, "0")
 	}
 
+	// Build final semver string
 	semver := strings.Join(segments, ".")
-	if release != "" {
-		semver += "-" + release
+	if preRelease != "" {
+		semver += "-" + preRelease
+	}
+	if buildMetadata != "" {
+		semver += "+" + buildMetadata
 	}
 
 	return semver, nil
-}
-
-// ConvertToSemver converts any versioning scheme to a semver-like versioning scheme
-func ConvertToSemver(originalVersion string) string {
-	if originalVersion == "" {
-		return ""
-	}
-	// check if its already a valid semver
-	if semver, err := SemverFix(originalVersion); err == nil {
-		return semver
-	}
-
-	// mainComponents, _ := splitVersion(originalVersion)
-	// Step 1: Parse the original version
-	components := parseVersion(originalVersion)
-
-	// Step 2: Normalize the components
-	normalizedComponents := []int{}
-	for _, component := range components {
-		num, err := strconv.Atoi(component)
-		if err == nil {
-			normalizedComponents = append(normalizedComponents, num%max31BitValue)
-		} else {
-			normalizedComponents = append(normalizedComponents, mapToNumeric(component))
-		}
-	}
-
-	// Step 3: Formulate Semver-like version
-	semverMajor := getComponent(normalizedComponents, 0)
-	semverMinor := getComponent(normalizedComponents, 1)
-	semverPatch := getComponent(normalizedComponents, 2)
-
-	// If there are more components, handle them as needed
-	if len(normalizedComponents) > 3 {
-		additionalComponents := normalizedComponents[3:]
-		for _, component := range additionalComponents {
-			semverPatch = (semverPatch*100 + component) % max31BitValue
-		}
-	}
-
-	semverVersion := fmt.Sprintf("%d.%d.%d", semverMajor, semverMinor, semverPatch)
-
-	/*
-		There is no simple way to handle pre-release components in a generic way.
-			if preReleaseComponents != "" {
-				semverVersion = fmt.Sprintf("%s-%s", semverVersion, preReleaseComponents)
-			}
-	*/
-
-	return semverVersion
-}
-
-// parseVersion splits the version string into components based on common delimiters
-func parseVersion(version string) []string {
-	re := regexp.MustCompile(`[.\-_]`)
-	return re.Split(version, -1)
-}
-
-// mapToNumeric maps non-numeric components to numeric values
-func mapToNumeric(component string) int {
-	sum := 0
-	for _, char := range component {
-		sum += int(char)
-	}
-	return sum
-}
-
-// getComponent safely retrieves a component from a slice or returns 0
-func getComponent(components []int, index int) int {
-	if index < len(components) {
-		return components[index]
-	}
-	return 0
 }
 
 func ArtifactPurl(scanner string, assetName string) string {
