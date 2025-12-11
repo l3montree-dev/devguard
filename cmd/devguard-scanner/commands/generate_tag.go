@@ -30,14 +30,15 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	upstreamVersion := config.RuntimeBaseConfig.UpstreamVersion
 	architecture := config.RuntimeBaseConfig.Architecture
 	imagePath := config.RuntimeBaseConfig.ImagePath
-	imageSuffix := config.RuntimeBaseConfig.ImageSuffix
+	imageVariant := config.RuntimeBaseConfig.ImageVariant
+	imageSuffix := config.RuntimeBaseConfig.ImagePathSuffix
 
 	refFlag, err := cmd.Flags().GetString("ref")
 	if err != nil {
 		return err
 	}
 
-	output, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageSuffix)
+	output, _, err := generateTag(upstreamVersion, architecture, imagePath, refFlag, imageVariant, imageSuffix)
 	if err != nil {
 		return err
 	}
@@ -45,25 +46,36 @@ func generateTagRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTag(upstreamVersion string, architecture string, imagePath string, refFlag string, imageSuffix string) (string, error) {
+type tagOutput struct {
+	ImageTag           string
+	ArtifactName       string
+	ArtifactURLEncoded string
+}
 
-	if len(architecture) == 0 {
-		return "", fmt.Errorf("architecture list cannot be empty")
+func generateTag(upstreamVersion string, architecture string, imagePath string, refFlag string, imageVariant string, imageSuffix string) (string, tagOutput, error) {
+
+	var tagElements = []string{}
+	if refFlag != "" {
+		tagElements = append(tagElements, refFlag)
 	}
 
-	output := []struct {
-		ImageTag           string
-		ArtifactName       string
-		ArtifactURLEncoded string
-	}{}
+	if architecture != "" {
+		tagElements = append(tagElements, architecture)
+	}
 
-	var tag string
+	// tag has the format [<upstreamVersion>-]<ref>[-<type>][-<architecture>]
+	if upstreamVersion != "0" && upstreamVersion != "" {
+		// add the upstream version as first element
+		tagElements = append([]string{upstreamVersion}, tagElements...)
+	}
 
-	// tag has the format <upstreamVersion>+ref-<architecture> or <ref>+<architecture>
-	if upstreamVersion == "0" || upstreamVersion == "" {
-		tag = refFlag + "-" + architecture
-	} else {
-		tag = upstreamVersion + "-" + refFlag + "-" + architecture
+	// check if we have a image type, if so, should be second last element
+	if imageVariant != "" {
+		// insert as second last
+		lastElement := tagElements[len(tagElements)-1]
+		tagElements = tagElements[:len(tagElements)-1]
+		tagElements = append(tagElements, imageVariant)
+		tagElements = append(tagElements, lastElement)
 	}
 
 	imagePathWithSuffix := imagePath
@@ -72,29 +84,24 @@ func generateTag(upstreamVersion string, architecture string, imagePath string, 
 		imagePathWithSuffix += "/" + imageSuffix
 	}
 
-	tag = imagePathWithSuffix + ":" + tag
-	artifactName, artifactURLEncoded, err := generateArtifactName(tag, architecture)
+	image := fmt.Sprintf("%s:%s", imagePathWithSuffix, strings.Join(tagElements, "-"))
+	artifactName, artifactURLEncoded, err := generateArtifactName(image, architecture)
 	if err != nil {
-		return "", err
+		return "", tagOutput{}, err
 	}
-	output = append(output, struct {
-		ImageTag           string
-		ArtifactName       string
-		ArtifactURLEncoded string
-	}{
-		ImageTag:           tag,
+	output := tagOutput{
+		ImageTag:           image,
 		ArtifactName:       artifactName,
 		ArtifactURLEncoded: artifactURLEncoded,
-	})
-
-	var outputString strings.Builder
-	for _, o := range output {
-		outputString.WriteString(fmt.Sprintf("IMAGE_TAG=%s\n", o.ImageTag))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME=%s\n", o.ArtifactName))
-		outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", o.ArtifactURLEncoded))
 	}
 
-	return outputString.String(), nil
+	var outputString strings.Builder
+
+	outputString.WriteString(fmt.Sprintf("IMAGE_TAG=%s\n", image))
+	outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME=%s\n", artifactName))
+	outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", artifactURLEncoded))
+
+	return outputString.String(), output, nil
 }
 
 func generateArtifactName(imageTag string, architecture string) (string, string, error) {

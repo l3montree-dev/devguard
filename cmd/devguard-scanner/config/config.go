@@ -63,9 +63,10 @@ type baseConfig struct {
 	Offline bool `json:"offline" mapstructure:"offline"`
 
 	ImagePath       string `json:"imagePath" mapstructure:"imagePath"`
+	ImagePathSuffix string `json:"imageSuffix" mapstructure:"imageSuffix"`
 	UpstreamVersion string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
 	Architecture    string `json:"architecture" mapstructure:"architecture"`
-	ImageSuffix     string `json:"imageSuffix" mapstructure:"imageSuffix"`
+	ImageVariant    string `json:"imageVariant" mapstructure:"imageVariant"`
 }
 
 type InTotoConfig struct {

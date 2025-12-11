@@ -22,6 +22,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -241,7 +242,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Minutes())
 	}()
 
-	var sarifScan dtos.SarifResult
+	var sarifScan sarif.SarifSchema210Json
 
 	defer ctx.Request().Body.Close()
 

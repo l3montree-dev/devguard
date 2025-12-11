@@ -37,6 +37,7 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	cmd.Flags().String("upstreamVersion", "", "Upstream version of the software")
 	cmd.Flags().String("architecture", "amd64", "Target architecture(s) for the image (required). Can be specified multiple times or as comma-separated values.")
 	cmd.Flags().String("imageSuffix", "", "Suffix to append to the image tag")
+	cmd.Flags().String("imageVariant", "", "Type of the image (e.g., minimal, full, alpine)")
 
 	err := cmd.MarkFlagRequired("imagePath")
 	if err != nil {

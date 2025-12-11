@@ -486,6 +486,43 @@ func buildDependencyMap(dependencies []cdx.Dependency) map[string][]string {
 	return depMap
 }
 
+func addFakeMetadataRootComponent(bom *cdx.BOM) *cdx.BOM {
+	// we have no root component, we need to create a fake one.
+	// besides that we need to create the dependency tree of that fake root
+	// lets do this by getting all existing dependencies which are not referenced by any other component
+	// those will be direct children of the fake root
+	rootComponent := &cdx.Component{
+		BOMRef:     "root-component",
+		Name:       "root-component",
+		PackageURL: "root-component",
+		Type:       "application",
+	}
+	bom.Metadata.Component = rootComponent
+	// find all referenced components
+	referencedComponents := make(map[string]bool)
+	for _, d := range *bom.Dependencies {
+		if d.Dependencies != nil {
+			for _, dep := range *d.Dependencies {
+				referencedComponents[dep] = true
+			}
+		}
+	}
+	// find all components which are not referenced
+	rootDependencies := []string{}
+	for _, c := range *bom.Components {
+		if !referencedComponents[c.BOMRef] {
+			rootDependencies = append(rootDependencies, c.BOMRef)
+		}
+	}
+	// add a dependency entry for the fake root
+	*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
+		Ref:          rootComponent.BOMRef,
+		Dependencies: &rootDependencies,
+	})
+
+	return bom
+}
+
 func newCdxBom(bom *cdx.BOM) *CdxBom {
 	// convert components to sbomNodes
 	// first make sure components exist
@@ -494,6 +531,9 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	}
 	if bom.Dependencies == nil {
 		bom.Dependencies = &[]cdx.Dependency{}
+	}
+	if bom.Metadata.Component == nil {
+		bom = addFakeMetadataRootComponent(bom)
 	}
 
 	sbomNodes := make([]cdxBomNode, 0, len(*bom.Components))
