@@ -121,13 +121,17 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 
+	org := shared.GetOrg(ctx)
+
+	project := shared.GetProject(ctx)
+
 	asset := shared.GetAsset(ctx)
 
-	assetVersion := shared.GetAssetVersion(ctx)
+	// assetVersion := shared.GetAssetVersion(ctx)
 
 	artifact := shared.GetArtifact(ctx)
 
-	err := c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
+	err := c.artifactService.DeleteArtifact(org, project, asset, artifact)
 
 	if err != nil {
 		return err
