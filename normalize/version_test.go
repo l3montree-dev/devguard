@@ -46,6 +46,12 @@ func TestConvertToSemver(t *testing.T) {
 }
 
 func TestConvertRPMtoSemVer(t *testing.T) {
+	//this is important for introducing semver sorting
+	t.Run("zero version", func(t *testing.T) {
+		result, err := normalize.ConvertToSemver("0")
+		assert.NoError(t, err)
+		assert.Equal(t, "0.0.0", result)
+	})
 	t.Run("simple version without release", func(t *testing.T) {
 		result, err := normalize.ConvertToSemver("1.2.3")
 		assert.NoError(t, err)

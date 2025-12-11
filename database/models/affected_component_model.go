@@ -184,7 +184,11 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 					if shouldConvertToSemver {
 						introduced, err = normalize.ConvertToSemver(introduced)
 						if err != nil {
-							continue
+							introduced, err = normalize.ConvertToSemver("0")
+							if err != nil {
+								continue
+							}
+							containsSemver = true
 						}
 						fixed, err = normalize.ConvertToSemver(fixed)
 						if err != nil {
