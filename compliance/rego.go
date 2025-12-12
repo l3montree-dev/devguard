@@ -116,8 +116,6 @@ func ConvertPolicyFsToModel(policy PolicyFS) models.Policy {
 	}
 }
 
-//create sarif data from metadata of yaml in opa eval
-
 func NewPolicy(filename string, content string) (*PolicyFS, error) {
 	metadata, err := parseMetadata(filename, content)
 	if err != nil {
@@ -129,8 +127,6 @@ func NewPolicy(filename string, content string) (*PolicyFS, error) {
 		Content:        content,
 	}, nil
 }
-
-// here, output should be sarif from now
 
 func Eval(p models.Policy, input any) PolicyEvaluation {
 
