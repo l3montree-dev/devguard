@@ -21,7 +21,7 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-            "attestations", "registry.opencode.de/open-code/oci/coreutils:1.0.0-rc.3-minimal-amd64"
+            "attestations", "registry.opencode.de/open-code/oci/coreutils:1.0.0-rc.3-minimal-amd64", "--policy", "container.gov.de.rego"
             ],
         },
         {

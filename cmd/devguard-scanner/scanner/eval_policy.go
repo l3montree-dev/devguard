@@ -105,23 +105,11 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 
 	location := func(message string) sarif.Location {
 		uri := fmt.Sprintf("oci://%s", image)
-		startLine := 1
-		startColumn := 1
-		endLine := 1
-		endColumn := 1
+
 		return sarif.Location{
 			PhysicalLocation: sarif.PhysicalLocation{
 				ArtifactLocation: sarif.ArtifactLocation{
 					URI: &uri,
-				},
-				Region: &sarif.Region{
-					StartLine:   &startLine,
-					StartColumn: &startColumn,
-					EndLine:     &endLine,
-					EndColumn:   &endColumn,
-					Snippet: &sarif.ArtifactContent{
-						Text: &message,
-					},
 				},
 			},
 			Message: sarif.Message{
@@ -132,6 +120,26 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 
 	var results []sarif.Result
 	for _, evaluation := range evaluations {
+		if evaluation.Compliant != nil && *evaluation.Compliant {
+			// create a pass result
+			results = append(results, sarif.Result{
+				Kind:   sarif.ResultKindPass,
+				RuleID: &ruleID,
+				Message: sarif.Message{
+					Text: "Policy compliant",
+				},
+				Locations: []sarif.Location{
+					location("The attestation is compliant with the policy."),
+				},
+				Properties: &sarif.PropertyBag{
+					Tags: policy.Tags,
+					AdditionalProperties: map[string]any{
+						"precision": "high",
+					},
+				},
+			})
+			continue
+		}
 		for _, violation := range evaluation.Violations {
 			results = append(results, sarif.Result{
 				Kind:   sarif.ResultKindFail,
