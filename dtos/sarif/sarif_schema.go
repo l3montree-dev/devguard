@@ -5,7 +5,6 @@ package sarif
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"reflect"
 	"regexp"
 	"strings"
@@ -2089,9 +2088,6 @@ func (j *Result) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
-	}
-	if _, ok := raw["message"]; raw != nil && !ok {
-		slog.Info("field message in Result: required")
 	}
 	type Plain Result
 	var plain Plain
