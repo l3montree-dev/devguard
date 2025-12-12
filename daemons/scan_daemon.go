@@ -71,7 +71,6 @@ func ScanArtifacts(
 				monitoring.AssetVersionScanAmount.Inc()
 
 				for i := range assetVersions {
-
 					artifacts, err := artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersions[i].AssetID, assetVersions[i].Name)
 					if err != nil {
 						slog.Error("failed to get artifacts for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
