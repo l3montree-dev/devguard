@@ -50,11 +50,7 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	// Handle tilde versions (convert to pre-release)
 	// This is common in Debian/RPM versioning
 	if idx := strings.Index(version, "~"); idx != -1 {
-		if preRelease != "" {
-			preRelease = version[idx+1:] + "-" + preRelease
-		} else {
-			preRelease = version[idx+1:]
-		}
+		preRelease = version[idx+1:]
 		version = version[:idx]
 	}
 
@@ -68,6 +64,10 @@ func ConvertToSemver(originalVersion string) (string, error) {
 		}
 		version = version[:idx]
 	}
+
+	// replace any "_" in preRelease with "."
+	// this is needed for redhat versions like "31.4.0-1.el5_11"
+	preRelease = strings.ReplaceAll(preRelease, "_", ".")
 
 	// Validate that version contains only digits and dots
 	if versionInvalidCharsRe.MatchString(version) {
@@ -106,6 +106,11 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	}
 	if buildMetadata != "" {
 		semver += "+" + buildMetadata
+	}
+
+	// validate using regex
+	if !ValidSemverRegex.MatchString(semver) {
+		return "", fmt.Errorf("resulting semver is invalid: %s", semver)
 	}
 
 	return semver, nil

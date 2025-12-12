@@ -332,13 +332,13 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	m := make(map[string]bool)
 	for _, v := range defaultVulns {
 		if v.State == dtos.VulnStateFixed {
-			m[v.ID] = true
+			m[fmt.Sprintf("%s/%s", utils.SafeDereference(v.CVEID), *v.ComponentPurl)] = true
 		}
 	}
 
 	// mark all vulns as fixed if they are in the map
 	for i := range dependencyVulns {
-		if _, ok := m[dependencyVulns[i].ID]; ok {
+		if m[fmt.Sprintf("%s/%s", utils.SafeDereference(dependencyVulns[i].CVEID), *dependencyVulns[i].ComponentPurl)] {
 			dependencyVulns[i].State = dtos.VulnStateFixed
 		}
 	}
