@@ -147,7 +147,7 @@ func CreateNewVulnEventBasedOnComment(vulnID string, vulnType dtos.VulnType, use
 	case dtos.EventTypeReopened:
 		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeComment:
-		return models.NewCommentEvent(vulnID, vulnType, userID, comment)
+		return models.NewCommentEvent(vulnID, vulnType, userID, comment, dtos.UpstreamStateInternal)
 	}
 
 	return models.VulnEvent{}
