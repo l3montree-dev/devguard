@@ -148,7 +148,6 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 		shouldConvertToSemver := false
 
 		if affected.Package.Purl != "" {
-
 			purl, err := packageurl.FromString(affected.Package.Purl)
 			if err != nil {
 				slog.Debug("could not parse purl", "purl", affected.Package.Purl, "err", err)
