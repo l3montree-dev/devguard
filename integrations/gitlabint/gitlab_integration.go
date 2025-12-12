@@ -1217,7 +1217,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(stateEvent),
 		Title:       gitlab.Ptr(dependencyVuln.Title()),
-		Description: gitlab.Ptr(commonint.RenderMarkdown(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: gitlab.Ptr(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1314,6 +1314,13 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		if err != nil {
 			return err
 		}
+	case *models.LicenseRisk:
+		createdIssue, err = g.createLicenseRiskIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, projectID)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("vuln type is currently not supported")
 	}
 
 	vuln.SetTicketID(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
@@ -1339,7 +1346,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(vuln.Title()),
-		Description: gitlab.Ptr(commonint.RenderMarkdown(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: gitlab.Ptr(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 
@@ -1388,6 +1395,33 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
+}
+
+func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
+
+	labels := commonint.GetLabels(licenseRisk)
+
+	issue := &gitlab.CreateIssueOptions{
+		Title:       gitlab.Ptr(licenseRisk.Title()),
+		Description: gitlab.Ptr(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+	}
+
+	createdIssue, _, err := client.CreateIssue(ctx, projectID, issue)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a comment with the justification
+	_, _, err = client.CreateIssueComment(ctx, projectID, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
+		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
+	})
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+		return nil, err
+	}
+
+	return createdIssue, nil
 }
 
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {

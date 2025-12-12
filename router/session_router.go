@@ -48,6 +48,7 @@ func NewSessionRouter(
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
+	assetVersionRepository shared.AssetVersionRepository,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
 		middlewares.SessionMiddleware(adminClient, patService),
@@ -74,6 +75,7 @@ func NewSessionRouter(
 		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
 		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
+		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 
 	fastAccessRoutes.POST("/scan/", scanController.ScanDependencyVulnFromProject)

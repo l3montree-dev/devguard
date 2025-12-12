@@ -79,7 +79,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
+			_, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, []string{csafURL})
 			assert.Equal(t, 1, len(invalidURLs))
 		})
 
@@ -167,7 +167,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := purl + ":" + testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			boms, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, []string{csafURL})
+			boms, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, assetVersion.Name, []string{csafURL})
 			assert.Equal(t, 0, len(invalidURLs))
 			assert.Equal(t, 1, len(boms))
 

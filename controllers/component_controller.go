@@ -137,7 +137,7 @@ func (ComponentController ComponentController) SearchComponentOccurrences(ctx sh
 		return echo.NewHTTPError(500, "could not fetch child projects").WithInternal(err)
 	}
 
-	var projectIDs = []uuid.UUID{
+	projectIDs := []uuid.UUID{
 		project.ID,
 	}
 	for _, p := range projects {

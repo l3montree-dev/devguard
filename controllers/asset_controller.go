@@ -273,8 +273,9 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			err = a.thirdPartyIntegration.CreateLabels(ctx.Request().Context(), asset)
 			if err != nil {
 				slog.Error("could not create labels in gitlab", "err", err)
+			} else {
+				asset.Metadata["gitlabLabels"] = true
 			}
-			asset.Metadata["gitlabLabels"] = true
 		}
 
 		a.FireAndForget(func() {
