@@ -90,7 +90,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	vulns, err := c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
@@ -146,7 +146,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
 
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
 		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
 		return origin
 	}), func(el string) string {
@@ -229,7 +229,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, toAdd)
+	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
 	var vulns []models.DependencyVuln
 	if len(boms) > 0 {
 		vulns, err = c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")

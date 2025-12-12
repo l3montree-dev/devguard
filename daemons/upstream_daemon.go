@@ -80,7 +80,7 @@ func SyncUpstream(
 							return el
 						})
 
-						vexReports, _, _ := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, upstreamURLs)
+						vexReports, _, _ := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
 
 						_, err = artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 						if err != nil {

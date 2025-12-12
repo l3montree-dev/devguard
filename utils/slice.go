@@ -27,6 +27,14 @@ func Filter[T any](s []T, f func(T) bool) []T {
 	return r
 }
 
+func MapType[New any, Old any](s []Old) []New {
+	r := make([]New, len(s))
+	for i, v := range s {
+		r[i] = any(v).(New)
+	}
+	return r
+}
+
 func Map[T, U any](s []T, f func(T) U) []U {
 	r := make([]U, len(s))
 	for i, v := range s {

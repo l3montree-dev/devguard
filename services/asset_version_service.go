@@ -842,86 +842,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	return wholeAssetSBOM, nil
 }
 
-func resolveLicense(component models.ComponentDependency, componentLicenseOverwrites map[string]string) cdx.Licenses {
-	licenses := cdx.Licenses{}
-	//first check if the license is overwritten by a license risk#
-	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
-	componentLicense := utils.SafeDereference(component.Dependency.License)
-	if exists && overwrite != "" {
-		// TO-DO: check if the license provided by the user is a valid license or not
-		licenses = append(licenses, cdx.LicenseChoice{
-			License: &cdx.License{
-				ID: overwrite,
-			},
-		})
-
-	} else if componentLicense != "" {
-		// non-standard and unknown are not valid values for the ID property in licenses
-		if componentLicense != "non-standard" && componentLicense != "unknown" {
-			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
-			if isLicenseExpression(componentLicense) {
-				licenses = append(licenses, cdx.LicenseChoice{
-					Expression: componentLicense,
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: componentLicense,
-					},
-				})
-			}
-
-		} else {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					Name: componentLicense,
-				},
-			})
-		}
-
-	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-		componentProjectLicense := component.Dependency.ComponentProject.License
-		// non-standard and unknown are not valid values for the ID property in licenses
-		if componentProjectLicense != "non-standard" && componentProjectLicense != "unknown" {
-			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
-			if isLicenseExpression(componentProjectLicense) {
-				licenses = append(licenses, cdx.LicenseChoice{
-					Expression: componentProjectLicense,
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: componentProjectLicense,
-					},
-				})
-			}
-
-		} else {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					Name: componentProjectLicense,
-				},
-			})
-		}
-	}
-	return licenses
-}
-
 func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
-	var err error
-	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
-	if artifactName == "" {
-		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
@@ -933,56 +854,7 @@ func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.
 		}
 	}
 
-	// add all components AND the root
-	bomComponents := make([]cdx.Component, 0, len(components)+1)
-	processedComponents := make(map[string]struct{}, len(components))
-	bomComponents = append(bomComponents, *bom.Metadata.Component)
-
-	for _, component := range components {
-		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
-			continue
-		}
-		processedComponents[component.DependencyPurl] = struct{}{}
-		licenses := resolveLicense(component, componentLicenseOverwrites)
-		bomComponents = append(bomComponents, cdx.Component{
-			Licenses:   &licenses,
-			BOMRef:     component.DependencyPurl,
-			Type:       cdx.ComponentType(component.Dependency.ComponentType),
-			PackageURL: component.DependencyPurl,
-			Version:    component.Dependency.Version,
-			Name:       component.DependencyPurl,
-		})
-	}
-
-	// just add all dependencies
-	// the sbom will be normalized afterwards
-	dependencyMap := make(map[string][]string)
-	for _, c := range components {
-		var purl string
-		if c.ComponentPurl == nil {
-			purl = rootPurl
-		} else {
-			purl = *c.ComponentPurl
-		}
-		dependencyMap[purl] = append(dependencyMap[purl], c.DependencyPurl)
-	}
-
-	// build up the dependencies
-	bomDependencies := make([]cdx.Dependency, 0, len(dependencyMap))
-	for k, v := range dependencyMap {
-		vtmp := v
-
-		bomDependencies = append(bomDependencies, cdx.Dependency{
-			Ref:          k,
-			Dependencies: &vtmp,
-		})
-	}
-	bom.Dependencies = &bomDependencies
-	bom.Components = &bomComponents
-
-	normalizedSBOM := normalize.FromNormalizedCdxBom(&bom, rootPurl)
-
-	return normalizedSBOM, nil
+	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -1042,19 +914,6 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 }
 
 func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
-	if artifactName == "" {
-		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
 
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
@@ -1114,9 +973,8 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 			vulnerabilities = append(vulnerabilities, vuln)
 		}
 	}
-	bom.Vulnerabilities = &vulnerabilities
 
-	return normalize.FromNormalizedCdxBom(&bom, rootPurl)
+	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
@@ -1444,8 +1302,4 @@ func createTitles(name string) (string, string) {
 	}
 	//now we return the two titles formatted correctly for the yaml file
 	return title1, title2
-}
-
-func isLicenseExpression(license string) bool {
-	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
 }

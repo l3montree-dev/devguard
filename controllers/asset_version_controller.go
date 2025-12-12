@@ -203,7 +203,10 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 		assetID = &asset.ID
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+
+	return encoder.Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
@@ -216,7 +219,8 @@ func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM(assetID))
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
+	return encoder.Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
@@ -229,7 +233,9 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex(assetID))
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
+
+	return encoder.Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
@@ -243,7 +249,9 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 		assetID = &asset.ID
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+	return encoder.Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
