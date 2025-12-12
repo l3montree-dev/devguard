@@ -146,6 +146,7 @@ func init() {
 		NewDiscoverBaseImageAttestationsCommand(),
 		NewVexCommand(),
 		NewGenerateTagCommand(),
+		NewAttestationCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
