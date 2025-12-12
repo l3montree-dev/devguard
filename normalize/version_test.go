@@ -27,6 +27,12 @@ func TestConvertToSemver(t *testing.T) {
 		assert.Equal(t, "1.2.3", semver)
 	})
 
+	t.Run("with epoch", func(t *testing.T) {
+		semver, err := normalize.ConvertToSemver("2:1.2.3")
+		assert.NoError(t, err)
+		assert.Equal(t, "1.2.3", semver)
+	})
+
 	t.Run("valid semver with pre-release", func(t *testing.T) {
 		smallSemver, err := normalize.ConvertToSemver("1.2.3-rc1")
 		assert.NoError(t, err)
