@@ -79,11 +79,13 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 }
 
 func getBestDescription(rule sarif.ReportingDescriptor) string {
-	if rule.FullDescription.Markdown != nil {
-		return utils.OrDefault(rule.FullDescription.Markdown, "")
-	}
-	if rule.FullDescription.Text != "" {
-		return rule.FullDescription.Text
+	if rule.FullDescription != nil {
+		if rule.FullDescription.Markdown != nil {
+			return utils.OrDefault(rule.FullDescription.Markdown, "")
+		}
+		if rule.FullDescription.Text != "" {
+			return rule.FullDescription.Text
+		}
 	}
 	if rule.ShortDescription.Markdown != nil {
 		return utils.OrDefault(rule.ShortDescription.Markdown, "")
