@@ -708,7 +708,7 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 			sbomURL = fmt.Sprintf("%s?ref=%s", sbomURL, url.QueryEscape(bom.ref))
 		}
 		if bom.ref != "" && bom.artifactName != "" {
-			sbomURL = fmt.Sprintf("%s&artifactName=%s", sbomURL, url.PathEscape(bom.artifactName))
+			sbomURL = fmt.Sprintf("%s&artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
 		} else if bom.artifactName != "" {
 			sbomURL = fmt.Sprintf("%s?artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
 		}
