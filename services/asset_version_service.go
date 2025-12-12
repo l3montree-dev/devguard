@@ -948,6 +948,8 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 			justification := getJustification(dependencyVuln)
 			if justification != nil {
 				vuln.Analysis.Detail = *justification
+			} else if response == cdx.IARUpdate {
+				vuln.Analysis.Detail = "Update available! Please update to the fixed version."
 			}
 
 			cvss := math.Round(float64(cve.CVSS)*100) / 100
@@ -1004,7 +1006,7 @@ func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAn
 	case dtos.VulnStateOpen:
 		return cdx.IASInTriage
 	case dtos.VulnStateFixed:
-		return cdx.IASResolved
+		return cdx.IASExploitable
 	case dtos.VulnStateAccepted:
 		return cdx.IASExploitable
 	case dtos.VulnStateFalsePositive:

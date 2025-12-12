@@ -372,7 +372,7 @@ func (s *LicenseRiskService) updateLicenseRiskState(tx shared.DB, userID string,
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, upstream)
 	case dtos.EventTypeComment:
-		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification)
+		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, upstream)
 	}
 
 	err := s.licenseRiskRepository.ApplyAndSave(tx, licenseRisk, &ev)

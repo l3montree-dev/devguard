@@ -57,6 +57,8 @@ func MapCDXToEventType(a *cdx.VulnerabilityAnalysis) string {
 		if a.Response != nil {
 			if slices.Contains(*a.Response, cdx.IARWillNotFix) {
 				return "accepted"
+			} else if slices.Contains(*a.Response, cdx.IARUpdate) {
+				return "comment"
 			}
 		}
 		return "detected"
@@ -64,13 +66,12 @@ func MapCDXToEventType(a *cdx.VulnerabilityAnalysis) string {
 		return "detected"
 	case cdx.IASNotAffected:
 		return "falsePositive"
+
 	default:
 		// fallback to response mapping if state is empty
 		if a.Response != nil && len(*a.Response) > 0 {
 			// take first response
 			switch (*a.Response)[0] {
-			case cdx.IARUpdate:
-				return "fixed"
 			case cdx.IARWillNotFix:
 				return "accepted"
 			default:

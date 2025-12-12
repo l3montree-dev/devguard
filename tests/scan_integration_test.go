@@ -601,7 +601,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
-			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "This is a test comment for lifecycle verification")
+			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "This is a test comment for lifecycle verification", 0)
 			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
@@ -831,7 +831,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
-			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Test comment for lifecycle verification")
+			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Test comment for lifecycle verification", 0)
 			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
