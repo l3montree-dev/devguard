@@ -132,46 +132,6 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 
 	var results []sarif.Result
 	for _, evaluation := range evaluations {
-		if evaluation.Compliant != nil && *evaluation.Compliant && len(evaluation.Violations) == 0 {
-			results = append(results, sarif.Result{
-				Kind:   sarif.ResultKindPass,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: "Policy compliant",
-				},
-				Locations: []sarif.Location{
-					location(policy.Title),
-				},
-				Properties: &sarif.PropertyBag{
-					Tags: policy.Tags,
-					AdditionalProperties: map[string]any{
-						"precision": "high",
-					},
-				},
-			})
-			continue
-		}
-
-		if len(evaluation.Violations) == 0 {
-			results = append(results, sarif.Result{
-				Kind:   sarif.ResultKindFail,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: "Policy evaluation returned non-compliant result",
-				},
-				Locations: []sarif.Location{
-					location(policy.Title),
-				},
-				Properties: &sarif.PropertyBag{
-					Tags: policy.Tags,
-					AdditionalProperties: map[string]any{
-						"precision": "high",
-					},
-				},
-			})
-			continue
-		}
-
 		for _, violation := range evaluation.Violations {
 			results = append(results, sarif.Result{
 				Kind:   sarif.ResultKindFail,
