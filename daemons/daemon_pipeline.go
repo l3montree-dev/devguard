@@ -90,9 +90,11 @@ func (runner DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
 
 	var pErr pipelineError
 	errChan := make(chan pipelineError)
+	errCh1, errCh2 := utils.TeeChannel(errChan)
+	runner.collectErrors(errCh1)
 	wg := make(chan struct{})
 	go func() {
-		for err := range errChan {
+		for err := range errCh2 {
 			pErr = err
 		}
 		close(wg)
@@ -234,6 +236,11 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errC
 		defer close(out)
 
 		for assetWithDetails := range input {
+			errChan <- pipelineError{
+				asset: assetWithDetails.asset,
+				err:   fmt.Errorf("SyncTickets not yet implemented"),
+			}
+			continue
 			asset := assetWithDetails.asset
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 				slog.Info("asset not connected to third party integration - skipping SyncTickets", "assetID", asset.ID)
@@ -327,11 +334,6 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 }
 
 func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
-	// if do not have a connection to a repo we do not need to do anything
-	if asset.RepositoryID == nil {
-		return nil
-	}
-
 	//extract information from repository ID
 	fields := strings.Split(*asset.RepositoryID, ":")
 	if len(fields) == 1 {
@@ -391,6 +393,7 @@ func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset 
 	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
 	return nil
 }
+
 func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 

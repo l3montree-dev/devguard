@@ -188,6 +188,22 @@ func WaitForChannelDrain[T any](ch <-chan T) {
 	}
 }
 
+func TeeChannel[T any](input <-chan T) (<-chan T, <-chan T) {
+	out1 := make(chan T)
+	out2 := make(chan T)
+
+	go func() {
+		defer close(out1)
+		defer close(out2)
+		for v := range input {
+			out1 <- v
+			out2 <- v
+		}
+	}()
+
+	return out1, out2
+}
+
 // useful for integration testing - use in production to just fire and forget a function "go func()"
 // during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
 type FireAndForgetSynchronizer interface {
