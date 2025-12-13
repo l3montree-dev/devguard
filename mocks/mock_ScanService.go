@@ -148,29 +148,33 @@ func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(org models.
 }
 
 // ScanNormalizedSBOMWithoutEventHandling provides a mock function for the type ScanService
-func (_mock *ScanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error) {
+func (_mock *ScanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	ret := _mock.Called(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScanNormalizedSBOMWithoutEventHandling")
 	}
 
-	var r0 int
-	var r1 int
+	var r0 []models.DependencyVuln
+	var r1 []models.DependencyVuln
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) (int, int, []models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
 		return returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) int); ok {
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
 		r0 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) int); ok {
+	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
 		r1 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
-		r1 = ret.Get(1).(int)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]models.DependencyVuln)
+		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
 		r2 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
@@ -247,12 +251,12 @@ func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) Run(run func(
 	return _c
 }
 
-func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) Return(n int, n1 int, dependencyVulns []models.DependencyVuln, err error) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
-	_c.Call.Return(n, n1, dependencyVulns, err)
+func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) Return(dependencyVulns []models.DependencyVuln, dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, err error) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
+	_c.Call.Return(dependencyVulns, dependencyVulns1, dependencyVulns2, err)
 	return _c
 }
 
-func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
+func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
 	_c.Call.Return(run)
 	return _c
 }

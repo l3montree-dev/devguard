@@ -34,6 +34,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 					// Log the error and stack trace for debugging
 					fmt.Println("Recovered from panic:", err)
 					fmt.Println("Stack trace:", string(stack[:length]))
+					returnErr = echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 				}
 			}()
 			return next(ctx)

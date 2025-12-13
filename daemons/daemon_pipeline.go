@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -43,37 +45,73 @@ type assetWithProjectAndOrg struct {
 	org           models.Org
 }
 
-// this creates a channel which will be used to pipeline asset processing in daemons
-func (DaemonRunner DaemonRunner) RunAssetPipeline() {
-	// fetch all assets from the database
-	idsChan := DaemonRunner.FetchAssetIDs()
+type pipelineError struct {
+	asset models.Asset
+	err   error
+}
+
+func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
 
 	// fetch asset details
-	assetsChan := monitorStage(monitoring.FetchAssetStageDuration, DaemonRunner.FetchAssetDetails)(idsChan)
+	assetsChan := monitorStage(monitoring.FetchAssetStageDuration, runner.FetchAssetDetails)(idsChan, errChan)
 	// scan assets
-	scannedAssetsChan := monitorStage(monitoring.ScanDaemonDuration, DaemonRunner.ScanAsset)(assetsChan)
+	scannedAssetsChan := monitorStage(monitoring.ScanDaemonDuration, runner.ScanAsset)(assetsChan, errChan)
 	// sync upstream
-	syncedUpstreamChan := monitorStage(monitoring.UpstreamSyncDuration, DaemonRunner.SyncUpstream)(scannedAssetsChan)
+	syncedUpstreamChan := monitorStage(monitoring.UpstreamSyncDuration, runner.SyncUpstream)(scannedAssetsChan, errChan)
 	// auto-reopen tickets
-	autoReopenedVulnsChan := monitorStage(monitoring.ReopenVulnsStageDuration, DaemonRunner.AutoReopenTickets)(syncedUpstreamChan)
+	autoReopenedVulnsChan := monitorStage(monitoring.ReopenVulnsStageDuration, runner.AutoReopenTickets)(syncedUpstreamChan, errChan)
 	// recalculate risk for vulnerabilities
-	recalculatedRiskChan := monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, DaemonRunner.RecalculateRiskForVulnerabilities)(autoReopenedVulnsChan)
+	recalculatedRiskChan := monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, runner.RecalculateRiskForVulnerabilities)(autoReopenedVulnsChan, errChan)
 	// sync tickets
-	syncedTicketsChan := monitorStage(monitoring.SyncTicketDuration, DaemonRunner.SyncTickets)(recalculatedRiskChan)
+	syncedTicketsChan := monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(recalculatedRiskChan, errChan)
 	// collect stats
-	ch := monitorStage(monitoring.StatisticsUpdateDuration, DaemonRunner.CollectStats)(syncedTicketsChan)
+	ch := monitorStage(monitoring.StatisticsUpdateDuration, runner.CollectStats)(syncedTicketsChan, errChan)
 	utils.WaitForChannelDrain(ch)
+	// we can close the error channel now
+	// since it is a chan<-pipelineError we can be sure that all errors have been sent
+	close(errChan)
+}
+
+// this creates a channel which will be used to pipeline asset processing in daemons
+func (runner DaemonRunner) RunAssetPipeline() {
+	// fetch all assets from the database
+	errChan := make(chan pipelineError, 100)
+	runner.collectErrors(errChan)
+	idsChan := runner.FetchAssetIDs()
+	runner.runPipeline(idsChan, errChan)
+}
+
+func (runner DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
+	idsChan := make(chan uuid.UUID, 1)
+	go func() {
+		idsChan <- assetID
+		close(idsChan)
+	}()
+
+	var pErr pipelineError
+	errChan := make(chan pipelineError)
+	wg := make(chan struct{})
+	go func() {
+		for err := range errChan {
+			pErr = err
+		}
+		close(wg)
+	}()
+	runner.runPipeline(idsChan, errChan)
+	<-wg
+
+	return pErr.err
 }
 
 func monitorStage[In any, Out any](
 	hist prometheus.Histogram,
-	stageFunc func(<-chan In) <-chan Out,
-) func(<-chan In) <-chan Out {
-	return func(input <-chan In) <-chan Out {
+	stageFunc func(<-chan In, chan<- pipelineError) <-chan Out,
+) func(<-chan In, chan<- pipelineError) <-chan Out {
+	return func(input <-chan In, errChan chan<- pipelineError) <-chan Out {
 		output := make(chan Out)
 		go func() {
 			defer close(output)
-			for item := range stageFunc(input) {
+			for item := range stageFunc(input, errChan) {
 				// record metrics
 				start := time.Now()
 				output <- item
@@ -84,18 +122,34 @@ func monitorStage[In any, Out any](
 	}
 }
 
-func (DaemonRunner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
+func (runner DaemonRunner) collectErrors(input <-chan pipelineError) {
+	go func() {
+		for assetWithDetails := range input {
+			slog.Error("error during asset pipeline", "assetID", assetWithDetails.asset.ID, "err", assetWithDetails.err)
+
+			asset := assetWithDetails.asset
+			errMsg := assetWithDetails.err.Error()
+			asset.PipelineError = &errMsg
+			asset.PipelineLastRun = time.Now()
+			err := runner.assetRepository.Save(nil, &asset)
+			if err != nil {
+				monitoring.Alert("could not save pipeline error to asset", err)
+			}
+		}
+	}()
+}
+
+func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 
 	go func() {
 		defer close(out)
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
-		err := DaemonRunner.assetRepository.GetDB(nil).Model(&models.Asset{}).Select("ID").Find(&assets).Error
+		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-1*time.Hour)).Select("ID").Find(&assets).Error
 		if err != nil {
-			monitoring.Alert("could not fetch asset ids. Cannot run DaemonRunner. This is critical since all background jobs will be stuck.", err)
+			monitoring.Alert("could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
-
 		for _, asset := range assets {
 			out <- asset.ID
 		}
@@ -105,35 +159,64 @@ func (DaemonRunner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 
 // fetches the asset details for each element in the input channel
 // this way WE HOPE to no overload the database with too big queries or too many concurrent requests
-func (DaemonRunner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
 		defer close(out)
 		for assetID := range input {
-			asset, err := DaemonRunner.assetRepository.Read(assetID)
+			asset, err := runner.assetRepository.Read(assetID)
 			if err != nil {
-				slog.Error("could not fetch asset in DaemonRunner", "assetID", assetID, "err", err)
+				slog.Error("could not fetch asset in runner", "assetID", assetID, "err", err)
+				errChan <- pipelineError{
+					asset: models.Asset{Model: models.Model{ID: assetID}},
+					err:   fmt.Errorf("could not fetch asset: %w", err),
+				}
 				continue
 			}
 
-			assetVersions, err := DaemonRunner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(nil, asset.ID)
+			assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(nil, asset.ID)
 			if err != nil {
-				slog.Error("could not fetch asset versions in DaemonRunner", "assetID", asset.ID, "err", err)
+				slog.Error("could not fetch asset versions in runner", "assetID", asset.ID, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch asset versions: %w", err),
+				}
 				continue
 			}
 
-			project, err := DaemonRunner.projectRepository.Read(asset.ProjectID)
+			project, err := runner.projectRepository.Read(asset.ProjectID)
 			if err != nil {
-				slog.Error("could not fetch project in DaemonRunner", "assetID", asset.ID, "err", err)
+				slog.Error("could not fetch project in runner", "assetID", asset.ID, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch project: %w", err),
+				}
 				continue
 			}
-			org, err := DaemonRunner.orgRepository.Read(project.OrganizationID)
+			org, err := runner.orgRepository.Read(project.OrganizationID)
 			if err != nil {
-				slog.Error("could not fetch org in DaemonRunner", "assetID", asset.ID, "err", err)
+				slog.Error("could not fetch org in runner", "assetID", asset.ID, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch project: %w", err),
+				}
 				continue
 			}
 
+			// mark the asset as processed - so that we do not process it again, even if the pipeline takes longer than an hour
+			asset.PipelineLastRun = time.Now()
+			asset.PipelineError = nil
+			err = runner.assetRepository.Save(nil, &asset)
+			if err != nil {
+				monitoring.Alert("could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch project: %w", err),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "FetchAssetDetails", "assetID", asset.ID)
 			out <- assetWithProjectAndOrg{
 				asset:         asset,
 				assetVersions: assetVersions,
@@ -145,7 +228,42 @@ func (DaemonRunner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID) <-cha
 	return out
 }
 
-func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+	out := make(chan assetWithProjectAndOrg)
+	go func() {
+		defer close(out)
+
+		for assetWithDetails := range input {
+			asset := assetWithDetails.asset
+			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
+				slog.Info("asset not connected to third party integration - skipping SyncTickets", "assetID", asset.ID)
+				out <- assetWithDetails
+				continue
+			}
+			errs := make([]error, 0)
+			for _, assetVersion := range assetWithDetails.assetVersions {
+				err := runner.dependencyVulnService.SyncAllIssues(assetWithDetails.org, assetWithDetails.project, asset, assetVersion)
+				if err != nil {
+					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
+					errs = append(errs, err)
+					continue
+				}
+			}
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not sync tickets: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "SyncTickets", "assetID", assetWithDetails.asset.ID)
+			out <- assetWithDetails
+		}
+	}()
+	return out
+}
+
+func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
 		defer close(out)
@@ -155,36 +273,24 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg) <-ch
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 				continue
 			}
-			for _, assetVersion := range assetWithDetails.assetVersions {
-				err := runner.dependencyVulnService.SyncAllIssues(assetWithDetails.org, assetWithDetails.project, asset, assetVersion)
-				if err != nil {
-					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
-					continue
-				}
-			}
-			out <- assetWithDetails
-		}
-	}()
-	return out
-}
-
-func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
-	out := make(chan assetWithProjectAndOrg)
-	go func() {
-		defer close(out)
-
-		for assetWithDetails := range input {
-			asset := assetWithDetails.asset
 			// build new client each time for authentication
 			gitlabClient, _, err := runner.integrationAggregate.GetIntegration(shared.GitLabIntegrationID).(*gitlabint.GitlabIntegration).GetClientBasedOnAsset(asset)
 			if err != nil {
 				slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not get gitlab client: %w", err),
+				}
 				continue
 			}
 
 			depVulns, err := runner.dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(nil, asset.ID)
 			if err != nil {
 				slog.Error("could not get dependency vulns for asset", "assetID", asset.ID, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not get dependency vulns: %w", err),
+				}
 				continue
 			}
 
@@ -207,8 +313,13 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 			err = CompareStatesAndResolveDifferences(gitlabClient, asset, depVulnsIIDs)
 			if err != nil {
 				slog.Error("could not compare ticket states", "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not compare ticket states: %w", err),
+				}
 				continue
 			}
+			slog.Info("finished pipeline stage", "stage", "ResolveDifferencesInTicketState", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -280,31 +391,33 @@ func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset 
 	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
 	return nil
 }
-func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
 		defer close(out)
 
 		for assetWithDetails := range input {
-			start := time.Now()
 			assetVersions := assetWithDetails.assetVersions
 			asset := assetWithDetails.asset
 			project := assetWithDetails.project
 			org := assetWithDetails.org
 
+			errs := make([]error, 0)
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					components, err := runner.componentRepository.LoadComponents(nil, assetVersions[i].Name, assetVersions[i].AssetID, &artifact.ArtifactName)
 					if err != nil {
 						slog.Error("failed to load components", "error", err)
+						errs = append(errs, err)
 						continue
 					}
 
 					bom, err := runner.assetVersionService.BuildSBOM(asset, assetVersions[i], artifact.ArtifactName, "", components)
 					if err != nil {
 						slog.Error("error when building SBOM")
+						errs = append(errs, err)
 						continue
 					}
 					if len(components) <= 0 {
@@ -315,31 +428,39 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg) <-chan
 
 					if err != nil {
 						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						errs = append(errs, err)
 						continue
 					}
 
 					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				}
 			}
-			monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not scan asset: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "ScanAsset", "assetID", asset.ID)
 			out <- assetWithDetails
 		}
 	}()
 	return out
 }
 
-func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
 		defer close(out)
 
 		for assetWithDetails := range input {
-			start := time.Now()
 			assetVersions := assetWithDetails.assetVersions
 			asset := assetWithDetails.asset
 			project := assetWithDetails.project
 			org := assetWithDetails.org
+			errs := make([]error, 0)
 
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
@@ -347,6 +468,7 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg) <-c
 					rootNodes, err := runner.componentService.FetchInformationSources(&artifact)
 					if err != nil {
 						slog.Error("failed to fetch root nodes for artifact", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+						errs = append(errs, err)
 						continue
 					}
 
@@ -364,29 +486,38 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg) <-c
 					_, err = runner.artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
 					if err != nil {
 						slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+						errs = append(errs, err)
 						continue
 					}
-
-					slog.Info("synced upstream VEX reports for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-					monitoring.UpstreamSyncDuration.Observe(float64(time.Since(start).Minutes()))
 				}
 			}
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not sync upstream: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "SyncUpstream", "assetID", asset.ID)
+			out <- assetWithDetails
 		}
 	}()
 	return out
 }
 
-func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
 		defer close(out)
 
 		for assetWithDetails := range input {
+			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
 				for _, artifact := range assetVersion.Artifacts {
 					start := time.Now()
 					if err := runner.statisticsService.UpdateArtifactRiskAggregation(&artifact, artifact.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, time.Now().AddDate(0, -1, 0)), time.Now()); err != nil {
 						slog.Error("could not recalculate risk history", "err", err)
+						errs = append(errs, err)
 						continue
 					}
 
@@ -394,13 +525,21 @@ func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg) <-c
 					monitoring.StatisticsUpdateDuration.Observe(time.Since(start).Minutes())
 				}
 			}
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: assetWithDetails.asset,
+					err:   fmt.Errorf("could not collect stats: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "CollectStats", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
 	return out
 }
 
-func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -408,13 +547,15 @@ func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetW
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
+			errs := make([]error, 0)
+
 			for _, assetVersion := range assetVersions {
-				start := time.Now()
 
 				// get all dependencyVulns of the asset
 				dependencyVulns, err := runner.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
 				if err != nil {
 					slog.Error("failed to get dependency vulns for asset version", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID, "error", err)
+					errs = append(errs, err)
 					continue
 				}
 
@@ -425,19 +566,26 @@ func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetW
 				_, err = runner.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "System recalculated raw risk assessment", assetVersion.Asset)
 				if err != nil {
 					slog.Error("failed to recalculate raw risk assessment for asset version", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID, "error", err)
+					errs = append(errs, err)
 					continue
 				}
 
-				monitoring.RecalculateRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
 			}
-
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: assetWithDetails.asset,
+					err:   fmt.Errorf("could not recalculate risk: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "RecalculateRiskForVulnerabilities", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
 	return out
 }
 
-func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg) <-chan assetWithProjectAndOrg {
+func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -445,6 +593,11 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
+			if asset.VulnAutoReopenAfterDays == nil || *asset.VulnAutoReopenAfterDays <= 0 {
+				slog.Info("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
+				out <- assetWithDetails
+				continue
+			}
 			// convert days to time.Duration
 			reopenAfterDuration := time.Duration(*asset.VulnAutoReopenAfterDays) * 24 * time.Hour
 
@@ -452,19 +605,34 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 			vulnerabilities, err := runner.dependencyVulnRepository.GetAllByAssetIDAndState(nil, asset.ID, dtos.VulnStateAccepted, reopenAfterDuration)
 			if err != nil {
 				slog.Error("failed to get closed/accepted vulnerabilities for asset", "assetID", asset.ID, "error", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not get closed/accepted vulnerabilities: %w", err),
+				}
 				continue
 			}
 
+			errs := make([]error, 0)
 			for _, vuln := range vulnerabilities {
 				// create a new event for the vulnerability
 				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), dtos.UpstreamStateInternal)
 
 				if err := runner.dependencyVulnRepository.ApplyAndSave(nil, &vuln, &event); err != nil {
 					slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)
+					errs = append(errs, err)
+					continue
 				} else {
 					slog.Info("reopened vulnerability since it was accepted more than the configured time", "vulnerabilityID", vuln.ID, "assetID", asset.ID, "reopenAfterDays", *asset.VulnAutoReopenAfterDays)
 				}
 			}
+			if len(errs) > 0 {
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not auto-reopen tickets: %v", errors.Join(errs...)),
+				}
+				continue
+			}
+			slog.Info("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()

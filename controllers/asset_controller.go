@@ -23,10 +23,12 @@ type AssetController struct {
 	dependencyVulnService  shared.DependencyVulnService
 	statisticsService      shared.StatisticsService
 	thirdPartyIntegration  shared.IntegrationAggregate
+	daemonRunner           shared.DaemonRunner
+
 	utils.FireAndForgetSynchronizer
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
 	return &AssetController{
 		assetRepository:           repository,
 		assetVersionRepository:    assetVersionRepository,
@@ -35,7 +37,19 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		statisticsService:         statisticsService,
 		thirdPartyIntegration:     thirdPartyIntegration,
 		FireAndForgetSynchronizer: synchronizer,
+		daemonRunner:              daemonRunner,
 	}
+}
+
+func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+
+	if err := a.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
+		slog.Error("error")
+		return echo.NewHTTPError(500, err.Error()).WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
 }
 
 func (a *AssetController) HandleLookup(ctx shared.Context) error {

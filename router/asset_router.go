@@ -46,6 +46,7 @@ func NewAssetRouter(
 
 	assetRouter := projectGroup.Group.Group("/assets/:assetSlug", assetScopedRBAC(shared.ObjectAsset, shared.ActionRead))
 	assetRouter.GET("/", assetController.Read)
+
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
@@ -68,6 +69,7 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
+	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 
 	return AssetRouter{Group: assetRouter}
 }

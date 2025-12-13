@@ -16,6 +16,9 @@
 package daemons
 
 import (
+	"log/slog"
+	"time"
+
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
@@ -108,10 +111,29 @@ func NewDaemonRunner(
 }
 
 // Start initiates all background daemons
-func (dr DaemonRunner) Start() {
-	dr.startBackgroundDaemons()
+func (runner DaemonRunner) Start() {
+	go func() {
+		runner.tick()
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			runner.tick()
+		}
+	}()
 }
 
+func (runner DaemonRunner) tick() {
+	if runner.leaderElector.IsLeader() {
+		slog.Info("this instance is the leader - running background jobs")
+		runner.runDaemons()
+		runner.RunAssetPipeline()
+	} else {
+		slog.Info("not the leader - skipping background jobs")
+	}
+}
+
+var _ shared.DaemonRunner = (*DaemonRunner)(nil)
+
 var Module = fx.Module("daemons",
-	fx.Provide(NewDaemonRunner),
+	fx.Provide(fx.Annotate(NewDaemonRunner, fx.As(new(shared.DaemonRunner)))),
 )

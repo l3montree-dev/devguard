@@ -42,21 +42,6 @@ func TestApplyToModel(t *testing.T) {
 			updated: true,
 		},
 		{
-			name: "Update CentralDependencyVulnManagement",
-			patch: dtos.AssetPatchRequest{
-				CentralDependencyVulnManagement: utils.Ptr(true),
-			},
-			initial: models.Asset{
-
-				CentralDependencyVulnManagement: false,
-			},
-			expected: models.Asset{
-
-				CentralDependencyVulnManagement: true,
-			},
-			updated: true,
-		},
-		{
 			name: "Update ReachableFromInternet",
 			patch: dtos.AssetPatchRequest{
 				ReachableFromInternet: utils.Ptr(true),

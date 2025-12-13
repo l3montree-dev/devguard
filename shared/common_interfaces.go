@@ -34,8 +34,13 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type DaemonRunner interface {
+	RunDaemonPipelineForAsset(assetID uuid.UUID) error
+	Start()
+}
+
 type LeaderElector interface {
-	IfLeader(ctx context.Context, fn func() error)
+	IsLeader() bool
 }
 type ReleaseService interface {
 	ListByProject(projectID uuid.UUID) ([]models.Release, error)
