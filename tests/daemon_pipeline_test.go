@@ -262,7 +262,7 @@ func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
 
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(asset.ID)
-
+		assert.NoError(t, err, "Pipeline should complete even with errors")
 		// The pipeline should complete but may record errors
 		var updatedAsset models.Asset
 		err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
