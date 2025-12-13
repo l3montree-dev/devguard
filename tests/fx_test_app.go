@@ -22,6 +22,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
@@ -137,11 +138,16 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 		// Use the same modules as production
 		repositories.Module,
 		services.ServiceModule,
+		daemons.Module,
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
 		fx.Decorate(func() utils.FireAndForgetSynchronizer {
 			return utils.NewSyncFireAndForgetSynchronizer()
+		}),
+		// Provide a test leader elector that always returns true
+		fx.Decorate(func() shared.LeaderElector {
+			return &testLeaderElector{}
 		}),
 		fx.Populate(&app),
 	}
@@ -191,4 +197,11 @@ func (n *noopBroker) Subscribe(topic database.Channel) (<-chan map[string]any, e
 	ch := make(chan map[string]any)
 	close(ch) // Return a closed channel so subscribers don't block
 	return ch, nil
+}
+
+// testLeaderElector is a simple implementation for tests that always returns true
+type testLeaderElector struct{}
+
+func (t *testLeaderElector) IsLeader() bool {
+	return true
 }

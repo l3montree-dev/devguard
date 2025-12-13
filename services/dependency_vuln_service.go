@@ -229,7 +229,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 		}
 
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
-		newRiskAssessment := vulndb.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
+		newRiskAssessment := vulndb.RawRisk(*dependencyVuln.CVE, env, utils.OrDefault(dependencyVuln.ComponentDepth, 1))
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)

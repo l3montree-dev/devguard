@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,16 +37,16 @@ func (_m *DaemonRunner) EXPECT() *DaemonRunner_Expecter {
 }
 
 // RunDaemonPipelineForAsset provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) RunDaemonPipelineForAsset(asset models.Asset) error {
-	ret := _mock.Called(asset)
+func (_mock *DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
+	ret := _mock.Called(assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RunDaemonPipelineForAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset) error); ok {
-		r0 = returnFunc(asset)
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) error); ok {
+		r0 = returnFunc(assetID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -59,16 +59,16 @@ type DaemonRunner_RunDaemonPipelineForAsset_Call struct {
 }
 
 // RunDaemonPipelineForAsset is a helper method to define mock.On call
-//   - asset models.Asset
-func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(asset interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
-	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", asset)}
+//   - assetID uuid.UUID
+func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(assetID interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", assetID)}
 }
 
-func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Run(run func(asset models.Asset)) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Run(run func(assetID uuid.UUID)) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 uuid.UUID
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -82,7 +82,7 @@ func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Return(err error) *Daemon
 	return _c
 }
 
-func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(asset models.Asset) error) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(assetID uuid.UUID) error) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

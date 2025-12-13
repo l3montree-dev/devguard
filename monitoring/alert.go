@@ -16,6 +16,7 @@
 package monitoring
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/getsentry/sentry-go"
@@ -31,4 +32,10 @@ func Alert(message string, err error) {
 func RecoverAndAlert(message string, err error) {
 	evID := sentry.CurrentHub().Recover(err)
 	slog.Error("critical error encounded (recover)", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
+}
+
+func RecoverPanic(msg string) {
+	if r := recover(); r != nil {
+		Alert(msg, fmt.Errorf("panic recovered: %v", r))
+	}
 }

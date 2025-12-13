@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/require"
@@ -132,6 +133,40 @@ func (f *TestFixture) CreateAssetVersion(assetID uuid.UUID, name string, isDefau
 	err := f.DB.Create(&assetVersion).Error
 	require.NoError(f.T, err)
 	return assetVersion
+}
+
+// CreateDaemonRunner creates a DaemonRunner instance with all dependencies from the test app
+func (f *TestFixture) CreateDaemonRunner() daemons.DaemonRunner {
+	f.T.Helper()
+
+	// Create a daemon runner using the NewDaemonRunner constructor with all dependencies from TestApp
+	return daemons.NewDaemonRunner(
+		f.DB,
+		f.App.Broker,
+		f.App.ConfigService,
+		f.App.RBACProvider,
+		f.App.IntegrationAggregate,
+		f.App.AssetVersionService,
+		f.App.AssetVersionRepository,
+		f.App.AssetRepository,
+		f.App.ProjectRepository,
+		f.App.OrgRepository,
+		f.App.ArtifactService,
+		f.App.ComponentRepository,
+		f.App.ComponentService,
+		f.App.DependencyVulnService,
+		f.App.DependencyVulnRepository,
+		f.App.ComponentProjectRepository,
+		f.App.VulnEventRepository,
+		f.App.StatisticsService,
+		f.App.ArtifactRepository,
+		f.App.CveRepository,
+		f.App.CweRepository,
+		f.App.ExploitRepository,
+		f.App.AffectedComponentRepository,
+		f.App.ScanService,
+		&testLeaderElector{}, // Use simple test leader elector
+	)
 }
 
 // WithTestApp provides a callback-based pattern for tests

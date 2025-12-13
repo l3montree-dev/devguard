@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,48 +35,46 @@ func (_m *LeaderElector) EXPECT() *LeaderElector_Expecter {
 	return &LeaderElector_Expecter{mock: &_m.Mock}
 }
 
-// IfLeader provides a mock function for the type LeaderElector
-func (_mock *LeaderElector) IfLeader(ctx context.Context, fn func() error) {
-	_mock.Called(ctx, fn)
-	return
+// IsLeader provides a mock function for the type LeaderElector
+func (_mock *LeaderElector) IsLeader() bool {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsLeader")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func() bool); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
 }
 
-// LeaderElector_IfLeader_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IfLeader'
-type LeaderElector_IfLeader_Call struct {
+// LeaderElector_IsLeader_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsLeader'
+type LeaderElector_IsLeader_Call struct {
 	*mock.Call
 }
 
-// IfLeader is a helper method to define mock.On call
-//   - ctx context.Context
-//   - fn func() error
-func (_e *LeaderElector_Expecter) IfLeader(ctx interface{}, fn interface{}) *LeaderElector_IfLeader_Call {
-	return &LeaderElector_IfLeader_Call{Call: _e.mock.On("IfLeader", ctx, fn)}
+// IsLeader is a helper method to define mock.On call
+func (_e *LeaderElector_Expecter) IsLeader() *LeaderElector_IsLeader_Call {
+	return &LeaderElector_IsLeader_Call{Call: _e.mock.On("IsLeader")}
 }
 
-func (_c *LeaderElector_IfLeader_Call) Run(run func(ctx context.Context, fn func() error)) *LeaderElector_IfLeader_Call {
+func (_c *LeaderElector_IsLeader_Call) Run(run func()) *LeaderElector_IsLeader_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 func() error
-		if args[1] != nil {
-			arg1 = args[1].(func() error)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run()
 	})
 	return _c
 }
 
-func (_c *LeaderElector_IfLeader_Call) Return() *LeaderElector_IfLeader_Call {
-	_c.Call.Return()
+func (_c *LeaderElector_IsLeader_Call) Return(b bool) *LeaderElector_IsLeader_Call {
+	_c.Call.Return(b)
 	return _c
 }
 
-func (_c *LeaderElector_IfLeader_Call) RunAndReturn(run func(ctx context.Context, fn func() error)) *LeaderElector_IfLeader_Call {
-	_c.Run(run)
+func (_c *LeaderElector_IsLeader_Call) RunAndReturn(run func() bool) *LeaderElector_IsLeader_Call {
+	_c.Call.Return(run)
 	return _c
 }

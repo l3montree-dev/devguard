@@ -27,10 +27,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -142,7 +140,10 @@ func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("fetch asset ids panic")
+		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
 		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-1*time.Hour)).Select("ID").Find(&assets).Error
@@ -162,7 +163,10 @@ func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan cha
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("fetch asset details panic")
+		}()
 		for assetID := range input {
 			asset, err := runner.assetRepository.Read(assetID)
 			if err != nil {
@@ -230,14 +234,12 @@ func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan cha
 func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("sync tickets panic")
+		}()
 
 		for assetWithDetails := range input {
-			errChan <- pipelineError{
-				asset: assetWithDetails.asset,
-				err:   fmt.Errorf("SyncTickets not yet implemented"),
-			}
-			continue
 			asset := assetWithDetails.asset
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 				slog.Info("asset not connected to third party integration - skipping SyncTickets", "assetID", asset.ID)
@@ -270,7 +272,10 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errC
 func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("resolve differences in ticket state panic")
+		}()
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
@@ -289,17 +294,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 			}
 
 			// build new client each time for authentication
-			gitlabClient, _, err := runner.integrationAggregate.GetIntegration(shared.GitLabIntegrationID).(*gitlabint.GitlabIntegration).GetClientBasedOnAsset(asset)
-			if err != nil {
-				slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not get gitlab client: %w", err),
-				}
-				continue
-			}
-
-			err = CompareStatesAndResolveDifferences(gitlabClient, asset, depVulnsIIDs)
+			err = runner.integrationAggregate.CompareIssueStatesAndResolveDifferences(asset, depVulns)
 			if err != nil {
 				slog.Error("could not compare ticket states", "err", err)
 				errChan <- pipelineError{
@@ -315,15 +310,14 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 	return out
 }
 
-func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
-
-}
-
 func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("scan panic")
+		}()
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
@@ -381,7 +375,10 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("sync upstream panic")
+		}()
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
@@ -436,7 +433,10 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("collect stats panic")
+		}()
 
 		for assetWithDetails := range input {
 			errs := make([]error, 0)
@@ -471,7 +471,10 @@ func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetW
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("recalculate risk for vulnerabilities panic")
+		}()
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
@@ -517,7 +520,10 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
-		defer close(out)
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("auto reopen tickets panic")
+		}()
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
