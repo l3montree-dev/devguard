@@ -5,15 +5,10 @@ package daemons
 
 import (
 	"log/slog"
-
-	"github.com/l3montree-dev/devguard/shared"
 )
 
-func DeleteOldAssetVersions(
-	assetVersionRepository shared.AssetVersionRepository,
-	vulnEventRepository shared.VulnEventRepository,
-) error {
-	count, err := assetVersionRepository.DeleteOldAssetVersions(7)
+func (runner DaemonRunner) DeleteOldAssetVersions() error {
+	count, err := runner.assetVersionRepository.DeleteOldAssetVersions(7)
 	if err != nil {
 		return err
 	}
@@ -24,7 +19,7 @@ func DeleteOldAssetVersions(
 	}
 
 	// Delete old vuln events
-	err = vulnEventRepository.DeleteEventsWithNotExistingVulnID()
+	err = runner.vulnEventRepository.DeleteEventsWithNotExistingVulnID()
 	if err != nil {
 		slog.Error("Failed to delete old vuln events", "err", err)
 	}

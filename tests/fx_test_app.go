@@ -42,7 +42,7 @@ type TestApp struct {
 	Broker database.Broker
 
 	// Services
-	ConfigService            services.ConfigService
+	ConfigService            shared.ConfigService
 	LicenseRiskService       shared.LicenseRiskService
 	StatisticsService        shared.StatisticsService
 	ComponentService         shared.ComponentService

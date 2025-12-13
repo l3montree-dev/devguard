@@ -16,9 +16,7 @@
 package daemons
 
 import (
-	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -27,10 +25,9 @@ import (
 type DaemonRunner struct {
 	db                           shared.DB
 	broker                       database.Broker
-	configService                services.ConfigService
+	configService                shared.ConfigService
 	rbacProvider                 shared.RBACProvider
 	integrationAggregate         shared.IntegrationAggregate
-	scanController               *controllers.ScanController
 	assetVersionService          shared.AssetVersionService
 	assetVersionRepository       shared.AssetVersionRepository
 	assetRepository              shared.AssetRepository
@@ -49,16 +46,17 @@ type DaemonRunner struct {
 	cweRepository                shared.CweRepository
 	exploitsRepository           shared.ExploitRepository
 	affectedComponentsRepository shared.AffectedComponentRepository
+	scanService                  shared.ScanService
+	leaderElector                shared.LeaderElector
 }
 
 // NewDaemonRunner creates a new daemon runner with injected dependencies
 func NewDaemonRunner(
 	db shared.DB,
 	broker database.Broker,
-	configService services.ConfigService,
+	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
-	scanController *controllers.ScanController,
 	assetVersionService shared.AssetVersionService,
 	assetVersionRepository shared.AssetVersionRepository,
 	assetRepository shared.AssetRepository,
@@ -77,14 +75,15 @@ func NewDaemonRunner(
 	cweRepository shared.CweRepository,
 	exploitsRepository shared.ExploitRepository,
 	affectedComponentsRepository shared.AffectedComponentRepository,
-) *DaemonRunner {
-	return &DaemonRunner{
+	scanService shared.ScanService,
+	leaderElector shared.LeaderElector,
+) DaemonRunner {
+	return DaemonRunner{
 		db:                           db,
 		broker:                       broker,
 		configService:                configService,
 		rbacProvider:                 rbacProvider,
 		integrationAggregate:         integrationAggregate,
-		scanController:               scanController,
 		assetVersionService:          assetVersionService,
 		assetVersionRepository:       assetVersionRepository,
 		assetRepository:              assetRepository,
@@ -103,42 +102,16 @@ func NewDaemonRunner(
 		cweRepository:                cweRepository,
 		exploitsRepository:           exploitsRepository,
 		affectedComponentsRepository: affectedComponentsRepository,
+		scanService:                  scanService,
+		leaderElector:                leaderElector,
 	}
 }
 
 // Start initiates all background daemons
-func (dr *DaemonRunner) Start() {
-	Start(
-		dr.db,
-		dr.broker,
-		dr.configService,
-		dr.rbacProvider,
-		dr.integrationAggregate,
-		dr.scanController,
-		dr.assetVersionService,
-		dr.assetVersionRepository,
-		dr.assetRepository,
-		dr.projectRepository,
-		dr.orgRepository,
-		dr.artifactService,
-		dr.componentRepository,
-		dr.componentService,
-		dr.dependencyVulnService,
-		dr.dependencyVulnRepository,
-		dr.componentProjectRepository,
-		dr.vulnEventRepository,
-		dr.statisticsService,
-		dr.artifactRepository,
-		dr.cveRepository,
-		dr.cweRepository,
-		dr.exploitsRepository,
-		dr.affectedComponentsRepository,
-	)
+func (dr DaemonRunner) Start() {
+	dr.startBackgroundDaemons()
 }
 
 var Module = fx.Module("daemons",
 	fx.Provide(NewDaemonRunner),
-	fx.Invoke(func(dr *DaemonRunner) {
-		dr.Start()
-	}),
 )

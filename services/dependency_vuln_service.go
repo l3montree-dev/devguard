@@ -150,43 +150,6 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *DependencyVulnService) RecalculateAllRawRiskAssessments() error {
-
-	now := time.Now()
-	slog.Info("recalculating all raw risk assessments", "time", now)
-
-	userID := "system"
-	justification := "System recalculated raw risk assessment"
-
-	assetVersions, err := s.assetVersionRepository.All()
-	if err != nil {
-		return fmt.Errorf("could not get all assets: %v", err)
-	}
-
-	for _, assetVersion := range assetVersions {
-		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsAmount.Inc()
-		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
-		if len(dependencyVulns) == 0 {
-			continue
-		}
-
-		if err != nil {
-			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
-		}
-
-		_, err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
-		if err != nil {
-			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
-		}
-
-		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsUpdatedAmount.Inc()
-	}
-
-	return nil
-
-}
-
 func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil

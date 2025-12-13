@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -38,6 +39,8 @@ func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {
 		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
 	}
 }
+
+var _ shared.AssetVersionRepository = (*assetVersionRepository)(nil)
 
 func (repository *assetVersionRepository) All() ([]models.AssetVersion, error) {
 	var result []models.AssetVersion
@@ -216,6 +219,12 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetID(tx *gorm.DB,
 	var assets []models.AssetVersion
 	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
+}
+
+func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+	var assetVersion []models.AssetVersion
+	err := repository.db.Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
+	return assetVersion, err
 }
 
 func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {

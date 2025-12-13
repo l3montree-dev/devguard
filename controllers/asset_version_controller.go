@@ -886,7 +886,7 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
 	}
@@ -933,7 +933,7 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}

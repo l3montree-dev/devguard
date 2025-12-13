@@ -18,7 +18,7 @@ import (
 	"go.uber.org/fx"
 )
 
-func markMirrored(configService services.ConfigService, key string) error {
+func markMirrored(configService shared.ConfigService, key string) error {
 	return configService.SetJSONConfig(key, struct {
 		Time time.Time `json:"time"`
 	}{
@@ -62,6 +62,7 @@ func newTriggerCommand() *cobra.Command {
 func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
+		fx.NopLogger,
 		// Provide the already-created db and broker
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
@@ -71,37 +72,19 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 		accesscontrol.AccessControlModule,
 		controllers.ControllerModule,
 		integrations.Module,
+		daemons.Module,
 
 		// Invoke the daemon trigger function with all dependencies
 		fx.Invoke(func(
-			configService services.ConfigService,
-			assetVersionRepository shared.AssetVersionRepository,
-			assetRepository shared.AssetRepository,
-			dependencyVulnRepository shared.DependencyVulnRepository,
-			componentProjectRepository shared.ComponentProjectRepository,
-			componentService shared.ComponentService,
-			vulnEventRepository shared.VulnEventRepository,
-			cveRepository shared.CveRepository,
-			cweRepository shared.CweRepository,
-			exploitsRepository shared.ExploitRepository,
-			affectedComponentsRepository shared.AffectedComponentRepository,
-			statisticsService shared.StatisticsService,
-			artifactRepository shared.ArtifactRepository,
-			dependencyVulnService shared.DependencyVulnService,
-			integrationAggregate shared.IntegrationAggregate,
-			scanController *controllers.ScanController,
-			assetVersionService shared.AssetVersionService,
-			projectRepository shared.ProjectRepository,
-			orgRepository shared.OrganizationRepository,
-			artifactService shared.ArtifactService,
-			componentRepository shared.ComponentRepository,
+			runner daemons.DaemonRunner,
+			configService shared.ConfigService,
 		) {
 			slog.Info("starting background jobs", "time", time.Now())
 			var start time.Time
 
 			if emptyOrContains(selectedDaemons, "deleteOldAssetVersions") {
 				start = time.Now()
-				err := daemons.DeleteOldAssetVersions(assetVersionRepository, vulnEventRepository)
+				err := runner.DeleteOldAssetVersions()
 				if err != nil {
 					slog.Error("could not delete old asset versions", "err", err)
 					return
@@ -115,7 +98,7 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "openSourceInsights") {
 				start = time.Now()
-				err := daemons.UpdateOpenSourceInsightInformation(componentProjectRepository, componentService)
+				err := runner.UpdateOpenSourceInsightInformation()
 				if err != nil {
 					slog.Error("could not update deps dev information", "err", err)
 					return
@@ -123,19 +106,9 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 				slog.Info("deps dev information updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "scan") {
-				start = time.Now()
-				err := daemons.ScanArtifacts(db, scanController, assetVersionService, assetVersionRepository, assetRepository, projectRepository, orgRepository, artifactService, componentRepository)
-				if err != nil {
-					slog.Error("could not scan asset versions", "err", err)
-					return
-				}
-				slog.Info("asset version scanned successfully", "duration", time.Since(start))
-			}
-
 			if emptyOrContains(selectedDaemons, "vulndb") {
 				start = time.Now()
-				if err := daemons.UpdateVulnDB(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService); err != nil {
+				if err := runner.UpdateVulnDB(); err != nil {
 					slog.Error("could not update vulndb", "err", err)
 					return
 				}
@@ -147,7 +120,7 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "fixedVersions") {
 				start = time.Now()
-				if err := daemons.UpdateFixedVersions(db, dependencyVulnRepository); err != nil {
+				if err := runner.UpdateFixedVersions(); err != nil {
 					slog.Error("could not update component properties", "err", err)
 					return
 				}
@@ -157,40 +130,10 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 				slog.Info("component properties updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "risk") {
+			if emptyOrContains(selectedDaemons, "assetPipeline") {
 				start = time.Now()
-				if err := daemons.RecalculateRisk(dependencyVulnService); err != nil {
-					slog.Error("could not recalculate risk", "err", err)
-					return
-				}
-				if err := markMirrored(configService, "vulndb.risk"); err != nil {
-					slog.Error("could not mark vulndb.risk as mirrored", "err", err)
-				}
-				slog.Info("risk recalculated", "duration", time.Since(start))
-			}
-
-			if emptyOrContains(selectedDaemons, "tickets") {
-				start = time.Now()
-				if err := daemons.SyncTickets(db, integrationAggregate, dependencyVulnService, assetVersionRepository, assetRepository, projectRepository, orgRepository, dependencyVulnRepository); err != nil {
-					slog.Error("could not sync tickets", "err", err)
-					return
-				}
-				if err := markMirrored(configService, "vulndb.tickets"); err != nil {
-					slog.Error("could not mark vulndb.tickets as mirrored", "err", err)
-				}
-				slog.Info("tickets synced", "duration", time.Since(start))
-			}
-
-			if emptyOrContains(selectedDaemons, "statistics") {
-				start = time.Now()
-				if err := daemons.UpdateStatistics(statisticsService, assetVersionRepository, artifactRepository); err != nil {
-					slog.Error("could not update statistics", "err", err)
-					return
-				}
-				if err := markMirrored(configService, "vulndb.statistics"); err != nil {
-					slog.Error("could not mark vulndb.statistics as mirrored", "err", err)
-				}
-				slog.Info("statistics updated", "duration", time.Since(start))
+				runner.RunAssetPipeline()
+				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 		}),
 	)

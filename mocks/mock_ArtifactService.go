@@ -102,8 +102,8 @@ func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uui
 }
 
 // FetchBomsFromUpstream provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
-	ret := _mock.Called(artifactName, upstreamURLs)
+func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+	ret := _mock.Called(artifactName, ref, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchBomsFromUpstream")
@@ -112,25 +112,25 @@ func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, upstrea
 	var r0 []*normalize.CdxBom
 	var r1 []string
 	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, []string) ([]*normalize.CdxBom, []string, []string)); ok {
-		return returnFunc(artifactName, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.CdxBom, []string, []string)); ok {
+		return returnFunc(artifactName, ref, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, []string) []*normalize.CdxBom); ok {
-		r0 = returnFunc(artifactName, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.CdxBom); ok {
+		r0 = returnFunc(artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*normalize.CdxBom)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, []string) []string); ok {
-		r1 = returnFunc(artifactName, upstreamURLs)
+	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
+		r1 = returnFunc(artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(string, []string) []string); ok {
-		r2 = returnFunc(artifactName, upstreamURLs)
+	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
+		r2 = returnFunc(artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]string)
@@ -146,24 +146,30 @@ type ArtifactService_FetchBomsFromUpstream_Call struct {
 
 // FetchBomsFromUpstream is a helper method to define mock.On call
 //   - artifactName string
+//   - ref string
 //   - upstreamURLs []string
-func (_e *ArtifactService_Expecter) FetchBomsFromUpstream(artifactName interface{}, upstreamURLs interface{}) *ArtifactService_FetchBomsFromUpstream_Call {
-	return &ArtifactService_FetchBomsFromUpstream_Call{Call: _e.mock.On("FetchBomsFromUpstream", artifactName, upstreamURLs)}
+func (_e *ArtifactService_Expecter) FetchBomsFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ArtifactService_FetchBomsFromUpstream_Call {
+	return &ArtifactService_FetchBomsFromUpstream_Call{Call: _e.mock.On("FetchBomsFromUpstream", artifactName, ref, upstreamURLs)}
 }
 
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) Run(run func(artifactName string, upstreamURLs []string)) *ArtifactService_FetchBomsFromUpstream_Call {
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ArtifactService_FetchBomsFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 []string
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].([]string)
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -174,17 +180,17 @@ func (_c *ArtifactService_FetchBomsFromUpstream_Call) Return(cdxBoms []*normaliz
 	return _c
 }
 
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetArtifactNamesByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+// GetArtifactsByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetArtifactNamesByAssetIDAndAssetVersionName")
+		panic("no return value specified for GetArtifactsByAssetIDAndAssetVersionName")
 	}
 
 	var r0 []models.Artifact
@@ -207,19 +213,19 @@ func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(asset
 	return r0, r1
 }
 
-// ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifactNamesByAssetIDAndAssetVersionName'
-type ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call struct {
+// ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifactsByAssetIDAndAssetVersionName'
+type ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call struct {
 	*mock.Call
 }
 
-// GetArtifactNamesByAssetIDAndAssetVersionName is a helper method to define mock.On call
+// GetArtifactsByAssetIDAndAssetVersionName is a helper method to define mock.On call
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *ArtifactService_Expecter) GetArtifactNamesByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
-	return &ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetArtifactNamesByAssetIDAndAssetVersionName", assetID, assetVersionName)}
+func (_e *ArtifactService_Expecter) GetArtifactsByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
+	return &ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetArtifactsByAssetIDAndAssetVersionName", assetID, assetVersionName)}
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -237,12 +243,12 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(artifacts, err)
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(run)
 	return _c
 }
