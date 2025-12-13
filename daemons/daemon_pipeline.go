@@ -158,7 +158,7 @@ func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 }
 
 // fetches the asset details for each element in the input channel
-// this way WE HOPE to no overload the database with too big queries or too many concurrent requests
+// This approach is intended to avoid overloading the database with large queries or too many concurrent requests.
 func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
