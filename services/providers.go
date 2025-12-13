@@ -13,7 +13,12 @@ var ServiceModule = fx.Options(
 	fx.Provide(
 		fx.Annotate(utils.NewFireAndForgetSynchronizer, fx.As(new(utils.FireAndForgetSynchronizer))),
 	),
-	fx.Provide(NewConfigService),
+	fx.Provide(
+		fx.Annotate(NewDatabaseLeaderElector, fx.As(new(shared.LeaderElector))),
+	),
+	fx.Provide(
+		fx.Annotate(NewConfigService, fx.As(new(shared.ConfigService))),
+	),
 	fx.Provide(fx.Annotate(NewFirstPartyVulnService, fx.As(new(shared.FirstPartyVulnService)))),
 	fx.Provide(fx.Annotate(NewLicenseRiskService, fx.As(new(shared.LicenseRiskService)))),
 	fx.Provide(fx.Annotate(NewProjectService, fx.As(new(shared.ProjectService)))),

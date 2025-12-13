@@ -100,12 +100,8 @@ func main() {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
-	if err != nil {
-		slog.Error("failed to create broker", "err", err)
-		panic(err)
-	}
-
 	fx.New(
+		fx.NopLogger, // disable FX logging
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),
@@ -129,6 +125,7 @@ func main() {
 		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
+		fx.Invoke(func(DependencyProxyRouter router.DependencyProxyRouter) {}),
 		fx.Invoke(func(server *echo.Echo) {}),
 	).Run()
 }

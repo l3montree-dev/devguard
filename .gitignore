@@ -28,3 +28,4 @@ csaf-openpgp-public-key.asc
 vulndb-tmp-*
 cert.pem
 key.pem
+cache

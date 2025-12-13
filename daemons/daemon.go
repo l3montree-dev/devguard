@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func getLastMirrorTime(configService services.ConfigService, key string) (time.Time, error) {
+func getLastMirrorTime(configService shared.ConfigService, key string) (time.Time, error) {
 	var lastMirror struct {
 		Time time.Time `json:"time"`
 	}
@@ -34,7 +34,7 @@ func getLastMirrorTime(configService services.ConfigService, key string) (time.T
 	return lastMirror.Time, nil
 }
 
-func shouldMirror(configService services.ConfigService, key string) bool {
+func shouldMirror(configService shared.ConfigService, key string) bool {
 	lastTime, err := getLastMirrorTime(configService, key)
 	if err != nil {
 		return false
@@ -43,7 +43,7 @@ func shouldMirror(configService services.ConfigService, key string) bool {
 	return time.Since(lastTime) > 12*time.Hour
 }
 
-func markMirrored(configService services.ConfigService, key string) error {
+func markMirrored(configService shared.ConfigService, key string) error {
 	return configService.SetJSONConfig(key, struct {
 		Time time.Time `json:"time"`
 	}{
@@ -54,7 +54,7 @@ func markMirrored(configService services.ConfigService, key string) error {
 func runDaemons(
 	db shared.DB,
 	broker database.Broker,
-	configService services.ConfigService,
+	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
 	scanController *controllers.ScanController,
@@ -229,7 +229,7 @@ func runDaemons(
 func Start(
 	db shared.DB,
 	broker database.Broker,
-	configService services.ConfigService,
+	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
 	scanController *controllers.ScanController,
