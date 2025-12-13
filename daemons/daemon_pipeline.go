@@ -16,10 +16,8 @@
 package daemons
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
@@ -35,7 +33,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type assetWithProjectAndOrg struct {
@@ -280,18 +277,8 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 				continue
 			}
-			// build new client each time for authentication
-			gitlabClient, _, err := runner.integrationAggregate.GetIntegration(shared.GitLabIntegrationID).(*gitlabint.GitlabIntegration).GetClientBasedOnAsset(asset)
-			if err != nil {
-				slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not get gitlab client: %w", err),
-				}
-				continue
-			}
-
 			depVulns, err := runner.dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(nil, asset.ID)
+
 			if err != nil {
 				slog.Error("could not get dependency vulns for asset", "assetID", asset.ID, "err", err)
 				errChan <- pipelineError{
@@ -301,20 +288,15 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 				continue
 			}
 
-			// convert the dependency vulns into a list of iids for this asset
-			depVulnsIIDs := make([]int, 0, len(depVulns))
-			for _, vuln := range depVulns {
-				fields := strings.Split(*vuln.TicketID, "/")
-				if len(fields) == 1 {
-					continue
+			// build new client each time for authentication
+			gitlabClient, _, err := runner.integrationAggregate.GetIntegration(shared.GitLabIntegrationID).(*gitlabint.GitlabIntegration).GetClientBasedOnAsset(asset)
+			if err != nil {
+				slog.Error("could not get gitlab client for asset", "asset", asset.Slug, "err", err)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not get gitlab client: %w", err),
 				}
-				// iid is found in the last part of the ticketID
-				iid, err := strconv.Atoi(fields[len(fields)-1])
-				if err != nil {
-					slog.Warn("invalid ticket id", "vulnID", vuln.ID)
-					continue
-				}
-				depVulnsIIDs = append(depVulnsIIDs, iid)
+				continue
 			}
 
 			err = CompareStatesAndResolveDifferences(gitlabClient, asset, depVulnsIIDs)
@@ -334,64 +316,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 }
 
 func CompareStatesAndResolveDifferences(client shared.GitlabClientFacade, asset models.Asset, devguardStateIIDs []int) error {
-	//extract information from repository ID
-	fields := strings.Split(*asset.RepositoryID, ":")
-	if len(fields) == 1 {
-		return fmt.Errorf("invalid repository id (%s)", *asset.RepositoryID)
-	}
-	if fields[0] != "gitlab" {
-		slog.Warn("only gitlab is currently supported for this function")
-		return nil
-	}
-	projectID, err := gitlabint.ExtractProjectIDFromRepoID(*asset.RepositoryID)
-	if err != nil {
-		slog.Error("could not extract projectID from RepoID")
-		return err
-	}
 
-	issues, err := gitlabint.FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
-		listIssuesOptions := gitlab.ListProjectIssuesOptions{
-			ListOptions: gitlab.ListOptions{
-				PerPage: 100,
-				Page:    page,
-			},
-			State: utils.Ptr("opened"),
-			Labels: &gitlab.LabelOptions{
-				"devguard",
-			},
-		}
-		return client.GetProjectIssues(projectID, &listIssuesOptions)
-	})
-	if err != nil {
-		return err
-	}
-
-	gitlabIIDs := make([]int, 0, len(issues))
-	// only count open tickets created by devguard
-	for _, issue := range issues {
-		gitlabIIDs = append(gitlabIIDs, issue.IID)
-	}
-
-	// compare both states
-	comparison := utils.CompareSlices(devguardStateIIDs, gitlabIIDs, func(iid int) int { return iid })
-	excessIIDs := comparison.OnlyInB
-
-	// close all excess devguard tickets
-	updateOptions := gitlab.UpdateIssueOptions{
-		StateEvent: utils.Ptr("close"),
-	}
-	amountClosed := 0
-	for _, iid := range excessIIDs {
-		_, _, err = client.EditIssue(context.Background(), projectID, iid, &updateOptions)
-		if err != nil {
-			slog.Error("could not close issue", "iid", iid)
-			continue
-		}
-		amountClosed++
-	}
-
-	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
-	return nil
 }
 
 func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {

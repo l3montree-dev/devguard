@@ -19,6 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
+
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -337,6 +338,75 @@ func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*git
 		group = parentGroup
 	}
 	return parentGroups
+}
+
+func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	// check if we can even handle this
+	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	if errors.Is(err, notConnectedError) {
+		// asset not connected to gitlab
+		return nil
+	}
+
+	// convert the dependency vulns into a list of iids for this asset
+	depVulnsIIDs := make([]int, 0, len(vulnsWithTickets))
+	for _, vuln := range vulnsWithTickets {
+		fields := strings.Split(*vuln.TicketID, "/")
+		if len(fields) == 1 {
+			continue
+		}
+		// iid is found in the last part of the ticketID
+		iid, err := strconv.Atoi(fields[len(fields)-1])
+		if err != nil {
+			slog.Warn("invalid ticket id", "vulnID", vuln.ID)
+			continue
+		}
+		depVulnsIIDs = append(depVulnsIIDs, iid)
+	}
+
+	issues, err := FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
+		listIssuesOptions := gitlab.ListProjectIssuesOptions{
+			ListOptions: gitlab.ListOptions{
+				PerPage: 100,
+				Page:    page,
+			},
+			State: utils.Ptr("opened"),
+			Labels: &gitlab.LabelOptions{
+				"devguard",
+			},
+		}
+		return client.GetProjectIssues(projectID, &listIssuesOptions)
+	})
+	if err != nil {
+		return err
+	}
+
+	gitlabIIDs := make([]int, 0, len(issues))
+	// only count open tickets created by devguard
+	for _, issue := range issues {
+		gitlabIIDs = append(gitlabIIDs, issue.IID)
+	}
+
+	// compare both states
+	comparison := utils.CompareSlices(depVulnsIIDs, gitlabIIDs, func(iid int) int { return iid })
+	excessIIDs := comparison.OnlyInB
+
+	// close all excess devguard tickets
+	updateOptions := gitlab.UpdateIssueOptions{
+		StateEvent: utils.Ptr("close"),
+	}
+	amountClosed := 0
+	for _, iid := range excessIIDs {
+		_, _, err = client.EditIssue(context.Background(), projectID, iid, &updateOptions)
+		if err != nil {
+			slog.Error("could not close issue", "iid", iid)
+			continue
+		}
+		amountClosed++
+	}
+
+	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
+	return nil
 }
 
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
