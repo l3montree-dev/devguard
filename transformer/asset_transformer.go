@@ -70,6 +70,9 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		IsPublic:                     asset.IsPublic,
 		ParanoidMode:                 asset.ParanoidMode,
 		SharesInformation:            asset.SharesInformation,
+
+		PipelineLastRun: asset.PipelineLastRun,
+		PipelineError:   asset.PipelineError,
 	}
 }
 
@@ -86,8 +89,6 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 		Slug:        slug.Make(assetCreateRequest.Name),
 		ProjectID:   projectID,
 		Description: assetCreateRequest.Description,
-
-		CentralDependencyVulnManagement: assetCreateRequest.CentralDependencyVulnManagement,
 
 		Importance:            assetCreateRequest.Importance,
 		ReachableFromInternet: assetCreateRequest.ReachableFromInternet,
@@ -131,11 +132,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.Description != nil {
 		updated = true
 		asset.Description = *assetPatch.Description
-	}
-
-	if assetPatch.CentralDependencyVulnManagement != nil {
-		updated = true
-		asset.CentralDependencyVulnManagement = *assetPatch.CentralDependencyVulnManagement
 	}
 
 	if assetPatch.ReachableFromInternet != nil {

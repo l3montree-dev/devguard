@@ -106,12 +106,6 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 
@@ -132,6 +126,13 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+
+	c.FireAndForget(func() {
+		err := c.dependencyVulnService.SyncAllIssues(shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	return ctx.NoContent(200)
 }
@@ -172,12 +173,6 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 
@@ -265,12 +260,6 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 

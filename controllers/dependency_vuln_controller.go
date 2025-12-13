@@ -385,7 +385,6 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
 			if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
-
 			}
 		}
 	}

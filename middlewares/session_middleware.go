@@ -22,8 +22,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -90,7 +90,7 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 					} else if strings.Contains(err.Error(), "could not get public key using fingerprint") {
 						return echo.NewHTTPError(401, "token provided but not found in database").SetInternal(err)
 					}
-					sentry.CurrentHub().CaptureException(err)
+					monitoring.Alert("failed to verify request signature", err)
 					return echo.NewHTTPError(500, "unexpected error").WithInternal(err)
 				}
 				scopesArray := strings.Fields(scopes)

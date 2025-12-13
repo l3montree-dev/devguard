@@ -5,30 +5,25 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/shared"
 )
 
-func UpdateOpenSourceInsightInformation(
-	componentProjectRepository shared.ComponentProjectRepository,
-	componentService shared.ComponentService,
-) error {
+func (runner DaemonRunner) UpdateOpenSourceInsightInformation() error {
 	start := time.Now()
 	defer func() {
 		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(start).Minutes())
 	}()
 
-	projectsToUpdate, err := componentProjectRepository.FindAllOutdatedProjects()
+	projectsToUpdate, err := runner.componentProjectRepository.FindAllOutdatedProjects()
 	if err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
 	for _, project := range projectsToUpdate {
-		wg.Go(func() { componentService.RefreshComponentProjectInformation(project) })
+		wg.Go(func() { runner.componentService.RefreshComponentProjectInformation(project) })
 	}
 
 	wg.Wait()
 
-	monitoring.UpdateOpenSourceInsightInformationDaemonAmount.Inc()
 	return nil
 }

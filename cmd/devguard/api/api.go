@@ -19,30 +19,31 @@ import (
 	"log/slog"
 	"sort"
 
-	"go.uber.org/fx"
-
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
-func NewServer(lc fx.Lifecycle, db shared.DB, broker database.Broker) *echo.Echo {
+type Server struct {
+	Echo *echo.Echo
+}
+
+func NewServer() Server {
 	server := middlewares.Server()
-	lc.Append(fx.StartHook(func() {
-		go func() {
-			routes := server.Routes()
-			sort.Slice(routes, func(i, j int) bool {
-				return routes[i].Path < routes[j].Path
-			})
-			// print all registered routes
-			for _, route := range routes {
-				if route.Method != "echo_route_not_found" {
-					slog.Info(route.Path, "method", route.Method)
-				}
-			}
-			slog.Error("failed to start server", "err", server.Start(":8080").Error())
-		}()
-	}))
-	return server
+	return Server{
+		Echo: server,
+	}
+}
+
+func (s Server) Start() {
+	routes := s.Echo.Routes()
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].Path < routes[j].Path
+	})
+	// print all registered routes
+	for _, route := range routes {
+		if route.Method != "echo_route_not_found" {
+			slog.Info(route.Path, "method", route.Method)
+		}
+	}
+	slog.Error("failed to start server", "err", s.Echo.Start(":8080").Error())
 }

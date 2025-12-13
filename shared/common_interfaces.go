@@ -34,6 +34,20 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type DaemonRunner interface {
+	RunDaemonPipelineForAsset(assetID uuid.UUID) error
+	RunAssetPipeline()
+	UpdateFixedVersions() error
+	UpdateVulnDB() error
+	UpdateOpenSourceInsightInformation() error
+	DeleteOldAssetVersions() error
+
+	Start()
+}
+
+type LeaderElector interface {
+	IsLeader() bool
+}
 type ReleaseService interface {
 	ListByProject(projectID uuid.UUID) ([]models.Release, error)
 	ListByProjectPaged(projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)
@@ -312,7 +326,7 @@ type AssetService interface {
 	BootstrapAsset(rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {
-	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
+	GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
@@ -321,7 +335,6 @@ type ArtifactService interface {
 }
 
 type DependencyVulnService interface {
-	RecalculateAllRawRiskAssessments() error
 	RecalculateRawRiskAssessment(tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
 	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
@@ -350,6 +363,7 @@ type AssetVersionRepository interface {
 	Delete(tx DB, assetVersion *models.AssetVersion) error
 	Save(tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
+	GetAssetVersionsByAssetIDWithArtifacts(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
@@ -371,6 +385,7 @@ type FirstPartyVulnService interface {
 
 type ScanService interface {
 	ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error)
+	ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 }
 
 type ConfigRepository interface {

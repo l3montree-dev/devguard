@@ -45,28 +45,24 @@ type AssetDTO struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	LastSecretScan               *time.Time `json:"lastSecretScan"`
-	LastSastScan                 *time.Time `json:"lastSastScan"`
-	LastScaScan                  *time.Time `json:"lastScaScan"`
-	LastIacScan                  *time.Time `json:"lastIacScan"`
-	LastContainerScan            *time.Time `json:"lastContainerScan"`
-	LastDastScan                 *time.Time `json:"lastDastScan"`
-	SigningPubKey                *string    `json:"signingPubKey"`
-	EnableTicketRange            bool       `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64   `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64   `json:"riskAutomaticTicketThreshold"`
-	VulnAutoReopenAfterDays      *int       `json:"vulnAutoReopenAfterDays"`
+	SigningPubKey                *string  `json:"signingPubKey"`
+	EnableTicketRange            bool     `json:"enableTicketRange"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+	VulnAutoReopenAfterDays      *int     `json:"vulnAutoReopenAfterDays"`
 
 	AssetVersions []AssetVersionDTO `json:"refs"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 
-	RepositoryProvider              *string `json:"repositoryProvider,omitempty"`
-	IsPublic                        bool    `json:"isPublic"`
-	ParanoidMode                    bool    `json:"paranoidMode"`
-	SharesInformation               bool    `json:"sharesInformation"`
-	CentralDependencyVulnManagement bool    `json:"centralDependencyVulnManagement"`
+	RepositoryProvider              *string   `json:"repositoryProvider,omitempty"`
+	IsPublic                        bool      `json:"isPublic"`
+	ParanoidMode                    bool      `json:"paranoidMode"`
+	SharesInformation               bool      `json:"sharesInformation"`
+	CentralDependencyVulnManagement bool      `json:"centralDependencyVulnManagement"`
+	PipelineLastRun                 time.Time `json:"pipelineLastRun"`
+	PipelineError                   *string   `json:"pipelineError,omitempty"`
 }
 
 type AssetWithSecretsDTO struct {

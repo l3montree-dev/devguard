@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
@@ -32,7 +33,7 @@ func health(ctx echo.Context) error {
 	return ctx.String(200, "ok")
 }
 
-func NewAPIV1Router(srv *echo.Echo,
+func NewAPIV1Router(srv api.Server,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin shared.AdminClient,
 	assetController *controllers.AssetController,
@@ -44,7 +45,7 @@ func NewAPIV1Router(srv *echo.Echo,
 	assetVersionRepository shared.AssetVersionRepository,
 	artifactRepository shared.ArtifactRepository,
 ) APIV1Router {
-	apiV1Router := srv.Group("/api/v1")
+	apiV1Router := srv.Echo.Group("/api/v1")
 	// this makes the third party integrations available to all controllers
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
