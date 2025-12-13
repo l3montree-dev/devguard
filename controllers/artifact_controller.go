@@ -127,6 +127,13 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 		return err
 	}
 
+	c.FireAndForget(func() {
+		err := c.dependencyVulnService.SyncAllIssues(shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion)
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
 	return ctx.NoContent(200)
 }
 
