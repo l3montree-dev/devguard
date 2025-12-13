@@ -196,8 +196,16 @@ func TeeChannel[T any](input <-chan T) (<-chan T, <-chan T) {
 		defer close(out1)
 		defer close(out2)
 		for v := range input {
-			out1 <- v
-			out2 <- v
+			select {
+			case out1 <- v:
+			default:
+			}
+
+			select {
+			case out2 <- v:
+			default:
+			}
+
 		}
 	}()
 

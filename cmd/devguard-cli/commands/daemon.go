@@ -76,7 +76,7 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 
 		// Invoke the daemon trigger function with all dependencies
 		fx.Invoke(func(
-			runner daemons.DaemonRunner,
+			runner shared.DaemonRunner,
 			configService shared.ConfigService,
 		) {
 			slog.Info("starting background jobs", "time", time.Now())

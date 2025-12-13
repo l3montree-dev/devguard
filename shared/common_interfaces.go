@@ -36,6 +36,12 @@ import (
 
 type DaemonRunner interface {
 	RunDaemonPipelineForAsset(assetID uuid.UUID) error
+	RunAssetPipeline()
+	UpdateFixedVersions() error
+	UpdateVulnDB() error
+	UpdateOpenSourceInsightInformation() error
+	DeleteOldAssetVersions() error
+
 	Start()
 }
 

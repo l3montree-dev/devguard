@@ -132,7 +132,7 @@ func (runner DaemonRunner) tick() {
 	}
 }
 
-var _ shared.DaemonRunner = (*DaemonRunner)(nil)
+var _ shared.DaemonRunner = DaemonRunner{}
 
 var Module = fx.Module("daemons",
 	fx.Provide(fx.Annotate(NewDaemonRunner, fx.As(new(shared.DaemonRunner)))),
