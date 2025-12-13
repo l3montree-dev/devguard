@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.uber.org/fx"
 )
@@ -39,12 +40,12 @@ func ProvideDependencyProxyConfig() DependencyProxyConfig {
 }
 
 // ProvideMaliciousPackageChecker creates the malicious package checker
-func ProvideMaliciousPackageChecker() *vulndb.MaliciousPackageChecker {
+func ProvideMaliciousPackageChecker(leaderElector shared.LeaderElector) *vulndb.MaliciousPackageChecker {
 	dbPath := filepath.Join(os.TempDir(), "devguard-dependency-proxy-db", "osv", "malicious")
 
 	checker, err := vulndb.NewMaliciousPackageChecker(vulndb.MaliciousPackageCheckerConfig{
 		DBPath: dbPath,
-	})
+	}, leaderElector)
 	if err != nil {
 		slog.Warn("Could not initialize malicious package checker", "error", err)
 		return nil

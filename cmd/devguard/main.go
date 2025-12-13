@@ -100,12 +100,8 @@ func main() {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
-	if err != nil {
-		slog.Error("failed to create broker", "err", err)
-		panic(err)
-	}
-
 	fx.New(
+		fx.NopLogger, // disable FX logging
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),

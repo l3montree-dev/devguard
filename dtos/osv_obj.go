@@ -35,6 +35,7 @@ type OSV struct {
 	Summary       string     `json:"summary"`
 	Modified      time.Time  `json:"modified"`
 	Published     time.Time  `json:"published"`
+	Details       string     `json:"details"`
 	Related       []string   `json:"related"`
 	Aliases       []string   `json:"aliases"`
 	Upstream      []string   `json:"upstream"`

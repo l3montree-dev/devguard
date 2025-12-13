@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
 
@@ -36,20 +37,20 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	}
 
 	// Create a test malicious package entry
-	testEntry := vulndb.MaliciousPackageEntry{
+	testEntry := dtos.OSV{
 		ID:      "MAL-TEST-001",
 		Summary: "Test malicious package",
 		Details: "This is a test entry for malicious package detection",
-		Affected: []vulndb.Affected{
+		Affected: []dtos.Affected{
 			{
-				Package: vulndb.Package{
+				Package: dtos.Pkg{
 					Ecosystem: "npm",
 					Name:      "test-malicious-package",
 				},
 				Versions: []string{"1.0.0", "1.0.1"},
 			},
 		},
-		Published: time.Now().Format(time.RFC3339),
+		Published: time.Now(),
 	}
 
 	// Write the test entry to a JSON file
@@ -67,7 +68,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		DBPath:            dbPath,
 		UpdateInterval:    24 * time.Hour, // Long interval for tests
 		SkipInitialUpdate: true,           // Skip GitHub download, use test data
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("Failed to create malicious package checker: %v", err)
 	}

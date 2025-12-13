@@ -8,14 +8,14 @@ echo "======================================================="
 echo ""
 
 # Set the proxy URL
-PROXY_URL="http://localhost:8080/dependency-proxy/go"
+PROXY_URL="http://localhost:8080/api/v1/dependency-proxy/go"
 
 echo "Using proxy: $PROXY_URL"
 echo ""
 
 # Clear Go module cache to force fetching from proxy
 echo "Cleaning Go module cache..."
-go clean -modcache
+# go clean -modcache
 
 # Set GOPROXY environment variable
 export GOPROXY=$PROXY_URL

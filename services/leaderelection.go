@@ -23,6 +23,8 @@ type databaseLeaderElector struct {
 	daemonIsRunning bool
 }
 
+var _ shared.LeaderElector = (*databaseLeaderElector)(nil)
+
 func NewDatabaseLeaderElector(configService shared.ConfigService) *databaseLeaderElector {
 	leaderElector := databaseLeaderElector{
 		configService: configService,
@@ -106,7 +108,7 @@ func (e *databaseLeaderElector) IfLeader(ctx context.Context, fn func() error) {
 					}
 				} else {
 					slog.Debug("not leader, waiting")
-					time.Sleep(5 * time.Minute)
+					time.Sleep(5 * time.Second)
 				}
 			}
 		}

@@ -34,6 +34,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type LeaderElector interface {
+	IsLeader() bool
+	IfLeader(ctx context.Context, fn func() error)
+}
+
 type ReleaseService interface {
 	ListByProject(projectID uuid.UUID) ([]models.Release, error)
 	ListByProjectPaged(projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)

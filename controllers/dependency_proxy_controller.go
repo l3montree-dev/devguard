@@ -175,6 +175,8 @@ func (d *DependencyProxyController) isCached(proxyType ProxyType, cachePath stri
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(proxyType ProxyType, upstreamURL, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
+	// remove any trailing slashes from requestPath
+	requestPath = strings.TrimRight(requestPath, "/")
 	url := upstreamURL + requestPath
 	slog.Debug("Fetching from upstream", "proxy", proxyType, "url", url)
 
@@ -286,7 +288,7 @@ func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, pa
 				version = strings.TrimSuffix(strings.TrimSuffix(matches[2], ".info"), ".mod")
 				version = strings.TrimSuffix(version, ".zip")
 			}
-			return moduleName, version
+			return strings.TrimRight(moduleName, "/"), version
 		}
 
 	case OCIProxy:

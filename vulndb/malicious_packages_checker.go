@@ -30,8 +30,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -42,40 +42,10 @@ const (
 	DefaultUpdateInterval       = 2 * time.Hour
 )
 
-// MaliciousPackageEntry represents a malicious package from the OSV database
-type MaliciousPackageEntry struct {
-	ID        string     `json:"id"`
-	Summary   string     `json:"summary"`
-	Details   string     `json:"details"`
-	Affected  []Affected `json:"affected"`
-	Published string     `json:"published"`
-}
-
-type Affected struct {
-	Package  Package  `json:"package"`
-	Ranges   []Range  `json:"ranges"`
-	Versions []string `json:"versions"`
-}
-
-type Package struct {
-	Ecosystem string `json:"ecosystem"`
-	Name      string `json:"name"`
-}
-
-type Range struct {
-	Type   string  `json:"type"`
-	Events []Event `json:"events"`
-}
-
-type Event struct {
-	Introduced string `json:"introduced"`
-	Fixed      string `json:"fixed"`
-}
-
 // MaliciousPackageChecker checks packages against the malicious package database
 type MaliciousPackageChecker struct {
 	mu             sync.RWMutex
-	packages       map[string]map[string]*MaliciousPackageEntry // ecosystem -> package name -> entry
+	packages       map[string]map[string]*dtos.OSV // ecosystem -> package name -> entry
 	dbPath         string
 	repoPath       string
 	repoURL        string
@@ -92,7 +62,7 @@ type MaliciousPackageCheckerConfig struct {
 	SkipInitialUpdate bool // Skip initial download, useful for tests
 }
 
-func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, configService shared.ConfigService) (*MaliciousPackageChecker, error) {
+func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, leaderElector shared.LeaderElector) (*MaliciousPackageChecker, error) {
 	// Set defaults
 	if config.RepoURL == "" {
 		config.RepoURL = DefaultMaliciousPackageRepo
@@ -110,7 +80,7 @@ func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, configServ
 	repoPath := filepath.Join(filepath.Dir(config.DBPath), "malicious-packages")
 
 	checker := &MaliciousPackageChecker{
-		packages:       make(map[string]map[string]*MaliciousPackageEntry),
+		packages:       make(map[string]map[string]*dtos.OSV),
 		dbPath:         config.DBPath,
 		repoPath:       repoPath,
 		repoURL:        config.RepoURL,
@@ -121,9 +91,8 @@ func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, configServ
 
 	// Initial fetch/update of the database
 	if !config.SkipInitialUpdate {
-		leaderElector := services.NewDatabaseLeaderElector(configService)
-
 		leaderElector.IfLeader(context.Background(), func() error {
+			slog.Info("starting malicious package database update")
 			if err := checker.updateDatabase(); err != nil {
 				slog.Error("Failed to initialize malicious package database", "error", err)
 				return err
@@ -355,27 +324,27 @@ func (c *MaliciousPackageChecker) loadEcosystem(ecosystemPath string) (int, erro
 	}
 
 	// create a fake package entry for testing purposes
-	fakeEntry := MaliciousPackageEntry{
+	fakeEntry := dtos.OSV{
 		ID:      "FAKE-TEST-001",
 		Summary: "Fake malicious package for testing",
 		Details: "This is a fake malicious package entry used for testing the dependency proxy",
-		Affected: []Affected{
+		Affected: []dtos.Affected{
 			{
-				Package: Package{
+				Package: dtos.Pkg{
 					Ecosystem: strings.ToLower(ecosystemPath),
-					Name:      "fake-malicious-package",
+					Name:      "github.com/fake-malicious-package",
 				},
 				Versions: []string{}, // All versions affected
 			},
 		},
-		Published: time.Now().Format(time.RFC3339),
+		Published: time.Now(),
 	}
 	c.loadEntry(fakeEntry)
 
 	return len(files), nil
 }
 
-func (c *MaliciousPackageChecker) loadEntry(entry MaliciousPackageEntry) {
+func (c *MaliciousPackageChecker) loadEntry(entry dtos.OSV) {
 	if len(entry.Affected) == 0 {
 		return
 	}
@@ -387,7 +356,7 @@ func (c *MaliciousPackageChecker) loadEntry(entry MaliciousPackageEntry) {
 		pkgName := strings.ToLower(affected.Package.Name)
 
 		if c.packages[pkgEcosystem] == nil {
-			c.packages[pkgEcosystem] = make(map[string]*MaliciousPackageEntry)
+			c.packages[pkgEcosystem] = make(map[string]*dtos.OSV)
 		}
 
 		c.packages[pkgEcosystem][pkgName] = &entry
@@ -400,7 +369,7 @@ func (c *MaliciousPackageChecker) loadPackageEntryPath(path string) error {
 		return err
 	}
 
-	var entry MaliciousPackageEntry
+	var entry dtos.OSV
 	if err := json.Unmarshal(data, &entry); err != nil {
 		return err
 	}
@@ -408,7 +377,7 @@ func (c *MaliciousPackageChecker) loadPackageEntryPath(path string) error {
 	return nil
 }
 
-func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *MaliciousPackageEntry) {
+func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
 	ecosystemKey := strings.ToLower(ecosystem)
 	packageKey := strings.ToLower(packageName)
 
@@ -429,7 +398,7 @@ func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version st
 	return false, nil
 }
 
-func (c *MaliciousPackageChecker) isVersionAffected(affected Affected, version string) bool {
+func (c *MaliciousPackageChecker) isVersionAffected(affected dtos.Affected, version string) bool {
 	// If no specific versions or ranges, consider all versions affected
 	if len(affected.Versions) == 0 && len(affected.Ranges) == 0 {
 		return true

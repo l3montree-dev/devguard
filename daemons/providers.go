@@ -18,7 +18,6 @@ package daemons
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -27,7 +26,7 @@ import (
 type DaemonRunner struct {
 	db                           shared.DB
 	broker                       database.Broker
-	configService                services.ConfigService
+	configService                shared.ConfigService
 	rbacProvider                 shared.RBACProvider
 	integrationAggregate         shared.IntegrationAggregate
 	scanController               *controllers.ScanController
@@ -55,7 +54,7 @@ type DaemonRunner struct {
 func NewDaemonRunner(
 	db shared.DB,
 	broker database.Broker,
-	configService services.ConfigService,
+	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
 	scanController *controllers.ScanController,
