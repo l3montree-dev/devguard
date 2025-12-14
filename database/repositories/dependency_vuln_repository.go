@@ -464,14 +464,14 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx
 	return vulns, nil
 }
 
-func (r *dependencyVulnRepository) GetAllVulnsByArtifact(
+func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(
 	tx *gorm.DB,
 	artifact models.Artifact,
 ) ([]models.DependencyVuln, error) {
 
 	var vulns []models.DependencyVuln
 
-	err := r.Repository.GetDB(tx).
+	err := repository.Repository.GetDB(tx).
 		Model(&models.DependencyVuln{}).
 		Where(`
 			EXISTS (
