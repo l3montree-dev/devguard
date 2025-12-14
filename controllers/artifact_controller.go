@@ -16,18 +16,19 @@ import (
 )
 
 type ArtifactController struct {
-	artifactRepository    shared.ArtifactRepository
-	artifactService       shared.ArtifactService
-	dependencyVulnService shared.DependencyVulnService
-	statisticsService     shared.StatisticsService
-	componentService      shared.ComponentService
-	assetVersionService   shared.AssetVersionService
+	artifactRepository       shared.ArtifactRepository
+	artifactService          shared.ArtifactService
+	dependencyVulnService    shared.DependencyVulnService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	statisticsService        shared.StatisticsService
+	componentService         shared.ComponentService
+	assetVersionService      shared.AssetVersionService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -36,6 +37,7 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		FireAndForgetSynchronizer: synchronizer,
 		componentService:          componentService,
 		assetVersionService:       assetVersionService,
+		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 	}
 }
@@ -110,7 +112,6 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	})
 
 	return ctx.JSON(201, artifact)
-
 }
 
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
@@ -121,18 +122,41 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 
 	artifact := shared.GetArtifact(ctx)
 
-	err := c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
+	// Extract org and project before FireAndForget since Echo contexts are not goroutine-safe
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+
+	// we need to sync the vulnerabilities after deleting the artifact
+	// maybe we need to close some: https://github.com/l3montree-dev/devguard/issues/1496
+	// fetch all vulnerabilities which ONLY belong to this artifact
+	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch vulnerabilities").WithInternal(err)
+	}
+	syncVulns := make([]models.DependencyVuln, 0)
+	// check which vulns will be removed completely
+	for _, vuln := range vulns {
+		if len(vuln.Artifacts) <= 1 {
+			// mark it as fixed so it gets closed in the issue tracker
+			vuln.State = dtos.VulnStateFixed
+			syncVulns = append(syncVulns, vuln)
+		}
+	}
+
+	if len(syncVulns) > 0 {
+		c.FireAndForget(func() {
+			err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, syncVulns)
+			if err != nil {
+				slog.Error("could not sync issues for vulnerabilities after artifact deletion", "err", err)
+			}
+		})
+	}
+
+	err = c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err
 	}
-
-	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncAllIssues(shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
 
 	return ctx.NoContent(200)
 }

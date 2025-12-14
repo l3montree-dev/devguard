@@ -17,14 +17,20 @@ package tests
 
 type SessionMock struct {
 	UserID string
+	Scopes []string
 }
 
 func (s SessionMock) GetUserID() string {
 	return s.UserID
 }
 
+func (s SessionMock) GetScopes() []string {
+	return s.Scopes
+}
+
 func NewSessionMock(userID string) SessionMock {
 	return SessionMock{
 		UserID: userID,
+		Scopes: []string{},
 	}
 }
