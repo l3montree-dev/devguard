@@ -146,7 +146,6 @@ type CveRepository interface {
 	FindCVE(tx DB, id string) (models.CVE, error)
 	FindCVEs(tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
-	CreateCVEWithAssociations(tx DB, cve *models.CVE) error
 }
 
 type CweRepository interface {
@@ -165,6 +164,7 @@ type AffectedComponentRepository interface {
 	Save(tx DB, affectedComponent *models.AffectedComponent) error
 	SaveBatch(tx DB, affectedPkgs []models.AffectedComponent) error
 	DeleteAll(tx DB, ecosystem string) error
+	CreateAffectedComponentsUsingUnnest(tx DB, components []models.AffectedComponent) error
 }
 
 type ComponentRepository interface {

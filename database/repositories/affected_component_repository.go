@@ -97,3 +97,71 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 func (g *affectedCmpRepository) SaveBatch(tx *gorm.DB, affectedPkgs []models.AffectedComponent) error {
 	return g.createInBatches(tx, affectedPkgs, 1000)
 }
+
+func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB, components []models.AffectedComponent) error {
+	if len(components) == 0 {
+		return nil
+	}
+
+	// convert values of entries into arrays of values
+	ids := make([]string, len(components))
+	sources := make([]string, len(components))
+	purls := make([]string, len(components))
+	ecosystems := make([]string, len(components))
+	schemes := make([]string, len(components))
+	types := make([]string, len(components))
+	names := make([]string, len(components))
+
+	// nil-able
+	namespaces := make([]string, len(components))
+	qualifiers := make([]string, len(components))
+	subpaths := make([]string, len(components))
+	versions := make([]string, len(components))
+	semversIntroduced := make([]string, len(components))
+	semversFixed := make([]string, len(components))
+	versionsIntroduced := make([]string, len(components))
+	versionsFixed := make([]string, len(components))
+
+	for i := range components {
+		// non nil-able
+		ids[i] = components[i].CalculateHash()
+		sources[i] = components[i].Source
+		purls[i] = components[i].PurlWithoutVersion
+		ecosystems[i] = components[i].Ecosystem
+		schemes[i] = components[i].Scheme
+		types[i] = components[i].Type
+		names[i] = components[i].Name
+
+		// nil-able
+		namespaces[i] = utils.SafeDereference(components[i].Namespace)
+		qualifiers[i] = utils.SafeDereference(components[i].Qualifiers)
+		subpaths[i] = utils.SafeDereference(components[i].Subpath)
+		versions[i] = utils.SafeDereference(components[i].Version)
+		semversIntroduced[i] = utils.SafeDereference(components[i].SemverIntroduced)
+		semversFixed[i] = utils.SafeDereference(components[i].SemverFixed)
+		versionsIntroduced[i] = utils.SafeDereference(components[i].VersionIntroduced)
+		versionsFixed[i] = utils.SafeDereference(components[i].VersionFixed)
+	}
+
+	query := `
+        INSERT INTO affected_components (id,source,purl,ecosystem,scheme,type,name,namespace,qualifiers,subpath,version,semver_introduced,semver_fixed,version_introduced,version_fixed)
+        SELECT
+            unnest($1::text[]),
+            unnest($2::text[]),
+            unnest($3::text[]),
+            unnest($4::text[]),
+            unnest($5::text[]),
+            unnest($6::text[]),
+            unnest($7::text[]),
+            unnest($8::text[]),
+            unnest($9::text[]),
+            unnest($10::text[]),
+            unnest($11::text[]),
+            NULLIF(unnest($12::text[]), '')::semver,
+            NULLIF(unnest($13::text[]), '')::semver,
+            unnest($14::text[]),
+			unnest($15::text[])
+			ON CONFLICT (id) DO NOTHING`
+
+	return g.GetDB(tx).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
+}

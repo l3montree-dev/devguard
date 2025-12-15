@@ -161,9 +161,6 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 	return affectedComponents, nil
 }
 
-var cveMutex sync.Mutex
-var collectedCVEs []models.CVE = make([]models.CVE, 0, 2000)
-
 func (s osvService) Mirror() error {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
@@ -225,22 +222,19 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
-				// first build the CVE based on the OSV, then build the affected components and append them to the CVE, lastly save everything to the db
+				// first build the CVE based on the OSV and save it to the db
 				newCVE := OSVToCVE(osv)
-				affectedComponents := models.AffectedComponentsFromOSV(osv)
-
-				affectedComponentsPtr := make([]*models.AffectedComponent, 0, len(affectedComponents))
-				for i := range affectedComponents {
-					affectedComponentsPtr = append(affectedComponentsPtr, &affectedComponents[i])
-				}
-				newCVE.AffectedComponents = affectedComponentsPtr
-
-				// create the CVE and its affectedComponents
-				err = s.cveRepository.CreateCVEWithAssociations(nil, &newCVE)
+				err = s.cveRepository.Create(nil, &newCVE)
 				if err != nil {
-					slog.Error(fmt.Sprintf("could not save CVE, err: %s", err.Error()))
-					continue
+					slog.Warn("could not save CVE", "cve", newCVE.CVE, "err", err)
 				}
+				affectedComponents := models.AffectedComponentsFromOSV(osv)
+				// then create the affected components
+				err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(nil, affectedComponents)
+				if err != nil {
+					slog.Error("could not save affected components", "cve", newCVE.CVE, "error", err)
+				}
+
 			}
 		}(ecosystem)
 	}
