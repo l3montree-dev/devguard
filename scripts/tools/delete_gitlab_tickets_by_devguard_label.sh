@@ -77,7 +77,7 @@ ISSUE_IIDS=$(echo "$ISSUES" | jq -r '.[].iid')
 ISSUE_COUNT=$(echo "$ISSUES" | jq 'length')
 
 if [[ "$ISSUE_COUNT" -eq 0 ]]; then
-    echo "No $STATE_DISPLAY issues found with label '$LABEL'. Nothing to $ACTION."
+    echo "No $STATE_DISPLAY issues found with label '$LABEL'. Nothing to ${ACTION_VERB_LOWER}."
     exit 0
 fi
 
