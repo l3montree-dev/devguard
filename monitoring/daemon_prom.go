@@ -38,6 +38,12 @@ var SyncTicketDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Buckets: prometheus.DefBuckets,
 })
 
+var ResolveDifferencesInTicketState = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "devguard_daemon_resolve_differences_in_ticket_state_duration_minutes",
+	Help:    "Duration of resolving differences in ticket state in minutes",
+	Buckets: prometheus.DefBuckets,
+})
+
 var StatisticsUpdateDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "devguard_daemon_statistics_update_duration_minutes",
 	Help:    "Duration of statistics updates in minutes",

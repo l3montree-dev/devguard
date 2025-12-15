@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Daemon Pipeline",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "daemon",
+                "trigger",
+                "--daemons",
+                "assetPipeline"
+            ],
+        },
+        {
             "name": "Launch Server",
             "type": "go",
             "request": "launch",

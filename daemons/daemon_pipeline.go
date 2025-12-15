@@ -59,6 +59,8 @@ func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- 
 	recalculatedRiskChan := monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, runner.RecalculateRiskForVulnerabilities)(autoReopenedVulnsChan, errChan)
 	// sync tickets
 	syncedTicketsChan := monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(recalculatedRiskChan, errChan)
+	// resolve differences in ticket state
+	syncedTicketsChan = monitorStage(monitoring.ResolveDifferencesInTicketState, runner.ResolveDifferencesInTicketState)(syncedTicketsChan, errChan)
 	// collect stats
 	ch := monitorStage(monitoring.StatisticsUpdateDuration, runner.CollectStats)(syncedTicketsChan, errChan)
 	utils.WaitForChannelDrain(ch)
@@ -146,7 +148,7 @@ func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
-		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-1*time.Hour)).Select("ID").Find(&assets).Error
+		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now()).Select("ID").Find(&assets).Error
 		if err != nil {
 			monitoring.Alert("could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
