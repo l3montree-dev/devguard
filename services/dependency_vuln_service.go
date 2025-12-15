@@ -150,43 +150,6 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *DependencyVulnService) RecalculateAllRawRiskAssessments() error {
-
-	now := time.Now()
-	slog.Info("recalculating all raw risk assessments", "time", now)
-
-	userID := "system"
-	justification := "System recalculated raw risk assessment"
-
-	assetVersions, err := s.assetVersionRepository.All()
-	if err != nil {
-		return fmt.Errorf("could not get all assets: %v", err)
-	}
-
-	for _, assetVersion := range assetVersions {
-		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsAmount.Inc()
-		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, nil)
-		if len(dependencyVulns) == 0 {
-			continue
-		}
-
-		if err != nil {
-			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
-		}
-
-		_, err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
-		if err != nil {
-			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
-		}
-
-		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsUpdatedAmount.Inc()
-	}
-
-	return nil
-
-}
-
 func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
@@ -266,7 +229,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 		}
 
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
-		newRiskAssessment := vulndb.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
+		newRiskAssessment := vulndb.RawRisk(*dependencyVuln.CVE, env, utils.OrDefault(dependencyVuln.ComponentDepth, 1))
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
@@ -337,7 +300,9 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, userID str
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, upstream)
 	case dtos.EventTypeComment:
-		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification)
+		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, upstream)
+	case dtos.EventTypeFixed:
+		ev = models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 	}
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
@@ -356,23 +321,44 @@ func (s *DependencyVulnService) SyncAllIssues(org models.Org, project models.Pro
 		return nil
 	}
 
+	// Check for duplicate vulnerability IDs in the list
+	seen := make(map[string]int)
+	for _, vuln := range vulnList {
+		seen[vuln.ID]++
+	}
+	for id, count := range seen {
+		if count > 1 {
+			slog.Warn("duplicate vulnerability detected in vulnList", "vulnID", id, "count", count, "assetVersion", assetVersion.Name)
+		}
+	}
+
 	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
 }
 
 func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
+	vulnMap := make(map[string]models.DependencyVuln)
+	for _, vuln := range vulnList {
+		if _, exists := vulnMap[vuln.ID]; !exists {
+			vulnMap[vuln.ID] = vuln
+		}
+	}
+
 	errgroup := utils.ErrGroup[any](10)
-	for _, vulnerability := range vulnList {
+	for _, vulnerability := range vulnMap {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
 			if !commonint.ShouldCreateIssues(assetVersion) || !commonint.ShouldCreateThisIssue(asset, &vulnerability) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {
-				return s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system"), nil
+				err := s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
+				return nil, err
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(asset, assetVersion.Slug, vulnerability), nil
+				err := s.updateIssue(asset, assetVersion.Slug, vulnerability)
+				return nil, err
 			})
 		}
 	}

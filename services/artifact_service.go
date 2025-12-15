@@ -50,7 +50,7 @@ func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	}
 }
 
-func (s *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (s *ArtifactService) ReadArtifact(name string, assetVersionName string, ass
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
 	var boms []*normalize.CdxBom
 
 	var validURLs []string
@@ -104,7 +104,7 @@ func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, upstreamURL
 				invalidURLs = append(invalidURLs, url)
 				continue
 			}
-			bom, err := s.csafService.GetVexFromCsafProvider(purl, url, sanitizedURL)
+			bom, err := s.csafService.GetVexFromCsafProvider(purl, ref, url, sanitizedURL)
 			if err != nil {
 				slog.Warn("could not download csaf from csaf provider", "err", err)
 				invalidURLs = append(invalidURLs, url)
@@ -151,7 +151,7 @@ func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, upstreamURL
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, url))
+		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, ref, url))
 	}
 
 	return boms, validURLs, invalidURLs

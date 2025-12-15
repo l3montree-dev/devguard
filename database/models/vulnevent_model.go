@@ -35,6 +35,8 @@ type VulnEventDetail struct {
 
 func EventTypeToVulnState(eventType dtos.VulnEventType) (dtos.VulnState, error) {
 	switch eventType {
+	case dtos.EventTypeComment:
+		return dtos.VulnStateOpen, nil
 	case dtos.EventTypeFixed:
 		return dtos.VulnStateFixed, nil
 	case dtos.EventTypeDetected:
@@ -158,13 +160,14 @@ func NewReopenedEvent(vulnID string, vulnType dtos.VulnType, userID, justificati
 	}
 }
 
-func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justification string) VulnEvent {
+func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
 	return VulnEvent{
 		Type:          dtos.EventTypeComment,
 		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
 		Justification: &justification,
+		Upstream:      upstream,
 	}
 }
 

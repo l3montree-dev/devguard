@@ -90,8 +90,8 @@ ALTER TABLE ONLY public.artifact_dependency_vulns
     ADD CONSTRAINT fk_artifact_dependency_vulns_dependency_vuln FOREIGN KEY
     (dependency_vuln_id)
     REFERENCES public.dependency_vulns (id)
-    ON DELETE CASCADE;
-
+    ON DELETE CASCADE
+    ON UPDATE CASCADE;
 
 
 ALTER TABLE ONLY public.artifact_license_risks

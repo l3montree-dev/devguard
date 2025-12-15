@@ -45,8 +45,10 @@ func NewAffectedComponentRepository(db *gorm.DB) *affectedCmpRepository {
 	}
 }
 
+// DeleteAll deletes all affected components whose ecosystem name starts with the provided string.
+// This uses a prefix match (SQL LIKE 'ecosystem%') to handle versioned ecosystems,
 func (g *affectedCmpRepository) DeleteAll(tx *gorm.DB, ecosystem string) error {
-	return g.GetDB(tx).Where("ecosystem = ?", ecosystem).Delete(&models.AffectedComponent{}).Error
+	return g.GetDB(tx).Where("ecosystem LIKE ?", ecosystem+"%").Delete(&models.AffectedComponent{}).Error
 }
 
 func (g *affectedCmpRepository) GetAllAffectedComponentsID() ([]string, error) {

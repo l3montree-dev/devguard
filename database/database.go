@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -33,19 +33,19 @@ func (s *sentryLogger) LogMode(level logger.LogLevel) logger.Interface {
 	return &sentryLogger{defaultLogger: newDefault}
 }
 func (s *sentryLogger) Info(ctx context.Context, msg string, data ...any) {
-	s.sendToSentry(ctx, msg, data...)
+	s.alert(msg, data...)
 	s.defaultLogger.Info(ctx, msg, data...)
 }
 func (s *sentryLogger) Warn(ctx context.Context, msg string, data ...any) {
-	s.sendToSentry(ctx, msg, data...)
+	s.alert(msg, data...)
 	s.defaultLogger.Warn(ctx, msg, data...)
 }
 func (s *sentryLogger) Error(ctx context.Context, msg string, data ...any) {
-	s.sendToSentry(ctx, msg, data...)
+	s.alert(msg, data...)
 	s.defaultLogger.Error(ctx, msg, data...)
 }
 
-func (s *sentryLogger) sendToSentry(ctx context.Context, msg string, data ...any) {
+func (s *sentryLogger) alert(msg string, data ...any) {
 	if len(data) > 0 {
 		err, ok := data[0].(error)
 		if ok {
@@ -53,18 +53,18 @@ func (s *sentryLogger) sendToSentry(ctx context.Context, msg string, data ...any
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return
 			}
-			sentry.CurrentHub().CaptureException(err)
+			monitoring.Alert(msg, err)
 		} else {
-			sentry.CurrentHub().CaptureMessage(fmt.Sprintf("%s: %v", msg, data))
+			monitoring.Alert(msg, fmt.Errorf("%v", data[0]))
 		}
 	} else {
-		sentry.CurrentHub().CaptureMessage(msg)
+		monitoring.Alert(msg, nil)
 	}
 }
 
 func (s *sentryLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	if err != nil {
-		s.sendToSentry(ctx, "Database error", err)
+		s.alert("Database error", err)
 	}
 	s.defaultLogger.Trace(ctx, begin, fc, err)
 }

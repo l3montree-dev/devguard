@@ -464,18 +464,34 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(tx
 	return vulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(tx *gorm.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetAllVulnsByArtifact(
+	tx *gorm.DB,
+	artifact models.Artifact,
+) ([]models.DependencyVuln, error) {
+
 	var vulns []models.DependencyVuln
-	err := repository.Repository.GetDB(tx).Raw(`
-		SELECT vulns.* FROM dependency_vulns vulns 
-		LEFT JOIN artifact_dependency_vulns adv ON vulns.id = adv.dependency_vuln_id
-		WHERE adv.artifact_artifact_name = ? 
-		AND adv.artifact_asset_version_name = ? 
-		AND adv.artifact_asset_id = ?;`, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&vulns).Error
-	if err != nil {
-		return nil, err
-	}
-	return vulns, nil
+
+	err := repository.Repository.GetDB(tx).
+		Model(&models.DependencyVuln{}).
+		Where(`
+			EXISTS (
+				SELECT 1
+				FROM artifact_dependency_vulns adv
+				WHERE adv.dependency_vuln_id = dependency_vulns.id
+				  AND adv.artifact_artifact_name = ?
+				  AND adv.artifact_asset_version_name = ?
+				  AND adv.artifact_asset_id = ?
+			)
+		`,
+			artifact.ArtifactName,
+			artifact.AssetVersionName,
+			artifact.AssetID,
+		).
+		Preload("Artifacts").
+		Preload("CVE").
+		Find(&vulns).Error
+
+	return vulns, err
 }
 
 func (repository *dependencyVulnRepository) GetAllVulnsForTagsAndDefaultBranchInAsset(tx *gorm.DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error) {

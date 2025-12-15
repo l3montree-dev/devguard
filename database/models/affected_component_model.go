@@ -102,8 +102,8 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 				}
 			}
 		}
-
-		isRedhatEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat")
+		// Red Hat, Debian, and Alpine ecosystems can be converted to semver ranges
+		isConvertibleEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian") || strings.Contains(affected.Package.Ecosystem, "Alpine")
 		shouldConvertToSemver := false
 
 		if affected.Package.Purl != "" {
@@ -119,7 +119,7 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 			for _, r := range affected.Ranges {
 				if r.Type == "SEMVER" {
 					containsSemver = true
-				} else if r.Type == "ECOSYSTEM" && isRedhatEcosystem {
+				} else if r.Type == "ECOSYSTEM" && isConvertibleEcosystem {
 					shouldConvertToSemver = true
 				} else {
 					continue
@@ -140,18 +140,27 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 					}
 
 					if shouldConvertToSemver {
-						introduced, err = normalize.ConvertRPMtoSemVer(introduced)
+						introduced, err = normalize.ConvertToSemver(introduced)
 						if err != nil {
 							continue
 						}
-						fixed, err = normalize.ConvertRPMtoSemVer(fixed)
+						fixed, err = normalize.ConvertToSemver(fixed)
 						if err != nil {
 							continue
 						}
+						containsSemver = true
 					}
 
-					semverIntroduced, _ := normalize.SemverFix(introduced)
-					semverFixed, _ := normalize.SemverFix(fixed)
+					var semverIntroducedPtr *string
+					var semverFixedPtr *string
+					semverIntroduced, err := normalize.ConvertToSemver(introduced)
+					if err == nil {
+						semverIntroducedPtr = &semverIntroduced
+					}
+					semverFixed, err := normalize.ConvertToSemver(fixed)
+					if err == nil {
+						semverFixedPtr = &semverFixed
+					}
 
 					// create the affected package
 					affectedComponent := AffectedComponent{
@@ -255,7 +264,7 @@ func versionsToRange(versions []string) [][2]string {
 	// try to fix all versions - if we cannot fix using semver - we cant do anything
 	semvers := make([]string, 0)
 	for _, v := range versions {
-		fixedVersion, err := normalize.SemverFix(v)
+		fixedVersion, err := normalize.ConvertToSemver(v)
 		if err != nil {
 			continue
 		}

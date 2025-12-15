@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -77,32 +78,34 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 	"open",
 }
 
-func getBestDescription(rule dtos.Rule) string {
-	if rule.FullDescription.Markdown != "" {
-		return rule.FullDescription.Markdown
+func getBestDescription(rule sarif.ReportingDescriptor) string {
+	if rule.FullDescription != nil {
+		if rule.FullDescription.Markdown != nil {
+			return utils.OrDefault(rule.FullDescription.Markdown, "")
+		}
+		if rule.FullDescription.Text != "" {
+			return rule.FullDescription.Text
+		}
 	}
-	if rule.FullDescription.Text != "" {
-		return rule.FullDescription.Text
-	}
-	if rule.ShortDescription.Markdown != "" {
-		return rule.ShortDescription.Markdown
+	if rule.ShortDescription.Markdown != nil {
+		return utils.OrDefault(rule.ShortDescription.Markdown, "")
 	}
 
 	return rule.ShortDescription.Text
 }
 
-func preferMarkdown(text dtos.Text) string {
-	if text.Markdown != "" {
-		return text.Markdown
+func preferMarkdown(text sarif.MultiformatMessageString) string {
+	if text.Markdown != nil {
+		return utils.OrDefault(text.Markdown, "")
 	}
 	return text.Text
 }
 
-func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan dtos.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
-	ruleMap := make(map[string]dtos.Rule)
+	ruleMap := make(map[string]sarif.ReportingDescriptor)
 	for _, run := range sarifScan.Runs {
 		for _, rule := range run.Tool.Driver.Rules {
 			ruleMap[rule.ID] = rule
@@ -111,11 +114,16 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
-			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, result.Kind) {
+			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, string(result.Kind)) {
 				continue
 			}
 
-			rule := ruleMap[result.RuleID]
+			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
+
+			ruleProperties := map[string]any{}
+			if rule.Properties != nil {
+				ruleProperties = rule.Properties.AdditionalProperties
+			}
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
@@ -124,36 +132,37 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 					Message:          &result.Message.Text,
 				},
 				ScannerIDs:      scannerID,
-				RuleID:          result.RuleID,
-				RuleHelp:        preferMarkdown(rule.Help),
-				RuleName:        rule.Name,
-				RuleHelpURI:     rule.HelpURI,
+				RuleID:          utils.OrDefault(result.RuleID, ""),
+				RuleHelp:        preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),
+				RuleName:        utils.OrDefault(rule.Name, ""),
+				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
 				RuleDescription: getBestDescription(rule),
-				RuleProperties:  database.JSONB(rule.Properties),
+				RuleProperties:  database.JSONB(ruleProperties),
 			}
 			if result.PartialFingerprints != nil {
-				firstPartyVulnerability.Commit = result.PartialFingerprints.CommitSha
-				firstPartyVulnerability.Email = result.PartialFingerprints.Email
-				firstPartyVulnerability.Author = result.PartialFingerprints.Author
-				firstPartyVulnerability.Date = result.PartialFingerprints.Date
+				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
+				firstPartyVulnerability.Email = result.PartialFingerprints["email"]
+				firstPartyVulnerability.Author = result.PartialFingerprints["author"]
+				firstPartyVulnerability.Date = result.PartialFingerprints["date"]
 			}
 
 			var hash string
 			if result.Fingerprints != nil {
-				if result.Fingerprints.CalculatedFingerprint != "" {
-					firstPartyVulnerability.Fingerprint = result.Fingerprints.CalculatedFingerprint
+				if result.Fingerprints["calculatedFingerprint"] != "" {
+					firstPartyVulnerability.Fingerprint = result.Fingerprints["calculatedFingerprint"]
 				}
 			}
 
 			if len(result.Locations) > 0 {
-				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
+				loc := result.Locations[0]
+				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
 				snippetContent := dtos.SnippetContent{
-					StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
-					EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
-					StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
-					EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
-					Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
+					StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
+					EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
+					StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
+					EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
+					Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
 				}
 
 				hash = firstPartyVulnerability.CalculateHash()
@@ -491,6 +500,97 @@ func diffVulnsBetweenBranches[T Diffable](foundVulnerabilities []T, existingVuln
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
+func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, existingVulnsOnOtherBranch []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, error) {
+
+	vulnsToUpdate := make([]models.DependencyVuln, 0)
+
+	for _, newVuln := range newVulns {
+		if newVuln.ComponentPurl == nil {
+			continue
+		}
+		fullPurl := newVuln.ComponentPurl
+		purl := strings.SplitN(*fullPurl, "?", 2)[0]
+
+		for i, existingVuln := range existingVulns {
+			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
+				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
+				existingVulns[i].ComponentPurl = fullPurl
+				vulnsToUpdate = append(vulnsToUpdate, existingVulns[i])
+			}
+
+		}
+
+		for i, existingVuln := range existingVulnsOnOtherBranch {
+			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
+				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
+				existingVulnsOnOtherBranch[i].ComponentPurl = fullPurl
+				vulnsToUpdate = append(vulnsToUpdate, existingVulnsOnOtherBranch[i])
+			}
+
+		}
+	}
+
+	if len(vulnsToUpdate) == 0 {
+		return existingVulns, existingVulnsOnOtherBranch, nil
+	}
+
+	db := s.dependencyVulnRepository.GetDB(nil)
+
+	//save all updated vulns back to the database
+	for _, dependencyVuln := range vulnsToUpdate {
+		oldHash := dependencyVuln.ID
+		newHash := dependencyVuln.CalculateHash()
+
+		if oldHash == newHash {
+			continue
+		}
+
+		// Update the hash in the database
+		err := db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
+		if err != nil {
+			slog.Info("could not update dependencyVuln hash, trying to merge", "err", err)
+			// Handle duplicate key error by merging
+			var otherVuln models.DependencyVuln
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
+			if err != nil {
+				slog.Error("could not fetch other dependencyVuln", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
+			if err != nil {
+				slog.Error("could not delete old dependencyVuln during merge", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+		}
+
+		err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("component_purl", dependencyVuln.ComponentPurl).Error
+		if err != nil {
+			slog.Error("could not update component purl during dependencyVuln merge", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+
+		// Update all vuln events
+		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
+		if err != nil {
+			slog.Error("could not update vuln events", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+
+		// update dependencyVuln in artifacts dependencyVuln table
+		err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
+		if err != nil {
+			slog.Error("could not update artifact dependency vulns", "err", err)
+			return existingVulns, existingVulnsOnOtherBranch, err
+		}
+
+	}
+
+	return existingVulns, existingVulnsOnOtherBranch, nil
+
+}
+
 func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -503,6 +603,15 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
+
+	// this is just for migration.
+	// the call can be removed after all assets were scanned again
+	existingDependencyVulns, existingVulnsOnOtherBranch, err = s.migrateToPurlsWithQualifiers(dependencyVulns, existingDependencyVulns, existingVulnsOnOtherBranch)
+	if err != nil {
+		slog.Error("could not migrate dependencyVulns to purls with qualifiers", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.DependencyVuln) bool {
 		return dependencyVuln.State != dtos.VulnStateFixed
 	})
@@ -736,86 +845,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	return wholeAssetSBOM, nil
 }
 
-func resolveLicense(component models.ComponentDependency, componentLicenseOverwrites map[string]string) cdx.Licenses {
-	licenses := cdx.Licenses{}
-	//first check if the license is overwritten by a license risk#
-	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
-	componentLicense := utils.SafeDereference(component.Dependency.License)
-	if exists && overwrite != "" {
-		// TO-DO: check if the license provided by the user is a valid license or not
-		licenses = append(licenses, cdx.LicenseChoice{
-			License: &cdx.License{
-				ID: overwrite,
-			},
-		})
-
-	} else if componentLicense != "" {
-		// non-standard and unknown are not valid values for the ID property in licenses
-		if componentLicense != "non-standard" && componentLicense != "unknown" {
-			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
-			if isLicenseExpression(componentLicense) {
-				licenses = append(licenses, cdx.LicenseChoice{
-					Expression: componentLicense,
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: componentLicense,
-					},
-				})
-			}
-
-		} else {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					Name: componentLicense,
-				},
-			})
-		}
-
-	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
-		componentProjectLicense := component.Dependency.ComponentProject.License
-		// non-standard and unknown are not valid values for the ID property in licenses
-		if componentProjectLicense != "non-standard" && componentProjectLicense != "unknown" {
-			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
-			if isLicenseExpression(componentProjectLicense) {
-				licenses = append(licenses, cdx.LicenseChoice{
-					Expression: componentProjectLicense,
-				})
-			} else {
-				licenses = append(licenses, cdx.LicenseChoice{
-					License: &cdx.License{
-						ID: componentProjectLicense,
-					},
-				})
-			}
-
-		} else {
-			licenses = append(licenses, cdx.LicenseChoice{
-				License: &cdx.License{
-					Name: componentProjectLicense,
-				},
-			})
-		}
-	}
-	return licenses
-}
-
 func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
-	var err error
-	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
-	if artifactName == "" {
-		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
@@ -827,56 +857,7 @@ func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.
 		}
 	}
 
-	// add all components AND the root
-	bomComponents := make([]cdx.Component, 0, len(components)+1)
-	processedComponents := make(map[string]struct{}, len(components))
-	bomComponents = append(bomComponents, *bom.Metadata.Component)
-
-	for _, component := range components {
-		if _, alreadyProcessed := processedComponents[component.DependencyPurl]; alreadyProcessed {
-			continue
-		}
-		processedComponents[component.DependencyPurl] = struct{}{}
-		licenses := resolveLicense(component, componentLicenseOverwrites)
-		bomComponents = append(bomComponents, cdx.Component{
-			Licenses:   &licenses,
-			BOMRef:     component.DependencyPurl,
-			Type:       cdx.ComponentType(component.Dependency.ComponentType),
-			PackageURL: component.DependencyPurl,
-			Version:    component.Dependency.Version,
-			Name:       component.DependencyPurl,
-		})
-	}
-
-	// just add all dependencies
-	// the sbom will be normalized afterwards
-	dependencyMap := make(map[string][]string)
-	for _, c := range components {
-		var purl string
-		if c.ComponentPurl == nil {
-			purl = rootPurl
-		} else {
-			purl = *c.ComponentPurl
-		}
-		dependencyMap[purl] = append(dependencyMap[purl], c.DependencyPurl)
-	}
-
-	// build up the dependencies
-	bomDependencies := make([]cdx.Dependency, 0, len(dependencyMap))
-	for k, v := range dependencyMap {
-		vtmp := v
-
-		bomDependencies = append(bomDependencies, cdx.Dependency{
-			Ref:          k,
-			Dependencies: &vtmp,
-		})
-	}
-	bom.Dependencies = &bomDependencies
-	bom.Components = &bomComponents
-
-	normalizedSBOM := normalize.FromNormalizedCdxBom(&bom, rootPurl)
-
-	return normalizedSBOM, nil
+	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -936,19 +917,6 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 }
 
 func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-	rootPurl := normalize.Purlify(artifactName, assetVersion.Name)
-	if artifactName == "" {
-		rootPurl = normalize.Purlify(asset.Slug, assetVersion.Name)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
 
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
@@ -960,10 +928,10 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 				ID: cve.CVE,
 				Source: &cdx.Source{
 					Name: "NVD",
-					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", *dependencyVuln.CVEID),
+					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", utils.OrDefault(dependencyVuln.CVEID, "")),
 				},
 				Affects: &[]cdx.Affects{{
-					Ref: *dependencyVuln.ComponentPurl,
+					Ref: utils.OrDefault(dependencyVuln.ComponentPurl, ""),
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
 					State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
@@ -983,11 +951,13 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 			justification := getJustification(dependencyVuln)
 			if justification != nil {
 				vuln.Analysis.Detail = *justification
+			} else if response == cdx.IARUpdate {
+				vuln.Analysis.Detail = "Update available! Please update to the fixed version."
 			}
 
 			cvss := math.Round(float64(cve.CVSS)*100) / 100
 
-			risk := vulndb.RawRisk(*cve, shared.GetEnvironmentalFromAsset(asset), *dependencyVuln.ComponentDepth)
+			risk := vulndb.RawRisk(*cve, shared.GetEnvironmentalFromAsset(asset), utils.OrDefault(dependencyVuln.ComponentDepth, 1))
 
 			vuln.Ratings = &[]cdx.VulnerabilityRating{
 				{
@@ -1008,9 +978,8 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 			vulnerabilities = append(vulnerabilities, vuln)
 		}
 	}
-	bom.Vulnerabilities = &vulnerabilities
 
-	return normalize.FromNormalizedCdxBom(&bom, rootPurl)
+	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
@@ -1040,7 +1009,7 @@ func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAn
 	case dtos.VulnStateOpen:
 		return cdx.IASInTriage
 	case dtos.VulnStateFixed:
-		return cdx.IASResolved
+		return cdx.IASExploitable
 	case dtos.VulnStateAccepted:
 		return cdx.IASExploitable
 	case dtos.VulnStateFalsePositive:
@@ -1338,8 +1307,4 @@ func createTitles(name string) (string, string) {
 	}
 	//now we return the two titles formatted correctly for the yaml file
 	return title1, title2
-}
-
-func isLicenseExpression(license string) bool {
-	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
 }

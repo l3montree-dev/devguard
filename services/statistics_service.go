@@ -214,6 +214,10 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
+	err := s.assetVersionRepository.GetDB(nil).Save(artifact).Error
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

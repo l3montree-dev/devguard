@@ -16,14 +16,17 @@
 package scanner
 
 import (
-	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
-	"log"
-	"os/exec"
+	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 type AttestationFileLine struct {
@@ -31,57 +34,117 @@ type AttestationFileLine struct {
 	Payload     string `json:"payload"` // base64 encoded AttestationPayload
 }
 
+// DiscoverAttestations fetches and decodes attestations for a container image
+// without relying on the cosign CLI binary.
 func DiscoverAttestations(image string, predicateType string) ([]map[string]any, error) {
-	// cosign download attestation image
+	ctx := context.Background()
 
-	options := []string{"download", "attestation", image}
-	if predicateType != "" {
-		options = append(options, "--predicate-type", predicateType)
-	}
-	cosignCmd := exec.Command("cosign", options...)
-
-	stderrBuf := &bytes.Buffer{}
-	stdoutBuf := &bytes.Buffer{}
-
-	// get the output
-	cosignCmd.Stderr = stderrBuf
-	cosignCmd.Stdout = stdoutBuf
-
-	err := cosignCmd.Run()
+	// Parse the image reference
+	ref, err := name.ParseReference(image)
 	if err != nil {
-		return nil, errors.Wrap(err, stderrBuf.String())
-	}
-
-	stdoutStr := stdoutBuf.String()
-	jsonLines := strings.Split(stdoutStr, "\n")
-	if len(jsonLines) > 0 {
-		// remove last element (empty line)
-		jsonLines = jsonLines[:len(jsonLines)-1]
+		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
 
 	attestations := []map[string]any{}
-	// go through each line (attestation) of the .jsonlines file
-	for _, jsonLine := range jsonLines {
-		var line AttestationFileLine
-		err = json.Unmarshal([]byte(jsonLine), &line)
+
+	// Construct the attestation reference by appending .att to the tag
+	// Cosign stores attestations in a separate manifest with this suffix
+	attRef, err := ociremote.AttestationTag(ref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to construct attestation reference")
+	}
+
+	// Fetch attestations using the constructed reference
+	sigs, err := ociremote.Signatures(attRef,
+		ociremote.WithRemoteOptions(
+			remote.WithAuthFromKeychain(authn.DefaultKeychain),
+			remote.WithContext(ctx),
+		),
+	)
+	if err != nil {
+		// If error contains "not found" or similar, return empty list
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "MANIFEST_UNKNOWN") ||
+			strings.Contains(err.Error(), "NAME_UNKNOWN") {
+			return attestations, nil
+		}
+		return nil, errors.Wrap(err, "failed to fetch attestations")
+	}
+
+	// Iterate through all attestation signatures
+	attList, err := sigs.Get()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get attestation list")
+	}
+
+	for _, att := range attList {
+		// Get the payload - this is the DSSE envelope or Simple Signing payload
+		payload, err := att.Payload()
 		if err != nil {
-			return nil, err
+			continue // Skip invalid attestations
 		}
 
-		// Extract base64 encoded payload
-		data, err := base64.StdEncoding.DecodeString(line.Payload)
-		if err != nil {
-			log.Fatal("error:", err)
+		// First try to parse as DSSE envelope (newer format)
+		var envelope struct {
+			PayloadType string `json:"payloadType"`
+			Payload     string `json:"payload"`
 		}
 
-		// Parse payload as attestation
+		// Check if this looks like JSON by checking the first byte
+		if len(payload) > 0 && payload[0] == '{' {
+			if err := json.Unmarshal(payload, &envelope); err == nil && envelope.Payload != "" {
+				// Successfully parsed as DSSE envelope
+				// Decode the base64 payload
+				decodedPayload, err := base64.StdEncoding.DecodeString(envelope.Payload)
+				if err != nil {
+					continue // Skip invalid base64
+				}
+
+				// Parse the attestation
+				var attestation map[string]any
+				if err := json.Unmarshal(decodedPayload, &attestation); err != nil {
+					continue // Skip invalid JSON
+				}
+
+				// Check if it has predicateType (characteristic of in-toto attestations)
+				predType, hasPredType := attestation["predicateType"].(string)
+				if !hasPredType {
+					continue // Not an attestation
+				}
+
+				// Filter by predicate type if specified
+				if predicateType != "" && predType != predicateType {
+					continue
+				}
+
+				attestations = append(attestations, attestation)
+				continue
+			}
+		}
+
+		// If not DSSE, try Simple Signing format (payload is the attestation directly)
+		// The payload might be the attestation itself
 		var attestation map[string]any
-		err = json.Unmarshal([]byte(data), &attestation)
-		if err != nil {
-			return nil, err
+		if err := json.Unmarshal(payload, &attestation); err != nil {
+			continue // Skip if not valid JSON
+		}
+
+		// Check if it has predicateType (characteristic of in-toto attestations)
+		predType, hasPredType := attestation["predicateType"].(string)
+		if !hasPredType {
+			continue // Not an attestation
+		}
+
+		// Filter by predicate type if specified
+		if predicateType != "" && predType != predicateType {
+			continue
 		}
 
 		attestations = append(attestations, attestation)
+	}
+
+	if len(attestations) == 0 && predicateType != "" {
+		return nil, fmt.Errorf("no attestations found with predicate type: %s", predicateType)
 	}
 
 	return attestations, nil

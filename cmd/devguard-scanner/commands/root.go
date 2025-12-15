@@ -136,6 +136,8 @@ func init() {
 		NewLoginCommand(),
 		NewIaCCommand(),
 		NewSarifCommand(),
+		newKyvernoSarifCommand(),
+		newSarifMarkdownCommand(),
 		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
@@ -144,6 +146,7 @@ func init() {
 		NewDiscoverBaseImageAttestationsCommand(),
 		NewVexCommand(),
 		NewGenerateTagCommand(),
+		NewAttestationCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

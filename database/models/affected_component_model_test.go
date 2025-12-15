@@ -120,8 +120,8 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		// check the semver range
-		if affectedComponents[0].SemverIntroduced != nil {
-			t.Errorf("Expected semver introduced to be nil, got %s", *affectedComponents[0].SemverIntroduced)
+		if *affectedComponents[0].SemverIntroduced != "0.0.0" {
+			t.Errorf("Expected semver introduced to be 0.0.0, got %s", *affectedComponents[0].SemverIntroduced)
 		}
 
 		if *affectedComponents[0].SemverFixed != "1.14.14" {
@@ -131,7 +131,7 @@ func TestFromOSV(t *testing.T) {
 		// check the hash
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
-		if affectedComponents[0].ID != "cd146d09f2bf86c4" { // nolint:all
+		if affectedComponents[0].ID != "a60faf290cdd4b70" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
 	})
@@ -172,7 +172,7 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		// check if both affected ranges are present
-		if affectedComponents[0].SemverIntroduced != nil {
+		if *affectedComponents[0].SemverIntroduced != "0.0.0" {
 			t.Errorf("Expected semver introduced to be 0, got %s", *affectedComponents[0].SemverIntroduced)
 		}
 

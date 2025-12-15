@@ -161,6 +161,10 @@ func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID s
 	return models.Org{}, fmt.Errorf("not implemented")
 }
 
+func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	return nil
+}
+
 func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	if !shared.HasOrganization(ctx) {
 		// github integration is connected to an organization not a user

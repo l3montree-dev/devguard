@@ -16,8 +16,10 @@
 package models
 
 import (
+	"strings"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -44,7 +46,7 @@ func (c ComponentProject) TableName() string {
 }
 
 type Component struct {
-	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
+	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"`
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
 	Version       string                `json:"version"`
@@ -89,6 +91,95 @@ func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
 	// a component dependency represents an edge in the dependency tree
 	// thus we can represent it as two nodes
 	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentPurl)}, ComponentDependencyNode{ID: c.DependencyPurl}}
+}
+
+func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {
+	licenses := cyclonedx.Licenses{}
+	//first check if the license is overwritten by a license risk#
+	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
+	componentLicense := utils.SafeDereference(component.Dependency.License)
+	if exists && overwrite != "" {
+		// TO-DO: check if the license provided by the user is a valid license or not
+		licenses = append(licenses, cyclonedx.LicenseChoice{
+			License: &cyclonedx.License{
+				ID: overwrite,
+			},
+		})
+
+	} else if componentLicense != "" {
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentLicense != "non-standard" && componentLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentLicense) {
+				licenses = append(licenses, cyclonedx.LicenseChoice{
+					Expression: componentLicense,
+				})
+			} else {
+				licenses = append(licenses, cyclonedx.LicenseChoice{
+					License: &cyclonedx.License{
+						ID: componentLicense,
+					},
+				})
+			}
+
+		} else {
+			licenses = append(licenses, cyclonedx.LicenseChoice{
+				License: &cyclonedx.License{
+					Name: componentLicense,
+				},
+			})
+		}
+
+	} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+		componentProjectLicense := component.Dependency.ComponentProject.License
+		// non-standard and unknown are not valid values for the ID property in licenses
+		if componentProjectLicense != "non-standard" && componentProjectLicense != "unknown" {
+			// if we have an license expression containing logical operators like OR, AND we need to put them in the expression property instead of id
+			if isLicenseExpression(componentProjectLicense) {
+				licenses = append(licenses, cyclonedx.LicenseChoice{
+					Expression: componentProjectLicense,
+				})
+			} else {
+				licenses = append(licenses, cyclonedx.LicenseChoice{
+					License: &cyclonedx.License{
+						ID: componentProjectLicense,
+					},
+				})
+			}
+
+		} else {
+			licenses = append(licenses, cyclonedx.LicenseChoice{
+				License: &cyclonedx.License{
+					Name: componentProjectLicense,
+				},
+			})
+		}
+	}
+	return licenses
+}
+
+func isLicenseExpression(license string) bool {
+	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
+}
+
+func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[string]string) cyclonedx.Component {
+	licenses := resolveLicense(c, componentLicenseOverwrites)
+	return cyclonedx.Component{
+		Licenses:   &licenses,
+		BOMRef:     c.DependencyPurl,
+		Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
+		PackageURL: c.DependencyPurl,
+		Version:    c.Dependency.Version,
+		Name:       c.DependencyPurl,
+	}
+}
+
+func (c ComponentDependency) GetPurl() string {
+	return c.DependencyPurl
+}
+
+func (c ComponentDependency) GetDependentPurl() *string {
+	return c.ComponentPurl
 }
 
 func BuildDepMap(deps []ComponentDependency) map[string][]string {

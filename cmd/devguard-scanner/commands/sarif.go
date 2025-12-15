@@ -31,6 +31,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
@@ -134,7 +135,7 @@ The command signs the request using the configured token and returns scan result
 	return cmd
 }
 
-func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan *sarif.SarifSchema210Json, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -148,22 +149,22 @@ func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
 				var err error
 				// read the file from git - if there is a partial fingerprint which looks like a commit sha
 				// this is a bit of a hack, but we need to read the file from git to expand the snippet
-				if sarifScan.Runs[ru].Results[re].PartialFingerprints != nil && len(sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha) > 0 {
-					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.URI)
+				if sarifScan.Runs[ru].Results[re].PartialFingerprints != nil && len(sarifScan.Runs[ru].Results[re].PartialFingerprints["commitSha"]) > 0 {
+					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints["commitSha"], utils.OrDefault(location.PhysicalLocation.ArtifactLocation.URI, ""))
 					if err != nil {
 						slog.Error("could not read file", "err", err)
 						continue
 					}
 				} else {
 					// read the file from the filesystem
-					fileContent, err = os.ReadFile(location.PhysicalLocation.ArtifactLocation.URI)
+					fileContent, err = os.ReadFile(utils.OrDefault(location.PhysicalLocation.ArtifactLocation.URI, ""))
 					if err != nil {
 						slog.Error("could not read file", "err", err)
 						continue
 					}
 				}
 				// expand the snippet
-				expandedSnippet, err := expandSnippet(fileContent, startLine, endLine, original)
+				expandedSnippet, err := expandSnippet(fileContent, utils.OrDefault(startLine, 0), utils.OrDefault(endLine, 0), utils.OrDefault(original, ""))
 				if err != nil {
 					continue
 				}
@@ -172,7 +173,7 @@ func expandAndObfuscateSnippet(sarifScan *dtos.SarifResult, path string) {
 				obfuscateSnippet := scanner.ObfuscateString(expandedSnippet)
 
 				// set the snippet
-				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = obfuscateSnippet
+				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = &obfuscateSnippet
 
 			}
 		}
@@ -311,7 +312,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*dtos.SarifResult, error) {
+func executeCodeScan(scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path, outputPath)

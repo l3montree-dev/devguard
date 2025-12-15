@@ -16,18 +16,19 @@ import (
 )
 
 type ArtifactController struct {
-	artifactRepository    shared.ArtifactRepository
-	artifactService       shared.ArtifactService
-	dependencyVulnService shared.DependencyVulnService
-	statisticsService     shared.StatisticsService
-	componentService      shared.ComponentService
-	assetVersionService   shared.AssetVersionService
+	artifactRepository       shared.ArtifactRepository
+	artifactService          shared.ArtifactService
+	dependencyVulnService    shared.DependencyVulnService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	statisticsService        shared.StatisticsService
+	componentService         shared.ComponentService
+	assetVersionService      shared.AssetVersionService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -36,6 +37,7 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		FireAndForgetSynchronizer: synchronizer,
 		componentService:          componentService,
 		assetVersionService:       assetVersionService,
+		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 	}
 }
@@ -90,7 +92,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	vulns, err := c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
 	if err != nil {
 		slog.Error("could not sync vex reports", "err", err)
@@ -106,17 +108,10 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 
 	return ctx.JSON(201, artifact)
-
 }
 
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
@@ -127,7 +122,37 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 
 	artifact := shared.GetArtifact(ctx)
 
-	err := c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
+	// Extract org and project before FireAndForget since Echo contexts are not goroutine-safe
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+
+	// we need to sync the vulnerabilities after deleting the artifact
+	// maybe we need to close some: https://github.com/l3montree-dev/devguard/issues/1496
+	// fetch all vulnerabilities which ONLY belong to this artifact
+	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch vulnerabilities").WithInternal(err)
+	}
+	syncVulns := make([]models.DependencyVuln, 0)
+	// check which vulns will be removed completely
+	for _, vuln := range vulns {
+		if len(vuln.Artifacts) <= 1 {
+			// mark it as fixed so it gets closed in the issue tracker
+			vuln.State = dtos.VulnStateFixed
+			syncVulns = append(syncVulns, vuln)
+		}
+	}
+
+	if len(syncVulns) > 0 {
+		c.FireAndForget(func() {
+			err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, syncVulns)
+			if err != nil {
+				slog.Error("could not sync issues for vulnerabilities after artifact deletion", "err", err)
+			}
+		})
+	}
+
+	err = c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err
@@ -146,7 +171,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
 
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
+	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
 		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
 		return origin
 	}), func(el string) string {
@@ -172,12 +197,6 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 
@@ -229,7 +248,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, toAdd)
+	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
 	var vulns []models.DependencyVuln
 	if len(boms) > 0 {
 		vulns, err = c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
@@ -265,12 +284,6 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := c.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 

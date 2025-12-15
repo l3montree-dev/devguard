@@ -150,7 +150,7 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID s
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeComment:
-		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification)
+		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	}
 
 	return s.applyAndSave(tx, firstPartyVuln, &ev)

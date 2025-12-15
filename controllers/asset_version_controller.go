@@ -203,7 +203,10 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 		assetID = &asset.ID
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectSBOM(assetID))
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+
+	return encoder.Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
@@ -216,7 +219,8 @@ func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectSBOM(assetID))
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
+	return encoder.Encode(sbom.EjectSBOM(assetID))
 }
 
 func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
@@ -229,7 +233,9 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 	if asset.SharesInformation {
 		assetID = &asset.ID
 	}
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom.EjectVex(assetID))
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
+
+	return encoder.Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
@@ -243,7 +249,9 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 		assetID = &asset.ID
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom.EjectVex(assetID))
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+	return encoder.Encode(sbom.EjectVex(assetID))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
@@ -332,13 +340,13 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	m := make(map[string]bool)
 	for _, v := range defaultVulns {
 		if v.State == dtos.VulnStateFixed {
-			m[v.ID] = true
+			m[fmt.Sprintf("%s/%s", utils.SafeDereference(v.CVEID), *v.ComponentPurl)] = true
 		}
 	}
 
 	// mark all vulns as fixed if they are in the map
 	for i := range dependencyVulns {
-		if _, ok := m[dependencyVulns[i].ID]; ok {
+		if m[fmt.Sprintf("%s/%s", utils.SafeDereference(dependencyVulns[i].CVEID), *dependencyVulns[i].ComponentPurl)] {
 			dependencyVulns[i].State = dtos.VulnStateFixed
 		}
 	}
@@ -878,7 +886,7 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
 	}
@@ -925,7 +933,7 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}

@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Daemon Pipeline",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "daemon",
+                "trigger",
+                "--daemons",
+                "assetPipeline"
+            ],
+        },
+        {
             "name": "Launch Server",
             "type": "go",
             "request": "launch",
@@ -21,7 +35,7 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-            "sast", "--token", "8949940588e4df13516ad777ec579414031cf74a2d851bcb89a9ada25b849958", "--apiUrl", "http://localhost:8080", "--assetName", "test-orggggggg/test/new-repo",  "--path", "../feedback-server/"
+            "attestations", "registry.opencode.de/open-code/oci/coreutils:1.0.0-rc.3-minimal-amd64", "--policy", "container.gov.de.rego"
             ],
         },
         {

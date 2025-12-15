@@ -7,7 +7,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 )
@@ -38,24 +37,20 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 	return nil, nil
 }
 
-func UpdateFixedVersions(
-	db shared.DB,
-	dependencyVulnRepository shared.DependencyVulnRepository,
-) error {
+func (runner DaemonRunner) UpdateFixedVersions() error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
-
 	start := time.Now()
 	defer func() {
 		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
 	}()
 
-	purlComparer := scan.NewPurlComparer(db)
+	purlComparer := scan.NewPurlComparer(runner.db)
 
 	var dependencyVulns []models.DependencyVuln
 	// get all dependency vulns without a fixed version
-	err := dependencyVulnRepository.GetDB(nil).Where("component_fixed_version IS NULL OR component_fixed_version = ''").Find(&dependencyVulns).Error
+	err := runner.dependencyVulnRepository.GetDB(nil).Where("component_fixed_version IS NULL OR component_fixed_version = ''").Find(&dependencyVulns).Error
 	if err != nil {
 		slog.Error("could not get dependency vulns without fixed version", "err", err)
 		return err
@@ -82,11 +77,9 @@ func UpdateFixedVersions(
 			}
 
 			// save the dependencyVuln
-			if err := dependencyVulnRepository.Save(nil, &dependencyVuln); err != nil {
+			if err := runner.dependencyVulnRepository.Save(nil, &dependencyVuln); err != nil {
 				slog.Warn("could not save dependencyVuln", "dependencyVuln", dependencyVuln.ID, "err", err)
 			}
-
-			monitoring.DependencyVulnsUpdatedAmount.Inc()
 
 			return nil, nil
 		})
