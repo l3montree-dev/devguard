@@ -285,7 +285,7 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 			Name:            "asset-needs-processing",
 			ProjectID:       project.ID,
 			Slug:            "asset-needs-processing",
-			PipelineLastRun: time.Now().Add(-2 * time.Hour),
+			PipelineLastRun: time.Now().Add(-20 * time.Hour),
 		}
 		err := f.DB.Create(&asset1).Error
 		require.NoError(t, err)
@@ -329,7 +329,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 				Name:            fmt.Sprintf("asset-%d", i),
 				ProjectID:       project.ID,
 				Slug:            fmt.Sprintf("asset-%d", i),
-				PipelineLastRun: time.Now().Add(-3 * time.Hour),
+				PipelineLastRun: time.Now().Add(-30 * time.Hour),
 			}
 			err := f.DB.Create(&asset).Error
 			require.NoError(t, err)

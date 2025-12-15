@@ -26,7 +26,11 @@ import (
 func Alert(message string, err error) {
 	// log it
 	evID := sentry.CurrentHub().CaptureException(errors.Wrap(err, message))
-	slog.Error("critical error encountered", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
+	if evID == nil {
+		slog.Error("critical error encountered - not send to error tracking", "msg", message, "error", err)
+	} else {
+		slog.Error("critical error encountered", "msg", message, "error", err, "id", *evID)
+	}
 }
 
 func RecoverAndAlert(message string, err error) {

@@ -282,6 +282,8 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
+				slog.Info("asset not connected to third party integration - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
+				out <- assetWithDetails
 				continue
 			}
 			depVulns, err := runner.dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(nil, asset.ID)
