@@ -548,6 +548,7 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 		// Update the hash in the database
 		err := db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 		if err != nil {
+			slog.Info("could not update dependencyVuln hash, trying to merge", "err", err)
 			// Handle duplicate key error by merging
 			var otherVuln models.DependencyVuln
 			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
