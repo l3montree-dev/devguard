@@ -38,7 +38,7 @@
             }
         },
         {
-            "name": "Export Diffs",
+            "name": "VulnDB Export Diffs",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",
@@ -48,6 +48,18 @@
                 "vulndb",
                 "export",
             ],
+        },
+        {
+            "name": "VulnDB Sync",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "vulndb",
+                "sync",
+            ]
         }
     ]
 }

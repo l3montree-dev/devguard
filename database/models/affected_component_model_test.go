@@ -30,7 +30,7 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{},
 		}
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -40,14 +40,14 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "",
 					},
-					Ranges: []dtos.Rng{},
+					Ranges: []dtos.Range{},
 				},
 			},
 		}
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -57,14 +57,14 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "invalidPURL",
 					},
-					Ranges: []dtos.Rng{},
+					Ranges: []dtos.Range{},
 				},
 			},
 		}
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -74,10 +74,10 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []dtos.Rng{
+					Ranges: []dtos.Range{
 						{
 							Type: "SEMVER",
 							Events: []dtos.SemverEvent{
@@ -93,7 +93,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
@@ -140,10 +140,10 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []dtos.Rng{
+					Ranges: []dtos.Range{
 						{
 							Type: "SEMVER",
 							Events: []dtos.SemverEvent{
@@ -166,7 +166,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -193,10 +193,10 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []dtos.Rng{
+					Ranges: []dtos.Range{
 						{
 							Type: "ECOSYSTEM",
 							Events: []dtos.SemverEvent{
@@ -217,7 +217,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
@@ -234,7 +234,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}
@@ -244,10 +244,10 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{
 				{
-					Package: dtos.Pkg{
+					Package: dtos.Package{
 						Purl: "pkg:github/package-url/purl-spec",
 					},
-					Ranges: []dtos.Rng{
+					Ranges: []dtos.Range{
 						{
 							Type: "GIT",
 							Events: []dtos.SemverEvent{
@@ -268,7 +268,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -285,7 +285,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := AffectedComponentFromOSV(osv)
+		affectedComponents := AffectedComponentsFromOSV(osv)
 		for _, ac := range affectedComponents {
 			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
 			assert.Equal(t, ac.Type, "github.com")
@@ -308,7 +308,7 @@ func TestSetIdHash(t *testing.T) {
 		affectedComponent := AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVE: []CVE{
+			CVEs: []CVE{
 				{},
 			},
 		}
@@ -317,7 +317,7 @@ func TestSetIdHash(t *testing.T) {
 		otherAffectedComponent := AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVE:                make([]CVE, 0),
+			CVEs:               make([]CVE, 0),
 		}
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck

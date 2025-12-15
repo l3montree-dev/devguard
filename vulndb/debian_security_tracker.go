@@ -166,7 +166,7 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 			// this version is affected
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: purl,
-				CVE:                []models.CVE{{CVE: cveID}},
+				CVEs:               []models.CVE{{CVE: cveID}},
 				Ecosystem:          "Debian:" + codenameToVersion[strings.ToLower(debianVersion)],
 				Scheme:             "pkg",
 				Type:               "deb",

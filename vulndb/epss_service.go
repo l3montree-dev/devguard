@@ -96,7 +96,7 @@ func (s epssService) Mirror() error {
 	group := errgroup.Group{}
 	group.SetLimit(10) // 10 because, i do not really know.
 	if err != nil {
-		slog.Error("Could not fetch EPSS data", "error", err)
+		slog.Error("could not fetch EPSS data", "error", err)
 		return err
 	} else {
 		start := time.Now()

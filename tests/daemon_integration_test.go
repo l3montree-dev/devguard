@@ -226,7 +226,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 				ID:                 "1",
 				PurlWithoutVersion: "pkg:npm/react",
 				Version:            utils.Ptr("18.2.0"),
-				CVE:                []models.CVE{{CVE: "CVE-2025-46569"}},
+				CVEs:               []models.CVE{{CVE: "CVE-2025-46569"}},
 			}
 
 			// create the component
@@ -770,7 +770,7 @@ func TestDaemonFixedVersions(t *testing.T) {
 			ID:                 "1",
 			PurlWithoutVersion: "pkg:npm/react-dom",
 			Version:            utils.Ptr("15.0.0"),
-			CVE:                []models.CVE{{CVE: "CVE-2025-46569"}},
+			CVEs:               []models.CVE{{CVE: "CVE-2025-46569"}},
 		}
 		err = f.DB.Create(&affectedComponent).Error
 		assert.Nil(t, err)

@@ -191,3 +191,8 @@ func (g *cveRepository) FindCVEs(tx *gorm.DB, cveIds []string) ([]models.CVE, er
 	err := g.GetDB(tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
+
+// this function is used to save a CVE and create all associated entries of for example missing affectedComponents
+func (g *cveRepository) CreateCVEWithAssociations(tx *gorm.DB, cve *models.CVE) error {
+	return g.GetDB(tx).Session(&gorm.Session{FullSaveAssociations: true}).Create(cve).Error
+}

@@ -23,6 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -55,31 +56,26 @@ var osvBaseURL string = "https://storage.googleapis.com/osv-vulnerabilities"
 var importEcosystems = []string{
 	"Go",
 	"npm",
-	// "AlmaLinux",
 	"Alpine",
-	// "Android",
 	"Bitnami",
 	"Chainguard",
-	// "CRAN",
 	"crates.io",
 	"Debian",
 	"GIT",
-	"Github Actions",
-	// "Hackage",
-	// "Hex",
 	"Linux",
 	"Maven",
 	"NuGet",
-	// "OSS-Fuzz",
 	"Packagist",
-	// "Pub",
 	"PyPI",
-	// "Rocky Linux",
 	"RubyGems",
-	// "SwiftURL",
-	// "Ubuntu",
-	// "Wolfi",
 	"Red Hat",
+	//GitHub Actions,
+}
+
+var ignoreVulnerabilityEcosystems = []string{
+	"MAL",
+	"CGA",
+	"GSD",
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
@@ -118,18 +114,15 @@ func (s osvService) getEcosystems() ([]string, error) {
 	}
 
 	ecosystems := strings.Split(string(bodyBytes), "\n")
+
+	// trim spaces for all entries
 	for i, e := range ecosystems {
 		ecosystems[i] = strings.TrimSpace(e)
 	}
 
-	// filter out the ecosystems we are interested in
-	ecosystems = utils.Filter(ecosystems, func(s string) bool {
-		for _, e := range importEcosystems {
-			if s == e {
-				return true
-			}
-		}
-		return false
+	// lastly filter out the ecosystems we are not using
+	ecosystems = utils.Filter(ecosystems, func(ecosystem string) bool {
+		return slices.Contains(importEcosystems, ecosystem)
 	})
 
 	return ecosystems, nil
@@ -158,7 +151,7 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 		return nil, errors.New("not a cve")
 	}
 
-	affectedComponents := models.AffectedComponentFromOSV(osv)
+	affectedComponents := models.AffectedComponentsFromOSV(osv)
 
 	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 	if err != nil {
@@ -168,12 +161,16 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 	return affectedComponents, nil
 }
 
+var cveMutex sync.Mutex
+var collectedCVEs []models.CVE = make([]models.CVE, 0, 2000)
+
 func (s osvService) Mirror() error {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
 		slog.Error("could not get ecosystems", "err", err)
 		return err
 	}
+
 	wg := sync.WaitGroup{}
 
 	for _, ecosystem := range ecosystems {
@@ -182,7 +179,7 @@ func (s osvService) Mirror() error {
 		}
 
 		wg.Add(1)
-		go func(ecosystem string) {
+		go func(string) {
 			defer wg.Done()
 			slog.Info("importing ecosystem", "ecosystem", ecosystem)
 			start := time.Now()
@@ -193,9 +190,6 @@ func (s osvService) Mirror() error {
 				return
 			}
 			slog.Info("deleted all affected packages", "ecosystem", ecosystem, "duration", time.Since(start))
-
-			// cleanup the string
-			ecosystem = strings.TrimSpace(ecosystem)
 
 			// download the zip and extract it in memory
 			zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
@@ -210,8 +204,6 @@ func (s osvService) Mirror() error {
 				return
 			}
 
-			totalPackagesSaved := 0
-			packageErrors := 0
 			// iterate over all files in the zip
 			for _, file := range zipReader.File {
 				// read the file
@@ -228,75 +220,59 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
-				newCVE, err := OSVToCVE(osv)
-				// swallow error so we can still create affected components
-				if err == nil {
-					err = s.cveRepository.Save(nil, &newCVE)
-					if err != nil {
-						// swallow error so we can still create affected components
-						slog.Error("could not save CVE to db")
-					}
+				// if we do not support the Vulnerability Ecosystem we do not want to handle it
+				if !isVulnerabilityIDSupported(osv.ID) {
+					continue
 				}
 
-				// convert the osv to affected packages
-				affectedComponents := models.AffectedComponentFromOSV(osv)
-				// save the affected packages
-				err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
+				// first build the CVE based on the OSV, then build the affected components and append them to the CVE, lastly save everything to the db
+				newCVE := OSVToCVE(osv)
+				affectedComponents := models.AffectedComponentsFromOSV(osv)
+
+				affectedComponentsPtr := make([]*models.AffectedComponent, 0, len(affectedComponents))
+				for i := range affectedComponents {
+					affectedComponentsPtr = append(affectedComponentsPtr, &affectedComponents[i])
+				}
+				newCVE.AffectedComponents = affectedComponentsPtr
+
+				// create the CVE and its affectedComponents
+				err = s.cveRepository.CreateCVEWithAssociations(nil, &newCVE)
 				if err != nil {
-					packageErrors += len(affectedComponents)
-					slog.Error("could not save affected packages", "err", err, "file", file.Name, "ecosystem", ecosystem)
+					slog.Error(fmt.Sprintf("could not save CVE, err: %s", err.Error()))
 					continue
-				} else {
-					totalPackagesSaved += len(affectedComponents)
 				}
 			}
-			// add the affected packages to the list
-			slog.Info("saved affected packages", "ecosystem", ecosystem, "total", totalPackagesSaved, "errors", packageErrors)
 		}(ecosystem)
 	}
+
 	wg.Wait()
 	return nil
 }
 
-var osvWithMissingCVSSScores int
-var totalAmountOfAssociations int
-var numberOfIterations int
-
-func OSVToCVE(osv dtos.OSV) (models.CVE, error) {
+func OSVToCVE(osv dtos.OSV) models.CVE {
 	cve := models.CVE{}
-
 	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
-	if !ok {
-		// if we cannot parse a CVSS score we are currently not saving the CVE
-		osvWithMissingCVSSScores++
-		if osvWithMissingCVSSScores%30000 == 0 {
-			slog.Warn("CVSS Error", "total errors", osvWithMissingCVSSScores)
-		}
-		return cve, fmt.Errorf("could not parse CVSS Score")
+	if ok {
+		cve.CVSS = float32(cvssScore)
+		cve.Vector = cvssVector
+	} else {
+		// if we cannot parse a CVSS score we save the CVE with a CVSS score of -1
+		cve.CVSS = float32(-1)
 	}
 
 	if !strings.HasPrefix(osv.ID, "CVE-") {
 		// if its not a CVE itself we need want to add additional information about related CVEs
-		associatedCVEs := osv.GetCVE()
+		associatedCVEs := osv.GetAssociatedCVEs()
 		// clean up statistics by removing entries with no associations
 		if len(associatedCVEs) > 0 {
-			totalAmountOfAssociations += len(associatedCVEs)
-			numberOfIterations++
-			if numberOfIterations%700 == 0 {
-				avg := float32(totalAmountOfAssociations) / float32(numberOfIterations)
-				slog.Info("Current average", "avg", avg)
-			}
 			cve.References = strings.Join(associatedCVEs, ",")
 		}
 	}
 
-	cve.CVSS = float32(cvssScore)
-	cve.Vector = cvssVector
-
 	cve.CVE = osv.ID
 	cve.Description = osv.Summary
 
-	return cve, nil
+	return cve
 }
 
 // checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
@@ -320,4 +296,13 @@ func hasValidCVSSScore(osv dtos.OSV) (float64, string, bool) {
 		}
 	}
 	return 0, "", false
+}
+
+func isVulnerabilityIDSupported(id string) bool {
+	prefix, _, ok := strings.Cut(id, "-")
+	if !ok {
+		// false negatives are ok
+		return true
+	}
+	return !slices.Contains(ignoreVulnerabilityEcosystems, prefix)
 }

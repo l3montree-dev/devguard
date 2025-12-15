@@ -74,7 +74,6 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 			// lets try to save the CVEs one by one
 			// this will be slow but it will work
 			for _, pkg := range pkgs {
-				tmpPkg := pkg
 				if err := g.GetDB(tx).Session(
 					&gorm.Session{
 						// Logger: logger.Default.LogMode(logger.Silent),
@@ -82,9 +81,9 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 					clause.OnConflict{
 						DoNothing: true,
 					},
-				).Create(&tmpPkg).Error; err != nil {
+				).Create(pkg).Error; err != nil {
 					// log, that we werent able to save the CVE
-					slog.Error("unable to save affected packages", "cve", pkg.CVE, "err", err)
+					slog.Error("unable to save affected packages", "cve", pkg.CVEs, "err", err)
 				}
 			}
 			return nil
