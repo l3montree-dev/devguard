@@ -19,9 +19,36 @@ if [[ -z "$GROUP_ID" || -z "$GITLAB_API_URL" ]]; then
 fi
 
 if [[ -z "$PRIVATE_TOKEN" ]]; then
-    echo "Error: PRIVATE_TOKEN environment variable must be set"
+    BASE_URL="${GITLAB_API_URL%%/api/*}"
+    if [[ -z "$BASE_URL" ]]; then
+        BASE_URL="https://gitlab.example.com"
+    fi
+    echo "Error: PRIVATE_TOKEN environment variable must be set with a valid GitLab API token."
+    echo "Create one at: ${BASE_URL}/-/profile/personal_access_tokens"
     exit 1
 fi
+
+curl_gitlab() {
+    local URL="$1"
+    local RESPONSE
+    
+    RESPONSE=$(curl --silent --show-error --fail --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" --url "$URL")
+    CURL_EXIT_CODE=$?
+    
+    if [[ $CURL_EXIT_CODE -ne 0 ]]; then
+        echo "Error: Failed to fetch from GitLab API (curl exit code $CURL_EXIT_CODE)." >&2
+        echo "URL: $URL" >&2
+        exit 2
+    fi
+    
+    if ! echo "$RESPONSE" | jq empty >/dev/null 2>&1; then
+        echo "Error: Response from GitLab API is not valid JSON:" >&2
+        echo "$RESPONSE" >&2
+        exit 3
+    fi
+    
+    echo "$RESPONSE"
+}
 
 echo "Fetching projects from group $GROUP_ID (including subgroups)..."
 echo ""
@@ -30,8 +57,7 @@ PAGE=1
 ALL_PROJECTS="[]"
 
 while true; do
-    PROJECTS=$(curl --silent --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
-        --url "$GITLAB_API_URL/groups/$GROUP_ID/projects?include_subgroups=true&per_page=$PER_PAGE&page=$PAGE")
+    PROJECTS=$(curl_gitlab "$GITLAB_API_URL/groups/$GROUP_ID/projects?include_subgroups=true&per_page=$PER_PAGE&page=$PAGE")
     
     PROJECT_COUNT=$(echo "$PROJECTS" | jq 'length')
     
@@ -39,7 +65,7 @@ while true; do
         break
     fi
     
-    ALL_PROJECTS=$(echo "$ALL_PROJECTS $PROJECTS" | jq -s 'add')
+    ALL_PROJECTS=$(jq -s '.[0] + .[1]' <(echo "$ALL_PROJECTS") <(echo "$PROJECTS"))
     
     if [[ "$PROJECT_COUNT" -lt "$PER_PAGE" ]]; then
         break
@@ -64,8 +90,7 @@ count_issues() {
     local PAGE=1
     
     while true; do
-        ISSUES=$(curl --silent --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
-            --url "$GITLAB_API_URL/projects/$PROJECT_ID/issues?labels=$LABEL&state=opened&per_page=$PER_PAGE&page=$PAGE")
+        ISSUES=$(curl_gitlab "$GITLAB_API_URL/projects/$PROJECT_ID/issues?labels=$LABEL&state=opened&per_page=$PER_PAGE&page=$PAGE")
         
         ISSUE_COUNT=$(echo "$ISSUES" | jq 'length')
         TOTAL_COUNT=$((TOTAL_COUNT + ISSUE_COUNT))

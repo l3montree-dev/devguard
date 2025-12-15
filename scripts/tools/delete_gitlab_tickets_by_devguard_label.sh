@@ -14,6 +14,7 @@ GITLAB_API_URL="$2"
 STATE="${3:-open}"    # Default to "open"
 ACTION="${4:-delete}" # Default to "delete"
 LABEL="devguard"
+PER_PAGE=100
 
 if [[ -z "$PROJECT_ID" || -z "$GITLAB_API_URL" ]]; then
     echo "Usage: $0 <project_id> <gitlab_api_url> [state] [action]"
@@ -39,7 +40,12 @@ if [[ "$ACTION" != "delete" && "$ACTION" != "close" ]]; then
 fi
 
 if [[ -z "$PRIVATE_TOKEN" ]]; then
-    echo "Error: PRIVATE_TOKEN environment variable must be set"
+    BASE_URL="${GITLAB_API_URL%%/api/*}"
+    if [[ -z "$BASE_URL" ]]; then
+        BASE_URL="https://gitlab.example.com"
+    fi
+    echo "Error: PRIVATE_TOKEN environment variable must be set with a valid GitLab API token."
+    echo "Create one at: ${BASE_URL}/-/profile/personal_access_tokens"
     exit 1
 fi
 
@@ -70,14 +76,47 @@ fi
 
 echo "Fetching $STATE_DISPLAY issues with label '$LABEL' from project $PROJECT_ID..."
 
-ISSUES=$(curl --silent --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
-    --url "$GITLAB_API_URL/projects/$PROJECT_ID/issues?labels=$LABEL&per_page=100$API_STATE_PARAM")
+ISSUES="[]"
+PAGE=1
+
+while true; do
+    PAGE_ISSUES=$(curl --silent --show-error --fail --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
+        --url "$GITLAB_API_URL/projects/$PROJECT_ID/issues?labels=$LABEL&per_page=$PER_PAGE&page=$PAGE$API_STATE_PARAM")
+    CURL_EXIT_CODE=$?
+    
+    if [[ $CURL_EXIT_CODE -ne 0 ]]; then
+        echo "Error: Failed to fetch issues from GitLab API (curl exit code $CURL_EXIT_CODE)."
+        exit 2
+    fi
+    
+    # Validate that the response is valid JSON
+    if ! echo "$PAGE_ISSUES" | jq empty >/dev/null 2>&1; then
+        echo "Error: Response from GitLab API is not valid JSON:"
+        echo "$PAGE_ISSUES"
+        exit 3
+    fi
+    
+    COUNT=$(echo "$PAGE_ISSUES" | jq 'length')
+    
+    if [[ "$COUNT" -eq 0 ]]; then
+        break
+    fi
+    
+    # Merge this page's issues into the main ISSUES array
+    ISSUES=$(jq -s '.[0] + .[1]' <(echo "$ISSUES") <(echo "$PAGE_ISSUES"))
+    
+    if [[ "$COUNT" -lt "$PER_PAGE" ]]; then
+        break
+    fi
+    
+    PAGE=$((PAGE + 1))
+done
 
 ISSUE_IIDS=$(echo "$ISSUES" | jq -r '.[].iid')
 ISSUE_COUNT=$(echo "$ISSUES" | jq 'length')
 
 if [[ "$ISSUE_COUNT" -eq 0 ]]; then
-    echo "No $STATE_DISPLAY issues found with label '$LABEL'. Nothing to ${ACTION_VERB_LOWER}."
+    echo "No $STATE_DISPLAY issues found with label '$LABEL'. Nothing to $ACTION."
     exit 0
 fi
 
