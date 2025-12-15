@@ -77,3 +77,9 @@ var ReopenVulnsStageDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Help:    "Duration of reopen vulns stage in minutes",
 	Buckets: prometheus.DefBuckets,
 })
+
+var DeleteOldAssetVersionsDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "devguard_daemon_delete_old_asset_versions_duration_minutes",
+	Help:    "Duration of delete old asset versions stage in minutes",
+	Buckets: prometheus.DefBuckets,
+})

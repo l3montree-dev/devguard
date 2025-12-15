@@ -36,11 +36,10 @@ import (
 
 type DaemonRunner interface {
 	RunDaemonPipelineForAsset(assetID uuid.UUID) error
-	RunAssetPipeline()
+	RunAssetPipeline(forceAll bool)
 	UpdateFixedVersions() error
 	UpdateVulnDB() error
 	UpdateOpenSourceInsightInformation() error
-	DeleteOldAssetVersions() error
 
 	Start()
 }
@@ -372,6 +371,7 @@ type AssetVersionRepository interface {
 	GetAllTagsAndDefaultBranchForAsset(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(day int) (int64, error)
+	DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error)
 }
 
 type FirstPartyVulnService interface {
@@ -400,7 +400,6 @@ type VulnEventRepository interface {
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(tx DB, vulnIDs []string) ([]models.VulnEvent, error)
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
-	DeleteEventsWithNotExistingVulnID() error
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
 }

@@ -82,20 +82,6 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 			slog.Info("starting background jobs", "time", time.Now())
 			var start time.Time
 
-			if emptyOrContains(selectedDaemons, "deleteOldAssetVersions") {
-				start = time.Now()
-				err := runner.DeleteOldAssetVersions()
-				if err != nil {
-					slog.Error("could not delete old asset versions", "err", err)
-					return
-				}
-				if err := markMirrored(configService, "vulndb.deleteOldAssetVersions"); err != nil {
-					slog.Error("could not mark assetVersionsDelete as mirrored", "err", err)
-					return
-				}
-				slog.Info("old asset versions deleted", "duration", time.Since(start))
-			}
-
 			if emptyOrContains(selectedDaemons, "openSourceInsights") {
 				start = time.Now()
 				err := runner.UpdateOpenSourceInsightInformation()
@@ -132,7 +118,7 @@ func triggerDaemon(db shared.DB, selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "assetPipeline") {
 				start = time.Now()
-				runner.RunAssetPipeline()
+				runner.RunAssetPipeline(true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 		}),

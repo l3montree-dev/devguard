@@ -126,7 +126,7 @@ func (runner DaemonRunner) tick() {
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()
-		runner.RunAssetPipeline()
+		runner.RunAssetPipeline(false)
 	} else {
 		slog.Info("not the leader - skipping background jobs")
 	}
