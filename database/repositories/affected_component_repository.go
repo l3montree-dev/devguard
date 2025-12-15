@@ -165,5 +165,5 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
 			unnest($15::text[])
 			ON CONFLICT (id) DO NOTHING`
 
-	return g.GetDB(tx).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
+	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
 }

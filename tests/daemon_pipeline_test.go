@@ -40,7 +40,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: "pkg:npm/test-package",
 				Version:            utils.Ptr("1.0.0"),
-				CVE:                []models.CVE{cve},
+				CVEs:               []models.CVE{cve},
 			}
 			err = f.DB.Create(&affectedComponent).Error
 			require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:npm/vulnerable-package",
 			Version:            utils.Ptr("2.0.0"),
-			CVE:                []models.CVE{cve},
+			CVEs:               []models.CVE{cve},
 		}
 		err = f.DB.Create(&affectedComponent).Error
 		require.NoError(t, err)
@@ -488,7 +488,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: "pkg:npm/risk-test-package",
 				Version:            utils.Ptr("1.0.0"),
-				CVE:                []models.CVE{cve},
+				CVEs:               []models.CVE{cve},
 			}
 			err = f.DB.Create(&affectedComponent).Error
 			require.NoError(t, err)

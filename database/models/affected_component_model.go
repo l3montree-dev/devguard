@@ -84,12 +84,53 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
+/*
+func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent) []AffectedComponent {
+	// get all the versions
+	versions := make([]string, 0)
+	for _, ac := range affectedComponents {
+		if ac.Version == nil {
+			return affectedComponents
+		}
+		versions = append(versions, *ac.Version)
+	}
+
+	// get the ranges
+	ranges := versionsToRange(versions)
+
+	// create the new affected components again
+	newAffectedComponents := make([]AffectedComponent, len(ranges))
+	for i, r := range ranges {
+		if r[0] == r[1] {
+			// create with version attribute
+			cmp := affectedComponents[0]
+			cmp.Version = &r[0]
+			newAffectedComponents[i] = cmp
+		} else {
+			// create semver range component
+			cmp := affectedComponents[0]
+			cmp.Version = nil
+			cmp.SemverIntroduced = &r[0]
+			cmp.SemverFixed = &r[1]
+			newAffectedComponents[i] = cmp
+		}
+	}
+
+	return newAffectedComponents
+}
+*/
+
 func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
-	for _, affected := range osv.Affected {
+	cveIds := osv.GetAssociatedCVEs()
+	cves := make([]CVE, len(cveIds))
+	for i, cveID := range cveIds {
+		cves[i] = CVE{CVE: cveID}
+	}
 
-		// skip the package if it is deemed unimportant by debian
+	for _, affected := range osv.Affected {
+		// check if the affected package has a purl
 		if affected.EcosystemSpecific != nil {
 			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
 			if urgency, ok := affected.EcosystemSpecific["urgency"]; ok {
@@ -124,18 +165,18 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 				} else {
 					continue
 				}
-
-				// iterate over all events. Events form a pair starting from i = 0 all even slice entries have the introduced version set and the entry after that (i+1) has the fixed version set
+				// iterate over all events
 				for i, e := range r.Events {
-					var fixed string
-
+					tmpE := e
 					if i%2 != 0 {
 						continue
 					}
-					introduced := e.Introduced
+					introduced := tmpE.Introduced
 
-					// if its the last event there is no fix
+					// check if a fix does even exist
+					fixed := ""
 					if len(r.Events) != i+1 {
+						// there is a fix available
 						fixed = r.Events[i+1].Fixed
 					}
 
@@ -175,18 +216,20 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 
 						Source: "osv",
 
-						SemverIntroduced: utils.EmptyThenNil(semverIntroduced),
-						SemverFixed:      utils.EmptyThenNil(semverFixed),
+						SemverIntroduced: semverIntroducedPtr,
+						SemverFixed:      semverFixedPtr,
+
+						CVEs: cves,
 					}
 					affectedComponents = append(affectedComponents, affectedComponent)
 				}
 			}
 
-			// we do not have a semver versioning
 			if !containsSemver {
 				notSemverVersionedComponents := make([]AffectedComponent, 0, len(affected.Ranges))
 				// create an affected package with a specific version
 				for _, v := range affected.Versions {
+					tmpV := v
 					affectedComponent := AffectedComponent{
 						PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
 						Ecosystem:          affected.Package.Ecosystem,
@@ -196,18 +239,21 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 						Namespace:          &purl.Namespace,
 						Qualifiers:         &qualifiersStr,
 						Subpath:            &purl.Subpath,
-						Version:            &v,
-						Source:             "osv",
+						Version:            &tmpV,
+
+						Source: "osv",
+
+						CVEs: cves,
 					}
 					notSemverVersionedComponents = append(notSemverVersionedComponents, affectedComponent)
 				}
 
 				// combine the affected components using ranges - This adds a layer of heuristic to it.
 				// affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
+
 				affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
 			}
 		} else {
-			// if we do not have a purl we try to work with GIT information
 			for _, r := range affected.Ranges {
 				if r.Type != "GIT" {
 					continue
@@ -226,7 +272,7 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 				}
 				// remove the scheme
 				url.Scheme = ""
-				purl := fmt.Sprintf("pkg:%s%s", url.Host, strings.TrimSuffix(url.Path, ".git"))
+				purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
 
 				// parse the purl to get the name and namespace
 				purlParsed, err := packageurl.FromString(purl)
@@ -237,15 +283,17 @@ func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
 
 				notPurlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
 				for _, v := range affected.Versions {
+					tmpV := v
 					affectedComponent := AffectedComponent{
 						PurlWithoutVersion: purl,
 						Ecosystem:          "GIT",
 						Scheme:             "pkg",
 						Type:               purlParsed.Type,
 						Name:               purlParsed.Name,
-						Version:            &v,
+						Version:            &tmpV,
 						Namespace:          &purlParsed.Namespace,
 						Source:             "osv",
+						CVEs:               cves,
 					}
 					notPurlVersionedComponents = append(notPurlVersionedComponents, affectedComponent)
 				}

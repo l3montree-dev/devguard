@@ -3,11 +3,14 @@ package normalize
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 // versionInvalidCharsRe is compiled once for performance
 var versionInvalidCharsRe = regexp.MustCompile(`[^0-9.]`)
+
+const max31BitNumber int = 2_147_483_648
 
 // ConvertToSemver converts various version formats to semantic versioning format.
 // It handles:
@@ -92,6 +95,16 @@ func ConvertToSemver(originalVersion string) (string, error) {
 				segments[i] = "0"
 			}
 		}
+
+		// check if the numbers of the main components exceed 31 bits, this is due to database limitations
+		number, err := strconv.Atoi(segments[i])
+		if err != nil {
+			return "", fmt.Errorf("%d. semver segment: %s is not numeric", i, segments[i])
+		}
+		if number >= max31BitNumber {
+			return "", fmt.Errorf("bad semver, %d. component %d does not fit 31 bit limit", i, number)
+		}
+
 	}
 
 	// Pad missing segments with "0"

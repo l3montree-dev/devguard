@@ -161,6 +161,8 @@ type CveRepository interface {
 	FindCVE(tx DB, id string) (models.CVE, error)
 	FindCVEs(tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
+	CreateCVEWithConflictHandling(tx DB, cve *models.CVE) error
+	CreateCVEAffectedComponentsEntries(tx DB, cve *models.CVE, components []models.AffectedComponent) error
 }
 
 type CweRepository interface {

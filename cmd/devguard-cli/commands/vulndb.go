@@ -170,7 +170,7 @@ func newSyncCommand() *cobra.Command {
 			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
 			mitreService := vulndb.NewMitreService(cweRepository)
 
-			epssService := vulndb.NewEPSSService(cveRepository)
+			// epssService := vulndb.NewEPSSService(cveRepository)
 
 			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository)
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
@@ -191,15 +191,15 @@ func newSyncCommand() *cobra.Command {
 				slog.Info("finished cwe database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToSync, "epss") {
-				slog.Info("starting epss database sync")
-				now := time.Now()
+			// if emptyOrContains(databasesToSync, "epss") {
+			// 	slog.Info("starting epss database sync")
+			// 	now := time.Now()
 
-				if err := epssService.Mirror(); err != nil {
-					slog.Error("could not sync epss database", "err", err)
-				}
-				slog.Info("finished epss database sync", "duration", time.Since(now))
-			}
+			// 	if err := epssService.Mirror(); err != nil {
+			// 		slog.Error("could not sync epss database", "err", err)
+			// 	}
+			// 	slog.Info("finished epss database sync", "duration", time.Since(now))
+			// }
 
 			if emptyOrContains(databasesToSync, "osv") {
 				slog.Info("starting osv database sync")
