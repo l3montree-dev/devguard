@@ -148,7 +148,7 @@ func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
-		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now()).Select("ID").Find(&assets).Error
+		err := runner.assetRepository.GetDB(nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-12*time.Hour)).Select("ID").Find(&assets).Error
 		if err != nil {
 			monitoring.Alert("could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
