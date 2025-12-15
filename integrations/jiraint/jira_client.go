@@ -277,7 +277,6 @@ func ParseWebhook(payload []byte) (*WebhookEvent, error) {
 	}
 
 	if event.Event == "" {
-		slog.Error("Webhook event type is empty")
 		return nil, fmt.Errorf("webhook event type is empty")
 	}
 

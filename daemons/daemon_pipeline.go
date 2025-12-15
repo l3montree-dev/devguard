@@ -219,7 +219,7 @@ func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan cha
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "FetchAssetDetails", "assetID", asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "FetchAssetDetails", "assetID", asset.ID)
 			out <- assetWithProjectAndOrg{
 				asset:         asset,
 				assetVersions: assetVersions,
@@ -262,7 +262,7 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errC
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "SyncTickets", "assetID", assetWithDetails.asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "SyncTickets", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -303,7 +303,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "ResolveDifferencesInTicketState", "assetID", assetWithDetails.asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "ResolveDifferencesInTicketState", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -364,7 +364,7 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "ScanAsset", "assetID", asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "ScanAsset", "assetID", asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -423,7 +423,7 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "SyncUpstream", "assetID", asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "SyncUpstream", "assetID", asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -460,7 +460,7 @@ func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, err
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "CollectStats", "assetID", assetWithDetails.asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "CollectStats", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -509,7 +509,7 @@ func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetW
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "RecalculateRiskForVulnerabilities", "assetID", assetWithDetails.asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "RecalculateRiskForVulnerabilities", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -528,7 +528,7 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
 			if asset.VulnAutoReopenAfterDays == nil || *asset.VulnAutoReopenAfterDays <= 0 {
-				slog.Info("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
+				slog.Debug("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
 				out <- assetWithDetails
 				continue
 			}
@@ -566,7 +566,7 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 				}
 				continue
 			}
-			slog.Info("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
+			slog.Debug("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()
