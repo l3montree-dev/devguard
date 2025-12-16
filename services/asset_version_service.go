@@ -557,6 +557,21 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 				return existingVulns, existingVulnsOnOtherBranch, err
 			}
 
+			// Update all vuln events BEFORE deleting the old record
+			err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
+			if err != nil {
+				slog.Error("could not update vuln events", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+			// Update artifact dependency vulns BEFORE deleting the old record
+			err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
+			if err != nil {
+				slog.Error("could not update artifact dependency vulns", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+			// Now delete the old record after all references are updated
 			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
 			if err != nil {
 				slog.Error("could not delete old dependencyVuln during merge", "err", err)
@@ -571,14 +586,14 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 			return existingVulns, existingVulnsOnOtherBranch, err
 		}
 
-		// Update all vuln events
+		// Update all vuln events (in case the update succeeded on first try)
 		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
 		if err != nil {
 			slog.Error("could not update vuln events", "err", err)
 			return existingVulns, existingVulnsOnOtherBranch, err
 		}
 
-		// update dependencyVuln in artifacts dependencyVuln table
+		// update dependencyVuln in artifacts dependencyVuln table (in case the update succeeded on first try)
 		err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
 		if err != nil {
 			slog.Error("could not update artifact dependency vulns", "err", err)
