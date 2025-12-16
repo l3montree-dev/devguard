@@ -1157,7 +1157,7 @@ func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 			}
 		}
 		if len(licenseIDs) == 0 {
-			licenseIDs = []string{"Unknown"}
+			licenseIDs = []string{" Unknown"}
 		}
 
 		templateValues = append(templateValues, componentData{
