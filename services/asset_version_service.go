@@ -1114,7 +1114,7 @@ func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	type componentData struct {
 		Package  string
 		Version  string
-		Licenses *cdx.Licenses
+		Licenses []string
 	}
 
 	ecosystemCounts := make(map[string]int)
@@ -1148,10 +1148,22 @@ func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 			licenseCounts["Unknown"]++
 		}
 
+		var licenseIDs []string
+		if component.Licenses != nil && len(*component.Licenses) > 0 {
+			for _, licenseChoice := range *component.Licenses {
+				if licenseChoice.License != nil && licenseChoice.License.ID != "" {
+					licenseIDs = append(licenseIDs, licenseChoice.License.ID)
+				}
+			}
+		}
+		if len(licenseIDs) == 0 {
+			licenseIDs = []string{"Unknown"}
+		}
+
 		templateValues = append(templateValues, componentData{
 			Package:  packageName,
 			Version:  component.Version,
-			Licenses: component.Licenses,
+			Licenses: licenseIDs,
 		})
 	}
 
@@ -1241,7 +1253,7 @@ Total Components: {{ .TotalComponents }}
 
 | Package 						  | Version | Licenses  |
 |---------------------------------|---------|-------|
-{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
+{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.}} {{end}}{{ else }} Unknown {{ end }} |
 {{end}}`,
 	)
 	if err != nil {
