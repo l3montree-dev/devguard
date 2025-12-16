@@ -374,7 +374,6 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", newState, "", asset)
-
 	if err != nil {
 		slog.Error("could not recalculate raw risk assessment", "err", err)
 		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")

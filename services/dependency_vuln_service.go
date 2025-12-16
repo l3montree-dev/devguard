@@ -246,10 +246,10 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
 		err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
-			if err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns); err != nil {
+			if err := s.dependencyVulnRepository.SaveBatchWithUnnest(tx, dependencyVulns); err != nil {
 				return fmt.Errorf("could not save dependencyVulns: %v", err)
 			}
-			if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
+			if err := s.vulnEventRepository.CreateBatchWithUnnest(tx, events); err != nil {
 				return fmt.Errorf("could not save events: %v", err)
 			}
 			return nil
@@ -260,12 +260,12 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 		return dependencyVulns, nil
 	}
 
-	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatchWithUnnest(tx, dependencyVulns)
 	if err != nil {
 		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
 
-	err = s.vulnEventRepository.SaveBatch(tx, events)
+	err = s.vulnEventRepository.CreateBatchWithUnnest(tx, events)
 	if err != nil {
 		return nil, fmt.Errorf("could not save events: %v", err)
 	}

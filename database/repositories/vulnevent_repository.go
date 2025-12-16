@@ -163,3 +163,50 @@ func (r *eventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (b
 	}
 	return count > 0, nil
 }
+
+func (r *eventRepository) CreateBatchWithUnnest(tx *gorm.DB, events []models.VulnEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(events))
+	types := make([]string, len(events))
+	vulnIDs := make([]string, len(events))
+	vulnTypes := make([]string, len(events))
+	userIDs := make([]string, len(events))
+	justifications := make([]*string, len(events))
+	mechanicalJustifications := make([]string, len(events))
+	arbitraryJSONData := make([]string, len(events))
+	originalAssetVersionNames := make([]*string, len(events))
+	upstreams := make([]int, len(events))
+
+	for i := range events {
+		ids[i] = events[i].ID
+		types[i] = string(events[i].Type)
+		vulnIDs[i] = events[i].VulnID
+		vulnTypes[i] = string(events[i].VulnType)
+		userIDs[i] = events[i].UserID
+		justifications[i] = events[i].Justification
+		mechanicalJustifications[i] = string(events[i].MechanicalJustification)
+		arbitraryJSONData[i] = events[i].ArbitraryJSONData
+		originalAssetVersionNames[i] = events[i].OriginalAssetVersionName
+		upstreams[i] = int(events[i].Upstream)
+	}
+
+	query := `
+        INSERT INTO vuln_events (id,type,vuln_id,vuln_type,user_id,justification,mechanical_justification,arbitrary_json_data,original_asset_version_name,upstream)
+        SELECT
+            unnest($1::uuid[]),
+            unnest($2::text[]),
+            unnest($3::text[]),
+            unnest($4::text[]),
+            unnest($5::text[]),
+            unnest($6::text[]),
+            unnest($7::text[]),
+            unnest($8::text[]),
+			unnest($9::text[]),
+			unnest($10::int(4)[])
+		ON CONFLICT (id) DO NOTHING`
+
+	return r.GetDB(tx).Exec(query, ids, types, vulnIDs, vulnTypes, userIDs, justifications, mechanicalJustifications, arbitraryJSONData, originalAssetVersionNames, upstreams).Error
+}

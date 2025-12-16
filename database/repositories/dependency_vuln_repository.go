@@ -524,3 +524,82 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(t
 	}).Preload("Artifacts").Preload("CVE").Where("cve_id = ? AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err
 }
+
+func (repository *dependencyVulnRepository) SaveBatchWithUnnest(tx *gorm.DB, vulns []models.DependencyVuln) error {
+	if len(vulns) == 0 {
+		return nil
+	}
+
+	// primary key
+	ids := make([]string, len(vulns))
+
+	//non-key attributes
+	messages := make([]*string, len(vulns))
+	states := make([]string, len(vulns))
+	lastDetected := make([]string, len(vulns))
+	ticketIDs := make([]*string, len(vulns))
+	ticketURLs := make([]*string, len(vulns))
+	componentDepths := make([]*int, len(vulns))
+	componentFixedVersions := make([]*string, len(vulns))
+	efforts := make([]*int, len(vulns))
+	riskAssesements := make([]*int, len(vulns))
+	rawRiskAssesements := make([]*float64, len(vulns))
+	priorities := make([]*int, len(vulns))
+	riskRecalculatedAt := make([]string, len(vulns))
+	manualTicketCreation := make([]bool, len(vulns))
+
+	for i := range vulns {
+		ids[i] = vulns[i].CalculateHash()
+
+		messages[i] = vulns[i].Message
+		states[i] = string(vulns[i].State)
+		lastDetected[i] = vulns[i].LastDetected.String()
+		ticketIDs[i] = vulns[i].TicketID
+		ticketURLs[i] = vulns[i].TicketURL
+		componentDepths[i] = vulns[i].ComponentDepth
+		componentFixedVersions[i] = vulns[i].ComponentFixedVersion
+		efforts[i] = vulns[i].Effort
+		riskAssesements[i] = vulns[i].RiskAssessment
+		rawRiskAssesements[i] = vulns[i].RawRiskAssessment
+		priorities[i] = vulns[i].Priority
+		riskRecalculatedAt[i] = vulns[i].RiskRecalculatedAt.String()
+		manualTicketCreation[i] = vulns[i].ManualTicketCreation
+	}
+
+	query := `
+	UPDATE dependency_vulns dv
+	SET 
+	message = bulk_query.u_message
+	state = bulk_query.u_state
+	last_detected = bulk_query.u_last_detected
+	ticket_id = bulk_query.u_ticket_id
+	ticket_url = bulk_query.u_ticket_url
+	component_depth = bulk_query.u_component_depth
+	component_fixed_version = bulk_query.u_component_fixed_version
+	effort = bulk_query.u_effort
+	risk_assesement  = bulk_query.u_risk_assesement
+	raw_risk_assesement = bulk_query.u_raw_risk_assesement
+	priority = bulk_query.u_priority
+	risk_recalculated_at  = bulk_query.u_risk_recalculated_at
+	manual_ticket_creation = bulk_query.u_manual_ticket_creation
+	FROM (
+		SELECT 
+			UNNEST($1::text[]) AS u_message,
+			UNNEST($2::text[]) AS u_state,
+			UNNEST($3::text[]) AS u_last_detected,
+			UNNEST($4::text[]) AS u_ticket_id,
+			UNNEST($5::text[]) AS u_ticket_url,
+			UNNEST($6::int(8)[]) AS u_component_depth,
+			UNNEST($7::text[]) AS u_component_fixed_version,
+			UNNEST($8::int(8)[]) AS u_effort,
+			UNNEST($9::int(8)[]) AS u_risk_assesement,
+			UNNEST($10::text[]) AS u_raw_risk_assesement,
+			UNNEST($11::int(8)[]) AS u_priority,
+			UNNEST($12::text[]) AS u_risk_recalculated_at,
+			UNNEST($13::bool[]) AS u_manual_ticket_creation,
+			UNNEST($14::text[]) AS u_id
+	) AS bulk_query
+	WHERE dv.id = bulk_query.u_id;`
+
+	return repository.GetDB(tx).Exec(query, messages, states, lastDetected, ticketIDs, ticketURLs, componentDepths, componentFixedVersions, efforts, riskAssesements, rawRiskAssesements, priorities, riskRecalculatedAt, manualTicketCreation, ids).Error
+}

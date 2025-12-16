@@ -218,6 +218,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
+	SaveBatchWithUnnest(tx DB, vulns []models.DependencyVuln) error
 }
 
 type FirstPartyVulnRepository interface {
@@ -402,6 +403,7 @@ type VulnEventRepository interface {
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
+	CreateBatchWithUnnest(tx DB, events []models.VulnEvent) error
 }
 
 type GithubAppInstallationRepository interface {
