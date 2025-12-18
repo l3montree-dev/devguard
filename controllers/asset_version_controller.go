@@ -490,7 +490,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 			}
 			frontendURL := os.Getenv("FRONTEND_URL")
 			if frontendURL == "" {
-				panic("FRONTEND_URL is not set")
+				return nil, fmt.Errorf("FRONTEND_URL is not set")
 			}
 
 			vex := a.assetVersionService.BuildVeX(asset, assetVersion, artifact, project.Slug, org.Name, org.Slug, frontendURL, dependencyVulns)
