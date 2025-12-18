@@ -111,8 +111,10 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 			merged := append(*result.Components, *bom.Components...)
 			result.Components = &merged
 		}
-		// add a dependency from the main purl to the sbom purl
-		*rootDependencies.Dependencies = append(*rootDependencies.Dependencies, bom.Metadata.Component.BOMRef)
+		// add a dependency from the main purl to the sbom purl, if the BOMRef is non-empty
+		if bom.Metadata.Component.BOMRef != "" {
+			*rootDependencies.Dependencies = append(*rootDependencies.Dependencies, bom.Metadata.Component.BOMRef)
+		}
 
 		if bom.Dependencies != nil {
 			*result.Dependencies = append(*result.Dependencies, *bom.Dependencies...)
