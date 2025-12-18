@@ -145,7 +145,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		panic("FRONTEND_URL is not set")
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
 	}
 
 	bom, err := h.buildMergedVEX(c, rel, project.Slug, org.Name, org.Slug, frontendURL)
