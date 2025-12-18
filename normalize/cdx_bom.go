@@ -706,12 +706,15 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 			URL:     vexURL,
 			Comment: "Up to date Vulnerability exploitability information.",
 			Type:    cdx.ERTypeExploitabilityStatement,
-		},
-			{
+		}}
+
+		if dashboardURL != "" {
+			*externalRefs = append(*externalRefs, cdx.ExternalReference{
 				URL:     dashboardURL,
 				Comment: "Dynamic analysis report",
 				Type:    cdx.ERTypeDynamicAnalysisReport,
-			}}
+			})
+		}
 	}
 
 	b := cdx.BOM{
@@ -741,12 +744,15 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 			URL:     sbomURL,
 			Comment: "Up to date software bill of material and license information.",
 			Type:    cdx.ERTypeBOM,
-		},
-			{
+		}}
+
+		if dashboardURL != "" {
+			*externalRefs = append(*externalRefs, cdx.ExternalReference{
 				URL:     dashboardURL,
 				Comment: "Dynamic analysis report",
 				Type:    cdx.ERTypeDynamicAnalysisReport,
-			}}
+			})
+		}
 	}
 
 	b := cdx.BOM{

@@ -345,16 +345,15 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		monitoring.Alert("FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
-	}
-
 	go func() {
 		defer func() {
 			close(out)
 			monitoring.RecoverPanic("scan panic")
 		}()
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			monitoring.Alert("FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
+		}
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
