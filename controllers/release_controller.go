@@ -166,7 +166,8 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 	return merged.EjectVex(nil), nil
 }
 
-// avoid nil pointer panic, when a release item represents a child, instead of an artifact the builder AssetID AssetVersionName and ArtifactName which which are nil for child-release items, resulting in a crash
+// Loop over release items and then check, an item can either be an artifact reference with an assetid, asset versioname, artifact name or be a childreleaseID reference with no asset fields, this is where the bug also happend, where it pointed to a nil pointer
+
 func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
