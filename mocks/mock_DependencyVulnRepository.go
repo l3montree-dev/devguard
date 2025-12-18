@@ -2346,6 +2346,63 @@ func (_c *DependencyVulnRepository_SaveBatch_Call) RunAndReturn(run func(tx shar
 	return _c
 }
 
+// SaveBatchWithUnnest provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) SaveBatchWithUnnest(tx shared.DB, vulns []models.DependencyVuln) error {
+	ret := _mock.Called(tx, vulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchWithUnnest")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.DependencyVuln) error); ok {
+		r0 = returnFunc(tx, vulns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnRepository_SaveBatchWithUnnest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchWithUnnest'
+type DependencyVulnRepository_SaveBatchWithUnnest_Call struct {
+	*mock.Call
+}
+
+// SaveBatchWithUnnest is a helper method to define mock.On call
+//   - tx shared.DB
+//   - vulns []models.DependencyVuln
+func (_e *DependencyVulnRepository_Expecter) SaveBatchWithUnnest(tx interface{}, vulns interface{}) *DependencyVulnRepository_SaveBatchWithUnnest_Call {
+	return &DependencyVulnRepository_SaveBatchWithUnnest_Call{Call: _e.mock.On("SaveBatchWithUnnest", tx, vulns)}
+}
+
+func (_c *DependencyVulnRepository_SaveBatchWithUnnest_Call) Run(run func(tx shared.DB, vulns []models.DependencyVuln)) *DependencyVulnRepository_SaveBatchWithUnnest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.DependencyVuln
+		if args[1] != nil {
+			arg1 = args[1].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_SaveBatchWithUnnest_Call) Return(err error) *DependencyVulnRepository_SaveBatchWithUnnest_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_SaveBatchWithUnnest_Call) RunAndReturn(run func(tx shared.DB, vulns []models.DependencyVuln) error) *DependencyVulnRepository_SaveBatchWithUnnest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)

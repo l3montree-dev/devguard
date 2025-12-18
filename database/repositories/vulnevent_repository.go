@@ -170,7 +170,7 @@ func (r *eventRepository) CreateBatchWithUnnest(tx *gorm.DB, events []models.Vul
 	}
 
 	ids := make([]uuid.UUID, len(events))
-	types := make([]string, len(events))
+	types := make([]dtos.VulnEventType, len(events))
 	vulnIDs := make([]string, len(events))
 	vulnTypes := make([]string, len(events))
 	userIDs := make([]string, len(events))
@@ -181,8 +181,13 @@ func (r *eventRepository) CreateBatchWithUnnest(tx *gorm.DB, events []models.Vul
 	upstreams := make([]int, len(events))
 
 	for i := range events {
-		ids[i] = events[i].ID
-		types[i] = string(events[i].Type)
+		// if there somehow already is an id present we keep that, otherwise generate a new one
+		if events[i].ID == uuid.Nil {
+			ids[i] = uuid.New()
+		} else {
+			ids[i] = events[i].ID
+		}
+		types[i] = events[i].Type
 		vulnIDs[i] = events[i].VulnID
 		vulnTypes[i] = string(events[i].VulnType)
 		userIDs[i] = events[i].UserID
@@ -205,8 +210,7 @@ func (r *eventRepository) CreateBatchWithUnnest(tx *gorm.DB, events []models.Vul
             unnest($7::text[]),
             unnest($8::text[]),
 			unnest($9::text[]),
-			unnest($10::int(4)[])
-		ON CONFLICT (id) DO NOTHING`
+			unnest($10::int4[])`
 
 	return r.GetDB(tx).Exec(query, ids, types, vulnIDs, vulnTypes, userIDs, justifications, mechanicalJustifications, arbitraryJSONData, originalAssetVersionNames, upstreams).Error
 }

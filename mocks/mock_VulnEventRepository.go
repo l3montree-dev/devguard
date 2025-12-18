@@ -41,6 +41,63 @@ func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
+// CreateBatchWithUnnest provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) CreateBatchWithUnnest(tx shared.DB, events []models.VulnEvent) error {
+	ret := _mock.Called(tx, events)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatchWithUnnest")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VulnEvent) error); ok {
+		r0 = returnFunc(tx, events)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnEventRepository_CreateBatchWithUnnest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatchWithUnnest'
+type VulnEventRepository_CreateBatchWithUnnest_Call struct {
+	*mock.Call
+}
+
+// CreateBatchWithUnnest is a helper method to define mock.On call
+//   - tx shared.DB
+//   - events []models.VulnEvent
+func (_e *VulnEventRepository_Expecter) CreateBatchWithUnnest(tx interface{}, events interface{}) *VulnEventRepository_CreateBatchWithUnnest_Call {
+	return &VulnEventRepository_CreateBatchWithUnnest_Call{Call: _e.mock.On("CreateBatchWithUnnest", tx, events)}
+}
+
+func (_c *VulnEventRepository_CreateBatchWithUnnest_Call) Run(run func(tx shared.DB, events []models.VulnEvent)) *VulnEventRepository_CreateBatchWithUnnest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.VulnEvent
+		if args[1] != nil {
+			arg1 = args[1].([]models.VulnEvent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_CreateBatchWithUnnest_Call) Return(err error) *VulnEventRepository_CreateBatchWithUnnest_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnEventRepository_CreateBatchWithUnnest_Call) RunAndReturn(run func(tx shared.DB, events []models.VulnEvent) error) *VulnEventRepository_CreateBatchWithUnnest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteEventByID provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) DeleteEventByID(tx shared.DB, eventID string) error {
 	ret := _mock.Called(tx, eventID)

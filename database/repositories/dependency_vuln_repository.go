@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -536,16 +537,16 @@ func (repository *dependencyVulnRepository) SaveBatchWithUnnest(tx *gorm.DB, vul
 	//non-key attributes
 	messages := make([]*string, len(vulns))
 	states := make([]string, len(vulns))
-	lastDetected := make([]string, len(vulns))
+	lastDetected := make([]time.Time, len(vulns))
 	ticketIDs := make([]*string, len(vulns))
 	ticketURLs := make([]*string, len(vulns))
 	componentDepths := make([]*int, len(vulns))
 	componentFixedVersions := make([]*string, len(vulns))
 	efforts := make([]*int, len(vulns))
-	riskAssesements := make([]*int, len(vulns))
-	rawRiskAssesements := make([]*float64, len(vulns))
+	riskAssessments := make([]*int, len(vulns))
+	rawRiskAssessments := make([]*float64, len(vulns))
 	priorities := make([]*int, len(vulns))
-	riskRecalculatedAt := make([]string, len(vulns))
+	riskRecalculatedAt := make([]time.Time, len(vulns))
 	manualTicketCreation := make([]bool, len(vulns))
 
 	for i := range vulns {
@@ -553,53 +554,53 @@ func (repository *dependencyVulnRepository) SaveBatchWithUnnest(tx *gorm.DB, vul
 
 		messages[i] = vulns[i].Message
 		states[i] = string(vulns[i].State)
-		lastDetected[i] = vulns[i].LastDetected.String()
+		lastDetected[i] = vulns[i].LastDetected
 		ticketIDs[i] = vulns[i].TicketID
 		ticketURLs[i] = vulns[i].TicketURL
 		componentDepths[i] = vulns[i].ComponentDepth
 		componentFixedVersions[i] = vulns[i].ComponentFixedVersion
 		efforts[i] = vulns[i].Effort
-		riskAssesements[i] = vulns[i].RiskAssessment
-		rawRiskAssesements[i] = vulns[i].RawRiskAssessment
+		riskAssessments[i] = vulns[i].RiskAssessment
+		rawRiskAssessments[i] = vulns[i].RawRiskAssessment
 		priorities[i] = vulns[i].Priority
-		riskRecalculatedAt[i] = vulns[i].RiskRecalculatedAt.String()
+		riskRecalculatedAt[i] = vulns[i].RiskRecalculatedAt
 		manualTicketCreation[i] = vulns[i].ManualTicketCreation
 	}
 
 	query := `
 	UPDATE dependency_vulns dv
 	SET 
-	message = bulk_query.u_message
-	state = bulk_query.u_state
-	last_detected = bulk_query.u_last_detected
-	ticket_id = bulk_query.u_ticket_id
-	ticket_url = bulk_query.u_ticket_url
-	component_depth = bulk_query.u_component_depth
-	component_fixed_version = bulk_query.u_component_fixed_version
-	effort = bulk_query.u_effort
-	risk_assesement  = bulk_query.u_risk_assesement
-	raw_risk_assesement = bulk_query.u_raw_risk_assesement
-	priority = bulk_query.u_priority
-	risk_recalculated_at  = bulk_query.u_risk_recalculated_at
+	message = bulk_query.u_message,
+	state = bulk_query.u_state,
+	last_detected = bulk_query.u_last_detected,
+	ticket_id = bulk_query.u_ticket_id,
+	ticket_url = bulk_query.u_ticket_url,
+	component_depth = bulk_query.u_component_depth,
+	component_fixed_version = bulk_query.u_component_fixed_version,
+	effort = bulk_query.u_effort,
+	risk_assessment  = bulk_query.u_risk_assessment,
+	raw_risk_assessment = bulk_query.u_raw_risk_assessment,
+	priority = bulk_query.u_priority,
+	risk_recalculated_at  = bulk_query.u_risk_recalculated_at,
 	manual_ticket_creation = bulk_query.u_manual_ticket_creation
 	FROM (
 		SELECT 
 			UNNEST($1::text[]) AS u_message,
 			UNNEST($2::text[]) AS u_state,
-			UNNEST($3::text[]) AS u_last_detected,
+			UNNEST($3::timestamp[]) AS u_last_detected,
 			UNNEST($4::text[]) AS u_ticket_id,
 			UNNEST($5::text[]) AS u_ticket_url,
-			UNNEST($6::int(8)[]) AS u_component_depth,
+			UNNEST($6::int8[]) AS u_component_depth,
 			UNNEST($7::text[]) AS u_component_fixed_version,
-			UNNEST($8::int(8)[]) AS u_effort,
-			UNNEST($9::int(8)[]) AS u_risk_assesement,
-			UNNEST($10::text[]) AS u_raw_risk_assesement,
-			UNNEST($11::int(8)[]) AS u_priority,
-			UNNEST($12::text[]) AS u_risk_recalculated_at,
+			UNNEST($8::int8[]) AS u_effort,
+			UNNEST($9::int8[]) AS u_risk_assessment,
+			UNNEST($10::float8[]) AS u_raw_risk_assessment,
+			UNNEST($11::int8[]) AS u_priority,
+			UNNEST($12::timestamp[]) AS u_risk_recalculated_at,
 			UNNEST($13::bool[]) AS u_manual_ticket_creation,
 			UNNEST($14::text[]) AS u_id
 	) AS bulk_query
 	WHERE dv.id = bulk_query.u_id;`
 
-	return repository.GetDB(tx).Exec(query, messages, states, lastDetected, ticketIDs, ticketURLs, componentDepths, componentFixedVersions, efforts, riskAssesements, rawRiskAssesements, priorities, riskRecalculatedAt, manualTicketCreation, ids).Error
+	return repository.GetDB(tx).Exec(query, messages, states, lastDetected, ticketIDs, ticketURLs, componentDepths, componentFixedVersions, efforts, riskAssessments, rawRiskAssessments, priorities, riskRecalculatedAt, manualTicketCreation, ids).Error
 }
