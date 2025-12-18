@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -111,8 +112,13 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		panic("FRONTEND_URL is not set")
+	}
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	bom, err := h.buildMergedVEX(c, rel, project.Slug, org.Name, org.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -134,9 +140,15 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
+	project := shared.GetProject(c)
 	org := shared.GetOrg(c)
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		panic("FRONTEND_URL is not set")
+	}
+
+	bom, err := h.buildMergedVEX(c, rel, project.Slug, org.Name, org.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -198,7 +210,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, projectSlug, orgName, orgSlug, frontendURL string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	for _, item := range release.Items {
@@ -218,7 +230,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, orgName, depVulns)
+		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, projectSlug, orgName, orgSlug, frontendURL, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}

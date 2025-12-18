@@ -931,7 +931,7 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
+func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, projectSlug, organizationName, organizationSlug string, frontendURL string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
 
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
@@ -994,7 +994,7 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 		}
 	}
 
-	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, vulnerabilities)
+	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

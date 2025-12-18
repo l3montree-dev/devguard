@@ -18,6 +18,10 @@ type CdxBom struct {
 	vulnerabilities  *[]cdx.Vulnerability
 	artifactName     string
 	assetVersionSlug string
+	assetSlug        string
+	projectSlug      string
+	orgSlug          string
+	frontendURL      string
 }
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
@@ -533,7 +537,7 @@ type CdxComponent interface {
 	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
 }
 
-func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug string, vulns []cdx.Vulnerability) *CdxBom {
+func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, vulns []cdx.Vulnerability) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -552,7 +556,7 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersion
 
 	bom.Vulnerabilities = &vulns
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
@@ -610,7 +614,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug 
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, "", "", "", "")
 }
 
 func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
@@ -667,20 +671,30 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 		apiURL := os.Getenv("API_URL")
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String())
 
+		dashboardURL := ""
+
 		if bom.assetVersionSlug != "" {
 			vexURL = fmt.Sprintf("%s?ref=%s", vexURL, url.QueryEscape(bom.assetVersionSlug))
+			dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug, url.QueryEscape(bom.assetVersionSlug))
 		}
 		if bom.assetVersionSlug != "" && bom.artifactName != "" {
 			vexURL = fmt.Sprintf("%s&artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
+			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(bom.artifactName))
 		} else if bom.artifactName != "" {
 			vexURL = fmt.Sprintf("%s?artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
+			dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/main?artifact=%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug, url.QueryEscape(bom.artifactName))
 		}
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
 			Comment: "Up to date Vulnerability exploitability information.",
 			Type:    cdx.ERTypeExploitabilityStatement,
-		}}
+		},
+			{
+				URL:     dashboardURL,
+				Comment: "Dynamic analysis report",
+				Type:    cdx.ERTypeDynamicAnalysisReport,
+			}}
 	}
 
 	b := cdx.BOM{
@@ -886,7 +900,7 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug string) *CdxBom {
+func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
 	cdxBom := newCdxBom(bom, artifactName)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     rootPurl,
@@ -898,6 +912,11 @@ func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug
 	cdxBom.ReplaceRoot(newRoot)
 	cdxBom.artifactName = artifactName
 	cdxBom.assetVersionSlug = assetVersionSlug
+	cdxBom.assetSlug = assetSlug
+	cdxBom.projectSlug = projectSlug
+	cdxBom.orgSlug = orgSlug
+	cdxBom.frontendURL = frontendURL
+
 	return cdxBom
 }
 

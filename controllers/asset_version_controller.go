@@ -354,10 +354,16 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 }
 
 func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom, error) {
+	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	artifact, err := shared.MaybeGetArtifact(ctx)
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		panic("FRONTEND_URL is not set")
+	}
 
 	var dependencyVulns []models.DependencyVuln
 
@@ -371,7 +377,7 @@ func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, artifact.ArtifactName, org.Name, dependencyVulns), nil
+	return a.assetVersionService.BuildVeX(asset, assetVersion, artifact.ArtifactName, project.Slug, org.Name, org.Slug, frontendURL, dependencyVulns), nil
 }
 
 func (a *AssetVersionController) Metrics(ctx shared.Context) error {
@@ -449,6 +455,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 	// get the vex from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	artifact := ctx.QueryParam("artifactName")
 
@@ -481,7 +488,12 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 			if err != nil {
 				return nil, err
 			}
-			vex := a.assetVersionService.BuildVeX(asset, assetVersion, artifact, org.Name, dependencyVulns)
+			frontendURL := os.Getenv("FRONTEND_URL")
+			if frontendURL == "" {
+				panic("FRONTEND_URL is not set")
+			}
+
+			vex := a.assetVersionService.BuildVeX(asset, assetVersion, artifact, project.Slug, org.Name, org.Slug, frontendURL, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))

@@ -347,7 +347,7 @@ type DependencyVulnService interface {
 
 type AssetVersionService interface {
 	BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
+	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, projectSlug string, orgName string, orgSlug string, frontendURL string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error)
