@@ -362,7 +362,7 @@ func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		panic("FRONTEND_URL is not set")
+		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
 	var dependencyVulns []models.DependencyVuln
