@@ -152,6 +152,13 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
 
 	artifactName := ctx.QueryParam("artifactName")
 
@@ -160,7 +167,7 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 		return err
 	}
 
-	sbom, err := a.assetVersionService.BuildSBOM(asset, app, artifactName, "", components)
+	sbom, err := a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, app, artifactName, components)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -172,6 +179,13 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 
 // function to return a graph of all dependencies which lead to the requested pURL
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
+
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	pURL := ctx.QueryParam("purl")
@@ -183,7 +197,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 		return err
 	}
 
-	sbom, err := a.assetVersionService.BuildSBOM(shared.GetAsset(ctx), assetVersion, artifactName, "", components)
+	sbom, err := a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, shared.GetAsset(ctx), assetVersion, artifactName, components)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -267,6 +281,11 @@ func (a *AssetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBo
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
 
 	// get artifact from path
 	artifact, err := shared.MaybeGetArtifact(ctx)
@@ -294,7 +313,7 @@ func (a *AssetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBo
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(asset, assetVersion, artifact.ArtifactName, org.Name, components.Data)
+	return a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
@@ -354,10 +373,16 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 }
 
 func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom, error) {
+	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	artifact, err := shared.MaybeGetArtifact(ctx)
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
 
 	var dependencyVulns []models.DependencyVuln
 
@@ -371,7 +396,7 @@ func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, artifact.ArtifactName, org.Name, dependencyVulns), nil
+	return a.assetVersionService.BuildVeX(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
 }
 
 func (a *AssetVersionController) Metrics(ctx shared.Context) error {
@@ -449,6 +474,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 	// get the vex from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	artifact := ctx.QueryParam("artifactName")
 
@@ -481,7 +507,12 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 			if err != nil {
 				return nil, err
 			}
-			vex := a.assetVersionService.BuildVeX(asset, assetVersion, artifact, org.Name, dependencyVulns)
+			frontendURL := os.Getenv("FRONTEND_URL")
+			if frontendURL == "" {
+				return nil, fmt.Errorf("FRONTEND_URL is not set")
+			}
+
+			vex := a.assetVersionService.BuildVeX(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))

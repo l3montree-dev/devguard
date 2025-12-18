@@ -883,7 +883,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -910,7 +910,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -932,7 +932,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		metadata := result.GetMetadata()
 
 		assert.NotNil(t, metadata.Component)
