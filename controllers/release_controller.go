@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -147,17 +148,66 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
 func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+	merged, err := h.mergeReleaseSBOM(release, orgName, map[uuid.UUID]struct{}{})
+	if err != nil {
+		return nil, err
+	}
+
+	return merged.EjectSBOM(nil), nil
+}
+
+// buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+	merged, err := h.mergeReleaseVEX(release, orgName, map[uuid.UUID]struct{}{})
+	if err != nil {
+		return nil, err
+	}
+
+	return merged.EjectVex(nil), nil
+}
+
+// avoid nil pointer panic, when a release item represents a child, instead of an artifact the builder AssetID AssetVersionName and ArtifactName which which are nil for child-release items, resulting in a crash
+func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+	if _, ok := visiting[release.ID]; ok {
+		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
+	}
+	visiting[release.ID] = struct{}{}
+	defer delete(visiting, release.ID)
+
 	var boms []*normalize.CdxBom
 
-	// iterate over items and build SBOM per artifact
 	for _, item := range release.Items {
-		// load overwritten licenses for the asset version
+		if item.ChildRelease != nil || item.ChildReleaseID != nil {
+			child := item.ChildRelease
+			if child == nil && item.ChildReleaseID != nil {
+				rel, err := h.service.ReadRecursive(*item.ChildReleaseID)
+				if err != nil {
+					return nil, err
+				}
+				child = &rel
+			}
+			if child == nil {
+				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
+			}
+			childBom, err := h.mergeReleaseSBOM(*child, orgName, visiting)
+			if err != nil {
+				return nil, err
+			}
+			if childBom != nil {
+				boms = append(boms, childBom)
+			}
+			continue
+		}
+
+		if item.AssetID == nil || item.AssetVersionName == nil || item.ArtifactName == nil {
+			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
+		}
+
 		overwrittenLicenses, err := h.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(*item.AssetID, *item.AssetVersionName)
 		if err != nil {
 			return nil, err
 		}
 
-		// load components for this artifact (page size large enough to include all components)
 		compsPage, err := h.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, *item.AssetVersionName, *item.AssetID, shared.PageInfo{PageSize: 1000, Page: 1}, "", nil, nil)
 		if err != nil {
 			return nil, err
@@ -166,7 +216,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		if err != nil {
 			return nil, err
 		}
-		// build sbom for this artifact via assetVersionService
+
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
 		bom, err := h.assetVersionService.BuildSBOM(asset, av, *item.ArtifactName, orgName, compsPage.Data)
@@ -177,38 +227,55 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		boms = append(boms, bom)
 	}
 
-	if len(boms) == 0 {
-		// Use the same merge helper so Components/Dependencies are initialized correctly
-		return normalize.MergeCdxBoms(&cdx.Metadata{
-			Component: &cdx.Component{
-				Type: cdx.ComponentTypeApplication,
-				Name: release.Name,
-			},
-		}, release.Name, release.Name).EjectSBOM(nil), nil
-	}
-
-	merged := normalize.MergeCdxBoms(&cdx.Metadata{
+	return normalize.MergeCdxBoms(&cdx.Metadata{
 		Component: &cdx.Component{
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
-
-	return merged.EjectSBOM(nil), nil
+	}, release.Name, release.Name, boms...), nil
 }
 
-// buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+	if _, ok := visiting[release.ID]; ok {
+		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
+	}
+	visiting[release.ID] = struct{}{}
+	defer delete(visiting, release.ID)
+
 	var boms []*normalize.CdxBom
 
 	for _, item := range release.Items {
-		// gather dependency vulns for this artifact (empty artifactName for release-level vulns)
+		if item.ChildRelease != nil || item.ChildReleaseID != nil {
+			child := item.ChildRelease
+			if child == nil && item.ChildReleaseID != nil {
+				rel, err := h.service.ReadRecursive(*item.ChildReleaseID)
+				if err != nil {
+					return nil, err
+				}
+				child = &rel
+			}
+			if child == nil {
+				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
+			}
+			childBom, err := h.mergeReleaseVEX(*child, orgName, visiting)
+			if err != nil {
+				return nil, err
+			}
+			if childBom != nil {
+				boms = append(boms, childBom)
+			}
+			continue
+		}
+
+		if item.AssetID == nil || item.AssetVersionName == nil || item.ArtifactName == nil {
+			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
+		}
+
 		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
 		if err != nil {
 			return nil, err
 		}
 
-		// fetch the asset version - preload the Asset relation
 		av, err := h.assetVersionRepository.Read(*item.AssetVersionName, *item.AssetID)
 		if err != nil {
 			return nil, err
@@ -224,23 +291,12 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 		}
 	}
 
-	if len(boms) == 0 {
-		return normalize.MergeCdxBoms(&cdx.Metadata{
-			Component: &cdx.Component{
-				Type: cdx.ComponentTypeApplication,
-				Name: release.Name,
-			},
-		}, release.Name, release.Name).EjectVex(nil), nil
-	}
-
-	merged := normalize.MergeCdxBoms(&cdx.Metadata{
+	return normalize.MergeCdxBoms(&cdx.Metadata{
 		Component: &cdx.Component{
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
-
-	return merged.EjectVex(nil), nil
+	}, release.Name, release.Name, boms...), nil
 }
 
 func (h *ReleaseController) Read(c shared.Context) error {
