@@ -184,7 +184,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}, release.Name, release.Name).EjectSBOM(nil), nil
+		}, release.Name).EjectSBOM(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -192,7 +192,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
+	}, release.Name, boms...)
 
 	return merged.EjectSBOM(nil), nil
 }
@@ -230,7 +230,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}, release.Name, release.Name).EjectVex(nil), nil
+		}, release.Name).EjectVex(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -238,7 +238,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
+	}, release.Name, boms...)
 
 	return merged.EjectVex(nil), nil
 }

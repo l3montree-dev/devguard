@@ -14,10 +14,10 @@ import (
 )
 
 type CdxBom struct {
-	tree            Tree[cdxBomNode]
-	vulnerabilities *[]cdx.Vulnerability
-	artifactName    string
-	ref             string
+	tree             Tree[cdxBomNode]
+	vulnerabilities  *[]cdx.Vulnerability
+	artifactName     string
+	assetVersionSlug string
 }
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
@@ -533,7 +533,7 @@ type CdxComponent interface {
 	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
 }
 
-func FromVulnerabilities(assetSlug, artifactName, assetVersionName string, vulns []cdx.Vulnerability) *CdxBom {
+func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug string, vulns []cdx.Vulnerability) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -552,10 +552,10 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName string, vulns
 
 	bom.Vulnerabilities = &vulns
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionName)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug)
 }
 
-func FromComponents(assetSlug, artifactName, assetVersionName string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
+func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -610,10 +610,10 @@ func FromComponents(assetSlug, artifactName, assetVersionName string, components
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionName)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug)
 }
 
-func newCdxBom(bom *cdx.BOM, artifactName, ref string) *CdxBom {
+func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	// convert components to sbomNodes
 	// first make sure components exist
 	if bom.Components == nil {
@@ -667,10 +667,10 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 		apiURL := os.Getenv("API_URL")
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String())
 
-		if bom.ref != "" {
-			vexURL = fmt.Sprintf("%s?ref=%s", vexURL, url.QueryEscape(bom.ref))
+		if bom.assetVersionSlug != "" {
+			vexURL = fmt.Sprintf("%s?ref=%s", vexURL, url.QueryEscape(bom.assetVersionSlug))
 		}
-		if bom.ref != "" && bom.artifactName != "" {
+		if bom.assetVersionSlug != "" && bom.artifactName != "" {
 			vexURL = fmt.Sprintf("%s&artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
 		} else if bom.artifactName != "" {
 			vexURL = fmt.Sprintf("%s?artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
@@ -704,10 +704,10 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 		apiURL := os.Getenv("API_URL")
 		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String())
 
-		if bom.ref != "" {
-			sbomURL = fmt.Sprintf("%s?ref=%s", sbomURL, url.QueryEscape(bom.ref))
+		if bom.assetVersionSlug != "" {
+			sbomURL = fmt.Sprintf("%s?ref=%s", sbomURL, url.QueryEscape(bom.assetVersionSlug))
 		}
-		if bom.ref != "" && bom.artifactName != "" {
+		if bom.assetVersionSlug != "" && bom.artifactName != "" {
 			sbomURL = fmt.Sprintf("%s&artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
 		} else if bom.artifactName != "" {
 			sbomURL = fmt.Sprintf("%s?artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
@@ -886,8 +886,8 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, ref string) *CdxBom {
-	cdxBom := newCdxBom(bom, artifactName, ref)
+func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug string) *CdxBom {
+	cdxBom := newCdxBom(bom, artifactName)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     rootPurl,
 		Name:       rootPurl,
@@ -897,7 +897,7 @@ func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, ref string) *Cdx
 
 	cdxBom.ReplaceRoot(newRoot)
 	cdxBom.artifactName = artifactName
-	cdxBom.ref = ref
+	cdxBom.assetVersionSlug = assetVersionSlug
 	return cdxBom
 }
 
@@ -923,7 +923,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)
 	}
 
-	cdxBom := newCdxBom(bom, artifactName, ref)
+	cdxBom := newCdxBom(bom, artifactName)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     artifactName,
 		Name:       artifactName,
@@ -945,7 +945,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, artifactName, ref string, boms ...*CdxBom) *CdxBom {
+func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -958,7 +958,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, artifactName, ref string, boms ...*Cdx
 
 	vulnMap := make(map[string]cdx.Vulnerability)
 
-	newBom := newCdxBom(merged, artifactName, ref)
+	newBom := newCdxBom(merged, artifactName)
 	for _, bom := range boms {
 		if bom == nil {
 			continue

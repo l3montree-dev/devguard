@@ -872,7 +872,7 @@ func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.
 		}
 	}
 
-	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
+	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -994,7 +994,7 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 		}
 	}
 
-	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, vulnerabilities)
+	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
