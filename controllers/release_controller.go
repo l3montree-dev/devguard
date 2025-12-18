@@ -64,8 +64,13 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -88,8 +93,13 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -158,7 +168,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
-func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, projectSlug, orgName, orgSlug string, frontendURL string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	// iterate over items and build SBOM per artifact
@@ -181,7 +191,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		// build sbom for this artifact via assetVersionService
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
-		bom, err := h.assetVersionService.BuildSBOM(asset, av, *item.ArtifactName, orgName, compsPage.Data)
+		bom, err := h.assetVersionService.BuildSBOM(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, compsPage.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +240,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, projectSlug, orgName, orgSlug, frontendURL, depVulns)
+		bom := h.assetVersionService.BuildVeX(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}

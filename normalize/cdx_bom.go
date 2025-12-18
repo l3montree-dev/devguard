@@ -559,7 +559,7 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersion
 	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
-func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
+func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -614,7 +614,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug 
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, "", "", "", "")
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
@@ -665,25 +665,42 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
 
+func (bom *CdxBom) calculateExternalURLs(docURL string) (string, string) {
+	dashboardURL := ""
+	if bom.frontendURL != "" && bom.orgSlug != "" && bom.projectSlug != "" && bom.assetSlug != "" {
+		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug)
+	}
+
+	if bom.assetVersionSlug != "" {
+		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(bom.assetVersionSlug))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(bom.assetVersionSlug))
+		}
+	} else {
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
+		}
+	}
+
+	if bom.assetVersionSlug != "" && bom.artifactName != "" {
+		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(bom.artifactName))
+		}
+	} else if bom.artifactName != "" {
+		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+	}
+
+	return docURL, dashboardURL
+}
+
 func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if assetID != nil {
 		apiURL := os.Getenv("API_URL")
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String())
 
-		dashboardURL := ""
-
-		if bom.assetVersionSlug != "" {
-			vexURL = fmt.Sprintf("%s?ref=%s", vexURL, url.QueryEscape(bom.assetVersionSlug))
-			dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug, url.QueryEscape(bom.assetVersionSlug))
-		}
-		if bom.assetVersionSlug != "" && bom.artifactName != "" {
-			vexURL = fmt.Sprintf("%s&artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
-			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(bom.artifactName))
-		} else if bom.artifactName != "" {
-			vexURL = fmt.Sprintf("%s?artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
-			dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/main?artifact=%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug, url.QueryEscape(bom.artifactName))
-		}
+		vexURL, dashboardURL := bom.calculateExternalURLs(vexURL)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
@@ -718,20 +735,18 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 		apiURL := os.Getenv("API_URL")
 		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String())
 
-		if bom.assetVersionSlug != "" {
-			sbomURL = fmt.Sprintf("%s?ref=%s", sbomURL, url.QueryEscape(bom.assetVersionSlug))
-		}
-		if bom.assetVersionSlug != "" && bom.artifactName != "" {
-			sbomURL = fmt.Sprintf("%s&artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
-		} else if bom.artifactName != "" {
-			sbomURL = fmt.Sprintf("%s?artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
-		}
+		sbomURL, dashboardURL := bom.calculateExternalURLs(sbomURL)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     sbomURL,
 			Comment: "Up to date software bill of material and license information.",
 			Type:    cdx.ERTypeBOM,
-		}}
+		},
+			{
+				URL:     dashboardURL,
+				Comment: "Dynamic analysis report",
+				Type:    cdx.ERTypeDynamicAnalysisReport,
+			}}
 	}
 
 	b := cdx.BOM{

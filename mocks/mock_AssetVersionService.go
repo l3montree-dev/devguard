@@ -197,16 +197,16 @@ func (_c *AssetVersionService_BuildSBOM_Call) RunAndReturn(run func(asset models
 }
 
 // BuildVeX provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, projectSlug string, orgName string, orgSlug string, frontendURL string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-	ret := _mock.Called(asset, assetVersion, artifactName, projectSlug, orgName, orgSlug, frontendURL, dependencyVulns)
+func (_mock *AssetVersionService) BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
+	ret := _mock.Called(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildVeX")
 	}
 
 	var r0 *normalize.CdxBom
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, models.AssetVersion, string, string, string, string, string, []models.DependencyVuln) *normalize.CdxBom); ok {
-		r0 = returnFunc(asset, assetVersion, artifactName, projectSlug, orgName, orgSlug, frontendURL, dependencyVulns)
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, string, models.Asset, models.AssetVersion, string, []models.DependencyVuln) *normalize.CdxBom); ok {
+		r0 = returnFunc(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.CdxBom)
@@ -221,27 +221,27 @@ type AssetVersionService_BuildVeX_Call struct {
 }
 
 // BuildVeX is a helper method to define mock.On call
+//   - frontendURL string
+//   - orgName string
+//   - orgSlug string
+//   - projectSlug string
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - artifactName string
-//   - projectSlug string
-//   - orgName string
-//   - orgSlug string
-//   - frontendURL string
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildVeX(asset interface{}, assetVersion interface{}, artifactName interface{}, projectSlug interface{}, orgName interface{}, orgSlug interface{}, frontendURL interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
-	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", asset, assetVersion, artifactName, projectSlug, orgName, orgSlug, frontendURL, dependencyVulns)}
+func (_e *AssetVersionService_Expecter) BuildVeX(frontendURL interface{}, orgName interface{}, orgSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
+	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)}
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) Run(run func(asset models.Asset, assetVersion models.AssetVersion, artifactName string, projectSlug string, orgName string, orgSlug string, frontendURL string, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) Run(run func(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 string
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(string)
 		}
-		var arg1 models.AssetVersion
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(models.AssetVersion)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -251,13 +251,13 @@ func (_c *AssetVersionService_BuildVeX_Call) Run(run func(asset models.Asset, as
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
+		var arg4 models.Asset
 		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg4 = args[4].(models.Asset)
 		}
-		var arg5 string
+		var arg5 models.AssetVersion
 		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg5 = args[5].(models.AssetVersion)
 		}
 		var arg6 string
 		if args[6] != nil {
@@ -286,7 +286,7 @@ func (_c *AssetVersionService_BuildVeX_Call) Return(cdxBom *normalize.CdxBom) *A
 	return _c
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(asset models.Asset, assetVersion models.AssetVersion, artifactName string, projectSlug string, orgName string, orgSlug string, frontendURL string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Return(run)
 	return _c
 }

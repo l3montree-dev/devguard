@@ -711,7 +711,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX(asset, assetVersion, organizationName, "test-artifact", "", "", "", dependencyVulns).EjectVex(nil)
+		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).EjectVex(nil)
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
