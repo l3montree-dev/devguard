@@ -572,8 +572,11 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 			// Update artifact dependency vulns BEFORE deleting the old record
 			err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
 			if err != nil {
-				slog.Error("could not update artifact dependency vulns", "err", err)
-				return existingVulns, existingVulnsOnOtherBranch, err
+				//check if the error is because duplicate entries, then we need to ignore it, because the other vuln already has those entries and the id is being updated to the new hash
+				if !strings.Contains(err.Error(), "duplicate key value") {
+					slog.Error("could not update artifact dependency vulns", "err", err)
+					return existingVulns, existingVulnsOnOtherBranch, err
+				}
 			}
 
 			// Now delete the old record after all references are updated
