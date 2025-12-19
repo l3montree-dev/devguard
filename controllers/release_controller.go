@@ -168,7 +168,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
-func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, projectSlug, orgName, orgSlug string, frontendURL string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName, orgSlug, projectSlug string, frontendURL string) (*cdx.BOM, error) {
 	merged, err := h.mergeReleaseSBOM(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, projectSlug, orgName, orgSlug, frontendURL string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string) (*cdx.BOM, error) {
 	merged, err := h.mergeReleaseVEX(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
