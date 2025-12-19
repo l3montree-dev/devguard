@@ -70,6 +70,13 @@ func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *mode
 			return err
 		}
 
+		go func() {
+			sql := CleanupOrphanedRecordsSQL
+			err := repository.db.Exec(sql).Error
+			if err != nil {
+				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+			}
+		}() //nolint:errcheck
 		slog.Info("successfully deleted asset version and all related artifacts", "assetVersion", assetVersion.Name)
 		return nil
 	})

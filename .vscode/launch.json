@@ -28,7 +28,7 @@
             "args": [],
         },
         {
-            "name": "Launch Scanner",
+            "name": "Launch Policy eval",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",

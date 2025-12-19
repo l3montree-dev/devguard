@@ -18,6 +18,7 @@ package daemons
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -349,6 +350,10 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 			close(out)
 			monitoring.RecoverPanic("scan panic")
 		}()
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			monitoring.Alert("FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
+		}
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
@@ -367,7 +372,7 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 						continue
 					}
 
-					bom, err := runner.assetVersionService.BuildSBOM(asset, assetVersions[i], artifact.ArtifactName, "", components)
+					bom, err := runner.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersions[i], artifact.ArtifactName, components)
 					if err != nil {
 						slog.Error("error when building SBOM")
 						errs = append(errs, err)
