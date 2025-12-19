@@ -933,8 +933,34 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 
 func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
 
+	// sort vulnerabilities deterministically by first detected date, then by component PURL
+	sortedDependencyVulns := make([]models.DependencyVuln, len(dependencyVulns))
+	copy(sortedDependencyVulns, dependencyVulns)
+	slices.SortFunc(sortedDependencyVulns, func(a, b models.DependencyVuln) int {
+		firstIssuedA, _, _ := getDatesForVulnerabilityEvent(a.Events)
+		firstIssuedB, _, _ := getDatesForVulnerabilityEvent(b.Events)
+
+		switch {
+		case firstIssuedA.Before(firstIssuedB):
+			return -1
+		case firstIssuedA.After(firstIssuedB):
+			return 1
+		}
+
+		purlA := utils.OrDefault(a.ComponentPurl, "")
+		purlB := utils.OrDefault(b.ComponentPurl, "")
+		switch {
+		case purlA < purlB:
+			return -1
+		case purlA > purlB:
+			return 1
+		}
+
+		return strings.Compare(utils.OrDefault(a.CVEID, ""), utils.OrDefault(b.CVEID, ""))
+	})
+
 	vulnerabilities := make([]cdx.Vulnerability, 0)
-	for _, dependencyVuln := range dependencyVulns {
+	for _, dependencyVuln := range sortedDependencyVulns {
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
