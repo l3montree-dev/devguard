@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -64,8 +65,13 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -88,8 +94,13 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -112,8 +123,13 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	bom, err := h.buildMergedVEX(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -135,9 +151,14 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
+	project := shared.GetProject(c)
 	org := shared.GetOrg(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	bom, err := h.buildMergedVEX(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -147,8 +168,8 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
-func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseSBOM(release, orgName, map[uuid.UUID]struct{}{})
+func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, projectSlug, orgName, orgSlug string, frontendURL string) (*cdx.BOM, error) {
+	merged, err := h.mergeReleaseSBOM(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +178,8 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseVEX(release, orgName, map[uuid.UUID]struct{}{})
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, projectSlug, orgName, orgSlug, frontendURL string) (*cdx.BOM, error) {
+	merged, err := h.mergeReleaseVEX(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +189,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 
 // Loop over release items and then check, an item can either be an artifact reference with an assetid, asset versioname, artifact name or be a childreleaseID reference with no asset fields, this is where the bug also happend, where it pointed to a nil pointer
 
-func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
@@ -190,7 +211,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName str
 			if child == nil {
 				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseSBOM(*child, orgName, visiting)
+			childBom, err := h.mergeReleaseSBOM(*child, orgName, orgSlug, projectSlug, frontendURL, visiting)
 			if err != nil {
 				return nil, err
 			}
@@ -220,7 +241,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName str
 
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
-		bom, err := h.assetVersionService.BuildSBOM(asset, av, *item.ArtifactName, orgName, compsPage.Data)
+		bom, err := h.assetVersionService.BuildSBOM(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, compsPage.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -233,10 +254,10 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName str
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...), nil
+	}, release.Name, boms...), nil
 }
 
-func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
@@ -258,7 +279,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName stri
 			if child == nil {
 				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseVEX(*child, orgName, visiting)
+			childBom, err := h.mergeReleaseVEX(*child, orgName, orgSlug, projectSlug, frontendURL, visiting)
 			if err != nil {
 				return nil, err
 			}
@@ -286,7 +307,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName stri
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, orgName, depVulns)
+		bom := h.assetVersionService.BuildVeX(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}
@@ -297,7 +318,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName stri
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...), nil
+	}, release.Name, boms...), nil
 }
 
 func (h *ReleaseController) Read(c shared.Context) error {
