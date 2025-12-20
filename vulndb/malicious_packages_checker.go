@@ -99,6 +99,13 @@ func (c *MaliciousPackageChecker) Stop() {
 	}
 }
 
+// IsReady returns true if the malicious package database has been loaded
+func (c *MaliciousPackageChecker) IsReady() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.databaseLoaded
+}
+
 func (c *MaliciousPackageChecker) Start() {
 	for {
 		if c.leaderElector.IsLeader() && c.updaterCtx == nil && c.cancelFn == nil {
@@ -255,6 +262,9 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 	if err := c.loadFromCache(cacheFile, dbPath); err == nil {
 		// Include fake packages for testing
 		c.loadFakePackages()
+		c.mu.Lock()
+		c.databaseLoaded = true
+		c.mu.Unlock()
 		slog.Info("Malicious package database loaded from cache",
 			"duration", time.Since(startTime).String())
 		return nil
@@ -273,6 +283,10 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 
 	// Include fake packages for testing
 	c.loadFakePackages()
+
+	c.mu.Lock()
+	c.databaseLoaded = true
+	c.mu.Unlock()
 
 	slog.Info("Malicious package database loaded", "duration", time.Since(startTime).String())
 	return nil

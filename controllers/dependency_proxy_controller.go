@@ -4,6 +4,8 @@
 package controllers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -82,10 +84,21 @@ func (d *DependencyProxyController) handleProxy(c shared.Context, proxyType Prox
 
 	slog.Info("Proxy request", "proxy", proxyType, "method", c.Request().Method, "path", requestPath)
 
-	// Check for malicious packages
+	// Block all requests if malicious package database is not yet loaded
+	if d.maliciousChecker != nil && !d.maliciousChecker.IsReady() {
+		slog.Warn("Blocking request - malicious package database not yet loaded", "proxy", proxyType, "path", requestPath)
+		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
+	}
+
+	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
 		if blocked, reason := d.checkMaliciousPackage(proxyType, requestPath); blocked {
 			slog.Warn("Blocked malicious package", "proxy", proxyType, "path", requestPath, "reason", reason)
+			// Also remove from cache if it exists to prevent serving cached malicious content
+			cachePath := d.getCachePath(proxyType, requestPath)
+			if err := os.Remove(cachePath); err == nil {
+				slog.Info("Removed malicious package from cache", "path", cachePath)
+			}
 			return d.blockMaliciousPackage(c, proxyType, requestPath, reason)
 		}
 	}
@@ -97,7 +110,14 @@ func (d *DependencyProxyController) handleProxy(c shared.Context, proxyType Prox
 		slog.Debug("Cache hit", "proxy", proxyType, "path", requestPath)
 		data, err := os.ReadFile(cachePath)
 		if err == nil {
-			return d.writeResponse(c, data, proxyType, requestPath, true)
+			// Verify cache integrity
+			if d.VerifyCacheIntegrity(cachePath, data) {
+				return d.writeResponse(c, data, proxyType, requestPath, true)
+			}
+			slog.Warn("Cache integrity verification failed, refetching", "proxy", proxyType, "path", requestPath)
+			// Remove corrupted cache
+			os.Remove(cachePath)
+			os.Remove(cachePath + ".sha256")
 		}
 		slog.Warn("Cache read error", "proxy", proxyType, "error", err)
 	}
@@ -120,8 +140,8 @@ func (d *DependencyProxyController) handleProxy(c shared.Context, proxyType Prox
 		return c.Blob(statusCode, headers.Get("Content-Type"), data)
 	}
 
-	// Cache successful responses
-	if err := d.cacheData(cachePath, data); err != nil {
+	// Cache successful responses with integrity verification
+	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 		slog.Warn("Failed to cache response", "proxy", proxyType, "error", err)
 	}
 
@@ -216,6 +236,61 @@ func (d *DependencyProxyController) cacheData(cachePath string, data []byte) err
 		return err
 	}
 	return os.WriteFile(cachePath, data, 0644)
+}
+
+// CacheDataWithIntegrity stores data and its SHA256 hash for integrity verification
+func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, data []byte) error {
+	// Write the data file
+	if err := d.cacheData(cachePath, data); err != nil {
+		return err
+	}
+
+	// Calculate and store SHA256 hash
+	hash := sha256.Sum256(data)
+	hashStr := hex.EncodeToString(hash[:])
+	hashPath := cachePath + ".sha256"
+
+	if err := os.WriteFile(hashPath, []byte(hashStr), 0644); err != nil {
+		slog.Warn("Failed to write integrity hash", "path", hashPath, "error", err)
+		return err
+	}
+
+	return nil
+}
+
+// VerifyCacheIntegrity checks if the cached data matches its stored hash
+func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data []byte) bool {
+	hashPath := cachePath + ".sha256"
+
+	// Read stored hash
+	storedHashBytes, err := os.ReadFile(hashPath)
+	if err != nil {
+		// If hash file doesn't exist, consider it valid for backward compatibility
+		// but log a warning
+		if os.IsNotExist(err) {
+			slog.Debug("No integrity hash found for cached file", "path", cachePath)
+			return true
+		}
+		slog.Warn("Failed to read integrity hash", "path", hashPath, "error", err)
+		return false
+	}
+
+	storedHash := string(storedHashBytes)
+
+	// Calculate current hash
+	hash := sha256.Sum256(data)
+	currentHash := hex.EncodeToString(hash[:])
+
+	// Compare
+	if currentHash != storedHash {
+		slog.Error("Cache integrity verification failed",
+			"path", cachePath,
+			"expected", storedHash,
+			"actual", currentHash)
+		return false
+	}
+
+	return true
 }
 
 func (d *DependencyProxyController) writeResponse(c shared.Context, data []byte, proxyType ProxyType, path string, cached bool) error {
