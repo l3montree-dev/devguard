@@ -31,7 +31,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	// Create a temporary directory for test data
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "osv", "malicious")
-	maliciousDir := filepath.Join(dbPath, "npm", "test-malicious-package")
+	maliciousDir := filepath.Join(dbPath, "npm", "fake-malicious-npm-package")
 	if err := os.MkdirAll(maliciousDir, 0755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			{
 				Package: dtos.Pkg{
 					Ecosystem: "npm",
-					Name:      "test-malicious-package",
+					Name:      "fake-malicious-npm-package",
 				},
 				Versions: []string{"1.0.0", "1.0.1"},
 			},
@@ -80,21 +80,21 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		{
 			name:      "Malicious package with specific version",
 			ecosystem: "npm",
-			pkgName:   "test-malicious-package",
+			pkgName:   "fake-malicious-npm-package",
 			version:   "1.0.0",
 			expected:  true,
 		},
 		{
 			name:      "Malicious package with another version",
 			ecosystem: "npm",
-			pkgName:   "test-malicious-package",
+			pkgName:   "fake-malicious-npm-package",
 			version:   "1.0.1",
 			expected:  true,
 		},
 		{
 			name:      "Malicious package without version",
 			ecosystem: "npm",
-			pkgName:   "test-malicious-package",
+			pkgName:   "fake-malicious-npm-package",
 			version:   "",
 			expected:  true,
 		},
@@ -108,7 +108,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		{
 			name:      "Wrong ecosystem",
 			ecosystem: "go",
-			pkgName:   "test-malicious-package",
+			pkgName:   "fake-malicious-npm-package",
 			version:   "1.0.0",
 			expected:  false,
 		},
