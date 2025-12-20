@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright (C) 2025 l3montree GmbH
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -13,4 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-GOPATH=/tmp/go-proxy-test/gopath GOMODCACHE=/tmp/go-proxy-test/pkg/mod GOPROXY="http://localhost:8080/api/v1/dependency-proxy/go" go get github.com/fake-org/malicious-package
+python3 -m venv venv
+source venv/bin/activate
+PIP_INDEX_URL="http://localhost:8080/api/v1/dependency-proxy/pypi/simple" PIP_TRUSTED_HOST="localhost" python3 -m pip install -r requirements.txt

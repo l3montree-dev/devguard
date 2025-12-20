@@ -101,7 +101,7 @@ func main() {
 	}
 
 	fx.New(
-		// fx.NopLogger,
+		fx.NopLogger,
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),
@@ -126,6 +126,14 @@ func main() {
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
 		fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
+		fx.Invoke(func(lc fx.Lifecycle, maliciousPackageChecker *vulndb.MaliciousPackageChecker) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					go maliciousPackageChecker.Start() // start in background
+					return nil
+				},
+			})
+		}),
 		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

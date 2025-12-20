@@ -64,11 +64,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	}
 
 	// Create the checker with SkipInitialUpdate to prevent downloading from GitHub
-	checker, err := vulndb.NewMaliciousPackageChecker(vulndb.MaliciousPackageCheckerConfig{
-		DBPath:            dbPath,
-		UpdateInterval:    24 * time.Hour, // Long interval for tests
-		SkipInitialUpdate: true,           // Skip GitHub download, use test data
-	}, nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	if err != nil {
 		t.Fatalf("Failed to create malicious package checker: %v", err)
 	}

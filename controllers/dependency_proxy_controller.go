@@ -14,23 +14,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 )
 
 const (
-	npmRegistry    = "https://registry.npmjs.org"
-	goProxyURL     = "https://proxy.golang.org"
-	dockerRegistry = "https://registry-1.docker.io"
+	npmRegistry  = "https://registry.npmjs.org"
+	goProxyURL   = "https://proxy.golang.org"
+	pypiRegistry = "https://pypi.org"
 )
 
 type ProxyType string
 
 const (
-	NPMProxy ProxyType = "npm"
-	GoProxy  ProxyType = "go"
-	OCIProxy ProxyType = "oci"
+	NPMProxy  ProxyType = "npm"
+	GoProxy   ProxyType = "go"
+	PyPIProxy ProxyType = "pypi"
 )
 
 type DependencyProxyConfig struct {
@@ -64,8 +65,8 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	return d.handleProxy(c, GoProxy, goProxyURL, "/api/v1/dependency-proxy/go")
 }
 
-func (d *DependencyProxyController) ProxyOCI(c shared.Context) error {
-	return d.handleProxy(c, OCIProxy, dockerRegistry, "/api/v1/dependency-proxy/oci")
+func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
+	return d.handleProxy(c, PyPIProxy, pypiRegistry, "/api/v1/dependency-proxy/pypi")
 }
 
 func (d *DependencyProxyController) handleProxy(c shared.Context, proxyType ProxyType, upstreamURL, prefix string) error {
@@ -85,7 +86,7 @@ func (d *DependencyProxyController) handleProxy(c shared.Context, proxyType Prox
 	if d.maliciousChecker != nil {
 		if blocked, reason := d.checkMaliciousPackage(proxyType, requestPath); blocked {
 			slog.Warn("Blocked malicious package", "proxy", proxyType, "path", requestPath, "reason", reason)
-			return d.blockMaliciousPackage(c, requestPath, reason)
+			return d.blockMaliciousPackage(c, proxyType, requestPath, reason)
 		}
 	}
 
@@ -161,8 +162,8 @@ func (d *DependencyProxyController) isCached(proxyType ProxyType, cachePath stri
 		} else {
 			maxAge = 1 * time.Hour
 		}
-	case OCIProxy:
-		if strings.Contains(cachePath, "/blobs/") {
+	case PyPIProxy:
+		if strings.HasSuffix(cachePath, ".whl") || strings.HasSuffix(cachePath, ".tar.gz") {
 			maxAge = 168 * time.Hour // 7 days
 		} else {
 			maxAge = 1 * time.Hour
@@ -185,15 +186,13 @@ func (d *DependencyProxyController) fetchFromUpstream(proxyType ProxyType, upstr
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Forward important headers for OCI registry auth
-	if proxyType == OCIProxy {
-		if auth := headers.Get("Authorization"); auth != "" {
-			req.Header.Set("Authorization", auth)
+	// Forward important headers for PyPI
+	if proxyType == PyPIProxy {
+		if userAgent := headers.Get("User-Agent"); userAgent != "" {
+			req.Header.Set("User-Agent", userAgent)
 		}
 		if accept := headers.Get("Accept"); accept != "" {
 			req.Header.Set("Accept", accept)
-		} else {
-			req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json")
 		}
 	}
 
@@ -249,13 +248,15 @@ func (d *DependencyProxyController) getContentType(proxyType ProxyType, path str
 			return "application/zip"
 		}
 		return "text/plain; charset=utf-8"
-	case OCIProxy:
-		if strings.Contains(path, "/manifests/") {
-			return "application/vnd.docker.distribution.manifest.v2+json"
-		} else if strings.Contains(path, "/blobs/") {
+	case PyPIProxy:
+		if strings.HasSuffix(path, ".whl") {
+			return "application/zip"
+		} else if strings.HasSuffix(path, ".tar.gz") || strings.HasSuffix(path, ".zip") {
 			return "application/octet-stream"
+		} else if strings.Contains(path, "/simple/") {
+			return "text/html"
 		}
-		return "application/json"
+		return "application/octet-stream"
 	}
 	return "application/octet-stream"
 }
@@ -272,7 +273,7 @@ func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, pa
 				return pkgName, version
 			}
 		}
-		pkgName := strings.TrimPrefix(path, "/")
+		pkgName := strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
 		return pkgName, ""
 
 	case GoProxy:
@@ -291,11 +292,21 @@ func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, pa
 			return strings.TrimRight(moduleName, "/"), version
 		}
 
-	case OCIProxy:
-		re := regexp.MustCompile(`^/v2/([^/]+(?:/[^/]+)*)/(?:manifests|blobs)/(.+)$`)
-		matches := re.FindStringSubmatch(path)
-		if len(matches) > 2 {
-			return matches[1], matches[2]
+	case PyPIProxy:
+		// PyPI simple API: /simple/<package-name>/ or /packages/<filename>
+		// Extract package name from path like /simple/django/ or /packages/django-3.2.0-py3-none-any.whl
+		if after, ok := strings.CutPrefix(path, "/simple/"); ok {
+			pkgName := after
+			pkgName = strings.TrimSuffix(pkgName, "/")
+			return pkgName, ""
+		} else if strings.HasPrefix(path, "/packages/") {
+			filename := filepath.Base(path)
+			// Try to extract package name and version from filename
+			re := regexp.MustCompile(`^([a-zA-Z0-9_-]+)-([0-9\.]+[a-zA-Z0-9\.]*)(?:-|\.).*$`)
+			matches := re.FindStringSubmatch(filename)
+			if len(matches) > 2 {
+				return matches[1], matches[2]
+			}
 		}
 	}
 
@@ -314,8 +325,8 @@ func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, p
 		ecosystem = "npm"
 	case GoProxy:
 		ecosystem = "go"
-	case OCIProxy:
-		return false, ""
+	case PyPIProxy:
+		ecosystem = "pypi"
 	}
 
 	slog.Debug("Checking package against malicious database", "ecosystem", ecosystem, "package", packageName, "version", version)
@@ -332,10 +343,20 @@ func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, p
 	return false, ""
 }
 
-func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, path, reason string) error {
+func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
 	c.Response().Header().Set("X-Malicious-Package", "blocked")
 
-	response := map[string]interface{}{
+	slog.Warn("BLOCKED MALICIOUS PACKAGE", "path", path, "reason", reason)
+
+	// Extract package name from path for metrics
+	packageName, _ := d.parsePackageFromPath(proxyType, path)
+	if packageName == "" {
+		packageName = "unknown"
+	}
+
+	monitoring.MaliciousPackageBlocked.WithLabelValues(string(proxyType), packageName).Inc()
+
+	response := map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
 		"reason":  reason,

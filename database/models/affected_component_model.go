@@ -133,14 +133,9 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 		// check if the affected package has a purl
 		if affected.EcosystemSpecific != nil {
 			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
-			if urgency, ok := affected.EcosystemSpecific["urgency"]; ok {
-				if urgencyStr, ok := urgency.(string); ok {
-					urgencyStr = strings.ToLower(urgencyStr)
-					if urgencyStr == "unimportant" {
-						// just continue
-						continue
-					}
-				}
+			if affected.EcosystemSpecific.Urgency == "unimportant" {
+				// just continue
+				continue
 			}
 		}
 		// Red Hat, Debian, and Alpine ecosystems can be converted to semver ranges

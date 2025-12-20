@@ -4,7 +4,7 @@ go 1.21
 
 require (
     github.com/sirupsen/logrus v1.9.3
-    github.com/fake-malicious-package v1.0.0
+    github.com/fake-org/malicious-package v1.0.0
 )
 
 require (

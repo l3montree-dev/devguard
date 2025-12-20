@@ -19,13 +19,16 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -55,39 +58,27 @@ type MaliciousPackageChecker struct {
 	updaterCtx     *context.Context
 	cancelFn       context.CancelFunc
 	leaderElector  shared.LeaderElector
+	databaseLoaded bool
 }
 
-type MaliciousPackageCheckerConfig struct {
-	DBPath            string
-	RepoURL           string
-	UpdateInterval    time.Duration
-	SkipInitialUpdate bool // Skip initial download, useful for tests
-}
-
-func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, leaderElector shared.LeaderElector) (*MaliciousPackageChecker, error) {
-	// Set defaults
-	if config.RepoURL == "" {
-		config.RepoURL = DefaultMaliciousPackageRepo
-	}
-	if config.UpdateInterval == 0 {
-		config.UpdateInterval = DefaultUpdateInterval
-	}
+func NewMaliciousPackageChecker(leaderElector shared.LeaderElector) (*MaliciousPackageChecker, error) {
+	dbPath := filepath.Join(os.TempDir(), "devguard-dependency-proxy-db")
 
 	// make sure the dbPath exists
-	if err := os.MkdirAll(config.DBPath, 0755); err != nil {
+	if err := os.MkdirAll(dbPath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create db path: %w", err)
 	}
 
 	// Determine repo path (parent of OSV structure)
-	repoPath := filepath.Join(filepath.Dir(config.DBPath), "malicious-packages")
+	repoPath := filepath.Join(dbPath, "malicious-packages")
 
 	checker := &MaliciousPackageChecker{
 		packages:       make(map[string]map[string]*dtos.OSV),
-		dbPath:         config.DBPath,
+		dbPath:         dbPath,
 		repoPath:       repoPath,
-		repoURL:        config.RepoURL,
-		updateInterval: config.UpdateInterval,
-		updateTicker:   time.NewTicker(config.UpdateInterval),
+		repoURL:        DefaultMaliciousPackageRepo,
+		updateInterval: DefaultUpdateInterval,
+		leaderElector:  leaderElector,
 	}
 
 	if err := checker.loadDatabase(checker.dbPath); err != nil {
@@ -109,23 +100,21 @@ func (c *MaliciousPackageChecker) Stop() {
 }
 
 func (c *MaliciousPackageChecker) Start() {
-	go func() {
-		for {
-			if c.leaderElector.IsLeader() && c.updaterCtx == nil && c.cancelFn == nil {
-				ctx, cancel := context.WithCancel(context.Background())
-				c.updaterCtx = &ctx
-				c.cancelFn = cancel
-				// Start background updater
-				c.backgroundUpdater()
-			} else if c.updaterCtx != nil && c.cancelFn != nil {
-				slog.Info("skipping malicious package database update - not leader")
-				c.cancelFn()
-				c.updaterCtx = nil
-				c.cancelFn = nil
-			}
-			time.Sleep(5 * time.Minute)
+	for {
+		if c.leaderElector.IsLeader() && c.updaterCtx == nil && c.cancelFn == nil {
+			ctx, cancel := context.WithCancel(context.Background())
+			c.updaterCtx = &ctx
+			c.cancelFn = cancel
+			// Start background updater
+			go c.backgroundUpdater()
+		} else if c.updaterCtx != nil && c.cancelFn != nil {
+			slog.Info("skipping malicious package database update - not leader")
+			c.cancelFn()
+			c.updaterCtx = nil
+			c.cancelFn = nil
 		}
-	}()
+		time.Sleep(5 * time.Minute)
+	}
 }
 
 // updateDatabase fetches the latest malicious packages via HTTP
@@ -152,18 +141,16 @@ func (c *MaliciousPackageChecker) updateDatabase() error {
 
 // downloadAndExtract downloads the repository archive and extracts it
 func (c *MaliciousPackageChecker) downloadAndExtract() error {
-	slog.Info("Downloading repository archive", "url", c.repoURL)
-
 	// check when it was last modified
 	if info, err := os.Stat(c.repoPath); err == nil {
 		modTime := info.ModTime()
-		slog.Info("Existing repository found", "last_modified", modTime.Format(time.RFC3339))
+		slog.Info("Existing repository found", "last_modified", modTime.Format(time.RFC3339), "path", c.repoPath)
 		if time.Since(modTime) < c.updateInterval {
 			slog.Info("Repository is up-to-date, skipping download")
 			return nil
 		}
 	}
-
+	slog.Info("Downloading repository archive", "url", c.repoURL)
 	// Download the archive
 	resp, err := http.Get(c.repoURL)
 	if err != nil {
@@ -239,6 +226,10 @@ func (c *MaliciousPackageChecker) downloadAndExtract() error {
 
 // backgroundUpdater periodically updates the database
 func (c *MaliciousPackageChecker) backgroundUpdater() {
+	if err := c.updateDatabase(); err != nil {
+		slog.Error("Failed to perform initial database update", "error", err)
+	}
+	c.updateTicker = time.NewTicker(c.updateInterval)
 	slog.Info("Background database updater started", "interval", c.updateInterval)
 	for {
 		select {
@@ -255,16 +246,98 @@ func (c *MaliciousPackageChecker) backgroundUpdater() {
 }
 
 func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
+	startTime := time.Now()
 	slog.Info("Loading malicious package database", "path", dbPath)
 
+	cacheFile := filepath.Join(dbPath, "malicious-packages.cache.gob.gz")
+
+	// Try to load from cache first
+	if err := c.loadFromCache(cacheFile, dbPath); err == nil {
+		// Include fake packages for testing
+		c.loadFakePackages()
+		slog.Info("Malicious package database loaded from cache",
+			"duration", time.Since(startTime).String())
+		return nil
+	}
+
+	// Cache miss or invalid, load from JSON files
+	slog.Info("Cache miss, loading from JSON files")
+	if err := c.loadFromJSON(dbPath); err != nil {
+		return err
+	}
+
+	// Save cache for next time
+	if err := c.saveCache(cacheFile); err != nil {
+		slog.Warn("Failed to save cache", "error", err)
+	}
+
+	// Include fake packages for testing
+	c.loadFakePackages()
+
+	slog.Info("Malicious package database loaded", "duration", time.Since(startTime).String())
+	return nil
+}
+
+func (c *MaliciousPackageChecker) loadFromCache(cacheFile, dbPath string) error {
+	// Check if cache exists
+	cacheInfo, err := os.Stat(cacheFile)
+	if err != nil {
+		return err
+	}
+
+	// Check if source directory is newer than cache
+	sourceDir := filepath.Join(dbPath, "malicious-packages")
+	sourceInfo, err := os.Stat(sourceDir)
+	if err == nil && sourceInfo.ModTime().After(cacheInfo.ModTime()) {
+		return fmt.Errorf("cache is older than source")
+	}
+
+	file, err := os.Open(cacheFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gz, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	decoder := gob.NewDecoder(gz)
+	return decoder.Decode(&c.packages)
+}
+
+func (c *MaliciousPackageChecker) saveCache(cacheFile string) error {
+	file, err := os.Create(cacheFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gz := gzip.NewWriter(file)
+	defer gz.Close()
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	encoder := gob.NewEncoder(gz)
+	return encoder.Encode(c.packages)
+}
+
+func (c *MaliciousPackageChecker) loadFromJSON(dbPath string) error {
 	ecosystems := []string{"npm", "go", "maven", "pypi", "crates.io"}
 	totalLoaded := 0
 
 	errGroup := utils.ErrGroup[int](5)
 
 	for _, ecosystem := range ecosystems {
-		ecosystemPath := filepath.Join(dbPath, ecosystem)
+		ecosystemPath := filepath.Join(dbPath, "malicious-packages", "osv", "malicious", ecosystem)
 		if _, err := os.Stat(ecosystemPath); os.IsNotExist(err) {
+			slog.Error("could not load ecosystem", "err", err)
 			continue
 		}
 
@@ -291,7 +364,6 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 		}
 	}
 
-	slog.Info("Malicious package database loaded", "total", totalLoaded)
 	return nil
 }
 
@@ -311,46 +383,101 @@ func (c *MaliciousPackageChecker) loadEcosystem(ecosystemPath string) (int, erro
 		return 0, err
 	}
 
-	// Process files in parallel batches
-	const batchSize = 100
-	errGroup := utils.ErrGroup[any](10)
+	// Process files in parallel with larger batches
+	const batchSize = 1000
+	numWorkers := runtime.NumCPU() * 2
+	errGroup := utils.ErrGroup[map[string]map[string]*dtos.OSV](numWorkers)
 
 	for i := 0; i < len(files); i += batchSize {
 		end := min(i+batchSize, len(files))
-		errGroup.Go(func() (any, error) {
-			batch := files[i:end]
+		batch := files[i:end]
+
+		errGroup.Go(func() (map[string]map[string]*dtos.OSV, error) {
+			// Build local map without locking
+			localPackages := make(map[string]map[string]*dtos.OSV)
+
 			for _, path := range batch {
-				if err := c.loadPackageEntryPath(path); err != nil {
-					slog.Debug("Failed to load malicious package entry", "path", path, "error", err)
+				data, err := os.ReadFile(path)
+				if err != nil {
+					slog.Debug("Failed to read file", "path", path, "error", err)
+					continue
 				}
 
+				var entry dtos.OSV
+				if err := json.Unmarshal(data, &entry); err != nil {
+					slog.Debug("Failed to unmarshal JSON", "path", path, "error", err)
+					continue
+				}
+
+				if len(entry.Affected) == 0 {
+					continue
+				}
+
+				// Add to local map
+				for _, affected := range entry.Affected {
+					ecosystem := strings.ToLower(affected.Package.Ecosystem)
+					pkgName := strings.ToLower(affected.Package.Name)
+
+					if localPackages[ecosystem] == nil {
+						localPackages[ecosystem] = make(map[string]*dtos.OSV)
+					}
+					localPackages[ecosystem][pkgName] = &entry
+				}
 			}
-			return nil, nil
+			return localPackages, nil
 		})
 	}
-	if _, err := errGroup.WaitAndCollect(); err != nil {
+
+	results, err := errGroup.WaitAndCollect()
+	if err != nil {
 		return 0, fmt.Errorf("failed to load ecosystem entries: %w", err)
 	}
 
-	// create a fake package entry for testing purposes
-	fakeEntry := dtos.OSV{
-		ID:      "FAKE-TEST-001",
-		Summary: "Fake malicious package for testing",
-		Details: "This is a fake malicious package entry used for testing the dependency proxy",
-		Affected: []dtos.Affected{
-			{
-				Package: dtos.Pkg{
-					Ecosystem: strings.ToLower(ecosystemPath),
-					Name:      "github.com/fake-malicious-package",
-				},
-				Versions: []string{}, // All versions affected
-			},
-		},
-		Published: time.Now(),
+	// Merge all local maps into main map with single lock
+	c.mu.Lock()
+	for _, localMap := range results {
+		for ecosystem, packages := range localMap {
+			if c.packages[ecosystem] == nil {
+				c.packages[ecosystem] = make(map[string]*dtos.OSV)
+			}
+			maps.Copy(c.packages[ecosystem], packages)
+		}
 	}
-	c.loadEntry(fakeEntry)
+	c.mu.Unlock()
 
 	return len(files), nil
+}
+
+func (c *MaliciousPackageChecker) loadFakePackages() {
+	testPackages := map[string][]string{
+		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
+		"go":        {"github.com/fake-org/malicious-package"},
+		"pypi":      {"fake-malicious-pypi-package"},
+		"maven":     {"com.fake:malicious-package"},
+		"crates.io": {"fake-malicious-crate"},
+	}
+	for ecosystem := range testPackages {
+		if pkgNames, ok := testPackages[ecosystem]; ok {
+			for _, pkgName := range pkgNames {
+				fakeEntry := dtos.OSV{
+					ID:      fmt.Sprintf("FAKE-TEST-%s-001", strings.ToUpper(ecosystem)),
+					Summary: fmt.Sprintf("Fake malicious %s package for testing", ecosystem),
+					Details: "This is a fake malicious package entry used for testing the dependency proxy",
+					Affected: []dtos.Affected{
+						{
+							Package: dtos.Pkg{
+								Ecosystem: ecosystem,
+								Name:      pkgName,
+							},
+							Versions: []string{}, // All versions affected
+						},
+					},
+					Published: time.Now(),
+				}
+				c.loadEntry(fakeEntry)
+			}
+		}
+	}
 }
 
 func (c *MaliciousPackageChecker) loadEntry(entry dtos.OSV) {
@@ -370,20 +497,6 @@ func (c *MaliciousPackageChecker) loadEntry(entry dtos.OSV) {
 
 		c.packages[pkgEcosystem][pkgName] = &entry
 	}
-}
-
-func (c *MaliciousPackageChecker) loadPackageEntryPath(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	var entry dtos.OSV
-	if err := json.Unmarshal(data, &entry); err != nil {
-		return err
-	}
-	c.loadEntry(entry)
-	return nil
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {

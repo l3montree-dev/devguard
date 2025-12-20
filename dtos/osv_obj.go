@@ -22,12 +22,18 @@ type Rng struct {
 	Events []SemverEvent `json:"events"`
 }
 
+type EcosystemSpecific struct {
+	Urgency string `json:"urgency,omitempty"`
+	// there are more fields
+	// since we are using binary serialization for this struct
+	// we need to define all fields we want to use
+}
+
 type Affected struct {
-	Package           Pkg            `json:"package"`
-	Ranges            []Rng          `json:"ranges"`
-	Versions          []string       `json:"versions"`
-	DatabaseSpecific  map[string]any `json:"database_specific"`
-	EcosystemSpecific map[string]any `json:"ecosystem_specific"`
+	Package           Pkg                `json:"package"`
+	Ranges            []Rng              `json:"ranges"`
+	Versions          []string           `json:"versions"`
+	EcosystemSpecific *EcosystemSpecific `json:"ecosystem_specific"`
 }
 
 type OSV struct {

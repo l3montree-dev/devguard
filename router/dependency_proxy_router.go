@@ -26,9 +26,9 @@ func NewDependencyProxyRouter(
 	group.GET("/go", controller.ProxyGo)
 	group.GET("/go/*", controller.ProxyGo)
 
-	// OCI/Docker proxy - handles /dependency-proxy/oci/*
-	group.GET("/oci", controller.ProxyOCI)
-	group.GET("/oci/*", controller.ProxyOCI)
+	// PyPI proxy - handles /dependency-proxy/pypi/*
+	group.GET("/pypi", controller.ProxyPyPI)
+	group.GET("/pypi/*", controller.ProxyPyPI)
 
 	return DependencyProxyRouter{Group: group}
 }

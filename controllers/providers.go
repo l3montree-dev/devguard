@@ -41,11 +41,7 @@ func ProvideDependencyProxyConfig() DependencyProxyConfig {
 
 // ProvideMaliciousPackageChecker creates the malicious package checker
 func ProvideMaliciousPackageChecker(leaderElector shared.LeaderElector) *vulndb.MaliciousPackageChecker {
-	dbPath := filepath.Join(os.TempDir(), "devguard-dependency-proxy-db", "osv", "malicious")
-
-	checker, err := vulndb.NewMaliciousPackageChecker(vulndb.MaliciousPackageCheckerConfig{
-		DBPath: dbPath,
-	}, leaderElector)
+	checker, err := vulndb.NewMaliciousPackageChecker(leaderElector)
 	if err != nil {
 		slog.Warn("Could not initialize malicious package checker", "error", err)
 		return nil

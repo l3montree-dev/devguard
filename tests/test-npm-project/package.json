@@ -6,7 +6,7 @@
     "test": "echo 'Testing malicious package detection'"
   },
   "dependencies": {
-    "fake-malicious-package": "1.0.0",
+    "fake-malicious-npm-package": "1.0.0",
     "lodash": "^4.17.21"
   },
   "author": "",

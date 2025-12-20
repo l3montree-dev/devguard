@@ -42,7 +42,7 @@ func (s Server) Start() {
 	// print all registered routes
 	for _, route := range routes {
 		if route.Method != "echo_route_not_found" {
-			slog.Info(route.Path, "method", route.Method)
+			// slog.Info(route.Path, "method", route.Method)
 		}
 	}
 	slog.Error("failed to start server", "err", s.Echo.Start(":8080").Error())
