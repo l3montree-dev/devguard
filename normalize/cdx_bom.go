@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	_ "embed"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 )
@@ -431,7 +433,7 @@ type cdxBomNode struct {
 
 func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
-	component = replaceTrivyProperties(component)
+	component = applyPackageAlias(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
 	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:deb/") || strings.Contains(component.PackageURL, "pkg:apk/")) && component.Version != "" {
 		version, err := ConvertToSemver(component.Version)
@@ -793,41 +795,6 @@ func (bom *CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
 		return minNode
 	}
 	return convert(bom.tree.Root)
-}
-
-func replaceTrivyProperties(component *cdx.Component) *cdx.Component {
-	// check if the component is a library
-	// we can detect that, if the component has a "properties" object - as long as we are using trivy for sbom generation
-	if component.Properties != nil {
-		// we currently have no idea, why trivy calls it src name and src version
-		// we just stick with it.
-		srcName := ""
-		srcVersion := ""
-
-		// will be exactly the string we need to replace inside the purl
-		// src version differs in debian cases for some packages like "libc6" and openssl
-		pkgID := ""
-		for _, property := range *component.Properties {
-			if property.Name == "aquasecurity:trivy:SrcName" {
-				// never expand to whole linux - this might happen - not sure why
-				if property.Value == "linux" {
-					break
-				}
-
-				srcName = property.Value
-			} else if property.Name == "aquasecurity:trivy:SrcVersion" {
-				srcVersion = property.Value
-			} else if property.Name == "aquasecurity:trivy:PkgID" {
-				pkgID = property.Value
-			}
-		}
-
-		// if both are defined - we can replace the package url with the new name and version
-		if srcName != "" && srcVersion != "" && pkgID != "" {
-			component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgID, srcName+"@"+srcVersion)
-		}
-	}
-	return component
 }
 
 func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {

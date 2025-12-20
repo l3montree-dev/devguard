@@ -1,0 +1,2 @@
+requests==2.32.3
+fake-malicious-pypi-package==1.0.0

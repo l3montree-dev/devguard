@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+
 	"github.com/openvex/go-vex/pkg/vex"
 
 	"github.com/package-url/packageurl-go"

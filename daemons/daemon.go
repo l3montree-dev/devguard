@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
-
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )

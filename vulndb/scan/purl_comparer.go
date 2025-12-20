@@ -141,11 +141,16 @@ func (comparer *PurlComparer) buildQualifierQuery(qualifiers packageurl.Qualifie
 
 // buildVersionRangeQuery creates the database query for version range matching
 func (comparer *PurlComparer) buildVersionRangeQuery(targetVersion, originalVersion, normalizedVersion string) *gorm.DB {
-	return comparer.db.Where("version = ?", targetVersion). // Exact match - to the target version
-								Or("version = ?", originalVersion).                                                     // Original purl version match
-								Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).                // Vulnerable from start until fixed version
-								Or("semver_introduced <= ? AND semver_fixed IS NULL", normalizedVersion).               // Vulnerable from introduced version onwards
-								Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion) // Vulnerable in range
+	// Exact match - to the target version
+	return comparer.db.Where("version = ?", targetVersion).
+		// Original purl version match
+		Or("version = ?", originalVersion).
+		// Vulnerable from start until fixed version
+		Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).
+		// Vulnerable from introduced version onwards
+		Or("semver_introduced <= ? AND semver_fixed IS NULL", normalizedVersion).
+		// Vulnerable in range
+		Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion)
 }
 
 // some purls do contain versions, which cannot be found in the database. An example is git.
