@@ -9,15 +9,21 @@ import (
 	"strings"
 	"time"
 
+	_ "embed"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 )
 
 type CdxBom struct {
-	tree            Tree[cdxBomNode]
-	vulnerabilities *[]cdx.Vulnerability
-	artifactName    string
-	ref             string
+	tree             Tree[cdxBomNode]
+	vulnerabilities  *[]cdx.Vulnerability
+	artifactName     string
+	assetVersionSlug string
+	assetSlug        string
+	projectSlug      string
+	orgSlug          string
+	frontendURL      string
 }
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
@@ -427,7 +433,7 @@ type cdxBomNode struct {
 
 func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
-	component = replaceTrivyProperties(component)
+	component = applyPackageAlias(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
 	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:deb/") || strings.Contains(component.PackageURL, "pkg:apk/")) && component.Version != "" {
 		version, err := ConvertToSemver(component.Version)
@@ -533,7 +539,7 @@ type CdxComponent interface {
 	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
 }
 
-func FromVulnerabilities(assetSlug, artifactName, assetVersionName string, vulns []cdx.Vulnerability) *CdxBom {
+func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, vulns []cdx.Vulnerability) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -552,10 +558,10 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName string, vulns
 
 	bom.Vulnerabilities = &vulns
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionName)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
-func FromComponents(assetSlug, artifactName, assetVersionName string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
+func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
@@ -610,10 +616,10 @@ func FromComponents(assetSlug, artifactName, assetVersionName string, components
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionName)
+	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
-func newCdxBom(bom *cdx.BOM, artifactName, ref string) *CdxBom {
+func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	// convert components to sbomNodes
 	// first make sure components exist
 	if bom.Components == nil {
@@ -661,26 +667,56 @@ func newCdxBom(bom *cdx.BOM, artifactName, ref string) *CdxBom {
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
 
+func (bom *CdxBom) calculateExternalURLs(docURL string) (string, string) {
+	dashboardURL := ""
+	if bom.frontendURL != "" && bom.orgSlug != "" && bom.projectSlug != "" && bom.assetSlug != "" {
+		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug)
+	}
+
+	if bom.assetVersionSlug != "" {
+		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(bom.assetVersionSlug))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(bom.assetVersionSlug))
+		}
+	} else {
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
+		}
+	}
+
+	if bom.assetVersionSlug != "" && bom.artifactName != "" {
+		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(bom.artifactName))
+		}
+	} else if bom.artifactName != "" {
+		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+	}
+
+	return docURL, dashboardURL
+}
+
 func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if assetID != nil {
 		apiURL := os.Getenv("API_URL")
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String())
 
-		if bom.ref != "" {
-			vexURL = fmt.Sprintf("%s?ref=%s", vexURL, url.QueryEscape(bom.ref))
-		}
-		if bom.ref != "" && bom.artifactName != "" {
-			vexURL = fmt.Sprintf("%s&artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
-		} else if bom.artifactName != "" {
-			vexURL = fmt.Sprintf("%s?artifactName=%s", vexURL, url.QueryEscape(bom.artifactName))
-		}
+		vexURL, dashboardURL := bom.calculateExternalURLs(vexURL)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
 			Comment: "Up to date Vulnerability exploitability information.",
 			Type:    cdx.ERTypeExploitabilityStatement,
 		}}
+
+		if dashboardURL != "" {
+			*externalRefs = append(*externalRefs, cdx.ExternalReference{
+				URL:     dashboardURL,
+				Comment: "Dynamic analysis report",
+				Type:    cdx.ERTypeDynamicAnalysisReport,
+			})
+		}
 	}
 
 	b := cdx.BOM{
@@ -704,20 +740,21 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 		apiURL := os.Getenv("API_URL")
 		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String())
 
-		if bom.ref != "" {
-			sbomURL = fmt.Sprintf("%s?ref=%s", sbomURL, url.QueryEscape(bom.ref))
-		}
-		if bom.ref != "" && bom.artifactName != "" {
-			sbomURL = fmt.Sprintf("%s&artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
-		} else if bom.artifactName != "" {
-			sbomURL = fmt.Sprintf("%s?artifactName=%s", sbomURL, url.QueryEscape(bom.artifactName))
-		}
+		sbomURL, dashboardURL := bom.calculateExternalURLs(sbomURL)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     sbomURL,
 			Comment: "Up to date software bill of material and license information.",
 			Type:    cdx.ERTypeBOM,
 		}}
+
+		if dashboardURL != "" {
+			*externalRefs = append(*externalRefs, cdx.ExternalReference{
+				URL:     dashboardURL,
+				Comment: "Dynamic analysis report",
+				Type:    cdx.ERTypeDynamicAnalysisReport,
+			})
+		}
 	}
 
 	b := cdx.BOM{
@@ -758,41 +795,6 @@ func (bom *CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
 		return minNode
 	}
 	return convert(bom.tree.Root)
-}
-
-func replaceTrivyProperties(component *cdx.Component) *cdx.Component {
-	// check if the component is a library
-	// we can detect that, if the component has a "properties" object - as long as we are using trivy for sbom generation
-	if component.Properties != nil {
-		// we currently have no idea, why trivy calls it src name and src version
-		// we just stick with it.
-		srcName := ""
-		srcVersion := ""
-
-		// will be exactly the string we need to replace inside the purl
-		// src version differs in debian cases for some packages like "libc6" and openssl
-		pkgID := ""
-		for _, property := range *component.Properties {
-			if property.Name == "aquasecurity:trivy:SrcName" {
-				// never expand to whole linux - this might happen - not sure why
-				if property.Value == "linux" {
-					break
-				}
-
-				srcName = property.Value
-			} else if property.Name == "aquasecurity:trivy:SrcVersion" {
-				srcVersion = property.Value
-			} else if property.Name == "aquasecurity:trivy:PkgID" {
-				pkgID = property.Value
-			}
-		}
-
-		// if both are defined - we can replace the package url with the new name and version
-		if srcName != "" && srcVersion != "" && pkgID != "" {
-			component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgID, srcName+"@"+srcVersion)
-		}
-	}
-	return component
 }
 
 func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {
@@ -886,8 +888,8 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, ref string) *CdxBom {
-	cdxBom := newCdxBom(bom, artifactName, ref)
+func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
+	cdxBom := newCdxBom(bom, artifactName)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     rootPurl,
 		Name:       rootPurl,
@@ -897,7 +899,12 @@ func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, ref string) *Cdx
 
 	cdxBom.ReplaceRoot(newRoot)
 	cdxBom.artifactName = artifactName
-	cdxBom.ref = ref
+	cdxBom.assetVersionSlug = assetVersionSlug
+	cdxBom.assetSlug = assetSlug
+	cdxBom.projectSlug = projectSlug
+	cdxBom.orgSlug = orgSlug
+	cdxBom.frontendURL = frontendURL
+
 	return cdxBom
 }
 
@@ -923,7 +930,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)
 	}
 
-	cdxBom := newCdxBom(bom, artifactName, ref)
+	cdxBom := newCdxBom(bom, artifactName)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     artifactName,
 		Name:       artifactName,
@@ -945,7 +952,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, artifactName, ref string, boms ...*CdxBom) *CdxBom {
+func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -958,7 +965,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, artifactName, ref string, boms ...*Cdx
 
 	vulnMap := make(map[string]cdx.Vulnerability)
 
-	newBom := newCdxBom(merged, artifactName, ref)
+	newBom := newCdxBom(merged, artifactName)
 	for _, bom := range boms {
 		if bom == nil {
 			continue

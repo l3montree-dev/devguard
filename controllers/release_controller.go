@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -63,8 +64,13 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -87,8 +93,13 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedSBOM(c, rel, org.Name)
+	bom, err := h.buildMergedSBOM(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -111,8 +122,13 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	}
 
 	org := shared.GetOrg(c)
+	project := shared.GetProject(c)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	bom, err := h.buildMergedVEX(c, rel, project.Slug, org.Name, org.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -134,9 +150,15 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
+	project := shared.GetProject(c)
 	org := shared.GetOrg(c)
 
-	bom, err := h.buildMergedVEX(c, rel, org.Name)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
+	}
+
+	bom, err := h.buildMergedVEX(c, rel, project.Slug, org.Name, org.Slug, frontendURL)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
@@ -146,7 +168,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
-func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, projectSlug, orgName, orgSlug string, frontendURL string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	// iterate over items and build SBOM per artifact
@@ -169,7 +191,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		// build sbom for this artifact via assetVersionService
 		av := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
 
-		bom, err := h.assetVersionService.BuildSBOM(asset, av, *item.ArtifactName, orgName, compsPage.Data)
+		bom, err := h.assetVersionService.BuildSBOM(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, compsPage.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +206,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}, release.Name, release.Name).EjectSBOM(nil), nil
+		}, release.Name).EjectSBOM(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -192,13 +214,13 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
+	}, release.Name, boms...)
 
 	return merged.EjectSBOM(nil), nil
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName string) (*cdx.BOM, error) {
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, projectSlug, orgName, orgSlug, frontendURL string) (*cdx.BOM, error) {
 	var boms []*normalize.CdxBom
 
 	for _, item := range release.Items {
@@ -218,7 +240,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(asset, av, *item.ArtifactName, orgName, depVulns)
+		bom := h.assetVersionService.BuildVeX(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}
@@ -230,7 +252,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 				Type: cdx.ComponentTypeApplication,
 				Name: release.Name,
 			},
-		}, release.Name, release.Name).EjectVex(nil), nil
+		}, release.Name).EjectVex(nil), nil
 	}
 
 	merged := normalize.MergeCdxBoms(&cdx.Metadata{
@@ -238,7 +260,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, release.Name, boms...)
+	}, release.Name, boms...)
 
 	return merged.EjectVex(nil), nil
 }

@@ -16,6 +16,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -36,7 +37,6 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
 
 	_ "github.com/lib/pq"
@@ -101,7 +101,7 @@ func main() {
 	}
 
 	fx.New(
-		fx.NopLogger, // disable FX logging
+		// fx.NopLogger,
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),
@@ -125,8 +125,23 @@ func main() {
 		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
-		fx.Invoke(func(DependencyProxyRouter router.DependencyProxyRouter) {}),
-		fx.Invoke(func(server *echo.Echo) {}),
+		fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
+		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					go server.Start() // start in background
+					return nil
+				},
+			})
+		}),
+		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					go daemonRunner.Start() // start in background
+					return nil
+				},
+			})
+		}),
 	).Run()
 }
 

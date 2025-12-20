@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -80,11 +81,13 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 }
 
 func getBestDescription(rule sarif.ReportingDescriptor) string {
-	if rule.FullDescription.Markdown != nil {
-		return utils.OrDefault(rule.FullDescription.Markdown, "")
-	}
-	if rule.FullDescription.Text != "" {
-		return rule.FullDescription.Text
+	if rule.FullDescription != nil {
+		if rule.FullDescription.Markdown != nil {
+			return utils.OrDefault(rule.FullDescription.Markdown, "")
+		}
+		if rule.FullDescription.Text != "" {
+			return rule.FullDescription.Text
+		}
 	}
 	if rule.ShortDescription.Markdown != nil {
 		return utils.OrDefault(rule.ShortDescription.Markdown, "")
@@ -310,6 +313,10 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 }
 
 func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return nil, nil, nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
@@ -320,7 +327,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	}
 
 	// calculate the depth of each component
-	sbom, err := s.BuildSBOM(asset, *assetVersion, artifactName, org.Name, assetComponents)
+	sbom, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, *assetVersion, artifactName, assetComponents)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
 	}
@@ -547,6 +554,7 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 		// Update the hash in the database
 		err := db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 		if err != nil {
+			slog.Info("could not update dependencyVuln hash, trying to merge", "err", err)
 			// Handle duplicate key error by merging
 			var otherVuln models.DependencyVuln
 			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
@@ -555,6 +563,24 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 				return existingVulns, existingVulnsOnOtherBranch, err
 			}
 
+			// Update all vuln events BEFORE deleting the old record
+			err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
+			if err != nil {
+				slog.Error("could not update vuln events", "err", err)
+				return existingVulns, existingVulnsOnOtherBranch, err
+			}
+
+			// Update artifact dependency vulns BEFORE deleting the old record
+			err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
+			if err != nil {
+				//check if the error is because duplicate entries, then we need to ignore it, because the other vuln already has those entries and the id is being updated to the new hash
+				if !strings.Contains(err.Error(), "duplicate key value") {
+					slog.Error("could not update artifact dependency vulns", "err", err)
+					return existingVulns, existingVulnsOnOtherBranch, err
+				}
+			}
+
+			// Now delete the old record after all references are updated
 			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
 			if err != nil {
 				slog.Error("could not delete old dependencyVuln during merge", "err", err)
@@ -569,14 +595,14 @@ func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.Dep
 			return existingVulns, existingVulnsOnOtherBranch, err
 		}
 
-		// Update all vuln events
+		// Update all vuln events (in case the update succeeded on first try)
 		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
 		if err != nil {
 			slog.Error("could not update vuln events", "err", err)
 			return existingVulns, existingVulnsOnOtherBranch, err
 		}
 
-		// update dependencyVuln in artifacts dependencyVuln table
+		// update dependencyVuln in artifacts dependencyVuln table (in case the update succeeded on first try)
 		err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
 		if err != nil {
 			slog.Error("could not update artifact dependency vulns", "err", err)
@@ -713,6 +739,11 @@ func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
 }
 
 func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
+	}
+
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
@@ -732,7 +763,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
 	// first we need to replace the subtree.
 
-	wholeAssetSBOM, err := s.BuildSBOM(asset, assetVersion, artifactName, org.Name, assetComponents)
+	wholeAssetSBOM, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifactName, assetComponents)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build whole asset sbom")
 	}
@@ -843,7 +874,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	return wholeAssetSBOM, nil
 }
 
-func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, organizationName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
+func (s *assetVersionService) BuildSBOM(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
@@ -855,7 +886,7 @@ func (s *assetVersionService) BuildSBOM(asset models.Asset, assetVersion models.
 		}
 	}
 
-	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
+	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -914,7 +945,7 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName, organizationName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
+func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
 
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
@@ -977,7 +1008,7 @@ func (s *assetVersionService) BuildVeX(asset models.Asset, assetVersion models.A
 		}
 	}
 
-	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, vulnerabilities)
+	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
@@ -1097,7 +1128,7 @@ func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	type componentData struct {
 		Package  string
 		Version  string
-		Licenses *cdx.Licenses
+		Licenses []string
 	}
 
 	ecosystemCounts := make(map[string]int)
@@ -1131,10 +1162,22 @@ func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 			licenseCounts["Unknown"]++
 		}
 
+		var licenseIDs []string
+		if component.Licenses != nil && len(*component.Licenses) > 0 {
+			for _, licenseChoice := range *component.Licenses {
+				if licenseChoice.License != nil && licenseChoice.License.ID != "" {
+					licenseIDs = append(licenseIDs, licenseChoice.License.ID)
+				}
+			}
+		}
+		if len(licenseIDs) == 0 {
+			licenseIDs = []string{" Unknown"}
+		}
+
 		templateValues = append(templateValues, componentData{
 			Package:  packageName,
 			Version:  component.Version,
-			Licenses: component.Licenses,
+			Licenses: licenseIDs,
 		})
 	}
 
@@ -1224,7 +1267,7 @@ Total Components: {{ .TotalComponents }}
 
 | Package 						  | Version | Licenses  |
 |---------------------------------|---------|-------|
-{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
+{{range .Components}}| {{ .Package }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.}} {{end}}{{ else }} Unknown {{ end }} |
 {{end}}`,
 	)
 	if err != nil {

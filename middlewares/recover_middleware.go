@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/getsentry/sentry-go"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/labstack/echo/v4"
 )
 
@@ -14,7 +14,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
-					sentry.CurrentHub().Recover(r)
+					monitoring.RecoverAndAlert("panic recovered in middleware", fmt.Errorf("%v", r))
 
 					if r == http.ErrAbortHandler {
 						panic(r)
@@ -34,6 +34,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 					// Log the error and stack trace for debugging
 					fmt.Println("Recovered from panic:", err)
 					fmt.Println("Stack trace:", string(stack[:length]))
+					returnErr = echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 				}
 			}()
 			return next(ctx)

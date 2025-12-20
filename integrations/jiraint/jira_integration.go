@@ -97,6 +97,10 @@ func (i *JiraIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
+func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	return nil
+}
+
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
 	asset, err := i.assetRepository.Read(assetID)
 	if err != nil {
@@ -446,7 +450,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
-		return fmt.Errorf("asset %s is not a Jira repository", asset.ID)
+		return nil
 	}
 
 	client, projectID, err := i.getClientBasedOnAsset(asset)
@@ -562,7 +566,7 @@ func getOpenAndDoneStatusIDs(transitions []Transition) (openStatusID, doneStatus
 func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
-		return fmt.Errorf("asset %s is not a Jira repository", asset.ID)
+		return nil
 	}
 
 	client, _, err := i.getClientBasedOnAsset(asset)

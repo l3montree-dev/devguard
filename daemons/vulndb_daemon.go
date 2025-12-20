@@ -6,17 +6,10 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
 
-func UpdateVulnDB(
-	cveRepository shared.CveRepository,
-	cweRepository shared.CweRepository,
-	exploitsRepository shared.ExploitRepository,
-	affectedComponentsRepository shared.AffectedComponentRepository,
-	configService shared.ConfigService,
-) error {
+func (runner DaemonRunner) UpdateVulnDB() error {
 	begin := time.Now()
 	defer func() {
 		monitoring.VulnDBUpdateDuration.Observe(time.Since(begin).Minutes())
@@ -28,13 +21,12 @@ func UpdateVulnDB(
 
 	slog.Info("updating vulndb")
 
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+	v := vulndb.NewImportService(runner.cveRepository, runner.cweRepository, runner.exploitsRepository, runner.affectedComponentsRepository, runner.configService)
 
 	err := v.ImportFromDiff(nil)
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err
 	}
-	monitoring.VulnDBUpdateDaemonAmount.Inc()
 	return nil
 }

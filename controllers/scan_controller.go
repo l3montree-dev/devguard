@@ -154,12 +154,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-
-		}
-
-		// save the asset
-		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
 		}
 	})
 
@@ -167,7 +161,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dtos.ScanResponse, error) {
-	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
 		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Minutes())
@@ -235,8 +228,6 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 }
 
 func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
-
-	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
 		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Minutes())

@@ -49,22 +49,13 @@ func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersi
 		FireAndForgetSynchronizer: synchronizer}
 }
 
+var _ shared.ScanService = &scanService{}
+
 func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error) {
-
-	vulns, err := s.sbomScanner.Scan(normalizedBom)
-
+	opened, closed, newState, err := s.ScanNormalizedSBOMWithoutEventHandling(org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	if err != nil {
-		slog.Error("could not scan file", "err", err)
 		return 0, 0, nil, err
 	}
-
-	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
-	if err != nil {
-		slog.Error("could not handle scan result", "err", err)
-		return 0, 0, nil, err
-	}
-
 	//Check if we want to create an issue for this assetVersion
 	s.FireAndForget(func() {
 		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
@@ -78,12 +69,25 @@ func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project,
 		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
-
-		// save the asset
-		if err := s.artifactService.SaveArtifact(&artifact); err != nil {
-			slog.Error("could not save artifact", "err", err)
-		}
 	})
 
 	return len(opened), len(closed), newState, nil
+}
+
+func (s *scanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
+
+	if err != nil {
+		slog.Error("could not scan file", "err", err)
+		return nil, nil, nil, err
+	}
+
+	// handle the scan result
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return nil, nil, nil, err
+	}
+
+	return opened, closed, newState, nil
 }

@@ -2089,9 +2089,6 @@ func (j *Result) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["message"]; raw != nil && !ok {
-		return fmt.Errorf("field message in Result: required")
-	}
 	type Plain Result
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {

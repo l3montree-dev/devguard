@@ -33,6 +33,17 @@ func (t *thirdPartyIntegrations) GetID() shared.IntegrationID {
 	return shared.AggregateID
 }
 
+func (t *thirdPartyIntegrations) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CompareIssueStatesAndResolveDifferences(asset, vulnsWithTickets)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
 func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	type projectsWithRoles struct {
 		projects []models.Project

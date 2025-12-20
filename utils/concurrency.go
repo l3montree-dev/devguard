@@ -164,6 +164,54 @@ func Concurrently(fns ...func() (any, error)) concurrentResultSlice {
 	return res
 }
 
+func DrainChannel[T any](ch <-chan T) []T {
+	results := make([]T, 0)
+	for {
+		select {
+		case r, ok := <-ch:
+			if !ok {
+				return results
+			}
+			results = append(results, r)
+		default:
+			return results
+		}
+	}
+}
+
+func WaitForChannelDrain[T any](ch <-chan T) {
+	for {
+		_, ok := <-ch
+		if !ok {
+			return
+		}
+	}
+}
+
+func TeeChannel[T any](input <-chan T) (<-chan T, <-chan T) {
+	out1 := make(chan T)
+	out2 := make(chan T)
+
+	go func() {
+		defer close(out1)
+		defer close(out2)
+		for v := range input {
+			select {
+			case out1 <- v:
+			default:
+			}
+
+			select {
+			case out2 <- v:
+			default:
+			}
+
+		}
+	}()
+
+	return out1, out2
+}
+
 // useful for integration testing - use in production to just fire and forget a function "go func()"
 // during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
 type FireAndForgetSynchronizer interface {

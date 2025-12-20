@@ -254,7 +254,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -317,7 +317,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -371,7 +371,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
+	merged := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -856,8 +856,7 @@ func TestCalculateDepth(t *testing.T) {
 				},
 			},
 		}, "artifact", "test", "vex")
-		bom = normalize.MergeCdxBoms(rootMetadata, "artifact", "test", bom, vex)
-
+		bom = normalize.MergeCdxBoms(rootMetadata, "artifact", bom, vex)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
@@ -884,7 +883,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -911,7 +910,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -933,7 +932,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		metadata := result.GetMetadata()
 
 		assert.NotNil(t, metadata.Component)

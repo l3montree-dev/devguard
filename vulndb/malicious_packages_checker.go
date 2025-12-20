@@ -50,9 +50,11 @@ type MaliciousPackageChecker struct {
 	repoPath       string
 	repoURL        string
 	lastUpdate     time.Time
-	stopChan       chan struct{}
 	updateTicker   *time.Ticker
 	updateInterval time.Duration
+	updaterCtx     *context.Context
+	cancelFn       context.CancelFunc
+	leaderElector  shared.LeaderElector
 }
 
 type MaliciousPackageCheckerConfig struct {
@@ -85,27 +87,11 @@ func NewMaliciousPackageChecker(config MaliciousPackageCheckerConfig, leaderElec
 		repoPath:       repoPath,
 		repoURL:        config.RepoURL,
 		updateInterval: config.UpdateInterval,
-		stopChan:       make(chan struct{}),
 		updateTicker:   time.NewTicker(config.UpdateInterval),
 	}
 
-	// Initial fetch/update of the database
-	if !config.SkipInitialUpdate {
-		leaderElector.IfLeader(context.Background(), func() error {
-			slog.Info("starting malicious package database update")
-			if err := checker.updateDatabase(); err != nil {
-				slog.Error("Failed to initialize malicious package database", "error", err)
-				return err
-			}
-			// Start background updater
-			checker.backgroundUpdater()
-			return nil
-		})
-	} else {
-		// Test mode: synchronous initialization, no background updater
-		if err := checker.loadDatabase(checker.dbPath); err != nil {
-			return nil, fmt.Errorf("failed to load test database: %w", err)
-		}
+	if err := checker.loadDatabase(checker.dbPath); err != nil {
+		return nil, fmt.Errorf("failed to load test database: %w", err)
 	}
 
 	return checker, nil
@@ -116,7 +102,30 @@ func (c *MaliciousPackageChecker) Stop() {
 	if c.updateTicker != nil {
 		c.updateTicker.Stop()
 	}
-	close(c.stopChan)
+
+	if c.cancelFn != nil {
+		c.cancelFn()
+	}
+}
+
+func (c *MaliciousPackageChecker) Start() {
+	go func() {
+		for {
+			if c.leaderElector.IsLeader() && c.updaterCtx == nil && c.cancelFn == nil {
+				ctx, cancel := context.WithCancel(context.Background())
+				c.updaterCtx = &ctx
+				c.cancelFn = cancel
+				// Start background updater
+				c.backgroundUpdater()
+			} else if c.updaterCtx != nil && c.cancelFn != nil {
+				slog.Info("skipping malicious package database update - not leader")
+				c.cancelFn()
+				c.updaterCtx = nil
+				c.cancelFn = nil
+			}
+			time.Sleep(5 * time.Minute)
+		}
+	}()
 }
 
 // updateDatabase fetches the latest malicious packages via HTTP
@@ -238,7 +247,7 @@ func (c *MaliciousPackageChecker) backgroundUpdater() {
 			if err := c.updateDatabase(); err != nil {
 				slog.Error("Failed to update database", "error", err)
 			}
-		case <-c.stopChan:
+		case <-(*c.updaterCtx).Done():
 			slog.Info("Background updater stopped")
 			return
 		}

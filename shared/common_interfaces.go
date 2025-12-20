@@ -34,11 +34,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type LeaderElector interface {
-	IsLeader() bool
-	IfLeader(ctx context.Context, fn func() error)
+type DaemonRunner interface {
+	RunDaemonPipelineForAsset(assetID uuid.UUID) error
+	RunAssetPipeline(forceAll bool)
+	UpdateFixedVersions() error
+	UpdateVulnDB() error
+	UpdateOpenSourceInsightInformation() error
+
+	Start()
 }
 
+type LeaderElector interface {
+	IsLeader() bool
+}
 type ReleaseService interface {
 	ListByProject(projectID uuid.UUID) ([]models.Release, error)
 	ListByProjectPaged(projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)
@@ -317,7 +325,7 @@ type AssetService interface {
 	BootstrapAsset(rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {
-	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
+	GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
@@ -326,7 +334,6 @@ type ArtifactService interface {
 }
 
 type DependencyVulnService interface {
-	RecalculateAllRawRiskAssessments() error
 	RecalculateRawRiskAssessment(tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
 	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
@@ -339,8 +346,8 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
+	BuildSBOM(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
+	BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error)
@@ -355,6 +362,7 @@ type AssetVersionRepository interface {
 	Delete(tx DB, assetVersion *models.AssetVersion) error
 	Save(tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
+	GetAssetVersionsByAssetIDWithArtifacts(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
@@ -363,6 +371,7 @@ type AssetVersionRepository interface {
 	GetAllTagsAndDefaultBranchForAsset(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(day int) (int64, error)
+	DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error)
 }
 
 type FirstPartyVulnService interface {
@@ -376,6 +385,7 @@ type FirstPartyVulnService interface {
 
 type ScanService interface {
 	ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error)
+	ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 }
 
 type ConfigRepository interface {
@@ -390,7 +400,6 @@ type VulnEventRepository interface {
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(tx DB, vulnIDs []string) ([]models.VulnEvent, error)
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
-	DeleteEventsWithNotExistingVulnID() error
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
 }

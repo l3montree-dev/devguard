@@ -15,12 +15,81 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
+
+func TestCompareStatesAndResolveDifferences(t *testing.T) {
+	t.Run("the same state should result in no changes", func(t *testing.T) {
+		depVulns := []models.DependencyVuln{
+			{Vulnerability: models.Vulnerability{TicketID: utils.Ptr("abc/42")}},
+			{Vulnerability: models.Vulnerability{TicketID: utils.Ptr("abc/57")}},
+		}
+		client := mocks.NewGitlabClientFacade(t)
+
+		asset := models.Asset{
+			RepositoryID: utils.Ptr("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
+		}
+		projectID := 69787207
+		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
+		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
+		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+
+		mockClientFactory := mocks.NewGitlabClientFactory(t)
+		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
+
+		integration := &GitlabIntegration{
+			clientFactory: mockClientFactory,
+		}
+
+		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		assert.Nil(t, err)
+	})
+	t.Run("if we have 2 excess tickets we should close these tickets", func(t *testing.T) {
+		depVulns := []models.DependencyVuln{}
+		client := mocks.NewGitlabClientFacade(t)
+
+		asset := models.Asset{
+			RepositoryID: utils.Ptr("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
+		}
+		projectID := 69787207
+		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
+		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
+
+		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+		client.On("EditIssue", mock.Anything, projectID, 57, mock.Anything).Return(nil, nil, nil)
+		client.On("EditIssue", mock.Anything, projectID, 42, mock.Anything).Return(nil, nil, nil)
+
+		mockClientFactory := mocks.NewGitlabClientFactory(t)
+		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
+		integration := &GitlabIntegration{
+			clientFactory: mockClientFactory,
+		}
+
+		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("if we use another integration than gitlab, we should get no error but wont do any function calls", func(t *testing.T) {
+		depVulns := []models.DependencyVuln{}
+
+		asset := models.Asset{
+			RepositoryID: utils.Ptr("gitschlapp:a73edfce-10f6-402d-9073-157cbc220c0f6978720d7"),
+		}
+
+		integration := &GitlabIntegration{
+			clientFactory: nil,
+		}
+
+		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		assert.Nil(t, err)
+	})
+}
 
 func TestCreateProjectHook(t *testing.T) {
 	t.Run("Returned ProjectHookOption Struct should have the URL set to main devguard", func(t *testing.T) {
