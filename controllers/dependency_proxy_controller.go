@@ -60,14 +60,32 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		monitoring.DependencyProxyRequestDuration.WithLabelValues("npm").Observe(duration)
+	}()
+
 	return d.handleProxy(c, NPMProxy, npmRegistry, "/api/v1/dependency-proxy/npm")
 }
 
 func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		monitoring.DependencyProxyRequestDuration.WithLabelValues("go").Observe(duration)
+	}()
+
 	return d.handleProxy(c, GoProxy, goProxyURL, "/api/v1/dependency-proxy/go")
 }
 
 func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		monitoring.DependencyProxyRequestDuration.WithLabelValues("pypi").Observe(duration)
+	}()
+
 	return d.handleProxy(c, PyPIProxy, pypiRegistry, "/api/v1/dependency-proxy/pypi")
 }
 
