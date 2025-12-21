@@ -343,9 +343,12 @@ func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*git
 func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	// check if we can even handle this
 	client, projectID, err := g.GetClientBasedOnAsset(asset)
-	if errors.Is(err, notConnectedError) {
-		// asset not connected to gitlab
-		return nil
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
 	}
 
 	// convert the dependency vulns into a list of iids for this asset
