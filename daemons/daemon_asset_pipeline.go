@@ -299,8 +299,27 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errC
 	return out
 }
 
+func parseDisabledExternalEntityProviderIDs() map[string]struct{} {
+	// they start with GITLAB_*_DISABLETICKETSYNC=true
+	disabledIDs := make(map[string]struct{})
+	for _, envVar := range os.Environ() {
+		if strings.HasSuffix(envVar, "_DISABLETICKETSYNC=true") {
+			parts := strings.SplitN(envVar, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := parts[0]
+			providerID := strings.TrimSuffix(strings.TrimPrefix(key, "GITLAB_"), "_DISABLETICKETSYNC")
+			disabledIDs[providerID] = struct{}{}
+		}
+	}
+	return disabledIDs
+}
 func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
+	// parse the disabled external entity provider IDs
+	disabledExternalEntityProviderIDs := parseDisabledExternalEntityProviderIDs()
+
 	go func() {
 		defer func() {
 			close(out)
@@ -309,6 +328,15 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
+			if asset.ExternalEntityProviderID != nil {
+				if _, disabled := disabledExternalEntityProviderIDs[*asset.ExternalEntityProviderID]; disabled {
+					// we skip this.
+					slog.Info("asset connected to disabled external entity provider - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
+					out <- assetWithDetails
+					continue
+				}
+			}
+
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
 				slog.Info("asset not connected to third party integration - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
 				out <- assetWithDetails
