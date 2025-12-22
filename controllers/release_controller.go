@@ -187,8 +187,9 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 	return merged.EjectVex(nil), nil
 }
 
-// Loop over release items and then check, an item can either be an artifact reference with an assetid, asset versioname, artifact name or be a childreleaseID reference with no asset fields, this is where the bug also happend, where it pointed to a nil pointer
-
+// mergeReleaseSBOM loops over release items, resolving each item either as an artifact
+// reference (by asset ID, asset version name, or artifact name) or as a child release
+// reference with no asset fields, and guards against bugs such as nil-pointer access.
 func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
