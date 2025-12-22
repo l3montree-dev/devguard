@@ -314,12 +314,14 @@ func (s externalEntityProviderService) syncProjectAssets(ctx shared.Context, use
 
 	for i, asset := range toUpsert {
 		if err := s.assetService.BootstrapAsset(domainRBAC, asset); err != nil {
-			return nil, fmt.Errorf("could not bootstrap asset %s: %w", asset.Slug, err)
+			slog.Error("could not bootstrap asset", "slug", asset.Slug, "err", err)
+			continue
 		}
 
 		// make sure to update the role for the user on the asset
 		if err := s.updateUserRoleInAsset(domainRBAC, user, roles[i], asset.ID.String()); err != nil {
-			return nil, fmt.Errorf("could not update user role in asset %s: %w", asset.Slug, err)
+			slog.Error("could not update user role", "user", user, "assetID", asset.ID, "err", err)
+			continue
 		}
 	}
 

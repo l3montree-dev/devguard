@@ -601,7 +601,6 @@ func FetchPaginatedData[T any](
 }
 
 func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) shared.Role {
-
 	if accessLevel >= gitlab.OwnerPermissions {
 		return shared.RoleAdmin // there is nothing like an owner on project level, so we map it to admin
 	} else if accessLevel >= gitlab.MaintainerPermissions {
