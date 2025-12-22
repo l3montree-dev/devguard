@@ -39,6 +39,8 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 
+	_ "net/http/pprof"
+
 	_ "github.com/lib/pq"
 )
 

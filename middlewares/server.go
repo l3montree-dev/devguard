@@ -13,6 +13,7 @@ import (
 )
 
 func registerMiddlewares(e *echo.Echo) {
+	// Wrap(e)
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{

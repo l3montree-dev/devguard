@@ -172,13 +172,13 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 
 	t.Run("Extract version from npm package metadata", func(t *testing.T) {
 		// Create sample NPM package metadata JSON
-		metadata := map[string]interface{}{
+		metadata := map[string]any{
 			"name": "test-package",
 			"dist-tags": map[string]string{
 				"latest": "1.2.3",
 				"next":   "2.0.0-beta.1",
 			},
-			"versions": map[string]interface{}{
+			"versions": map[string]any{
 				"1.2.3": map[string]string{
 					"name":    "test-package",
 					"version": "1.2.3",
@@ -202,7 +202,7 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 	})
 
 	t.Run("Extract version when dist-tags missing", func(t *testing.T) {
-		metadata := map[string]interface{}{
+		metadata := map[string]any{
 			"name": "test-package",
 		}
 		jsonData, err := json.Marshal(metadata)
@@ -229,7 +229,7 @@ func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
 	t.Run("Verify extractNPMVersionFromMetadata extracts correct version", func(t *testing.T) {
 		// Test that when metadata is fetched for a package without a version,
 		// we correctly extract the "latest" version from dist-tags
-		metadata := map[string]interface{}{
+		metadata := map[string]any{
 			"name": "test-package",
 			"dist-tags": map[string]string{
 				"latest": "3.1.4",

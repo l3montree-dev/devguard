@@ -28,6 +28,7 @@ type Server struct {
 
 func NewServer() Server {
 	server := middlewares.Server()
+
 	return Server{
 		Echo: server,
 	}

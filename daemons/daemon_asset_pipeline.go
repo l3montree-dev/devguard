@@ -310,7 +310,7 @@ func parseDisabledExternalEntityProviderIDs() map[string]struct{} {
 			}
 			key := parts[0]
 			providerID := strings.TrimSuffix(strings.TrimPrefix(key, "GITLAB_"), "_DISABLETICKETSYNC")
-			disabledIDs[providerID] = struct{}{}
+			disabledIDs[strings.ToUpper(providerID)] = struct{}{}
 		}
 	}
 	return disabledIDs
@@ -329,7 +329,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
 			if asset.ExternalEntityProviderID != nil {
-				if _, disabled := disabledExternalEntityProviderIDs[*asset.ExternalEntityProviderID]; disabled {
+				if _, disabled := disabledExternalEntityProviderIDs[strings.ToUpper(*asset.ExternalEntityProviderID)]; disabled {
 					// we skip this.
 					slog.Info("asset connected to disabled external entity provider - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
 					out <- assetWithDetails
