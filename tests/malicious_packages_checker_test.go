@@ -68,7 +68,6 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create malicious package checker: %v", err)
 	}
-	defer checker.Stop()
 
 	tests := []struct {
 		name      string
