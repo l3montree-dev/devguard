@@ -21,6 +21,8 @@ func NewDependencyProxyRouter(
 	// NPM proxy - handles /dependency-proxy/npm/*
 	group.GET("/npm", controller.ProxyNPM)
 	group.GET("/npm/*", controller.ProxyNPM)
+	// Support POST for npm audit endpoints
+	group.POST("/npm/*", controller.ProxyNPMAudit)
 
 	// Go proxy - handles /dependency-proxy/go/*
 	group.GET("/go", controller.ProxyGo)
