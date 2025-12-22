@@ -213,6 +213,7 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 		Name:                     token.ProviderID,
 		Slug:                     fmt.Sprintf("@%s", token.ProviderID),
 		ExternalEntityProviderID: &token.ProviderID,
+		IsPublic:                 true,
 	}
 }
 
