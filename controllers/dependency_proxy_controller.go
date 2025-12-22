@@ -395,7 +395,6 @@ func (d *DependencyProxyController) getCachePath(proxyType ProxyType, requestPat
 }
 
 func (d *DependencyProxyController) isNPMCached(cachePath string) bool {
-	return false
 	info, err := os.Stat(cachePath)
 	if err != nil {
 		return false
