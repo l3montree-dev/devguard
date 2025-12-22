@@ -160,18 +160,19 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 	return affectedComponents, nil
 }
 
-var waitGroup sync.WaitGroup = sync.WaitGroup{}
-
 const numOfGoRoutines int = 10
 
 func (s osvService) Mirror() error {
 	zips := make(chan *zip.Reader, 2)
 	jobs := make(chan *zip.File, numOfGoRoutines*20)
 
+	waitGroup := &sync.WaitGroup{}
+
 	go s.workerZipFunction(zips)
 
-	for i := range numOfGoRoutines {
-		go s.workerFileFunction(i+1, jobs)
+	for range numOfGoRoutines {
+		waitGroup.Add(1)
+		go s.workerFileFunction(waitGroup, jobs)
 	}
 
 	// iterate over all files in the zip
@@ -222,8 +223,7 @@ func (s osvService) workerZipFunction(results chan<- *zip.Reader) {
 	close(results)
 }
 
-func (s osvService) workerFileFunction(id int, jobs <-chan *zip.File) {
-	waitGroup.Add(1)
+func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *zip.File) {
 	for job := range jobs {
 		// read the file
 		unzippedFileBytes, err := utils.ReadZipFile(job)
@@ -289,7 +289,7 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 	}
 
 	if !strings.HasPrefix(osv.ID, "CVE-") {
-		// if its not a CVE itself we need want to add additional information about related CVEs
+		// if its not a CVE itself we want to add additional information about related CVEs
 		associatedCVEs := osv.GetAssociatedCVEs()
 		// clean up statistics by removing entries with no associations
 		if len(associatedCVEs) > 0 {
@@ -306,7 +306,7 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 // checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
 func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 	for _, severity := range osv.Severity {
-		// currently only supporting CVSS Version 3
+		// currently only supporting CVSS Version 3 and 4
 		switch severity.Type {
 		case "CVSS_V3":
 			cvssScore, err := gocvss30.ParseVector(severity.Score)
@@ -318,9 +318,6 @@ func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 			if err == nil {
 				return cvssScore.Score(), cvssScore.Vector(), true
 			}
-		default:
-			// Debug purpose can be deleted in deployment
-			slog.Info("We do not support severity type: %s with Score: %s", severity.Type, severity.Score)
 		}
 	}
 	return 0, "", false
