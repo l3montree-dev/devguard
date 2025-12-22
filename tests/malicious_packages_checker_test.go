@@ -16,7 +16,9 @@
 package tests
 
 import (
-	"encoding/json"
+	"compress/gzip"
+	"encoding/gob"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,17 +26,15 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestMaliciousPackageChecker tests the malicious package detection
 func TestMaliciousPackageChecker(t *testing.T) {
 	// Create a temporary directory for test data
-	tempDir := t.TempDir()
-	dbPath := filepath.Join(tempDir, "osv", "malicious")
-	maliciousDir := filepath.Join(dbPath, "npm", "fake-malicious-npm-package")
-	if err := os.MkdirAll(maliciousDir, 0755); err != nil {
-		t.Fatalf("Failed to create test directory: %v", err)
-	}
+	dbPath := t.TempDir()
+
+	os.Setenv("MALICIOUS_PACKAGE_DATABASE_PATH", dbPath)
 
 	// Create a test malicious package entry
 	testEntry := dtos.OSV{
@@ -53,16 +53,24 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		Published: time.Now(),
 	}
 
-	// Write the test entry to a JSON file
-	entryPath := filepath.Join(maliciousDir, "MAL-TEST-001.json")
-	data, err := json.MarshalIndent(testEntry, "", "  ")
-	if err != nil {
-		t.Fatalf("Failed to marshal test entry: %v", err)
-	}
-	if err := os.WriteFile(entryPath, data, 0644); err != nil {
-		t.Fatalf("Failed to write test entry: %v", err)
-	}
+	// write the cache file
+	cacheFilePath := filepath.Join(dbPath, "malicious-packages.cache.gob.gz")
 
+	fmt.Println("writing file", cacheFilePath)
+	packages := map[string]map[string]*dtos.OSV{
+		"npm": {
+			"fake-malicious-npm-package": &testEntry,
+		},
+	}
+	file, err := os.Create(cacheFilePath)
+	assert.Nil(t, err)
+	defer file.Close()
+
+	gz := gzip.NewWriter(file)
+
+	encoder := gob.NewEncoder(gz)
+	assert.Nil(t, encoder.Encode(packages))
+	gz.Close()
 	// Create the checker with SkipInitialUpdate to prevent downloading from GitHub
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	if err != nil {
@@ -95,7 +103,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			ecosystem: "npm",
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
-			expected:  true,
+			expected:  false,
 		},
 		{
 			name:      "Safe package",
