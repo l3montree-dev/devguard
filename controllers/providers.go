@@ -27,7 +27,16 @@ import (
 
 // ProvideDependencyProxyConfig creates the configuration for the dependency proxy
 func ProvideDependencyProxyConfig() DependencyProxyConfig {
-	cacheDir := filepath.Join(os.TempDir(), "devguard-dependency-proxy-cache")
+	var cacheDir string
+	dependencyProxyCacheDir := os.Getenv("DEPENDENCY_PROXY_CACHE_DIR")
+	if dependencyProxyCacheDir != "" {
+		slog.Info("Using custom dependency proxy cache directory", "path", dependencyProxyCacheDir)
+		cacheDir = dependencyProxyCacheDir
+	} else {
+		cacheDir = filepath.Join(os.TempDir(), "devguard-dependency-proxy-cache")
+		slog.Info("Using default dependency proxy cache directory", "path", cacheDir)
+
+	}
 
 	// Ensure directory exists
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {

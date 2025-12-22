@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -83,8 +84,12 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
 	}
 
-	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
-	if d.maliciousChecker != nil {
+	// For requests with explicit versions (e.g., .tgz files or package@version), check immediately
+	// For metadata requests (package info without version), we need to fetch first to see which version would be used
+	packageName, version := d.ParsePackageFromPath(NPMProxy, requestPath)
+	hasExplicitVersion := version != "" || strings.HasSuffix(requestPath, ".tgz")
+
+	if d.maliciousChecker != nil && hasExplicitVersion {
 		if blocked, reason := d.checkMaliciousPackage(NPMProxy, requestPath); blocked {
 			slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
 			// Also remove from cache if it exists to prevent serving cached malicious content
@@ -133,6 +138,23 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		return c.Blob(statusCode, headers.Get("Content-Type"), data)
 	}
 
+	// For metadata requests without explicit version, check the resolved version against malicious database
+	if d.maliciousChecker != nil && !hasExplicitVersion && packageName != "" {
+		// Parse the JSON response to extract the version that would be installed
+		if resolvedVersion := d.ExtractNPMVersionFromMetadata(data); resolvedVersion != "" {
+			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
+			isMalicious, entry := d.maliciousChecker.IsMalicious("npm", packageName, resolvedVersion)
+			if isMalicious {
+				reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
+				if entry.Summary != "" {
+					reason += ": " + entry.Summary
+				}
+				slog.Warn("Blocked malicious package after version resolution", "proxy", "npm", "package", packageName, "version", resolvedVersion, "reason", reason)
+				return d.blockMaliciousPackage(c, NPMProxy, requestPath, reason)
+			}
+		}
+	}
+
 	// Cache successful responses with integrity verification
 	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
@@ -141,9 +163,6 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	// Copy important headers from upstream
 	if contentType := headers.Get("Content-Type"); contentType != "" {
 		c.Response().Header().Set("Content-Type", contentType)
-	}
-	if dockerContentDigest := headers.Get("Docker-Content-Digest"); dockerContentDigest != "" {
-		c.Response().Header().Set("Docker-Content-Digest", dockerContentDigest)
 	}
 
 	return d.writeNPMResponse(c, data, requestPath, false)
@@ -376,6 +395,7 @@ func (d *DependencyProxyController) getCachePath(proxyType ProxyType, requestPat
 }
 
 func (d *DependencyProxyController) isNPMCached(cachePath string) bool {
+	return false
 	info, err := os.Stat(cachePath)
 	if err != nil {
 		return false
@@ -674,7 +694,7 @@ func (d *DependencyProxyController) writePyPIResponse(c shared.Context, data []b
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), data)
 }
 
-func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, path string) (string, string) {
+func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, path string) (string, string) {
 	switch proxyType {
 	case NPMProxy:
 		if strings.HasSuffix(path, ".tgz") {
@@ -682,7 +702,21 @@ func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, pa
 			if len(parts) == 2 {
 				pkgName := strings.TrimPrefix(parts[0], "/")
 				filename := strings.TrimSuffix(parts[1], ".tgz")
-				version := strings.TrimPrefix(filename, strings.ReplaceAll(pkgName, "/", "-")+"-")
+
+				// For scoped packages like @babel/core, the tarball is named core-7.23.0.tgz
+				// For regular packages like lodash, the tarball is named lodash-4.17.21.tgz
+				var expectedPrefix string
+				if strings.HasPrefix(pkgName, "@") {
+					// Scoped package: @scope/name -> use just "name" as prefix
+					if idx := strings.LastIndex(pkgName, "/"); idx != -1 {
+						expectedPrefix = pkgName[idx+1:]
+					}
+				} else {
+					// Regular package: use full package name
+					expectedPrefix = pkgName
+				}
+
+				version := strings.TrimPrefix(filename, expectedPrefix+"-")
 				return pkgName, version
 			}
 		}
@@ -727,7 +761,7 @@ func (d *DependencyProxyController) parsePackageFromPath(proxyType ProxyType, pa
 }
 
 func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, path string) (bool, string) {
-	packageName, version := d.parsePackageFromPath(proxyType, path)
+	packageName, version := d.ParsePackageFromPath(proxyType, path)
 	if packageName == "" {
 		return false, ""
 	}
@@ -756,13 +790,30 @@ func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, p
 	return false, ""
 }
 
+// ExtractNPMVersionFromMetadata parses NPM package metadata JSON and extracts the "latest" version
+// This is used when npx or npm install is called without a specific version
+func (d *DependencyProxyController) ExtractNPMVersionFromMetadata(data []byte) string {
+	var metadata struct {
+		DistTags struct {
+			Latest string `json:"latest"`
+		} `json:"dist-tags"`
+	}
+
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		slog.Debug("Failed to parse NPM metadata", "error", err)
+		return ""
+	}
+
+	return metadata.DistTags.Latest
+}
+
 func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
 	c.Response().Header().Set("X-Malicious-Package", "blocked")
 
 	slog.Warn("BLOCKED MALICIOUS PACKAGE", "path", path, "reason", reason)
 
 	// Extract package name from path for metrics
-	packageName, _ := d.parsePackageFromPath(proxyType, path)
+	packageName, _ := d.ParsePackageFromPath(proxyType, path)
 	if packageName == "" {
 		packageName = "unknown"
 	}

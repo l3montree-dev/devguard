@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -62,7 +63,16 @@ type MaliciousPackageChecker struct {
 }
 
 func NewMaliciousPackageChecker(leaderElector shared.LeaderElector) (*MaliciousPackageChecker, error) {
-	dbPath := filepath.Join(os.TempDir(), "devguard-dependency-proxy-db")
+
+	var dbPath string
+	maliciousPackageDatabasePath := os.Getenv("MALICIOUS_PACKAGE_DATABASE_PATH")
+	if maliciousPackageDatabasePath != "" {
+		slog.Info("Using custom malicious package database path", "path", maliciousPackageDatabasePath)
+		dbPath = maliciousPackageDatabasePath
+	} else {
+		dbPath = filepath.Join(os.TempDir(), "devguard-dependency-proxy-db")
+		slog.Info("Using default malicious package database path")
+	}
 
 	// make sure the dbPath exists
 	if err := os.MkdirAll(dbPath, 0755); err != nil {
@@ -541,10 +551,8 @@ func (c *MaliciousPackageChecker) isVersionAffected(affected dtos.Affected, vers
 	}
 
 	// Check explicit versions
-	for _, v := range affected.Versions {
-		if v == version || version == "" {
-			return true
-		}
+	if slices.Contains(affected.Versions, version) {
+		return true
 	}
 
 	// Check ranges
