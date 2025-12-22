@@ -166,30 +166,30 @@ func newSyncCommand() *cobra.Command {
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			cveRepository := repositories.NewCVERepository(db)
-			cweRepository := repositories.NewCWERepository(db)
+			// cweRepository := repositories.NewCWERepository(db)
 			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
-			mitreService := vulndb.NewMitreService(cweRepository)
+			// mitreService := vulndb.NewMitreService(cweRepository)
 
 			// epssService := vulndb.NewEPSSService(cveRepository)
 
 			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository)
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
-			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
+			// debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			exploitDBService := vulndb.NewExploitDBService(repositories.NewExploitRepository(db))
+			// exploitDBService := vulndb.NewExploitDBService(repositories.NewExploitRepository(db))
 
-			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
+			// githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
 
 			slog.Info("start updating vulnDB components:")
 			start := time.Now()
-			if emptyOrContains(databasesToSync, "cwe") {
-				now := time.Now()
-				slog.Info("starting cwe database sync")
-				if err := mitreService.Mirror(); err != nil {
-					slog.Error("could not mirror cwe database", "err", err)
-				}
-				slog.Info("finished cwe database sync", "duration", time.Since(now))
-			}
+			// if emptyOrContains(databasesToSync, "cwe") {
+			// 	now := time.Now()
+			// 	slog.Info("starting cwe database sync")
+			// 	if err := mitreService.Mirror(); err != nil {
+			// 		slog.Error("could not mirror cwe database", "err", err)
+			// 	}
+			// 	slog.Info("finished cwe database sync", "duration", time.Since(now))
+			// }
 
 			// if emptyOrContains(databasesToSync, "epss") {
 			// 	slog.Info("starting epss database sync")
@@ -210,32 +210,32 @@ func newSyncCommand() *cobra.Command {
 				slog.Info("finished osv database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToSync, "exploitdb") {
-				slog.Info("starting exploitdb database sync")
-				now := time.Now()
-				if err := exploitDBService.Mirror(); err != nil {
-					slog.Error("could not sync exploitdb database", "err", err)
-				}
-				slog.Info("finished exploitdb database sync", "duration", time.Since(now))
-			}
+			// if emptyOrContains(databasesToSync, "exploitdb") {
+			// 	slog.Info("starting exploitdb database sync")
+			// 	now := time.Now()
+			// 	if err := exploitDBService.Mirror(); err != nil {
+			// 		slog.Error("could not sync exploitdb database", "err", err)
+			// 	}
+			// 	slog.Info("finished exploitdb database sync", "duration", time.Since(now))
+			// }
 
-			if emptyOrContains(databasesToSync, "github-poc") {
-				slog.Info("starting github-poc database sync")
-				now := time.Now()
-				if err := githubExploitDBService.Mirror(); err != nil {
-					slog.Error("could not sync github-poc database", "err", err)
-				}
-				slog.Info("finished github-poc database sync", "duration", time.Since(now))
-			}
+			// if emptyOrContains(databasesToSync, "github-poc") {
+			// 	slog.Info("starting github-poc database sync")
+			// 	now := time.Now()
+			// 	if err := githubExploitDBService.Mirror(); err != nil {
+			// 		slog.Error("could not sync github-poc database", "err", err)
+			// 	}
+			// 	slog.Info("finished github-poc database sync", "duration", time.Since(now))
+			// }
 
-			if emptyOrContains(databasesToSync, "dsa") {
-				slog.Info("starting dsa database sync")
-				now := time.Now()
-				if err := debianSecurityTracker.Mirror(); err != nil {
-					slog.Error("could not sync dsa database", "err", err)
-				}
-				slog.Info("finished dsa database sync", "duration", time.Since(now))
-			}
+			// if emptyOrContains(databasesToSync, "dsa") {
+			// 	slog.Info("starting dsa database sync")
+			// 	now := time.Now()
+			// 	if err := debianSecurityTracker.Mirror(); err != nil {
+			// 		slog.Error("could not sync dsa database", "err", err)
+			// 	}
+			// 	slog.Info("finished dsa database sync", "duration", time.Since(now))
+			// }
 			slog.Info("Finished database sync", "time elapsed", time.Since(start))
 		},
 	}

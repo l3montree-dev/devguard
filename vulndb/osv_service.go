@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -68,7 +69,6 @@ var importEcosystems = []string{
 	"PyPI",
 	"RubyGems",
 	"Red Hat",
-	//GitHub Actions,
 }
 
 var ignoreVulnerabilityEcosystems = []string{
@@ -150,7 +150,7 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 		return nil, errors.New("not a cve")
 	}
 
-	affectedComponents := models.AffectedComponentsFromOSV(osv)
+	affectedComponents := models.AffectedComponentsFromOSV(&osv)
 
 	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 	if err != nil {
@@ -160,13 +160,38 @@ func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) 
 	return affectedComponents, nil
 }
 
+var waitGroup sync.WaitGroup = sync.WaitGroup{}
+
+const numOfGoRoutines int = 10
+
 func (s osvService) Mirror() error {
+	zips := make(chan *zip.Reader, 2)
+	jobs := make(chan *zip.File, numOfGoRoutines*20)
+
+	go s.workerZipFunction(zips)
+
+	for i := range numOfGoRoutines {
+		go s.workerFileFunction(i+1, jobs)
+	}
+
+	// iterate over all files in the zip
+	for zipReader := range zips {
+		for _, file := range zipReader.File {
+			jobs <- file
+		}
+	}
+	close(jobs)
+	waitGroup.Wait()
+
+	return nil
+}
+
+func (s osvService) workerZipFunction(results chan<- *zip.Reader) {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
 		slog.Error("could not get ecosystems", "err", err)
-		return err
+		return
 	}
-
 	for _, ecosystem := range ecosystems {
 		if ecosystem == "" {
 			continue
@@ -184,69 +209,75 @@ func (s osvService) Mirror() error {
 
 		// download the zip and extract it in memory
 		zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
-
 		if err != nil {
 			slog.Error("could not read zip", "err", err)
 			continue
 		}
-
 		if len(zipReader.File) == 0 {
 			slog.Error("no files found in zip")
 			continue
 		}
-
-		// iterate over all files in the zip
-		for _, file := range zipReader.File {
-			// read the file
-			unzippedFileBytes, err := utils.ReadZipFile(file)
-			if err != nil {
-				slog.Error("could not read file", "err", err, "file", file.Name)
-				continue
-			}
-
-			osv := dtos.OSV{}
-			err = json.Unmarshal(unzippedFileBytes, &osv)
-			if err != nil {
-				slog.Error("could not unmarshal osv", "err", err)
-				continue
-			}
-
-			// if we do not support the Vulnerability Ecosystem we do not want to handle it
-			if !isVulnerabilityIDSupported(osv.ID) {
-				continue
-			}
-
-			// first build the CVE based on the OSV and save it to the db
-			tx := s.cveRepository.Begin()
-			newCVE := OSVToCVE(osv)
-			err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
-			if err != nil {
-				slog.Error("could not save CVE", "CVE", newCVE.CVE, "error", err)
-				tx.Rollback()
-				continue
-			}
-			affectedComponents := models.AffectedComponentsFromOSV(osv)
-			// then create the affected components
-			err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(tx, affectedComponents)
-			if err != nil {
-				slog.Error("could not save affected components", "cve", newCVE.CVE, "error", err)
-				tx.Rollback()
-				continue
-			}
-
-			err = s.cveRepository.CreateCVEAffectedComponentsEntries(tx, &newCVE, affectedComponents)
-			if err != nil {
-				slog.Error("could not save to cve_affected_components relation table", "cve", newCVE.CVE, "error", err)
-				tx.Rollback()
-				continue
-			}
-			tx.Commit()
-		}
+		results <- zipReader
 	}
-	return nil
+	close(results)
 }
 
-func OSVToCVE(osv dtos.OSV) models.CVE {
+func (s osvService) workerFileFunction(id int, jobs <-chan *zip.File) {
+	waitGroup.Add(1)
+	for job := range jobs {
+		// read the file
+		unzippedFileBytes, err := utils.ReadZipFile(job)
+		if err != nil {
+			slog.Error("could not read file", "err", err, "file", job.Name)
+			continue
+		}
+
+		osv := dtos.OSV{}
+		err = json.Unmarshal(unzippedFileBytes, &osv)
+		if err != nil {
+			slog.Error("could not unmarshal osv", "err", err)
+			continue
+		}
+
+		// if we do not support the Vulnerability Ecosystem we do not want to handle it
+		if shouldIgnoreVulnerabilityID(osv.ID) {
+			continue
+		}
+
+		// first build the CVE based on the OSV and save it to the db
+		tx := s.cveRepository.Begin()
+
+		newCVE := OSVToCVE(&osv)
+
+		err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
+		if err != nil {
+			slog.Error("could not save CVE", "CVE", newCVE.CVE, "error", err)
+			tx.Rollback()
+			continue
+		}
+
+		affectedComponents := models.AffectedComponentsFromOSV(&osv)
+
+		// then create the affected components
+		err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(tx, affectedComponents)
+		if err != nil {
+			slog.Error("could not save affected components", "cve", newCVE.CVE, "error", err)
+			tx.Rollback()
+			continue
+		}
+
+		err = s.cveRepository.CreateCVEAffectedComponentsEntries(tx, &newCVE, affectedComponents)
+		if err != nil {
+			slog.Error("could not save to cve_affected_components relation table", "cve", newCVE.CVE, "error", err)
+			tx.Rollback()
+			continue
+		}
+		tx.Commit()
+	}
+	waitGroup.Done()
+}
+
+func OSVToCVE(osv *dtos.OSV) models.CVE {
 	cve := models.CVE{}
 	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
 	if ok {
@@ -273,7 +304,7 @@ func OSVToCVE(osv dtos.OSV) models.CVE {
 }
 
 // checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
-func hasValidCVSSScore(osv dtos.OSV) (float64, string, bool) {
+func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 	for _, severity := range osv.Severity {
 		// currently only supporting CVSS Version 3
 		switch severity.Type {
@@ -295,11 +326,11 @@ func hasValidCVSSScore(osv dtos.OSV) (float64, string, bool) {
 	return 0, "", false
 }
 
-func isVulnerabilityIDSupported(id string) bool {
+func shouldIgnoreVulnerabilityID(id string) bool {
 	prefix, _, ok := strings.Cut(id, "-")
 	if !ok {
 		// false negatives are ok
 		return true
 	}
-	return !slices.Contains(ignoreVulnerabilityEcosystems, prefix)
+	return slices.Contains(ignoreVulnerabilityEcosystems, prefix)
 }

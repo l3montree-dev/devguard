@@ -120,7 +120,7 @@ func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent
 }
 */
 
-func AffectedComponentsFromOSV(osv dtos.OSV) []AffectedComponent {
+func AffectedComponentsFromOSV(osv *dtos.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
 	cveIds := osv.GetAssociatedCVEs()
