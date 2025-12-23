@@ -217,6 +217,8 @@ func (c *MaliciousPackageChecker) downloadDBAndSaveCache() error {
 	}
 	// make sure to have pretty much atomic switch
 	c.packages = packages
+	c.databaseLoaded = true
+	c.lastUpdate = time.Now()
 
 	return nil
 }
@@ -249,8 +251,9 @@ func (c *MaliciousPackageChecker) loadDatabase(dbPath string) error {
 	if err := decoder.Decode(&c.packages); err != nil {
 		return errors.Wrap(err, "could not load database from cache")
 	}
-
+	c.loadFakePackages(c.packages)
 	c.databaseLoaded = true
+
 	slog.Info("Malicious package database loaded from cache",
 		"duration", time.Since(startTime).String(), "npm", len(c.packages["npm"]),
 		"go", len(c.packages["go"]), "pypi", len(c.packages["pypi"]),

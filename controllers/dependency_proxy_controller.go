@@ -89,16 +89,14 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	packageName, version := d.ParsePackageFromPath(NPMProxy, requestPath)
 	hasExplicitVersion := version != "" || strings.HasSuffix(requestPath, ".tgz")
 
-	if d.maliciousChecker != nil && hasExplicitVersion {
-		if blocked, reason := d.checkMaliciousPackage(NPMProxy, requestPath); blocked {
-			slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
-			// Also remove from cache if it exists to prevent serving cached malicious content
-			cachePath := d.getCachePath(NPMProxy, requestPath)
-			if err := os.Remove(cachePath); err == nil {
-				slog.Info("Removed malicious package from cache", "path", cachePath)
-			}
-			return d.blockMaliciousPackage(c, NPMProxy, requestPath, reason)
+	if blocked, reason := d.checkMaliciousPackage(NPMProxy, requestPath); blocked {
+		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
+		// Also remove from cache if it exists to prevent serving cached malicious content
+		cachePath := d.getCachePath(NPMProxy, requestPath)
+		if err := os.Remove(cachePath); err == nil {
+			slog.Info("Removed malicious package from cache", "path", cachePath)
 		}
+		return d.blockMaliciousPackage(c, NPMProxy, requestPath, reason)
 	}
 
 	cachePath := d.getCachePath(NPMProxy, requestPath)

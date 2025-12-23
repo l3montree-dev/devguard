@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-debug
+  namespace: devguard
+spec:
+
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: devguard-dependency-proxy-pvc
+
+  containers:
+    - name: debug
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep infinity"]
+
+      volumeMounts:
+        - name: data
+          mountPath: /data
