@@ -103,7 +103,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			ecosystem: "npm",
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
-			expected:  false,
+			expected:  true,
 		},
 		{
 			name:      "Safe package",
