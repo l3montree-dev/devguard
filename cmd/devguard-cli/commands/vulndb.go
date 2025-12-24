@@ -286,11 +286,24 @@ func newSyncCommand() *cobra.Command {
 				}
 				slog.Info("finished dsa database sync", "duration", time.Since(now))
 			}
+
+			if emptyOrContains(databasesToSync, "malicious-packages") {
+				slog.Info("starting malicious packages database sync")
+				now := time.Now()
+				maliciousPackageRepository := repositories.NewMaliciousPackageRepository(db)
+				maliciousPackageChecker, err := vulndb.NewMaliciousPackageChecker(maliciousPackageRepository)
+				if err != nil {
+					slog.Error("could not create malicious package checker", "err", err)
+				} else if err := maliciousPackageChecker.DownloadAndProcessDB(); err != nil {
+					slog.Error("could not sync malicious packages database", "err", err)
+				}
+				slog.Info("finished malicious packages database sync", "duration", time.Since(now))
+			}
 		},
 	}
 	syncCmd.Flags().String("after", "", "allows to only sync a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
 	syncCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa, malicious-packages")
 
 	return &syncCmd
 }

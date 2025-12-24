@@ -20,7 +20,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 )
 
@@ -43,14 +42,14 @@ type DependencyProxyConfig struct {
 }
 
 type DependencyProxyController struct {
-	maliciousChecker *vulndb.MaliciousPackageChecker
+	maliciousChecker shared.MaliciousPackageChecker
 	cacheDir         string
 	client           *http.Client
 }
 
 func NewDependencyProxyController(
 	config DependencyProxyConfig,
-	maliciousChecker *vulndb.MaliciousPackageChecker,
+	maliciousChecker shared.MaliciousPackageChecker,
 ) *DependencyProxyController {
 	return &DependencyProxyController{
 		maliciousChecker: maliciousChecker,
@@ -78,11 +77,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 
 	slog.Info("Proxy request", "proxy", "npm", "method", c.Request().Method, "path", requestPath)
 
-	// Block all requests if malicious package database is not yet loaded
-	if d.maliciousChecker != nil && !d.maliciousChecker.IsReady() {
-		slog.Warn("Blocking request - malicious package database not yet loaded", "proxy", "npm", "path", requestPath)
-		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
-	}
+	// Check for malicious packages
 
 	// For requests with explicit versions (e.g., .tgz files or package@version), check immediately
 	// For metadata requests (package info without version), we need to fetch first to see which version would be used
@@ -177,12 +172,6 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 
 	slog.Info("Proxy npm audit request", "method", c.Request().Method, "path", requestPath, "contentType", c.Request().Header.Get("Content-Type"))
 
-	// Block all requests if malicious package database is not yet loaded
-	if d.maliciousChecker != nil && !d.maliciousChecker.IsReady() {
-		slog.Warn("Blocking request - malicious package database not yet loaded", "proxy", "npm-audit", "path", requestPath)
-		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
-	}
-
 	// Read the request body
 	bodyBytes, err := io.ReadAll(c.Request().Body)
 	if err != nil {
@@ -227,12 +216,6 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	}
 
 	slog.Info("Proxy request", "proxy", "go", "method", c.Request().Method, "path", requestPath)
-
-	// Block all requests if malicious package database is not yet loaded
-	if d.maliciousChecker != nil && !d.maliciousChecker.IsReady() {
-		slog.Warn("Blocking request - malicious package database not yet loaded", "proxy", "go", "path", requestPath)
-		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
-	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
@@ -316,12 +299,6 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 	}
 
 	slog.Info("Proxy request", "proxy", "pypi", "method", c.Request().Method, "path", requestPath)
-
-	// Block all requests if malicious package database is not yet loaded
-	if d.maliciousChecker != nil && !d.maliciousChecker.IsReady() {
-		slog.Warn("Blocking request - malicious package database not yet loaded", "proxy", "pypi", "path", requestPath)
-		return echo.NewHTTPError(http.StatusServiceUnavailable, "Service is initializing, please try again in a moment")
-	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {

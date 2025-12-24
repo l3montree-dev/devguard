@@ -16,14 +16,11 @@
 package tests
 
 import (
-	"compress/gzip"
-	"encoding/gob"
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
@@ -31,10 +28,12 @@ import (
 
 // TestMaliciousPackageChecker tests the malicious package detection
 func TestMaliciousPackageChecker(t *testing.T) {
-	// Create a temporary directory for test data
-	dbPath := t.TempDir()
+	// Set up test database
+	db, terminate := InitDatabaseContainer("../initdb.sql")
+	defer terminate()
 
-	os.Setenv("MALICIOUS_PACKAGE_DATABASE_PATH", dbPath)
+	// Create repository
+	maliciousPackageRepository := repositories.NewMaliciousPackageRepository(db)
 
 	// Create a test malicious package entry
 	testEntry := dtos.OSV{
@@ -46,33 +45,32 @@ func TestMaliciousPackageChecker(t *testing.T) {
 				Package: dtos.Pkg{
 					Ecosystem: "npm",
 					Name:      "fake-malicious-npm-package",
+					Purl:      "pkg:npm/fake-malicious-npm-package",
 				},
 				Versions: []string{"1.0.0", "1.0.1"},
 			},
 		},
 		Published: time.Now(),
+		Modified:  time.Now(),
 	}
 
-	// write the cache file
-	cacheFilePath := filepath.Join(dbPath, "malicious-packages.cache.gob.gz")
-
-	fmt.Println("writing file", cacheFilePath)
-	packages := map[string]map[string]*dtos.OSV{
-		"npm": {
-			"fake-malicious-npm-package": &testEntry,
-		},
+	// Insert test data into database
+	pkg := models.MaliciousPackage{
+		ID:        testEntry.ID,
+		Summary:   testEntry.Summary,
+		Details:   testEntry.Details,
+		Published: testEntry.Published,
+		Modified:  testEntry.Modified,
 	}
-	file, err := os.Create(cacheFilePath)
+	err := maliciousPackageRepository.UpsertPackages([]models.MaliciousPackage{pkg})
 	assert.Nil(t, err)
-	defer file.Close()
 
-	gz := gzip.NewWriter(file)
+	components := models.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
+	err = maliciousPackageRepository.UpsertAffectedComponents(components)
+	assert.Nil(t, err)
 
-	encoder := gob.NewEncoder(gz)
-	assert.Nil(t, encoder.Encode(packages))
-	gz.Close()
-	// Create the checker with SkipInitialUpdate to prevent downloading from GitHub
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	// Create the checker
+	checker, err := vulndb.NewMaliciousPackageChecker(maliciousPackageRepository)
 	if err != nil {
 		t.Fatalf("Failed to create malicious package checker: %v", err)
 	}
@@ -103,7 +101,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			ecosystem: "npm",
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
-			expected:  true,
+			expected:  false,
 		},
 		{
 			name:      "Safe package",

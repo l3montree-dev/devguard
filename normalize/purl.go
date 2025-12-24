@@ -9,6 +9,53 @@ import (
 	"github.com/package-url/packageurl-go"
 )
 
+// PurlMatchContext holds the parsed purl information for matching
+type PurlMatchContext struct {
+	SearchPurl        string
+	TargetVersion     string
+	NormalizedVersion string
+	VersionIsValid    error
+	Qualifiers        packageurl.Qualifiers
+	Namespace         string
+}
+
+// ParsePurlForMatching parses a purl and version into a context for database matching
+func ParsePurlForMatching(purl, version string) (*PurlMatchContext, error) {
+	// Parse the package URL (purl)
+	parsedPurl, err := packageurl.FromString(purl)
+	if err != nil {
+		return nil, err
+	}
+
+	qualifier := parsedPurl.Qualifiers
+
+	// Determine which version to use
+	targetVersion := version
+	if targetVersion == "" {
+		targetVersion = parsedPurl.Version
+		if targetVersion == "" {
+			return nil, nil // No version = no results
+		}
+	}
+
+	// Try to normalize the version to semantic versioning format
+	normalizedVersion, versionIsValid := ConvertToSemver(targetVersion)
+
+	// Create search key (purl without version)
+	parsedPurl.Version = ""
+	parsedPurl.Qualifiers = nil
+	searchPurl := parsedPurl.ToString()
+
+	return &PurlMatchContext{
+		SearchPurl:        searchPurl,
+		TargetVersion:     targetVersion,
+		NormalizedVersion: normalizedVersion,
+		VersionIsValid:    versionIsValid,
+		Qualifiers:        qualifier,
+		Namespace:         parsedPurl.Namespace,
+	}, nil
+}
+
 // function to make purl look more visually appealing
 func BeautifyPURL(pURL string) (string, error) {
 	p, err := packageurl.FromString(pURL)

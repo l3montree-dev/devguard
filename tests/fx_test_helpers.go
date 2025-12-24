@@ -166,6 +166,7 @@ func (f *TestFixture) CreateDaemonRunner() daemons.DaemonRunner {
 		f.App.AffectedComponentRepository,
 		f.App.ScanService,
 		&testLeaderElector{}, // Use simple test leader elector
+		f.App.MaliciousPackageChecker,
 	)
 }
 

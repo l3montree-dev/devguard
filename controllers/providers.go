@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.uber.org/fx"
@@ -49,8 +50,12 @@ func ProvideDependencyProxyConfig() DependencyProxyConfig {
 }
 
 // ProvideMaliciousPackageChecker creates the malicious package checker
-func ProvideMaliciousPackageChecker(leaderElector shared.LeaderElector) *vulndb.MaliciousPackageChecker {
-	checker, err := vulndb.NewMaliciousPackageChecker(leaderElector)
+func ProvideMaliciousPackageChecker(
+	db shared.DB,
+	leaderElector shared.LeaderElector,
+) *vulndb.MaliciousPackageChecker {
+	repository := repositories.NewMaliciousPackageRepository(db)
+	checker, err := vulndb.NewMaliciousPackageChecker(repository)
 	if err != nil {
 		slog.Warn("Could not initialize malicious package checker", "error", err)
 		return nil
@@ -100,6 +105,6 @@ var ControllerModule = fx.Options(
 
 	// Dependency Proxy
 	fx.Provide(ProvideDependencyProxyConfig),
-	fx.Provide(ProvideMaliciousPackageChecker),
+	fx.Provide(fx.Annotate(ProvideMaliciousPackageChecker, fx.As(new(shared.MaliciousPackageChecker)))),
 	fx.Provide(NewDependencyProxyController),
 )

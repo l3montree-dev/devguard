@@ -19,17 +19,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
 	"math"
-	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 
-	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
 
@@ -84,42 +80,6 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
-/*
-func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent) []AffectedComponent {
-	// get all the versions
-	versions := make([]string, 0)
-	for _, ac := range affectedComponents {
-		if ac.Version == nil {
-			return affectedComponents
-		}
-		versions = append(versions, *ac.Version)
-	}
-
-	// get the ranges
-	ranges := versionsToRange(versions)
-
-	// create the new affected components again
-	newAffectedComponents := make([]AffectedComponent, len(ranges))
-	for i, r := range ranges {
-		if r[0] == r[1] {
-			// create with version attribute
-			cmp := affectedComponents[0]
-			cmp.Version = &r[0]
-			newAffectedComponents[i] = cmp
-		} else {
-			// create semver range component
-			cmp := affectedComponents[0]
-			cmp.Version = nil
-			cmp.SemverIntroduced = &r[0]
-			cmp.SemverFixed = &r[1]
-			newAffectedComponents[i] = cmp
-		}
-	}
-
-	return newAffectedComponents
-}
-*/
-
 func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
@@ -138,161 +98,52 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 				continue
 			}
 		}
-		// Red Hat, Debian, and Alpine ecosystems can be converted to semver ranges
-		isConvertibleEcosystem := strings.Contains(affected.Package.Ecosystem, "Red Hat") || strings.Contains(affected.Package.Ecosystem, "Debian") || strings.Contains(affected.Package.Ecosystem, "Alpine")
-		shouldConvertToSemver := false
 
 		if affected.Package.Purl != "" {
-			purl, err := packageurl.FromString(affected.Package.Purl)
-			if err != nil {
-				slog.Debug("could not parse purl", "purl", affected.Package.Purl, "err", err)
-				continue
-			}
-			qualifiersStr := purl.Qualifiers.String()
-
-			// iterate over all ranges
-			containsSemver := false
-			for _, r := range affected.Ranges {
-				if r.Type == "SEMVER" {
-					containsSemver = true
-				} else if r.Type == "ECOSYSTEM" && isConvertibleEcosystem {
-					shouldConvertToSemver = true
-				} else {
-					continue
+			// Use the shared helper function with ecosystem conversion enabled
+			bases := affectedComponentBaseFromAffected(affected)
+			for _, base := range bases {
+				affectedComponent := AffectedComponent{
+					ID:                 "",
+					Source:             "osv",
+					PurlWithoutVersion: base.PurlWithoutVersion,
+					Ecosystem:          base.Ecosystem,
+					Scheme:             base.Scheme,
+					Type:               base.Type,
+					Name:               base.Name,
+					Namespace:          base.Namespace,
+					Qualifiers:         base.Qualifiers,
+					Subpath:            base.Subpath,
+					Version:            base.Version,
+					SemverIntroduced:   base.SemverIntroduced,
+					SemverFixed:        base.SemverFixed,
+					VersionIntroduced:  base.VersionIntroduced,
+					VersionFixed:       base.VersionFixed,
+					CVE:                cves,
 				}
-				// iterate over all events
-				for i, e := range r.Events {
-					tmpE := e
-					if i%2 != 0 {
-						continue
-					}
-					introduced := tmpE.Introduced
-
-					// check if a fix does even exist
-					fixed := ""
-					if len(r.Events) != i+1 {
-						// there is a fix available
-						fixed = r.Events[i+1].Fixed
-					}
-
-					if shouldConvertToSemver {
-						introduced, err = normalize.ConvertToSemver(introduced)
-						if err != nil {
-							continue
-						}
-						fixed, err = normalize.ConvertToSemver(fixed)
-						if err != nil {
-							continue
-						}
-						containsSemver = true
-					}
-
-					var semverIntroducedPtr *string
-					var semverFixedPtr *string
-					semverIntroduced, err := normalize.ConvertToSemver(introduced)
-					if err == nil {
-						semverIntroducedPtr = &semverIntroduced
-					}
-					semverFixed, err := normalize.ConvertToSemver(fixed)
-					if err == nil {
-						semverFixedPtr = &semverFixed
-					}
-
-					// create the affected package
-					affectedComponent := AffectedComponent{
-						PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
-						Ecosystem:          affected.Package.Ecosystem,
-						Scheme:             "pkg",
-						Type:               purl.Type,
-						Name:               purl.Name,
-						Namespace:          &purl.Namespace,
-						Qualifiers:         &qualifiersStr,
-						Subpath:            &purl.Subpath,
-
-						Source: "osv",
-
-						SemverIntroduced: semverIntroducedPtr,
-						SemverFixed:      semverFixedPtr,
-
-						CVE: cves,
-					}
-					affectedComponents = append(affectedComponents, affectedComponent)
-				}
-			}
-
-			if !containsSemver {
-				notSemverVersionedComponents := make([]AffectedComponent, 0, len(affected.Ranges))
-				// create an affected package with a specific version
-				for _, v := range affected.Versions {
-					tmpV := v
-					affectedComponent := AffectedComponent{
-						PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
-						Ecosystem:          affected.Package.Ecosystem,
-						Scheme:             "pkg",
-						Type:               purl.Type,
-						Name:               purl.Name,
-						Namespace:          &purl.Namespace,
-						Qualifiers:         &qualifiersStr,
-						Subpath:            &purl.Subpath,
-						Version:            &tmpV,
-
-						Source: "osv",
-
-						CVE: cves,
-					}
-					notSemverVersionedComponents = append(notSemverVersionedComponents, affectedComponent)
-				}
-
-				// combine the affected components using ranges - This adds a layer of heuristic to it.
-				// affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
-
-				affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
+				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		} else {
-			for _, r := range affected.Ranges {
-				if r.Type != "GIT" {
-					continue
+			// Handle GIT ranges (no purl case)
+			bases := affectedComponentBaseFromGitRange(affected)
+			for _, base := range bases {
+				affectedComponent := AffectedComponent{
+					ID:                 "",
+					Source:             "osv",
+					PurlWithoutVersion: base.PurlWithoutVersion,
+					Ecosystem:          base.Ecosystem,
+					Scheme:             base.Scheme,
+					Type:               base.Type,
+					Name:               base.Name,
+					Version:            base.Version,
+					Namespace:          base.Namespace,
+					SemverIntroduced:   base.SemverIntroduced,
+					SemverFixed:        base.SemverFixed,
+					VersionIntroduced:  base.VersionIntroduced,
+					VersionFixed:       base.VersionFixed,
+					CVE:                cves,
 				}
-
-				// parse the repo as url
-				url, err := url.Parse(r.Repo)
-				if err != nil {
-					slog.Debug("could not parse repo url", "url", r.Repo, "err", err)
-					continue
-				}
-
-				if url.Host != "github.com" && url.Host != "gitlab.com" && url.Host != "bitbucket.org" {
-					// we currently dont support those.
-					continue
-				}
-				// remove the scheme
-				url.Scheme = ""
-				purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
-
-				// parse the purl to get the name and namespace
-				purlParsed, err := packageurl.FromString(purl)
-				if err != nil {
-					slog.Debug("could not parse purl", "purl", purl, "err", err)
-					continue
-				}
-
-				notPurlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
-				for _, v := range affected.Versions {
-					tmpV := v
-					affectedComponent := AffectedComponent{
-						PurlWithoutVersion: purl,
-						Ecosystem:          "GIT",
-						Scheme:             "pkg",
-						Type:               purlParsed.Type,
-						Name:               purlParsed.Name,
-						Version:            &tmpV,
-						Namespace:          &purlParsed.Namespace,
-						Source:             "osv",
-						CVE:                cves,
-					}
-					notPurlVersionedComponents = append(notPurlVersionedComponents, affectedComponent)
-				}
-				affectedComponents = append(affectedComponents, notPurlVersionedComponents...)
+				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
 	}

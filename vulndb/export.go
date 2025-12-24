@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected_component", "exploits"}
+var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected_component", "exploits", "malicious_packages", "malicious_affected_components"}
 
 // we are going to compare two tables to extract the diffs.
 // this means, for example for cve we need another cve table which holds the old state
