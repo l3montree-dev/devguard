@@ -119,8 +119,9 @@ func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
-// affectedComponentBaseFromAffected extracts common base component data from OSV affected entry
-// Set convertEcosystem=true for CVE processing to handle Red Hat, Debian, Alpine ecosystems
+// affectedComponentBaseFromAffected extracts common base component data from an OSV affected entry.
+// This helper is shared between malicious package and CVE processing; callers handle any ecosystem
+// conversion (e.g., for Red Hat, Debian, Alpine) before invoking it.
 func affectedComponentBaseFromAffected(affected dtos.Affected) []AffectedComponentBase {
 	purlStr := affected.Package.Purl
 
