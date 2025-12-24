@@ -55,8 +55,15 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, versio
 	// Build query using shared helper functions
 	query := r.db.Model(&models.MaliciousAffectedComponent{}).Where("purl = ?", ctx.SearchPurl)
 	query = BuildQualifierQuery(query, ctx.Qualifiers, ctx.Namespace)
-	query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
 
+	// Align version matching behavior with PurlComparer:
+	// - If VersionIsValid is not nil, perform an exact version match.
+	// - Otherwise, fall back to semver range matching.
+	if ctx.VersionIsValid != nil {
+		query = query.Where("version = ?", ctx.TargetVersion)
+	} else {
+		query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
+	}
 	err = query.Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
