@@ -123,31 +123,31 @@ func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
 // Set convertEcosystem=true for CVE processing to handle Red Hat, Debian, Alpine ecosystems
 func affectedComponentBaseFromAffected(affected dtos.Affected) []AffectedComponentBase {
 	purlStr := affected.Package.Purl
-	
+
 	// If no purl provided, construct it from ecosystem and name
 	if purlStr == "" {
 		if affected.Package.Ecosystem == "" || affected.Package.Name == "" {
 			return nil
 		}
-		
+
 		// Map ecosystem to purl type
 		ecosystemToPurlType := map[string]string{
-			"npm":   "npm",
-			"PyPI":  "pypi",
-			"RubyGems": "gem",
+			"npm":       "npm",
+			"PyPI":      "pypi",
+			"RubyGems":  "gem",
 			"crates.io": "cargo",
-			"Go": "golang",
+			"Go":        "golang",
 			"Packagist": "composer",
-			"NuGet": "nuget",
-			"Hex": "hex",
+			"NuGet":     "nuget",
+			"Hex":       "hex",
 		}
-		
+
 		purlType, ok := ecosystemToPurlType[affected.Package.Ecosystem]
 		if !ok {
 			// Try lowercase version
 			purlType = strings.ToLower(affected.Package.Ecosystem)
 		}
-		
+
 		purlStr = fmt.Sprintf("pkg:%s/%s", purlType, affected.Package.Name)
 	}
 
