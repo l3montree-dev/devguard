@@ -55,12 +55,22 @@ func NewMaliciousPackageChecker(
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
 func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
-	// make sure both tables are empty before loading
-	if err := c.repository.GetDB().Exec("DELETE FROM malicious_affected_components").Error; err != nil {
+	// make sure both tables are empty before loading, in a single transaction
+	tx := c.repository.GetDB().Begin()
+	if err := tx.Error; err != nil {
+		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
+	}
+
+	if err := tx.Exec("DELETE FROM malicious_affected_components").Error; err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to clear affected components table: %w", err)
 	}
-	if err := c.repository.GetDB().Exec("DELETE FROM malicious_packages").Error; err != nil {
+	if err := tx.Exec("DELETE FROM malicious_packages").Error; err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to clear packages table: %w", err)
+	}
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction for clearing tables: %w", err)
 	}
 
 	// Download the archive
