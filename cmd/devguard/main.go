@@ -103,7 +103,7 @@ func main() {
 	}
 
 	fx.New(
-		// fx.NopLogger,
+		fx.NopLogger,
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
 		fx.Provide(api.NewServer),
