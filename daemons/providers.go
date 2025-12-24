@@ -51,6 +51,7 @@ type DaemonRunner struct {
 	affectedComponentsRepository shared.AffectedComponentRepository
 	scanService                  shared.ScanService
 	leaderElector                shared.LeaderElector
+	maliciousPackageChecker      shared.MaliciousPackageChecker
 }
 
 // NewDaemonRunner creates a new daemon runner with injected dependencies
@@ -80,6 +81,7 @@ func NewDaemonRunner(
 	affectedComponentsRepository shared.AffectedComponentRepository,
 	scanService shared.ScanService,
 	leaderElector shared.LeaderElector,
+	maliciousPackageChecker shared.MaliciousPackageChecker,
 ) DaemonRunner {
 	return DaemonRunner{
 		db:                           db,
@@ -107,6 +109,7 @@ func NewDaemonRunner(
 		affectedComponentsRepository: affectedComponentsRepository,
 		scanService:                  scanService,
 		leaderElector:                leaderElector,
+		maliciousPackageChecker:      maliciousPackageChecker,
 	}
 }
 

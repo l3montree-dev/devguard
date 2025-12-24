@@ -219,7 +219,7 @@ func TestFromOSV(t *testing.T) {
 
 		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 2 {
-			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
+			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
 	})
 

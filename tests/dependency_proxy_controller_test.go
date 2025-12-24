@@ -39,7 +39,7 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 	}
 
 	// Create a malicious checker (can be nil for these tests)
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil, &testLeaderElector{})
 	require.NoError(t, err)
 
 	controller := controllers.NewDependencyProxyController(config, checker)
@@ -136,7 +136,7 @@ func TestDependencyProxyController_MaliciousPackageRemoval(t *testing.T) {
 		CacheDir: tempDir,
 	}
 
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil, &testLeaderElector{})
 	require.NoError(t, err)
 
 	controller := controllers.NewDependencyProxyController(config, checker)
@@ -162,7 +162,7 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 		CacheDir: tempDir,
 	}
 
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil, &testLeaderElector{})
 	require.NoError(t, err)
 
 	controller := controllers.NewDependencyProxyController(config, checker)
@@ -217,7 +217,7 @@ func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
 		CacheDir: tempDir,
 	}
 
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil, &testLeaderElector{})
 	require.NoError(t, err)
 
 	controller := controllers.NewDependencyProxyController(config, checker)
@@ -263,7 +263,7 @@ func TestDependencyProxyController_ParseNPMPackagePath(t *testing.T) {
 		CacheDir: tempDir,
 	}
 
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	checker, err := vulndb.NewMaliciousPackageChecker(nil, &testLeaderElector{})
 	require.NoError(t, err)
 
 	controller := controllers.NewDependencyProxyController(config, checker)

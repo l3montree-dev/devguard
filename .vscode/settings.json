@@ -25,5 +25,6 @@
     },
     "git.ignoredRepositories": [
         "malicious-packages"
-    ]
+    ],
+    "go.testTimeout": "300s"
 }

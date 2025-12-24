@@ -180,6 +180,10 @@ type AffectedComponentRepository interface {
 	DeleteAll(tx DB, ecosystem string) error
 }
 
+type MaliciousPackageChecker interface {
+	DownloadAndProcessDB() error
+}
+
 type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)

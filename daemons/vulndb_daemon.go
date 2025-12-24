@@ -28,5 +28,6 @@ func (runner DaemonRunner) UpdateVulnDB() error {
 		slog.Error("failed to update vulndb", "error", err)
 		return err
 	}
+
 	return nil
 }
