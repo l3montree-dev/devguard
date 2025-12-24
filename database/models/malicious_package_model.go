@@ -122,17 +122,42 @@ func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
 // affectedComponentBaseFromAffected extracts common base component data from OSV affected entry
 // Set convertEcosystem=true for CVE processing to handle Red Hat, Debian, Alpine ecosystems
 func affectedComponentBaseFromAffected(affected dtos.Affected) []AffectedComponentBase {
-	if affected.Package.Purl == "" {
-		return nil
+	purlStr := affected.Package.Purl
+	
+	// If no purl provided, construct it from ecosystem and name
+	if purlStr == "" {
+		if affected.Package.Ecosystem == "" || affected.Package.Name == "" {
+			return nil
+		}
+		
+		// Map ecosystem to purl type
+		ecosystemToPurlType := map[string]string{
+			"npm":   "npm",
+			"PyPI":  "pypi",
+			"RubyGems": "gem",
+			"crates.io": "cargo",
+			"Go": "golang",
+			"Packagist": "composer",
+			"NuGet": "nuget",
+			"Hex": "hex",
+		}
+		
+		purlType, ok := ecosystemToPurlType[affected.Package.Ecosystem]
+		if !ok {
+			// Try lowercase version
+			purlType = strings.ToLower(affected.Package.Ecosystem)
+		}
+		
+		purlStr = fmt.Sprintf("pkg:%s/%s", purlType, affected.Package.Name)
 	}
 
-	purl, err := packageurl.FromString(affected.Package.Purl)
+	purl, err := packageurl.FromString(purlStr)
 	if err != nil {
 		return nil
 	}
 
 	qualifiersStr := purl.Qualifiers.String()
-	purlWithoutVersion := strings.Split(affected.Package.Purl, "?")[0]
+	purlWithoutVersion := strings.Split(purlStr, "?")[0]
 
 	// Try processing ranges first
 	bases := processRanges(affected.Ranges, affected.Package.Ecosystem, purlWithoutVersion, purl, qualifiersStr)
@@ -158,19 +183,12 @@ func processRanges(ranges []dtos.Rng, ecosystem, purlWithoutVersion string, purl
 		case "SEMVER":
 			bases = append(bases, processSemverRange(r, ecosystem, purlWithoutVersion, purl, qualifiersStr)...)
 		case "ECOSYSTEM":
-			if isConvertibleToSemver(ecosystem) {
-				bases = append(bases, processEcosystemRange(r, ecosystem, purlWithoutVersion, purl, qualifiersStr)...)
-			}
+			// Try to process all ECOSYSTEM ranges - conversion will fail naturally if not compatible
+			bases = append(bases, processEcosystemRange(r, ecosystem, purlWithoutVersion, purl, qualifiersStr)...)
 		}
 	}
 
 	return bases
-}
-
-func isConvertibleToSemver(ecosystem string) bool {
-	return strings.Contains(ecosystem, "Red Hat") ||
-		strings.Contains(ecosystem, "Debian") ||
-		strings.Contains(ecosystem, "Alpine")
 }
 
 func processSemverRange(r dtos.Rng, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []AffectedComponentBase {

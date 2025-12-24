@@ -55,6 +55,13 @@ func NewMaliciousPackageChecker(
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
 func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
+	// make sure both tables are empty before loading
+	if err := c.repository.GetDB().Exec("DELETE FROM malicious_affected_components").Error; err != nil {
+		return fmt.Errorf("failed to clear affected components table: %w", err)
+	}
+	if err := c.repository.GetDB().Exec("DELETE FROM malicious_packages").Error; err != nil {
+		return fmt.Errorf("failed to clear packages table: %w", err)
+	}
 
 	// Download the archive
 	resp, err := http.Get(c.repoURL)
@@ -150,9 +157,6 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 				slog.Error("Failed to upsert packages batch", "error", err)
 			}
 			packages = packages[:0] // Reset slice
-		}
-
-		if len(affectedComponents) >= BatchSize*2 {
 			if err := c.repository.UpsertAffectedComponents(affectedComponents); err != nil {
 				slog.Error("Failed to upsert affected components batch", "error", err)
 			}

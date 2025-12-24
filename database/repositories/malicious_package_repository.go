@@ -16,10 +16,13 @@
 package repositories
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type MaliciousPackageRepository struct {
@@ -30,6 +33,10 @@ func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
 	return &MaliciousPackageRepository{
 		db: db,
 	}
+}
+
+func (r *MaliciousPackageRepository) GetDB() *gorm.DB {
+	return r.db
 }
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)
@@ -60,10 +67,32 @@ func (r *MaliciousPackageRepository) UpsertPackages(packages []models.MaliciousP
 	}
 
 	// Use ON CONFLICT to update if exists, insert if not
-	return r.db.Clauses(clause.OnConflict{
+	err := r.db.Session(
+		&gorm.Session{
+			Logger: logger.Discard,
+		},
+	).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&packages).Error
+
+	// If duplicate key error (cannot affect row a second time), split batch and retry
+	if err != nil && (strings.Contains(err.Error(), "cannot affect row a second time") ||
+		strings.Contains(err.Error(), "extended protocol limited to 65535 parameters")) {
+		// Split the batch in half and try again
+		half := len(packages) / 2
+		if half == 0 {
+			// Can't split further, skip this problematic entry
+			return nil
+		}
+		err = r.UpsertPackages(packages[:half])
+		if err != nil {
+			return err
+		}
+		err = r.UpsertPackages(packages[half:])
+	}
+
+	return err
 }
 
 func (r *MaliciousPackageRepository) UpsertAffectedComponents(components []models.MaliciousAffectedComponent) error {
@@ -71,10 +100,33 @@ func (r *MaliciousPackageRepository) UpsertAffectedComponents(components []model
 		return nil
 	}
 
-	return r.db.Clauses(clause.OnConflict{
+	// Use ON CONFLICT to update if exists, insert if not
+	err := r.db.Session(
+		&gorm.Session{
+			Logger: logger.Discard,
+		},
+	).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&components).Error
+
+	// If duplicate key error (cannot affect row a second time), split batch and retry
+	if err != nil && (strings.Contains(err.Error(), "cannot affect row a second time") ||
+		strings.Contains(err.Error(), "extended protocol limited to 65535 parameters")) {
+		// Split the batch in half and try again
+		half := len(components) / 2
+		if half == 0 {
+			// Can't split further, skip this problematic entry
+			return nil
+		}
+		err = r.UpsertAffectedComponents(components[:half])
+		if err != nil {
+			return err
+		}
+		err = r.UpsertAffectedComponents(components[half:])
+	}
+
+	return err
 }
 
 func (r *MaliciousPackageRepository) DeleteAll() error {
@@ -109,7 +161,7 @@ func (r *MaliciousPackageRepository) CountByEcosystem() (map[string]int64, error
 
 	counts := make(map[string]int64)
 	for _, r := range results {
-		counts[r.Ecosystem] = r.Count
+		counts[strings.ToLower(r.Ecosystem)] += r.Count
 	}
 
 	return counts, nil

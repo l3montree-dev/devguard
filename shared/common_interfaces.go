@@ -182,6 +182,7 @@ type AffectedComponentRepository interface {
 
 type MaliciousPackageChecker interface {
 	DownloadAndProcessDB() error
+	IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV)
 }
 
 type ComponentRepository interface {

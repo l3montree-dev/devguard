@@ -20,7 +20,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 )
 
@@ -43,14 +42,14 @@ type DependencyProxyConfig struct {
 }
 
 type DependencyProxyController struct {
-	maliciousChecker *vulndb.MaliciousPackageChecker
+	maliciousChecker shared.MaliciousPackageChecker
 	cacheDir         string
 	client           *http.Client
 }
 
 func NewDependencyProxyController(
 	config DependencyProxyConfig,
-	maliciousChecker *vulndb.MaliciousPackageChecker,
+	maliciousChecker shared.MaliciousPackageChecker,
 ) *DependencyProxyController {
 	return &DependencyProxyController{
 		maliciousChecker: maliciousChecker,
