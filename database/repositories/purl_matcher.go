@@ -85,3 +85,9 @@ func BuildVersionRangeQuery(db *gorm.DB, targetVersion, normalizedVersion string
 			Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion),
 	)
 }
+
+func BuildEmptyVersionQuery(db *gorm.DB) *gorm.DB {
+	return db.Where(
+		db.Session(&gorm.Session{NewDB: true}).Where("version IS NULL AND semver_introduced IS NULL AND semver_fixed IS NULL"),
+	)
+}

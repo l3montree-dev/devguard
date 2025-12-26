@@ -33,9 +33,6 @@ func ParsePurlForMatching(purl, version string) (*PurlMatchContext, error) {
 	targetVersion := version
 	if targetVersion == "" {
 		targetVersion = parsedPurl.Version
-		if targetVersion == "" {
-			return nil, nil // No version = no results
-		}
 	}
 
 	// Try to normalize the version to semantic versioning format

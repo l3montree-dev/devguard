@@ -61,10 +61,13 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, versio
 	// - Otherwise, fall back to semver range matching.
 	if ctx.VersionIsValid != nil {
 		query = query.Where("version = ?", ctx.TargetVersion)
-	} else {
+	} else if ctx.TargetVersion != "" || ctx.NormalizedVersion != "" {
 		query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
+	} else {
+		// no version at all - maybe the whole package is malicious
+		query = BuildEmptyVersionQuery(query)
 	}
-	err = query.Preload("MaliciousPackage").Find(&components).Error
+	err = query.Preload("MaliciousPackage").Debug().Find(&components).Error
 	return components, err
 }
 
