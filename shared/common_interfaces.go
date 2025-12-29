@@ -400,6 +400,7 @@ type ConfigRepository interface {
 
 type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
+	SaveBatchBestEffort(db DB, events []models.VulnEvent) error
 	Save(db DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)

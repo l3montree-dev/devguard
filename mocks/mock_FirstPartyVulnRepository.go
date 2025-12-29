@@ -1431,6 +1431,63 @@ func (_c *FirstPartyVulnRepository_SaveBatch_Call) RunAndReturn(run func(tx shar
 	return _c
 }
 
+// SaveBatchBestEffort provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) SaveBatchBestEffort(tx shared.DB, ts []models.FirstPartyVuln) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.FirstPartyVuln) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type FirstPartyVulnRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - tx shared.DB
+//   - ts []models.FirstPartyVuln
+func (_e *FirstPartyVulnRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
+	return &FirstPartyVulnRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+}
+
+func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.FirstPartyVuln)) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) Return(err error) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.FirstPartyVuln) error) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) Transaction(txFunc func(shared.DB) error) error {
 	ret := _mock.Called(txFunc)

@@ -111,8 +111,8 @@ func (_c *AssetVersionService_BuildOpenVeX_Call) RunAndReturn(run func(asset mod
 }
 
 // BuildSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
-	ret := _mock.Called(asset, assetVersion, artifactName, orgName, components)
+func (_mock *AssetVersionService) BuildSBOM(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
+	ret := _mock.Called(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, components)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildSBOM")
@@ -120,18 +120,18 @@ func (_mock *AssetVersionService) BuildSBOM(asset models.Asset, assetVersion mod
 
 	var r0 *normalize.CdxBom
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, models.AssetVersion, string, string, []models.ComponentDependency) (*normalize.CdxBom, error)); ok {
-		return returnFunc(asset, assetVersion, artifactName, orgName, components)
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, string, models.Asset, models.AssetVersion, string, []models.ComponentDependency) (*normalize.CdxBom, error)); ok {
+		return returnFunc(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, components)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, models.AssetVersion, string, string, []models.ComponentDependency) *normalize.CdxBom); ok {
-		r0 = returnFunc(asset, assetVersion, artifactName, orgName, components)
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, string, models.Asset, models.AssetVersion, string, []models.ComponentDependency) *normalize.CdxBom); ok {
+		r0 = returnFunc(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, components)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.CdxBom)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.Asset, models.AssetVersion, string, string, []models.ComponentDependency) error); ok {
-		r1 = returnFunc(asset, assetVersion, artifactName, orgName, components)
+	if returnFunc, ok := ret.Get(1).(func(string, string, string, string, models.Asset, models.AssetVersion, string, []models.ComponentDependency) error); ok {
+		r1 = returnFunc(frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, components)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -144,24 +144,27 @@ type AssetVersionService_BuildSBOM_Call struct {
 }
 
 // BuildSBOM is a helper method to define mock.On call
+//   - frontendURL string
+//   - orgName string
+//   - orgSlug string
+//   - projectSlug string
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - artifactName string
-//   - orgName string
 //   - components []models.ComponentDependency
-func (_e *AssetVersionService_Expecter) BuildSBOM(asset interface{}, assetVersion interface{}, artifactName interface{}, orgName interface{}, components interface{}) *AssetVersionService_BuildSBOM_Call {
-	return &AssetVersionService_BuildSBOM_Call{Call: _e.mock.On("BuildSBOM", asset, assetVersion, artifactName, orgName, components)}
+func (_e *AssetVersionService_Expecter) BuildSBOM(frontendURL interface{}, orgName interface{}, orgSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, components interface{}) *AssetVersionService_BuildSBOM_Call {
+	return &AssetVersionService_BuildSBOM_Call{Call: _e.mock.On("BuildSBOM", frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, components)}
 }
 
-func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency)) *AssetVersionService_BuildSBOM_Call {
+func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency)) *AssetVersionService_BuildSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 string
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(string)
 		}
-		var arg1 models.AssetVersion
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(models.AssetVersion)
+			arg1 = args[1].(string)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -171,9 +174,21 @@ func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(asset models.Asset, a
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 []models.ComponentDependency
+		var arg4 models.Asset
 		if args[4] != nil {
-			arg4 = args[4].([]models.ComponentDependency)
+			arg4 = args[4].(models.Asset)
+		}
+		var arg5 models.AssetVersion
+		if args[5] != nil {
+			arg5 = args[5].(models.AssetVersion)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		var arg7 []models.ComponentDependency
+		if args[7] != nil {
+			arg7 = args[7].([]models.ComponentDependency)
 		}
 		run(
 			arg0,
@@ -181,6 +196,9 @@ func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(asset models.Asset, a
 			arg2,
 			arg3,
 			arg4,
+			arg5,
+			arg6,
+			arg7,
 		)
 	})
 	return _c
@@ -191,7 +209,7 @@ func (_c *AssetVersionService_BuildSBOM_Call) Return(cdxBom *normalize.CdxBom, e
 	return _c
 }
 
-func (_c *AssetVersionService_BuildSBOM_Call) RunAndReturn(run func(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)) *AssetVersionService_BuildSBOM_Call {
+func (_c *AssetVersionService_BuildSBOM_Call) RunAndReturn(run func(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error)) *AssetVersionService_BuildSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

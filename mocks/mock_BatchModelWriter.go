@@ -206,3 +206,60 @@ func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) RunAndReturn(run func(tx Tx, t
 	_c.Call.Return(run)
 	return _c
 }
+
+// SaveBatchBestEffort provides a mock function for the type BatchModelWriter
+func (_mock *BatchModelWriter[T, Tx]) SaveBatchBestEffort(tx Tx, ts []T) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BatchModelWriter_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type BatchModelWriter_SaveBatchBestEffort_Call[T utils.Tabler, Tx any] struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - tx Tx
+//   - ts []T
+func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatchBestEffort(tx interface{}, ts interface{}) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+	return &BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+}
+
+func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) Run(run func(tx Tx, ts []T)) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 Tx
+		if args[0] != nil {
+			arg0 = args[0].(Tx)
+		}
+		var arg1 []T
+		if args[1] != nil {
+			arg1 = args[1].([]T)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) Return(err error) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+	_c.Call.Return(run)
+	return _c
+}

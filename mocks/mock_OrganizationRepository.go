@@ -948,6 +948,63 @@ func (_c *OrganizationRepository_SaveBatch_Call) RunAndReturn(run func(tx shared
 	return _c
 }
 
+// SaveBatchBestEffort provides a mock function for the type OrganizationRepository
+func (_mock *OrganizationRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Org) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Org) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrganizationRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type OrganizationRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - tx shared.DB
+//   - ts []models.Org
+func (_e *OrganizationRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *OrganizationRepository_SaveBatchBestEffort_Call {
+	return &OrganizationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+}
+
+func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.Org
+		if args[1] != nil {
+			arg1 = args[1].([]models.Org)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Return(err error) *OrganizationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrganizationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type OrganizationRepository
 func (_mock *OrganizationRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)

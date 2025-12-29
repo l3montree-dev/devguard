@@ -16,6 +16,10 @@
 package repositories
 
 import (
+	"errors"
+
+	"github.com/in-toto/go-witness/log"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -68,6 +72,40 @@ func (g *GormRepository[ID, T]) Upsert(t *[]*T, conflictingColumns []clause.Colu
 	}
 
 	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
+}
+
+func (g *GormRepository[ID, T]) SaveBatchBestEffort(
+	tx *gorm.DB,
+	ts []T,
+) error {
+	if len(ts) == 0 {
+		return nil
+	}
+
+	err := g.GetDB(tx).Save(ts).Error
+	if err == nil {
+		return nil
+	}
+
+	// Base case: single row
+	if len(ts) == 1 {
+		if isIgnorableUpsertError(err) {
+			log.Warn("dropping row during best-effort upsert", "row", ts[0], "err", err)
+			return nil
+		}
+		return err
+	}
+
+	// Split and retry
+	half := len(ts) / 2
+	if half == 0 {
+		return err
+	}
+
+	if err := g.SaveBatchBestEffort(tx, ts[:half]); err != nil {
+		return err
+	}
+	return g.SaveBatchBestEffort(tx, ts[half:])
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
@@ -150,4 +188,18 @@ func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
 func (g *GormRepository[ID, T]) Activate(tx *gorm.DB, id ID) error {
 	var t T
 	return g.GetDB(tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
+}
+
+func isIgnorableUpsertError(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23503": // FK violation
+			return true
+		case "23505": // unique violation (optional)
+			return true
+		}
+	}
+
+	return false
 }
