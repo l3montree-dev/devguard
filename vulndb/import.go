@@ -697,7 +697,7 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 		slog.Info("Dropping orphaned table", "table", tableName)
 		_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName))
 		if err != nil {
-			slog.Error("Failed to drop orphaned table", "table", tableName, "error", err)
+			monitoring.Alert("failed to drop orphaned table", fmt.Errorf("table: %s, error: %w", tableName, err))
 			// Continue with other tables even if one fails
 		} else {
 			slog.Info("Successfully dropped orphaned table", "table", tableName)
