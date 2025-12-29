@@ -29,6 +29,7 @@ func NewVulndbCommand() *cobra.Command {
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportIncrementalCommand())
 	vulndbCmd.AddCommand(newAliasMappingCommand())
+	vulndbCmd.AddCommand(newCleanupCommand())
 	return &vulndbCmd
 }
 
@@ -72,6 +73,28 @@ func migrateDB(db shared.DB) {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
+}
+
+func newCleanupCommand() *cobra.Command {
+	cleanupCmd := &cobra.Command{
+		Use:   "cleanup",
+		Short: "Cleans up orphaned vulndb tables older than specified hours",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := shared.LoadConfig(); err != nil {
+				slog.Error("could not load config", "error", err)
+				return
+			}
+			if err := vulndb.CleanupOrphanedTables(); err != nil {
+				slog.Error("failed to cleanup orphaned tables", "error", err)
+				return
+			}
+
+			slog.Info("successfully cleaned up orphaned tables older than 24 hours")
+		},
+	}
+
+	return cleanupCmd
 }
 
 func newImportCVECommand() *cobra.Command {
