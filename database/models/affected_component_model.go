@@ -19,12 +19,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"math"
-	"strconv"
+	"log/slog"
+	"net/url"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 
 	"gorm.io/gorm"
 )
@@ -150,179 +152,178 @@ func AffectedComponentFromOSV(osv dtos.OSV) []AffectedComponent {
 	return affectedComponents
 }
 
-func versionsToRange(versions []string) [][2]string {
-	if len(versions) == 0 {
-		return [][2]string{}
+// affectedComponentBaseFromAffected extracts common base component data from an OSV affected entry.
+// This helper is shared between malicious package and CVE processing; callers handle any ecosystem
+// conversion (e.g., for Red Hat, Debian, Alpine) before invoking it.
+func affectedComponentBaseFromAffected(affected dtos.Affected) []AffectedComponentBase {
+	purlStr := affected.Package.Purl
+
+	// If no purl provided, construct it from ecosystem and name
+	if purlStr == "" {
+		if affected.Package.Ecosystem == "" || affected.Package.Name == "" {
+			return nil
+		}
+
+		// Map ecosystem to purl type
+		ecosystemToPurlType := map[string]string{
+			"npm":       "npm",
+			"PyPI":      "pypi",
+			"RubyGems":  "gem",
+			"crates.io": "cargo",
+			"Go":        "golang",
+			"Packagist": "composer",
+			"NuGet":     "nuget",
+			"Hex":       "hex",
+		}
+
+		purlType, ok := ecosystemToPurlType[affected.Package.Ecosystem]
+		if !ok {
+			// Try lowercase version
+			purlType = strings.ToLower(affected.Package.Ecosystem)
+		}
+
+		purlStr = fmt.Sprintf("pkg:%s/%s", purlType, affected.Package.Name)
 	}
 
-	// try to fix all versions - if we cannot fix using semver - we cant do anything
-	semvers := make([]string, 0)
-	for _, v := range versions {
-		fixedVersion, err := normalize.ConvertToSemver(v)
+	purl, err := packageurl.FromString(purlStr)
+	if err != nil {
+		return nil
+	}
+
+	qualifiersStr := purl.Qualifiers.String()
+	purlWithoutVersion := strings.Split(purlStr, "?")[0]
+
+	// Try processing ranges first
+	bases := processRanges(affected.Ranges, affected.Package.Ecosystem, purlWithoutVersion, purl, qualifiersStr)
+
+	// If no ranges produced results, fall back to explicit versions
+	if len(bases) == 0 && len(affected.Versions) > 0 {
+		bases = processVersions(affected.Versions, affected.Package.Ecosystem, purlWithoutVersion, purl, qualifiersStr)
+	}
+
+	// If still nothing, all versions are affected
+	if len(bases) == 0 {
+		bases = []AffectedComponentBase{createBase(purlWithoutVersion, affected.Package.Ecosystem, purl, qualifiersStr, nil, nil, nil)}
+	}
+
+	return bases
+}
+
+func processRanges(ranges []dtos.Rng, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []AffectedComponentBase {
+	bases := make([]AffectedComponentBase, 0)
+
+	for _, r := range ranges {
+		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
+			// Try to process all ECOSYSTEM ranges - conversion will fail naturally if not compatible
+			bases = append(bases, processRange(r, ecosystem, purlWithoutVersion, purl, qualifiersStr)...)
+		}
+	}
+
+	return bases
+}
+
+func processRange(r dtos.Rng, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []AffectedComponentBase {
+	bases := make([]AffectedComponentBase, 0)
+
+	for i := 0; i < len(r.Events); i += 2 {
+		introduced := r.Events[i].Introduced
+		fixed := ""
+		if i+1 < len(r.Events) {
+			fixed = r.Events[i+1].Fixed
+		}
+
+		semverIntroduced, err := normalize.ConvertToSemver(introduced)
 		if err != nil {
 			continue
 		}
-		semvers = append(semvers, fixedVersion)
-	}
 
-	// now we only have semver versions
-	// sort the semvers
-	normalize.SemverSort(semvers)
-
-	// lets check if we can create a range
-	// split the semver in each part using a regex
-	// and then compare the parts
-	var startVersion string
-	var cursor string
-	cursorMatches := make([]string, 5)
-	ranges := make([][2]string, 0)
-	for _, v := range semvers {
-		if startVersion == "" {
-			startVersion = v
-			cursor = v
-			cursorMatches = normalize.ValidSemverRegex.FindStringSubmatch(v)
-			continue
-		}
-		matches := normalize.ValidSemverRegex.FindStringSubmatch(v)
-
-		// Extract the parts using indices
-		major := matches[1]
-		minor := matches[2]
-		patch := matches[3]
-		prerelease := matches[4] // Can be empty if not present
-		// buildMetadata := matches[5] // Can be empty if not present
-
-		if safeStringToInt(major) == safeStringToInt(cursorMatches[1])+1 {
-			// the major version is different
-			// we NEVER want to expand a range over a major version
-			ranges = append(ranges, [2]string{startVersion, cursor})
-			startVersion = v
-			cursor = v
-			cursorMatches = matches
-			continue
-		}
-
-		// major versions are the same
-		// maybe minor changed a bit
-		if safeStringToInt(minor) == safeStringToInt(cursorMatches[2])+1 {
-			// minor changed +1
-			if patch == "0" {
-				// patch is 0 - we can update the cursor
-				cursor = v
-				cursorMatches = matches
+		var semverFixed *string
+		if fixed != "" {
+			converted, err := normalize.ConvertToSemver(fixed)
+			if err != nil {
 				continue
 			}
+			semverFixed = &converted
+		}
 
-			// patch is not 0 - we cannot further expand it
-			ranges = append(ranges, [2]string{startVersion, cursor})
-			startVersion = v
-			cursor = v
-			cursorMatches = matches
+		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, &semverIntroduced, semverFixed, nil))
+	}
+
+	return bases
+}
+
+func processVersions(versions []string, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []AffectedComponentBase {
+	bases := make([]AffectedComponentBase, 0, len(versions))
+
+	for _, v := range versions {
+		version := v
+		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, nil, nil, &version))
+	}
+
+	return bases
+}
+
+func createBase(purlWithoutVersion, ecosystem string, purl packageurl.PackageURL, qualifiersStr string, semverIntroduced, semverFixed, version *string) AffectedComponentBase {
+	return AffectedComponentBase{
+		PurlWithoutVersion: purlWithoutVersion,
+		Ecosystem:          ecosystem,
+		Scheme:             "pkg",
+		Type:               purl.Type,
+		Name:               purl.Name,
+		Namespace:          &purl.Namespace,
+		Qualifiers:         &qualifiersStr,
+		Subpath:            &purl.Subpath,
+		SemverIntroduced:   semverIntroduced,
+		SemverFixed:        semverFixed,
+		Version:            version,
+	}
+}
+
+// affectedComponentBaseFromGitRange extracts base component data from GIT ranges (used for CVEs)
+func affectedComponentBaseFromGitRange(affected dtos.Affected) []AffectedComponentBase {
+	bases := make([]AffectedComponentBase, 0)
+
+	for _, r := range affected.Ranges {
+		if r.Type != "GIT" {
 			continue
 		}
 
-		// minor versions are the same
-		// maybe patch changed a bit
-		if safeStringToInt(patch) == safeStringToInt(cursorMatches[3])+1 {
-			// patch changed +1
-			// check if prerelease was empty
-			if cursorMatches[4] == "" {
-				// this is enough for now: TODO Check if this heuristic holds
-				cursor = v
-				cursorMatches = matches
-				continue
+		// parse the repo as url
+		url, err := url.Parse(r.Repo)
+		if err != nil {
+			slog.Debug("could not parse repo url", "url", r.Repo, "err", err)
+			continue
+		}
+
+		if url.Host != "github.com" && url.Host != "gitlab.com" && url.Host != "bitbucket.org" {
+			// we currently dont support those.
+			continue
+		}
+		// remove the scheme
+		url.Scheme = ""
+		purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
+
+		// parse the purl to get the name and namespace
+		purlParsed, err := packageurl.FromString(purl)
+		if err != nil {
+			slog.Debug("could not parse purl", "purl", purl, "err", err)
+			continue
+		}
+
+		for _, v := range affected.Versions {
+			tmpV := v
+			base := AffectedComponentBase{
+				PurlWithoutVersion: purl,
+				Ecosystem:          "GIT",
+				Scheme:             "pkg",
+				Type:               purlParsed.Type,
+				Name:               purlParsed.Name,
+				Version:            &tmpV,
+				Namespace:          &purlParsed.Namespace,
 			}
-			// prerelease wasnt empty - thus we expected a full release
-			// no further expansion possible
-			ranges = append(ranges, [2]string{startVersion, cursor})
-			startVersion = v
-			cursor = v
-			cursorMatches = matches
-			continue
-		}
-
-		// if prerelease is empty now - this is the next version
-		if cursorMatches[4] != "" && prerelease == "" {
-			// it is the next version - this is enough right now
-			cursor = v
-			cursorMatches = matches
-			continue
-		}
-
-		// check if the "next prerelease version"
-		diffA, diffB := stringDiff(prerelease, cursorMatches[4])
-		// remove all "non" number character (a lot should already be done by stringDiff)
-		prereleaseA := removeNonNumberChars(diffA)
-		prereleaseB := removeNonNumberChars(diffB)
-
-		// check if the prerelease is the next version
-		if prereleaseA == prereleaseB+1 {
-			// it is the next version - this is enough right now
-			cursor = v
-			cursorMatches = matches
-			continue
-		}
-
-		// thats it - we cannot expand the range a range
-		ranges = append(ranges, [2]string{startVersion, cursor})
-		startVersion = v
-		cursor = v
-		cursorMatches = matches
-	}
-
-	// collect the last range
-	ranges = append(ranges, [2]string{startVersion, cursor})
-
-	return ranges
-}
-
-func removeNonNumberChars(s string) int {
-	// remove all non number characters
-	// we can do this by iterating over the string
-	// and checking if the character is a number
-	// if it is not a number we remove it
-	// we can do this by creating a new string
-	// and appending the character if it is a number
-	// and then returning the new string
-	newString := ""
-	for i := range s {
-		if s[i] >= '0' && s[i] <= '9' {
-			newString += string(s[i])
-		}
-	}
-	return safeStringToInt(newString)
-}
-
-func stringDiff(a, b string) (string, string) {
-	onlyA := ""
-	onlyB := ""
-
-	for i := range a {
-		if i >= len(b) {
-			onlyA += string(a[i])
-			continue
-		}
-
-		if a[i] != b[i] {
-			onlyA += string(a[i])
-			onlyB += string(b[i])
+			bases = append(bases, base)
 		}
 	}
 
-	// maybe there is a difference in length
-	if len(a) > len(b) {
-		onlyA += a[len(b):]
-	} else if len(b) > len(a) {
-		onlyB += b[len(a):]
-	}
-
-	return onlyA, onlyB
-}
-
-func safeStringToInt(s string) int {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return -math.MaxInt64
-	}
-	return i
+	return bases
 }
