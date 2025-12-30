@@ -306,6 +306,47 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 	return nil
 }
 
+func makeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `
+-- Drop the foreign key constraint first
+ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
+
+-- Set cve_id to NULL where the referenced CVE doesn't exist anymore
+DELETE FROM dependency_vulns 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
+);
+
+-- Now recreate the foreign key constraint
+ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
+  FOREIGN KEY (cve_id) REFERENCES cves(cve);
+
+-- Drop any foreign key constraint (if it exists)
+ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
+
+-- Delete orphaned rows where the CVE no longer exists
+DELETE FROM cve_affected_component 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
+);
+
+-- Recreate the foreign key constraint
+ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
+  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+
+
+ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
+
+DELETE FROM weaknesses 
+WHERE NOT EXISTS (
+   SELECT 1 FROM cves WHERE cves.cve = weaknesses.cve_id
+);
+
+ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
+ FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
+	return err
+}
+
 func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string) error {
 	ctx := context.Background()
 	pool, err := establishConnection(ctx)
@@ -361,43 +402,9 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
-	_, err = tx.Exec(ctx, `
--- Drop the foreign key constraint first
-ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
 
--- Set cve_id to NULL where the referenced CVE doesn't exist anymore
-DELETE FROM dependency_vulns 
-WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
-);
+	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
--- Now recreate the foreign key constraint
-ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
-  FOREIGN KEY (cve_id) REFERENCES cves(cve);
-
--- Drop any foreign key constraint (if it exists)
-ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
-
--- Delete orphaned rows where the CVE no longer exists
-DELETE FROM cve_affected_component 
-WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
-);
-
--- Recreate the foreign key constraint
-ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
-  FOREIGN KEY (cvecve) REFERENCES cves(cve);
-
-
-ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
-
-DELETE FROM weaknesses 
-WHERE NOT EXISTS (
-   SELECT 1 FROM cves WHERE cves.cve = weaknesses.cve_id
-);
-
-ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
- FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
 	if err != nil {
 		return tx.Rollback(ctx)
 	}
@@ -691,6 +698,22 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 
 	// Filter tables based on age
 	tablesToDrop = filterTablesToCleanup(tablesToDrop, olderThanHours)
+	if len(tablesToDrop) == 0 {
+		slog.Info("No orphaned tables found for cleanup")
+		return nil
+	}
+	// make sure the foreign keys are not violated before dropping tables
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		monitoring.Alert("failed to begin transaction for foreign key check", err)
+		return fmt.Errorf("failed to begin transaction for foreign key check: %w", err)
+	}
+
+	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	if err != nil {
+		monitoring.Alert("failed to ensure foreign keys before dropping orphaned tables", err)
+		return fmt.Errorf("failed to ensure foreign keys before dropping orphaned tables: %w", err)
+	}
 
 	// Drop the orphaned tables
 	for _, tableName := range tablesToDrop {
