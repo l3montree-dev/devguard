@@ -35,7 +35,7 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 		distro := qualifier.Value
 
 		switch namespace {
-		case "debian":
+		case "deb", "debian":
 			// Capitalize the first letter of each word in the distro string (e.g., "debian-13.2" -> "Debian-13.2")
 			distro = cases.Title(language.English).String(distro)
 			// Parse distro string (e.g., "debian-13.2" -> "Debian:13")
@@ -48,7 +48,7 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 
 				query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")
 			}
-		case "alpine":
+		case "apk", "alpine":
 			// Only major and minor versions are used from the distro qualifier.
 			// Example: "pkg:apk/alpine/curl@8.14.1-r2?arch=aarch64&distro=3.22.2" -> "Alpine:v3.22"
 			parts := strings.Split(distro, ".")
