@@ -1,7 +1,6 @@
 package dtos
 
 import (
-	"strings"
 	"time"
 )
 
@@ -44,36 +43,4 @@ type OSV struct {
 		Type  string `json:"type"`
 		Score string `json:"score"`
 	} `json:"severity"`
-}
-
-func (osv OSV) GetAssociatedCVEs() []string {
-	cves := make([]string, 0)
-	for _, alias := range osv.Aliases {
-		if strings.HasPrefix(alias, "CVE-") {
-			cves = append(cves, alias)
-		}
-	}
-
-	for _, upstream := range osv.Upstream {
-		if strings.HasPrefix(upstream, "CVE-") {
-			cves = append(cves, upstream)
-		}
-	}
-
-	// check if the osv itself is a cve
-	if strings.HasPrefix(osv.ID, "CVE-") {
-		cves = append(cves, osv.ID)
-	}
-
-	// check if its related to a cve
-	for _, related := range osv.Related {
-		if strings.HasPrefix(related, "CVE-") {
-			cves = append(cves, related)
-		}
-	}
-
-	return cves
-}
-func (osv OSV) IsCVE() bool {
-	return len(osv.GetAssociatedCVEs()) > 0
 }

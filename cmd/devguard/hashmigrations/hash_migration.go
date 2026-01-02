@@ -1,4 +1,4 @@
-package vulndb
+package hashmigrations
 
 import (
 	"fmt"
@@ -6,9 +6,12 @@ import (
 	"strconv"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"gorm.io/gorm"
 )
 
@@ -192,6 +195,48 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 			}
 		}
 	}
+
+	return nil
+}
+
+// this function handles the migration for importing new CVEs from the OSV.
+// existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
+func runCVEHashMigration(db *gorm.DB) error {
+	slog.Info("start running cve migration...")
+
+	// before importing the new CVEs we need to make sure that we do not get foreign key errors, for dependency_vulns which CVE does not exist anymore
+	err := db.Exec(`ALTER TABLE dependency_vulns 
+					DROP CONSTRAINT fk_dependency_vulns_cve`).Error
+	if err != nil {
+		slog.Error("could not drop foreign key constraint")
+		return err
+	}
+
+	defer func() {
+		// make sure to reenable the foreign key constraint as cleanup
+		err := db.Exec(`ALTER TABLE ONLY public.dependency_vulns
+    					ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES public.cves(cve);`).Error
+		if err != nil {
+			panic(fmt.Sprintf("fatal error: could not reenable foreign key constraint fk_dependency_vulns_cve on table dependency_vulns, with internal error: %s", err.Error()))
+		}
+	}()
+
+	// import the new VulnDB state, containing the (new) CVEs from the OSV database
+	cveRepository := repositories.NewCVERepository(db)
+	cweRepository := repositories.NewCWERepository(db)
+	exploitsRepository := repositories.NewExploitRepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	configService := services.NewConfigService(db)
+	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+
+	err = v.ImportFromDiff(nil)
+	if err != nil {
+		slog.Error("error when trying to import with diff files", "err", err)
+	}
+
+	// now we need to scan everything once more to update the dependencyVulns on the way
+
+	//daemon := fx.Invoke(func(daemonRunner shared.DaemonRunner) {})
 
 	return nil
 }

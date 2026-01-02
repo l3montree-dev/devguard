@@ -451,8 +451,22 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 			}
 		}
 	}
-
 	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
+}
+
+func chooseCVE(existingCVE *string, currentCVEs []string) (cveChoice string, err error) {
+	if existingCVE != nil {
+		currentCVEFoundAgain := slices.Contains(currentCVEs, *existingCVE)
+		if currentCVEFoundAgain {
+			return *existingCVE, nil
+		}
+	}
+	bestFit := determineBestCVEFit(currentCVEs)
+	return bestFit, nil
+}
+
+func determineBestCVEFit(cves []string) string {
+	return cves[0]
 }
 
 type Diffable interface {
@@ -612,14 +626,10 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State != dtos.VulnStateFixed
-	})
-
 	// remove all fixed dependencyVulns from the existing dependencyVulns
-	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State != dtos.VulnStateFixed
-	})
+	var filterFixed = func(dependencyVuln models.DependencyVuln) bool { return dependencyVuln.State != dtos.VulnStateFixed }
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
+	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
 
 	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them

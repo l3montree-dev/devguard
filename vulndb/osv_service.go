@@ -19,7 +19,6 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -31,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	gocvss30 "github.com/pandatix/go-cvss/30"
 	gocvss40 "github.com/pandatix/go-cvss/40"
@@ -38,16 +38,18 @@ import (
 )
 
 type osvService struct {
-	httpClient            *http.Client
-	affectedCmpRepository shared.AffectedComponentRepository
-	cveRepository         shared.CveRepository
+	httpClient                *http.Client
+	affectedCmpRepository     shared.AffectedComponentRepository
+	cveRepository             shared.CveRepository
+	cveRelationshipRepository shared.CVERelationshipRepository
 }
 
-func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository) osvService {
+func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository) osvService {
 	return osvService{
-		httpClient:            &http.Client{},
-		affectedCmpRepository: affectedCmpRepository,
-		cveRepository:         cveRepository,
+		httpClient:                &http.Client{},
+		affectedCmpRepository:     affectedCmpRepository,
+		cveRepository:             cveRepository,
+		cveRelationshipRepository: cveRelationshipRepository,
 	}
 }
 
@@ -125,39 +127,6 @@ func (s osvService) getEcosystems() ([]string, error) {
 	})
 
 	return ecosystems, nil
-}
-
-func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) {
-	resp, err := s.httpClient.Get(fmt.Sprintf("https://api.osv.dev/v1/vulns/%s", cveID))
-
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cve")
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("could not get cve")
-	}
-
-	defer resp.Body.Close()
-	var osv dtos.OSV
-	err = json.NewDecoder(resp.Body).Decode(&osv)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "could not decode cve")
-	}
-
-	if !osv.IsCVE() {
-		return nil, errors.New("not a cve")
-	}
-
-	affectedComponents := models.AffectedComponentsFromOSV(&osv)
-
-	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not save affected packages")
-	}
-
-	return affectedComponents, nil
 }
 
 const numOfGoRoutines int = 10
@@ -247,6 +216,15 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		// first build the CVE based on the OSV and save it to the db
 		tx := s.cveRepository.Begin()
 
+		relations := transformer.OSVToCVERelationships(&osv)
+
+		err = s.cveRelationshipRepository.SaveBatch(tx, relations)
+		if err != nil {
+			slog.Error("could not save cve relation", "error", err)
+			tx.Rollback()
+			continue
+		}
+
 		newCVE := OSVToCVE(&osv)
 
 		err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
@@ -256,7 +234,7 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 			continue
 		}
 
-		affectedComponents := models.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 		// then create the affected components
 		err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(tx, affectedComponents)
@@ -286,15 +264,6 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 	} else {
 		// if we cannot parse a CVSS score we save the CVE with a CVSS score of -1
 		cve.CVSS = float32(-1)
-	}
-
-	if !strings.HasPrefix(osv.ID, "CVE-") {
-		// if its not a CVE itself we want to add additional information about related CVEs
-		associatedCVEs := osv.GetAssociatedCVEs()
-		// clean up statistics by removing entries with no associations
-		if len(associatedCVEs) > 0 {
-			cve.References = strings.Join(associatedCVEs, ",")
-		}
 	}
 
 	cve.CVE = osv.ID

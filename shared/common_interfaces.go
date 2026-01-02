@@ -523,6 +523,11 @@ type ComponentService interface {
 	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
 }
 
+type CVERelationshipRepository interface {
+	utils.Repository[string, models.CVERelationShip, DB]
+	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationShip, error)
+}
+
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream dtos.UpstreamState) error
 	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState) (models.VulnEvent, error)

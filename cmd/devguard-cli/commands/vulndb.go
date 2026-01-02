@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard/hashmigrations"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/services"
@@ -24,7 +24,6 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
-	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportIncrementalCommand())
@@ -64,52 +63,13 @@ func migrateDB(db shared.DB) {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := hashmigrations.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-}
-
-func newImportCVECommand() *cobra.Command {
-	importCmd := &cobra.Command{
-		Use:   "import-cve",
-		Short: "Will import the vulnerability database",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			shared.LoadConfig() // nolint
-			db, err := shared.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return
-			}
-
-			migrateDB(db)
-
-			cveID := args[0]
-			cveID = strings.TrimSpace(strings.ToUpper(cveID))
-			// check if first argument is valid cve
-			if !isValidCVE(cveID) {
-				slog.Error("invalid cve id", "cve", cveID)
-				return
-			}
-
-			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db), repositories.NewCVERepository(db))
-
-			// the osv database provides additional information about affected packages
-			affectedPackages, err := osvService.ImportCVE(cveID)
-			if err != nil {
-				slog.Error("could not import cve from osv", "err", err)
-				return
-			}
-
-			slog.Info("successfully imported affected packages", "cveID", cveID, "affectedPackages", len(affectedPackages))
-		},
-	}
-
-	return importCmd
 }
 
 func newImportCommand() *cobra.Command {
@@ -132,9 +92,6 @@ func newImportCommand() *cobra.Command {
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
-			for _, arg := range args {
-				slog.Info(arg)
-			}
 
 			err = v.ImportFromDiff(nil)
 			if err != nil {
@@ -172,7 +129,7 @@ func newSyncCommand() *cobra.Command {
 
 			// epssService := vulndb.NewEPSSService(cveRepository)
 
-			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			// debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 

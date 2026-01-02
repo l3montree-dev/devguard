@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package tests
 
 import (
 	"encoding/json"
@@ -21,7 +21,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +32,7 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{},
 		}
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -47,7 +49,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -64,7 +66,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -93,7 +95,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
@@ -166,7 +168,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -217,7 +219,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
@@ -234,7 +236,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}
@@ -268,7 +270,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -285,7 +287,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := AffectedComponentsFromOSV(osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		for _, ac := range affectedComponents {
 			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
 			assert.Equal(t, ac.Type, "github.com")
@@ -305,19 +307,19 @@ func ptr[T any](t T) *T {
 
 func TestSetIdHash(t *testing.T) {
 	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
-		affectedComponent := AffectedComponent{
+		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVEs: []CVE{
+			CVEs: []models.CVE{
 				{},
 			},
 		}
 		affectedComponent.BeforeSave(nil) // nolint:errcheck
 
-		otherAffectedComponent := AffectedComponent{
+		otherAffectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVEs:               make([]CVE, 0),
+			CVEs:               make([]models.CVE, 0),
 		}
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck
@@ -339,7 +341,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"0.24.0", "0.24.2"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
@@ -363,7 +365,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"1.0.0", "1.2.0"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
@@ -389,7 +391,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"3.0.0", "3.0.0"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
@@ -413,7 +415,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"1.0.0-beta1", "1.0.0-beta3"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
@@ -440,7 +442,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"1.0.0-beta1", "1.0.2"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
@@ -466,7 +468,7 @@ func TestVersionsToRange(t *testing.T) {
 			{"1.0.2", "1.0.2"},
 		}
 
-		actual := versionsToRange(versions)
+		actual := transformer.VersionsToRange(versions)
 
 		if len(actual) != len(expected) {
 			t.Fatalf("Expected %v, got %v", expected, actual)
