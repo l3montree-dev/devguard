@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -42,7 +43,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID st
 	for i, vuln := range firstPartyVulns {
 		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, dtos.UpstreamStateInternal)
 
-		ev.Apply(&firstPartyVulns[i])
+		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
 	}
 
@@ -63,7 +64,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID
 	for i, firstPartyVuln := range firstPartyVulns {
 		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, dtos.UpstreamStateInternal)
 		// apply the event on the dependencyVuln
-		ev.Apply(&firstPartyVulns[i])
+		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
 	}
 
@@ -114,7 +115,7 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 			return 0
 		})
 		for _, ev := range events[i] {
-			ev.Apply(&firstPartyVulns[i])
+			statemachine.Apply(&firstPartyVulns[i], ev)
 		}
 	}
 
@@ -171,7 +172,7 @@ func (s *firstPartyVulnService) ApplyAndSave(tx shared.DB, firstPartyVuln *model
 
 func (s *firstPartyVulnService) applyAndSave(tx shared.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the first-party vuln
-	ev.Apply(firstPartyVuln)
+	statemachine.Apply(firstPartyVuln, *ev)
 
 	// run the updates in the transaction to keep a valid state
 	err := s.firstPartyVulnRepository.Save(tx, firstPartyVuln)
