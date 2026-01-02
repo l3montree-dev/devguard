@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
 )
@@ -80,61 +79,6 @@ func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
 }
 func (event VulnEvent) TableName() string {
 	return "vuln_events"
-}
-
-func (event VulnEvent) Apply(vuln Vuln) {
-	if event.Upstream != dtos.UpstreamStateInternal && event.Type == dtos.EventTypeAccepted {
-		// its an external accepted event that should not modify state
-		return
-	}
-
-	switch event.Type {
-	case dtos.EventTypeLicenseDecision:
-		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
-		if !ok {
-			slog.Error("could not parse final license decision", "dependencyVulnID",
-
-				event.VulnID)
-			return
-		}
-		v := vuln.(*LicenseRisk)
-		v.SetFinalLicenseDecision(finalLicenseDecision)
-		v.SetState(dtos.VulnStateFixed)
-	case dtos.EventTypeFixed:
-		vuln.SetState(dtos.VulnStateFixed)
-	case dtos.EventTypeReopened:
-		if event.Upstream == dtos.UpstreamStateExternal {
-			return
-		}
-		vuln.SetState(dtos.VulnStateOpen)
-	case dtos.EventTypeDetected:
-		// event type detected will always be applied!
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			f = vuln.GetRawRiskAssessment()
-		}
-		vuln.SetRawRiskAssessment(f)
-		vuln.SetRiskRecalculatedAt(time.Now())
-		vuln.SetState(dtos.VulnStateOpen)
-	case dtos.EventTypeAccepted:
-		vuln.SetState(dtos.VulnStateAccepted)
-	case dtos.EventTypeFalsePositive:
-		if event.Upstream == dtos.UpstreamStateExternal {
-			return
-		}
-		vuln.SetState(dtos.VulnStateFalsePositive)
-	case dtos.EventTypeMarkedForTransfer:
-		vuln.SetState(dtos.VulnStateMarkedForTransfer)
-	case dtos.EventTypeRawRiskAssessmentUpdated:
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
-			return
-		}
-		vuln.SetRawRiskAssessment(f)
-		vuln.SetRiskRecalculatedAt(time.Now())
-	}
-
 }
 
 func NewAcceptedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {

@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
@@ -363,7 +364,8 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		// create a new event based on the comment
 		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, vuln.GetScannerIDsOrArtifactNames())
 
-		vulnEvent.Apply(vuln)
+		statemachine.Apply(vuln, vulnEvent)
+
 		// save the vuln and the event in a transaction
 		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)

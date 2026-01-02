@@ -5,6 +5,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +37,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeFixed}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateFixed, vuln.State)
 	})
@@ -44,7 +45,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeFalsePositive}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 	})
@@ -55,7 +56,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, 0.5, vuln.GetRawRiskAssessment())
 	})
@@ -67,7 +68,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.NotZero(t, vuln.RiskRecalculatedAt)
 	})
@@ -75,7 +76,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeDetected}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
@@ -87,7 +88,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.NotZero(t, vuln.RiskRecalculatedAt)
 	})
@@ -96,7 +97,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeReopened}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
@@ -104,7 +105,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeAccepted}
 
-		event.Apply(&vuln)
+		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
 	})
