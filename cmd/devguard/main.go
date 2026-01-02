@@ -82,25 +82,9 @@ func main() {
 		panic(errors.New("Failed to setup database connection"))
 	}
 
-	// Run database migrations using the existing database connection
-	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
-	if disableAutoMigrate != "true" {
-		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
-			slog.Error("failed to run database migrations", "error", err)
-			panic(errors.New("Failed to run database migrations"))
-		}
+	var daemonRunner shared.DaemonRunner
 
-		// Run hash migrations if needed (when algorithm version changes)
-		if err := hashmigrations.RunHashMigrationsIfNeeded(db); err != nil {
-			slog.Error("failed to run hash migrations", "error", err)
-			panic(errors.New("Failed to run hash migrations"))
-		}
-	} else {
-		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
-	}
-
-	fx.New(
+	app := fx.New(
 		// fx.NopLogger,
 		fx.Supply(db),
 		fx.Provide(database.BrokerFactory),
@@ -141,7 +125,28 @@ func main() {
 				},
 			})
 		}),
-	).Run()
+		fx.Populate(&daemonRunner),
+	)
+
+	// Run database migrations using the existing database connection
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if err := database.RunMigrationsWithDB(db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := hashmigrations.RunHashMigrationsIfNeeded(db, daemonRunner); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
+	}
+
+	app.Run()
 }
 
 func initSentry() {

@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -22,7 +23,7 @@ const (
 	HashMigrationVersionKey = "hash_migration_version"
 )
 
-func RunHashMigrationsIfNeeded(db *gorm.DB) error {
+func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// Check current version from config table
 	var config models.Config
 	err := db.Where("key = ?", HashMigrationVersionKey).First(&config).Error
