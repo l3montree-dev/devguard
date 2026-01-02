@@ -8,6 +8,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -319,7 +320,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 		}
 
 		dependencyVuln.Events = events
-		events[len(events)-1].Apply(&dependencyVuln)
+		statemachine.Apply(&dependencyVuln, events[len(events)-1])
 
 		//update the dependencyVuln and its events
 		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -40,7 +41,7 @@ func (repository *dependencyVulnRepository) ApplyAndSave(tx *gorm.DB, dependency
 
 func (repository *dependencyVulnRepository) applyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	ev.Apply(dependencyVuln)
+	statemachine.Apply(dependencyVuln, *ev)
 
 	// run the updates in the transaction to keep a valid state
 	err := repository.Save(tx, dependencyVuln)
