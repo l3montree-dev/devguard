@@ -41,6 +41,21 @@ type MemStats struct {
 	HeapAlloc  uint64 `json:"heapAlloc"`
 }
 
+// PoolInfo exposes non-sensitive pool configuration used by the application.
+// Note: sensitive information (passwords) is intentionally omitted.
+type PoolInfo struct {
+	DBName          string `json:"dbName,omitempty"`
+	MaxOpenConns    int32  `json:"maxOpenConns,omitempty"`
+	ConnMaxLifetime string `json:"connMaxLifetime,omitempty"`
+	ConnMaxIdleTime string `json:"connMaxIdleTime,omitempty"`
+
+	// Runtime pool statistics taken from pgxpool.Stat()
+	TotalConns    int `json:"totalConns,omitempty"`
+	IdleConns     int `json:"idleConns,omitempty"`
+	AcquiredConns int `json:"acquiredConns,omitempty"`
+	MaxConns      int `json:"maxConns,omitempty"`
+}
+
 // DatabaseInfo describes DB connectivity and migration/vulndb metadata
 type DatabaseInfo struct {
 	sql.DBStats
@@ -52,4 +67,6 @@ type DatabaseInfo struct {
 	MigrationError   *string `json:"migrationError,omitempty"`
 
 	VulnDBVersion *string `json:"vulndbVersion,omitempty"`
+
+	Pool *PoolInfo `json:"pool,omitempty"`
 }

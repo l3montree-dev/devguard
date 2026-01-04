@@ -31,6 +31,7 @@ type PoolConfig struct {
 	DBName   string
 
 	MaxOpenConns    int32
+	MinConns        int32
 	ConnMaxLifetime time.Duration
 	ConnMaxIdleTime time.Duration
 }
@@ -46,8 +47,9 @@ type PoolConfig struct {
 func GetPoolConfigFromEnv() PoolConfig {
 	cfg := PoolConfig{
 		MaxOpenConns:    25, // Default: conservative limit
-		ConnMaxLifetime: 5 * time.Minute,
-		ConnMaxIdleTime: 1 * time.Minute,
+		ConnMaxLifetime: 4 * time.Hour,
+		ConnMaxIdleTime: 15 * time.Minute,
+		MinConns:        5, // Default: keep some idle connections
 		/**
 		  POSTGRES_USER=devguard
 		  POSTGRES_PASSWORD=devguard
@@ -66,6 +68,12 @@ func GetPoolConfigFromEnv() PoolConfig {
 	if maxOpen := os.Getenv("DB_MAX_OPEN_CONNS"); maxOpen != "" {
 		if val, err := strconv.Atoi(maxOpen); err == nil && val > 0 {
 			cfg.MaxOpenConns = int32(val)
+		}
+	}
+
+	if minConns := os.Getenv("DB_MIN_CONNS"); minConns != "" {
+		if val, err := strconv.Atoi(minConns); err == nil && val >= 0 {
+			cfg.MinConns = int32(val)
 		}
 	}
 

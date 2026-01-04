@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
@@ -38,6 +39,7 @@ type APIV1Router struct {
 
 func NewAPIV1Router(srv api.Server,
 	db shared.DB,
+	pool *pgxpool.Pool,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin shared.AdminClient,
 	assetController *controllers.AssetController,
@@ -100,6 +102,15 @@ func NewAPIV1Router(srv api.Server,
 		}
 
 		// DB connectivity & migration info
+		// Prepare pool config and a working PoolInfo to fill in later
+		poolCfg := database.GetPoolConfigFromEnv()
+		poolInfo := PoolInfo{
+			DBName:          poolCfg.DBName,
+			MaxOpenConns:    poolCfg.MaxOpenConns,
+			ConnMaxLifetime: poolCfg.ConnMaxLifetime.String(),
+			ConnMaxIdleTime: poolCfg.ConnMaxIdleTime.String(),
+		}
+
 		dbInfo := DatabaseInfo{Status: "unknown"}
 		sqlDB, err := db.DB()
 		if err != nil {
@@ -113,12 +124,30 @@ func NewAPIV1Router(srv api.Server,
 				dbInfo.Error = &errMsg
 			} else {
 				dbInfo.Status = "healthy"
-				dbInfo.DBStats = sqlDB.Stats()
+
+				// Prefer runtime stats from the underlying pgx pool which backs the sql.DB
+				if pool != nil {
+					stats := pool.Stat()
+					// Map pgx pool stats to the DBStats fields
+					dbInfo.OpenConnections = int(stats.TotalConns())
+					dbInfo.InUse = int(stats.AcquiredConns())
+					dbInfo.Idle = int(stats.IdleConns())
+					dbInfo.MaxOpenConnections = int(stats.MaxConns())
+
+					// Expose the same values in the Pool info structure below
+					poolInfo.TotalConns = int(stats.TotalConns())
+					poolInfo.IdleConns = int(stats.IdleConns())
+					poolInfo.AcquiredConns = int(stats.AcquiredConns())
+					poolInfo.MaxConns = int(stats.MaxConns())
+				} else {
+					// Fallback to sql DB stats if pool isn't available
+					dbInfo.DBStats = sqlDB.Stats()
+				}
+
 				if ver, dirty, err := database.GetMigrationVersionWithDB(db); err == nil {
 					v := ver
-					d := dirty
 					dbInfo.MigrationVersion = &v
-					dbInfo.MigrationDirty = &d
+					dbInfo.MigrationDirty = &dirty
 				} else {
 					errStr := err.Error()
 					dbInfo.MigrationError = &errStr
@@ -137,6 +166,9 @@ func NewAPIV1Router(srv api.Server,
 				}
 			}
 		}
+		// attach pool config for diagnostics (no sensitive fields)
+		resp.Database.Pool = &poolInfo
+
 		resp.Database = dbInfo
 
 		return c.JSON(200, resp)

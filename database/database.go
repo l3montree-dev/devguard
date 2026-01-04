@@ -85,6 +85,7 @@ func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	config.MaxConnIdleTime = cfg.ConnMaxIdleTime
 	config.MaxConnLifetime = cfg.ConnMaxLifetime
 	config.MaxConns = cfg.MaxOpenConns
+	config.MinConns = cfg.MinConns
 
 	ctx := context.Background()
 
