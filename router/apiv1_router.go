@@ -144,7 +144,7 @@ func NewAPIV1Router(srv api.Server,
 					dbInfo.DBStats = sqlDB.Stats()
 				}
 
-				if ver, dirty, err := database.GetMigrationVersionWithDB(db); err == nil {
+				if ver, dirty, err := database.GetMigrationVersionWithDB(); err == nil {
 					v := ver
 					dbInfo.MigrationVersion = &v
 					dbInfo.MigrationDirty = &dirty

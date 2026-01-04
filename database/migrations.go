@@ -49,26 +49,34 @@ func getMigrator(gormDB shared.DB) (*migrate.Migrate, error) {
 	return migrator, migratorErr
 }
 
-// RunMigrationsWithDB runs all pending database migrations using an existing GORM database instance
-func RunMigrationsWithDB(gormDB shared.DB) (*migrate.Migrate, error) {
-	// Get the underlying sql.DB from GORM
-	migrator, err := getMigrator(gormDB)
-	if err != nil {
-		return migrator, fmt.Errorf("failed to create migrator: %w", err)
+// RunMigrations runs all pending database migrations using an existing GORM database instance
+func RunMigrations(db shared.DB) error {
+	// if no shared db is provided, create a new one
+	// only provide a db during testing
+	if db == nil {
+		db = NewGormDB(NewPgxConnPool(GetPoolConfigFromEnv()))
 	}
-
+	// Get the underlying sql.DB from GORM
+	migrator, err := getMigrator(db)
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+	if db == nil {
+		// only close the connetion pool if WE own it.
+		defer migrator.Close()
+	}
 	// Run all pending migrations
 	if err := migrator.Up(); err != nil {
 		if err == migrate.ErrNoChange {
 			slog.Info("no pending migrations")
-			return nil, err
+			return nil
 		}
-		return migrator, fmt.Errorf("failed to run migrations: %w", err)
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	migrationVersion, migrationDirty, migratorErr = migrator.Version()
 	slog.Info("migrations completed successfully")
-	return migrator, nil
+	return nil
 }
 
 // GetMigrationVersionWithDB returns the current migration version using an existing GORM database instance

@@ -15,12 +15,11 @@ import (
 
 func InitDatabaseContainer(initDBSQLPath string) (shared.DB, *pgxpool.Pool, func()) {
 	pool, terminate := InitRawDatabaseContainer(initDBSQLPath)
-	db := database.NewGormDB(pool)
-
 	// Run embedded migrations to ensure the DB schema matches the project's
 	// migration files. This creates the tables and constraints consistently
 	// for integration tests.
-	if _, err := database.RunMigrationsWithDB(db); err != nil {
+	db := database.NewGormDB(pool)
+	if err := database.RunMigrations(db); err != nil {
 		log.Printf("failed to run migrations: %s", err)
 		panic(err)
 	}

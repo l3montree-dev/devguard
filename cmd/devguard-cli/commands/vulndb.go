@@ -6,7 +6,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/golang-migrate/migrate/v4"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
@@ -36,7 +35,6 @@ func emptyOrContains(s []string, e string) bool {
 
 func migrateDB() {
 	var err error
-	var migrator *migrate.Migrate
 
 	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
 	db := database.NewGormDB(pool)
@@ -44,7 +42,7 @@ func migrateDB() {
 	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
 		slog.Info("running database migrations...")
-		if migrator, err = database.RunMigrationsWithDB(db); err != nil {
+		if err = database.RunMigrations(nil); err != nil {
 			slog.Error("failed to run database migrations", "error", err)
 			panic(errors.New("Failed to run database migrations"))
 		}
@@ -57,5 +55,4 @@ func migrateDB() {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-	migrator.Close()
 }

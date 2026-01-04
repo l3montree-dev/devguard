@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/golang-migrate/migrate/v4"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
@@ -83,13 +82,13 @@ func main() {
 	// Run database migrations using the existing database connection
 	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
 	db := database.NewGormDB(pool)
-	var migrator *migrate.Migrate
+
 	var err error
 
 	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
 		slog.Info("running database migrations...")
-		if migrator, err = database.RunMigrationsWithDB(db); err != nil {
+		if err = database.RunMigrations(nil); err != nil {
 			slog.Error("failed to run database migrations", "error", err)
 			panic(errors.New("Failed to run database migrations"))
 		}
@@ -102,11 +101,7 @@ func main() {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-	// close the DB connection pool
-	// we will create a new pool in the FX app anyways
-	if _, err := migrator.Close(); err != nil {
-		panic(fmt.Sprintf("could not close migrator: %s", err))
-	}
+
 	pool.Close()
 
 	app := fx.New(
