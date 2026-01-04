@@ -6,8 +6,8 @@ import (
 	"os"
 	"slices"
 
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 )
@@ -34,12 +34,17 @@ func emptyOrContains(s []string, e string) bool {
 	return slices.Contains(s, e)
 }
 
-func migrateDB(db shared.DB) {
+func migrateDB() {
+	var err error
+	var migrator *migrate.Migrate
+
+	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
+	db := database.NewGormDB(pool)
 	// Run database migrations using the existing database connection
 	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
 		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
+		if migrator, err = database.RunMigrationsWithDB(db); err != nil {
 			slog.Error("failed to run database migrations", "error", err)
 			panic(errors.New("Failed to run database migrations"))
 		}
@@ -52,4 +57,5 @@ func migrateDB(db shared.DB) {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
+	migrator.Close()
 }

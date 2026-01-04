@@ -19,15 +19,15 @@ func newImportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 
+			migrateDB()
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
+				fx.Provide(database.GetPoolConfigFromEnv()),
 				vulndb.Module,
 				fx.Invoke(func(
-					db shared.DB,
 					importService shared.VulnDBImportService,
 				) error {
-					migrateDB(db)
 					return importService.ImportFromDiff(nil)
 				}),
 			)

@@ -17,6 +17,7 @@ type PurlMatchContext struct {
 	VersionIsValid    error
 	Qualifiers        packageurl.Qualifiers
 	Namespace         string
+	EmptyVersion      bool
 }
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
@@ -50,6 +51,7 @@ func ParsePurlForMatching(purl, version string) (*PurlMatchContext, error) {
 		VersionIsValid:    versionIsValid,
 		Qualifiers:        qualifier,
 		Namespace:         parsedPurl.Namespace,
+		EmptyVersion:      targetVersion == "" && normalizedVersion == "",
 	}, nil
 }
 

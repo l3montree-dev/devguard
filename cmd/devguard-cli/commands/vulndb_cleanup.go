@@ -23,6 +23,7 @@ func newCleanupCommand() *cobra.Command {
 
 			app := fx.New(
 				fx.NopLogger,
+				fx.Provide(database.GetPoolConfigFromEnv()),
 				database.Module,
 				vulndb.Module,
 				fx.Invoke(func(

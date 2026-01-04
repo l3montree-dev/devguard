@@ -20,7 +20,7 @@ func InitDatabaseContainer(initDBSQLPath string) (shared.DB, *pgxpool.Pool, func
 	// Run embedded migrations to ensure the DB schema matches the project's
 	// migration files. This creates the tables and constraints consistently
 	// for integration tests.
-	if err := database.RunMigrationsWithDB(db); err != nil {
+	if _, err := database.RunMigrationsWithDB(db); err != nil {
 		log.Printf("failed to run migrations: %s", err)
 		panic(err)
 	}

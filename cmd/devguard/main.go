@@ -18,17 +18,20 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/router"
@@ -71,13 +74,41 @@ func main() {
 			if err := recover(); err != nil {
 				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
 				sentry.CurrentHub().Recover(err)
-				// Wait for events to be send to server
+				monitoring.RecoverAndAlert("could not recover from panic in main", fmt.Errorf("panic: %v", err))
 				sentry.Flush(time.Second * 5)
 			}
 		}()
 	}
 
-	var db shared.DB
+	// Run database migrations using the existing database connection
+	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
+	db := database.NewGormDB(pool)
+	var migrator *migrate.Migrate
+	var err error
+
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if migrator, err = database.RunMigrationsWithDB(db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
+	}
+	// close the DB connection pool
+	// we will create a new pool in the FX app anyways
+	if _, err := migrator.Close(); err != nil {
+		panic(fmt.Sprintf("could not close migrator: %s", err))
+	}
+	pool.Close()
+
 	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(database.GetPoolConfigFromEnv()),
@@ -120,29 +151,11 @@ func main() {
 				},
 			})
 		}),
-		fx.Populate(&db),
 	)
 
 	if err := app.Err(); err != nil {
 		slog.Error("failed to create app", "error", err)
 		panic(err)
-	}
-	// Run database migrations using the existing database connection
-	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
-	if disableAutoMigrate != "true" {
-		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
-			slog.Error("failed to run database migrations", "error", err)
-			panic(errors.New("Failed to run database migrations"))
-		}
-
-		// Run hash migrations if needed (when algorithm version changes)
-		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
-			slog.Error("failed to run hash migrations", "error", err)
-			panic(errors.New("Failed to run hash migrations"))
-		}
-	} else {
-		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
 	app.Run()

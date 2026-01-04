@@ -36,23 +36,21 @@ Use --databases flag to sync specific sources only.`,
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			shared.LoadConfig() // nolint
-
+			migrateDB()
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
 				repositories.Module,
+				fx.Provide(database.GetPoolConfigFromEnv()),
 				controllers.ControllerModule,
 				services.ServiceModule,
 				fx.Invoke(func(
-					db shared.DB,
 					cveRepository shared.CveRepository,
 					cweRepository shared.CweRepository,
 					affectedCmpRepository shared.AffectedComponentRepository,
 					exploitRepository shared.ExploitRepository,
 					maliciousPackageChecker shared.MaliciousPackageChecker,
 				) error {
-					migrateDB(db)
-
 					nvdService := vulndb.NewNVDService(cveRepository)
 					mitreService := vulndb.NewMitreService(cweRepository)
 					epssService := vulndb.NewEPSSService(nvdService, cveRepository)

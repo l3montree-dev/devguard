@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver for database/sql
 	"github.com/l3montree-dev/devguard/monitoring"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

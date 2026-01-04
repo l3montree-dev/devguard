@@ -179,7 +179,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 		if err != nil {
 			return err
 		}
-		defer tx.Rollback(ctx) // nolint:errcheck - rollback is safe even after commit
+		defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
 		dirPath := fmt.Sprintf("%s/diffs-tmp", outpath)
 
@@ -363,8 +363,7 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
-	defer tx.Rollback(ctx) // nolint:errcheck - rollback is safe even after commit
-
+	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
 	if err != nil {
@@ -664,7 +663,7 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 		monitoring.Alert("failed to begin transaction for foreign key check", err)
 		return fmt.Errorf("failed to begin transaction for foreign key check: %w", err)
 	}
-	defer tx.Rollback(ctx) // nolint:errcheck - rollback is safe even after commit
+	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
 	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 	if err != nil {

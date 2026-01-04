@@ -43,11 +43,7 @@ func (r *MaliciousPackageRepository) GetDB() *gorm.DB {
 func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, version string) ([]models.MaliciousAffectedComponent, error) {
 	ctx, err := normalize.ParsePurlForMatching(purl, version)
 	if err != nil {
-		return []models.MaliciousAffectedComponent{}, nil
-	}
-
-	if ctx == nil {
-		return []models.MaliciousAffectedComponent{}, nil
+		return nil, err
 	}
 
 	var components []models.MaliciousAffectedComponent
@@ -61,13 +57,12 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, versio
 	// - Otherwise, fall back to semver range matching.
 	if ctx.VersionIsValid != nil {
 		query = query.Where("version = ?", ctx.TargetVersion)
-	} else if ctx.TargetVersion != "" || ctx.NormalizedVersion != "" {
-		query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
-	} else {
-		// no version at all - maybe the whole package is malicious
+	} else if ctx.EmptyVersion {
 		query = BuildEmptyVersionQuery(query)
+	} else {
+		query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
 	}
-	err = query.Preload("MaliciousPackage").Debug().Find(&components).Error
+	err = query.Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
 

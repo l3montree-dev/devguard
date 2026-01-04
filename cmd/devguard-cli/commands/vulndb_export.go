@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"time"
 
@@ -23,21 +22,16 @@ func newExportIncrementalCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			os.RemoveAll("diffs-tmp/")
-
+			migrateDB()
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
 				vulndb.Module,
+				fx.Provide(database.GetPoolConfigFromEnv()),
 				fx.Invoke(func(
 					db shared.DB,
 					importService shared.VulnDBImportService,
 				) error {
-					migrateDB(db)
-
-					for _, arg := range args {
-						slog.Info(arg)
-					}
-
 					if err := importService.CreateTablesWithSuffix("_diff"); err != nil {
 						return err
 					}
