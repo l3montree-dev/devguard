@@ -29,10 +29,10 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/database"
 
@@ -77,44 +77,20 @@ func main() {
 		}()
 	}
 
-	// Initialize database connection first
-	db, err := shared.DatabaseFactory()
-	if err != nil {
-		slog.Error(err.Error()) // print detailed error message to stdout
-		panic(errors.New("Failed to setup database connection"))
-	}
-
-	// Run database migrations using the existing database connection
-	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
-	if disableAutoMigrate != "true" {
-		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
-			slog.Error("failed to run database migrations", "error", err)
-			panic(errors.New("Failed to run database migrations"))
-		}
-
-		// Run hash migrations if needed (when algorithm version changes)
-		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
-			slog.Error("failed to run hash migrations", "error", err)
-			panic(errors.New("Failed to run hash migrations"))
-		}
-	} else {
-		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
-	}
-
-	fx.New(
+	var db shared.DB
+	app := fx.New(
 		fx.NopLogger,
-		fx.Supply(db),
-		fx.Provide(database.BrokerFactory),
+		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
+		database.Module,
 		repositories.Module,
 		controllers.ControllerModule,
 		services.ServiceModule,
 		router.RouterModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
+		vulndb.Module,
 		daemons.Module,
-
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
@@ -144,7 +120,32 @@ func main() {
 				},
 			})
 		}),
-	).Run()
+		fx.Populate(&db),
+	)
+
+	if err := app.Err(); err != nil {
+		slog.Error("failed to create app", "error", err)
+		panic(err)
+	}
+	// Run database migrations using the existing database connection
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if err := database.RunMigrationsWithDB(db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
+	}
+
+	app.Run()
 }
 
 func initSentry() {

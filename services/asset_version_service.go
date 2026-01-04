@@ -15,8 +15,8 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -139,7 +139,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 				RuleName:        utils.OrDefault(rule.Name, ""),
 				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
 				RuleDescription: getBestDescription(rule),
-				RuleProperties:  database.JSONB(ruleProperties),
+				RuleProperties:  databasetypes.JSONB(ruleProperties),
 			}
 			if result.PartialFingerprints != nil {
 				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]

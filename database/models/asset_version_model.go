@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 )
 
 type AssetVersionType string
@@ -34,9 +34,9 @@ type AssetVersion struct {
 	Components      []ComponentDependency `json:"components" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
-	SigningPubKey  *string        `json:"signingPubKey" gorm:"type:text;"`
-	Metadata       database.JSONB `json:"metadata" gorm:"type:jsonb"`
-	LastAccessedAt time.Time      `json:"lastAccessedAt" gorm:"default:NOW();"`
+	SigningPubKey  *string             `json:"signingPubKey" gorm:"type:text;"`
+	Metadata       databasetypes.JSONB `json:"metadata" gorm:"type:jsonb"`
+	LastAccessedAt time.Time           `json:"lastAccessedAt" gorm:"default:NOW();"`
 }
 
 func (m AssetVersion) TableName() string {

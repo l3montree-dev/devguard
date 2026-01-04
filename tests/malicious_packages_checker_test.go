@@ -29,7 +29,7 @@ import (
 // TestMaliciousPackageChecker tests the malicious package detection
 func TestMaliciousPackageChecker(t *testing.T) {
 	// Set up test database
-	db, terminate := InitDatabaseContainer("../initdb.sql")
+	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
 
 	// Create repository

@@ -2,13 +2,15 @@ package database
 
 import (
 	"context"
-	"database/sql/driver"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver for database/sql
 	"github.com/l3montree-dev/devguard/monitoring"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -69,10 +71,43 @@ func (s *sentryLogger) Trace(ctx context.Context, begin time.Time, fc func() (st
 	s.defaultLogger.Trace(ctx, begin, fc, err)
 }
 
-func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) {
-	// https://github.com/go-gorm/postgres
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname),
+// getDSN builds a PostgreSQL connection string from parameters
+func getDSN(host, user, password, dbname, port string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
+}
+
+func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
+	// create a connection pool with increased connections for parallel processing
+	config, err := pgxpool.ParseConfig(getDSN(cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port))
+	if err != nil {
+		panic("could not parse pgx pool config")
+	}
+	config.MaxConnIdleTime = cfg.ConnMaxIdleTime
+	config.MaxConnLifetime = cfg.ConnMaxLifetime
+	config.MaxConns = cfg.MaxOpenConns
+
+	ctx := context.Background()
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		panic(fmt.Sprintf("could not create pgx pool: %s", err))
+	}
+
+	slog.Info("Database connection pool configured",
+		"maxOpenConns", cfg.MaxOpenConns,
+		"connMaxLifetime", cfg.ConnMaxLifetime,
+		"connMaxIdleTime", cfg.ConnMaxIdleTime,
+	)
+
+	return pool
+}
+
+// NewGormDB creates a GORM instance using an existing *pgxpool.Pool
+func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
+	// Use the existing connection pool with GORM
+	db := stdlib.OpenDBFromPool(existingPool)
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: db,
 	}), &gorm.Config{
 		Logger: &sentryLogger{
 			defaultLogger: logger.Default,
@@ -80,55 +115,12 @@ func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) 
 	})
 
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return db, nil
+	return gormDB
 }
 
 func IsDuplicateKeyError(err error) bool {
 	return strings.HasPrefix(err.Error(), "ERROR: duplicate key value violates unique constraint")
-}
-
-type PageInfo struct {
-	Total    int64 `json:"total"`
-	PageSize int   `json:"pageSize"`
-	Page     int   `json:"page"`
-}
-
-type JSONB map[string]any
-
-// Value Marshal
-func (jsonField JSONB) Value() (driver.Value, error) {
-	return json.Marshal(jsonField)
-}
-
-// Scan Unmarshal
-func (jsonField *JSONB) Scan(value any) error {
-	data, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-	return json.Unmarshal(data, &jsonField)
-}
-
-func JSONbFromStruct(m any) (JSONB, error) {
-	data, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-	var jsonb JSONB
-	err = json.Unmarshal(data, &jsonb)
-	if err != nil {
-		return nil, err
-	}
-	return jsonb, nil
-}
-
-func MustJSONBFromStruct(m any) JSONB {
-	jsonb, err := JSONbFromStruct(m)
-	if err != nil {
-		panic(err)
-	}
-	return jsonb
 }

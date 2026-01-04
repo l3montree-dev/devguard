@@ -11,9 +11,9 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
-
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
@@ -42,15 +42,9 @@ func newTriggerCommand() *cobra.Command {
 		Short: "Will trigger the background jobs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			db, err := shared.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return err
-			}
-
 			daemons, _ := cmd.Flags().GetStringArray("daemons")
 
-			return triggerDaemon(db, daemons)
+			return triggerDaemon(daemons)
 		},
 	}
 
@@ -59,19 +53,19 @@ func newTriggerCommand() *cobra.Command {
 	return trigger
 }
 
-func triggerDaemon(db shared.DB, selectedDaemons []string) error {
+func triggerDaemon(selectedDaemons []string) error {
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		fx.NopLogger,
-		// Provide the already-created db and broker
-		fx.Supply(db),
-		fx.Provide(database.BrokerFactory),
+		database.Module,
+		fx.Provide(database.NewPostgreSQLBroker),
 		// Include all the standard modules
 		repositories.Module,
 		services.ServiceModule,
 		accesscontrol.AccessControlModule,
 		controllers.ControllerModule,
 		integrations.Module,
+		vulndb.Module,
 		daemons.Module,
 
 		// Invoke the daemon trigger function with all dependencies

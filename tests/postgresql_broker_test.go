@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/shared"
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -13,31 +14,30 @@ import (
 
 // testMessage for testing
 type testMessage struct {
-	channel database.Channel
-	payload map[string]interface{}
+	channel shared.PubSubChannel
+	payload map[string]any
 }
 
-func (m testMessage) GetChannel() database.Channel {
+func (m testMessage) GetChannel() shared.PubSubChannel {
 	return m.channel
 }
 
-func (m testMessage) GetPayload() map[string]interface{} {
+func (m testMessage) GetPayload() map[string]any {
 	return m.payload
 }
 
 func TestPostgreSQLBroker(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../initdb.sql")
+	db, terminate := InitRawDatabaseContainer("../initdb.sql")
 	defer terminate()
 
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(db)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := database.Channel("test_topic")
+		testTopic := shared.PubSubChannel("test_topic")
 
 		// Subscribe to topic
 		messagesCh, err := broker.Subscribe(testTopic)
@@ -49,7 +49,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		// Publish message
 		testMsg := testMessage{
 			channel: testTopic,
-			payload: map[string]interface{}{
+			payload: map[string]any{
 				"test":   "data",
 				"number": 42,
 			},
@@ -58,24 +58,27 @@ func TestPostgreSQLBroker(t *testing.T) {
 		err = broker.Publish(ctx, testMsg)
 		assert.NoError(t, err)
 
+		var received bool
 		// Wait for message to be received
 		select {
 		case receivedPayload := <-messagesCh:
+			received = true
 			assert.Equal(t, "data", receivedPayload["test"])
 			assert.Equal(t, float64(42), receivedPayload["number"])
 		case <-time.After(1 * time.Second):
 			t.Error("Message not received within timeout")
 		}
+
+		assert.True(t, received, "Expected to receive a message")
 	})
 
 	t.Run("MultipleSubscribers", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(db)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-		defer broker.Close()
 
 		ctx := context.Background()
-		testTopic := database.Channel("multi_topic")
+		testTopic := shared.PubSubChannel("multi_topic")
 
 		// Subscribe with multiple subscribers
 		subscriber1, err := broker.Subscribe(testTopic)
@@ -89,7 +92,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		// Publish message
 		testMsg := testMessage{
 			channel: testTopic,
-			payload: map[string]interface{}{
+			payload: map[string]any{
 				"multi": "test",
 			},
 		}
@@ -97,9 +100,11 @@ func TestPostgreSQLBroker(t *testing.T) {
 		err = broker.Publish(ctx, testMsg)
 		assert.NoError(t, err)
 
+		var received1, received2 bool
 		// Both subscribers should receive the message
 		select {
 		case payload1 := <-subscriber1:
+			received1 = true
 			assert.Equal(t, "test", payload1["multi"])
 		case <-time.After(1 * time.Second):
 			t.Error("Subscriber 1 did not receive message")
@@ -107,29 +112,32 @@ func TestPostgreSQLBroker(t *testing.T) {
 
 		select {
 		case payload2 := <-subscriber2:
+			received2 = true
 			assert.Equal(t, "test", payload2["multi"])
 		case <-time.After(1 * time.Second):
 			t.Error("Subscriber 2 did not receive message")
 		}
+
+		assert.True(t, received1, "Subscriber 1 should have received the message")
+		assert.True(t, received2, "Subscriber 2 should have received the message")
 	})
 
 	t.Run("PolicyChangeChannel", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(db)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-		defer broker.Close()
 
 		ctx := context.Background()
 
 		// Subscribe to policy changes
-		messagesCh, err := broker.Subscribe(database.PolicyChange)
+		messagesCh, err := broker.Subscribe(shared.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish simple policy change message
 		policyMsg := testMessage{
-			channel: database.PolicyChange,
+			channel: shared.PolicyChange,
 			payload: map[string]interface{}{
 				"policy_id": "policy-123",
 				"action":    "updated",
@@ -152,95 +160,50 @@ func TestPostgreSQLBroker(t *testing.T) {
 	})
 
 	t.Run("GetActiveTopics", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+		broker, err := database.NewPostgreSQLBroker(db)
 		assert.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-		defer broker.Close()
 
 		// Initially no topics
 		topics := broker.GetActiveTopics()
 		assert.Empty(t, topics)
 
 		// Subscribe to topics
-		_, err = broker.Subscribe(database.Channel("topic1"))
+		_, err = broker.Subscribe(shared.PubSubChannel("topic1"))
 		assert.NoError(t, err)
 
-		_, err = broker.Subscribe(database.Channel("topic2"))
+		_, err = broker.Subscribe(shared.PubSubChannel("topic2"))
 		assert.NoError(t, err)
 
 		topics = broker.GetActiveTopics()
 		assert.Len(t, topics, 2)
-		assert.Contains(t, topics, database.Channel("topic1"))
-		assert.Contains(t, topics, database.Channel("topic2"))
-	})
-
-	t.Run("Unsubscribe", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
-		assert.NoError(t, err)
-		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-		defer broker.Close()
-
-		ctx := context.Background()
-		testTopic := database.Channel("unsub_topic")
-
-		// Subscribe
-		messagesCh, err := broker.Subscribe(testTopic)
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		// Close the broker which should close all subscriptions
-		broker.Close()
-
-		// Publish message (should not be received since broker is closed)
-		testMsg := testMessage{
-			channel: testTopic,
-			payload: map[string]interface{}{
-				"test": "unsubscribed",
-			},
-		}
-
-		// This should fail or have no effect since broker is closed
-
-		_ = broker.Publish(ctx, testMsg)
-		// We don't require this to error, as the behavior when closed may vary
-
-		// Channel should be closed
-		select {
-		case _, ok := <-messagesCh:
-			if ok {
-				t.Error("Should not receive message after broker close")
-			}
-			// Channel closed, which is expected
-		case <-time.After(500 * time.Millisecond):
-			// No message received, which is good
-		}
+		assert.Contains(t, topics, shared.PubSubChannel("topic1"))
+		assert.Contains(t, topics, shared.PubSubChannel("topic2"))
 	})
 }
 
 func TestBrokerIntegration(t *testing.T) {
 	// Initialize test database container with SQL DB
-	dbUser, dbPassword, host, port, dbName, terminate := InitSQLDatabaseContainer("../initdb.sql")
+	db, terminate := InitRawDatabaseContainer("../initdb.sql")
 	defer terminate()
 
-	broker, err := database.NewPostgreSQLBroker(dbUser, dbPassword, host, port, dbName)
+	broker, err := database.NewPostgreSQLBroker(db)
 	assert.NoError(t, err)
 	broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
-	defer broker.Close()
 
 	t.Run("BasicIntegration", func(t *testing.T) {
 		ctx := context.Background()
 
 		// Subscribe to policy changes to verify publication
-		messagesCh, err := broker.Subscribe(database.PolicyChange)
+		messagesCh, err := broker.Subscribe(shared.PolicyChange)
 		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
 		// Publish a simple policy change
 		msg := testMessage{
-			channel: database.PolicyChange,
-			payload: map[string]interface{}{
+			channel: shared.PolicyChange,
+			payload: map[string]any{
 				"policy_id": "policy-123",
 				"action":    "updated",
 				"user_id":   "user-456",

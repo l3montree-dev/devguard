@@ -20,16 +20,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
@@ -40,7 +41,7 @@ type TestApp struct {
 
 	// Core infrastructure
 	DB     shared.DB
-	Broker database.Broker
+	Broker shared.PubSubBroker
 
 	// Services
 	ConfigService            shared.ConfigService
@@ -100,6 +101,7 @@ type TestApp struct {
 	// Integrations
 	GitlabIntegration    *gitlabint.GitlabIntegration
 	IntegrationAggregate shared.IntegrationAggregate
+	VulnDBImportService  shared.VulnDBImportService
 }
 
 // TestAppOptions configures the test application
@@ -109,12 +111,12 @@ type TestAppOptions struct {
 	// Whether to suppress FX logging
 	SuppressLogs bool
 	// Custom broker (if nil, a default in-memory broker will be provided)
-	Broker database.Broker
+	Broker shared.PubSubBroker
 }
 
 // NewTestApp creates a test application with all dependencies wired via FX
 // It uses the same FX modules as production for consistency
-func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fxtest.App, error) {
+func NewTestApp(t *testing.T, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App, error) {
 	if opts == nil {
 		opts = &TestAppOptions{SuppressLogs: true}
 	}
@@ -126,16 +128,17 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 	fxOptions := []fx.Option{
 		// Provide the database
 		fx.Provide(func() shared.DB { return db }),
+		// Provide the connection pool
+		fx.Provide(func() *pgxpool.Pool { return pool }),
 
 		// Provide broker
-		fx.Provide(func() database.Broker {
+		fx.Provide(func() shared.PubSubBroker {
 			if opts.Broker != nil {
 				return opts.Broker
 			}
 			// Return a no-op broker for tests
 			return &noopBroker{}
 		}),
-
 		// Use the same modules as production
 		repositories.Module,
 		services.ServiceModule,
@@ -143,6 +146,7 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
+		vulndb.Module,
 		fx.Decorate(func() utils.FireAndForgetSynchronizer {
 			return utils.NewSyncFireAndForgetSynchronizer()
 		}),
@@ -176,10 +180,10 @@ func NewTestApp(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fx
 
 // NewTestAppWithT creates a test application tied to a testing.T
 // It automatically stops the app when the test completes
-func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp, *fxtest.App) {
+func NewTestAppWithT(t *testing.T, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App) {
 	t.Helper()
 
-	app, fxApp, err := NewTestApp(t, db, opts)
+	app, fxApp, err := NewTestApp(t, db, pool, opts)
 	if err != nil {
 		t.Fatalf("Failed to create test app: %v", err)
 	}
@@ -190,11 +194,11 @@ func NewTestAppWithT(t *testing.T, db shared.DB, opts *TestAppOptions) (*TestApp
 // noopBroker is a no-op implementation of the Broker interface for testing
 type noopBroker struct{}
 
-func (n *noopBroker) Publish(ctx context.Context, message database.Message) error {
+func (n *noopBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
 	return nil
 }
 
-func (n *noopBroker) Subscribe(topic database.Channel) (<-chan map[string]any, error) {
+func (n *noopBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]any, error) {
 	ch := make(chan map[string]any)
 	close(ch) // Return a closed channel so subscribers don't block
 	return ch, nil

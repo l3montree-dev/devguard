@@ -35,26 +35,19 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "devguard-cli",
-	Short: "Management cli",
-	Long:  `The devguard cli can be used to interact with a running devguard instance.`,
-}
-
 func Execute() {
-	err := rootCmd.Execute()
+	err := commands.GetRootCmd().Execute()
 	if err != nil {
 		slog.Error("Error executing command", "err", err)
 	}
 }
 
 func init() {
-	rootCmd.AddCommand(commands.NewVulndbCommand())
-	rootCmd.AddCommand(commands.NewDaemonCommand())
-	rootCmd.AddCommand(commands.NewLicensesCommand())
+	commands.GetRootCmd().AddCommand(commands.NewVulndbCommand())
+	commands.GetRootCmd().AddCommand(commands.NewDaemonCommand())
+	commands.GetRootCmd().AddCommand(commands.NewLicensesCommand())
 }
 
 func main() {

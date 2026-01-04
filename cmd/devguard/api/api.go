@@ -17,16 +17,21 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+// StartedAt records when the API server was initialized. It is used for uptime reporting in /info/
+var StartedAt time.Time
 
 type Server struct {
 	Echo *echo.Echo
 }
 
 func NewServer() Server {
+	StartedAt = time.Now()
 	server := middlewares.Server()
 
 	return Server{

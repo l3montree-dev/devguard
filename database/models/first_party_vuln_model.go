@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -12,14 +12,14 @@ import (
 type FirstPartyVuln struct {
 	Vulnerability
 	// the scanner which was used to detect this firstPartyVuln
-	ScannerIDs      string         `json:"scannerIds" gorm:"not null;column:scanner_ids"` //List of scanner ids separated by a white space
-	Fingerprint     string         `json:"fingerprint" gorm:"type:text;"`
-	RuleID          string         `json:"ruleId"`
-	RuleName        string         `json:"ruleName"`
-	RuleDescription string         `json:"ruleDescription"`
-	RuleHelp        string         `json:"ruleHelp"`
-	RuleHelpURI     string         `json:"ruleHelpUri"`
-	RuleProperties  database.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
+	ScannerIDs      string              `json:"scannerIds" gorm:"not null;column:scanner_ids"` //List of scanner ids separated by a white space
+	Fingerprint     string              `json:"fingerprint" gorm:"type:text;"`
+	RuleID          string              `json:"ruleId"`
+	RuleName        string              `json:"ruleName"`
+	RuleDescription string              `json:"ruleDescription"`
+	RuleHelp        string              `json:"ruleHelp"`
+	RuleHelpURI     string              `json:"ruleHelpUri"`
+	RuleProperties  databasetypes.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
 
 	URI string `json:"uri"`
 
@@ -28,7 +28,7 @@ type FirstPartyVuln struct {
 	Author string `json:"author"`
 	Date   string `json:"date"`
 
-	SnippetContents database.JSONB `json:"snippetContents" gorm:"type:jsonb;snippet_contents"` // SnippetContents
+	SnippetContents databasetypes.JSONB `json:"snippetContents" gorm:"type:jsonb;snippet_contents"` // SnippetContents
 }
 
 func (firstPartyVuln *FirstPartyVuln) AddScannerID(scannerID string) {

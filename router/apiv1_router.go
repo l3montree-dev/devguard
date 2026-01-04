@@ -1,9 +1,16 @@
 package router
 
 import (
+	"encoding/json"
+	"os"
+	"runtime"
+	"time"
+
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -29,11 +36,8 @@ type APIV1Router struct {
 	*echo.Group
 }
 
-func health(ctx echo.Context) error {
-	return ctx.String(200, "ok")
-}
-
 func NewAPIV1Router(srv api.Server,
+	db shared.DB,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin shared.AdminClient,
 	assetController *controllers.AssetController,
@@ -63,16 +67,103 @@ func NewAPIV1Router(srv api.Server,
 	})
 
 	apiV1Router.GET("/info/", func(c echo.Context) error {
-		return c.JSON(200, map[string]any{
-			"version":   config.Version,
-			"commit":    config.Commit,
-			"branch":    config.Branch,
-			"buildDate": config.BuildDate,
-		})
+		var mem runtime.MemStats
+		runtime.ReadMemStats(&mem)
+
+		// Build the response with typed structs
+		resp := InfoResponse{
+			Build: BuildInfo{
+				Version:   config.Version,
+				Commit:    config.Commit,
+				Branch:    config.Branch,
+				BuildDate: config.BuildDate,
+			},
+			Runtime: RuntimeInfo{
+				GoVersion:     runtime.Version(),
+				NumGoroutines: runtime.NumGoroutine(),
+				Mem: MemStats{
+					Alloc:      mem.Alloc,
+					TotalAlloc: mem.TotalAlloc,
+					Sys:        mem.Sys,
+					HeapAlloc:  mem.HeapAlloc,
+				},
+			},
+			Process: ProcessInfo{
+				PID:           os.Getpid(),
+				UptimeSeconds: int(time.Since(api.StartedAt).Seconds()),
+			},
+		}
+
+		host, _ := os.Hostname()
+		if host != "" {
+			resp.Process.Hostname = host
+		}
+
+		// DB connectivity & migration info
+		dbInfo := DatabaseInfo{Status: "unknown"}
+		sqlDB, err := db.DB()
+		if err != nil {
+			errMsg := "failed to get database instance"
+			dbInfo.Status = "unhealthy"
+			dbInfo.Error = &errMsg
+		} else {
+			if err := sqlDB.Ping(); err != nil {
+				errMsg := "database ping failed"
+				dbInfo.Status = "unhealthy"
+				dbInfo.Error = &errMsg
+			} else {
+				dbInfo.Status = "healthy"
+				dbInfo.DBStats = sqlDB.Stats()
+				if ver, dirty, err := database.GetMigrationVersionWithDB(db); err == nil {
+					v := ver
+					d := dirty
+					dbInfo.MigrationVersion = &v
+					dbInfo.MigrationDirty = &d
+				} else {
+					errStr := err.Error()
+					dbInfo.MigrationError = &errStr
+				}
+
+				// vulndb last imported version from config
+				var cfg models.Config
+				if err := db.Where("key = ?", "vulndb.lastIncrementalImport").First(&cfg).Error; err == nil {
+					var last string
+					if err := json.Unmarshal([]byte(cfg.Val), &last); err == nil {
+						dbInfo.VulnDBVersion = &last
+					} else {
+						copy := cfg.Val
+						dbInfo.VulnDBVersion = &copy
+					}
+				}
+			}
+		}
+		resp.Database = dbInfo
+
+		return c.JSON(200, resp)
 	})
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
-	apiV1Router.GET("/health/", health)
+	apiV1Router.GET("/health/", func(ctx echo.Context) error {
+		// Check database connectivity
+		sqlDB, err := db.DB()
+		if err != nil {
+			return ctx.JSON(503, map[string]string{
+				"status": "unhealthy",
+				"error":  "failed to get database instance",
+			})
+		}
+
+		if err := sqlDB.Ping(); err != nil {
+			return ctx.JSON(503, map[string]string{
+				"status": "unhealthy",
+				"error":  "database ping failed",
+			})
+		}
+
+		return ctx.JSON(200, map[string]string{
+			"status": "healthy",
+		})
+	})
 	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
