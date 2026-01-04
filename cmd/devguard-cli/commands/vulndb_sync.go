@@ -41,7 +41,7 @@ Use --databases flag to sync specific sources only.`,
 				fx.NopLogger,
 				database.Module,
 				repositories.Module,
-				fx.Provide(database.GetPoolConfigFromEnv()),
+				fx.Supply(database.GetPoolConfigFromEnv()),
 				controllers.ControllerModule,
 				services.ServiceModule,
 				fx.Invoke(func(

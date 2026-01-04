@@ -23,7 +23,7 @@ func newImportCommand() *cobra.Command {
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
-				fx.Provide(database.GetPoolConfigFromEnv()),
+				fx.Supply(database.GetPoolConfigFromEnv()),
 				vulndb.Module,
 				fx.Invoke(func(
 					importService shared.VulnDBImportService,

@@ -27,7 +27,7 @@ func newExportIncrementalCommand() *cobra.Command {
 				fx.NopLogger,
 				database.Module,
 				vulndb.Module,
-				fx.Provide(database.GetPoolConfigFromEnv()),
+				fx.Supply(database.GetPoolConfigFromEnv()),
 				fx.Invoke(func(
 					db shared.DB,
 					importService shared.VulnDBImportService,

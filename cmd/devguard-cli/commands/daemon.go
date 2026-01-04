@@ -56,7 +56,7 @@ func newTriggerCommand() *cobra.Command {
 func triggerDaemon(selectedDaemons []string) error {
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
-		fx.Provide(database.GetPoolConfigFromEnv()),
+		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.NopLogger,
 		database.Module,
 		fx.Provide(database.NewPostgreSQLBroker),
