@@ -127,16 +127,10 @@ func main() {
 		slog.Error("failed to create app", "error", err)
 		panic(err)
 	}
-	// Run database migrations using the existing database connection
+	// Run hash migrations if needed (when algorithm version changes)
+	// Note: Database schema migrations now run automatically in NewGormDB
 	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
-		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
-			slog.Error("failed to run database migrations", "error", err)
-			panic(errors.New("Failed to run database migrations"))
-		}
-
-		// Run hash migrations if needed (when algorithm version changes)
 		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))

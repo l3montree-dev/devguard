@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -117,6 +118,19 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 
 	if err != nil {
 		panic(err)
+	}
+
+	// Run migrations immediately after creating the database connection
+	// This ensures tables exist before any controllers try to use them
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if err := RunMigrationsWithDB(gormDB); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(fmt.Errorf("failed to run database migrations: %w", err))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
 	return gormDB
