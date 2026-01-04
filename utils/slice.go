@@ -44,12 +44,12 @@ func Map[T, U any](s []T, f func(T) U) []U {
 }
 
 func DereferenceSlice[T any](s []*T) []T {
-	r := make([]T, len(s))
-	for i, v := range s {
+	r := make([]T, 0, len(s))
+	for _, v := range s {
 		if v == nil {
 			continue
 		}
-		r[i] = *v
+		r = append(r, *v)
 	}
 	return r
 }
