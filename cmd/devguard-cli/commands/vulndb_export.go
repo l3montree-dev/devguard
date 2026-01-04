@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -27,6 +28,7 @@ func newExportIncrementalCommand() *cobra.Command {
 				fx.NopLogger,
 				database.Module,
 				vulndb.Module,
+				repositories.Module,
 				fx.Supply(database.GetPoolConfigFromEnv()),
 				fx.Invoke(func(
 					db shared.DB,
