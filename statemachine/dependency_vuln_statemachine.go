@@ -95,11 +95,85 @@ func isOnlyFoundInArtifact(vuln models.DependencyVuln, artifactName string) bool
 	return len(vuln.Artifacts) == 1 && vuln.Artifacts[0].ArtifactName == artifactName
 }
 
-func DiffScanResults(
-	artifactName string,
-	foundVulns []models.DependencyVuln,
-	existingVulns []models.DependencyVuln,
-) ScanDiff {
+func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ScanDiff {
+	// first of all we need to resolve the relations between the existing CVEs and the currently found CVEs
+	// we cannot rely on the ID of the vulns to do this matching since the CVE-ID could have changed since the last time leading to a different hash
+	// to combat this we can map the existing/found vulns to their respective combinations of purl and CVE-ID and get two maps which reflect the different states
+	// then we can use the cve relationship information to determine if there are actually new vulns or if the name just changed since the last scan
+
+	// build the two maps: purl -> (set of vulns) we only need the information about the CVE for the comparison but for the rest we need the associated vuln object
+	existingPurlsToCVEs := make(map[string][]models.DependencyVuln)
+	for _, vuln := range existingVulns {
+		purl := utils.SafeDereference(vuln.ComponentPurl)
+
+		existingPurlsToCVEs[purl] = append(existingPurlsToCVEs[purl], vuln)
+	}
+
+	foundPurlsToCVEs := make(map[string][]models.DependencyVuln)
+	for _, vuln := range foundVulns {
+		purl := utils.SafeDereference(vuln.ComponentPurl)
+
+		foundPurlsToCVEs[purl] = append(foundPurlsToCVEs[purl], vuln)
+	}
+	filteredFoundVulns := make([]models.DependencyVuln, 0, len(foundVulns))
+
+	//compare both sets: iterate over the found purls and handle each case
+	for purl, foundCVEs := range foundPurlsToCVEs {
+		existingCVEs, ok := existingPurlsToCVEs[purl]
+		// no existing vulns are present with this purl so we can assume these vulnerabilities are actually new
+		if !ok {
+			for _, cve := range foundCVEs {
+				if !vulnSliceContainsCVEID(filteredFoundVulns, *cve.CVEID) {
+					filteredFoundVulns = append(filteredFoundVulns, cve)
+				}
+			}
+			continue
+		}
+
+		// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out duplicates using the relationship information
+		uniqueFoundVulns := make([]models.DependencyVuln, 0, len(foundCVEs))
+		for _, foundCVE := range foundCVEs {
+			if utils.SafeDereference(foundCVE.CVEID) == "" {
+				continue
+			}
+
+			// basically slices Contains() function but only on the CVE-ID rather than the whole vuln object
+			foundMatch := false
+			for _, existingCVE := range existingCVEs {
+				if utils.SafeDereference(existingCVE.CVEID) == "" {
+					continue
+				}
+				// exact match we can append that
+				if vulnSliceContainsCVEID(foundCVEs, *existingCVE.CVEID) {
+					foundMatch = true
+					break
+				}
+			}
+
+			// if we have not found an exact match we try to find a match using the relationship-map
+			if !foundMatch {
+				relationsForThisCVE := cveRelationships[foundCVE.ID]
+				relatesToCVE := false
+				for _, existingCVE := range existingCVEs {
+					for _, relation := range relationsForThisCVE {
+						if relation.SourceCVE == existingCVE.ID {
+							relatesToCVE = true
+							break
+						}
+					}
+				}
+
+				// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
+				if !relatesToCVE {
+					if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+						uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
+					}
+				}
+			}
+		}
+		filteredFoundVulns = append(filteredFoundVulns, uniqueFoundVulns...)
+	}
+
 	diff := ScanDiff{
 		NewlyDiscovered:     make([]models.DependencyVuln, 0),
 		FixedEverywhere:     make([]models.DependencyVuln, 0),
@@ -141,8 +215,20 @@ func DiffScanResults(
 			}
 		}
 	}
-
 	return diff
+}
+
+func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
+	for _, vuln := range vulns {
+		cveID := utils.SafeDereference(vuln.CVEID)
+		if cveID == "" {
+			continue
+		}
+		if cveID == targetCVEID {
+			return true
+		}
+	}
+	return false
 }
 
 type BranchDiff[T models.Vuln] struct {

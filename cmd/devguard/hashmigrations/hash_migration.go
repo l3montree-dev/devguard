@@ -242,7 +242,7 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 
 	// now we need to scan everything once more to update the dependencyVulns on the way
 	slog.Info("Step 2: Scanning all Assets")
-	daemonRunner.RunAssetPipeline()
+	daemonRunner.RunAssetPipeline(true)
 
 	return nil
 }

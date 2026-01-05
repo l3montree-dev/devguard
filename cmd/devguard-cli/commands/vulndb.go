@@ -1,21 +1,29 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
 	"regexp"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/cmd/devguard/hashmigrations"
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
+	"go.uber.org/fx"
 )
 
 func NewVulndbCommand() *cobra.Command {
@@ -24,7 +32,6 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
-	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportIncrementalCommand())
@@ -65,8 +72,55 @@ func migrateDB(db shared.DB) {
 			panic(errors.New("Failed to run database migrations"))
 		}
 
+		var daemonRunner shared.DaemonRunner
+
+		fx.New(
+			// fx.NopLogger,
+			fx.Supply(db),
+			fx.Provide(database.BrokerFactory),
+			fx.Provide(api.NewServer),
+			repositories.Module,
+			controllers.ControllerModule,
+			services.ServiceModule,
+			router.RouterModule,
+			accesscontrol.AccessControlModule,
+			integrations.Module,
+			daemons.Module,
+
+			// we need to invoke all routers to register their routes
+			fx.Invoke(func(OrgRouter router.OrgRouter) {}),
+			fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
+			fx.Invoke(func(SessionRouter router.SessionRouter) {}),
+			fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
+			fx.Invoke(func(AssetRouter router.AssetRouter) {}),
+			fx.Invoke(func(AssetVersionRouter router.AssetVersionRouter) {}),
+			fx.Invoke(func(DependencyVulnRouter router.DependencyVulnRouter) {}),
+			fx.Invoke(func(FirstPartyVulnRouter router.FirstPartyVulnRouter) {}),
+			fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
+			fx.Invoke(func(ShareRouter router.ShareRouter) {}),
+			fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
+			fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
+			fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
+				lc.Append(fx.Hook{
+					OnStart: func(ctx context.Context) error {
+						go server.Start() // start in background
+						return nil
+					},
+				})
+			}),
+			fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
+				lc.Append(fx.Hook{
+					OnStart: func(ctx context.Context) error {
+						go daemonRunner.Start() // start in background
+						return nil
+					},
+				})
+			}),
+			fx.Populate(&daemonRunner),
+		)
+
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := hashmigrations.RunHashMigrationsIfNeeded(db, daemonRunner); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
@@ -95,54 +149,6 @@ func newCleanupCommand() *cobra.Command {
 	}
 
 	return cleanupCmd
-}
-
-func newImportCVECommand() *cobra.Command {
-	importCmd := &cobra.Command{
-		Use:   "import-cve",
-		Short: "Will import the vulnerability database",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			shared.LoadConfig() // nolint
-			db, err := shared.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return
-			}
-
-			migrateDB(db)
-
-			cveID := args[0]
-			cveID = strings.TrimSpace(strings.ToUpper(cveID))
-			// check if first argument is valid cve
-			if !isValidCVE(cveID) {
-				slog.Error("invalid cve id", "cve", cveID)
-				return
-			}
-
-			cveRepository := repositories.NewCVERepository(db)
-			nvdService := vulndb.NewNVDService(cveRepository)
-			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db))
-
-			cve, err := nvdService.ImportCVE(cveID)
-
-			if err != nil {
-				slog.Error("could not import cve", "err", err)
-				return
-			}
-
-			// the osv database provides additional information about affected packages
-			affectedPackages, err := osvService.ImportCVE(cveID)
-			if err != nil {
-				slog.Error("could not import cve from osv", "err", err)
-				return
-			}
-
-			slog.Info("successfully imported affected packages", "cveID", cve.CVE, "affectedPackages", len(affectedPackages))
-		},
-	}
-
-	return importCmd
 }
 
 func newImportCommand() *cobra.Command {
@@ -185,10 +191,6 @@ func newSyncCommand() *cobra.Command {
 		Short: "Will sync the vulnerability database",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			// check if after flag is set
-			after, _ := cmd.Flags().GetString("after")
-			startIndex, _ := cmd.Flags().GetInt("startIndex")
-
 			shared.LoadConfig() // nolint
 
 			db, err := shared.DatabaseFactory()
@@ -203,15 +205,17 @@ func newSyncCommand() *cobra.Command {
 
 			cveRepository := repositories.NewCVERepository(db)
 			cweRepository := repositories.NewCWERepository(db)
+			cveRelationshipRepository := repositories.NewCveRelationshipRepository(db)
 			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
-			nvdService := vulndb.NewNVDService(cveRepository)
+
 			mitreService := vulndb.NewMitreService(cweRepository)
-			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-			osvService := vulndb.NewOSVService(affectedCmpRepository)
+			epssService := vulndb.NewEPSSService(cveRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
+
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(db))
+			expoitDBService := vulndb.NewExploitDBService(repositories.NewExploitRepository(db))
 
 			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
 
@@ -223,46 +227,6 @@ func newSyncCommand() *cobra.Command {
 				}
 				slog.Info("finished cwe database sync", "duration", time.Since(now))
 			}
-
-			if emptyOrContains(databasesToSync, "nvd") {
-				slog.Info("starting nvd database sync")
-				now := time.Now()
-				if after != "" {
-					// we do a partial sync
-					// try to parse the date
-					afterDate, err := time.Parse("2006-01-02", after)
-					if err != nil {
-						slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-					}
-					err = nvdService.FetchAfter(afterDate)
-					if err != nil {
-						slog.Error("could not fetch after date", "err", err)
-					}
-				} else {
-					if startIndex != 0 {
-						err = nvdService.FetchAfterIndex(startIndex)
-						if err != nil {
-							slog.Error("could not fetch after index", "err", err)
-						}
-					} else {
-						err = nvdService.Sync()
-						if err != nil {
-							slog.Error("could not do initial sync", "err", err)
-						}
-					}
-				}
-				slog.Info("finished nvd database sync", "duration", time.Since(now))
-			}
-
-			/*if emptyOrContains(databasesToSync, "cvelist") {
-				slog.Info("starting cvelist database sync")
-				now := time.Now()
-
-				if err := cvelistService.Mirror(); err != nil {
-					slog.Error("could not mirror cvelist database", "err", err)
-				}
-				slog.Info("finished cvelist database sync", "duration", time.Since(now))
-			}*/
 
 			if emptyOrContains(databasesToSync, "epss") {
 				slog.Info("starting epss database sync")

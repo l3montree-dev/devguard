@@ -545,7 +545,18 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
 
-	diff := statemachine.DiffScanResults(artifactName, foundDependencyVulns, existingDependencyVulns)
+	cveIDs := make([]string, 0, len(foundDependencyVulns))
+	for _, vuln := range foundDependencyVulns {
+		cveIDs = append(cveIDs, utils.SafeDereference(vuln.CVEID))
+	}
+	cveRelations, err := s.cveRelationshipRepository.GetAllRelationshipsForCVEBatch(nil, cveIDs)
+
+	relationsByTargetCVE := make(map[string][]models.CVERelationShip, len(cveRelations))
+	for _, relation := range cveRelations {
+		relationsByTargetCVE[relation.TargetCVE] = append(relationsByTargetCVE[relation.TargetCVE], relation)
+	}
+
+	diff := statemachine.DiffScanResults(artifactName, foundDependencyVulns, existingDependencyVulns, relationsByTargetCVE)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
