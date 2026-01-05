@@ -75,39 +75,3 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	}
 	return nil
 }
-
-/*
-func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent) []AffectedComponent {
-	// get all the versions
-	versions := make([]string, 0)
-	for _, ac := range affectedComponents {
-		if ac.Version == nil {
-			return affectedComponents
-		}
-		versions = append(versions, *ac.Version)
-	}
-
-	// get the ranges
-	ranges := versionsToRange(versions)
-
-	// create the new affected components again
-	newAffectedComponents := make([]AffectedComponent, len(ranges))
-	for i, r := range ranges {
-		if r[0] == r[1] {
-			// create with version attribute
-			cmp := affectedComponents[0]
-			cmp.Version = &r[0]
-			newAffectedComponents[i] = cmp
-		} else {
-			// create semver range component
-			cmp := affectedComponents[0]
-			cmp.Version = nil
-			cmp.SemverIntroduced = &r[0]
-			cmp.SemverFixed = &r[1]
-			newAffectedComponents[i] = cmp
-		}
-	}
-
-	return newAffectedComponents
-}
-*/

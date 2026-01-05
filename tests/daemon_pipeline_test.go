@@ -10,7 +10,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
@@ -24,7 +23,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
 			asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 			err := f.App.AssetRepository.Save(nil, &asset)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create a CVE and affected component
 			cve := models.CVE{
@@ -35,7 +34,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				CVSS:             8.5,
 			}
 			err = f.DB.Create(&cve).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: "pkg:npm/test-package",
@@ -43,14 +42,14 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				CVEs:               []models.CVE{cve},
 			}
 			err = f.DB.Create(&affectedComponent).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create component
 			component := models.Component{
 				Purl: "pkg:npm/test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create artifact
 			artifact := models.Artifact{
@@ -59,7 +58,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				AssetID:          asset.ID,
 			}
 			err = f.DB.Create(&artifact).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create component dependency
 			componentDependency := models.ComponentDependency{
@@ -73,7 +72,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				Dependency:     component,
 			}
 			err = f.DB.Create(&componentDependency).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Run the daemon pipeline for this specific asset
 			runner := f.CreateDaemonRunner()
@@ -83,20 +82,20 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			// Verify asset was updated with pipeline run time
 			var updatedAsset models.Asset
 			err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.True(t, updatedAsset.PipelineLastRun.After(time.Now().Add(-1*time.Minute)), "PipelineLastRun should be recent")
 			assert.Nil(t, updatedAsset.PipelineError, "Pipeline should complete without errors")
 
 			// Verify vulnerabilities were detected
 			var vulnerabilities []models.DependencyVuln
 			err = f.DB.Find(&vulnerabilities, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Greater(t, len(vulnerabilities), 0, "Should detect at least one vulnerability")
 
 			// Verify statistics were collected
 			var stats []models.ArtifactRiskHistory
 			err = f.DB.Find(&stats, "asset_id = ?", asset.ID).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Greater(t, len(stats), 0, "Should have risk statistics")
 		})
 	})
@@ -115,7 +114,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		asset.VulnAutoReopenAfterDays = &autoReopenDays
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err := f.App.AssetRepository.Save(nil, &asset)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create a vulnerability
 		cve := models.CVE{
@@ -123,7 +122,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 			CVSS: 7.5,
 		}
 		err = f.DB.Create(&cve).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
@@ -141,7 +140,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 			}},
 		}
 		err = f.DB.Create(&vulnerability).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create accepted event (2 days ago)
 		acceptEvent := models.NewAcceptedEvent(
@@ -153,7 +152,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		)
 		acceptEvent.CreatedAt = time.Now().Add(-48 * time.Hour)
 		err = f.DB.Create(&acceptEvent).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
@@ -163,7 +162,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		// Verify vulnerability was reopened
 		var updatedVuln models.DependencyVuln
 		err = f.DB.Preload("Events").First(&updatedVuln, "id = ?", vulnerability.ID).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State, "Vulnerability should be reopened")
 
 		// Verify reopen event was created
@@ -192,7 +191,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		asset.VulnAutoReopenAfterDays = &autoReopenDays
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err := f.App.AssetRepository.Save(nil, &asset)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create a vulnerability accepted 2 days ago (within 7 day threshold)
 		cve := models.CVE{
@@ -200,7 +199,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 			CVSS: 7.5,
 		}
 		err = f.DB.Create(&cve).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
@@ -218,7 +217,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 			}},
 		}
 		err = f.DB.Create(&vulnerability).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
@@ -228,7 +227,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		// Verify vulnerability is still accepted
 		var updatedVuln models.DependencyVuln
 		err = f.DB.First(&updatedVuln, "id = ?", vulnerability.ID).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State, "Vulnerability should remain accepted")
 	})
 }
@@ -258,7 +257,7 @@ func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
 			PipelineLastRun: time.Now().Add(-2 * time.Hour),
 		}
 		err := f.DB.Create(&asset).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(asset.ID)
@@ -266,7 +265,7 @@ func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
 		// The pipeline should complete but may record errors
 		var updatedAsset models.Asset
 		err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Pipeline should have run (timestamp updated)
 		assert.True(t, updatedAsset.PipelineLastRun.After(asset.PipelineLastRun), "Pipeline should have updated run time")
@@ -288,7 +287,7 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 			PipelineLastRun: time.Now().Add(-20 * time.Hour),
 		}
 		err := f.DB.Create(&asset1).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Asset 2: Recently processed (should be skipped)
 		asset2 := models.Asset{
@@ -298,7 +297,7 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 			PipelineLastRun: time.Now().Add(-30 * time.Minute),
 		}
 		err = f.DB.Create(&asset2).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Fetch asset IDs
 		runner := f.CreateDaemonRunner()
@@ -332,7 +331,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 				PipelineLastRun: time.Now().Add(-30 * time.Hour),
 			}
 			err := f.DB.Create(&asset).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assetIDs = append(assetIDs, asset.ID)
 		}
 
@@ -369,7 +368,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			CVSS:             9.0,
 		}
 		err := f.DB.Create(&cve).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:npm/vulnerable-package",
@@ -377,14 +376,14 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			CVEs:               []models.CVE{cve},
 		}
 		err = f.DB.Create(&affectedComponent).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create component
 		component := models.Component{
 			Purl: "pkg:npm/vulnerable-package@2.0.0",
 		}
 		err = f.DB.Create(&component).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create artifact
 		artifact := models.Artifact{
@@ -393,7 +392,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			AssetID:          asset.ID,
 		}
 		err = f.DB.Create(&artifact).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Create component dependency
 		componentDependency := models.ComponentDependency{
@@ -407,12 +406,12 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			Dependency:     component,
 		}
 		err = f.DB.Create(&componentDependency).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Mark asset for processing
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err = f.App.AssetRepository.Save(nil, &asset)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
@@ -422,7 +421,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		// Verify vulnerability was detected
 		var vulnerabilities []models.DependencyVuln
 		err = f.DB.Preload("CVE").Find(&vulnerabilities, "asset_id = ? AND cve_id = ?", asset.ID, cve.CVE).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Len(t, vulnerabilities, 1, "Should detect exactly one vulnerability")
 		assert.Equal(t, cve.CVE, vulnerabilities[0].CVE.CVE, "Should detect correct CVE")
 		assert.Equal(t, dtos.VulnStateOpen, vulnerabilities[0].State, "Vulnerability should be in open state")
@@ -444,11 +443,11 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 			AssetID:          asset.ID,
 		}
 		err := f.DB.Create(&artifact).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err = f.App.AssetRepository.Save(nil, &asset)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
@@ -458,7 +457,7 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 		// Verify no vulnerabilities were created
 		var vulnerabilities []models.DependencyVuln
 		err = f.DB.Find(&vulnerabilities, "asset_id = ?", asset.ID).Error
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Len(t, vulnerabilities, 0, "Should not create vulnerabilities for empty artifacts")
 	})
 }
@@ -483,7 +482,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				EPSS:             utils.Ptr(0.7),
 			}
 			err := f.DB.Create(&cve).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: "pkg:npm/risk-test-package",
@@ -491,14 +490,14 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				CVEs:               []models.CVE{cve},
 			}
 			err = f.DB.Create(&affectedComponent).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create component
 			component := models.Component{
 				Purl: "pkg:npm/risk-test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create artifact
 			artifact := models.Artifact{
@@ -507,7 +506,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				AssetID:          asset.ID,
 			}
 			err = f.DB.Create(&artifact).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Create component dependency
 			componentDependency := models.ComponentDependency{
@@ -521,10 +520,10 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				Dependency:     component,
 			}
 			err = f.DB.Create(&componentDependency).Error
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			err = f.App.AssetRepository.Save(nil, &asset)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			// Run the pipeline
 			runner := f.CreateDaemonRunner()
@@ -534,8 +533,8 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			// Verify vulnerability was detected and risk was calculated
 			var vulnerabilities []models.DependencyVuln
 			err = f.DB.Where("asset_id = ? AND cve_id = ?", asset.ID, cve.CVE).Find(&vulnerabilities).Error
-			require.NoError(t, err)
-			require.Greater(t, len(vulnerabilities), 0, "Should detect vulnerability")
+			assert.NoError(t, err)
+			assert.Greater(t, len(vulnerabilities), 0, "Should detect vulnerability")
 
 			vuln := vulnerabilities[0]
 			assert.NotNil(t, vuln.RawRiskAssessment, "Risk assessment should be calculated")

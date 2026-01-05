@@ -54,6 +54,10 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 			return err
 		}
 
+		// if err := runCVEHashMigration(db, daemonRunner); err != nil {
+		// 	return err
+		// }
+
 		// Update version record in config table
 		versionConfig := models.Config{
 			Key: HashMigrationVersionKey,
@@ -202,11 +206,11 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 
 // this function handles the migration for importing new CVEs from the OSV.
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
-func runCVEHashMigration(db *gorm.DB) error {
+func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	slog.Info("start running cve migration...")
 
 	// before importing the new CVEs we need to make sure that we do not get foreign key errors, for dependency_vulns which CVE does not exist anymore
-	err := db.Exec(`ALTER TABLE dependency_vulns 
+	err := db.Exec(`ALTER TABLE public.dependency_vulns 
 					DROP CONSTRAINT fk_dependency_vulns_cve`).Error
 	if err != nil {
 		slog.Error("could not drop foreign key constraint")
@@ -230,14 +234,15 @@ func runCVEHashMigration(db *gorm.DB) error {
 	configService := services.NewConfigService(db)
 	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 
+	slog.Info("Step 1: Importing new vulnDB state")
 	err = v.ImportFromDiff(nil)
 	if err != nil {
 		slog.Error("error when trying to import with diff files", "err", err)
 	}
 
 	// now we need to scan everything once more to update the dependencyVulns on the way
-
-	//daemon := fx.Invoke(func(daemonRunner shared.DaemonRunner) {})
+	slog.Info("Step 2: Scanning all Assets")
+	daemonRunner.RunAssetPipeline()
 
 	return nil
 }

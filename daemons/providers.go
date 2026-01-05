@@ -51,6 +51,7 @@ type DaemonRunner struct {
 	affectedComponentsRepository shared.AffectedComponentRepository
 	scanService                  shared.ScanService
 	leaderElector                shared.LeaderElector
+	maliciousPackageChecker      shared.MaliciousPackageChecker
 }
 
 // NewDaemonRunner creates a new daemon runner with injected dependencies
@@ -80,6 +81,7 @@ func NewDaemonRunner(
 	affectedComponentsRepository shared.AffectedComponentRepository,
 	scanService shared.ScanService,
 	leaderElector shared.LeaderElector,
+	maliciousPackageChecker shared.MaliciousPackageChecker,
 ) DaemonRunner {
 	return DaemonRunner{
 		db:                           db,
@@ -107,6 +109,7 @@ func NewDaemonRunner(
 		affectedComponentsRepository: affectedComponentsRepository,
 		scanService:                  scanService,
 		leaderElector:                leaderElector,
+		maliciousPackageChecker:      maliciousPackageChecker,
 	}
 }
 
@@ -126,7 +129,7 @@ func (runner DaemonRunner) tick() {
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()
-		runner.RunAssetPipeline()
+		runner.RunAssetPipeline(false)
 	} else {
 		slog.Info("not the leader - skipping background jobs")
 	}

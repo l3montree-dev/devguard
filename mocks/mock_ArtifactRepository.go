@@ -1053,6 +1053,63 @@ func (_c *ArtifactRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB,
 	return _c
 }
 
+// SaveBatchBestEffort provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Artifact) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Artifact) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type ArtifactRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - tx shared.DB
+//   - ts []models.Artifact
+func (_e *ArtifactRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *ArtifactRepository_SaveBatchBestEffort_Call {
+	return &ArtifactRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.Artifact
+		if args[1] != nil {
+			arg1 = args[1].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Return(err error) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) Transaction(fn func(tx shared.DB) error) error {
 	ret := _mock.Called(fn)

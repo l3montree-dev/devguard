@@ -36,6 +36,46 @@ func (_m *DaemonRunner) EXPECT() *DaemonRunner_Expecter {
 	return &DaemonRunner_Expecter{mock: &_m.Mock}
 }
 
+// RunAssetPipeline provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) RunAssetPipeline(forceAll bool) {
+	_mock.Called(forceAll)
+	return
+}
+
+// DaemonRunner_RunAssetPipeline_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunAssetPipeline'
+type DaemonRunner_RunAssetPipeline_Call struct {
+	*mock.Call
+}
+
+// RunAssetPipeline is a helper method to define mock.On call
+//   - forceAll bool
+func (_e *DaemonRunner_Expecter) RunAssetPipeline(forceAll interface{}) *DaemonRunner_RunAssetPipeline_Call {
+	return &DaemonRunner_RunAssetPipeline_Call{Call: _e.mock.On("RunAssetPipeline", forceAll)}
+}
+
+func (_c *DaemonRunner_RunAssetPipeline_Call) Run(run func(forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 bool
+		if args[0] != nil {
+			arg0 = args[0].(bool)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_RunAssetPipeline_Call) Return() *DaemonRunner_RunAssetPipeline_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *DaemonRunner_RunAssetPipeline_Call) RunAndReturn(run func(forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
+	_c.Run(run)
+	return _c
+}
+
 // RunDaemonPipelineForAsset provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
 	ret := _mock.Called(assetID)
@@ -117,5 +157,137 @@ func (_c *DaemonRunner_Start_Call) Return() *DaemonRunner_Start_Call {
 
 func (_c *DaemonRunner_Start_Call) RunAndReturn(run func()) *DaemonRunner_Start_Call {
 	_c.Run(run)
+	return _c
+}
+
+// UpdateFixedVersions provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) UpdateFixedVersions() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateFixedVersions")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_UpdateFixedVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateFixedVersions'
+type DaemonRunner_UpdateFixedVersions_Call struct {
+	*mock.Call
+}
+
+// UpdateFixedVersions is a helper method to define mock.On call
+func (_e *DaemonRunner_Expecter) UpdateFixedVersions() *DaemonRunner_UpdateFixedVersions_Call {
+	return &DaemonRunner_UpdateFixedVersions_Call{Call: _e.mock.On("UpdateFixedVersions")}
+}
+
+func (_c *DaemonRunner_UpdateFixedVersions_Call) Run(run func()) *DaemonRunner_UpdateFixedVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateFixedVersions_Call) Return(err error) *DaemonRunner_UpdateFixedVersions_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateFixedVersions_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateFixedVersions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateOpenSourceInsightInformation provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) UpdateOpenSourceInsightInformation() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateOpenSourceInsightInformation")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_UpdateOpenSourceInsightInformation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateOpenSourceInsightInformation'
+type DaemonRunner_UpdateOpenSourceInsightInformation_Call struct {
+	*mock.Call
+}
+
+// UpdateOpenSourceInsightInformation is a helper method to define mock.On call
+func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation() *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+	return &DaemonRunner_UpdateOpenSourceInsightInformation_Call{Call: _e.mock.On("UpdateOpenSourceInsightInformation")}
+}
+
+func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) Run(run func()) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) Return(err error) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateVulnDB provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) UpdateVulnDB() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateVulnDB")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_UpdateVulnDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateVulnDB'
+type DaemonRunner_UpdateVulnDB_Call struct {
+	*mock.Call
+}
+
+// UpdateVulnDB is a helper method to define mock.On call
+func (_e *DaemonRunner_Expecter) UpdateVulnDB() *DaemonRunner_UpdateVulnDB_Call {
+	return &DaemonRunner_UpdateVulnDB_Call{Call: _e.mock.On("UpdateVulnDB")}
+}
+
+func (_c *DaemonRunner_UpdateVulnDB_Call) Run(run func()) *DaemonRunner_UpdateVulnDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateVulnDB_Call) Return(err error) *DaemonRunner_UpdateVulnDB_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_UpdateVulnDB_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateVulnDB_Call {
+	_c.Call.Return(run)
 	return _c
 }

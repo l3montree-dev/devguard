@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -223,6 +224,8 @@ func TestFromOSV(t *testing.T) {
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
+		assert.Equal(t, "1.14.14", *affectedComponents[0].SemverIntroduced)
+		assert.Equal(t, "1.14.15", *affectedComponents[0].SemverFixed)
 	})
 
 	t.Run("try GHSA-2v6x-frw8-7r7f.json", func(t *testing.T) {
@@ -329,155 +332,48 @@ func TestSetIdHash(t *testing.T) {
 	})
 }
 
-func TestVersionsToRange(t *testing.T) {
-	t.Run("Test patch updates", func(t *testing.T) {
-		versions := []string{
-			"0.24.0",
-			"0.24.1",
-			"0.24.2",
-		}
+func TestAlpineCVE2021_3711(t *testing.T) {
+	// read the file
+	f, _ := os.Open("testdata/ALPINE-CVE-2021-3711.json")
+	defer f.Close()
+	bytes, _ := io.ReadAll(f)
+	osv := dtos.OSV{}
+	err := json.Unmarshal(bytes, &osv)
+	if err != nil {
+		t.Errorf("Could not unmarshal osv, got %s", err)
+	}
 
-		expected := [][2]string{
-			{"0.24.0", "0.24.2"},
-		}
+	affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
+	// for simplicity just do assertions on the ecosystem Alpine:v3.11
+	ac := utils.Filter(affectedComponents, func(el models.AffectedComponent) bool {
+		return el.Ecosystem == "Alpine:v3.11"
 	})
-
-	t.Run("Test minor updates", func(t *testing.T) {
-		versions := []string{
-			"1.0.0",
-			"1.1.0",
-			"1.2.0",
-		}
-
-		expected := [][2]string{
-			{"1.0.0", "1.2.0"},
-		}
-
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
-	})
-
-	t.Run("Test major updates should NEVER be in a range", func(t *testing.T) {
-		versions := []string{
-			"1.0.0",
-			"2.0.0",
-			"3.0.0",
-		}
-
-		expected := [][2]string{
-			{"1.0.0", "1.0.0"},
-			{"2.0.0", "2.0.0"},
-			{"3.0.0", "3.0.0"},
-		}
-
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
-	})
-
-	t.Run("Test prerelease updates", func(t *testing.T) {
-		versions := []string{
-			"1.0.0-beta1",
-			"1.0.0-beta2",
-			"1.0.0-beta3",
-		}
-
-		expected := [][2]string{
-			{"1.0.0-beta1", "1.0.0-beta3"},
-		}
-
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
-	})
-
-	t.Run("Test prerelease updates with patch updates", func(t *testing.T) {
-		versions := []string{
-			"1.0.0-beta1",
-			"1.0.0-beta2",
-			"1.0.0-beta3",
-			"1.0.0",
-			"1.0.1",
-			"1.0.2",
-		}
-
-		expected := [][2]string{
-			{"1.0.0-beta1", "1.0.2"},
-		}
-
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
-	})
-
-	t.Run("test different patch and prerelease versions", func(t *testing.T) {
-		versions := []string{
-			"1.0.0-beta1",
-			"1.0.1-beta2",
-			"1.0.2",
-		}
-
-		expected := [][2]string{
-			{"1.0.0-beta1", "1.0.0-beta1"},
-			{"1.0.1-beta2", "1.0.1-beta2"},
-			{"1.0.2", "1.0.2"},
-		}
-
-		actual := transformer.VersionsToRange(versions)
-
-		if len(actual) != len(expected) {
-			t.Fatalf("Expected %v, got %v", expected, actual)
-		}
-
-		for i, v := range actual {
-			if v != expected[i] {
-				t.Fatalf("Expected %v, got %v", expected, actual)
-			}
-		}
-	})
+	assert.Equal(t, 18, len(ac))
+	// validate the versions
+	expected := []string{
+		"1.1.1-r1",
+		"1.1.1-r2",
+		"1.1.1-r3",
+		"1.1.1-r4",
+		"1.1.1-r5",
+		"1.1.1a-r0",
+		"1.1.1a-r1",
+		"1.1.1b-r0",
+		"1.1.1b-r1",
+		"1.1.1c-r0",
+		"1.1.1c-r1",
+		"1.1.1d-r1",
+		"1.1.1d-r2",
+		"1.1.1d-r3",
+		"1.1.1g-r0",
+		"1.1.1i-r0",
+		"1.1.1j-r0",
+		"1.1.1k-r0",
+	}
+	for i, acEntry := range ac {
+		assert.Equal(t, expected[i], *acEntry.Version)
+		assert.Nil(t, acEntry.SemverIntroduced)
+		assert.Nil(t, acEntry.SemverFixed)
+	}
 }

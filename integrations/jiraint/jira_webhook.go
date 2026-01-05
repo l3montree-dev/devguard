@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 )
 
 func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
@@ -136,8 +137,8 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 
 		// create a new event based on the comment
 		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), comment, vuln.GetScannerIDsOrArtifactNames())
+		statemachine.Apply(vuln, vulnEvent)
 
-		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
 		err = i.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := i.aggregatedVulnRepository.Save(tx, &vuln)

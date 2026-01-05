@@ -39,6 +39,8 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 
+	_ "net/http/pprof"
+
 	_ "github.com/lib/pq"
 )
 
@@ -109,6 +111,7 @@ func main() {
 		fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
+		fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

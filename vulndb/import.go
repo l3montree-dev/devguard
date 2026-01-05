@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -53,10 +54,10 @@ func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.
 }
 
 // maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
-var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}}
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}}
 
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
-var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}}
+var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}}
 
 func (service importService) Import(tx shared.DB, tag string) error {
 	begin := time.Now()
@@ -305,6 +306,47 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 	return nil
 }
 
+func makeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `
+-- Drop the foreign key constraint first
+ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
+
+-- Set cve_id to NULL where the referenced CVE doesn't exist anymore
+DELETE FROM dependency_vulns 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
+);
+
+-- Now recreate the foreign key constraint
+ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
+  FOREIGN KEY (cve_id) REFERENCES cves(cve);
+
+-- Drop any foreign key constraint (if it exists)
+ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
+
+-- Delete orphaned rows where the CVE no longer exists
+DELETE FROM cve_affected_component 
+WHERE NOT EXISTS (
+    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
+);
+
+-- Recreate the foreign key constraint
+ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
+  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+
+
+ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
+
+DELETE FROM weaknesses 
+WHERE NOT EXISTS (
+   SELECT 1 FROM cves WHERE cves.cve = weaknesses.cve_id
+);
+
+ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
+ FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
+	return err
+}
+
 func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string) error {
 	ctx := context.Background()
 	pool, err := establishConnection(ctx)
@@ -312,6 +354,13 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 		return err
 	}
 	defer pool.Close()
+
+	// Clean up orphaned tables older than 24 hours at the start of import
+	// This helps prevent accumulation of tables from failed imports
+	if err := cleanupOrphanedTables(ctx, pool, 24); err != nil {
+		monitoring.Alert("failed to cleanup orphaned tables", err)
+		return fmt.Errorf("failed to cleanup orphaned tables: %w", err)
+	}
 
 	// read all csv files in the directory
 	files, err := os.ReadDir(csvDir)
@@ -353,43 +402,9 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
-	_, err = tx.Exec(ctx, `
--- Drop the foreign key constraint first
-ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
 
--- Set cve_id to NULL where the referenced CVE doesn't exist anymore
-DELETE FROM dependency_vulns 
-WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = dependency_vulns.cve_id
-);
+	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
--- Now recreate the foreign key constraint
-ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve 
-  FOREIGN KEY (cve_id) REFERENCES cves(cve);
-
--- Drop any foreign key constraint (if it exists)
-ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
-
--- Delete orphaned rows where the CVE no longer exists
-DELETE FROM cve_affected_component 
-WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
-);
-
--- Recreate the foreign key constraint
-ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
-  FOREIGN KEY (cvecve) REFERENCES cves(cve);
-
-
-ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
-
-DELETE FROM weaknesses 
-WHERE NOT EXISTS (
-   SELECT 1 FROM cves WHERE cves.cve = weaknesses.cve_id
-);
-
-ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
- FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
 	if err != nil {
 		return tx.Rollback(ctx)
 	}
@@ -477,6 +492,19 @@ func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName string
 // This keeps the original table available during most of the import process
 func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
 	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
+
+	defer func() {
+		// Clean up shadow table if it still exists (swap failed)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		_, err := pool.Exec(cleanupCtx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", shadowTable))
+		if err != nil {
+			slog.Error("Failed to cleanup shadow table after error", "shadowTable", shadowTable, "error", err)
+		} else {
+			slog.Info("Cleaned up shadow table after error", "shadowTable", shadowTable)
+		}
+	}()
+
 	// count initial rows
 	initialCount, err := countTableRows(ctx, pool, tableName)
 	if err != nil {
@@ -563,19 +591,149 @@ func swapTables(ctx context.Context, pool *pgxpool.Pool, originalTable, shadowTa
 	return backupTable, nil
 }
 
-// cleanupBackupTable removes the backup table in the background
+// cleanupBackupTable removes the backup table in the background with retry logic
 func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
 	slog.Debug("Starting cleanup of backup table", "backupTable", backupTable)
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
 
-	cleanupStart := time.Now()
-	_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", backupTable))
-	if err != nil {
-		slog.Error("Failed to drop backup table", "table", backupTable, "error", err, "cleanupDuration", time.Since(cleanupStart))
-	} else {
-		slog.Info("Successfully cleaned up backup table", "table", backupTable, "cleanupDuration", time.Since(cleanupStart))
+	// Retry up to 3 times with exponential backoff
+	for attempt := 1; attempt <= 3; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		cleanupStart := time.Now()
+
+		_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", backupTable))
+		cancel()
+
+		if err == nil {
+			slog.Info("Successfully cleaned up backup table", "table", backupTable, "cleanupDuration", time.Since(cleanupStart), "attempt", attempt)
+			return
+		}
+
+		monitoring.Alert("failed to drop backup table", fmt.Errorf("table: %s, error: %w, attempt: %d", backupTable, err, attempt))
+
+		slog.Warn("Failed to drop backup table", "table", backupTable, "error", err, "attempt", attempt, "maxAttempts", 3)
+
+		if attempt < 3 {
+			// Exponential backoff: 10s, 30s
+			backoffDuration := time.Duration(attempt*10) * time.Second
+			slog.Debug("Retrying cleanup after backoff", "backupTable", backupTable, "backoff", backoffDuration)
+			time.Sleep(backoffDuration)
+		}
 	}
+
+	slog.Error("Failed to drop backup table after all retry attempts", "table", backupTable)
+}
+
+func CleanupOrphanedTables() error {
+	ctx := context.Background()
+	pool, err := establishConnection(ctx)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	return cleanupOrphanedTables(ctx, pool, 24)
+}
+
+func filterTablesToCleanup(tables []string, olderThanHours int) []string {
+	var tablesToDrop []string
+	currentTime := time.Now().Unix()
+	thresholdTimestamp := currentTime - int64(olderThanHours*3600)
+
+	for _, tableName := range tables {
+		// Extract timestamp from table name (format: tablename_backup_1234567890 or tablename_shadow_1234567890)
+		parts := strings.Split(tableName, "_")
+		if len(parts) < 2 {
+			continue
+		}
+
+		timestampStr := parts[len(parts)-1]
+		tableTimestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+		if err != nil {
+			slog.Debug("Could not parse timestamp from table name", "table", tableName, "timestamp", timestampStr)
+			continue
+		}
+
+		if tableTimestamp < thresholdTimestamp {
+			tablesToDrop = append(tablesToDrop, tableName)
+			tableAge := time.Duration(currentTime-tableTimestamp) * time.Second
+			slog.Info("Found orphaned table to clean up", "table", tableName, "age", tableAge)
+		}
+	}
+	return tablesToDrop
+}
+
+// cleanupOrphanedTables removes old backup and shadow tables that may have been left behind
+// This should be called periodically or at the start of import operations
+func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHours int) error {
+	slog.Info("Starting cleanup of orphaned backup and shadow tables", "olderThanHours", olderThanHours)
+
+	// Query to find all backup and shadow tables
+	query := `
+		SELECT tablename 
+		FROM pg_tables 
+		WHERE schemaname = 'public' 
+		AND (tablename LIKE '%_backup_%' OR tablename LIKE '%_shadow_%')
+		ORDER BY tablename
+	`
+
+	rows, err := pool.Query(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to query orphaned tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tablesToDrop []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			slog.Error("Failed to scan table name", "error", err)
+			continue
+		}
+		tablesToDrop = append(tablesToDrop, tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating orphaned tables: %w", err)
+	}
+
+	// Filter tables based on age
+	tablesToDrop = filterTablesToCleanup(tablesToDrop, olderThanHours)
+	if len(tablesToDrop) == 0 {
+		slog.Info("No orphaned tables found for cleanup")
+		return nil
+	}
+	// make sure the foreign keys are not violated before dropping tables
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		monitoring.Alert("failed to begin transaction for foreign key check", err)
+		return fmt.Errorf("failed to begin transaction for foreign key check: %w", err)
+	}
+
+	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	if err != nil {
+		monitoring.Alert("failed to ensure foreign keys before dropping orphaned tables", err)
+		return fmt.Errorf("failed to ensure foreign keys before dropping orphaned tables: %w", err)
+	}
+
+	// Drop the orphaned tables
+	for _, tableName := range tablesToDrop {
+		slog.Info("Dropping orphaned table", "table", tableName)
+		_, err := pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName))
+		if err != nil {
+			monitoring.Alert("failed to drop orphaned table", fmt.Errorf("table: %s, error: %w", tableName, err))
+			// Continue with other tables even if one fails
+		} else {
+			slog.Info("Successfully dropped orphaned table", "table", tableName)
+		}
+	}
+
+	if len(tablesToDrop) > 0 {
+		slog.Info("Orphaned table cleanup completed", "tablesDropped", len(tablesToDrop))
+	} else {
+		slog.Info("No orphaned tables found to clean up")
+	}
+
+	return nil
 }
 
 func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx context.Context) error {

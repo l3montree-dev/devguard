@@ -98,50 +98,6 @@ func (_c *VulnEventRepository_DeleteEventByID_Call) RunAndReturn(run func(tx sha
 	return _c
 }
 
-// DeleteEventsWithNotExistingVulnID provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) DeleteEventsWithNotExistingVulnID() error {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteEventsWithNotExistingVulnID")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteEventsWithNotExistingVulnID'
-type VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call struct {
-	*mock.Call
-}
-
-// DeleteEventsWithNotExistingVulnID is a helper method to define mock.On call
-func (_e *VulnEventRepository_Expecter) DeleteEventsWithNotExistingVulnID() *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
-	return &VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call{Call: _e.mock.On("DeleteEventsWithNotExistingVulnID")}
-}
-
-func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) Run(run func()) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) Return(err error) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call) RunAndReturn(run func() error) *VulnEventRepository_DeleteEventsWithNotExistingVulnID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetLastEventBeforeTimestamp provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(tx shared.DB, vulnID string, time1 time.Time) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, vulnID, time1)
@@ -604,6 +560,63 @@ func (_c *VulnEventRepository_SaveBatch_Call) Return(err error) *VulnEventReposi
 }
 
 func (_c *VulnEventRepository_SaveBatch_Call) RunAndReturn(run func(db shared.DB, events []models.VulnEvent) error) *VulnEventRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) SaveBatchBestEffort(db shared.DB, events []models.VulnEvent) error {
+	ret := _mock.Called(db, events)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VulnEvent) error); ok {
+		r0 = returnFunc(db, events)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnEventRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type VulnEventRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - db shared.DB
+//   - events []models.VulnEvent
+func (_e *VulnEventRepository_Expecter) SaveBatchBestEffort(db interface{}, events interface{}) *VulnEventRepository_SaveBatchBestEffort_Call {
+	return &VulnEventRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", db, events)}
+}
+
+func (_c *VulnEventRepository_SaveBatchBestEffort_Call) Run(run func(db shared.DB, events []models.VulnEvent)) *VulnEventRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.VulnEvent
+		if args[1] != nil {
+			arg1 = args[1].([]models.VulnEvent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_SaveBatchBestEffort_Call) Return(err error) *VulnEventRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnEventRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(db shared.DB, events []models.VulnEvent) error) *VulnEventRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }

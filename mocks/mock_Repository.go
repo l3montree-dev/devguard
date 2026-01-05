@@ -714,6 +714,63 @@ func (_c *Repository_SaveBatch_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ts 
 	return _c
 }
 
+// SaveBatchBestEffort provides a mock function for the type Repository
+func (_mock *Repository[ID, T, Tx]) SaveBatchBestEffort(tx Tx, ts []T) error {
+	ret := _mock.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
+		r0 = returnFunc(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Repository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type Repository_SaveBatchBestEffort_Call[ID any, T utils.Tabler, Tx any] struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - tx Tx
+//   - ts []T
+func (_e *Repository_Expecter[ID, T, Tx]) SaveBatchBestEffort(tx interface{}, ts interface{}) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+	return &Repository_SaveBatchBestEffort_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+}
+
+func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Run(run func(tx Tx, ts []T)) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 Tx
+		if args[0] != nil {
+			arg0 = args[0].(Tx)
+		}
+		var arg1 []T
+		if args[1] != nil {
+			arg1 = args[1].([]T)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Return(err error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Transaction provides a mock function for the type Repository
 func (_mock *Repository[ID, T, Tx]) Transaction(fn func(tx Tx) error) error {
 	ret := _mock.Called(fn)

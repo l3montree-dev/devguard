@@ -58,6 +58,7 @@ type TestApp struct {
 	CSAFService              shared.CSAFService
 	ReleaseService           shared.ReleaseService
 	OpenSourceInsightService shared.OpenSourceInsightService
+	MaliciousPackageChecker  shared.MaliciousPackageChecker
 
 	// Controllers
 	AssetController          *controllers.AssetController

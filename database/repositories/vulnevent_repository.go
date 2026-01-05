@@ -128,16 +128,6 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 	return shared.NewPaged(pageInfo, count, events), err
 }
 
-func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
-	err := r.db.Exec("DELETE FROM vuln_events WHERE NOT EXISTS (SELECT 1 FROM dependency_vulns where dependency_vulns.id = vuln_events.vuln_id UNION SELECT 1 FROM first_party_vulnerabilities where first_party_vulnerabilities.id = vuln_events.vuln_id UNION SELECT 1 FROM license_risks WHERE license_risks.id = vuln_events.vuln_id)").Error
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(tx *gorm.DB, vulnIDs []string) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
 	err := r.Repository.GetDB(tx).Raw("SELECT * FROM vuln_events WHERE vuln_id IN (?) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs).Find(&events).Error

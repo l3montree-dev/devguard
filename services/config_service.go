@@ -5,6 +5,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+
 	"github.com/l3montree-dev/devguard/shared"
 )
 

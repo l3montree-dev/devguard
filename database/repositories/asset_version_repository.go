@@ -70,6 +70,13 @@ func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *mode
 			return err
 		}
 
+		go func() {
+			sql := CleanupOrphanedRecordsSQL
+			err := repository.db.Exec(sql).Error
+			if err != nil {
+				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+			}
+		}() //nolint:errcheck
 		slog.Info("successfully deleted asset version and all related artifacts", "assetVersion", assetVersion.Name)
 		return nil
 	})
@@ -228,7 +235,6 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts
 }
 
 func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {
-
 	//this is not exploitable because the day is an int and golang is statically typed
 	interval := fmt.Sprintf("INTERVAL '%d days'", day)
 	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch'", interval)
@@ -242,7 +248,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	if count > 0 {
-
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
 		err = repository.db.Transaction(func(tx *gorm.DB) error {
 			// Delete all artifacts for the asset versions being deleted in a single query
@@ -283,6 +288,64 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 
 	}
 
+	return count, nil
+}
+
+func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error) {
+
+	//this is not exploitable because the day is an int and golang is statically typed
+	interval := fmt.Sprintf("INTERVAL '%d days'", day)
+	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch' AND asset_id = ?", interval)
+
+	var count int64
+	err := repository.db.Model(&models.AssetVersion{}).
+		Where(query, assetID).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if count > 0 {
+
+		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
+		err = repository.db.Transaction(func(tx *gorm.DB) error {
+			// Delete all artifacts for the asset versions being deleted in a single query
+			artifactDeleteQuery := `
+				DELETE FROM artifacts 
+				WHERE (asset_version_name, asset_id) IN (
+					SELECT name, asset_id 
+					FROM asset_versions 
+					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
+					AND default_branch = false 
+					AND type = 'branch'
+					AND asset_id = ?
+				)`
+
+			if err := tx.Exec(artifactDeleteQuery, assetID).Error; err != nil {
+				slog.Error("error deleting artifacts for old asset versions", "err", err)
+				return err
+			}
+
+			// Now delete the asset versions, which should cascade to delete other related records
+			if err := tx.Unscoped().Where(query, assetID).Delete(&models.AssetVersion{}).Error; err != nil {
+				slog.Error("error deleting old asset versions", "err", err)
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return 0, err
+		}
+		go func() {
+			sql := CleanupOrphanedRecordsSQL
+			err = repository.db.Exec(sql).Error
+			if err != nil {
+				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+			}
+		}() //nolint:errcheck
+	}
 	return count, nil
 }
 

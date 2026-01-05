@@ -217,6 +217,13 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			session := shared.GetSession(ctx)
 			allowed, err := domainRBAC.HasAccess(session.GetUserID())
 			if err != nil {
+				if org.IsPublic {
+					shared.SetIsPublicRequest(ctx)
+					shared.SetOrg(ctx, *org)
+					shared.SetRBAC(ctx, domainRBAC)
+					shared.SetOrgSlug(ctx, organization)
+					return next(ctx)
+				}
 				slog.Info("asking user to reauthorize", "err", err)
 				return ctx.JSON(401, map[string]string{"error": err.Error()})
 			}

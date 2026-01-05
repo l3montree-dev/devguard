@@ -213,6 +213,7 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 		Name:                     token.ProviderID,
 		Slug:                     fmt.Sprintf("@%s", token.ProviderID),
 		ExternalEntityProviderID: &token.ProviderID,
+		IsPublic:                 true,
 	}
 }
 
@@ -343,9 +344,12 @@ func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*git
 func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	// check if we can even handle this
 	client, projectID, err := g.GetClientBasedOnAsset(asset)
-	if errors.Is(err, notConnectedError) {
-		// asset not connected to gitlab
-		return nil
+	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
 	}
 
 	// convert the dependency vulns into a list of iids for this asset
@@ -598,7 +602,6 @@ func FetchPaginatedData[T any](
 }
 
 func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) shared.Role {
-
 	if accessLevel >= gitlab.OwnerPermissions {
 		return shared.RoleAdmin // there is nothing like an owner on project level, so we map it to admin
 	} else if accessLevel >= gitlab.MaintainerPermissions {

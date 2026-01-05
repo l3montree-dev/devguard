@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
+	"github.com/l3montree-dev/devguard/statemachine"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
@@ -223,7 +224,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		// create a new event based on the comment
 		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDsOrArtifactNames())
 
-		vulnEvent.Apply(vuln)
+		statemachine.Apply(vuln, vulnEvent)
+
 		// save the dependencyVuln and the event in a transaction
 		err = g.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := g.aggregatedVulnRepository.Save(tx, &vuln)

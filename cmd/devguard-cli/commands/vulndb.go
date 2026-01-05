@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/cmd/devguard/hashmigrations"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/services"
@@ -24,9 +24,12 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
+	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportIncrementalCommand())
+	vulndbCmd.AddCommand(newAliasMappingCommand())
+	vulndbCmd.AddCommand(newCleanupCommand())
 	return &vulndbCmd
 }
 
@@ -63,13 +66,83 @@ func migrateDB(db shared.DB) {
 		}
 
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := hashmigrations.RunHashMigrationsIfNeeded(db); err != nil {
+		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
+}
+
+func newCleanupCommand() *cobra.Command {
+	cleanupCmd := &cobra.Command{
+		Use:   "cleanup",
+		Short: "Cleans up orphaned vulndb tables older than specified hours",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := shared.LoadConfig(); err != nil {
+				slog.Error("could not load config", "error", err)
+				return
+			}
+			if err := vulndb.CleanupOrphanedTables(); err != nil {
+				slog.Error("failed to cleanup orphaned tables", "error", err)
+				return
+			}
+
+			slog.Info("successfully cleaned up orphaned tables older than 24 hours")
+		},
+	}
+
+	return cleanupCmd
+}
+
+func newImportCVECommand() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import-cve",
+		Short: "Will import the vulnerability database",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			shared.LoadConfig() // nolint
+			db, err := shared.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				return
+			}
+
+			migrateDB(db)
+
+			cveID := args[0]
+			cveID = strings.TrimSpace(strings.ToUpper(cveID))
+			// check if first argument is valid cve
+			if !isValidCVE(cveID) {
+				slog.Error("invalid cve id", "cve", cveID)
+				return
+			}
+
+			cveRepository := repositories.NewCVERepository(db)
+			nvdService := vulndb.NewNVDService(cveRepository)
+			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db))
+
+			cve, err := nvdService.ImportCVE(cveID)
+
+			if err != nil {
+				slog.Error("could not import cve", "err", err)
+				return
+			}
+
+			// the osv database provides additional information about affected packages
+			affectedPackages, err := osvService.ImportCVE(cveID)
+			if err != nil {
+				slog.Error("could not import cve from osv", "err", err)
+				return
+			}
+
+			slog.Info("successfully imported affected packages", "cveID", cve.CVE, "affectedPackages", len(affectedPackages))
+		},
+	}
+
+	return importCmd
 }
 
 func newImportCommand() *cobra.Command {
@@ -92,6 +165,9 @@ func newImportCommand() *cobra.Command {
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+			for _, arg := range args {
+				slog.Info(arg)
+			}
 
 			err = v.ImportFromDiff(nil)
 			if err != nil {
@@ -109,6 +185,9 @@ func newSyncCommand() *cobra.Command {
 		Short: "Will sync the vulnerability database",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
+			// check if after flag is set
+			after, _ := cmd.Flags().GetString("after")
+			startIndex, _ := cmd.Flags().GetInt("startIndex")
 
 			shared.LoadConfig() // nolint
 
@@ -123,40 +202,77 @@ func newSyncCommand() *cobra.Command {
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			cveRepository := repositories.NewCVERepository(db)
-			// cweRepository := repositories.NewCWERepository(db)
+			cweRepository := repositories.NewCWERepository(db)
 			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
-			// mitreService := vulndb.NewMitreService(cweRepository)
-
-			// epssService := vulndb.NewEPSSService(cveRepository)
-
-			osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+			nvdService := vulndb.NewNVDService(cveRepository)
+			mitreService := vulndb.NewMitreService(cweRepository)
+			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository)
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
-			// debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
+			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			// exploitDBService := vulndb.NewExploitDBService(repositories.NewExploitRepository(db))
+			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(db))
 
-			// githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
+			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
 
-			slog.Info("start updating vulnDB components:")
-			start := time.Now()
-			// if emptyOrContains(databasesToSync, "cwe") {
-			// 	now := time.Now()
-			// 	slog.Info("starting cwe database sync")
-			// 	if err := mitreService.Mirror(); err != nil {
-			// 		slog.Error("could not mirror cwe database", "err", err)
-			// 	}
-			// 	slog.Info("finished cwe database sync", "duration", time.Since(now))
-			// }
+			if emptyOrContains(databasesToSync, "cwe") {
+				now := time.Now()
+				slog.Info("starting cwe database sync")
+				if err := mitreService.Mirror(); err != nil {
+					slog.Error("could not mirror cwe database", "err", err)
+				}
+				slog.Info("finished cwe database sync", "duration", time.Since(now))
+			}
 
-			// if emptyOrContains(databasesToSync, "epss") {
-			// 	slog.Info("starting epss database sync")
-			// 	now := time.Now()
+			if emptyOrContains(databasesToSync, "nvd") {
+				slog.Info("starting nvd database sync")
+				now := time.Now()
+				if after != "" {
+					// we do a partial sync
+					// try to parse the date
+					afterDate, err := time.Parse("2006-01-02", after)
+					if err != nil {
+						slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
+					}
+					err = nvdService.FetchAfter(afterDate)
+					if err != nil {
+						slog.Error("could not fetch after date", "err", err)
+					}
+				} else {
+					if startIndex != 0 {
+						err = nvdService.FetchAfterIndex(startIndex)
+						if err != nil {
+							slog.Error("could not fetch after index", "err", err)
+						}
+					} else {
+						err = nvdService.Sync()
+						if err != nil {
+							slog.Error("could not do initial sync", "err", err)
+						}
+					}
+				}
+				slog.Info("finished nvd database sync", "duration", time.Since(now))
+			}
 
-			// 	if err := epssService.Mirror(); err != nil {
-			// 		slog.Error("could not sync epss database", "err", err)
-			// 	}
-			// 	slog.Info("finished epss database sync", "duration", time.Since(now))
-			// }
+			/*if emptyOrContains(databasesToSync, "cvelist") {
+				slog.Info("starting cvelist database sync")
+				now := time.Now()
+
+				if err := cvelistService.Mirror(); err != nil {
+					slog.Error("could not mirror cvelist database", "err", err)
+				}
+				slog.Info("finished cvelist database sync", "duration", time.Since(now))
+			}*/
+
+			if emptyOrContains(databasesToSync, "epss") {
+				slog.Info("starting epss database sync")
+				now := time.Now()
+
+				if err := epssService.Mirror(); err != nil {
+					slog.Error("could not sync epss database", "err", err)
+				}
+				slog.Info("finished epss database sync", "duration", time.Since(now))
+			}
 
 			if emptyOrContains(databasesToSync, "osv") {
 				slog.Info("starting osv database sync")
@@ -167,38 +283,50 @@ func newSyncCommand() *cobra.Command {
 				slog.Info("finished osv database sync", "duration", time.Since(now))
 			}
 
-			// if emptyOrContains(databasesToSync, "exploitdb") {
-			// 	slog.Info("starting exploitdb database sync")
-			// 	now := time.Now()
-			// 	if err := exploitDBService.Mirror(); err != nil {
-			// 		slog.Error("could not sync exploitdb database", "err", err)
-			// 	}
-			// 	slog.Info("finished exploitdb database sync", "duration", time.Since(now))
-			// }
+			if emptyOrContains(databasesToSync, "exploitdb") {
+				slog.Info("starting exploitdb database sync")
+				now := time.Now()
+				if err := expoitDBService.Mirror(); err != nil {
+					slog.Error("could not sync exploitdb database", "err", err)
+				}
+				slog.Info("finished exploitdb database sync", "duration", time.Since(now))
+			}
 
-			// if emptyOrContains(databasesToSync, "github-poc") {
-			// 	slog.Info("starting github-poc database sync")
-			// 	now := time.Now()
-			// 	if err := githubExploitDBService.Mirror(); err != nil {
-			// 		slog.Error("could not sync github-poc database", "err", err)
-			// 	}
-			// 	slog.Info("finished github-poc database sync", "duration", time.Since(now))
-			// }
+			if emptyOrContains(databasesToSync, "github-poc") {
+				slog.Info("starting github-poc database sync")
+				now := time.Now()
+				if err := githubExploitDBService.Mirror(); err != nil {
+					slog.Error("could not sync github-poc database", "err", err)
+				}
+				slog.Info("finished github-poc database sync", "duration", time.Since(now))
+			}
 
-			// if emptyOrContains(databasesToSync, "dsa") {
-			// 	slog.Info("starting dsa database sync")
-			// 	now := time.Now()
-			// 	if err := debianSecurityTracker.Mirror(); err != nil {
-			// 		slog.Error("could not sync dsa database", "err", err)
-			// 	}
-			// 	slog.Info("finished dsa database sync", "duration", time.Since(now))
-			// }
-			slog.Info("Finished database sync", "time elapsed", time.Since(start))
+			if emptyOrContains(databasesToSync, "dsa") {
+				slog.Info("starting dsa database sync")
+				now := time.Now()
+				if err := debianSecurityTracker.Mirror(); err != nil {
+					slog.Error("could not sync dsa database", "err", err)
+				}
+				slog.Info("finished dsa database sync", "duration", time.Since(now))
+			}
+
+			if emptyOrContains(databasesToSync, "malicious-packages") {
+				slog.Info("starting malicious packages database sync")
+				now := time.Now()
+				maliciousPackageRepository := repositories.NewMaliciousPackageRepository(db)
+				maliciousPackageChecker, err := vulndb.NewMaliciousPackageChecker(maliciousPackageRepository)
+				if err != nil {
+					slog.Error("could not create malicious package checker", "err", err)
+				} else if err := maliciousPackageChecker.DownloadAndProcessDB(); err != nil {
+					slog.Error("could not sync malicious packages database", "err", err)
+				}
+				slog.Info("finished malicious packages database sync", "duration", time.Since(now))
+			}
 		},
 	}
 	syncCmd.Flags().String("after", "", "allows to only sync a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
 	syncCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa, malicious-packages")
 
 	return &syncCmd
 }

@@ -16,8 +16,54 @@
 package controllers
 
 import (
+	"log/slog"
+	"os"
+	"path/filepath"
+
+	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"go.uber.org/fx"
 )
+
+// ProvideDependencyProxyConfig creates the configuration for the dependency proxy
+func ProvideDependencyProxyConfig() DependencyProxyConfig {
+	var cacheDir string
+	dependencyProxyCacheDir := os.Getenv("DEPENDENCY_PROXY_CACHE_DIR")
+	if dependencyProxyCacheDir != "" {
+		slog.Info("Using custom dependency proxy cache directory", "path", dependencyProxyCacheDir)
+		cacheDir = dependencyProxyCacheDir
+	} else {
+		cacheDir = filepath.Join(os.TempDir(), "devguard-dependency-proxy-cache")
+		slog.Info("Using default dependency proxy cache directory", "path", cacheDir)
+
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		slog.Error("Failed to create cache directory", "error", err)
+	}
+
+	return DependencyProxyConfig{
+		CacheDir: cacheDir,
+	}
+}
+
+// ProvideMaliciousPackageChecker creates the malicious package checker
+func ProvideMaliciousPackageChecker(
+	db shared.DB,
+	leaderElector shared.LeaderElector,
+) *vulndb.MaliciousPackageChecker {
+	repository := repositories.NewMaliciousPackageRepository(db)
+	checker, err := vulndb.NewMaliciousPackageChecker(repository)
+	if err != nil {
+		slog.Warn("Could not initialize malicious package checker", "error", err)
+		return nil
+	}
+
+	slog.Info("Malicious package firewall enabled")
+	return checker
+}
 
 // ControllerModule provides all HTTP controller constructors
 var ControllerModule = fx.Options(
@@ -56,4 +102,9 @@ var ControllerModule = fx.Options(
 	// Authentication & Access
 	fx.Provide(NewPatController),
 	fx.Provide(NewScanController),
+
+	// Dependency Proxy
+	fx.Provide(ProvideDependencyProxyConfig),
+	fx.Provide(fx.Annotate(ProvideMaliciousPackageChecker, fx.As(new(shared.MaliciousPackageChecker)))),
+	fx.Provide(NewDependencyProxyController),
 )

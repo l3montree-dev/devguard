@@ -210,6 +210,72 @@ func (_c *AssetVersionRepository_DeleteOldAssetVersions_Call) RunAndReturn(run f
 	return _c
 }
 
+// DeleteOldAssetVersionsOfAsset provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error) {
+	ret := _mock.Called(assetID, day)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteOldAssetVersionsOfAsset")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) (int64, error)); ok {
+		return returnFunc(assetID, day)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) int64); ok {
+		r0 = returnFunc(assetID, day)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
+		r1 = returnFunc(assetID, day)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteOldAssetVersionsOfAsset'
+type AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call struct {
+	*mock.Call
+}
+
+// DeleteOldAssetVersionsOfAsset is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - day int
+func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersionsOfAsset(assetID interface{}, day interface{}) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
+	return &AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call{Call: _e.mock.On("DeleteOldAssetVersionsOfAsset", assetID, day)}
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call) Run(run func(assetID uuid.UUID, day int)) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call) Return(n int64, err error) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call) RunAndReturn(run func(assetID uuid.UUID, day int) (int64, error)) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindOrCreate provides a mock function for the type AssetVersionRepository
 func (_mock *AssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	ret := _mock.Called(assetVersionName, assetID, tag, defaultBranchName)

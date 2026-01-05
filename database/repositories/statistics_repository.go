@@ -8,6 +8,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/statemachine"
 )
 
 type statisticsRepository struct {
@@ -56,7 +57,7 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 		events := dependencyVuln.Events
 		// iterate through all events and apply them
 		for _, event := range events {
-			event.Apply(&tmpDependencyVuln)
+			statemachine.Apply(&tmpDependencyVuln, event)
 		}
 	}
 	return dependencyVulns, nil

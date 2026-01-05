@@ -17,7 +17,6 @@ package api
 
 import (
 	"log/slog"
-	"sort"
 
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/labstack/echo/v4"
@@ -29,21 +28,12 @@ type Server struct {
 
 func NewServer() Server {
 	server := middlewares.Server()
+
 	return Server{
 		Echo: server,
 	}
 }
 
 func (s Server) Start() {
-	routes := s.Echo.Routes()
-	sort.Slice(routes, func(i, j int) bool {
-		return routes[i].Path < routes[j].Path
-	})
-	// print all registered routes
-	for _, route := range routes {
-		if route.Method != "echo_route_not_found" {
-			slog.Info(route.Path, "method", route.Method)
-		}
-	}
 	slog.Error("failed to start server", "err", s.Echo.Start(":8080").Error())
 }

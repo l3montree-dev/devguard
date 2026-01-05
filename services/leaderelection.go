@@ -22,6 +22,8 @@ type databaseLeaderElector struct {
 	daemonIsRunning bool
 }
 
+var _ shared.LeaderElector = (*databaseLeaderElector)(nil)
+
 func NewDatabaseLeaderElector(configService shared.ConfigService) *databaseLeaderElector {
 	leaderElector := databaseLeaderElector{
 		configService: configService,

@@ -47,173 +47,6 @@ func TestFromCdxBom(t *testing.T) {
 		assert.Contains(t, component.PackageURL, "test-component")
 	})
 
-	t.Run("component with trivy properties", func(t *testing.T) {
-		testCases := []struct {
-			name           string
-			srcName        string
-			srcVersion     string
-			pkgID          string
-			expectUpdate   bool
-			expectContains string
-		}{
-			{"all properties present", "actual-source-name", "2.1.0", "old-pkg-id", true, "actual-source-name@2.1.0"},
-			{"linux srcName ignored", "linux", "2.1.0", "old-pkg-id", false, "old-pkg-id"},
-			{"missing srcName", "", "2.1.0", "old-pkg-id", false, "old-pkg-id"},
-			{"missing srcVersion", "actual-source-name", "", "old-pkg-id", false, "old-pkg-id"},
-			{"missing pkgID", "actual-source-name", "2.1.0", "", false, "old-pkg-id"},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				properties := []cdx.Property{}
-				if tc.srcName != "" {
-					properties = append(properties, cdx.Property{Name: "aquasecurity:trivy:SrcName", Value: tc.srcName})
-				}
-				if tc.srcVersion != "" {
-					properties = append(properties, cdx.Property{Name: "aquasecurity:trivy:SrcVersion", Value: tc.srcVersion})
-				}
-				if tc.pkgID != "" {
-					properties = append(properties, cdx.Property{Name: "aquasecurity:trivy:PkgID", Value: tc.pkgID})
-				}
-
-				bom := &cdx.BOM{
-					Metadata: &cdx.Metadata{
-						Component: &cdx.Component{
-							BOMRef: "root",
-						},
-					},
-					Components: &[]cdx.Component{{
-						BOMRef:     "pkg:npm/old-pkg-id@1.0.0",
-						Name:       "test-component",
-						Version:    "1.0.0",
-						PackageURL: "pkg:npm/old-pkg-id@1.0.0",
-						Type:       cdx.ComponentTypeLibrary,
-						Properties: &properties,
-					}},
-					Dependencies: &[]cdx.Dependency{
-						{Ref: "root", Dependencies: &[]string{
-							"pkg:npm/old-pkg-id@1.0.0",
-						}},
-					},
-				}
-
-				result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
-				component := (*result.GetComponents())[0]
-
-				assert.Contains(t, component.PackageURL, tc.expectContains)
-				if !tc.expectUpdate {
-					assert.NotContains(t, component.PackageURL, "actual-source-name@2.1.0")
-				}
-			})
-		}
-	})
-
-	t.Run("multiple components", func(t *testing.T) {
-		bom := &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "root",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					Name:       "component-1",
-					Version:    "1.0.0",
-					PackageURL: "pkg:npm/pkg-id-1@1.0.0",
-					BOMRef:     "pkg:npm/pkg-id-1@1.0.0",
-					Properties: &[]cdx.Property{
-						{Name: "aquasecurity:trivy:SrcName", Value: "source-name-1"},
-						{Name: "aquasecurity:trivy:SrcVersion", Value: "1.0.0"},
-						{Name: "aquasecurity:trivy:PkgID", Value: "pkg-id-1"},
-					},
-				},
-				{
-					Name:       "component-2",
-					Version:    "2.0.0",
-					BOMRef:     "pkg:npm/pkg-id-2@2.0.0",
-					PackageURL: "pkg:npm/pkg-id-2@2.0.0",
-					Properties: &[]cdx.Property{
-						{Name: "aquasecurity:trivy:SrcName", Value: "source-name-2"},
-						{Name: "aquasecurity:trivy:SrcVersion", Value: "2.0.0"},
-						{Name: "aquasecurity:trivy:PkgID", Value: "pkg-id-2"},
-					},
-				},
-				{
-					Name:       "component-3",
-					Version:    "3.0.0",
-					PackageURL: "pkg:npm/component-3@3.0.0",
-					BOMRef:     "pkg:npm/component-3@3.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "root",
-					Dependencies: &[]string{
-						"pkg:npm/pkg-id-1@1.0.0",
-						"pkg:npm/pkg-id-2@2.0.0",
-						"pkg:npm/component-3@3.0.0",
-					},
-				},
-			},
-		}
-
-		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
-		components := *result.GetComponents()
-
-		assert.Len(t, components, len(*bom.Components)+1) // +1 for artifact
-		assert.Contains(t, components[0].PackageURL, "source-name-1@1.0.0")
-		assert.Contains(t, components[1].PackageURL, "source-name-2@2.0.0")
-		assert.Contains(t, components[2].PackageURL, "component-3")
-	})
-
-	t.Run("empty components", func(t *testing.T) {
-		bom := &cdx.BOM{Components: &[]cdx.Component{}}
-		bom.Dependencies = &[]cdx.Dependency{}
-		bom.Components = &[]cdx.Component{}
-		bom.Metadata = &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef:     "root",
-				PackageURL: "root",
-			},
-		}
-		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
-		assert.Len(t, *result.GetComponents(), 1) // there is only the root artifactName
-	})
-
-	t.Run("component with mixed properties", func(t *testing.T) {
-		bom := &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "root",
-				},
-			},
-			Components: &[]cdx.Component{{
-				Name:       "test-component",
-				Version:    "1.0.0",
-				PackageURL: "pkg:npm/old-pkg-id@1.0.0",
-				BOMRef:     "pkg:npm/old-pkg-id@1.0.0",
-				Properties: &[]cdx.Property{
-					{Name: "aquasecurity:trivy:SrcName", Value: "actual-source-name"},
-					{Name: "aquasecurity:trivy:SrcVersion", Value: "2.1.0"},
-					{Name: "aquasecurity:trivy:PkgID", Value: "old-pkg-id"},
-					{Name: "aquasecurity:trivy:Other", Value: "some-other-value"},
-					{Name: "some:other:property", Value: "not-trivy-property"},
-				},
-			}},
-			Dependencies: &[]cdx.Dependency{{
-				Ref: "root", Dependencies: &[]string{
-					"pkg:npm/old-pkg-id@1.0.0",
-				},
-			},
-			},
-		}
-
-		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
-		component := (*result.GetComponents())[0]
-
-		assert.Contains(t, component.PackageURL, "actual-source-name@2.1.0")
-		assert.NotContains(t, component.PackageURL, "old-pkg-id")
-	})
 }
 
 func TestMergeCdxBoms(t *testing.T) {
@@ -254,7 +87,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -317,7 +150,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -371,7 +204,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", "test", normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
+	merged := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -856,8 +689,7 @@ func TestCalculateDepth(t *testing.T) {
 				},
 			},
 		}, "artifact", "test", "vex")
-		bom = normalize.MergeCdxBoms(rootMetadata, "artifact", "test", bom, vex)
-
+		bom = normalize.MergeCdxBoms(rootMetadata, "artifact", bom, vex)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
@@ -884,7 +716,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -911,7 +743,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		deps := result.GetDependencies()
 
 		var rootDep *cdx.Dependency
@@ -933,7 +765,7 @@ func TestAddFakeMetadataRootComponent(t *testing.T) {
 			Dependencies: &[]cdx.Dependency{},
 		}
 
-		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test")
+		result := normalize.FromNormalizedCdxBom(bom, "app", "app", "test", "", "", "", "")
 		metadata := result.GetMetadata()
 
 		assert.NotNil(t, metadata.Component)

@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -133,8 +134,7 @@ func (repository *LicenseRiskRepository) ApplyAndSave(tx *gorm.DB, licenseRisk *
 }
 
 func (repository *LicenseRiskRepository) applyAndSave(tx *gorm.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
-	ev.Apply(licenseRisk)
-
+	statemachine.Apply(licenseRisk, *ev)
 	// run the updates in the transaction to keep a valid state
 	err := repository.Save(tx, licenseRisk)
 	if err != nil {

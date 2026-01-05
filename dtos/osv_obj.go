@@ -21,6 +21,13 @@ type Range struct {
 	Events []SemverEvent `json:"events"`
 }
 
+type EcosystemSpecific struct {
+	Urgency string `json:"urgency,omitempty"`
+	// there are more fields
+	// since we are using binary serialization for this struct
+	// we need to define all fields we want to use
+}
+
 type Affected struct {
 	Package           Package        `json:"package"`
 	Ranges            []Range        `json:"ranges"`
@@ -34,6 +41,7 @@ type OSV struct {
 	Summary       string     `json:"summary"`
 	Modified      time.Time  `json:"modified"`
 	Published     time.Time  `json:"published"`
+	Details       string     `json:"details"`
 	Related       []string   `json:"related"`
 	Aliases       []string   `json:"aliases"`
 	Upstream      []string   `json:"upstream"`

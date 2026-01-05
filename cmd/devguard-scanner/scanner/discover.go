@@ -20,18 +20,82 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 type AttestationFileLine struct {
 	PayloadType string `json:"payloadType"`
 	Payload     string `json:"payload"` // base64 encoded AttestationPayload
+}
+
+func fetchAttestationsForReference(ctx context.Context, ref name.Reference) ([]oci.Signature, error) {
+	desc, err := remote.Get(ref, remote.WithContext(ctx))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get remote descriptor")
+	}
+
+	var sigs []oci.Signature
+
+	// If it's an index, iterate all manifests
+	if desc.MediaType.IsIndex() {
+		idx, err := desc.ImageIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get image index")
+		}
+		manifests, err := idx.IndexManifest()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get index manifest")
+		}
+
+		for _, m := range manifests.Manifests {
+			// Construct attestation reference per digest
+			platformRef := ref.Context().Digest(m.Digest.String())
+			attRef, err := ociremote.AttestationTag(platformRef)
+			if err != nil {
+				return nil, err
+			}
+
+			sigsPerPlatform, err := ociremote.Signatures(attRef,
+				ociremote.WithRemoteOptions(
+					remote.WithContext(ctx),
+				),
+			)
+			if err != nil {
+				return nil, err
+			}
+			platformSigs, err := sigsPerPlatform.Get()
+			if err != nil {
+				return nil, err
+			}
+			sigs = append(sigs, platformSigs...)
+		}
+	} else {
+		attRef, err := ociremote.AttestationTag(ref)
+		if err != nil {
+			return nil, err
+		}
+		// Single-platform manifest
+		sigsSingle, err := ociremote.Signatures(attRef,
+			ociremote.WithRemoteOptions(
+				remote.WithContext(ctx),
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+		sigsSingleList, err := sigsSingle.Get()
+		if err != nil {
+			return nil, err
+		}
+		sigs = append(sigs, sigsSingleList...)
+	}
+
+	return sigs, nil
 }
 
 // DiscoverAttestations fetches and decodes attestations for a container image
@@ -45,37 +109,13 @@ func DiscoverAttestations(image string, predicateType string) ([]map[string]any,
 		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
 
-	attestations := []map[string]any{}
-
-	// Construct the attestation reference by appending .att to the tag
-	// Cosign stores attestations in a separate manifest with this suffix
-	attRef, err := ociremote.AttestationTag(ref)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to construct attestation reference")
-	}
-
-	// Fetch attestations using the constructed reference
-	sigs, err := ociremote.Signatures(attRef,
-		ociremote.WithRemoteOptions(
-			remote.WithAuthFromKeychain(authn.DefaultKeychain),
-			remote.WithContext(ctx),
-		),
-	)
-	if err != nil {
-		// If error contains "not found" or similar, return empty list
-		if strings.Contains(err.Error(), "not found") ||
-			strings.Contains(err.Error(), "MANIFEST_UNKNOWN") ||
-			strings.Contains(err.Error(), "NAME_UNKNOWN") {
-			return attestations, nil
-		}
-		return nil, errors.Wrap(err, "failed to fetch attestations")
-	}
-
 	// Iterate through all attestation signatures
-	attList, err := sigs.Get()
+	attList, err := fetchAttestationsForReference(ctx, ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get attestation list")
 	}
+
+	var attestations []map[string]any
 
 	for _, att := range attList {
 		// Get the payload - this is the DSSE envelope or Simple Signing payload

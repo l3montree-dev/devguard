@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"gorm.io/gorm"
 )
 
@@ -186,7 +187,7 @@ func (repository *firstPartyVulnerabilityRepository) ApplyAndSave(tx *gorm.DB, f
 
 func (repository *firstPartyVulnerabilityRepository) applyAndSave(tx *gorm.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	ev.Apply(firstPartyVuln)
+	statemachine.Apply(firstPartyVuln, *ev)
 	// save the event
 	if err := repository.Save(tx, firstPartyVuln); err != nil {
 		return models.VulnEvent{}, err

@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
@@ -36,11 +37,10 @@ import (
 
 type DaemonRunner interface {
 	RunDaemonPipelineForAsset(assetID uuid.UUID) error
-	RunAssetPipeline()
+	RunAssetPipeline(forceAll bool)
 	UpdateFixedVersions() error
 	UpdateVulnDB() error
 	UpdateOpenSourceInsightInformation() error
-	DeleteOldAssetVersions() error
 
 	Start()
 }
@@ -182,6 +182,11 @@ type AffectedComponentRepository interface {
 	SaveBatch(tx DB, affectedPkgs []models.AffectedComponent) error
 	DeleteAll(tx DB, ecosystem string) error
 	CreateAffectedComponentsUsingUnnest(tx DB, components []models.AffectedComponent) error
+}
+
+type MaliciousPackageChecker interface {
+	DownloadAndProcessDB() error
+	IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV)
 }
 
 type ComponentRepository interface {
@@ -341,7 +346,7 @@ type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
 	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
-	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error)
@@ -350,8 +355,8 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, artifactName string, orgName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
+	BuildSBOM(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
+	BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error)
@@ -375,12 +380,13 @@ type AssetVersionRepository interface {
 	GetAllTagsAndDefaultBranchForAsset(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(day int) (int64, error)
+	DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error)
 }
 
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
-	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
@@ -398,12 +404,12 @@ type ConfigRepository interface {
 
 type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
+	SaveBatchBestEffort(db DB, events []models.VulnEvent) error
 	Save(db DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(tx DB, vulnIDs []string) ([]models.VulnEvent, error)
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
-	DeleteEventsWithNotExistingVulnID() error
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
 }
@@ -526,6 +532,7 @@ type ComponentService interface {
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationShip, DB]
 	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationShip, error)
+	GetAllRelationshipsForCVEBatch(tx DB, targetCVEIDs []string) ([]models.CVERelationShip, error)
 }
 
 type LicenseRiskService interface {

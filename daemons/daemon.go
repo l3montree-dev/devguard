@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
-
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -47,9 +46,9 @@ func markMirrored(configService shared.ConfigService, key string) error {
 
 func (runner DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 	if shouldMirror(runner.configService, key) {
-		err := fn()
 		// always mark as mirrored - even in case of error to avoid endless loops
 		err1 := markMirrored(runner.configService, key)
+		err := fn()
 		if err != nil {
 			return err
 		}
@@ -61,11 +60,6 @@ func (runner DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 }
 
 func (runner DaemonRunner) runDaemons() {
-	// delete old asset versions
-	if err := runner.maybeRunAndMark("vulndb.deleteOldAssetVersions", runner.DeleteOldAssetVersions); err != nil {
-		slog.Error("could not delete old asset versions", "err", err)
-	}
-
 	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", runner.UpdateOpenSourceInsightInformation); err != nil {
 		slog.Error("could not update deps dev information", "err", err)
 	}
