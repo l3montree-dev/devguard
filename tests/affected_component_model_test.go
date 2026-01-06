@@ -313,7 +313,7 @@ func TestSetIdHash(t *testing.T) {
 		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVEs: []models.CVE{
+			CVE: []models.CVE{
 				{},
 			},
 		}
@@ -322,7 +322,7 @@ func TestSetIdHash(t *testing.T) {
 		otherAffectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
 			Namespace:          ptr("golang"),
-			CVEs:               make([]models.CVE, 0),
+			CVE:                make([]models.CVE, 0),
 		}
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck

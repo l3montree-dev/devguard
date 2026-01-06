@@ -113,21 +113,3 @@ func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
 	}
 	return nil
 }
-
-// MaliciousAffectedComponentFromOSV converts OSV data to MaliciousAffectedComponent entries
-func MaliciousAffectedComponentFromOSV(osv dtos.OSV, maliciousPackageID string) []MaliciousAffectedComponent {
-	affectedComponents := make([]MaliciousAffectedComponent, 0)
-
-	for _, affected := range osv.Affected {
-		bases := affectedComponentBaseFromAffected(affected) // malicious packages don't need ecosystem conversion
-		for _, base := range bases {
-			affectedComponent := MaliciousAffectedComponent{
-				MaliciousPackageID:    maliciousPackageID,
-				AffectedComponentBase: base,
-			}
-			affectedComponents = append(affectedComponents, affectedComponent)
-		}
-	}
-
-	return affectedComponents
-}

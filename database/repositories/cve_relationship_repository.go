@@ -25,9 +25,9 @@ func (repository *cveRelationshipRepository) GetAllRelationsForCVE(tx *gorm.DB, 
 	return relations, err
 }
 
-func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationShip, error) {
+func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *gorm.DB, sourceCVEIDs []string) ([]models.CVERelationShip, error) {
 	var relations []models.CVERelationShip
-	err := repository.GetDB(tx).Raw("SELECT * FROM cve_relationships cr WHERE cr.target_cve IN ?", targetCVEIDs).Find(&relations).Error
+	err := repository.GetDB(tx).Raw("SELECT * FROM cve_relationships cr WHERE cr.source_cve IN ?", sourceCVEIDs).Find(&relations).Error
 	if err != nil {
 		return nil, err
 	}

@@ -34,7 +34,7 @@ type tableTest struct {
 	exploits           []*models.Exploit
 	expectedVector     string
 	cvss               float32
-	affectedComponents []*models.AffectedComponent
+	affectedComponents []models.AffectedComponent
 }
 
 func ptr[T any](s T) *T {
@@ -161,7 +161,7 @@ func TestCalculateRisk(t *testing.T) {
 			},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: ptr("v1.0.0"), // this should not matter. Reducing the score, since a fix is available, makes no sense in this application. Actually we want those cves to be handled first, since they are easy to handle.
 			}},
 		},
@@ -185,7 +185,7 @@ func TestCalculateRisk(t *testing.T) {
 			},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
 			}},
 		},
@@ -235,7 +235,7 @@ func TestCalculateRisk(t *testing.T) {
 					Verified: true,
 				},
 			},
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: ptr("v1.0.0"),
 			}},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
@@ -259,7 +259,7 @@ func TestCalculateRisk(t *testing.T) {
 					Verified: true,
 				},
 			},
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
 			}},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",

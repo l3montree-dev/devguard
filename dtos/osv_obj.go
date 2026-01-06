@@ -29,11 +29,10 @@ type EcosystemSpecific struct {
 }
 
 type Affected struct {
-	Package           Package        `json:"package"`
-	Ranges            []Range        `json:"ranges"`
-	Versions          []string       `json:"versions"`
-	DatabaseSpecific  map[string]any `json:"database_specific"`
-	EcosystemSpecific map[string]any `json:"ecosystem_specific"`
+	Package           Package            `json:"package"`
+	Ranges            []Range            `json:"ranges"`
+	Versions          []string           `json:"versions"`
+	EcosystemSpecific *EcosystemSpecific `json:"ecosystem_specific"`
 }
 
 type OSV struct {

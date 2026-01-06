@@ -85,7 +85,7 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 					},
 				).Create(pkg).Error; err != nil {
 					// log, that we werent able to save the CVE
-					slog.Error("unable to save affected packages", "cve", pkg.CVEs, "err", err)
+					slog.Error("unable to save affected packages", "cve", pkg.CVE, "err", err)
 				}
 			}
 			return nil

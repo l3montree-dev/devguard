@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"gorm.io/gorm"
 )
 
@@ -38,6 +36,10 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 		return fmt.Errorf("failed to check hash migration version: %w", err)
 	}
 
+	if err := runCVEHashMigration(db, daemonRunner); err != nil {
+		return err
+	}
+
 	// If version is outdated, run migrations
 	if currentVersion < CurrentHashVersion {
 		slog.Info("Hash algorithm version changed, running hash migrations",
@@ -53,10 +55,6 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 		if err := runFirstPartyVulnHashMigration(db); err != nil {
 			return err
 		}
-
-		// if err := runCVEHashMigration(db, daemonRunner); err != nil {
-		// 	return err
-		// }
 
 		// Update version record in config table
 		versionConfig := models.Config{
@@ -212,8 +210,8 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// before importing the new CVEs we need to make sure that we do not get foreign key errors, for dependency_vulns which CVE does not exist anymore
 	err := db.Exec(`ALTER TABLE public.dependency_vulns 
 					DROP CONSTRAINT fk_dependency_vulns_cve`).Error
-	if err != nil {
-		slog.Error("could not drop foreign key constraint")
+	if err != nil && !strings.Contains(err.Error(), "constraint \"fk_dependency_vulns_cve\" of relation \"dependency_vulns\" does not exist") {
+		slog.Error(fmt.Sprintf("could not drop foreign key constraint, with err:%s", err.Error()))
 		return err
 	}
 
@@ -221,28 +219,31 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 		// make sure to reenable the foreign key constraint as cleanup
 		err := db.Exec(`ALTER TABLE ONLY public.dependency_vulns
     					ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES public.cves(cve);`).Error
-		if err != nil {
+
+		if err != nil && !strings.Contains(err.Error(), "constraint \"fk_dependency_vulns_cve\" for relation \"dependency_vulns\" already exists") {
 			panic(fmt.Sprintf("fatal error: could not reenable foreign key constraint fk_dependency_vulns_cve on table dependency_vulns, with internal error: %s", err.Error()))
 		}
 	}()
 
 	// import the new VulnDB state, containing the (new) CVEs from the OSV database
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-	configService := services.NewConfigService(db)
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+	// cveRepository := repositories.NewCVERepository(db)
+	// cweRepository := repositories.NewCWERepository(db)
+	// exploitsRepository := repositories.NewExploitRepository(db)
+	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	// configService := services.NewConfigService(db)
+	// v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 
-	slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(nil)
-	if err != nil {
-		slog.Error("error when trying to import with diff files", "err", err)
-	}
+	// slog.Info("Step 1: Importing new vulnDB state")
+	// err = v.ImportFromDiff(nil)
+	// if err != nil {
+	// 	slog.Error("error when trying to import with diff files", "err", err)
+	// }
 
 	// now we need to scan everything once more to update the dependencyVulns on the way
 	slog.Info("Step 2: Scanning all Assets")
 	daemonRunner.RunAssetPipeline(true)
+
+	slog.Info("finished scan")
 
 	return nil
 }

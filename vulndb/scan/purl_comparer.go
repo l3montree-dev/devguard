@@ -77,7 +77,7 @@ func (comparer *PurlComparer) GetVulns(purl string, version string, _ string) ([
 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
-		for _, cve := range affectedComponent.CVEs {
+		for _, cve := range affectedComponent.CVE {
 			fixed := affectedComponent.SemverFixed
 			if fixed == nil {
 				fixed = affectedComponent.VersionFixed

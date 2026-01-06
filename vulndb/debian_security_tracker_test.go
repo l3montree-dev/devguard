@@ -45,7 +45,7 @@ func TestDebianCveToAffectedComponentVersionComparison(t *testing.T) {
 				found := false
 				for _, a := range got {
 					if a.Name == pkg {
-						for _, c := range a.CVEs {
+						for _, c := range a.CVE {
 							if c.CVE == cveID {
 								found = true
 								break

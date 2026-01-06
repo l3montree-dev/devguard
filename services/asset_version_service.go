@@ -551,12 +551,12 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	}
 	cveRelations, err := s.cveRelationshipRepository.GetAllRelationshipsForCVEBatch(nil, cveIDs)
 
-	relationsByTargetCVE := make(map[string][]models.CVERelationShip, len(cveRelations))
+	relationsBySourceCVE := make(map[string][]models.CVERelationShip, len(cveRelations))
 	for _, relation := range cveRelations {
-		relationsByTargetCVE[relation.TargetCVE] = append(relationsByTargetCVE[relation.TargetCVE], relation)
+		relationsBySourceCVE[relation.SourceCVE] = append(relationsBySourceCVE[relation.SourceCVE], relation)
 	}
 
-	diff := statemachine.DiffScanResults(artifactName, foundDependencyVulns, existingDependencyVulns, relationsByTargetCVE)
+	diff := statemachine.DiffScanResults(artifactName, foundDependencyVulns, existingDependencyVulns, relationsBySourceCVE)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()

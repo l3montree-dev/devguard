@@ -138,37 +138,38 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 			}
 
 			// basically slices Contains() function but only on the CVE-ID rather than the whole vuln object
-			foundMatch := false
-			for _, existingCVE := range existingCVEs {
-				if utils.SafeDereference(existingCVE.CVEID) == "" {
-					continue
+			if vulnSliceContainsCVEID(existingCVEs, *foundCVE.CVEID) {
+				if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+					uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
 				}
-				// exact match we can append that
-				if vulnSliceContainsCVEID(foundCVEs, *existingCVE.CVEID) {
-					foundMatch = true
-					break
-				}
-			}
-
-			// if we have not found an exact match we try to find a match using the relationship-map
-			if !foundMatch {
-				relationsForThisCVE := cveRelationships[foundCVE.ID]
+			} else {
+				// if we have not found an exact match we try to find a match using the relationship-map
+				relationsForThisCVE := cveRelationships[*foundCVE.CVEID]
 				relatesToCVE := false
-				for _, existingCVE := range existingCVEs {
-					for _, relation := range relationsForThisCVE {
-						if relation.SourceCVE == existingCVE.ID {
-							relatesToCVE = true
-							break
+				var existingCVE models.DependencyVuln
+				// find out if the foundCVE relates to any existing CVE
+				for _, relation := range relationsForThisCVE {
+					existingCVE, ok = vulnSliceContainsCVEIDWithVuln(existingCVEs, relation.TargetCVE)
+					if ok {
+						relatesToCVE = true
+						break
+					}
+				}
+
+				if relatesToCVE {
+					// if this found CVE is related to an existing CVE then we want to use the existing CVE instead of the newly found one for consistency
+					if !vulnSliceContainsCVEID(uniqueFoundVulns, *existingCVE.CVEID) {
+						uniqueFoundVulns = append(uniqueFoundVulns, existingCVE)
+					}
+				} else {
+					// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
+					if !relatesToCVE {
+						if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+							uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
 						}
 					}
 				}
 
-				// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
-				if !relatesToCVE {
-					if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
-						uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
-					}
-				}
 			}
 		}
 		filteredFoundVulns = append(filteredFoundVulns, uniqueFoundVulns...)
@@ -181,6 +182,8 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 		RemovedFromArtifact: make([]models.DependencyVuln, 0),
 		Unchanged:           make([]models.DependencyVuln, 0),
 	}
+
+	foundVulns = filteredFoundVulns
 
 	foundSet := NewVulnSet(foundVulns)
 	existingSet := NewVulnSet(existingVulns)
@@ -229,6 +232,19 @@ func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) b
 		}
 	}
 	return false
+}
+
+func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID string) (vuln models.DependencyVuln, ok bool) {
+	for _, vuln := range vulns {
+		cveID := utils.SafeDereference(vuln.CVEID)
+		if cveID == "" {
+			continue
+		}
+		if cveID == targetCVEID {
+			return vuln, true
+		}
+	}
+	return models.DependencyVuln{}, false
 }
 
 type BranchDiff[T models.Vuln] struct {

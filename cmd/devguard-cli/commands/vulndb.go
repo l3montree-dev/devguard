@@ -5,13 +5,11 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"regexp"
 	"slices"
 	"time"
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
-	"github.com/l3montree-dev/devguard/cmd/devguard/hashmigrations"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
@@ -45,21 +43,6 @@ func emptyOrContains(s []string, e string) bool {
 		return true
 	}
 	return slices.Contains(s, e)
-}
-
-func isValidCVE(cveID string) bool {
-	// should either be just 2023-1234 or cve-2023-1234
-	if len(cveID) == 0 {
-		return false
-	}
-
-	r := regexp.MustCompile(`^CVE-\d{4}-\d{4,7}$`)
-	if r.MatchString(cveID) {
-		return true
-	}
-
-	r = regexp.MustCompile(`^\d{4}-\d{4,7}$`)
-	return r.MatchString(cveID)
 }
 
 func migrateDB(db shared.DB) {
@@ -119,11 +102,6 @@ func migrateDB(db shared.DB) {
 			fx.Populate(&daemonRunner),
 		)
 
-		// Run hash migrations if needed (when algorithm version changes)
-		if err := hashmigrations.RunHashMigrationsIfNeeded(db, daemonRunner); err != nil {
-			slog.Error("failed to run hash migrations", "error", err)
-			panic(errors.New("Failed to run hash migrations"))
-		}
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
@@ -171,9 +149,6 @@ func newImportCommand() *cobra.Command {
 			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
 			configService := services.NewConfigService(database)
 			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
-			for _, arg := range args {
-				slog.Info(arg)
-			}
 
 			err = v.ImportFromDiff(nil)
 			if err != nil {
@@ -228,6 +203,15 @@ func newSyncCommand() *cobra.Command {
 				slog.Info("finished cwe database sync", "duration", time.Since(now))
 			}
 
+			if emptyOrContains(databasesToSync, "osv") {
+				slog.Info("starting osv database sync")
+				now := time.Now()
+				if err := osvService.Mirror(); err != nil {
+					slog.Error("could not sync osv database", "err", err)
+				}
+				slog.Info("finished osv database sync", "duration", time.Since(now))
+			}
+
 			if emptyOrContains(databasesToSync, "epss") {
 				slog.Info("starting epss database sync")
 				now := time.Now()
@@ -236,15 +220,6 @@ func newSyncCommand() *cobra.Command {
 					slog.Error("could not sync epss database", "err", err)
 				}
 				slog.Info("finished epss database sync", "duration", time.Since(now))
-			}
-
-			if emptyOrContains(databasesToSync, "osv") {
-				slog.Info("starting osv database sync")
-				now := time.Now()
-				if err := osvService.Mirror(); err != nil {
-					slog.Error("could not sync osv database", "err", err)
-				}
-				slog.Info("finished osv database sync", "duration", time.Since(now))
 			}
 
 			if emptyOrContains(databasesToSync, "exploitdb") {

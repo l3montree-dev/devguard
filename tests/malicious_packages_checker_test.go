@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +43,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		Details: "This is a test entry for malicious package detection",
 		Affected: []dtos.Affected{
 			{
-				Package: dtos.Pkg{
+				Package: dtos.Package{
 					Ecosystem: "npm",
 					Name:      "fake-malicious-npm-package",
 					Purl:      "pkg:npm/fake-malicious-npm-package",
@@ -65,7 +66,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	err := maliciousPackageRepository.UpsertPackages([]models.MaliciousPackage{pkg})
 	assert.Nil(t, err)
 
-	components := models.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
+	components := transformer.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
 	err = maliciousPackageRepository.UpsertAffectedComponents(components)
 	assert.Nil(t, err)
 
