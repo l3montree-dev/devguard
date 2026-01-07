@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -79,7 +80,7 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 		tw.AppendSeparator()
 	}
 
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
+	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))})
 
 	fmt.Println(tw.Render())
 }
@@ -102,7 +103,7 @@ func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, asset
 		}
 		tw.AppendSeparator()
 	}
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
+	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))})
 	fmt.Println(tw.Render())
 }
 
@@ -165,7 +166,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 	fmt.Println(tw.Render())
 	if len(scanResponse.DependencyVulns) > 0 {
-		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
+		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
 		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
 	}
 
