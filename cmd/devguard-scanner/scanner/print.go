@@ -56,7 +56,8 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 
 func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
+	rowLengthLimit := 130
+	tw.SetAllowedRowLength(rowLengthLimit)
 
 	blue := text.FgBlue
 	green := text.FgGreen
@@ -69,7 +70,7 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 		for _, snippet := range vuln.SnippetContents {
 			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
 		}
-		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, 80)},
+		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, rowLengthLimit)},
 
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
@@ -80,14 +81,17 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 		tw.AppendSeparator()
 	}
 
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))})
+	link := blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
+	wrappedLink := text.WrapText(link, rowLengthLimit)
+	tw.AppendRow(table.Row{"Link", wrappedLink})
 
 	fmt.Println(tw.Render())
 }
 
 func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
+	rowLengthLimit := 130
+	tw.SetAllowedRowLength(rowLengthLimit)
 
 	blue := text.FgBlue
 	green := text.FgGreen
@@ -96,14 +100,18 @@ func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, asset
 		for _, snippet := range vuln.SnippetContents {
 			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
 		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 80)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, rowLengthLimit)})
 		if vuln.URI != "" {
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI)})
 
 		}
 		tw.AppendSeparator()
 	}
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))})
+
+	link := blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
+	wrappedLink := text.WrapText(link, rowLengthLimit)
+	tw.AppendRow(table.Row{"Link", wrappedLink})
+
 	fmt.Println(tw.Render())
 }
 
