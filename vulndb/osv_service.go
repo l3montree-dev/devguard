@@ -153,6 +153,14 @@ func (s osvService) Mirror() error {
 	close(jobs)
 	waitGroup.Wait()
 
+	// after we are done with importing all relations we need to filter out any cve relations where the target_cve does not exist anymore
+	slog.Info("start filtering cve relationships")
+	err := s.cveRelationshipRepository.FilterOutRelationsWithInvalidTargetCVE(nil)
+	if err != nil {
+		slog.Error("could not filter out invalid cve relations")
+		return err
+	}
+	slog.Info("successfully filtered relationships")
 	return nil
 }
 
@@ -216,20 +224,20 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		// first build the CVE based on the OSV and save it to the db
 		tx := s.cveRepository.Begin()
 
-		relations := transformer.OSVToCVERelationships(&osv)
-
-		err = s.cveRelationshipRepository.SaveBatch(tx, relations)
-		if err != nil {
-			slog.Error("could not save cve relation", "error", err)
-			tx.Rollback()
-			continue
-		}
-
 		newCVE := OSVToCVE(&osv)
 
 		err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
 		if err != nil {
 			slog.Error("could not save CVE", "CVE", newCVE.CVE, "error", err)
+			tx.Rollback()
+			continue
+		}
+
+		relations := transformer.OSVToCVERelationships(&osv)
+
+		err = s.cveRelationshipRepository.SaveBatch(tx, relations)
+		if err != nil {
+			slog.Error("could not save cve relation", "error", err)
 			tx.Rollback()
 			continue
 		}

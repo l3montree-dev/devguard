@@ -96,6 +96,67 @@ func isOnlyFoundInArtifact(vuln models.DependencyVuln, artifactName string) bool
 }
 
 func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ScanDiff {
+
+	foundVulns = resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns, existingVulns, cveRelationships)
+
+	diff := ScanDiff{
+		NewlyDiscovered:     make([]models.DependencyVuln, 0),
+		FixedEverywhere:     make([]models.DependencyVuln, 0),
+		NewInArtifact:       make([]models.DependencyVuln, 0),
+		RemovedFromArtifact: make([]models.DependencyVuln, 0),
+		Unchanged:           make([]models.DependencyVuln, 0),
+	}
+
+	foundSet := NewVulnSet(foundVulns)
+	existingSet := NewVulnSet(existingVulns)
+
+	// Process existing vulnerabilities: what disappeared?
+	for _, existing := range existingVulns {
+		if !foundSet.Contains(existing) {
+			// This vulnerability was not found in current scan
+			if isOnlyFoundInArtifact(existing, artifactName) {
+				// Fixed everywhere (this was the only artifact reporting it)
+				diff.FixedEverywhere = append(diff.FixedEverywhere, existing)
+			} else {
+				// Fixed only in this artifact (still exists in others)
+				diff.RemovedFromArtifact = append(diff.RemovedFromArtifact, existing)
+			}
+		} else {
+			// Still exists, nothing changed
+			diff.Unchanged = append(diff.Unchanged, existing)
+		}
+	}
+
+	// Process found vulnerabilities: what's new?
+	for _, found := range foundVulns {
+		if existing, wasKnown := existingSet.Get(found); !wasKnown {
+			// Never seen this vulnerability before
+			diff.NewlyDiscovered = append(diff.NewlyDiscovered, found)
+		} else {
+			// Known vulnerability - check if it's new to this artifact
+			if !isFoundInArtifact(existing, artifactName) {
+				// First time seeing it in this artifact
+				diff.NewInArtifact = append(diff.NewInArtifact, existing)
+			}
+		}
+	}
+	return diff
+}
+
+func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
+	for _, vuln := range vulns {
+		cveID := utils.SafeDereference(vuln.CVEID)
+		if cveID == "" {
+			continue
+		}
+		if cveID == targetCVEID {
+			return true
+		}
+	}
+	return false
+}
+
+func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) []models.DependencyVuln {
 	// first of all we need to resolve the relations between the existing CVEs and the currently found CVEs
 	// we cannot rely on the ID of the vulns to do this matching since the CVE-ID could have changed since the last time leading to a different hash
 	// to combat this we can map the existing/found vulns to their respective combinations of purl and CVE-ID and get two maps which reflect the different states
@@ -174,64 +235,7 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 		}
 		filteredFoundVulns = append(filteredFoundVulns, uniqueFoundVulns...)
 	}
-
-	diff := ScanDiff{
-		NewlyDiscovered:     make([]models.DependencyVuln, 0),
-		FixedEverywhere:     make([]models.DependencyVuln, 0),
-		NewInArtifact:       make([]models.DependencyVuln, 0),
-		RemovedFromArtifact: make([]models.DependencyVuln, 0),
-		Unchanged:           make([]models.DependencyVuln, 0),
-	}
-
-	foundVulns = filteredFoundVulns
-
-	foundSet := NewVulnSet(foundVulns)
-	existingSet := NewVulnSet(existingVulns)
-
-	// Process existing vulnerabilities: what disappeared?
-	for _, existing := range existingVulns {
-		if !foundSet.Contains(existing) {
-			// This vulnerability was not found in current scan
-			if isOnlyFoundInArtifact(existing, artifactName) {
-				// Fixed everywhere (this was the only artifact reporting it)
-				diff.FixedEverywhere = append(diff.FixedEverywhere, existing)
-			} else {
-				// Fixed only in this artifact (still exists in others)
-				diff.RemovedFromArtifact = append(diff.RemovedFromArtifact, existing)
-			}
-		} else {
-			// Still exists, nothing changed
-			diff.Unchanged = append(diff.Unchanged, existing)
-		}
-	}
-
-	// Process found vulnerabilities: what's new?
-	for _, found := range foundVulns {
-		if existing, wasKnown := existingSet.Get(found); !wasKnown {
-			// Never seen this vulnerability before
-			diff.NewlyDiscovered = append(diff.NewlyDiscovered, found)
-		} else {
-			// Known vulnerability - check if it's new to this artifact
-			if !isFoundInArtifact(existing, artifactName) {
-				// First time seeing it in this artifact
-				diff.NewInArtifact = append(diff.NewInArtifact, existing)
-			}
-		}
-	}
-	return diff
-}
-
-func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
-	for _, vuln := range vulns {
-		cveID := utils.SafeDereference(vuln.CVEID)
-		if cveID == "" {
-			continue
-		}
-		if cveID == targetCVEID {
-			return true
-		}
-	}
-	return false
+	return filteredFoundVulns
 }
 
 func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID string) (vuln models.DependencyVuln, ok bool) {

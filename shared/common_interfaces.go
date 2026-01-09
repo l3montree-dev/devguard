@@ -533,6 +533,7 @@ type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationShip, DB]
 	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationShip, error)
 	GetAllRelationshipsForCVEBatch(tx DB, targetCVEIDs []string) ([]models.CVERelationShip, error)
+	FilterOutRelationsWithInvalidTargetCVE(tx DB) error
 }
 
 type LicenseRiskService interface {

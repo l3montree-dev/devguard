@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"gorm.io/gorm"
 )
 
@@ -210,6 +213,9 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// before importing the new CVEs we need to make sure that we do not get foreign key errors, for dependency_vulns which CVE does not exist anymore
 	err := db.Exec(`ALTER TABLE public.dependency_vulns 
 					DROP CONSTRAINT fk_dependency_vulns_cve`).Error
+	if err != nil {
+		slog.Warn("could not drop foreign key constraint")
+	}
 	if err != nil && !strings.Contains(err.Error(), "constraint \"fk_dependency_vulns_cve\" of relation \"dependency_vulns\" does not exist") {
 		slog.Error(fmt.Sprintf("could not drop foreign key constraint, with err:%s", err.Error()))
 		return err
@@ -221,25 +227,43 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
     					ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES public.cves(cve);`).Error
 
 		if err != nil && !strings.Contains(err.Error(), "constraint \"fk_dependency_vulns_cve\" for relation \"dependency_vulns\" already exists") {
-			panic(fmt.Sprintf("fatal error: could not reenable foreign key constraint fk_dependency_vulns_cve on table dependency_vulns, with internal error: %s", err.Error()))
+			// panic(fmt.Sprintf("fatal error: could not reenable foreign key constraint fk_dependency_vulns_cve on table dependency_vulns, with internal error: %s", err.Error()))
+			slog.Error(fmt.Sprintf("fatal error: could not reenable foreign key constraint fk_dependency_vulns_cve on table dependency_vulns, with internal error: %s", err.Error()))
 		}
 	}()
 
-	// import the new VulnDB state, containing the (new) CVEs from the OSV database
-	// cveRepository := repositories.NewCVERepository(db)
-	// cweRepository := repositories.NewCWERepository(db)
-	// exploitsRepository := repositories.NewExploitRepository(db)
-	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-	// configService := services.NewConfigService(db)
-	// v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+	err = db.Exec(`DELETE FROM cves`).Error
+	if err != nil {
+		slog.Error("could not delete cves")
+		return err
+	}
+	slog.Info("successfully deleted cve entries")
 
-	// slog.Info("Step 1: Importing new vulnDB state")
-	// err = v.ImportFromDiff(nil)
+	// import the new VulnDB state, containing the (new) CVEs from the OSV database
+	cveRepository := repositories.NewCVERepository(db)
+	cweRepository := repositories.NewCWERepository(db)
+	exploitsRepository := repositories.NewExploitRepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	configService := services.NewConfigService(db)
+	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
+
+	slog.Info("Step 1: Importing new vulnDB state")
+	err = v.ImportFromDiff(nil)
+	if err != nil {
+		slog.Error("error when trying to import with diff files", "err", err)
+	}
+
+	// cveRepository := repositories.NewCVERepository(db)
+	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+
+	// v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+	// slog.Info("Syncing vulndb")
+	// err = v.Mirror()
 	// if err != nil {
-	// 	slog.Error("error when trying to import with diff files", "err", err)
+	// 	return err
 	// }
 
-	// now we need to scan everything once more to update the dependencyVulns on the way
+	// now we need to scan everything to update the dependencyVulns on the way
 	slog.Info("Step 2: Scanning all Assets")
 	daemonRunner.RunAssetPipeline(true)
 

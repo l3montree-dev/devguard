@@ -4,6 +4,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type cveRelationshipRepository struct {
@@ -32,4 +33,32 @@ func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *
 		return nil, err
 	}
 	return relations, nil
+}
+
+func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(tx *gorm.DB) error {
+	var relationships []models.CVERelationShip
+	err := repository.GetDB(tx).Raw(`SELECT * FROM cve_relationships a WHERE NOT EXISTS
+	(SELECT * FROM cves b WHERE a.target_cve = b.cve);`).Find(&relationships).Error
+	if err != nil {
+		return err
+	}
+
+	batchsize := 1000
+	counter := 0
+	for counter < len(relationships) {
+		var batch []models.CVERelationShip
+		if counter+batchsize < len(relationships) {
+			batch = relationships[counter : counter+batchsize]
+			counter += batchsize
+		} else {
+			batch = relationships[counter:]
+			counter += batchsize
+		}
+
+		err = repository.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Delete(batch).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
