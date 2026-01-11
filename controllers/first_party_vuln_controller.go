@@ -34,6 +34,13 @@ func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnR
 	}
 }
 
+// @Summary List first-party vulnerabilities by organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/vulns [get]
 func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
@@ -61,6 +68,14 @@ func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 	}))
 }
 
+// @Summary List first-party vulnerabilities by project
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/vulns [get]
 func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
@@ -115,6 +130,12 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
 
+// @Summary Get first-party vulnerability details
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param vulnID path string true "Vulnerability ID"
+// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Router /vulns/{vulnID} [get]
 func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -128,6 +149,13 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
+// @Summary Create first-party vulnerability event
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param vulnID path string true "Vulnerability ID"
+// @Param body body object true "Event data"
+// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Router /vulns/{vulnID}/events [post]
 func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
@@ -175,6 +203,16 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
 
+// @Summary List first-party vulnerabilities by asset version
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns [get]
 func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -198,6 +236,15 @@ func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 	}))
 }
 
+// @Summary Get first-party vulnerabilities as SARIF
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns.sarif [get]
 func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)

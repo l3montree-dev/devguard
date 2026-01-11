@@ -126,6 +126,17 @@ func (controller DependencyVulnController) ListByAssetIDWithoutHandledExternalEv
 	}))
 }
 
+// @Summary List dependency vulnerabilities
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param flat query string false "Flat list flag"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns [get]
 func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -238,6 +249,16 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
+// @Summary Get dependency vulnerability details
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param dependencyVulnID path string true "Vulnerability ID"
+// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller DependencyVulnController) Read(ctx shared.Context) error {
 
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
@@ -344,6 +365,17 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	return ctx.JSON(200, map[string]any{"message": "sync completed"})
 }
 
+// @Summary Create vulnerability event
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param dependencyVulnID path string true "Vulnerability ID"
+// @Param body body object true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [post]
 func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)

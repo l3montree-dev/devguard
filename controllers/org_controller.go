@@ -47,6 +47,12 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 	}
 }
 
+// @Summary Create organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param body body dtos.OrgCreateRequest true "Request body"
+// @Success 200 {object} models.Org
+// @Router /organizations [post]
 func (controller *OrgController) Create(ctx shared.Context) error {
 
 	var req dtos.OrgCreateRequest
@@ -71,6 +77,13 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, organization)
 }
 
+// @Summary Update organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param body body dtos.OrgPatchRequest true "Request body"
+// @Success 200 {object} dtos.OrgDetailsDTO
+// @Router /organizations/{organization} [patch]
 func (controller *OrgController) Update(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	members, err := shared.FetchMembersOfOrganization(ctx)
@@ -109,6 +122,12 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 	return ctx.JSON(200, resp)
 }
 
+// @Summary Delete organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200
+// @Router /organizations/{organization} [delete]
 func (controller *OrgController) Delete(ctx shared.Context) error {
 	// get the id of the organization
 	organizationID := shared.GetOrg(ctx).GetID()
@@ -122,6 +141,12 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Get organization content tree
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/content-tree [get]
 func (controller *OrgController) ContentTree(ctx shared.Context) error {
 	// get the whole content tree of the organization
 	// this means all projects and their corresponding assets
@@ -142,6 +167,12 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 	return ctx.JSON(200, controller.organizationRepository.ContentTree(organization.GetID(), projects))
 }
 
+// @Summary Accept organization invitation
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param body body dtos.AcceptInvitationRequest true "Request body"
+// @Success 200
+// @Router /accept-invitation [post]
 func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the code and the org id from the path
 	var req dtos.AcceptInvitationRequest
@@ -196,6 +227,13 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	)
 }
 
+// @Summary Invite member to organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param body body dtos.InviteRequest true "Request body"
+// @Success 200 {object} models.Invitation
+// @Router /organizations/{organization}/members [post]
 func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	// we expect an email address in the request.
 	// afterwards we create a new invitation model and a code corresponding to the invitation
@@ -226,6 +264,14 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	return ctx.JSON(200, model) // for now return the model - later on we should send an email
 }
 
+// @Summary Change member role
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param userID path string true "User ID"
+// @Param body body dtos.OrgChangeRoleRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/members/{userID} [put]
 func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	// get the user id from the request
 	var req dtos.OrgChangeRoleRequest
@@ -261,6 +307,13 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Remove member from organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param userID path string true "User ID"
+// @Success 200
+// @Router /organizations/{organization}/members/{userID} [delete]
 func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	// get the user id from the request
 	userID := ctx.Param("userID")
@@ -286,6 +339,12 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Get organization metrics
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} object{ownerId=string}
+// @Router /organizations/{organization}/metrics [get]
 func (controller *OrgController) Metrics(ctx shared.Context) error {
 	owner, err := shared.GetRBAC(ctx).GetOwnerOfOrganization()
 	if err != nil {
@@ -294,6 +353,13 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }
 
+// @Summary Get organization config file
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param config-file path string true "Config file ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/config-files/{config-file} [get]
 func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
@@ -305,6 +371,12 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	return ctx.JSON(200, configContent)
 }
 
+// @Summary List organization members
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {array} object
+// @Router /organizations/{organization}/members [get]
 func (controller *OrgController) Members(ctx shared.Context) error {
 	users, err := shared.FetchMembersOfOrganization(ctx)
 	if err != nil {
@@ -314,6 +386,12 @@ func (controller *OrgController) Members(ctx shared.Context) error {
 	return ctx.JSON(200, users)
 }
 
+// @Summary Get organization details
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} dtos.OrgDetailsDTO
+// @Router /organizations/{organization} [get]
 func (controller *OrgController) Read(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
@@ -332,6 +410,11 @@ func (controller *OrgController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, resp)
 }
 
+// @Summary List organizations
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Success 200 {array} models.Org
+// @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {
 	// get all organizations the user has access to
 	userID := shared.GetSession(ctx).GetUserID()

@@ -58,8 +58,16 @@ var release string // Will be filled at build time
 //	@license.name	AGPL-3
 //	@license.url	https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
 
-// @host		localhost:8080
-// @BasePath	/api/v1
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+
+//	@securityDefinitions.apikey	CookieAuth
+//	@in							cookie
+//	@name						ory_kratos_session
+
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						X-API-Key
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck

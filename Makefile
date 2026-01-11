@@ -35,3 +35,8 @@ devguard-cli::
 
 devguard-scanner::
 	go build $(FLAGS) -o devguard-scanner cmd/devguard-scanner/main.go
+
+docs::
+	swag init -g cmd/devguard/main.go -o docs
+	@rm -f docs/docs.go
+	@echo "OpenAPI spec generated at docs/swagger.json and docs/swagger.yaml"

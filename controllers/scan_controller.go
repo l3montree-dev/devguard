@@ -62,8 +62,17 @@ func NewScanController(scanService shared.ScanService, componentRepository share
 	}
 }
 
-// UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
-// It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
+// @Summary Upload VEX document
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param body body object true "CycloneDX VEX BOM"
+// @Param X-Asset-Ref header string false "Asset version name"
+// @Param X-Artifact-Name header string false "Artifact name"
+// @Param X-Tag header string false "Tag flag"
+// @Param X-Asset-Default-Branch header string false "Default branch"
+// @Param X-Origin header string false "Origin"
+// @Success 200
+// @Router /vex [post]
 func (s ScanController) UploadVEX(ctx shared.Context) error {
 	var bom cdx.BOM
 	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
@@ -227,6 +236,16 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}, nil
 }
 
+// @Summary Scan for first-party vulnerabilities
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param body body object true "SARIF scan result"
+// @Param X-Asset-Ref header string false "Asset version name"
+// @Param X-Tag header string false "Tag flag"
+// @Param X-Asset-Default-Branch header string false "Default branch"
+// @Param X-Scanner header string true "Scanner ID"
+// @Success 200 {object} dtos.FirstPartyScanResponse
+// @Router /sarif-scan [post]
 func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	startTime := time.Now()
 	defer func() {
@@ -297,6 +316,18 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	})
 }
 
+// @Summary Scan for dependency vulnerabilities
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param body body object true "CycloneDX SBOM"
+// @Param X-Asset-Ref header string false "Asset version name"
+// @Param X-Artifact-Name header string false "Artifact name"
+// @Param X-Tag header string false "Tag flag"
+// @Param X-Asset-Default-Branch header string false "Default branch"
+// @Param X-Origin header string false "Origin"
+// @Param X-Scanner header string false "Scanner ID"
+// @Success 200 {object} dtos.ScanResponse
+// @Router /scan [post]
 func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
@@ -313,6 +344,13 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	return c.JSON(200, scanResults)
 }
 
+// @Summary Scan SBOM file
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param file formData file true "SBOM file"
+// @Param X-Origin header string false "Origin"
+// @Success 200 {object} dtos.ScanResponse
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file [post]
 func (s *ScanController) ScanSbomFile(c shared.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)

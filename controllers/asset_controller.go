@@ -52,6 +52,11 @@ func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Lookup asset by provider
+// @Param provider query string true "Provider name"
+// @Param id query string true "Repository ID"
+// @Success 200 {object} dtos.LookupResponse
+// @Router /lookup [get]
 func (a *AssetController) HandleLookup(ctx shared.Context) error {
 	provider := ctx.QueryParam("provider")
 	if provider == "" {
@@ -90,6 +95,13 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 	return ctx.JSON(200, response)
 }
 
+// @Summary List assets
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200 {array} dtos.AssetDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets [get]
 func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	rbac := shared.GetRBAC(ctx)
@@ -128,6 +140,14 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 	return nil
 }
 
+// @Summary Delete asset
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [delete]
 func (a *AssetController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	err := a.assetRepository.Delete(nil, asset.GetID())
@@ -153,6 +173,14 @@ func (a *AssetController) GetSecrets(ctx shared.Context) error {
 	return ctx.JSON(200, secrets)
 }
 
+// @Summary Create asset
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body dtos.AssetCreateRequest true "Request body"
+// @Success 200 {object} dtos.AssetDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets [post]
 func (a *AssetController) Create(ctx shared.Context) error {
 	var req dtos.AssetCreateRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -176,6 +204,14 @@ func (a *AssetController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDTO(*asset))
 }
 
+// @Summary Get asset details
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {object} dtos.AssetDetailsDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [get]
 func (a *AssetController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// fetch the members of the asset
@@ -187,6 +223,15 @@ func (a *AssetController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDetailsDTO(app, members))
 }
 
+// @Summary Update asset
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body dtos.AssetPatchRequest true "Request body"
+// @Success 200 {object} dtos.AssetDetailsDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [patch]
 func (a *AssetController) Update(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 

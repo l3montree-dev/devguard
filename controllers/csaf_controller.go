@@ -49,7 +49,14 @@ func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository,
 	}
 }
 
-// builds and returns the index.txt file, listing all csaf reports currently available
+// @Summary Get CSAF index file
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt [get]
 func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
@@ -71,7 +78,14 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	return ctx.String(200, index)
 }
 
-// builds and returns the changes.csv file, containing all reports ordered by release dates
+// @Summary Get CSAF changes CSV
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv [get]
 func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
@@ -324,7 +338,9 @@ func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 	return fmt.Errorf("invalid resource: %s", file)
 }
 
-// returns the aggregator file which points to all public organizations provider-metadata files
+// @Summary Get CSAF aggregator metadata
+// @Success 200 {object} object
+// @Router /.well-known/csaf-aggregator/aggregator.json [get]
 func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 
 	contactDetails := os.Getenv("CSAF_AGGREGATOR_CONTACT_DETAILS")
@@ -392,7 +408,12 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	return ctx.JSONPretty(200, aggregator, config.PrettyJSONIndent)
 }
 
-// returns the provider-metadata file for an organization which points to each assets provider-metadata
+// @Summary Get CSAF provider metadata for organization
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/csaf/provider-metadata.json [get]
 func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	hostURL := os.Getenv("API_URL")
@@ -447,7 +468,16 @@ func getPublicKeyFingerprint() string {
 
 // from here on: code that handles the creation of csaf reports them self
 
-// handles all requests directed at a specific csaf report version, including the csaf report itself as well as the respective hash and signature
+// @Summary Get CSAF report
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param year path string true "Year"
+// @Param version path string true "Version filename"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version} [get]
 func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
 	// generate the report first
 	csafReport, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)

@@ -37,6 +37,11 @@ func NewPatController(service shared.PersonalAccessTokenService, repository shar
 	}
 }
 
+// @Summary Create personal access token
+// @Security CookieAuth
+// @Param body body dtos.PatCreateRequest true "Request body"
+// @Success 200 {object} object{createdAt=string,description=string,userID=string,pubKey=string,fingerprint=string,scopes=string,id=string}
+// @Router /pats [post]
 func (p *PatController) Create(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
@@ -71,6 +76,10 @@ func (p *PatController) Create(c shared.Context) error {
 	})
 }
 
+// @Summary Revoke PAT by private key
+// @Param body body dtos.RevokeByPrivateKeyRequest true "Request body"
+// @Success 200
+// @Router /pats/revoke-by-private-key [post]
 func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	// get the json body
 	var req dtos.RevokeByPrivateKeyRequest
@@ -92,6 +101,12 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Delete personal access token
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Param tokenID path string true "Token ID"
+// @Success 200
+// @Router /pats/{tokenID} [delete]
 func (p *PatController) Delete(c shared.Context) error {
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
 
@@ -112,6 +127,11 @@ func (p *PatController) Delete(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary List personal access tokens
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Success 200 {array} models.PAT
+// @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)

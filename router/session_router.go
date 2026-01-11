@@ -27,6 +27,11 @@ type SessionRouter struct {
 	*echo.Group
 }
 
+// @Summary Get current user info
+// @Security CookieAuth
+// @Security ApiKeyAuth
+// @Success 200 {object} object{userID=string}
+// @Router /whoami [get]
 func whoami(ctx echo.Context) error {
 	return ctx.JSON(200, map[string]string{
 		"userID": shared.GetSession(ctx).GetUserID(),

@@ -1,0 +1,4209 @@
+basePath: /api/v1
+definitions:
+  databasetypes.JSONB:
+    additionalProperties: {}
+    type: object
+  dtos.AcceptInvitationRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
+    type: object
+  dtos.ArtifactDTO:
+    properties:
+      artifactName:
+        type: string
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+    type: object
+  dtos.AssetCreateRequest:
+    properties:
+      availabilityRequirement:
+        type: string
+      centralDependencyVulnManagement:
+        type: boolean
+      confidentialityRequirement:
+        type: string
+      cvssAutomaticTicketThreshold:
+        type: number
+      description:
+        type: string
+      enableTicketRange:
+        type: boolean
+      importance:
+        type: integer
+      integrityRequirement:
+        type: string
+      name:
+        type: string
+      reachableFromInternet:
+        type: boolean
+      repositoryProvider:
+        description: either null or github or gitlab, etc.
+        enum:
+        - github
+        - gitlab
+        type: string
+      riskAutomaticTicketThreshold:
+        type: number
+    required:
+    - availabilityRequirement
+    - confidentialityRequirement
+    - integrityRequirement
+    - name
+    type: object
+  dtos.AssetDTO:
+    properties:
+      availabilityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      avatar:
+        type: string
+      centralDependencyVulnManagement:
+        type: boolean
+      confidentialityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      cvssAutomaticTicketThreshold:
+        type: number
+      description:
+        type: string
+      enableTicketRange:
+        type: boolean
+      externalEntityId:
+        type: string
+      externalEntityProviderId:
+        type: string
+      id:
+        type: string
+      integrityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      isPublic:
+        type: boolean
+      name:
+        type: string
+      paranoidMode:
+        type: boolean
+      pipelineError:
+        type: string
+      pipelineLastRun:
+        type: string
+      projectId:
+        type: string
+      reachableFromInternet:
+        type: boolean
+      refs:
+        items:
+          $ref: '#/definitions/dtos.AssetVersionDTO'
+        type: array
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      repositoryProvider:
+        type: string
+      riskAutomaticTicketThreshold:
+        type: number
+      sharesInformation:
+        type: boolean
+      signingPubKey:
+        type: string
+      slug:
+        type: string
+      vulnAutoReopenAfterDays:
+        type: integer
+    type: object
+  dtos.AssetDetailsDTO:
+    properties:
+      availabilityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      avatar:
+        type: string
+      centralDependencyVulnManagement:
+        type: boolean
+      confidentialityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      cvssAutomaticTicketThreshold:
+        type: number
+      description:
+        type: string
+      enableTicketRange:
+        type: boolean
+      externalEntityId:
+        type: string
+      externalEntityProviderId:
+        type: string
+      id:
+        type: string
+      integrityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      isPublic:
+        type: boolean
+      members:
+        items:
+          $ref: '#/definitions/dtos.UserDTO'
+        type: array
+      name:
+        type: string
+      paranoidMode:
+        type: boolean
+      pipelineError:
+        type: string
+      pipelineLastRun:
+        type: string
+      projectId:
+        type: string
+      reachableFromInternet:
+        type: boolean
+      refs:
+        items:
+          $ref: '#/definitions/dtos.AssetVersionDTO'
+        type: array
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      repositoryProvider:
+        type: string
+      riskAutomaticTicketThreshold:
+        type: number
+      sharesInformation:
+        type: boolean
+      signingPubKey:
+        type: string
+      slug:
+        type: string
+      vulnAutoReopenAfterDays:
+        type: integer
+    type: object
+  dtos.AssetPatchRequest:
+    properties:
+      availabilityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      badgeSecret:
+        type: string
+      centralDependencyVulnManagement:
+        type: boolean
+      confidentialityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      configFiles:
+        additionalProperties: {}
+        type: object
+      cvssAutomaticTicketThreshold:
+        type: number
+      description:
+        type: string
+      enableTicketRange:
+        type: boolean
+      integrityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      isPublic:
+        type: boolean
+      name:
+        type: string
+      paranoidMode:
+        type: boolean
+      reachableFromInternet:
+        type: boolean
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      repositoryProvider:
+        description: either null or github or gitlab, etc.
+        enum:
+        - github
+        - gitlab
+        type: string
+      riskAutomaticTicketThreshold:
+        type: number
+      sharesInformation:
+        type: boolean
+      vulnAutoReopenAfterDays:
+        type: integer
+      webhookSecret:
+        type: string
+    type: object
+  dtos.AssetVersionDTO:
+    properties:
+      assetId:
+        type: string
+      createdAt:
+        type: string
+      defaultBranch:
+        type: boolean
+      lastAccessedAt:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      signingPubKey:
+        type: string
+      slug:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  dtos.CVEDTO:
+    properties:
+      cisaActionDue:
+        format: date
+        type: string
+      cisaExploitAdd:
+        format: date
+        type: string
+      cisaRequiredAction:
+        type: string
+      cisaVulnerabilityName:
+        type: string
+      createdAt:
+        type: string
+      cve:
+        type: string
+      cvss:
+        type: number
+      dateLastModified:
+        type: string
+      datePublished:
+        type: string
+      description:
+        type: string
+      epss:
+        type: number
+      exploits:
+        items:
+          $ref: '#/definitions/dtos.ExploitDTO'
+        type: array
+      percentile:
+        type: number
+      references:
+        type: string
+      risk:
+        $ref: '#/definitions/dtos.RiskMetrics'
+      updatedAt:
+        type: string
+      vector:
+        type: string
+    type: object
+  dtos.CandidatesResponseDTO:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/dtos.ArtifactDTO'
+        type: array
+      releases:
+        items:
+          $ref: '#/definitions/dtos.ReleaseDTO'
+        type: array
+    type: object
+  dtos.ComponentType:
+    enum:
+    - application
+    - container
+    - data
+    - device
+    - device-driver
+    - file
+    - firmware
+    - framework
+    - library
+    - machine-learning-model
+    - operating-system
+    - platform
+    type: string
+    x-enum-varnames:
+    - ComponentTypeApplication
+    - ComponentTypeContainer
+    - ComponentTypeData
+    - ComponentTypeDevice
+    - ComponentTypeDeviceDriver
+    - ComponentTypeFile
+    - ComponentTypeFirmware
+    - ComponentTypeFramework
+    - ComponentTypeLibrary
+    - ComponentTypeMachineLearningModel
+    - ComponentTypeOS
+    - ComponentTypePlatform
+  dtos.DependencyVulnDTO:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/dtos.ArtifactDTO'
+        type: array
+      assetId:
+        type: string
+      assetVersionId:
+        type: string
+      componentDepth:
+        type: integer
+      componentFixedVersion:
+        type: string
+      componentPurl:
+        type: string
+      createdAt:
+        type: string
+      cve:
+        $ref: '#/definitions/dtos.CVEDTO'
+      cveID:
+        type: string
+      effort:
+        type: integer
+      exploits:
+        items:
+          $ref: '#/definitions/dtos.ExploitDTO'
+        type: array
+      id:
+        type: string
+      lastDetected:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      priority:
+        type: integer
+      rawRiskAssessment:
+        type: number
+      riskAssessment:
+        type: integer
+      riskRecalculatedAt:
+        type: string
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        type: string
+      ticketUrl:
+        type: string
+    type: object
+  dtos.DetailedDependencyVulnDTO:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/dtos.ArtifactDTO'
+        type: array
+      assetId:
+        type: string
+      assetVersionId:
+        type: string
+      componentDepth:
+        type: integer
+      componentFixedVersion:
+        type: string
+      componentPurl:
+        type: string
+      createdAt:
+        type: string
+      cve:
+        $ref: '#/definitions/dtos.CVEDTO'
+      cveID:
+        type: string
+      effort:
+        type: integer
+      events:
+        items:
+          $ref: '#/definitions/dtos.VulnEventDTO'
+        type: array
+      exploits:
+        items:
+          $ref: '#/definitions/dtos.ExploitDTO'
+        type: array
+      id:
+        type: string
+      lastDetected:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      priority:
+        type: integer
+      rawRiskAssessment:
+        type: number
+      riskAssessment:
+        type: integer
+      riskRecalculatedAt:
+        type: string
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        type: string
+      ticketUrl:
+        type: string
+    type: object
+  dtos.DetailedFirstPartyVulnDTO:
+    properties:
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+      author:
+        type: string
+      commit:
+        type: string
+      createdAt:
+        type: string
+      date:
+        type: string
+      email:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/dtos.VulnEventDTO'
+        type: array
+      id:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      ruleDescription:
+        type: string
+      ruleHelp:
+        type: string
+      ruleHelpURI:
+        type: string
+      ruleId:
+        type: string
+      ruleName:
+        type: string
+      ruleProperties:
+        additionalProperties: {}
+        type: object
+      scannerIds:
+        type: string
+      snippetContents:
+        items:
+          $ref: '#/definitions/dtos.SnippetContent'
+        type: array
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        type: string
+      ticketUrl:
+        type: string
+      uri:
+        type: string
+    type: object
+  dtos.ExploitDTO:
+    properties:
+      author:
+        type: string
+      cveID:
+        type: string
+      description:
+        type: string
+      forks:
+        type: integer
+      id:
+        type: string
+      pushed_at:
+        type: string
+      sourceURL:
+        type: string
+      stargazers_count:
+        type: integer
+      subscribers_count:
+        type: integer
+      tags:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      verified:
+        type: boolean
+      watchers:
+        type: integer
+    type: object
+  dtos.FirstPartyScanResponse:
+    properties:
+      amountClosed:
+        type: integer
+      amountOpened:
+        type: integer
+      firstPartyVulns:
+        items:
+          $ref: '#/definitions/dtos.FirstPartyVulnDTO'
+        type: array
+    type: object
+  dtos.FirstPartyVulnDTO:
+    properties:
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+      author:
+        type: string
+      commit:
+        type: string
+      createdAt:
+        type: string
+      date:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      ruleDescription:
+        type: string
+      ruleHelp:
+        type: string
+      ruleHelpURI:
+        type: string
+      ruleId:
+        type: string
+      ruleName:
+        type: string
+      ruleProperties:
+        additionalProperties: {}
+        type: object
+      scannerIds:
+        type: string
+      snippetContents:
+        items:
+          $ref: '#/definitions/dtos.SnippetContent'
+        type: array
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        type: string
+      ticketUrl:
+        type: string
+      uri:
+        type: string
+    type: object
+  dtos.GithubAppInstallationDTO:
+    properties:
+      installationCreatedWebhookReceivedTime:
+        type: string
+      installationId:
+        type: integer
+      orgID:
+        type: string
+      settingsUrl:
+        type: string
+      targetAvatarUrl:
+        type: string
+      targetLogin:
+        type: string
+      targetType:
+        type: string
+    type: object
+  dtos.GitlabIntegrationDTO:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      obfuscatedToken:
+        type: string
+      url:
+        type: string
+    type: object
+  dtos.InviteRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  dtos.JiraIntegrationDTO:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      obfuscatedToken:
+        type: string
+      url:
+        type: string
+      userEmail:
+        type: string
+    type: object
+  dtos.LookupResponse:
+    properties:
+      asset:
+        type: string
+      link:
+        type: string
+      org:
+        type: string
+      project:
+        type: string
+    type: object
+  dtos.MechanicalJustificationType:
+    enum:
+    - component_not_present
+    - vulnerable_code_not_present
+    - vulnerable_code_not_in_execute_path
+    - vulnerable_code_cannot_be_controlled_by_adversary
+    - inline_mitigations_already_exist
+    type: string
+    x-enum-varnames:
+    - ComponentNotPresent
+    - VulnerableCodeNotPresent
+    - VulnerableCodeNotInExecutePath
+    - VulnerableCodeCannotBeControlledByAdversary
+    - InlineMitigationsAlreadyExist
+  dtos.OrgChangeRoleRequest:
+    properties:
+      role:
+        enum:
+        - member
+        - admin
+        type: string
+    required:
+    - role
+    type: object
+  dtos.OrgCreateRequest:
+    properties:
+      contactPhoneNumber:
+        type: string
+      country:
+        type: string
+      criticalInfrastructure:
+        type: boolean
+      description:
+        type: string
+      grundschutz:
+        type: boolean
+      industry:
+        type: string
+      iso27001:
+        type: boolean
+      language:
+        type: string
+      name:
+        type: string
+      nist:
+        type: boolean
+      numberOfEmployees:
+        type: integer
+    required:
+    - name
+    type: object
+  dtos.OrgDetailsDTO:
+    properties:
+      configFiles:
+        additionalProperties: {}
+        type: object
+      contactPhoneNumber:
+        type: string
+      country:
+        type: string
+      createdAt:
+        type: string
+      criticalInfrastructure:
+        type: boolean
+      description:
+        type: string
+      externalEntityProviderId:
+        type: string
+      gitLabIntegrations:
+        items:
+          $ref: '#/definitions/dtos.GitlabIntegrationDTO'
+        type: array
+      githubAppInstallations:
+        items:
+          $ref: '#/definitions/dtos.GithubAppInstallationDTO'
+        type: array
+      grundschutz:
+        type: boolean
+      id:
+        type: string
+      industry:
+        type: string
+      isPublic:
+        type: boolean
+      iso27001:
+        type: boolean
+      jiraIntegrations:
+        items:
+          $ref: '#/definitions/dtos.JiraIntegrationDTO'
+        type: array
+      language:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/dtos.UserDTO'
+        type: array
+      name:
+        type: string
+      nist:
+        type: boolean
+      numberOfEmployees:
+        type: integer
+      projects:
+        items:
+          $ref: '#/definitions/dtos.ProjectDTO'
+        type: array
+      sharesVulnInformation:
+        type: boolean
+      slug:
+        type: string
+      updatedAt:
+        type: string
+      webhooks:
+        items:
+          $ref: '#/definitions/dtos.WebhookIntegrationDTO'
+        type: array
+    type: object
+  dtos.OrgPatchRequest:
+    properties:
+      configFiles:
+        additionalProperties: {}
+        type: object
+      contactPhoneNumber:
+        type: string
+      country:
+        type: string
+      criticalInfrastructure:
+        type: boolean
+      description:
+        type: string
+      grundschutz:
+        type: boolean
+      industry:
+        type: string
+      isPublic:
+        type: boolean
+      iso27001:
+        type: boolean
+      language:
+        type: string
+      name:
+        type: string
+      nist:
+        type: boolean
+      numberOfEmployees:
+        type: integer
+      shareVulnInformation:
+        type: boolean
+    type: object
+  dtos.PatCreateRequest:
+    properties:
+      description:
+        type: string
+      pubKey:
+        type: string
+      scopes:
+        type: string
+    type: object
+  dtos.ProjectCreateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      parentId:
+        description: if created as a child project
+        type: string
+      type:
+        type: string
+    required:
+    - name
+    type: object
+  dtos.ProjectDTO:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/dtos.AssetDTO'
+        type: array
+      avatar:
+        description: URL to the project's avatar
+        type: string
+      configFiles:
+        additionalProperties: {}
+        type: object
+      description:
+        type: string
+      externalEntityId:
+        description: only set if this is an external entity
+        type: string
+      externalEntityProviderId:
+        type: string
+      id:
+        type: string
+      isPublic:
+        type: boolean
+      name:
+        type: string
+      parent:
+        allOf:
+        - $ref: '#/definitions/dtos.ProjectDTO'
+        description: recursive structure
+      parentId:
+        type: string
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      slug:
+        type: string
+      type:
+        type: string
+    type: object
+  dtos.ProjectDetailsDTO:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/dtos.AssetDTO'
+        type: array
+      avatar:
+        description: URL to the project's avatar
+        type: string
+      configFiles:
+        additionalProperties: {}
+        type: object
+      description:
+        type: string
+      externalEntityId:
+        description: only set if this is an external entity
+        type: string
+      externalEntityProviderId:
+        type: string
+      id:
+        type: string
+      isPublic:
+        type: boolean
+      members:
+        items:
+          $ref: '#/definitions/dtos.UserDTO'
+        type: array
+      name:
+        type: string
+      parent:
+        allOf:
+        - $ref: '#/definitions/dtos.ProjectDTO'
+        description: recursive structure
+      parentId:
+        type: string
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      slug:
+        type: string
+      type:
+        type: string
+      webhooks:
+        items:
+          $ref: '#/definitions/dtos.WebhookIntegrationDTO'
+        type: array
+    type: object
+  dtos.ProjectInviteRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    required:
+    - ids
+    type: object
+  dtos.ProjectPatchRequest:
+    properties:
+      configFiles:
+        additionalProperties: {}
+        type: object
+      description:
+        type: string
+      isPublic:
+        type: boolean
+      name:
+        type: string
+      repositoryId:
+        type: string
+      repositoryName:
+        type: string
+      type:
+        type: string
+    type: object
+  dtos.ReleaseCreateRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dtos.ReleaseItemDTO'
+        type: array
+      name:
+        type: string
+    type: object
+  dtos.ReleaseDTO:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dtos.ReleaseItemDTO'
+        type: array
+      name:
+        type: string
+      projectId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  dtos.ReleaseItemDTO:
+    properties:
+      artifactName:
+        type: string
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+      childReleaseId:
+        type: string
+      childReleaseName:
+        type: string
+      id:
+        type: string
+      releaseId:
+        type: string
+    type: object
+  dtos.ReleasePatchRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dtos.ReleaseItemDTO'
+        type: array
+    type: object
+  dtos.RequirementLevel:
+    enum:
+    - low
+    - medium
+    - high
+    type: string
+    x-enum-varnames:
+    - RequirementLevelLow
+    - RequirementLevelMedium
+    - RequirementLevelHigh
+  dtos.RevokeByPrivateKeyRequest:
+    properties:
+      privkey:
+        type: string
+    required:
+    - privkey
+    type: object
+  dtos.RiskMetrics:
+    properties:
+      baseScore:
+        type: number
+      withEnvironment:
+        type: number
+      withEnvironmentAndThreatIntelligence:
+        type: number
+      withThreatIntelligence:
+        type: number
+    type: object
+  dtos.ScanResponse:
+    properties:
+      amountClosed:
+        type: integer
+      amountOpened:
+        type: integer
+      dependencyVulns:
+        items:
+          $ref: '#/definitions/dtos.DependencyVulnDTO'
+        type: array
+    type: object
+  dtos.SnippetContent:
+    properties:
+      endColumn:
+        type: integer
+      endLine:
+        type: integer
+      snippet:
+        type: string
+      startColumn:
+        type: integer
+      startLine:
+        type: integer
+    type: object
+  dtos.UpstreamState:
+    enum:
+    - 0
+    - 1
+    - 2
+    type: integer
+    x-enum-varnames:
+    - UpstreamStateInternal
+    - UpstreamStateExternalAccepted
+    - UpstreamStateExternal
+  dtos.UserDTO:
+    properties:
+      avatarUrl:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  dtos.VulnEventDTO:
+    properties:
+      arbitraryJSONData:
+        additionalProperties: {}
+        type: object
+      assetVersionName:
+        type: string
+      assetVersionSlug:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      justification:
+        type: string
+      mechanicalJustification:
+        $ref: '#/definitions/dtos.MechanicalJustificationType'
+      packageName:
+        type: string
+      type:
+        $ref: '#/definitions/dtos.VulnEventType'
+      upstream:
+        $ref: '#/definitions/dtos.UpstreamState'
+      uri:
+        type: string
+      userId:
+        type: string
+      vulnId:
+        type: string
+      vulnType:
+        $ref: '#/definitions/dtos.VulnType'
+      vulnerabilityName:
+        type: string
+    type: object
+  dtos.VulnEventType:
+    enum:
+    - fixed
+    - licenseDecision
+    - reopened
+    - accepted
+    - mitigate
+    - falsePositive
+    - markedForTransfer
+    - comment
+    - detected
+    - rawRiskAssessmentUpdated
+    type: string
+    x-enum-varnames:
+    - EventTypeFixed
+    - EventTypeLicenseDecision
+    - EventTypeReopened
+    - EventTypeAccepted
+    - EventTypeMitigate
+    - EventTypeFalsePositive
+    - EventTypeMarkedForTransfer
+    - EventTypeComment
+    - EventTypeDetected
+    - EventTypeRawRiskAssessmentUpdated
+  dtos.VulnState:
+    enum:
+    - open
+    - fixed
+    - accepted
+    - falsePositive
+    - markedForTransfer
+    type: string
+    x-enum-comments:
+      VulnStateAccepted: like ignore
+      VulnStateFalsePositive: we can use that for crowdsource vulnerability management.
+        27 People marked this as false positive and they have the same dependency
+        tree - propably you are not either
+      VulnStateFixed: we did not find the dependencyVuln anymore in the last scan!
+    x-enum-varnames:
+    - VulnStateOpen
+    - VulnStateFixed
+    - VulnStateAccepted
+    - VulnStateFalsePositive
+    - VulnStateMarkedForTransfer
+  dtos.VulnType:
+    enum:
+    - dependencyVuln
+    - firstPartyVuln
+    - licenseRisk
+    type: string
+    x-enum-varnames:
+    - VulnTypeDependencyVuln
+    - VulnTypeFirstPartyVuln
+    - VulnTypeLicenseRisk
+  dtos.WebhookIntegrationDTO:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      sbomEnabled:
+        type: boolean
+      url:
+        type: string
+      vulnEnabled:
+        type: boolean
+    type: object
+  models.AffectedComponent:
+    properties:
+      cves:
+        items:
+          $ref: '#/definitions/models.CVE'
+        type: array
+      ecosystem:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      purl:
+        type: string
+      qualifiers:
+        type: string
+      scheme:
+        type: string
+      semverEnd:
+        type: string
+      semverStart:
+        type: string
+      source:
+        type: string
+      subpath:
+        type: string
+      type:
+        type: string
+      version:
+        description: either version or semver is defined
+        type: string
+      versionFixed:
+        description: for non semver packages - if both are defined, THIS one should
+          be used for displaying. We might fake semver versions just for database
+          querying and ordering
+        type: string
+      versionIntroduced:
+        description: for non semver packages - if both are defined, THIS one should
+          be used for displaying. We might fake semver versions just for database
+          querying and ordering
+        type: string
+    type: object
+  models.Artifact:
+    properties:
+      artifactName:
+        type: string
+      assetVersion:
+        $ref: '#/definitions/models.AssetVersion'
+      assetVersionName:
+        type: string
+      componentDependencies:
+        items:
+          $ref: '#/definitions/models.ComponentDependency'
+        type: array
+      createdAt:
+        type: string
+      dependencyVulns:
+        items:
+          $ref: '#/definitions/models.DependencyVuln'
+        type: array
+      lastHistoryUpdate:
+        type: string
+      licenseRisks:
+        items:
+          $ref: '#/definitions/models.LicenseRisk'
+        type: array
+      riskHistories:
+        items:
+          $ref: '#/definitions/models.ArtifactRiskHistory'
+        type: array
+      vulnAssetId:
+        type: string
+    type: object
+  models.ArtifactRiskHistory:
+    properties:
+      artifactName:
+        type: string
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+      averageClosedRisk:
+        type: number
+      averageOpenRisk:
+        type: number
+      critical:
+        type: integer
+      criticalCvss:
+        type: integer
+      day:
+        description: on the day 2024-08-12 the asset had a sumRisk of 25.
+        type: string
+      fixedDependencyVulns:
+        type: integer
+      high:
+        type: integer
+      highCvss:
+        type: integer
+      low:
+        type: integer
+      lowCvss:
+        type: integer
+      maxClosedRisk:
+        type: number
+      maxOpenRisk:
+        type: number
+      medium:
+        type: integer
+      mediumCvss:
+        type: integer
+      minClosedRisk:
+        type: number
+      minOpenRisk:
+        type: number
+      openDependencyVulns:
+        type: integer
+      sumClosedRisk:
+        type: number
+      sumOpenRisk:
+        type: number
+    type: object
+  models.Asset:
+    properties:
+      availabilityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      avatar:
+        type: string
+      badgeSecret:
+        type: string
+      confidentialityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      configFiles:
+        $ref: '#/definitions/databasetypes.JSONB'
+      createdAt:
+        type: string
+      cvssAutomaticTicketThreshold:
+        type: number
+      description:
+        type: string
+      externalEntityId:
+        type: string
+      externalEntityProviderId:
+        type: string
+      id:
+        type: string
+      importance:
+        type: integer
+      integrityRequirement:
+        $ref: '#/definitions/dtos.RequirementLevel'
+      isPublic:
+        type: boolean
+      metadata:
+        $ref: '#/definitions/databasetypes.JSONB'
+      name:
+        type: string
+      paranoidMode:
+        type: boolean
+      pipelineError:
+        type: string
+      pipelineLastRun:
+        type: string
+      project:
+        $ref: '#/definitions/models.Project'
+      projectId:
+        type: string
+      reachableFromInternet:
+        type: boolean
+      refs:
+        items:
+          $ref: '#/definitions/models.AssetVersion'
+        type: array
+      repositoryId:
+        description: the id will be prefixed with the provider name, e.g. github:<github
+          app installation id>:123456
+        type: string
+      repositoryName:
+        type: string
+      repositoryProvider:
+        type: string
+      riskAutomaticTicketThreshold:
+        type: number
+      shareInformation:
+        type: boolean
+      signingPubKey:
+        type: string
+      slug:
+        type: string
+      type:
+        $ref: '#/definitions/models.AssetType'
+      updatedAt:
+        type: string
+      vulnAutoReopenAfterDays:
+        description: Auto-reopen configuration - number of days after which closed/accepted
+          vulnerabilities should be reopened
+        type: integer
+      webhookSecret:
+        type: string
+    type: object
+  models.AssetType:
+    enum:
+    - application
+    - infrastructure
+    type: string
+    x-enum-varnames:
+    - AssetTypeApplication
+    - AssetTypeInfrastructure
+  models.AssetVersion:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/models.Artifact'
+        type: array
+      asset:
+        $ref: '#/definitions/models.Asset'
+      assetId:
+        type: string
+      components:
+        items:
+          $ref: '#/definitions/models.ComponentDependency'
+        type: array
+      createdAt:
+        type: string
+      defaultBranch:
+        type: boolean
+      dependencyVulns:
+        items:
+          $ref: '#/definitions/models.DependencyVuln'
+        type: array
+      lastAccessedAt:
+        type: string
+      metadata:
+        $ref: '#/definitions/databasetypes.JSONB'
+      name:
+        type: string
+      signingPubKey:
+        type: string
+      slug:
+        type: string
+      supplyChains:
+        items:
+          $ref: '#/definitions/models.SupplyChain'
+        type: array
+      type:
+        $ref: '#/definitions/models.AssetVersionType'
+      updatedAt:
+        type: string
+    type: object
+  models.AssetVersionType:
+    enum:
+    - branch
+    - tag
+    type: string
+    x-enum-varnames:
+    - AssetVersionBranch
+    - AssetVersionTag
+  models.Attestation:
+    properties:
+      artifact:
+        allOf:
+        - $ref: '#/definitions/models.Artifact'
+        description: 'Ensure foreign key field order matches Artifact primary key:
+          ArtifactName, AssetVersionName, AssetID'
+      artifactName:
+        type: string
+      assetId:
+        type: string
+      assetVersionName:
+        type: string
+      content:
+        $ref: '#/definitions/databasetypes.JSONB'
+      createdAt:
+        type: string
+      predicateType:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.CVE:
+    properties:
+      affectedComponents:
+        items:
+          $ref: '#/definitions/models.AffectedComponent'
+        type: array
+      cisaActionDue:
+        format: date
+        type: string
+      cisaExploitAdd:
+        format: date
+        type: string
+      cisaRequiredAction:
+        type: string
+      cisaVulnerabilityName:
+        type: string
+      createdAt:
+        type: string
+      cve:
+        type: string
+      cvss:
+        type: number
+      dateLastModified:
+        type: string
+      datePublished:
+        type: string
+      description:
+        type: string
+      epss:
+        type: number
+      exploits:
+        items:
+          $ref: '#/definitions/models.Exploit'
+        type: array
+      percentile:
+        type: number
+      references:
+        type: string
+      risk:
+        $ref: '#/definitions/dtos.RiskMetrics'
+      updatedAt:
+        type: string
+      vector:
+        type: string
+      weaknesses:
+        items:
+          $ref: '#/definitions/models.Weakness'
+        type: array
+    type: object
+  models.Component:
+    properties:
+      componentType:
+        $ref: '#/definitions/dtos.ComponentType'
+      dependsOn:
+        items:
+          $ref: '#/definitions/models.ComponentDependency'
+        type: array
+      isLicenseOverwritten:
+        type: boolean
+      license:
+        type: string
+      project:
+        $ref: '#/definitions/models.ComponentProject'
+      projectId:
+        type: string
+      published:
+        type: string
+      purl:
+        type: string
+      version:
+        type: string
+    type: object
+  models.ComponentDependency:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/models.Artifact'
+        type: array
+      assetId:
+        type: string
+      assetVersionName:
+        description: Foreign key fields for AssetVersion relationship
+        type: string
+      component:
+        allOf:
+        - $ref: '#/definitions/models.Component'
+        description: |-
+          the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
+          this means, that the dependency graph between people using the same library might differ, since they use it differently
+          we use edges, which provide the information, that a component is used by another component in one asset
+      componentPurl:
+        description: will be nil, for direct dependencies
+        type: string
+      dependency:
+        $ref: '#/definitions/models.Component'
+      dependencyPurl:
+        type: string
+      depth:
+        type: integer
+      id:
+        type: string
+    type: object
+  models.ComponentProject:
+    properties:
+      description:
+        type: string
+      forksCount:
+        type: integer
+      homepage:
+        type: string
+      license:
+        type: string
+      openIssuesCount:
+        type: integer
+      projectKey:
+        description: project name like "github.com/facebook/react"
+        type: string
+      scoreCard:
+        $ref: '#/definitions/databasetypes.JSONB'
+      scoreCardScore:
+        type: number
+      starsCount:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.DependencyVuln:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/models.Artifact'
+        type: array
+      assetVersion:
+        $ref: '#/definitions/models.AssetVersion'
+      assetVersionName:
+        type: string
+      componentDepth:
+        type: integer
+      componentFixedVersion:
+        type: string
+      componentPurl:
+        type: string
+      createdAt:
+        type: string
+      cve:
+        $ref: '#/definitions/models.CVE'
+      cveId:
+        type: string
+      effort:
+        type: integer
+      events:
+        items:
+          $ref: '#/definitions/models.VulnEvent'
+        type: array
+      id:
+        type: string
+      lastDetected:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      priority:
+        type: integer
+      rawRiskAssessment:
+        type: number
+      riskAssessment:
+        type: integer
+      riskRecalculatedAt:
+        type: string
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        description: might be set by integrations
+        type: string
+      ticketUrl:
+        type: string
+      updatedAt:
+        type: string
+      vulnAssetId:
+        type: string
+    type: object
+  models.Exploit:
+    properties:
+      author:
+        type: string
+      cveID:
+        type: string
+      description:
+        type: string
+      forks:
+        type: integer
+      id:
+        type: string
+      pushed_at:
+        type: string
+      sourceURL:
+        type: string
+      stargazers_count:
+        type: integer
+      subscribers_count:
+        type: integer
+      tags:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      verified:
+        type: boolean
+      watchers:
+        type: integer
+    type: object
+  models.GitLabIntegration:
+    properties:
+      accessToken:
+        type: string
+      createdAt:
+        type: string
+      gitLabUrl:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      org:
+        $ref: '#/definitions/models.Org'
+      orgId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.GithubAppInstallation:
+    properties:
+      installationCreatedWebhookReceivedTime:
+        type: string
+      installationId:
+        type: integer
+      org:
+        $ref: '#/definitions/models.Org'
+      orgId:
+        type: string
+      settingsUrl:
+        type: string
+      targetAvatarUrl:
+        type: string
+      targetLogin:
+        type: string
+      targetType:
+        type: string
+    type: object
+  models.Invitation:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      email:
+        description: Email is the email address of the user the invitation is for
+        type: string
+      id:
+        type: string
+      organization:
+        $ref: '#/definitions/models.Org'
+      organizationId:
+        description: OrganizationID is the ID of the organization the invitation is
+          for
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.JiraIntegration:
+    properties:
+      accessToken:
+        type: string
+      accountId:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      org:
+        $ref: '#/definitions/models.Org'
+      orgId:
+        type: string
+      updatedAt:
+        type: string
+      url:
+        type: string
+      userEmail:
+        type: string
+    type: object
+  models.LicenseRisk:
+    properties:
+      artifacts:
+        items:
+          $ref: '#/definitions/models.Artifact'
+        type: array
+      assetVersion:
+        $ref: '#/definitions/models.AssetVersion'
+      assetVersionName:
+        type: string
+      component:
+        $ref: '#/definitions/models.Component'
+      componentPurl:
+        type: string
+      createdAt:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/models.VulnEvent'
+        type: array
+      finalLicenseDecision:
+        type: string
+      id:
+        type: string
+      lastDetected:
+        type: string
+      manualTicketCreation:
+        type: boolean
+      message:
+        type: string
+      state:
+        $ref: '#/definitions/dtos.VulnState'
+      ticketId:
+        description: might be set by integrations
+        type: string
+      ticketUrl:
+        type: string
+      updatedAt:
+        type: string
+      vulnAssetId:
+        type: string
+    type: object
+  models.Org:
+    properties:
+      configFiles:
+        $ref: '#/definitions/databasetypes.JSONB'
+      contactPhoneNumber:
+        type: string
+      country:
+        type: string
+      createdAt:
+        type: string
+      criticalInfrastructure:
+        type: boolean
+      description:
+        type: string
+      externalEntityProviderId:
+        type: string
+      gitLabIntegrations:
+        items:
+          $ref: '#/definitions/models.GitLabIntegration'
+        type: array
+      githubAppInstallations:
+        items:
+          $ref: '#/definitions/models.GithubAppInstallation'
+        type: array
+      grundschutz:
+        type: boolean
+      id:
+        type: string
+      industry:
+        type: string
+      isPublic:
+        type: boolean
+      iso27001:
+        type: boolean
+      jiraIntegrations:
+        items:
+          $ref: '#/definitions/models.JiraIntegration'
+        type: array
+      language:
+        type: string
+      name:
+        type: string
+      nist:
+        type: boolean
+      numberOfEmployees:
+        type: integer
+      projects:
+        items:
+          $ref: '#/definitions/models.Project'
+        type: array
+      sharesVulnInformation:
+        type: boolean
+      slug:
+        type: string
+      updatedAt:
+        type: string
+      webhooks:
+        items:
+          $ref: '#/definitions/models.WebhookIntegration'
+        type: array
+    type: object
+  models.PAT:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      fingerprint:
+        type: string
+      id:
+        type: string
+      lastUsedAt:
+        type: string
+      pubKey:
+        type: string
+      scopes:
+        description: whitespace separated scopes manage-project read-project scan-asset
+          manage-all
+        type: string
+      userId:
+        type: string
+    type: object
+  models.Policy:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      opaqueId:
+        description: only used by global policies maintained by the community and
+          migrated by the system
+        type: string
+      organization:
+        $ref: '#/definitions/models.Org'
+      organizationId:
+        description: will be null for global policies
+        type: string
+      predicateType:
+        type: string
+      projects:
+        items:
+          $ref: '#/definitions/models.Project'
+        type: array
+      rego:
+        type: string
+      title:
+        type: string
+    type: object
+  models.Project:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/models.Asset'
+        type: array
+      avatar:
+        type: string
+      configFiles:
+        $ref: '#/definitions/databasetypes.JSONB'
+      createdAt:
+        type: string
+      description:
+        type: string
+      enabledPolicies:
+        items:
+          $ref: '#/definitions/models.Policy'
+        type: array
+      externalEntityId:
+        type: string
+      externalEntityProviderId:
+        type: string
+      externalEntityProviderParentId:
+        type: string
+      id:
+        type: string
+      isPublic:
+        type: boolean
+      name:
+        type: string
+      organization:
+        $ref: '#/definitions/models.Org'
+      organizationId:
+        type: string
+      parent:
+        $ref: '#/definitions/models.Project'
+      parentId:
+        type: string
+      repositoryId:
+        description: the id will be prefixed with the provider name, e.g. github:<github
+          app installation id>:123456
+        type: string
+      repositoryName:
+        type: string
+      slug:
+        type: string
+      type:
+        $ref: '#/definitions/models.ProjectType'
+      updatedAt:
+        type: string
+      webhooks:
+        items:
+          $ref: '#/definitions/models.WebhookIntegration'
+        type: array
+    type: object
+  models.ProjectType:
+    enum:
+    - default
+    - kubernetesNamespace
+    - kubernetesCluster
+    type: string
+    x-enum-varnames:
+    - ProjectTypeDefault
+    - ProjectTypeKubernetesNamespace
+    - ProjectTypeKubernetesCluster
+  models.SupplyChain:
+    properties:
+      assetId:
+        type: string
+      assetVersion:
+        $ref: '#/definitions/models.AssetVersion'
+      assetVersionName:
+        type: string
+      createdAt:
+        type: string
+      supplyChainId:
+        type: string
+      supplyChainOutputDigest:
+        type: string
+      updatedAt:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  models.VulnEvent:
+    properties:
+      arbitraryJSONData:
+        type: string
+      createdAt:
+        type: string
+      dtos.VulnType:
+        $ref: '#/definitions/dtos.VulnType'
+      id:
+        type: string
+      justification:
+        type: string
+      mechanicalJustification:
+        $ref: '#/definitions/dtos.MechanicalJustificationType'
+      originalAssetVersionName:
+        type: string
+      type:
+        $ref: '#/definitions/dtos.VulnEventType'
+      updatedAt:
+        type: string
+      upstream:
+        $ref: '#/definitions/dtos.UpstreamState'
+      userId:
+        type: string
+      vulnId:
+        type: string
+    type: object
+  models.Weakness:
+    properties:
+      cve:
+        $ref: '#/definitions/models.CVE'
+      cwe:
+        type: string
+      source:
+        type: string
+      type:
+        type: string
+    type: object
+  models.WebhookIntegration:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      org:
+        $ref: '#/definitions/models.Org'
+      orgId:
+        type: string
+      project:
+        $ref: '#/definitions/models.Project'
+      projectId:
+        type: string
+      sbomEnabled:
+        type: boolean
+      secret:
+        type: string
+      updatedAt:
+        type: string
+      url:
+        type: string
+      vulnEnabled:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Support
+    url: https://github.com/l3montree-dev/devguard/issues
+  description: devguard API
+  license:
+    name: AGPL-3
+    url: https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
+  title: devguard API
+  version: v1
+paths:
+  /.well-known/csaf-aggregator/aggregator.json:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Get CSAF aggregator metadata
+  /accept-invitation:
+    post:
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.AcceptInvitationRequest'
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Accept organization invitation
+  /attestations:
+    post:
+      parameters:
+      - description: Attestation content
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: Asset version name
+        in: header
+        name: X-Asset-Ref
+        type: string
+      - description: Artifact name
+        in: header
+        name: X-Artifact-Name
+        type: string
+      - description: Predicate type
+        in: header
+        name: X-Predicate-Type
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create attestation
+  /integrations/repositories:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List repositories from integrations
+  /lookup:
+    get:
+      parameters:
+      - description: Provider name
+        in: query
+        name: provider
+        required: true
+        type: string
+      - description: Repository ID
+        in: query
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.LookupResponse'
+      summary: Lookup asset by provider
+  /oauth2/gitlab/{integrationName}:
+    get:
+      parameters:
+      - description: Integration name
+        in: path
+        name: integrationName
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      summary: GitLab OAuth2 login
+  /oauth2/gitlab/callback/{integrationName}:
+    get:
+      parameters:
+      - description: Integration name
+        in: path
+        name: integrationName
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      summary: GitLab OAuth2 callback
+  /organizations:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Org'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List organizations
+    post:
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.OrgCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Org'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create organization
+  /organizations/{organization}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete organization
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.OrgDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get organization details
+    patch:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.OrgPatchRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.OrgDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update organization
+  /organizations/{organization}/config-files/{config-file}:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get organization config file
+  /organizations/{organization}/content-tree:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get organization content tree
+  /organizations/{organization}/csaf/provider-metadata.json:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get CSAF provider metadata for organization
+  /organizations/{organization}/members:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List organization members
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.InviteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Invitation'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Invite member to organization
+  /organizations/{organization}/members/{userID}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Remove member from organization
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.OrgChangeRoleRequest'
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Change member role
+  /organizations/{organization}/metrics:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              ownerId:
+                type: string
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get organization metrics
+  /organizations/{organization}/projects:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Project'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List projects
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ProjectCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Project'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create project
+  /organizations/{organization}/projects/{projectSlug}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete project
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ProjectDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get project details
+    patch:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ProjectPatchRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ProjectDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update project
+  /organizations/{organization}/projects/{projectSlug}/assets:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.AssetDTO'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List assets
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.AssetCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.AssetDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create asset
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete asset
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.AssetDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get asset details
+    patch:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.AssetPatchRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.AssetDetailsDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update asset
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version}:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Year
+        in: path
+        name: year
+        required: true
+        type: string
+      - description: Version filename
+        in: path
+        name: version
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get CSAF report
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get CSAF changes CSV
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get CSAF index file
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AssetVersion'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List asset versions
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            defaultBranch:
+              type: boolean
+            name:
+              type: string
+            tag:
+              type: boolean
+          type: object
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.AssetVersion'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create asset version
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete asset version
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AssetVersion'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get asset version details
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Artifact'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create artifact
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete artifact
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        type: string
+      - description: Artifact data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update artifact
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Sync external sources for artifact
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/attestations:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Attestation'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List attestations
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Flat list flag
+        in: query
+        name: flat
+        type: string
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List dependency vulnerabilities
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Vulnerability ID
+        in: path
+        name: dependencyVulnID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.DetailedDependencyVulnDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get dependency vulnerability details
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Vulnerability ID
+        in: path
+        name: dependencyVulnID
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create vulnerability event
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/metrics:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: query
+        name: artifactName
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get asset version metrics
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: query
+        name: artifactName
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get SBOM in JSON format
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Artifact name
+        in: query
+        name: artifactName
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get VEX in JSON format
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List first-party vulnerabilities by asset version
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns.sarif:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get first-party vulnerabilities as SARIF
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file:
+    post:
+      parameters:
+      - description: SBOM file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Origin
+        in: header
+        name: X-Origin
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ScanResponse'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Scan SBOM file
+  /organizations/{organization}/projects/{projectSlug}/members:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.UserDTO'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List project members
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ProjectInviteRequest'
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Invite members to project
+  /organizations/{organization}/projects/{projectSlug}/releases:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List releases
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ReleaseCreateRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.ReleaseDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create release
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete release
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ReleaseDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get release details
+    patch:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      - description: Release data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ReleasePatchRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ReleaseDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update release
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      - description: Release item data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.ReleaseItemDTO'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.ReleaseItemDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Add item to release
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items/{itemID}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: itemID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Remove item from release
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.json:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get release SBOM as JSON
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.xml:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get release SBOM as XML
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.json:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get release VEX as JSON
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.xml:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get release VEX as XML
+  /organizations/{organization}/projects/{projectSlug}/releases/candidates:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Release ID
+        in: query
+        name: releaseID
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.CandidatesResponseDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List release candidates
+  /organizations/{organization}/projects/{projectSlug}/vulns:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        type: string
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List first-party vulnerabilities by project
+  /organizations/{organization}/vulns:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        type: string
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List first-party vulnerabilities by organization
+  /pats:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.PAT'
+            type: array
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: List personal access tokens
+    post:
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PatCreateRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              createdAt:
+                type: string
+              description:
+                type: string
+              fingerprint:
+                type: string
+              id:
+                type: string
+              pubKey:
+                type: string
+              scopes:
+                type: string
+              userID:
+                type: string
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Create personal access token
+  /pats/{tokenID}:
+    delete:
+      parameters:
+      - description: Token ID
+        in: path
+        name: tokenID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete personal access token
+  /pats/revoke-by-private-key:
+    post:
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RevokeByPrivateKeyRequest'
+      responses:
+        "200":
+          description: OK
+      summary: Revoke PAT by private key
+  /sarif-scan:
+    post:
+      parameters:
+      - description: SARIF scan result
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: Asset version name
+        in: header
+        name: X-Asset-Ref
+        type: string
+      - description: Tag flag
+        in: header
+        name: X-Tag
+        type: string
+      - description: Default branch
+        in: header
+        name: X-Asset-Default-Branch
+        type: string
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.FirstPartyScanResponse'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Scan for first-party vulnerabilities
+  /scan:
+    post:
+      parameters:
+      - description: CycloneDX SBOM
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: Asset version name
+        in: header
+        name: X-Asset-Ref
+        type: string
+      - description: Artifact name
+        in: header
+        name: X-Artifact-Name
+        type: string
+      - description: Tag flag
+        in: header
+        name: X-Tag
+        type: string
+      - description: Default branch
+        in: header
+        name: X-Asset-Default-Branch
+        type: string
+      - description: Origin
+        in: header
+        name: X-Origin
+        type: string
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.ScanResponse'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Scan for dependency vulnerabilities
+  /vex:
+    post:
+      parameters:
+      - description: CycloneDX VEX BOM
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: Asset version name
+        in: header
+        name: X-Asset-Ref
+        type: string
+      - description: Artifact name
+        in: header
+        name: X-Artifact-Name
+        type: string
+      - description: Tag flag
+        in: header
+        name: X-Tag
+        type: string
+      - description: Default branch
+        in: header
+        name: X-Asset-Default-Branch
+        type: string
+      - description: Origin
+        in: header
+        name: X-Origin
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Upload VEX document
+  /vulndb:
+    get:
+      description: Get a paginated list of CVEs with optional filtering and sorting
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Sort by field, e.g. 'sort[cve]=asc
+        in: query
+        name: sort
+        type: string
+      - description: Filter query, e.g. 'filterQuery[cvss][is greater than]=4'
+        in: query
+        name: filter
+        type: string
+      - description: Confidentiality Requirements (low, medium, high), default is
+          medium
+        in: query
+        name: confidentialityRequirements
+        type: string
+      - description: Integrity Requirements (low, medium, high), default is medium
+        in: query
+        name: integrityRequirements
+        type: string
+      - description: Availability Requirements (low, medium, high), default is medium
+        in: query
+        name: availabilityRequirements
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: A paginated list of CVEs
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/definitions/models.CVE'
+                type: array
+              page:
+                type: integer
+              pageSize:
+                type: integer
+              total:
+                type: integer
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+      summary: List all CVEs with pagination
+      tags:
+      - CVE
+  /vulndb/{cveID}/:
+    get:
+      description: Retrieve details of a specific CVE by its ID, including risk and
+        vector calculations
+      parameters:
+      - description: CVE ID
+        in: path
+        name: cveID
+        required: true
+        type: string
+      - description: Confidentiality Requirements (low, medium, high), default is
+          medium
+        in: query
+        name: confidentialityRequirements
+        type: string
+      - description: Integrity Requirements (low, medium, high), default is medium
+        in: query
+        name: integrityRequirements
+        type: string
+      - description: Availability Requirements (low, medium, high), default is medium
+        in: query
+        name: availabilityRequirements
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Details of the specified CVE
+          schema:
+            $ref: '#/definitions/models.CVE'
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+      summary: Get a specific CVE by ID
+      tags:
+      - CVE
+  /vulns/{vulnID}:
+    get:
+      parameters:
+      - description: Vulnerability ID
+        in: path
+        name: vulnID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.DetailedFirstPartyVulnDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get first-party vulnerability details
+  /vulns/{vulnID}/events:
+    post:
+      parameters:
+      - description: Vulnerability ID
+        in: path
+        name: vulnID
+        required: true
+        type: string
+      - description: Event data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.DetailedFirstPartyVulnDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create first-party vulnerability event
+  /webhooks:
+    post:
+      parameters:
+      - description: Webhook data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.WebhookIntegrationDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Create webhook integration
+    put:
+      parameters:
+      - description: Webhook data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.WebhookIntegrationDTO'
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Update webhook integration
+  /webhooks/{id}:
+    delete:
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Delete webhook integration
+  /webhooks/test:
+    post:
+      parameters:
+      - description: Test webhook data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+              payloadType:
+                type: string
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Test webhook integration
+  /whoami:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              userID:
+                type: string
+            type: object
+      security:
+      - CookieAuth: []
+      - ApiKeyAuth: []
+      summary: Get current user info
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+  CookieAuth:
+    in: cookie
+    name: ory_kratos_session
+    type: apiKey
+swagger: "2.0"
