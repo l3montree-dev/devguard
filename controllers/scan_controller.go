@@ -63,8 +63,9 @@ func NewScanController(scanService shared.ScanService, componentRepository share
 }
 
 // @Summary Upload VEX document
+// @Tags Scanning
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param body body object true "CycloneDX VEX BOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -237,8 +238,9 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 }
 
 // @Summary Scan for first-party vulnerabilities
+// @Tags Scanning
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param body body object true "SARIF scan result"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Tag header string false "Tag flag"
@@ -317,8 +319,9 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 }
 
 // @Summary Scan for dependency vulnerabilities
+// @Tags Scanning
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param body body object true "CycloneDX SBOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -345,8 +348,9 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 }
 
 // @Summary Scan SBOM file
+// @Tags Scanning
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param file formData file true "SBOM file"
 // @Param X-Origin header string false "Origin"
 // @Success 200 {object} dtos.ScanResponse

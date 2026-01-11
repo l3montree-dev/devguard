@@ -64,10 +64,12 @@ var release string // Will be filled at build time
 //	@securityDefinitions.apikey	CookieAuth
 //	@in							cookie
 //	@name						ory_kratos_session
+//	@description				Session-based authentication using Ory Kratos
 
-//	@securityDefinitions.apikey	ApiKeyAuth
-//	@in							header
-//	@name						X-API-Key
+// @securityDefinitions.apikey	PATAuth
+// @in							header
+// @name						X-Signature
+// @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck

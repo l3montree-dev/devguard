@@ -31,8 +31,9 @@ func NewReleaseController(service shared.ReleaseService, avService shared.AssetV
 }
 
 // @Summary List releases
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
@@ -60,8 +61,9 @@ func (h *ReleaseController) List(c shared.Context) error {
 }
 
 // @Summary Get release SBOM as JSON
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -96,8 +98,9 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 }
 
 // @Summary Get release SBOM as XML
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -132,8 +135,9 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 }
 
 // @Summary Get release VEX as JSON
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -168,8 +172,9 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 }
 
 // @Summary Get release VEX as XML
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -359,8 +364,9 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 }
 
 // @Summary Get release details
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -382,8 +388,9 @@ func (h *ReleaseController) Read(c shared.Context) error {
 }
 
 // @Summary Create release
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ReleaseCreateRequest true "Release data"
@@ -406,8 +413,9 @@ func (h *ReleaseController) Create(c shared.Context) error {
 }
 
 // @Summary Update release
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -441,8 +449,9 @@ func (h *ReleaseController) Update(c shared.Context) error {
 }
 
 // @Summary Delete release
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -463,8 +472,9 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 }
 
 // @Summary Add item to release
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -500,8 +510,9 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 }
 
 // @Summary Remove item from release
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -523,8 +534,9 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 }
 
 // @Summary List release candidates
+// @Tags Releases
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID query string false "Release ID"

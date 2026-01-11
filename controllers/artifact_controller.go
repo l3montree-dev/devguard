@@ -61,8 +61,9 @@ func informationSourceToString(source informationSource) string {
 }
 
 // @Summary Create artifact
+// @Tags Artifacts
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -125,8 +126,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 }
 
 // @Summary Delete artifact
+// @Tags Artifacts
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -182,8 +184,9 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 }
 
 // @Summary Sync external sources for artifact
+// @Tags Artifacts
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -234,8 +237,9 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 }
 
 // @Summary Update artifact
+// @Tags Artifacts
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

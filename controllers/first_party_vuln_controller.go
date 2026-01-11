@@ -35,8 +35,9 @@ func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnR
 }
 
 // @Summary List first-party vulnerabilities by organization
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param search query string false "Search term"
 // @Success 200 {object} object
@@ -69,8 +70,9 @@ func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 }
 
 // @Summary List first-party vulnerabilities by project
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
@@ -131,8 +133,9 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 }
 
 // @Summary Get first-party vulnerability details
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
 // @Router /vulns/{vulnID} [get]
@@ -150,8 +153,9 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
 // @Summary Create first-party vulnerability event
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Param body body object true "Event data"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
@@ -204,8 +208,9 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 }
 
 // @Summary List first-party vulnerabilities by asset version
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -237,8 +242,9 @@ func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 }
 
 // @Summary Get first-party vulnerabilities as SARIF
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

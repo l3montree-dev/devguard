@@ -71,8 +71,9 @@ func NewAssetVersionController(
 }
 
 // @Summary Get asset version details
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -85,8 +86,9 @@ func (a *AssetVersionController) Read(ctx shared.Context) error {
 }
 
 // @Summary Create asset version
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -120,8 +122,9 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 }
 
 // @Summary Delete asset version
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -139,8 +142,9 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 }
 
 // @Summary List asset versions
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -240,8 +244,9 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 }
 
 // @Summary Get SBOM in JSON format
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -297,8 +302,9 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 }
 
 // @Summary Get VEX in JSON format
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -454,8 +460,9 @@ func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 }
 
 // @Summary Get asset version metrics
+// @Tags Asset Versions
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

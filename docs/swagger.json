@@ -3039,14 +3039,16 @@
             }
         },
         "securitySchemes": {
-            "ApiKeyAuth": {
-                "in": "header",
-                "name": "X-API-Key",
-                "type": "apiKey"
-            },
             "CookieAuth": {
+                "description": "Session-based authentication using Ory Kratos",
                 "in": "cookie",
                 "name": "ory_kratos_session",
+                "type": "apiKey"
+            },
+            "PATAuth": {
+                "description": "Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.",
+                "in": "header",
+                "name": "X-Signature",
                 "type": "apiKey"
             }
         }
@@ -3083,7 +3085,10 @@
                         "description": "OK"
                     }
                 },
-                "summary": "Get CSAF aggregator metadata"
+                "summary": "Get CSAF aggregator metadata",
+                "tags": [
+                    "CSAF"
+                ]
             }
         },
         "/accept-invitation": {
@@ -3111,10 +3116,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Accept organization invitation"
+                "summary": "Accept organization invitation",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/attestations": {
@@ -3167,10 +3175,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create attestation"
+                "summary": "Create attestation",
+                "tags": [
+                    "Attestations"
+                ]
             }
         },
         "/integrations/repositories": {
@@ -3195,10 +3206,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List repositories from integrations"
+                "summary": "List repositories from integrations",
+                "tags": [
+                    "Integrations"
+                ]
             }
         },
         "/lookup": {
@@ -3235,7 +3249,10 @@
                         "description": "OK"
                     }
                 },
-                "summary": "Lookup asset by provider"
+                "summary": "Lookup asset by provider",
+                "tags": [
+                    "Assets"
+                ]
             }
         },
         "/oauth2/gitlab/callback/{integrationName}": {
@@ -3261,7 +3278,10 @@
                         "CookieAuth": []
                     }
                 ],
-                "summary": "GitLab OAuth2 callback"
+                "summary": "GitLab OAuth2 callback",
+                "tags": [
+                    "Integrations"
+                ]
             }
         },
         "/oauth2/gitlab/{integrationName}": {
@@ -3287,7 +3307,10 @@
                         "CookieAuth": []
                     }
                 ],
-                "summary": "GitLab OAuth2 login"
+                "summary": "GitLab OAuth2 login",
+                "tags": [
+                    "Integrations"
+                ]
             }
         },
         "/organizations": {
@@ -3312,10 +3335,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List organizations"
+                "summary": "List organizations",
+                "tags": [
+                    "Organizations"
+                ]
             },
             "post": {
                 "requestBody": {
@@ -3348,10 +3374,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create organization"
+                "summary": "Create organization",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}": {
@@ -3377,10 +3406,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete organization"
+                "summary": "Delete organization",
+                "tags": [
+                    "Organizations"
+                ]
             },
             "get": {
                 "parameters": [
@@ -3411,10 +3443,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get organization details"
+                "summary": "Get organization details",
+                "tags": [
+                    "Organizations"
+                ]
             },
             "patch": {
                 "parameters": [
@@ -3458,10 +3493,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update organization"
+                "summary": "Update organization",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/config-files/{config-file}": {
@@ -3503,10 +3541,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get organization config file"
+                "summary": "Get organization config file",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/content-tree": {
@@ -3539,10 +3580,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get organization content tree"
+                "summary": "Get organization content tree",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/csaf/provider-metadata.json": {
@@ -3575,10 +3619,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get CSAF provider metadata for organization"
+                "summary": "Get CSAF provider metadata for organization",
+                "tags": [
+                    "CSAF"
+                ]
             }
         },
         "/organizations/{organization}/members": {
@@ -3614,10 +3661,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List organization members"
+                "summary": "List organization members",
+                "tags": [
+                    "Organizations"
+                ]
             },
             "post": {
                 "parameters": [
@@ -3661,10 +3711,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Invite member to organization"
+                "summary": "Invite member to organization",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/members/{userID}": {
@@ -3699,10 +3752,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Remove member from organization"
+                "summary": "Remove member from organization",
+                "tags": [
+                    "Organizations"
+                ]
             },
             "put": {
                 "parameters": [
@@ -3748,10 +3804,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Change member role"
+                "summary": "Change member role",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/metrics": {
@@ -3789,10 +3848,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get organization metrics"
+                "summary": "Get organization metrics",
+                "tags": [
+                    "Organizations"
+                ]
             }
         },
         "/organizations/{organization}/projects": {
@@ -3828,10 +3890,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List projects"
+                "summary": "List projects",
+                "tags": [
+                    "Projects"
+                ]
             },
             "post": {
                 "parameters": [
@@ -3875,10 +3940,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create project"
+                "summary": "Create project",
+                "tags": [
+                    "Projects"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}": {
@@ -3913,10 +3981,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete project"
+                "summary": "Delete project",
+                "tags": [
+                    "Projects"
+                ]
             },
             "get": {
                 "parameters": [
@@ -3956,10 +4027,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get project details"
+                "summary": "Get project details",
+                "tags": [
+                    "Projects"
+                ]
             },
             "patch": {
                 "parameters": [
@@ -4012,10 +4086,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update project"
+                "summary": "Update project",
+                "tags": [
+                    "Projects"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets": {
@@ -4060,10 +4137,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List assets"
+                "summary": "List assets",
+                "tags": [
+                    "Assets"
+                ]
             },
             "post": {
                 "parameters": [
@@ -4116,10 +4196,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create asset"
+                "summary": "Create asset",
+                "tags": [
+                    "Assets"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}": {
@@ -4163,10 +4246,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete asset"
+                "summary": "Delete asset",
+                "tags": [
+                    "Assets"
+                ]
             },
             "get": {
                 "parameters": [
@@ -4215,10 +4301,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get asset details"
+                "summary": "Get asset details",
+                "tags": [
+                    "Assets"
+                ]
             },
             "patch": {
                 "parameters": [
@@ -4280,10 +4369,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update asset"
+                "summary": "Update asset",
+                "tags": [
+                    "Assets"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv": {
@@ -4334,10 +4426,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get CSAF changes CSV"
+                "summary": "Get CSAF changes CSV",
+                "tags": [
+                    "CSAF"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt": {
@@ -4388,10 +4483,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get CSAF index file"
+                "summary": "Get CSAF index file",
+                "tags": [
+                    "CSAF"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version}": {
@@ -4453,10 +4551,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get CSAF report"
+                "summary": "Get CSAF report",
+                "tags": [
+                    "CSAF"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs": {
@@ -4510,10 +4611,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List asset versions"
+                "summary": "List asset versions",
+                "tags": [
+                    "Asset Versions"
+                ]
             },
             "post": {
                 "parameters": [
@@ -4585,10 +4689,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create asset version"
+                "summary": "Create asset version",
+                "tags": [
+                    "Asset Versions"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}": {
@@ -4641,10 +4748,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete asset version"
+                "summary": "Delete asset version",
+                "tags": [
+                    "Asset Versions"
+                ]
             },
             "get": {
                 "parameters": [
@@ -4702,10 +4812,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get asset version details"
+                "summary": "Get asset version details",
+                "tags": [
+                    "Asset Versions"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts": {
@@ -4777,10 +4890,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create artifact"
+                "summary": "Create artifact",
+                "tags": [
+                    "Artifacts"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}": {
@@ -4842,10 +4958,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete artifact"
+                "summary": "Delete artifact",
+                "tags": [
+                    "Artifacts"
+                ]
             },
             "put": {
                 "parameters": [
@@ -4924,10 +5043,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update artifact"
+                "summary": "Update artifact",
+                "tags": [
+                    "Artifacts"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync": {
@@ -4989,10 +5111,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Sync external sources for artifact"
+                "summary": "Sync external sources for artifact",
+                "tags": [
+                    "Artifacts"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/attestations": {
@@ -5055,10 +5180,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List attestations"
+                "summary": "List attestations",
+                "tags": [
+                    "Attestations"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns": {
@@ -5134,10 +5262,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List dependency vulnerabilities"
+                "summary": "List dependency vulnerabilities",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}": {
@@ -5206,10 +5337,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get dependency vulnerability details"
+                "summary": "Get dependency vulnerability details",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             },
             "post": {
                 "parameters": [
@@ -5281,10 +5415,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create vulnerability event"
+                "summary": "Create vulnerability event",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/metrics": {
@@ -5352,10 +5489,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get asset version metrics"
+                "summary": "Get asset version metrics",
+                "tags": [
+                    "Asset Versions"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json": {
@@ -5423,10 +5563,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get SBOM in JSON format"
+                "summary": "Get SBOM in JSON format",
+                "tags": [
+                    "Asset Versions"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json": {
@@ -5494,10 +5637,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get VEX in JSON format"
+                "summary": "Get VEX in JSON format",
+                "tags": [
+                    "Asset Versions"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns": {
@@ -5565,10 +5711,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List first-party vulnerabilities by asset version"
+                "summary": "List first-party vulnerabilities by asset version",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns.sarif": {
@@ -5628,10 +5777,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get first-party vulnerabilities as SARIF"
+                "summary": "Get first-party vulnerabilities as SARIF",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file": {
@@ -5675,10 +5827,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Scan SBOM file"
+                "summary": "Scan SBOM file",
+                "tags": [
+                    "Scanning"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/members": {
@@ -5723,10 +5878,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List project members"
+                "summary": "List project members",
+                "tags": [
+                    "Projects"
+                ]
             },
             "post": {
                 "parameters": [
@@ -5772,10 +5930,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Invite members to project"
+                "summary": "Invite members to project",
+                "tags": [
+                    "Projects"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases": {
@@ -5825,10 +5986,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List releases"
+                "summary": "List releases",
+                "tags": [
+                    "Releases"
+                ]
             },
             "post": {
                 "parameters": [
@@ -5881,10 +6045,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create release"
+                "summary": "Create release",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/candidates": {
@@ -5934,10 +6101,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List release candidates"
+                "summary": "List release candidates",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}": {
@@ -5981,10 +6151,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete release"
+                "summary": "Delete release",
+                "tags": [
+                    "Releases"
+                ]
             },
             "get": {
                 "parameters": [
@@ -6033,10 +6206,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get release details"
+                "summary": "Get release details",
+                "tags": [
+                    "Releases"
+                ]
             },
             "patch": {
                 "parameters": [
@@ -6098,10 +6274,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update release"
+                "summary": "Update release",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items": {
@@ -6165,10 +6344,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Add item to release"
+                "summary": "Add item to release",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items/{itemID}": {
@@ -6221,10 +6403,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Remove item from release"
+                "summary": "Remove item from release",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.json": {
@@ -6275,10 +6460,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get release SBOM as JSON"
+                "summary": "Get release SBOM as JSON",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.xml": {
@@ -6329,10 +6517,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get release SBOM as XML"
+                "summary": "Get release SBOM as XML",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.json": {
@@ -6383,10 +6574,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get release VEX as JSON"
+                "summary": "Get release VEX as JSON",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.xml": {
@@ -6437,10 +6631,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get release VEX as XML"
+                "summary": "Get release VEX as XML",
+                "tags": [
+                    "Releases"
+                ]
             }
         },
         "/organizations/{organization}/projects/{projectSlug}/vulns": {
@@ -6490,10 +6687,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List first-party vulnerabilities by project"
+                "summary": "List first-party vulnerabilities by project",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/organizations/{organization}/vulns": {
@@ -6534,10 +6734,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List first-party vulnerabilities by organization"
+                "summary": "List first-party vulnerabilities by organization",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/pats": {
@@ -6562,10 +6765,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "List personal access tokens"
+                "summary": "List personal access tokens",
+                "tags": [
+                    "Authentication"
+                ]
             },
             "post": {
                 "requestBody": {
@@ -6621,7 +6827,10 @@
                         "CookieAuth": []
                     }
                 ],
-                "summary": "Create personal access token"
+                "summary": "Create personal access token",
+                "tags": [
+                    "Authentication"
+                ]
             }
         },
         "/pats/revoke-by-private-key": {
@@ -6644,7 +6853,10 @@
                         "description": "OK"
                     }
                 },
-                "summary": "Revoke PAT by private key"
+                "summary": "Revoke PAT by private key",
+                "tags": [
+                    "Authentication"
+                ]
             }
         },
         "/pats/{tokenID}": {
@@ -6670,10 +6882,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete personal access token"
+                "summary": "Delete personal access token",
+                "tags": [
+                    "Authentication"
+                ]
             }
         },
         "/sarif-scan": {
@@ -6742,10 +6957,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Scan for first-party vulnerabilities"
+                "summary": "Scan for first-party vulnerabilities",
+                "tags": [
+                    "Scanning"
+                ]
             }
         },
         "/scan": {
@@ -6829,10 +7047,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Scan for dependency vulnerabilities"
+                "summary": "Scan for dependency vulnerabilities",
+                "tags": [
+                    "Scanning"
+                ]
             }
         },
         "/vex": {
@@ -6901,10 +7122,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Upload VEX document"
+                "summary": "Upload VEX document",
+                "tags": [
+                    "Scanning"
+                ]
             }
         },
         "/vulndb": {
@@ -7014,6 +7238,7 @@
                 },
                 "summary": "List all CVEs with pagination",
                 "tags": [
+                    "CVE Database",
                     "CVE"
                 ]
             }
@@ -7085,6 +7310,7 @@
                 },
                 "summary": "Get a specific CVE by ID",
                 "tags": [
+                    "CVE Database",
                     "CVE"
                 ]
             }
@@ -7119,10 +7345,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get first-party vulnerability details"
+                "summary": "Get first-party vulnerability details",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/vulns/{vulnID}/events": {
@@ -7167,10 +7396,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create first-party vulnerability event"
+                "summary": "Create first-party vulnerability event",
+                "tags": [
+                    "Vulnerabilities"
+                ]
             }
         },
         "/webhooks": {
@@ -7204,10 +7436,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Create webhook integration"
+                "summary": "Create webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
             },
             "put": {
                 "requestBody": {
@@ -7239,10 +7474,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Update webhook integration"
+                "summary": "Update webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
             }
         },
         "/webhooks/test": {
@@ -7284,10 +7522,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Test webhook integration"
+                "summary": "Test webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
             }
         },
         "/webhooks/{id}": {
@@ -7313,10 +7554,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Delete webhook integration"
+                "summary": "Delete webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
             }
         },
         "/whoami": {
@@ -7343,10 +7587,13 @@
                         "CookieAuth": []
                     },
                     {
-                        "ApiKeyAuth": []
+                        "PATAuth": []
                     }
                 ],
-                "summary": "Get current user info"
+                "summary": "Get current user info",
+                "tags": [
+                    "Authentication"
+                ]
             }
         }
     },

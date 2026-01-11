@@ -17,6 +17,7 @@ func NewVulnDBController(cveRepository shared.CveRepository) *VulnDBController {
 }
 
 // @Summary List all CVEs with pagination
+// @Tags CVE Database
 // @Description Get a paginated list of CVEs with optional filtering and sorting
 // @Tags CVE
 // @Produce json
@@ -53,6 +54,7 @@ func (c VulnDBController) ListPaged(ctx shared.Context) error {
 }
 
 // @Summary Get a specific CVE by ID
+// @Tags CVE Database
 // @Description Retrieve details of a specific CVE by its ID, including risk and vector calculations
 // @Tags CVE
 // @Produce json

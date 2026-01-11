@@ -50,8 +50,9 @@ func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository,
 }
 
 // @Summary Get CSAF index file
+// @Tags CSAF
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -79,8 +80,9 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 }
 
 // @Summary Get CSAF changes CSV
+// @Tags CSAF
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -339,6 +341,7 @@ func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 }
 
 // @Summary Get CSAF aggregator metadata
+// @Tags CSAF
 // @Success 200 {object} object
 // @Router /.well-known/csaf-aggregator/aggregator.json [get]
 func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
@@ -409,8 +412,9 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 }
 
 // @Summary Get CSAF provider metadata for organization
+// @Tags CSAF
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/csaf/provider-metadata.json [get]
@@ -469,8 +473,9 @@ func getPublicKeyFingerprint() string {
 // from here on: code that handles the creation of csaf reports them self
 
 // @Summary Get CSAF report
+// @Tags CSAF
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

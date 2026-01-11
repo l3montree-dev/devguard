@@ -26,8 +26,9 @@ func NewAttestationController(repository shared.AttestationRepository, assetVers
 }
 
 // @Summary List attestations
+// @Tags Attestations
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -48,8 +49,9 @@ func (a *AttestationController) List(ctx shared.Context) error {
 }
 
 // @Summary Create attestation
+// @Tags Attestations
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param body body object true "Attestation content"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"

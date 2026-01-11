@@ -53,6 +53,7 @@ func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 }
 
 // @Summary Lookup asset by provider
+// @Tags Assets
 // @Param provider query string true "Provider name"
 // @Param id query string true "Repository ID"
 // @Success 200 {object} dtos.LookupResponse
@@ -96,8 +97,9 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 }
 
 // @Summary List assets
+// @Tags Assets
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {array} dtos.AssetDTO
@@ -141,8 +143,9 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 }
 
 // @Summary Delete asset
+// @Tags Assets
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -174,8 +177,9 @@ func (a *AssetController) GetSecrets(ctx shared.Context) error {
 }
 
 // @Summary Create asset
+// @Tags Assets
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.AssetCreateRequest true "Request body"
@@ -205,8 +209,9 @@ func (a *AssetController) Create(ctx shared.Context) error {
 }
 
 // @Summary Get asset details
+// @Tags Assets
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -224,8 +229,9 @@ func (a *AssetController) Read(ctx shared.Context) error {
 }
 
 // @Summary Update asset
+// @Tags Assets
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

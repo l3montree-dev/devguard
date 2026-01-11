@@ -45,8 +45,9 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 }
 
 // @Summary Create project
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.ProjectCreateRequest true "Request body"
 // @Success 200 {object} models.Project
@@ -124,8 +125,9 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 }
 
 // @Summary List project members
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {array} dtos.UserDTO
@@ -140,8 +142,9 @@ func (ProjectController *ProjectController) Members(c shared.Context) error {
 }
 
 // @Summary Invite members to project
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectInviteRequest true "Request body"
@@ -248,8 +251,9 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 }
 
 // @Summary Delete project
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200
@@ -266,8 +270,9 @@ func (ProjectController *ProjectController) Delete(c shared.Context) error {
 }
 
 // @Summary Get project details
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {object} dtos.ProjectDetailsDTO
@@ -332,8 +337,9 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 }
 
 // @Summary List projects
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {array} models.Project
 // @Router /organizations/{organization}/projects [get]
@@ -349,8 +355,9 @@ func (ProjectController *ProjectController) List(c shared.Context) error {
 }
 
 // @Summary Update project
+// @Tags Projects
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectPatchRequest true "Request body"

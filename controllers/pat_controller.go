@@ -38,6 +38,7 @@ func NewPatController(service shared.PersonalAccessTokenService, repository shar
 }
 
 // @Summary Create personal access token
+// @Tags Authentication
 // @Security CookieAuth
 // @Param body body dtos.PatCreateRequest true "Request body"
 // @Success 200 {object} object{createdAt=string,description=string,userID=string,pubKey=string,fingerprint=string,scopes=string,id=string}
@@ -77,6 +78,7 @@ func (p *PatController) Create(c shared.Context) error {
 }
 
 // @Summary Revoke PAT by private key
+// @Tags Authentication
 // @Param body body dtos.RevokeByPrivateKeyRequest true "Request body"
 // @Success 200
 // @Router /pats/revoke-by-private-key [post]
@@ -102,8 +104,9 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 }
 
 // @Summary Delete personal access token
+// @Tags Authentication
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param tokenID path string true "Token ID"
 // @Success 200
 // @Router /pats/{tokenID} [delete]
@@ -128,8 +131,9 @@ func (p *PatController) Delete(c shared.Context) error {
 }
 
 // @Summary List personal access tokens
+// @Tags Authentication
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Success 200 {array} models.PAT
 // @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {

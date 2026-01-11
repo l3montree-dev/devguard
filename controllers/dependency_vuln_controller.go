@@ -127,8 +127,9 @@ func (controller DependencyVulnController) ListByAssetIDWithoutHandledExternalEv
 }
 
 // @Summary List dependency vulnerabilities
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -250,8 +251,9 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 }
 
 // @Summary Get dependency vulnerability details
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -366,8 +368,9 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 }
 
 // @Summary Create vulnerability event
+// @Tags Vulnerabilities
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

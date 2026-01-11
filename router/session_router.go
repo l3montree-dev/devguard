@@ -28,8 +28,9 @@ type SessionRouter struct {
 }
 
 // @Summary Get current user info
+// @Tags Authentication
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Success 200 {object} object{userID=string}
 // @Router /whoami [get]
 func whoami(ctx echo.Context) error {

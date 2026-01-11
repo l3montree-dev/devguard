@@ -46,8 +46,9 @@ func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 }
 
 // @Summary List repositories from integrations
+// @Tags Integrations
 // @Security CookieAuth
-// @Security ApiKeyAuth
+// @Security PATAuth
 // @Success 200 {array} object
 // @Router /integrations/repositories [get]
 func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
@@ -115,6 +116,7 @@ func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) e
 }
 
 // @Summary GitLab OAuth2 callback
+// @Tags Integrations
 // @Security CookieAuth
 // @Param integrationName path string true "Integration name"
 // @Success 200
@@ -138,6 +140,7 @@ func (c *IntegrationController) GitLabOauth2Callback(ctx shared.Context) error {
 }
 
 // @Summary GitLab OAuth2 login
+// @Tags Integrations
 // @Security CookieAuth
 // @Param integrationName path string true "Integration name"
 // @Success 200
