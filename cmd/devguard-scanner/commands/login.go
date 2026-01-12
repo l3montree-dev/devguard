@@ -25,19 +25,24 @@ import (
 
 func NewLoginCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "login [flags] <registry>",
-		Args:  cobra.ExactArgs(1),
-		Short: "Log in to a remote registry",
+		Use:               "login [flags] <registry>",
+		Args:              cobra.ExactArgs(1),
+		Short:             "Log in to a remote registry",
+		DisableAutoGenTag: true,
 		Long: `Log in to a remote registry using username and password.
 
 Provide the registry URL as a positional argument. Both --username and --password
 are required by this command. Credentials will be used to authenticate with the
 registry (for example to pull/push images) and may be cached per the underlying
-container runtime configuration.
-
-Example:
+container runtime configuration.`,
+		Example: `  # Log in to GitHub Container Registry
   devguard-scanner login -u myuser -p mypass ghcr.io
-`,
+
+  # Log in to Docker Hub
+  devguard-scanner login -u myuser -p mypass docker.io
+
+  # Log in to a private registry
+  devguard-scanner login -u admin -p secret registry.example.com`,
 		RunE: runLogin,
 	}
 

@@ -356,20 +356,26 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 func NewSCACommand() *cobra.Command {
 	scaCommand := &cobra.Command{
-		Use:   "sca [image|path]",
-		Short: "Run Software Composition Analysis (SCA)",
+		Use:               "sca [image|path]",
+		Short:             "Run Software Composition Analysis (SCA)",
+		DisableAutoGenTag: true,
 		Long: `Run a Software Composition Analysis (SCA) for a project or container image.
 
 This command can accept either an OCI image reference (e.g. ghcr.io/org/image:tag) via
 --image or as the first positional argument, or a local path/tar file via --path or as
 the first positional argument. The command will generate or accept an SBOM, upload it to
-DevGuard and return vulnerability results.
+DevGuard and return vulnerability results.`,
+		Example: `  # Scan a container image
+  devguard-scanner sca ghcr.io/org/image:tag
 
-Examples:
-  devguard-scanner sca --image ghcr.io/org/image:tag
+  # Scan a local project directory
   devguard-scanner sca ./path/to/project
-`,
-		// Args:  cobra.ExactArgs(0),
+
+  # Scan with custom asset name
+  devguard-scanner sca --image ghcr.io/org/image:tag --assetName my-app
+
+  # Scan and fail on high risk vulnerabilities
+  devguard-scanner sca ./project --failOnRisk high`,
 		RunE: scaCommand,
 	}
 

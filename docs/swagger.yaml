@@ -2098,11 +2098,13 @@ info:
   contact:
     name: Support
     url: https://github.com/l3montree-dev/devguard/issues
-  description: devguard API
+  description: DevGuard Backend. Secure your Software Supply Chain. Attestation-based
+    compliance as Code, manage your CVEs seamlessly, Integrate your Vulnerability
+    Scanners, Security Framework Documentation made easy. OWASP Incubating Project
   license:
     name: AGPL-3
     url: https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
-  title: devguard API
+  title: DevGuard API
   version: v1
 openapi: 3.1.0
 paths:
@@ -4824,4 +4826,17 @@ paths:
       tags:
       - Authentication
 servers:
-- url: localhost:8080/api/v1
+- description: Development server
+  url: '{scheme}://{host}:{port}/api/v1'
+  variables:
+    host:
+      default: localhost
+    port:
+      default: "8080"
+    scheme:
+      default: http
+      enum:
+      - http
+      - https
+- description: Production server
+  url: https://api.devguard.org/api/v1

@@ -12,9 +12,15 @@ import (
 
 func NewGenerateTagCommand() *cobra.Command {
 	generateTagCmd := &cobra.Command{
-		Use:   "generate-tag",
-		Short: "Generate a tag for an image based on its contents",
-		Long:  "This command generates a tag, artifact name, and URL-encoded artifact name for a given image based on its contents and the provided parameters such as upstream version, architecture, and image type.",
+		Use:               "generate-tag",
+		Short:             "Generate a tag for an image based on its contents",
+		DisableAutoGenTag: true,
+		Long:              "This command generates a tag, artifact name, and URL-encoded artifact name for a given image based on its contents and the provided parameters such as upstream version, architecture, and image type.",
+		Example: `  # Generate tag with upstream version and architecture
+  devguard-scanner generate-tag --upstreamVersion 1.2.3 --architecture amd64 --imagePath registry.io/my-image
+
+  # Generate tag with variant
+  devguard-scanner generate-tag --upstreamVersion 2.0.0 --architecture arm64 --imageVariant alpine --imagePath registry.io/app`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generateTagRun(cmd, args)
 		},

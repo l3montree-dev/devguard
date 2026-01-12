@@ -116,15 +116,20 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 func NewSarifCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sarif <sarif.json>",
-		Short: "Scan a SARIF report and upload results to DevGuard",
+		Use:               "sarif <sarif.json>",
+		Short:             "Scan a SARIF report and upload results to DevGuard",
+		DisableAutoGenTag: true,
 		Long: `Upload a SARIF-formatted static analysis report to DevGuard for processing and result comparison.
 
-Example:
+The command signs the request using the configured token and returns scan results.`,
+		Example: `  # Upload a SARIF report
   devguard-scanner sarif results.sarif.json
+
+  # Upload and save the processed report
   devguard-scanner sarif results.sarif.json --outputPath uploaded-results.sarif.json
 
-The command signs the request using the configured token and returns scan results.`,
+  # Upload with custom scanner ID for result tracking
+  devguard-scanner sarif results.sarif.json --scannerID custom-scanner-v1`,
 		Args: cobra.ExactArgs(1),
 		RunE: sarifCmd,
 	}

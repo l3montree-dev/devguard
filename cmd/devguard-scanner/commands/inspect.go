@@ -70,15 +70,20 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 
 func NewInspectCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "inspect-devguard-token <hex-token>",
-		Short: "Decode and display a DevGuard token's keys",
-		Long: `Decode a DevGuard hex token and print the corresponding private and public keys in PEM and hex formats. This is intended for debugging and key inspection only.
+		Use:               "inspect-devguard-token <hex-token>",
+		Short:             "Decode and display a DevGuard token's keys",
+		DisableAutoGenTag: true,
+		Long: `Decode a DevGuard hex token and print the corresponding private and public keys in PEM and hex formats.
 
-Example:
-  devguard-scanner inspect-devguard-token 4a6f... (hex token)
+This is intended for debugging and key inspection only.
 
 Warning: the private key will be printed to stdout; handle output carefully and avoid exposing
 private keys in logs or shared screens.`,
+		Example: `  # Inspect a DevGuard token
+  devguard-scanner inspect-devguard-token 4a6f...
+
+  # Save output to file
+  devguard-scanner inspect-devguard-token 4a6f... > keys.txt`,
 		Args: cobra.ExactArgs(1),
 		RunE: inspectCmd,
 	}
