@@ -44,6 +44,14 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 	}
 }
 
+// @Summary Create project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param body body dtos.ProjectCreateRequest true "Request body"
+// @Success 200 {object} models.Project
+// @Router /organizations/{organization}/projects [post]
 func (ProjectController *ProjectController) Create(ctx shared.Context) error {
 	var req dtos.ProjectCreateRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -116,6 +124,14 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	return users, nil
 }
 
+// @Summary List project members
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200 {array} dtos.UserDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/members [get]
 func (ProjectController *ProjectController) Members(c shared.Context) error {
 	members, err := FetchMembersOfProject(c)
 	if err != nil {
@@ -125,6 +141,15 @@ func (ProjectController *ProjectController) Members(c shared.Context) error {
 	return c.JSON(200, members)
 }
 
+// @Summary Invite members to project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body dtos.ProjectInviteRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/members [post]
 func (ProjectController *ProjectController) InviteMembers(c shared.Context) error {
 	project := shared.GetProject(c)
 
@@ -225,6 +250,14 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Delete project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug} [delete]
 func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
 
@@ -236,6 +269,14 @@ func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Get project details
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200 {object} dtos.ProjectDetailsDTO
+// @Router /organizations/{organization}/projects/{projectSlug} [get]
 func (ProjectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
@@ -295,6 +336,13 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 	}), nil
 }
 
+// @Summary List projects
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {array} models.Project
+// @Router /organizations/{organization}/projects [get]
 func (ProjectController *ProjectController) List(c shared.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
 	projects, err := ProjectController.projectService.ListAllowedProjectsPaged(c)
@@ -306,6 +354,15 @@ func (ProjectController *ProjectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
+// @Summary Update project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body dtos.ProjectPatchRequest true "Request body"
+// @Success 200 {object} dtos.ProjectDetailsDTO
+// @Router /organizations/{organization}/projects/{projectSlug} [patch]
 func (ProjectController *ProjectController) Update(c shared.Context) error {
 	req := c.Request().Body
 	defer req.Close()

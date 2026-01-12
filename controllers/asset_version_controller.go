@@ -70,11 +70,31 @@ func NewAssetVersionController(
 	}
 }
 
+// @Summary Get asset version details
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} models.AssetVersion
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [get]
 func (a *AssetVersionController) Read(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	return ctx.JSON(200, assetVersion)
 }
 
+// @Summary Create asset version
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body object{name=string,tag=bool,defaultBranch=bool} true "Request body"
+// @Success 201 {object} models.AssetVersion
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs [post]
 func (a *AssetVersionController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -101,7 +121,16 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 	return ctx.JSON(201, assetVersion)
 }
 
-// Function to delete provided asset version
+// @Summary Delete asset version
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [delete]
 func (a *AssetVersionController) Delete(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)                //Get the asset provided in the context / URL
 	err := a.assetVersionRepository.Delete(nil, &assetVersion) //Call delete on the returned assetVersion
@@ -112,6 +141,15 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 
+// @Summary List asset versions
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {array} models.AssetVersion
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs [get]
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -205,6 +243,17 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
 }
 
+// @Summary Get SBOM in JSON format
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json [get]
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
@@ -252,6 +301,17 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 	return encoder.Encode(sbom.EjectVex(assetID))
 }
 
+// @Summary Get VEX in JSON format
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json [get]
 func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 	sbom, err := a.buildVeX(ctx)
 	if err != nil {
@@ -399,6 +459,17 @@ func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom
 	return a.assetVersionService.BuildVeX(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
 }
 
+// @Summary Get asset version metrics
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/metrics [get]
 func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	//artifactName := ctx.QueryParam("artifact")

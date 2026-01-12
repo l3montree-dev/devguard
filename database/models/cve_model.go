@@ -33,8 +33,8 @@ type CVE struct {
 	Description           string               `json:"description" gorm:"type:text;" cve:"description"`
 	CVSS                  float32              `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
 	References            string               `json:"references" gorm:"type:text;" cve:"references"`
-	CISAExploitAdd        *datatypes.Date      `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd"`
-	CISAActionDue         *datatypes.Date      `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue"`
+	CISAExploitAdd        *datatypes.Date      `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd" swaggertype:"string" format:"date"`
+	CISAActionDue         *datatypes.Date      `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue" swaggertype:"string" format:"date"`
 	CISARequiredAction    string               `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
 	CISAVulnerabilityName string               `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
 	EPSS                  *float64             `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`

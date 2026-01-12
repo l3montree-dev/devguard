@@ -25,6 +25,16 @@ func NewAttestationController(repository shared.AttestationRepository, assetVers
 	}
 }
 
+// @Summary List attestations
+// @Tags Attestations
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {array} models.Attestation
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/attestations [get]
 func (a *AttestationController) List(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
@@ -38,6 +48,16 @@ func (a *AttestationController) List(ctx shared.Context) error {
 	return ctx.JSON(200, attestationList)
 }
 
+// @Summary Create attestation
+// @Tags Attestations
+// @Security CookieAuth
+// @Security PATAuth
+// @Param body body object true "Attestation content"
+// @Param X-Asset-Ref header string false "Asset version name"
+// @Param X-Artifact-Name header string false "Artifact name"
+// @Param X-Predicate-Type header string false "Predicate type"
+// @Success 200
+// @Router /attestations [post]
 func (a *AttestationController) Create(ctx shared.Context) error {
 
 	jsonContent := make(map[string]any)

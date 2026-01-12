@@ -32,19 +32,21 @@ type MergeSBOMsConfigFile struct {
 
 func NewMergeSBOMSCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "merge-sboms <config file>",
-		Short: "Merge multiple SBOMs into one SBOM",
+		Use:               "merge-sboms <config file>",
+		Short:             "Merge multiple SBOMs into one SBOM",
+		DisableAutoGenTag: true,
 		Long: `Merge multiple CycloneDX SBOMs into a single SBOM.
 
 The command expects a JSON configuration file with the target purl and a list
 of SBOM file paths to merge. The merged SBOM is written to stdout in pretty JSON.
 
 Example config file:
-	{ "purl": "pkg:foo/bar@1.2.3", "sboms": ["a.json", "b.json"] }
+  { "purl": "pkg:foo/bar@1.2.3", "sboms": ["a.json", "b.json"] }`,
+		Example: `  # Merge SBOMs using config file
+  devguard-scanner merge-sboms config.json
 
-Example:
-	devguard-scanner merge-sboms config.json
-`,
+  # Redirect output to file
+  devguard-scanner merge-sboms config.json > merged-sbom.json`,
 		RunE: runMergeSBOMs,
 	}
 

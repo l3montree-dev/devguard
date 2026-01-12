@@ -46,23 +46,29 @@ const (
 	defaultConfigFilename = ".devguard"
 )
 
-var rootCmd = &cobra.Command{
-	SilenceUsage: true,
-	Use:          "devguard-scanner",
-	Short:        "Secure your Software Supply Chain",
-	Version:      version,
+var RootCmd = &cobra.Command{
+	SilenceUsage:      true,
+	Use:               "devguard-scanner",
+	Short:             "Secure your Software Supply Chain",
+	Version:           version,
+	DisableAutoGenTag: true,
 	Long: `Secure your Software Supply Chain
 
-	DevGuard Scanner is a small CLI to help generate, sign and upload SBOMs, SARIF
-	reports and attestations to a DevGuard backend. Use commands like 'sca', 'sarif',
-	and 'attest' to interact with the platform. Configuration can be provided via a
-	./.devguard config file or environment variables (prefix DEVGUARD_).
+DevGuard Scanner is a small CLI to help generate, sign and upload SBOMs, SARIF
+reports and attestations to a DevGuard backend. Use commands like 'sca', 'sarif',
+and 'attest' to interact with the platform. Configuration can be provided via a
+./.devguard config file or environment variables (prefix DEVGUARD_).`,
+	Example: `  # Run Software Composition Analysis on a container image
+  devguard-scanner sca ghcr.io/org/image:tag
 
-	Examples:
-		devguard-scanner sca --image ghcr.io/org/image:tag
-		devguard-scanner attest predicate.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/vex/1.0
-		devguard-scanner sarif results.sarif.json
-	`,
+  # Run SCA on a local project directory
+  devguard-scanner sca ./path/to/project
+
+  # Create and upload an attestation
+  devguard-scanner attest predicate.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/vex/1.0
+
+  # Upload a SARIF report
+  devguard-scanner sarif results.sarif.json`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// init the logger - get the level
@@ -102,7 +108,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -122,7 +128,7 @@ func init() {
 		},
 	}
 
-	rootCmd.AddCommand(
+	RootCmd.AddCommand(
 		versionCmd,
 		NewSCACommand(),
 		NewContainerScanningCommand(),
@@ -152,11 +158,11 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", "Set the log level. Options: debug, info, warn, error")
+	RootCmd.PersistentFlags().StringP("logLevel", "l", "info", "Set the log level. Options: debug, info, warn, error")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // InitLogger initializes the logger with a tint handler.

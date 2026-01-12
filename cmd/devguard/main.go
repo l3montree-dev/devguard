@@ -48,9 +48,9 @@ import (
 
 var release string // Will be filled at build time
 
-//	@title			devguard API
+//	@title			DevGuard API
 //	@version		v1
-//	@description	devguard API
+//	@description	DevGuard Backend. Secure your Software Supply Chain. Attestation-based compliance as Code, manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Security Framework Documentation made easy. OWASP Incubating Project
 
 //	@contact.name	Support
 //	@contact.url	https://github.com/l3montree-dev/devguard/issues
@@ -58,8 +58,26 @@ var release string // Will be filled at build time
 //	@license.name	AGPL-3
 //	@license.url	https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
 
-// @host		localhost:8080
-// @BasePath	/api/v1
+// @servers.url {scheme}://{host}:{port}/api/v1
+// @servers.description Development server
+// @servers.variables.enum scheme http
+// @servers.variables.enum scheme https
+// @servers.variables.default scheme http
+// @servers.variables.default host localhost
+// @servers.variables.default port 8080
+
+// @servers.url https://api.devguard.org/api/v1
+// @servers.description Production server
+
+//	@securityDefinitions.apikey	CookieAuth
+//	@in							cookie
+//	@name						ory_kratos_session
+//	@description				Session-based authentication using Ory Kratos
+
+// @securityDefinitions.apikey	PATAuth
+// @in							header
+// @name						X-Signature
+// @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck

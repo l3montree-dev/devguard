@@ -84,14 +84,20 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 
 func NewSbomCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sbom <sbom.json>",
-		Short: "Scan a CycloneDX SBOM for vulnerabilities",
+		Use:               "sbom <sbom.json>",
+		Short:             "Scan a CycloneDX SBOM for vulnerabilities",
+		DisableAutoGenTag: true,
 		Long: `Scan a CycloneDX Software Bill of Materials (SBOM) and upload it to DevGuard for vulnerability analysis.
 
-Example:
+Only CycloneDX-formatted SBOMs are supported. The command signs the request using the configured token and returns scan results.`,
+		Example: `  # Scan a CycloneDX SBOM
   devguard-scanner sbom my-bom.json
 
-Only CycloneDX-formatted SBOMs are supported. The command signs the request using the configured token and returns scan results.`,
+  # Scan with custom asset name
+  devguard-scanner sbom my-bom.json --assetName my-app
+
+  # Fail on high risk vulnerabilities
+  devguard-scanner sbom my-bom.json --failOnRisk high`,
 		Args: cobra.ExactArgs(1),
 		RunE: sbomCmd,
 	}

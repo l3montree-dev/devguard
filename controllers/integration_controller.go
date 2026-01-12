@@ -45,6 +45,12 @@ func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 	return nil
 }
 
+// @Summary List repositories from integrations
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Success 200 {array} object
+// @Router /integrations/repositories [get]
 func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 
@@ -109,6 +115,12 @@ func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) e
 	return nil
 }
 
+// @Summary GitLab OAuth2 callback
+// @Tags Integrations
+// @Security CookieAuth
+// @Param integrationName path string true "Integration name"
+// @Success 200
+// @Router /oauth2/gitlab/callback/{integrationName} [get]
 func (c *IntegrationController) GitLabOauth2Callback(ctx shared.Context) error {
 	integrationName := shared.GetParam(ctx, "integrationName")
 	if integrationName == "" {
@@ -127,6 +139,12 @@ func (c *IntegrationController) GitLabOauth2Callback(ctx shared.Context) error {
 	return nil
 }
 
+// @Summary GitLab OAuth2 login
+// @Tags Integrations
+// @Security CookieAuth
+// @Param integrationName path string true "Integration name"
+// @Success 200
+// @Router /oauth2/gitlab/{integrationName} [get]
 func (c *IntegrationController) GitLabOauth2Login(ctx shared.Context) error {
 	integrationName := shared.GetParam(ctx, "integrationName")
 	if integrationName == "" {

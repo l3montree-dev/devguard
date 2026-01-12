@@ -29,6 +29,13 @@ func NewWebhookController(db shared.DB) *WebhookController {
 	}
 }
 
+// @Summary Delete webhook integration
+// @Tags Webhooks
+// @Security CookieAuth
+// @Security PATAuth
+// @Param id path string true "Webhook ID"
+// @Success 200
+// @Router /webhooks/{id} [delete]
 func (w *WebhookController) Delete(ctx shared.Context) error {
 	id := ctx.Param("id")
 	if id == "" {
@@ -52,6 +59,13 @@ func (w *WebhookController) CompareIssueStatesAndResolveDifferences(asset models
 	return nil
 }
 
+// @Summary Update webhook integration
+// @Tags Webhooks
+// @Security CookieAuth
+// @Security PATAuth
+// @Param body body object true "Webhook data"
+// @Success 200 {object} dtos.WebhookIntegrationDTO
+// @Router /webhooks [put]
 func (w *WebhookController) Update(ctx shared.Context) error {
 	var data struct {
 		ID          string `json:"id"`
@@ -108,6 +122,13 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})
 }
+// @Summary Create webhook integration
+// @Tags Webhooks
+// @Security CookieAuth
+// @Security PATAuth
+// @Param body body object true "Webhook data"
+// @Success 200 {object} dtos.WebhookIntegrationDTO
+// @Router /webhooks [post]
 func (w *WebhookController) Save(ctx shared.Context) error {
 	var data struct {
 		Name        string `json:"name"`
@@ -158,6 +179,13 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 	})
 }
 
+// @Summary Test webhook integration
+// @Tags Webhooks
+// @Security CookieAuth
+// @Security PATAuth
+// @Param body body object true "Test webhook data"
+// @Success 200 {object} object{message=string,payloadType=string}
+// @Router /webhooks/test [post]
 func (w *WebhookController) Test(ctx shared.Context) error {
 	var data struct {
 		URL         string `json:"url"`

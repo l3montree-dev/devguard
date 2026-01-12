@@ -22,9 +22,18 @@ type kyvernoTestResult struct {
 
 func newKyvernoSarifCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kyverno2sarif",
-		Short: "Convert Kyverno test output to SARIF",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Use:               "kyverno2sarif",
+		Short:             "Convert Kyverno test output to SARIF",
+		DisableAutoGenTag: true,
+		Long: `Convert Kyverno policy test output to SARIF format.
+
+This allows Kyverno test results to be uploaded to DevGuard and integrated with other security scanning tools.`,
+		Example: `  # Convert Kyverno output to SARIF
+  devguard-scanner kyverno2sarif -i kyverno-results.txt
+
+  # Save to file
+  devguard-scanner kyverno2sarif -i kyverno-results.txt -o results.sarif.json`,
+		RunE: func(cmd *cobra.Command, args []string) error{
 			inputPath, _ := cmd.Flags().GetString("input")
 			outputPath, _ := cmd.Flags().GetString("output")
 

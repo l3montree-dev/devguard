@@ -98,18 +98,22 @@ func signCmd(cmd *cobra.Command, args []string) error {
 
 func NewSignCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sign <file | image>",
-		Short: "Sign a file or image",
+		Use:               "sign <file | image>",
+		Short:             "Sign a file or image",
+		DisableAutoGenTag: true,
 		Long: `Sign a file or OCI image using cosign.
 
 When not run with --offline the command will upload the public key to DevGuard
 before creating the signature. The public key upload is signed using the
-configured token. The actual signing is performed by the cosign CLI.
-
-Examples:
+configured token. The actual signing is performed by the cosign CLI.`,
+		Example: `  # Sign a local file
   devguard-scanner sign ./artifact.bin
+
+  # Sign a container image
   devguard-scanner sign ghcr.io/org/image:tag
-`,
+
+  # Sign without uploading public key to DevGuard
+  devguard-scanner sign ./artifact.bin --offline`,
 		Args: cobra.ExactArgs(1),
 		RunE: signCmd,
 	}

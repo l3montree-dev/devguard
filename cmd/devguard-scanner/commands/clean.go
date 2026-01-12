@@ -16,18 +16,23 @@ import (
 // It exposes the same --key and --yes flags as cosign for familiarity.
 func NewCleanCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "clean <image | signature-file>",
-		Short: "Remove attestations or signatures using cosign",
+		Use:               "clean <image | signature-file>",
+		Short:             "Remove attestations or signatures using cosign",
+		DisableAutoGenTag: true,
 		Long: `Run cosign remove on an image or signature object to clean attestations/signatures.
 
 This command wraps the cosign CLI. If registry credentials are provided they will
 be used for authentication. The command converts your configured token into a key
 and uses it where appropriate. Use --type to limit the cleanup to signatures,
-attestations, SBOMs, or all.
+attestations, SBOMs, or all.`,
+		Example: `  # Remove all attestations and signatures from an image
+  devguard-scanner clean ghcr.io/org/image:tag
 
-Example:
-	devguard-scanner clean ghcr.io/org/image:tag
-`,
+  # Remove only attestations
+  devguard-scanner clean --type attestation ghcr.io/org/image:tag
+
+  # Remove only signatures
+  devguard-scanner clean --type signature ghcr.io/org/image:tag`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]

@@ -66,16 +66,22 @@ func NewCurlCommand() *cobra.Command {
 	var opts CurlOptions
 
 	cmd := &cobra.Command{
-		Use:   "curl [flags] <url>",
-		Short: "Make HTTP requests with DevGuard PAT signing (curl-compatible)",
+		Use:               "curl [flags] <url>",
+		Short:             "Make HTTP requests with DevGuard PAT signing (curl-compatible)",
+		DisableAutoGenTag: true,
 		Long: `Make HTTP requests with DevGuard Personal Access Token signing.
 This command provides curl-compatible syntax while automatically signing requests
-using for authentication.
-
-Examples:
+for authentication.`,
+		Example: `  # Simple GET request
   devguard-scanner curl https://api.example.com/users
+
+  # POST request with JSON data
   devguard-scanner curl -X POST -d '{"name":"test"}' -H "Content-Type: application/json" https://api.example.com/users
+
+  # Verbose request with custom headers
   devguard-scanner curl -v -H "Accept: application/json" https://api.example.com/data
+
+  # Request with explicit token
   devguard-scanner curl --token <your-pat-token> -X GET https://api.example.com/protected`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

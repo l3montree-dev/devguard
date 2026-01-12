@@ -69,8 +69,9 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 func NewSastCommand() *cobra.Command {
 	sastCommand := &cobra.Command{
-		Use:   "sast [path]",
-		Short: "Run a static application security test (SAST)",
+		Use:               "sast [path]",
+		Short:             "Run a static application security test (SAST)",
+		DisableAutoGenTag: true,
 		Long: `Run a static application security test using the configured SAST tool.
 
 This command executes the configured SAST scanner (semgrep) against the project
@@ -78,15 +79,18 @@ path provided via flags or configuration, obfuscates sensitive snippets, and
 uploads the SARIF results to DevGuard. The request is signed using the configured
 token before upload.
 
-You may pass the target as the first positional argument instead of using
---path.
+You may pass the target as the first positional argument instead of using --path.`,
+		Example: `  # Run SAST scan on local repository
+  devguard-scanner sast ./my-repo
 
-Examples:
-	devguard-scanner sast --path ./my-repo
-	devguard-scanner sast ./my-repo
-	devguard-scanner sast ghcr.io/org/image:tag
-	devguard-scanner sast --path ./my-repo --outputPath results.sarif.json
-`,
+  # Scan with custom path flag
+  devguard-scanner sast --path ./my-repo
+
+  # Scan container image
+  devguard-scanner sast ghcr.io/org/image:tag
+
+  # Scan and save results locally
+  devguard-scanner sast ./my-repo --outputPath results.sarif.json`,
 		RunE: sarifCommandFactory("sast"),
 	}
 
