@@ -90,7 +90,7 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 
 func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	rowLengthLimit := 130
+	rowLengthLimit := 80
 	tw.SetAllowedRowLength(rowLengthLimit)
 
 	blue := text.FgBlue
