@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
+	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
 
@@ -58,6 +59,46 @@ func postProcessMarkdown(filename string) {
 	}
 }
 
+// generateDocsForCommand recursively generates docs for a command and all its subcommands
+func generateDocsForCommand(cmd *cobra.Command, outDir string) {
+	identity := func(s string) string { return s }
+	emptyStr := func(s string) string { return "" }
+
+	// Print to stdout first
+	err := doc.GenMarkdownCustom(cmd, os.Stdout, emptyStr)
+	if err != nil {
+		slog.Error("could not generate markdown documentation", "err", err, "cmd", cmd.Name())
+		return
+	}
+
+	// Generate markdown for this command
+	filename := filepath.Join(outDir, cmd.Name()+".md")
+	f, err := os.Create(filename)
+	if err != nil {
+		slog.Error("could not create file", "err", err, "file", filename)
+		return
+	}
+
+	err = doc.GenMarkdownCustom(cmd, f, identity)
+	f.Close()
+	if err != nil {
+		slog.Error("could not write markdown", "err", err, "file", filename)
+		return
+	}
+
+	// Post-process the file
+	postProcessMarkdown(filename)
+
+	// Recursively generate docs for subcommands
+	for _, subCmd := range cmd.Commands() {
+		// Skip hidden commands
+		if subCmd.Hidden {
+			continue
+		}
+		generateDocsForCommand(subCmd, outDir)
+	}
+}
+
 func main() {
 	// check if no arguments were provided
 	if len(os.Args) < 2 {
@@ -67,38 +108,8 @@ func main() {
 			return
 		}
 
-		// Generate docs with custom settings to disable "SEE ALSO" section
+		// Generate root command doc first
 		identity := func(s string) string { return s }
-		emptyStr := func(s string) string { return "" }
-
-		for _, cmd := range commands.RootCmd.Commands() {
-			// Generate markdown for each command
-			err := doc.GenMarkdownCustom(cmd, os.Stdout, emptyStr)
-			if err != nil {
-				slog.Error("could not generate markdown documentation", "err", err, "cmd", cmd.Name())
-				continue
-			}
-
-			// Write to file
-			filename := filepath.Join("docs/scanner", cmd.Name()+".md")
-			f, err := os.Create(filename)
-			if err != nil {
-				slog.Error("could not create file", "err", err, "file", filename)
-				continue
-			}
-
-			err = doc.GenMarkdownCustom(cmd, f, identity)
-			f.Close()
-			if err != nil {
-				slog.Error("could not write markdown", "err", err, "file", filename)
-				continue
-			}
-
-			// Post-process: remove "devguard-scanner " prefix from headline and remove SEE ALSO
-			postProcessMarkdown(filename)
-		}
-
-		// Generate root command doc separately
 		rootFilename := filepath.Join("docs/scanner", "devguard-scanner.md")
 		rootFile, err := os.Create(rootFilename)
 		if err != nil {
@@ -111,6 +122,15 @@ func main() {
 			} else {
 				postProcessMarkdown(rootFilename)
 			}
+		}
+
+		// Generate docs for all commands (including nested subcommands)
+		for _, cmd := range commands.RootCmd.Commands() {
+			// Skip hidden commands
+			if cmd.Hidden {
+				continue
+			}
+			generateDocsForCommand(cmd, "docs/scanner")
 		}
 
 		return
