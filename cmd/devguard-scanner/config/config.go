@@ -138,7 +138,7 @@ func ParseBaseConfig(runningCMD string) {
 	}
 
 	if RuntimeBaseConfig.ArtifactName == "" {
-		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
+		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(RuntimeBaseConfig.AssetName)
 	}
 
 	if RuntimeBaseConfig.Timeout <= 0 {

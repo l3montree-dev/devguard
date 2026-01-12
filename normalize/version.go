@@ -116,16 +116,9 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	return semver, nil
 }
 
-func ArtifactPurl(scanner string, assetName string) string {
+func ArtifactPurl(assetName string) string {
 	// the user did not set any artifact name - thus we try to set a good one.
 	suffix := strings.ReplaceAll(strings.ReplaceAll(assetName, "/projects/", "/"), "/assets/", "/")
-	switch scanner {
-	case "container-scanning":
-		// we are scanning a container image - thus we use the container image as artifact name
-		return "pkg:oci/" + suffix
-	default:
-		// we are scanning an application - we have no idea which ecosystem - thus use generic
-		// use the asset name as the name of the artifact
-		return "pkg:devguard/" + suffix
-	}
+
+	return "pkg:devguard/" + suffix
 }

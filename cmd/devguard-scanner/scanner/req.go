@@ -94,7 +94,6 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
 	config.SetXAssetHeaders(req)

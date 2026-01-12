@@ -100,7 +100,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	if artifactName == "" {
-		artifactName = normalize.ArtifactPurl(ctx.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
+		artifactName = normalize.ArtifactPurl(org.Slug + "/" + project.Slug + "/" + asset.Slug)
 	}
 
 	artifact := models.Artifact{
@@ -197,7 +197,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 
 	if artifactName == "" {
-		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
+		artifactName = normalize.ArtifactPurl(org.Slug + "/" + project.Slug + "/" + asset.Slug)
 	}
 
 	artifact := models.Artifact{
