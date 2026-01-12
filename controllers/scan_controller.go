@@ -99,6 +99,10 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
 	}
 
+	if artifactName == "" {
+		artifactName = normalize.ArtifactPurl(ctx.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
+	}
+
 	artifact := models.Artifact{
 		ArtifactName:     artifactName,
 		AssetVersionName: assetVersionName,
