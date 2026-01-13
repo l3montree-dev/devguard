@@ -16,6 +16,8 @@
 package scan
 
 import (
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -77,6 +79,7 @@ func filterMatchingComponentsByVersion(components []models.AffectedComponent, ta
 	for _, component := range components {
 		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, targetVersion, component.Type)
 		if err != nil {
+			slog.Warn("could not check version for affected component", "error", err)
 			continue
 		}
 		if match {

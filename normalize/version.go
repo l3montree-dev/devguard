@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	apkversion "github.com/knqyf263/go-apk-version"
-	debversion "github.com/knqyf263/go-deb-version"
-	rpmversion "github.com/knqyf263/go-rpm-version"
+	apk "github.com/knqyf263/go-apk-version"
+	deb "github.com/knqyf263/go-deb-version"
+	rpm "github.com/knqyf263/go-rpm-version"
 )
 
 // versionInvalidCharsRe is compiled once for performance
@@ -134,18 +134,28 @@ func CheckVersion(version, introduced, fixed *string, targetVersion, affectedCom
 	}
 }
 
-func checkApkVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
-	targetVer, err := apkversion.NewVersion(targetVersion)
+// checkVersionWithComparator is a generic helper function that implements the common
+// version checking logic. It uses generics to provide type safety and eliminate type assertions.
+// V is the version type used by the specific version parsing library (APK, DEB, RPM).
+func checkVersionWithComparator[V any](
+	version, introduced, fixed *string,
+	targetVersion string,
+	newVersion func(string) (V, error),
+	equal func(a, b V) bool,
+	lessThan func(a, b V) bool,
+	greaterThan func(a, b V) bool,
+) (bool, error) {
+	targetVer, err := newVersion(targetVersion)
 	if err != nil {
 		return false, err
 	}
 
 	if version != nil {
-		v, err := apkversion.NewVersion(*version)
+		v, err := newVersion(*version)
 		if err != nil {
 			return false, err
 		}
-		if v.Equal(targetVer) {
+		if equal(v, targetVer) {
 			return true, nil
 		}
 	}
@@ -153,96 +163,56 @@ func checkApkVersion(version, introduced, fixed *string, targetVersion string) (
 	less, greater := false, false
 
 	if introduced != nil {
-		introVer, err := apkversion.NewVersion(*introduced)
+		introVer, err := newVersion(*introduced)
 		if err != nil {
 			return false, err
 		}
-		if targetVer.GreaterThan(introVer) {
+		if greaterThan(targetVer, introVer) {
 			greater = true
 		}
 	}
 
 	if fixed != nil {
-		fixedVer, err := apkversion.NewVersion(*fixed)
+		fixedVer, err := newVersion(*fixed)
 		if err != nil {
 			return false, err
 		}
-		if targetVer.LessThan(fixedVer) {
+		if lessThan(targetVer, fixedVer) {
 			less = true
 		}
 	}
 
 	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
 }
+
+func checkApkVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
+	return checkVersionWithComparator(
+		version, introduced, fixed, targetVersion,
+		apk.NewVersion,
+		func(a, b apk.Version) bool { return a.Equal(b) },
+		func(a, b apk.Version) bool { return a.LessThan(b) },
+		func(a, b apk.Version) bool { return a.GreaterThan(b) },
+	)
+}
+
 func checkDebVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
-
-	targetVer, err := debversion.NewVersion(targetVersion)
-	if err != nil {
-		return false, err
-	}
-
-	if version != nil {
-		v, err := debversion.NewVersion(*version)
-		if err != nil {
-			return false, err
-		}
-		if v.Equal(targetVer) {
-			return true, nil
-		}
-	}
-
-	less, greater := false, false
-
-	if introduced != nil {
-		introVer, err := debversion.NewVersion(*introduced)
-		if err != nil {
-			return false, err
-		}
-		if targetVer.GreaterThan(introVer) {
-			greater = true
-		}
-	}
-
-	if fixed != nil {
-		fixedVer, err := debversion.NewVersion(*fixed)
-		if err != nil {
-			return false, err
-		}
-		if targetVer.LessThan(fixedVer) {
-			less = true
-		}
-	}
-
-	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
+	return checkVersionWithComparator(
+		version, introduced, fixed, targetVersion,
+		deb.NewVersion,
+		func(a, b deb.Version) bool { return a.Equal(b) },
+		func(a, b deb.Version) bool { return a.LessThan(b) },
+		func(a, b deb.Version) bool { return a.GreaterThan(b) },
+	)
 }
 
 func checkRpmVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
-	targetVer := rpmversion.NewVersion(targetVersion)
-
-	if version != nil {
-		v := rpmversion.NewVersion(*version)
-		if v.Equal(targetVer) {
-			return true, nil
-		}
-	}
-
-	less, greater := false, false
-
-	if introduced != nil {
-		introVer := rpmversion.NewVersion(*introduced)
-		if targetVer.GreaterThan(introVer) {
-			greater = true
-		}
-	}
-
-	if fixed != nil {
-		fixedVer := rpmversion.NewVersion(*fixed)
-		if targetVer.LessThan(fixedVer) {
-			less = true
-		}
-	}
-
-	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
+	return checkVersionWithComparator(
+		version, introduced, fixed, targetVersion,
+		func(v string) (rpm.Version, error) { return rpm.NewVersion(v), nil },
+		func(a, b rpm.Version) bool { return a.Equal(b) },
+		func(a, b rpm.Version) bool { return a.LessThan(b) },
+		func(a, b rpm.Version) bool { return a.GreaterThan(b) },
+	)
 }
 
 func ArtifactPurl(scanner string, assetName string) string {

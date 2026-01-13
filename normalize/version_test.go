@@ -170,6 +170,66 @@ func TestCheckVersion(t *testing.T) {
 		assert.Contains(t, err.Error(), "unsupported affected component type")
 	})
 
+	t.Run("error handling", func(t *testing.T) {
+		t.Run("deb - empty target version", func(t *testing.T) {
+			result, err := normalize.CheckVersion(nil, nil, nil, "", "deb")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("deb - malformed target version", func(t *testing.T) {
+			result, err := normalize.CheckVersion(nil, nil, nil, "not-a-valid-version!", "deb")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("deb - malformed exact version", func(t *testing.T) {
+			version := "invalid!@#"
+			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3", "deb")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("deb - malformed introduced version", func(t *testing.T) {
+			introduced := "bad-version!!"
+			fixed := "2.0.0"
+			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "deb")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("deb - malformed fixed version", func(t *testing.T) {
+			introduced := "1.0.0"
+			fixed := "invalid@@"
+			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "deb")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("apk - malformed exact version", func(t *testing.T) {
+			version := "not@valid"
+			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3", "apk")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("apk - malformed introduced version", func(t *testing.T) {
+			introduced := "bad!version"
+			fixed := "2.0.0"
+			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "apk")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+
+		t.Run("apk - malformed fixed version", func(t *testing.T) {
+			introduced := "1.0.0"
+			fixed := "invalid@@version"
+			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "apk")
+			assert.Error(t, err)
+			assert.False(t, result)
+		})
+	})
+
 	t.Run("deb package type", func(t *testing.T) {
 		t.Run("exact version match", func(t *testing.T) {
 			version := "1.2.3-1"
