@@ -143,85 +143,73 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 	return diff
 }
 
-func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) []models.DependencyVuln {
+func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ([]models.DependencyVuln, []models.DependencyVuln) {
+	if len(oldVulns) == 1 && len(foundVulns) == 1 {
+		oldVulns[0].CVEID = foundVulns[0].CVEID
+		return oldVulns, nil
+	} else if len(oldVulns) == 1 {
+		// init foundVulns with the information from the oldVuln
+		// we need to delete oldVuln afterwards
+		for _, new := range foundVulns {
+			new.State = oldVulns[0].State
+			new.Events = oldVulns[0].Events
+		}
+
+		return foundVulns, oldVulns
+	} else {
+		// we have todo a many to many mapping
+		// we can only do this by inspecting relationships of cves to find matches
+		for _, old := range oldVulns {
+			hasUpstreamCVE := cveRelationships[*old.CVEID]
+
+		}
+
+		var existingCVE models.DependencyVuln
+		// find out if the foundCVE relates to any existing CVE
+		for _, relation := range relationsForThisCVE {
+			existingCVE, ok = vulnSliceContainsCVEIDWithVuln(existingCVEs, relation.TargetCVE)
+			if ok {
+				relatesToCVE = true
+				break
+			}
+		}
+		if relatesToCVE {
+			// if this found CVE is related to an existing CVE then we want to use the existing CVE instead of the newly found one for consistency
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *existingCVE.CVEID) {
+				return existingCVE.CVEID
+				uniqueFoundVulns = append(uniqueFoundVulns, existingCVE)
+			}
+		} else {
+			// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+				uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
+			}
+		}
+	}
+
 	// first of all we need to resolve the relations between the existing CVEs and the currently found CVEs
 	// we cannot rely on the ID of the vulns to do this matching since the CVE-ID could have changed since the last time leading to a different hash
 	// to combat this we can map the existing/found vulns to their respective combinations of purl and CVE-ID and get two maps which reflect the different states
 	// then we can use the cve relationship information to determine if there are actually new vulns or if the name just changed since the last scan
 
-	// build the two maps: purl -> (set of vulns) we only need the information about the CVE for the comparison but for the rest we need the associated vuln object
-	existingPurlsToCVEs := make(map[string][]models.DependencyVuln)
-	for _, vuln := range existingVulns {
-		purl := utils.SafeDereference(vuln.ComponentPurl)
-
-		existingPurlsToCVEs[purl] = append(existingPurlsToCVEs[purl], vuln)
-	}
-
-	foundPurlsToCVEs := make(map[string][]models.DependencyVuln)
-	for _, vuln := range foundVulns {
-		purl := utils.SafeDereference(vuln.ComponentPurl)
-
-		foundPurlsToCVEs[purl] = append(foundPurlsToCVEs[purl], vuln)
-	}
-	filteredFoundVulns := make([]models.DependencyVuln, 0, len(foundVulns))
-
 	//compare both sets: iterate over the found purls and handle each case
-	for purl, foundCVEs := range foundPurlsToCVEs {
-		existingCVEs, ok := existingPurlsToCVEs[purl]
-		if !ok {
-			// no existing vulns are present with this purl so we can assume these vulnerabilities are actually new and append them all distinctly to the filtered found vulns
-			for _, vuln := range foundCVEs {
-				if !vulnSliceContainsVuln(filteredFoundVulns, vuln) {
-					filteredFoundVulns = append(filteredFoundVulns, vuln)
-				}
-			}
-			// then we can skip to the next purl
+	// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out matches using the relationship information
+	uniqueFoundVulns := make([]models.DependencyVuln, 0, len(foundCVEs))
+	for _, foundCVE := range foundCVEs {
+		if utils.SafeDereference(foundCVE.CVEID) == "" {
 			continue
 		}
-
-		// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out matches using the relationship information
-		uniqueFoundVulns := make([]models.DependencyVuln, 0, len(foundCVEs))
-		for _, foundCVE := range foundCVEs {
-			if utils.SafeDereference(foundCVE.CVEID) == "" {
-				continue
+		//note: since we grouped the maps by purls we know that each foundVuln and existingVuln we compare already has the same purl, so to have an exact match we just need to match the CVE between these two.
+		// if we have an exact vuln match in the existing vulns we can append the found vuln
+		if vulnSliceContainsCVEID(existingCVEs, *foundCVE.CVEID) {
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+				uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
 			}
-			//note: since we grouped the maps by purls we know that each foundVuln and existingVuln we compare already has the same purl, so to have an exact match we just need to match the CVE between these two.
-			// if we have an exact vuln match in the existing vulns we can append the found vuln
-			if vulnSliceContainsCVEID(existingCVEs, *foundCVE.CVEID) {
-				if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
-					uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
-				}
-			} else {
-				// if we have not found an exact match we try to find a match using the relationship-map -> a vuln might have a different CVE-ID but maybe this CVE-ID is an alias for the existing CVE-ID
-				relationsForThisCVE := cveRelationships[*foundCVE.CVEID]
-				relatesToCVE := false
-				var existingCVE models.DependencyVuln
-				// find out if the foundCVE relates to any existing CVE
-				for _, relation := range relationsForThisCVE {
-					existingCVE, ok = vulnSliceContainsCVEIDWithVuln(existingCVEs, relation.TargetCVE)
-					if ok {
-						relatesToCVE = true
-						break
-					}
-				}
+		} else {
 
-				if relatesToCVE {
-					// if this found CVE is related to an existing CVE then we want to use the existing CVE instead of the newly found one for consistency
-					if !vulnSliceContainsCVEID(uniqueFoundVulns, *existingCVE.CVEID) {
-						uniqueFoundVulns = append(uniqueFoundVulns, existingCVE)
-					}
-				} else {
-					// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
-					if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
-						uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
-					}
-				}
-
-			}
 		}
-		filteredFoundVulns = append(filteredFoundVulns, uniqueFoundVulns...)
 	}
-	return filteredFoundVulns
+	return nil
 }
 
 type BranchDiff[T models.Vuln] struct {

@@ -153,14 +153,6 @@ func (s osvService) Mirror() error {
 	close(jobs)
 	waitGroup.Wait()
 
-	// after we are done with importing all relations we need to filter out any cve relations where the target_cve does not exist anymore
-	slog.Info("start filtering cve relationships")
-	err := s.cveRelationshipRepository.FilterOutRelationsWithInvalidTargetCVE(nil)
-	if err != nil {
-		slog.Error("could not filter out invalid cve relations")
-		return err
-	}
-	slog.Info("successfully filtered relationships")
 	return nil
 }
 

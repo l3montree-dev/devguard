@@ -66,7 +66,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 // some purls do contain versions, which cannot be found in the database. An example is git.
 // the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
-func (comparer *PurlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
+func (comparer *PurlComparer) GetVulns(purl string, version string) ([]models.VulnInPackage, error) {
 	// get the affected components
 	affectedComponents, err := comparer.GetAffectedComponents(purl, version)
 	if err != nil {

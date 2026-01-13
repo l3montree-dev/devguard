@@ -9,11 +9,11 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"gorm.io/gorm"
 )
 
@@ -39,9 +39,9 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 		return fmt.Errorf("failed to check hash migration version: %w", err)
 	}
 
-	if err := runCVEHashMigration(db, daemonRunner); err != nil {
-		return err
-	}
+	// if err := runCVEHashMigration(db, daemonRunner); err != nil {
+	// 	return err
+	// }
 
 	// If version is outdated, run migrations
 	if currentVersion < CurrentHashVersion {
@@ -205,6 +205,11 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 	return nil
 }
 
+type vulnWithVersion struct {
+	Vuln             models.DependencyVuln
+	ComponentVersion string `gorm:"version"`
+}
+
 // this function handles the migration for importing new CVEs from the OSV.
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
 func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
@@ -240,34 +245,100 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	slog.Info("successfully deleted cve entries")
 
 	// import the new VulnDB state, containing the (new) CVEs from the OSV database
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-	configService := services.NewConfigService(db)
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
-
-	slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(nil)
-	if err != nil {
-		slog.Error("error when trying to import with diff files", "err", err)
-	}
-
 	// cveRepository := repositories.NewCVERepository(db)
+	// cweRepository := repositories.NewCWERepository(db)
+	// exploitsRepository := repositories.NewExploitRepository(db)
 	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	// configService := services.NewConfigService(db)
+	// v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService)
 
-	// v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
-	// slog.Info("Syncing vulndb")
-	// err = v.Mirror()
+	// slog.Info("Step 1: Importing new vulnDB state")
+	// err = v.ImportFromDiff(nil)
 	// if err != nil {
-	// 	return err
+	// 	slog.Error("error when trying to import with diff files", "err", err)
 	// }
 
-	// now we need to scan everything to update the dependencyVulns on the way
-	slog.Info("Step 2: Scanning all Assets")
-	daemonRunner.RunAssetPipeline(true)
+	cveRepository := repositories.NewCVERepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+
+	v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+	slog.Info("Syncing vulndb")
+	err = v.Mirror()
+	if err != nil {
+		return err
+	}
+
+	var allVulns []vulnWithVersion
+	sql := `SELECT dv.*,cmp.version FROM dependency_vulns dv LEFT JOIN components cmp ON dv.component_purl = cmp.purl;`
+	err = db.Exec(sql).Find(&allVulns).Error
+	if err != nil {
+		return err
+	}
+	if len(allVulns) == 0 {
+		slog.Error("could not find any vulnerabilities")
+		return fmt.Errorf("could not find any vulnerabilities")
+	}
+
+	//map vulns by purl
+	vulnsByPurl := make(map[string][]vulnWithVersion)
+	for _, vuln := range allVulns {
+		purl := utils.SafeDereference(vuln.Vuln.ComponentPurl)
+		if purl == "" {
+			slog.Warn("cannot migrate dependency vuln without purl. Incorrect database state", "vulnID", vuln.Vuln.ID)
+		} else {
+			vulnsByPurl[purl] = append(vulnsByPurl[purl], vuln)
+		}
+	}
+
+	pc := scan.NewPurlComparer(db)
+
+	for purl, existingVulns := range vulnsByPurl {
+		vulnsInPackage, err := pc.GetVulns(purl)
+	}
 
 	slog.Info("finished scan")
-
 	return nil
 }
+
+// func determineBestFit(rows map[dtos.RelationshipType][]migrationRow) migrationRow {
+// 	upstreamRelations, ok := rows[dtos.RelationshipTypeUpstream]
+// 	if ok {
+// 		if len(upstreamRelations) == 1 {
+// 			return upstreamRelations[0]
+// 		} else {
+// 			slog.Error("multiple upstreams detected")
+// 		}
+// 	} else {
+// 		aliasRelations, ok := rows[dtos.RelationshipTypeAlias]
+// 		if ok {
+// 			return aliasRelations[0]
+// 		} else {
+// 			relatedRelations, ok := rows[dtos.RelationshipTypeRelated]
+// 			if ok {
+// 				return relatedRelations[0]
+// 			}
+// 		}
+// 	}
+// 	panic("could not determine best row")
+// }
+
+// var rows []migrationRow
+// 	sql := `SELECT depvulns.id,depvulns.cve_id,rel.source_cve,rel.relationship_type
+// 	FROM dependency_vulns depvulns LEFT JOIN cve_relationships rel ON a.cve_id = b.target_cve
+// 	WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = a.cve_id)`
+
+// 	err = db.Exec(sql).Find(&rows).Error
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// maps the dependency vuln id to a set of relations for the cve of the vuln. The relations are then further mapped by relationship type
+// 	idToRelations := make(map[string]map[dtos.RelationshipType][]migrationRow, len(rows))
+// 	for _, row := range rows {
+// 		idToRelations[row.ID][*row.RelationshipType] = append(idToRelations[row.ID][*row.RelationshipType], row)
+// 	}
+
+// 	// for id, rows := range idToRelations {
+// 	// 	bestFit := determineBestFit(rows)
+
+// 	// }
