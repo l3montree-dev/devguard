@@ -143,19 +143,6 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 	return diff
 }
 
-func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
-	for _, vuln := range vulns {
-		cveID := utils.SafeDereference(vuln.CVEID)
-		if cveID == "" {
-			continue
-		}
-		if cveID == targetCVEID {
-			return true
-		}
-	}
-	return false
-}
-
 func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) []models.DependencyVuln {
 	// first of all we need to resolve the relations between the existing CVEs and the currently found CVEs
 	// we cannot rely on the ID of the vulns to do this matching since the CVE-ID could have changed since the last time leading to a different hash
@@ -181,30 +168,31 @@ func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.Dependen
 	//compare both sets: iterate over the found purls and handle each case
 	for purl, foundCVEs := range foundPurlsToCVEs {
 		existingCVEs, ok := existingPurlsToCVEs[purl]
-		// no existing vulns are present with this purl so we can assume these vulnerabilities are actually new
 		if !ok {
-			for _, cve := range foundCVEs {
-				if !vulnSliceContainsCVEID(filteredFoundVulns, *cve.CVEID) {
-					filteredFoundVulns = append(filteredFoundVulns, cve)
+			// no existing vulns are present with this purl so we can assume these vulnerabilities are actually new and append them all distinctly to the filtered found vulns
+			for _, vuln := range foundCVEs {
+				if !vulnSliceContainsVuln(filteredFoundVulns, vuln) {
+					filteredFoundVulns = append(filteredFoundVulns, vuln)
 				}
 			}
+			// then we can skip to the next purl
 			continue
 		}
 
-		// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out duplicates using the relationship information
+		// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out matches using the relationship information
 		uniqueFoundVulns := make([]models.DependencyVuln, 0, len(foundCVEs))
 		for _, foundCVE := range foundCVEs {
 			if utils.SafeDereference(foundCVE.CVEID) == "" {
 				continue
 			}
-
-			// basically slices Contains() function but only on the CVE-ID rather than the whole vuln object
+			//note: since we grouped the maps by purls we know that each foundVuln and existingVuln we compare already has the same purl, so to have an exact match we just need to match the CVE between these two.
+			// if we have an exact vuln match in the existing vulns we can append the found vuln
 			if vulnSliceContainsCVEID(existingCVEs, *foundCVE.CVEID) {
 				if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
 					uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
 				}
 			} else {
-				// if we have not found an exact match we try to find a match using the relationship-map
+				// if we have not found an exact match we try to find a match using the relationship-map -> a vuln might have a different CVE-ID but maybe this CVE-ID is an alias for the existing CVE-ID
 				relationsForThisCVE := cveRelationships[*foundCVE.CVEID]
 				relatesToCVE := false
 				var existingCVE models.DependencyVuln
@@ -224,10 +212,8 @@ func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.Dependen
 					}
 				} else {
 					// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
-					if !relatesToCVE {
-						if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
-							uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
-						}
+					if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+						uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
 					}
 				}
 
@@ -236,19 +222,6 @@ func resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns []models.Dependen
 		filteredFoundVulns = append(filteredFoundVulns, uniqueFoundVulns...)
 	}
 	return filteredFoundVulns
-}
-
-func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID string) (vuln models.DependencyVuln, ok bool) {
-	for _, vuln := range vulns {
-		cveID := utils.SafeDereference(vuln.CVEID)
-		if cveID == "" {
-			continue
-		}
-		if cveID == targetCVEID {
-			return vuln, true
-		}
-	}
-	return models.DependencyVuln{}, false
 }
 
 type BranchDiff[T models.Vuln] struct {
@@ -410,4 +383,50 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		vuln.SetRiskRecalculatedAt(time.Now())
 	}
 
+}
+
+// this helper function checks if a vuln slice already contains the purl + cve-id combination of vuln
+func vulnSliceContainsVuln(vulns []models.DependencyVuln, checkVuln models.DependencyVuln) bool {
+	checkCVEID := utils.SafeDereference(checkVuln.CVEID)
+	checkPurl := utils.SafeDereference(checkVuln.ComponentPurl)
+	if checkCVEID == "" || checkPurl == "" {
+		return false
+	}
+
+	for _, vuln := range vulns {
+		vulnCVEID := utils.SafeDereference(vuln.CVEID)
+		if vulnCVEID != "" && vulnCVEID == checkCVEID {
+			vulnPurl := utils.SafeDereference(vuln.ComponentPurl)
+			if vulnPurl != "" && vulnPurl == checkPurl {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID string) (vuln models.DependencyVuln, ok bool) {
+	for _, vuln := range vulns {
+		cveID := utils.SafeDereference(vuln.CVEID)
+		if cveID == "" {
+			continue
+		}
+		if cveID == targetCVEID {
+			return vuln, true
+		}
+	}
+	return models.DependencyVuln{}, false
+}
+
+func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
+	for _, vuln := range vulns {
+		cveID := utils.SafeDereference(vuln.CVEID)
+		if cveID == "" {
+			continue
+		}
+		if cveID == targetCVEID {
+			return true
+		}
+	}
+	return false
 }
