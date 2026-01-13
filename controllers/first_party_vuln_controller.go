@@ -152,6 +152,7 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
 }
+
 // @Summary Create first-party vulnerability event
 // @Tags Vulnerabilities
 // @Security CookieAuth
