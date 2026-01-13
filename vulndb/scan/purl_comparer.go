@@ -52,9 +52,16 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 	if ctx.VersionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
-		err = query.Where("version = ?", ctx.TargetVersion).
+		err = query.
 			Preload("CVE").Preload("CVE.Exploits").
 			Find(&affectedComponents).Error
+		if err != nil {
+			return nil, err
+		}
+
+		// Filter the results based on introduced/fixed versions or exact match
+		affectedComponents = filterMatchingComponentsByVersion(affectedComponents, ctx.TargetVersion)
+
 	} else {
 		// Version is semantic versioning - check version ranges
 		query = repositories.BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
@@ -62,6 +69,22 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 	}
 
 	return affectedComponents, err
+}
+
+func filterMatchingComponentsByVersion(components []models.AffectedComponent, targetVersion string) []models.AffectedComponent {
+	matchingComponents := []models.AffectedComponent{}
+
+	for _, component := range components {
+		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, targetVersion, component.Type)
+		if err != nil {
+			continue
+		}
+		if match {
+			matchingComponents = append(matchingComponents, component)
+		}
+	}
+
+	return matchingComponents
 }
 
 // some purls do contain versions, which cannot be found in the database. An example is git.

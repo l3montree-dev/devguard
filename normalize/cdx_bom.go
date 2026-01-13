@@ -435,12 +435,6 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
 	component = applyPackageAlias(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
-	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:deb/") || strings.Contains(component.PackageURL, "pkg:apk/")) && component.Version != "" {
-		version, err := ConvertToSemver(component.Version)
-		if err == nil && version != "" {
-			component.Version = version
-		}
-	}
 
 	// if its a valid purl we expect this to be of type component -
 	if strings.HasPrefix(component.BOMRef, "pkg:") || strings.HasPrefix(component.PackageURL, "pkg:") {

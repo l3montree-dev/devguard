@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	apkversion "github.com/knqyf263/go-apk-version"
+	debversion "github.com/knqyf263/go-deb-version"
+	rpmversion "github.com/knqyf263/go-rpm-version"
 )
 
 // versionInvalidCharsRe is compiled once for performance
@@ -114,6 +118,131 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	}
 
 	return semver, nil
+}
+
+func CheckVersion(version, introduced, fixed *string, targetVersion, affectedComponentType string) (bool, error) {
+
+	switch affectedComponentType {
+	case "deb":
+		return checkDebVersion(version, introduced, fixed, targetVersion)
+	case "rpm":
+		return checkRpmVersion(version, introduced, fixed, targetVersion)
+	case "apk":
+		return checkApkVersion(version, introduced, fixed, targetVersion)
+	default:
+		return false, fmt.Errorf("unsupported affected component type: %s", affectedComponentType)
+	}
+}
+
+func checkApkVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
+	targetVer, err := apkversion.NewVersion(targetVersion)
+	if err != nil {
+		return false, err
+	}
+
+	if version != nil {
+		v, err := apkversion.NewVersion(*version)
+		if err != nil {
+			return false, err
+		}
+		if v.Equal(targetVer) {
+			return true, nil
+		}
+	}
+
+	less, greater := false, false
+
+	if introduced != nil {
+		introVer, err := apkversion.NewVersion(*introduced)
+		if err != nil {
+			return false, err
+		}
+		if targetVer.GreaterThan(introVer) {
+			greater = true
+		}
+	}
+
+	if fixed != nil {
+		fixedVer, err := apkversion.NewVersion(*fixed)
+		if err != nil {
+			return false, err
+		}
+		if targetVer.LessThan(fixedVer) {
+			less = true
+		}
+	}
+
+	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
+}
+func checkDebVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
+
+	targetVer, err := debversion.NewVersion(targetVersion)
+	if err != nil {
+		return false, err
+	}
+
+	if version != nil {
+		v, err := debversion.NewVersion(*version)
+		if err != nil {
+			return false, err
+		}
+		if v.Equal(targetVer) {
+			return true, nil
+		}
+	}
+
+	less, greater := false, false
+
+	if introduced != nil {
+		introVer, err := debversion.NewVersion(*introduced)
+		if err != nil {
+			return false, err
+		}
+		if targetVer.GreaterThan(introVer) {
+			greater = true
+		}
+	}
+
+	if fixed != nil {
+		fixedVer, err := debversion.NewVersion(*fixed)
+		if err != nil {
+			return false, err
+		}
+		if targetVer.LessThan(fixedVer) {
+			less = true
+		}
+	}
+
+	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
+}
+
+func checkRpmVersion(version, introduced, fixed *string, targetVersion string) (bool, error) {
+	targetVer := rpmversion.NewVersion(targetVersion)
+
+	if version != nil {
+		v := rpmversion.NewVersion(*version)
+		if v.Equal(targetVer) {
+			return true, nil
+		}
+	}
+
+	less, greater := false, false
+
+	if introduced != nil {
+		introVer := rpmversion.NewVersion(*introduced)
+		if targetVer.GreaterThan(introVer) {
+			greater = true
+		}
+	}
+
+	if fixed != nil {
+		fixedVer := rpmversion.NewVersion(*fixed)
+		if targetVer.LessThan(fixedVer) {
+			less = true
+		}
+	}
+
+	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
 }
 
 func ArtifactPurl(scanner string, assetName string) string {

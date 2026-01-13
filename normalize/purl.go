@@ -36,8 +36,15 @@ func ParsePurlForMatching(purl, version string) (*PurlMatchContext, error) {
 		targetVersion = parsedPurl.Version
 	}
 
+	var normalizedVersion string
+	var versionIsValid error
+
 	// Try to normalize the version to semantic versioning format
-	normalizedVersion, versionIsValid := ConvertToSemver(targetVersion)
+	if parsedPurl.Type == "deb" || parsedPurl.Type == "rpm" || parsedPurl.Type == "apk" {
+		versionIsValid = fmt.Errorf("non-semantic versioning for ecosystem %s", parsedPurl.Type)
+	} else {
+		normalizedVersion, versionIsValid = ConvertToSemver(targetVersion)
+	}
 
 	// Create search key (purl without version)
 	parsedPurl.Version = ""

@@ -27,6 +27,9 @@ require (
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jedib0t/go-pretty/v6 v6.7.2
 	github.com/joho/godotenv v1.5.1
+	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f
+	github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23
+	github.com/knqyf263/go-rpm-version v0.0.0-20240918084003-2afd7dc6a38f
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.1.2

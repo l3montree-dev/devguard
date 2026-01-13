@@ -203,7 +203,7 @@ func affectedComponentBaseFromAffected(affected dtos.Affected) []AffectedCompone
 
 	// If still nothing, all versions are affected
 	if len(bases) == 0 {
-		bases = []AffectedComponentBase{createBase(purlWithoutVersion, affected.Package.Ecosystem, purl, qualifiersStr, nil, nil, nil)}
+		bases = []AffectedComponentBase{createBase(purlWithoutVersion, affected.Package.Ecosystem, purl, qualifiersStr, nil, nil, nil, nil, nil)}
 	}
 
 	return bases
@@ -232,21 +232,30 @@ func processRange(r dtos.Rng, ecosystem, purlWithoutVersion string, purl package
 			fixed = r.Events[i+1].Fixed
 		}
 
-		semverIntroduced, err := normalize.ConvertToSemver(introduced)
-		if err != nil {
-			continue
-		}
+		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
 
-		var semverFixed *string
-		if fixed != "" {
-			converted, err := normalize.ConvertToSemver(fixed)
+		if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
+			versionIntroduced = &introduced
+			if fixed != "" {
+				versionFixed = &fixed
+			}
+		} else {
+			semverInt, err := normalize.ConvertToSemver(introduced)
+			semverIntroduced = &semverInt
 			if err != nil {
 				continue
 			}
-			semverFixed = &converted
+
+			if fixed != "" {
+				converted, err := normalize.ConvertToSemver(fixed)
+				if err != nil {
+					continue
+				}
+				semverFixed = &converted
+			}
 		}
 
-		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, &semverIntroduced, semverFixed, nil))
+		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, semverIntroduced, semverFixed, versionIntroduced, versionFixed, nil))
 	}
 
 	return bases
@@ -257,13 +266,13 @@ func processVersions(versions []string, ecosystem, purlWithoutVersion string, pu
 
 	for _, v := range versions {
 		version := v
-		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, nil, nil, &version))
+		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, nil, nil, nil, nil, &version))
 	}
 
 	return bases
 }
 
-func createBase(purlWithoutVersion, ecosystem string, purl packageurl.PackageURL, qualifiersStr string, semverIntroduced, semverFixed, version *string) AffectedComponentBase {
+func createBase(purlWithoutVersion, ecosystem string, purl packageurl.PackageURL, qualifiersStr string, semverIntroduced, semverFixed, versionIntroduced, versionFixed, version *string) AffectedComponentBase {
 	return AffectedComponentBase{
 		PurlWithoutVersion: purlWithoutVersion,
 		Ecosystem:          ecosystem,
@@ -276,6 +285,8 @@ func createBase(purlWithoutVersion, ecosystem string, purl packageurl.PackageURL
 		SemverIntroduced:   semverIntroduced,
 		SemverFixed:        semverFixed,
 		Version:            version,
+		VersionIntroduced:  versionIntroduced,
+		VersionFixed:       versionFixed,
 	}
 }
 
