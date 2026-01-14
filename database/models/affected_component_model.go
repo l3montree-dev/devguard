@@ -43,7 +43,7 @@ type AffectedComponent struct {
 	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 
-	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component"`
+	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
 }
 
 func (affectedComponent AffectedComponent) TableName() string {

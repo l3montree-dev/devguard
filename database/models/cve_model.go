@@ -39,7 +39,7 @@ type CVE struct {
 	CISAVulnerabilityName string              `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
 	EPSS                  *float64            `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
 	Percentile            *float32            `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
-	AffectedComponents    []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
+	AffectedComponents    []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
 	Vector                string              `json:"vector" gorm:"type:text;" cve:"vector"`
 	Risk                  dtos.RiskMetrics    `json:"risk" gorm:"-" cve:"risk"`
 	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;"`
