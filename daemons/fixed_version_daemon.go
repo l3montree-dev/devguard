@@ -9,12 +9,19 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/package-url/packageurl-go"
 )
 
 func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
-	affected, err := purlComparer.GetAffectedComponents(*dependencyVuln.ComponentPurl, "")
+	parsed, err := packageurl.FromString(utils.SafeDereference(dependencyVuln.ComponentPurl))
+	if err != nil {
+		slog.Warn("could not parse purl", "purl", utils.SafeDereference(dependencyVuln.ComponentPurl), "err", err)
+		return nil, err
+	}
+
+	affected, err := purlComparer.GetAffectedComponents(parsed)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 
@@ -73,7 +73,7 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 

@@ -82,7 +82,7 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 
 func (s *ComponentService) GetLicense(component models.Component) (models.Component, error) {
 	pURL := component.Purl
-	validatedPURL, err := packageurl.FromString(pURL)
+	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
 		component.License = utils.Ptr("unknown")
@@ -90,9 +90,9 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	}
 
 	// check the pURL type, if its a debian or alpine package we get the license from memory
-	switch validatedPURL.Type {
+	switch parsedPurl.Type {
 	case "deb":
-		l := licenses.GetDebianLicense(validatedPURL, component.Version)
+		l := licenses.GetDebianLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -100,7 +100,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 		}
 		component.License = &l
 	case "apk":
-		l := licenses.GetAlpineLicense(validatedPURL, component.Version)
+		l := licenses.GetAlpineLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -110,9 +110,9 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
 			context.Background(),
-			validatedPURL.Type,
-			combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name),
-			validatedPURL.Version,
+			parsedPurl.Type,
+			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
+			parsedPurl.Version,
 		)
 
 		if err != nil {

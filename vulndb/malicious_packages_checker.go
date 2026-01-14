@@ -272,12 +272,8 @@ func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version st
 		return false, nil
 	}
 
-	// Remove version for lookup
-	parsedPurl.Version = ""
-	searchPurl := parsedPurl.ToString()
-
 	// Query database using purl matching (similar to PurlComparer)
-	components, err := c.repository.GetMaliciousAffectedComponents(searchPurl, version)
+	components, err := c.repository.GetMaliciousAffectedComponents(parsedPurl)
 	if err != nil {
 		slog.Debug("Failed to query malicious packages", "error", err)
 		return false, nil

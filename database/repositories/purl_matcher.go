@@ -76,10 +76,10 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 }
 
 // BuildVersionRangeQuery creates the database query for version range matching
-func BuildVersionRangeQuery(db *gorm.DB, targetVersion, normalizedVersion string) *gorm.DB {
+func BuildVersionRangeQuery(db *gorm.DB, normalizedVersion string) *gorm.DB {
 	// Use GORM's group conditions to properly wrap OR clauses
 	return db.Where(
-		db.Session(&gorm.Session{NewDB: true}).Where("version = ?", targetVersion).
+		db.Session(&gorm.Session{NewDB: true}).Where("version = ?", normalizedVersion).
 			Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).
 			Or("semver_introduced <= ? AND semver_fixed IS NULL", normalizedVersion).
 			Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion),

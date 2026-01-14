@@ -27,7 +27,6 @@ func TestHandleComponent(t *testing.T) {
 
 		component := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version: "v1.0.0",
 			License: nil,
 		}
 
@@ -49,32 +48,11 @@ func TestHandleComponent(t *testing.T) {
 
 		component := models.Component{
 			Purl:    "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
-			Version: "3.0.0-r4",
 			License: nil,
 		}
 
 		actual, err := service.GetLicense(component)
 		fmt.Printf("License %s", *actual.License)
-		assert.NoError(t, err)
-		assert.NotEqual(t, utils.Ptr("unknown"), actual.License)
-	})
-
-	t.Run("should find debian licenses", func(t *testing.T) {
-		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
-		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
-		mockComponentRepository := mocks.NewComponentRepository(t)
-		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-
-		service := NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
-		component := models.Component{
-			Purl:    "pkg:deb/debian/gdbm@1.23", // that is how the component looks - the version inside the purl is not the full version
-			Version: "1.23-3",
-			License: nil,
-		}
-
-		actual, err := service.GetLicense(component)
-
 		assert.NoError(t, err)
 		assert.NotEqual(t, utils.Ptr("unknown"), actual.License)
 	})
@@ -88,7 +66,6 @@ func TestHandleComponent(t *testing.T) {
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version: "v1.0.0",
 			License: nil,
 		}
 
@@ -111,7 +88,6 @@ func TestHandleComponent(t *testing.T) {
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version: "v1.0.0",
 			License: nil,
 		}
 

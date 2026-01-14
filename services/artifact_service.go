@@ -247,10 +247,15 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 		vulnsInPackage := []models.VulnInPackage{}
 		for cveID, state := range expectedMap {
 			if cve, exists := cvesMap[cveID]; exists {
+				parsed, err := packageurl.FromString(state.purl)
+				if err != nil {
+					slog.Warn("could not parse purl", "purl", state.purl, "err", err)
+					continue
+				}
 				// skip CVEs that do not exist in the database
 				vulnInPackage := models.VulnInPackage{
 					CVE:   cve,
-					Purl:  state.purl,
+					Purl:  parsed,
 					CVEID: cveID,
 				}
 				vulnsInPackage = append(vulnsInPackage, vulnInPackage)

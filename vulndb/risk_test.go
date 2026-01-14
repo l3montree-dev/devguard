@@ -31,7 +31,7 @@ type tableTest struct {
 	vector             string
 	metrics            dtos.RiskMetrics
 	env                shared.Environmental
-	exploits           []*models.Exploit
+	exploits           []models.Exploit
 	expectedVector     string
 	cvss               float32
 	affectedComponents []models.AffectedComponent
@@ -133,7 +133,7 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -154,7 +154,7 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -178,7 +178,7 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -230,7 +230,7 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -254,7 +254,7 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -294,7 +294,7 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits:       []*models.Exploit{{Verified: true}},
+			exploits:       []models.Exploit{{Verified: true}},
 			cvss:           7.5,
 			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P/CR:L/IR:L/AR:L",
 		},
@@ -313,7 +313,7 @@ func TestCalculateRisk(t *testing.T) {
 			},
 			expectedVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N/E:F/RC:C/CR:H/IR:M/AR:M",
 			cvss:           6.1,
-			exploits:       []*models.Exploit{{Verified: true}},
+			exploits:       []models.Exploit{{Verified: true}},
 		},
 	}
 
@@ -651,7 +651,7 @@ func TestExploitMessage(t *testing.T) {
 		t.Run(fmt.Sprintf("should be deterministic: %s", exploitType), func(t *testing.T) {
 			v := models.DependencyVuln{
 				CVE: &models.CVE{
-					Exploits: []*models.Exploit{
+					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit1.com"},
 						{SourceURL: "http://exploit2.com"},
 					},
@@ -664,7 +664,7 @@ func TestExploitMessage(t *testing.T) {
 			// create another instance with exploits in different order
 			v2 := models.DependencyVuln{
 				CVE: &models.CVE{
-					Exploits: []*models.Exploit{
+					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit2.com"},
 						{SourceURL: "http://exploit1.com"},
 					},

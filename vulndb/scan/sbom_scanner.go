@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type sbomScanner struct {
@@ -33,7 +34,7 @@ type sbomScanner struct {
 // like the affected package version and fixed version
 
 type comparer interface {
-	GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error)
+	GetVulns(purl packageurl.PackageURL) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *sbomScanner {
@@ -56,16 +57,14 @@ func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error
 				if component.PackageURL != "" {
 					var res []models.VulnInPackage
 					var err error
-					/*if component.Type == cyclonedx.ComponentTypeApplication {
-						// try to convert the purl to a CPE
-						res, err = s.cpeComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
-						if err != nil {
-							slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-						} else {
-							vulns = append(vulns, res...)
-						}
-					}*/
-					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
+
+					parsed, err := packageurl.FromString(component.PackageURL)
+					if err != nil {
+						slog.Warn("could not parse purl", "purl", component.PackageURL, "err", err)
+						return nil, err
+					}
+
+					res, err = s.purlComparer.GetVulns(parsed)
 					if err != nil {
 						slog.Warn("could not get cves", "purl", component.PackageURL)
 					}

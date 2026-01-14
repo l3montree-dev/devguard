@@ -24,6 +24,7 @@ import (
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type ComponentProject struct {
@@ -49,7 +50,6 @@ type Component struct {
 	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"`
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
-	Version       string                `json:"version"`
 	License       *string               `json:"license"`
 	Published     *time.Time            `json:"published"`
 
@@ -165,12 +165,24 @@ func isLicenseExpression(license string) bool {
 
 func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[string]string) cyclonedx.Component {
 	licenses := resolveLicense(c, componentLicenseOverwrites)
+	// parse the purl to set the version column
+	parsed, err := packageurl.FromString(c.DependencyPurl)
+	if err == nil {
+		return cyclonedx.Component{
+			Licenses:   &licenses,
+			BOMRef:     c.DependencyPurl,
+			Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
+			PackageURL: c.DependencyPurl,
+			Version:    "",
+			Name:       c.DependencyPurl,
+		}
+	}
 	return cyclonedx.Component{
 		Licenses:   &licenses,
 		BOMRef:     c.DependencyPurl,
 		Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
 		PackageURL: c.DependencyPurl,
-		Version:    c.Dependency.Version,
+		Version:    parsed.Version,
 		Name:       c.DependencyPurl,
 	}
 }
@@ -213,7 +225,7 @@ func (c ComponentDependency) TableName() string {
 type VulnInPackage struct {
 	CVEID        string
 	CVE          CVE
-	Purl         string
+	Purl         packageurl.PackageURL
 	FixedVersion *string
 }
 

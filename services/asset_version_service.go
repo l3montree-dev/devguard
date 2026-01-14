@@ -337,11 +337,12 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	depthMap := sbom.CalculateDepth()
 	for _, vuln := range vulns {
 		v := vuln
-		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
+		stringPurl := v.Purl.ToString()
+		fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
 		// check if we could calculate a depth for this component
-		if _, ok := depthMap[v.Purl]; !ok {
+		if _, ok := depthMap[stringPurl]; !ok {
 			// if not, set it to 1 (direct dependency)
-			depthMap[v.Purl] = 1
+			depthMap[stringPurl] = 1
 		}
 
 		dependencyVuln := models.DependencyVuln{
@@ -358,9 +359,9 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 			},
 
 			CVEID:                 utils.Ptr(v.CVEID),
-			ComponentPurl:         utils.Ptr(v.Purl),
+			ComponentPurl:         utils.Ptr(stringPurl),
 			ComponentFixedVersion: fixedVersion,
-			ComponentDepth:        utils.Ptr(depthMap[v.Purl]),
+			ComponentDepth:        utils.Ptr(depthMap[stringPurl]),
 			CVE:                   &v.CVE,
 		}
 
@@ -700,12 +701,10 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	}
 
 	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
-		componentPackageURL := normalize.Purl(c)
-		if _, ok := existingComponentPurls[componentPackageURL]; !ok {
-			components[componentPackageURL] = models.Component{
-				Purl:          componentPackageURL,
+		if _, ok := existingComponentPurls[c.PackageURL]; !ok {
+			components[c.PackageURL] = models.Component{
+				Purl:          c.PackageURL,
 				ComponentType: dtos.ComponentType(c.Type),
-				Version:       c.Version,
 			}
 		}
 	}

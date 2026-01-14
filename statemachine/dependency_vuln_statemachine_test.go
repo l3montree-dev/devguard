@@ -44,7 +44,7 @@ func TestDiffScanResults(t *testing.T) {
 			}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns, make(map[string][]models.CVERelationShip))
+		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, diff.NewlyDiscovered)
 		assert.Empty(t, diff.FixedEverywhere)
@@ -65,7 +65,7 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		diff := DiffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns, make(map[string][]models.CVERelationShip))
+		diff := DiffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, diff.NewlyDiscovered)
 		assert.Empty(t, diff.Unchanged)
@@ -85,7 +85,7 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns, make(map[string][]models.CVERelationShip))
+		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, diff.NewlyDiscovered)
 		assert.Empty(t, diff.FixedEverywhere)
@@ -104,7 +104,7 @@ func TestDiffScanResults(t *testing.T) {
 
 		existingDependencyVulns := []models.DependencyVuln{}
 
-		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns, make(map[string][]models.CVERelationShip))
+		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Equal(t, 2, len(diff.NewlyDiscovered))
 		assert.Empty(t, diff.FixedEverywhere)
@@ -127,7 +127,7 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns, make(map[string][]models.CVERelationShip))
+		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Equal(t, 1, len(diff.Unchanged))
 		assert.Empty(t, diff.NewlyDiscovered, "Should be empty - this is a new detection by current artifact")

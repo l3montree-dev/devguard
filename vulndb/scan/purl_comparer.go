@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 )
 
@@ -34,8 +35,8 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 }
 
 // GetAffectedComponents finds security vulnerabilities for a software package
-func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]models.AffectedComponent, error) {
-	ctx, err := normalize.ParsePurlForMatching(purl, version)
+func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
+	ctx, err := normalize.ParsePurlForMatching(purl)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid package URL")
 	}
@@ -52,12 +53,12 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 	if ctx.VersionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
-		err = query.Where("version = ?", ctx.TargetVersion).
+		err = query.Where("version = ?", ctx.NormalizedVersion).
 			Preload("CVE").Preload("CVE.Exploits").
 			Find(&affectedComponents).Error
 	} else {
 		// Version is semantic versioning - check version ranges
-		query = repositories.BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
+		query = repositories.BuildVersionRangeQuery(query, ctx.NormalizedVersion)
 		err = query.Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents).Error
 	}
 
@@ -66,9 +67,9 @@ func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 // some purls do contain versions, which cannot be found in the database. An example is git.
 // the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
-func (comparer *PurlComparer) GetVulns(purl string, version string) ([]models.VulnInPackage, error) {
+func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
 	// get the affected components
-	affectedComponents, err := comparer.GetAffectedComponents(purl, version)
+	affectedComponents, err := comparer.GetAffectedComponents(purl)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get affected components")
 	}

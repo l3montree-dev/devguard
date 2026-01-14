@@ -52,7 +52,7 @@ var alpineMutex sync.Mutex
 // some components have a already modified purl to improve cve -> purl matching (see cdx bom normalization)
 // we basically need to revert that for license matching - thus the second parameter
 // see pkg:deb/debian/gdbm@1.23 as an example. Fallback version is 1.23-3
-func GetAlpineLicense(pURL packageurl.PackageURL, fallbackVersion string) string {
+func GetAlpineLicense(pURL packageurl.PackageURL) string {
 	var err error
 	var license string
 	alpineMutex.Lock()
@@ -65,10 +65,6 @@ func GetAlpineLicense(pURL packageurl.PackageURL, fallbackVersion string) string
 	}
 	alpineMutex.Unlock()
 	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
-	if exists {
-		return license
-	}
-	license, exists = alpineLicenseMap[pURL.Name+fallbackVersion]
 	if exists {
 		return license
 	}
@@ -96,7 +92,7 @@ var debianMutex sync.Mutex
 // some components have a already modified purl to improve cve -> purl matching (see cdx bom normalization)
 // we basically need to revert that for license matching - thus the second parameter
 // see pkg:deb/debian/gdbm@1.23 as an example. Fallback version is 1.23-3
-func GetDebianLicense(pURL packageurl.PackageURL, fallbackVersion string) string {
+func GetDebianLicense(pURL packageurl.PackageURL) string {
 	var err error
 	var license string
 	debianMutex.Lock()
@@ -109,10 +105,6 @@ func GetDebianLicense(pURL packageurl.PackageURL, fallbackVersion string) string
 	}
 	debianMutex.Unlock()
 	license, exists := debianLicenseMap[pURL.Name+pURL.Version]
-	if exists {
-		return license
-	}
-	license, exists = debianLicenseMap[pURL.Name+fallbackVersion]
 	if exists {
 		return license
 	}
