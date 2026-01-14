@@ -650,7 +650,7 @@ func TestExploitMessage(t *testing.T) {
 	for _, exploitType := range []string{"P", "POC", "F"} {
 		t.Run(fmt.Sprintf("should be deterministic: %s", exploitType), func(t *testing.T) {
 			v := models.DependencyVuln{
-				CVE: &models.CVE{
+				CVE: models.CVE{
 					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit1.com"},
 						{SourceURL: "http://exploit2.com"},
@@ -663,7 +663,7 @@ func TestExploitMessage(t *testing.T) {
 
 			// create another instance with exploits in different order
 			v2 := models.DependencyVuln{
-				CVE: &models.CVE{
+				CVE: models.CVE{
 					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit2.com"},
 						{SourceURL: "http://exploit1.com"},

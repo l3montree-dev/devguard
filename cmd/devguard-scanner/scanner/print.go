@@ -126,7 +126,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	})
 
 	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dtos.DependencyVulnDTO) bool {
-		return f.State == "open" && f.CVE != nil
+		return f.State == "open"
 	}), func(f dtos.DependencyVulnDTO) float32 {
 		return f.CVE.CVSS
 	})
@@ -153,7 +153,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 		func(v dtos.DependencyVulnDTO) table.Row {
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(*v.ComponentPurl)
+			pURL, err := packageurl.FromString(v.ComponentPurl)
 			if err != nil {
 				slog.Error("could not parse purl", "err", err)
 			}
@@ -214,13 +214,11 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 // Function to dynamically change the format of the table row depending on the input parameters
 func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO) table.Row {
 	var cvss float32 = 0.0
-	if v.CVE != nil {
-		cvss = v.CVE.CVSS
-	}
+	cvss = v.CVE.CVSS
 
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	}
 }

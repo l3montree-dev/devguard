@@ -131,8 +131,8 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour), // 2 days ago
 			},
-			CVEID:         utils.Ptr(cve.CVE),
-			ComponentPurl: utils.Ptr("pkg:npm/test-package@1.0.0"),
+			CVEID:         cve.CVE,
+			ComponentPurl: "pkg:npm/test-package@1.0.0",
 			Artifacts: []models.Artifact{{
 				ArtifactName:     "test-artifact",
 				AssetVersionName: assetVersion.Name,
@@ -208,8 +208,8 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour),
 			},
-			CVEID:         utils.Ptr(cve.CVE),
-			ComponentPurl: utils.Ptr("pkg:npm/test-package@1.0.0"),
+			CVEID:         cve.CVE,
+			ComponentPurl: "pkg:npm/test-package@1.0.0",
 			Artifacts: []models.Artifact{{
 				ArtifactName:     "test-artifact",
 				AssetVersionName: assetVersion.Name,

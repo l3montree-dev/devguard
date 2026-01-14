@@ -94,7 +94,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 					TicketID:             utils.Ptr("gitlab:0/123"),
 					ManualTicketCreation: true,
 				},
-				CVEID: utils.Ptr(cve.CVE),
+				CVEID: cve.CVE,
 			}
 			assert.Nil(t, f.DB.Create(&depVuln).Error)
 

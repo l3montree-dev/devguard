@@ -42,10 +42,7 @@ func (r *MaliciousPackageRepository) GetDB() *gorm.DB {
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)
 func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl packageurl.PackageURL) ([]models.MaliciousAffectedComponent, error) {
-	ctx, err := normalize.ParsePurlForMatching(purl)
-	if err != nil {
-		return nil, err
-	}
+	ctx := normalize.ParsePurlForMatching(purl)
 
 	var components []models.MaliciousAffectedComponent
 
@@ -63,7 +60,7 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl package
 	} else {
 		query = BuildVersionRangeQuery(query, ctx.NormalizedVersion)
 	}
-	err = query.Preload("MaliciousPackage").Find(&components).Error
+	err := query.Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
 

@@ -105,8 +105,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 					AssetID:          asset.ID,
 					State:            dtos.VulnStateOpen,
 				},
-				CVEID:         &testCVE.CVE,
-				ComponentPurl: &testComponent.ID,
+				CVEID:         testCVE.CVE,
+				ComponentPurl: testComponent.ID,
 				Artifacts:     []models.Artifact{testArtifact}, // Associate artifact immediately
 			}
 			err = f.DB.Create(&testDepVuln).Error

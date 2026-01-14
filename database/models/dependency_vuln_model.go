@@ -13,10 +13,10 @@ import (
 type DependencyVuln struct {
 	Vulnerability
 
-	CVE   *CVE    `json:"cve"`
-	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
+	CVE   CVE    `json:"cve"`
+	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         *string `json:"componentPurl" gorm:"type:text;default:null;"`
+	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
 	ComponentDepth        *int    `json:"componentDepth" gorm:"default:null;"`
 	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
 
@@ -69,10 +69,7 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 }
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
-	if vuln.CVEID == nil {
-		return utils.HashString(fmt.Sprintf("%s/%s/%s", utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID))
-	}
-	return *vuln.CVEID
+	return utils.HashString(fmt.Sprintf("%s/%s/%s", vuln.ComponentPurl, vuln.CVEID, vuln.AssetID))
 }
 
 func (vuln DependencyVuln) GetAssetVersionName() string {
@@ -102,8 +99,7 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(vuln.CVEID, ""), utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID))
-	return hash
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.ComponentPurl, vuln.AssetVersionName, vuln.AssetID))
 }
 
 // hook to calculate the hash before creating the dependencyVuln

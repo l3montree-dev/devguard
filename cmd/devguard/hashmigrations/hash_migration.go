@@ -291,7 +291,7 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 		}
 		vulnsInPackage, err := pc.GetVulns(parsedPurl)
 
-		result := resolveCVERelationsAndReturnFilteredFoundVulns(existingVulns, vulnsInPackage, v.GetCVERelationshipsMap())
+		result := resolveCVERelationsAndReturnFilteredFoundVulns(existingVulns, vulnsInPackage)
 	}
 
 	slog.Info("finished scan")
@@ -303,9 +303,9 @@ type resolveResult struct {
 	toDelete []models.DependencyVuln
 }
 
-func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.DependencyVuln) resolveResult {
+func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.VulnInPackage) resolveResult {
 	if len(oldVulns) == 1 && len(foundVulns) == 1 {
-		oldVulns[0].CVEID = foundVulns[0].CVEID
+		oldVulns[0].CVEID = &foundVulns[0].CVEID
 		return oldVulns, nil
 	} else if len(oldVulns) == 1 {
 		// init foundVulns with the information from the oldVuln

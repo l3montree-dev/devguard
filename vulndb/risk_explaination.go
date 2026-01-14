@@ -300,7 +300,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)
-	componentPurl := utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")
+	componentPurl := utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:")
 
 	return Explanation{
 		ExploitMessage: struct {
@@ -321,10 +321,10 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		Depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		CVEID:          utils.SafeDereference(dependencyVuln.CVEID),
+		CVEID:          dependencyVuln.CVEID,
 		CVEDescription: dependencyVuln.CVE.Description,
 
-		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		ComponentPurl: dependencyVuln.ComponentPurl,
 		ArtifactNames: dependencyVuln.GetScannerIDsOrArtifactNames(),
 		FixedVersion:  dependencyVuln.ComponentFixedVersion,
 

@@ -967,8 +967,8 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1001,8 +1001,8 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1042,8 +1042,8 @@ func TestTicketHandling(t *testing.T) {
 			}
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					State:            dtos.VulnStateAccepted,
 					AssetVersionName: "main",
@@ -1082,8 +1082,8 @@ func TestTicketHandling(t *testing.T) {
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					State:            dtos.VulnStateOpen,
 					AssetVersionName: "main",
@@ -1325,9 +1325,9 @@ func TestUploadVEX(t *testing.T) {
 
 		dv1 := models.DependencyVuln{
 			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     utils.Ptr("pkg:npm/example1@1.0.0"),
-			CVE:               &newCVE,
-			CVEID:             &newCVE.CVE,
+			ComponentPurl:     "pkg:npm/example1@1.0.0",
+			CVE:               newCVE,
+			CVEID:             newCVE.CVE,
 			RawRiskAssessment: utils.Ptr(1.23),
 			ComponentDepth:    utils.Ptr(1),
 		}
@@ -1337,9 +1337,9 @@ func TestUploadVEX(t *testing.T) {
 
 		dv2 := models.DependencyVuln{
 			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     utils.Ptr("pkg:npm/example2@2.0.0"),
-			CVE:               &newCVE2,
-			CVEID:             &newCVE2.CVE,
+			ComponentPurl:     "pkg:npm/example2@2.0.0",
+			CVE:               newCVE2,
+			CVEID:             newCVE2.CVE,
 			RawRiskAssessment: utils.Ptr(2.34),
 			ComponentDepth:    utils.Ptr(2),
 		}
@@ -1424,7 +1424,7 @@ func TestUploadVEX(t *testing.T) {
 		assert.GreaterOrEqual(t, len(dv), 2)
 
 		for _, d := range dv {
-			switch *d.CVEID {
+			switch d.CVEID {
 			case "CVE-2025-00001":
 				// i think its a race condition and the ordering of events is non deterministic
 				assert.Equal(t, dtos.VulnStateFalsePositive, d.State)

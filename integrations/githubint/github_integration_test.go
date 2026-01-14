@@ -147,12 +147,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				ID: "abc",
 			},
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			CVEID:                 utils.Ptr("CVE-2021-1234"),
+			CVEID:                 "CVE-2021-1234",
 			RawRiskAssessment:     utils.Ptr(8.5),
-			ComponentPurl:         utils.Ptr("pkg:github/owner/repo@1.0.0"),
+			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
@@ -218,12 +218,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 				TicketID:  utils.Ptr("github:0"),
 				TicketURL: utils.Ptr(""),
 			},
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			CVEID:                 utils.Ptr("CVE-2021-1234"),
+			CVEID:                 "CVE-2021-1234",
 			RawRiskAssessment:     utils.Ptr(8.5),
-			ComponentPurl:         utils.Ptr("pkg:github/owner/repo@1.0.0"),
+			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
@@ -346,7 +346,7 @@ func TestGetLabels(t *testing.T) {
 	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			RawRiskAssessment: utils.Ptr(8.0),
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVSS: 8.0,
 			},
 		}
@@ -364,7 +364,7 @@ func TestGetLabels(t *testing.T) {
 				State: dtos.VulnStateAccepted,
 			},
 			RawRiskAssessment: utils.Ptr(5.0),
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVSS: 5.0,
 			},
 		}
@@ -377,7 +377,7 @@ func TestGetLabels(t *testing.T) {
 
 	t.Run("it should include cvss-severity label for DependencyVuln", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVSS: 9.8,
 			},
 		}
@@ -404,7 +404,7 @@ func TestGetLabels(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				State: dtos.VulnStateFalsePositive,
 			},
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVSS: 0.0,
 			},
 		}

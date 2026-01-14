@@ -15,9 +15,9 @@ import (
 func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
-	parsed, err := packageurl.FromString(utils.SafeDereference(dependencyVuln.ComponentPurl))
+	parsed, err := packageurl.FromString(dependencyVuln.ComponentPurl)
 	if err != nil {
-		slog.Warn("could not parse purl", "purl", utils.SafeDereference(dependencyVuln.ComponentPurl), "err", err)
+		slog.Warn("could not parse purl", "purl", dependencyVuln.ComponentPurl, "err", err)
 		return nil, err
 	}
 
@@ -30,14 +30,14 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 		// check if this affected component comes from the same cve
 		if !utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
 			return c.CVE
-		}), *dependencyVuln.CVEID) {
+		}), dependencyVuln.CVEID) {
 			continue
 		}
 
 		if c.SemverFixed != nil {
-			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.SemverFixed), nil
+			return normalize.FixFixedVersion(dependencyVuln.ComponentPurl, c.SemverFixed), nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.VersionFixed), nil
+			return normalize.FixFixedVersion(dependencyVuln.ComponentPurl, c.VersionFixed), nil
 		}
 	}
 

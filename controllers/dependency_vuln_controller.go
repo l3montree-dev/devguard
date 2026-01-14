@@ -171,15 +171,15 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	res := map[string]dependencyVulnsByPackage{}
 	for _, dependencyVuln := range pagedResp.Data {
 		// get the package name
-		if _, ok := res[*dependencyVuln.ComponentPurl]; !ok {
-			res[*dependencyVuln.ComponentPurl] = dependencyVulnsByPackage{
-				PackageName: *dependencyVuln.ComponentPurl,
+		if _, ok := res[dependencyVuln.ComponentPurl]; !ok {
+			res[dependencyVuln.ComponentPurl] = dependencyVulnsByPackage{
+				PackageName: dependencyVuln.ComponentPurl,
 			}
 		}
-		dependencyVulnsByPackage := res[*dependencyVuln.ComponentPurl]
+		dependencyVulnsByPackage := res[dependencyVuln.ComponentPurl]
 		// append the dependencyVuln to the package
-		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, transformer.DependencyVulnToDTO(dependencyVuln))
-		res[*dependencyVuln.ComponentPurl] = dependencyVulnsByPackage
+		dependencyVulnsByPackage.DependencyVulns = append(res[dependencyVuln.ComponentPurl].DependencyVulns, transformer.DependencyVulnToDTO(dependencyVuln))
+		res[dependencyVuln.ComponentPurl] = dependencyVulnsByPackage
 	}
 
 	values := make([]dependencyVulnsByPackage, 0, len(res))
@@ -275,7 +275,7 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	risk, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
 	dependencyVuln.CVE.Vector = vector
 
@@ -296,7 +296,7 @@ func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, *dependencyVuln.ComponentPurl, *dependencyVuln.CVEID)
+	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, dependencyVuln.ComponentPurl, dependencyVuln.CVEID)
 	if err != nil {
 		return err
 	}

@@ -21,11 +21,8 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func CVEToDTO(cve *models.CVE) *dtos.CVEDTO {
-	if cve == nil {
-		return nil
-	}
-	return &dtos.CVEDTO{
+func CVEToDTO(cve models.CVE) dtos.CVEDTO {
+	return dtos.CVEDTO{
 		CVE:                   cve.CVE,
 		CreatedAt:             cve.CreatedAt,
 		UpdatedAt:             cve.UpdatedAt,

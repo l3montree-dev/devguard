@@ -57,7 +57,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	} else {
 		// Version is semantic versioning - check version ranges
 		query = repositories.BuildVersionRangeQuery(query, ctx.NormalizedVersion)
-		err = query.Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents).Error
+		err = query.Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Find(&affectedComponents).Error
 	}
 
 	return affectedComponents, err

@@ -358,11 +358,11 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 				},
 			},
 
-			CVEID:                 utils.Ptr(v.CVEID),
-			ComponentPurl:         utils.Ptr(stringPurl),
+			CVEID:                 v.CVEID,
+			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,
 			ComponentDepth:        utils.Ptr(depthMap[stringPurl]),
-			CVE:                   &v.CVE,
+			CVE:                   v.CVE,
 		}
 
 		dependencyVulns = append(dependencyVulns, dependencyVuln)
@@ -534,10 +534,7 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
 	filterPredicate := func(dv models.DependencyVuln) bool {
-		if dv.ComponentPurl == nil {
-			return true
-		}
-		return !slices.Contains(unfixablePurls, *dv.ComponentPurl)
+		return !slices.Contains(unfixablePurls, dv.ComponentPurl)
 	}
 
 	fixedVulns := utils.Filter(diff.FixedEverywhere, filterPredicate)
@@ -798,10 +795,6 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 
 	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
 	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.CVE == nil {
-			continue
-		}
-
 		statement := vex.Statement{
 			ID:              dependencyVuln.CVE.CVE,
 			Status:          dependencyVulnToOpenVexStatus(dependencyVuln),
@@ -834,61 +827,60 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
 		cve := dependencyVuln.CVE
-		if cve != nil {
-			firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
-			vuln := cdx.Vulnerability{
-				ID: cve.CVE,
-				Source: &cdx.Source{
-					Name: "NVD",
-					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", utils.OrDefault(dependencyVuln.CVEID, "")),
-				},
-				Affects: &[]cdx.Affects{{
-					Ref: utils.OrDefault(dependencyVuln.ComponentPurl, ""),
-				}},
-				Analysis: &cdx.VulnerabilityAnalysis{
-					State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
-					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
-					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
-				},
-			}
-			if !firstResponded.IsZero() {
-				vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
-			}
 
-			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
-			if response != "" {
-				vuln.Analysis.Response = &[]cdx.ImpactAnalysisResponse{response}
-			}
-
-			justification := getJustification(dependencyVuln)
-			if justification != nil {
-				vuln.Analysis.Detail = *justification
-			} else if response == cdx.IARUpdate {
-				vuln.Analysis.Detail = "Update available! Please update to the fixed version."
-			}
-
-			cvss := math.Round(float64(cve.CVSS)*100) / 100
-
-			risk := vulndb.RawRisk(*cve, shared.GetEnvironmentalFromAsset(asset), utils.OrDefault(dependencyVuln.ComponentDepth, 1))
-
-			vuln.Ratings = &[]cdx.VulnerabilityRating{
-				{
-					Vector:   cve.Vector,
-					Method:   vectorToCVSSScoringMethod(cve.Vector),
-					Score:    &cvss,
-					Severity: scoreToSeverity(cvss),
-				},
-				{
-					Vector:        risk.Vector,
-					Method:        "DevGuard",
-					Score:         &risk.Risk,
-					Severity:      scoreToSeverity(risk.Risk),
-					Justification: risk.String(),
-				},
-			}
-
-			vulnerabilities = append(vulnerabilities, vuln)
+		firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
+		vuln := cdx.Vulnerability{
+			ID: cve.CVE,
+			Source: &cdx.Source{
+				Name: "NVD",
+				URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.CVEID),
+			},
+			Affects: &[]cdx.Affects{{
+				Ref: dependencyVuln.ComponentPurl,
+			}},
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
+				FirstIssued: firstIssued.UTC().Format(time.RFC3339),
+				LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
+			},
 		}
+		if !firstResponded.IsZero() {
+			vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
+		}
+
+		response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
+		if response != "" {
+			vuln.Analysis.Response = &[]cdx.ImpactAnalysisResponse{response}
+		}
+
+		justification := getJustification(dependencyVuln)
+		if justification != nil {
+			vuln.Analysis.Detail = *justification
+		} else if response == cdx.IARUpdate {
+			vuln.Analysis.Detail = "Update available! Please update to the fixed version."
+		}
+
+		cvss := math.Round(float64(cve.CVSS)*100) / 100
+
+		risk := vulndb.RawRisk(cve, shared.GetEnvironmentalFromAsset(asset), utils.OrDefault(dependencyVuln.ComponentDepth, 1))
+
+		vuln.Ratings = &[]cdx.VulnerabilityRating{
+			{
+				Vector:   cve.Vector,
+				Method:   vectorToCVSSScoringMethod(cve.Vector),
+				Score:    &cvss,
+				Severity: scoreToSeverity(cvss),
+			},
+			{
+				Vector:        risk.Vector,
+				Method:        "DevGuard",
+				Score:         &risk.Risk,
+				Severity:      scoreToSeverity(risk.Risk),
+				Justification: risk.String(),
+			},
+		}
+
+		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
 	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, vulnerabilities)

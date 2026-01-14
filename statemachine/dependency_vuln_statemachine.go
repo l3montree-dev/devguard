@@ -304,16 +304,13 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 
 // this helper function checks if a vuln slice already contains the purl + cve-id combination of vuln
 func vulnSliceContainsVuln(vulns []models.DependencyVuln, checkVuln models.DependencyVuln) bool {
-	checkCVEID := utils.SafeDereference(checkVuln.CVEID)
-	checkPurl := utils.SafeDereference(checkVuln.ComponentPurl)
-	if checkCVEID == "" || checkPurl == "" {
-		return false
-	}
+	checkCVEID := checkVuln.CVEID
+	checkPurl := checkVuln.ComponentPurl
 
 	for _, vuln := range vulns {
-		vulnCVEID := utils.SafeDereference(vuln.CVEID)
+		vulnCVEID := vuln.CVEID
 		if vulnCVEID != "" && vulnCVEID == checkCVEID {
-			vulnPurl := utils.SafeDereference(vuln.ComponentPurl)
+			vulnPurl := vuln.ComponentPurl
 			if vulnPurl != "" && vulnPurl == checkPurl {
 				return true
 			}
@@ -324,10 +321,8 @@ func vulnSliceContainsVuln(vulns []models.DependencyVuln, checkVuln models.Depen
 
 func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID string) (vuln models.DependencyVuln, ok bool) {
 	for _, vuln := range vulns {
-		cveID := utils.SafeDereference(vuln.CVEID)
-		if cveID == "" {
-			continue
-		}
+		cveID := vuln.CVEID
+
 		if cveID == targetCVEID {
 			return vuln, true
 		}
@@ -337,10 +332,8 @@ func vulnSliceContainsCVEIDWithVuln(vulns []models.DependencyVuln, targetCVEID s
 
 func vulnSliceContainsCVEID(vulns []models.DependencyVuln, targetCVEID string) bool {
 	for _, vuln := range vulns {
-		cveID := utils.SafeDereference(vuln.CVEID)
-		if cveID == "" {
-			continue
-		}
+		cveID := vuln.CVEID
+
 		if cveID == targetCVEID {
 			return true
 		}

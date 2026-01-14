@@ -313,10 +313,10 @@ func TestBuildVeX(t *testing.T) {
 
 		dependencyVulns := []models.DependencyVuln{
 			{
-				CVEID:          &cveID,
-				ComponentPurl:  &componentPurl,
+				CVEID:          cveID,
+				ComponentPurl:  componentPurl,
 				ComponentDepth: &componentDepth,
-				CVE: &models.CVE{
+				CVE: models.CVE{
 					CVE:         cveID,
 					CVSS:        float32(5.0),
 					Vector:      "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",

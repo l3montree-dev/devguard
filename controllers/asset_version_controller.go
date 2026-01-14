@@ -419,13 +419,13 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	m := make(map[string]bool)
 	for _, v := range defaultVulns {
 		if v.State == dtos.VulnStateFixed {
-			m[fmt.Sprintf("%s/%s", utils.SafeDereference(v.CVEID), *v.ComponentPurl)] = true
+			m[fmt.Sprintf("%s/%s", v.CVEID, v.ComponentPurl)] = true
 		}
 	}
 
 	// mark all vulns as fixed if they are in the map
 	for i := range dependencyVulns {
-		if m[fmt.Sprintf("%s/%s", utils.SafeDereference(dependencyVulns[i].CVEID), *dependencyVulns[i].ComponentPurl)] {
+		if m[fmt.Sprintf("%s/%s", dependencyVulns[i].CVEID, dependencyVulns[i].ComponentPurl)] {
 			dependencyVulns[i].State = dtos.VulnStateFixed
 		}
 	}
@@ -591,7 +591,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 			// create a map of all dependency vulns by vuln ID for easy lookup
 			m := make(map[string]models.DependencyVuln)
 			for _, dv := range dependencyVulns {
-				m[*dv.CVEID] = dv
+				m[dv.CVEID] = dv
 			}
 
 			for _, v := range *vex.GetVulnerabilities() {
@@ -608,7 +608,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 					CVEID:               escapeLatex(v.ID),
 					SourceName:          escapeLatex(v.Source.Name),
 					SourceURL:           escapeLatex(v.Source.URL),
-					AffectedComponent:   escapeLatex(*dv.ComponentPurl),
+					AffectedComponent:   escapeLatex(dv.ComponentPurl),
 					CveDescription:      escapeLatex(dv.CVE.Description),
 					AnalysisState:       escapeLatex(string(v.Analysis.State)),
 					AnalysisResponse:    escapeLatex(response),

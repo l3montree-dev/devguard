@@ -100,8 +100,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          utils.Ptr(cve.CVE),
-				ComponentPurl:  utils.Ptr("pkg:npm/vulnerable-package@1.0.0"),
+				CVEID:          cve.CVE,
+				ComponentPurl:  "pkg:npm/vulnerable-package@1.0.0",
 				ComponentDepth: utils.Ptr(0),
 				Artifacts:      []models.Artifact{artifact1, artifact2},
 			}
@@ -172,8 +172,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion2.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          utils.Ptr(cve1.CVE),
-				ComponentPurl:  utils.Ptr("pkg:npm/package-a@1.0.0"),
+				CVEID:          cve1.CVE,
+				ComponentPurl:  "pkg:npm/package-a@1.0.0",
 				ComponentDepth: utils.Ptr(0),
 				Artifacts:      []models.Artifact{artifact3},
 			}
@@ -183,8 +183,8 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion2.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          utils.Ptr(cve2.CVE),
-				ComponentPurl:  utils.Ptr("pkg:npm/package-b@2.0.0"),
+				CVEID:          cve2.CVE,
+				ComponentPurl:  "pkg:npm/package-b@2.0.0",
 				ComponentDepth: utils.Ptr(0),
 				Artifacts:      []models.Artifact{artifact3},
 			}
@@ -277,8 +277,8 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 					AssetID:          asset.ID,
 					TicketID:         &existingTicketID,
 				},
-				CVEID:          utils.Ptr(cve.CVE),
-				ComponentPurl:  utils.Ptr("pkg:npm/existing-ticket-package@1.0.0"),
+				CVEID:          cve.CVE,
+				ComponentPurl:  "pkg:npm/existing-ticket-package@1.0.0",
 				ComponentDepth: utils.Ptr(0),
 				Artifacts:      []models.Artifact{artifact},
 			}

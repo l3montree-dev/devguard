@@ -73,7 +73,7 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 			continue
 		}
 		year := v.Events[0].CreatedAt.Year()
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(utils.SafeDereference(v.CVEID)))
+		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(v.CVEID))
 		index += fmt.Sprintf("%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
@@ -105,7 +105,7 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 		year := v.Events[0].CreatedAt.Year()
 		// get the last event
 		entry := v.Events[len(v.Events)-1]
-		fileName := fmt.Sprintf("%s.json", strings.ToLower(utils.SafeDereference(v.CVEID)))
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(v.CVEID))
 		// then write each entry to the csv string and return the result
 		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
@@ -267,7 +267,7 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	}
 	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
 	for _, entry := range vulnsOfThatYear {
-		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(utils.SafeDereference(entry.CVEID))))
+		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)))
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
