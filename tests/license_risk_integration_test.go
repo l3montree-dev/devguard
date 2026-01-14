@@ -41,7 +41,6 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 			// Create a component with an invalid license
 			componentWithInvalidLicense := models.Component{
 				Purl:    "pkg:npm/test-package@1.0.0",
-				Version: "1.0.0",
 				License: utils.Ptr("PROPRIETARY"),
 			}
 

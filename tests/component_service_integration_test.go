@@ -55,19 +55,16 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			// Create test components with different license scenarios
 			componentWithInvalidLicense := models.Component{
 				Purl:    "pkg:npm/test-package@1.0.0",
-				Version: "1.0.0",
 				License: utils.Ptr("PROPRIETARY"), // Invalid OSI license
 			}
 
 			componentWithValidLicense := models.Component{
 				Purl:    "pkg:npm/valid-package@1.0.0",
-				Version: "1.0.0",
 				License: utils.Ptr("MIT"), // Valid OSI license
 			}
 
 			componentWithoutLicense := models.Component{
 				Purl:    "pkg:npm/no-license-package@1.0.0",
-				Version: "1.0.0",
 				License: nil, // No license - will be handled by GetLicense
 			}
 
@@ -184,7 +181,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			// Create component with invalid license
 			componentWithInvalidLicense := models.Component{
 				Purl:    "pkg:npm/test-package@1.0.0",
-				Version: "1.0.0",
 				License: utils.Ptr("PROPRIETARY"),
 			}
 			err := f.DB.Create(&componentWithInvalidLicense).Error

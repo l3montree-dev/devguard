@@ -63,8 +63,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		}
 
 		// ensure Component rows exist for the dependency purls (FK to components.purl)
-		compA := models.Component{Purl: "pkg:maven/org.example/component-a@1.0.0", Version: "1.0.0"}
-		compB := models.Component{Purl: "pkg:maven/org.example/component-b@2.0.0", Version: "2.0.0"}
+		compA := models.Component{Purl: "pkg:maven/org.example/component-a@1.0.0"}
+		compB := models.Component{Purl: "pkg:maven/org.example/component-b@2.0.0"}
 		if err := f.DB.Create(&compA).Error; err != nil {
 			t.Fatal(err)
 		}

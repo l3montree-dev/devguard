@@ -83,8 +83,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 			// Create a component that might be associated with this artifact
 			testComponent := models.Component{
-				Purl:    "pkg:npm/test-component@1.0.0",
-				Version: "1.0.0",
+				Purl: "pkg:npm/test-component@1.0.0",
 			}
 			err = f.DB.Create(&testComponent).Error
 			assert.NoError(t, err)
