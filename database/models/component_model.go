@@ -74,8 +74,6 @@ type ComponentDependency struct {
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE"`
-
-	Depth int `json:"depth" gorm:"column:depth"`
 }
 
 const Root string = "root"
