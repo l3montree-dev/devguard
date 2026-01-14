@@ -336,36 +336,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	}
 	depthMap := sbom.CalculateDepth()
 	for _, vuln := range vulns {
-		v := vuln
-		stringPurl := v.Purl.ToString()
-		fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
-		// check if we could calculate a depth for this component
-		if _, ok := depthMap[stringPurl]; !ok {
-			// if not, set it to 1 (direct dependency)
-			depthMap[stringPurl] = 1
-		}
-
-		dependencyVuln := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
-			},
-			Artifacts: []models.Artifact{
-				{
-					ArtifactName:     artifactName,
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
-				},
-			},
-
-			CVEID:                 v.CVEID,
-			ComponentPurl:         stringPurl,
-			ComponentFixedVersion: fixedVersion,
-			ComponentDepth:        utils.Ptr(depthMap[stringPurl]),
-			CVE:                   v.CVE,
-		}
-
-		dependencyVulns = append(dependencyVulns, dependencyVuln)
+		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVuln(vuln, depthMap, asset.ID, assetVersion.Name, artifactName))
 	}
 
 	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
@@ -408,61 +379,6 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	}
 
 	return opened, closed, newState, nil
-}
-
-func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
-
-	var firstDetected []models.DependencyVuln
-	var fixedOnAll []models.DependencyVuln
-	var firstDetectedOnThisArtifactName []models.DependencyVuln
-	var fixedOnThisArtifactName []models.DependencyVuln
-	var nothingChanged []models.DependencyVuln
-
-	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
-	for _, vuln := range foundVulnerabilities {
-		if _, ok := foundVulnsMappedByID[vuln.CalculateHash()]; !ok {
-			foundVulnsMappedByID[vuln.CalculateHash()] = vuln
-		}
-	}
-
-	for _, existingVulns := range existingDependencyVulns {
-		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
-			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
-				fixedOnAll = append(fixedOnAll, existingVulns)
-			} else {
-				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVulns)
-			}
-		} else {
-			// still exists and nothing changed
-			nothingChanged = append(nothingChanged, existingVulns)
-		}
-	}
-	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
-	for _, vuln := range existingDependencyVulns {
-		if _, ok := existingVulnsMappedByID[vuln.CalculateHash()]; !ok {
-			existingVulnsMappedByID[vuln.CalculateHash()] = vuln
-		}
-	}
-
-	for _, foundVuln := range foundVulnerabilities {
-		if existingVuln, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
-			firstDetected = append(firstDetected, foundVuln)
-		} else {
-			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
-			alreadyDetectedOnThisArtifactName := false
-			for _, existingArtifact := range existingVuln.Artifacts {
-				if existingArtifact.ArtifactName == currentArtifactName {
-					alreadyDetectedOnThisArtifactName = true
-					break
-				}
-			}
-			if !alreadyDetectedOnThisArtifactName {
-				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, existingVuln)
-			}
-		}
-	}
-
-	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
 }
 
 type Diffable interface {

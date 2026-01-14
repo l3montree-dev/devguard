@@ -117,8 +117,6 @@ func main() {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
-	pool.Close()
-
 	app := fx.New(
 		fx.NopLogger,
 		fx.Supply(database.GetPoolConfigFromEnv()),
@@ -173,6 +171,8 @@ func main() {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
+	// this is a separate pool to not interfere with the main app's DB connections
+	pool.Close()
 	app.Run()
 }
 
