@@ -205,11 +205,6 @@ func runFirstPartyVulnHashMigration(db *gorm.DB) error {
 	return nil
 }
 
-type vulnWithVersion struct {
-	Vuln             models.DependencyVuln
-	ComponentVersion string `gorm:"version"`
-}
-
 // this function handles the migration for importing new CVEs from the OSV.
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
 func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
@@ -262,29 +257,24 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
 	v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	slog.Info("Syncing vulndb")
 	err = v.Mirror()
 	if err != nil {
 		return err
 	}
 
-	var allVulns []vulnWithVersion
-	sql := `SELECT dv.*,cmp.version FROM dependency_vulns dv LEFT JOIN components cmp ON dv.component_purl = cmp.purl;`
-	err = db.Exec(sql).Find(&allVulns).Error
+	allVulns, err := dependencyVulnRepository.All()
 	if err != nil {
-		return err
-	}
-	if len(allVulns) == 0 {
-		slog.Error("could not find any vulnerabilities")
-		return fmt.Errorf("could not find any vulnerabilities")
+		panic(err)
 	}
 
 	//map vulns by purl
-	vulnsByPurl := make(map[string][]vulnWithVersion)
+	vulnsByPurl := make(map[string][]models.DependencyVuln)
 	for _, vuln := range allVulns {
-		purl := utils.SafeDereference(vuln.Vuln.ComponentPurl)
+		purl := utils.SafeDereference(vuln.ComponentPurl)
 		if purl == "" {
-			slog.Warn("cannot migrate dependency vuln without purl. Incorrect database state", "vulnID", vuln.Vuln.ID)
+			panic("")
 		} else {
 			vulnsByPurl[purl] = append(vulnsByPurl[purl], vuln)
 		}
@@ -300,45 +290,70 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	return nil
 }
 
-// func determineBestFit(rows map[dtos.RelationshipType][]migrationRow) migrationRow {
-// 	upstreamRelations, ok := rows[dtos.RelationshipTypeUpstream]
-// 	if ok {
-// 		if len(upstreamRelations) == 1 {
-// 			return upstreamRelations[0]
-// 		} else {
-// 			slog.Error("multiple upstreams detected")
-// 		}
-// 	} else {
-// 		aliasRelations, ok := rows[dtos.RelationshipTypeAlias]
-// 		if ok {
-// 			return aliasRelations[0]
-// 		} else {
-// 			relatedRelations, ok := rows[dtos.RelationshipTypeRelated]
-// 			if ok {
-// 				return relatedRelations[0]
-// 			}
-// 		}
-// 	}
-// 	panic("could not determine best row")
-// }
+func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ([]models.DependencyVuln, []models.DependencyVuln) {
+	if len(oldVulns) == 1 && len(foundVulns) == 1 {
+		oldVulns[0].CVEID = foundVulns[0].CVEID
+		return oldVulns, nil
+	} else if len(oldVulns) == 1 {
+		// init foundVulns with the information from the oldVuln
+		// we need to delete oldVuln afterwards
+		for _, new := range foundVulns {
+			new.State = oldVulns[0].State
+			new.Events = oldVulns[0].Events
+		}
 
-// var rows []migrationRow
-// 	sql := `SELECT depvulns.id,depvulns.cve_id,rel.source_cve,rel.relationship_type
-// 	FROM dependency_vulns depvulns LEFT JOIN cve_relationships rel ON a.cve_id = b.target_cve
-// 	WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = a.cve_id)`
+		return foundVulns, oldVulns
+	} else {
+		// we have todo a many to many mapping
+		// we can only do this by inspecting relationships of cves to find matches
+		for _, old := range oldVulns {
+			hasUpstreamCVE := cveRelationships[*old.CVEID]
+		}
 
-// 	err = db.Exec(sql).Find(&rows).Error
-// 	if err != nil {
-// 		return err
-// 	}
+		var existingCVE models.DependencyVuln
+		// find out if the foundCVE relates to any existing CVE
+		for _, relation := range relationsForThisCVE {
+			existingCVE, ok = vulnSliceContainsCVEIDWithVuln(existingCVEs, relation.TargetCVE)
+			if ok {
+				relatesToCVE = true
+				break
+			}
+		}
+		if relatesToCVE {
+			// if this found CVE is related to an existing CVE then we want to use the existing CVE instead of the newly found one for consistency
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *existingCVE.CVEID) {
+				return existingCVE.CVEID
+				uniqueFoundVulns = append(uniqueFoundVulns, existingCVE)
+			}
+		} else {
+			// if this found CVE does not relate to any existing CVE we can assume its a new vulnerability
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+				uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
+			}
+		}
+	}
 
-// 	// maps the dependency vuln id to a set of relations for the cve of the vuln. The relations are then further mapped by relationship type
-// 	idToRelations := make(map[string]map[dtos.RelationshipType][]migrationRow, len(rows))
-// 	for _, row := range rows {
-// 		idToRelations[row.ID][*row.RelationshipType] = append(idToRelations[row.ID][*row.RelationshipType], row)
-// 	}
+	// first of all we need to resolve the relations between the existing CVEs and the currently found CVEs
+	// we cannot rely on the ID of the vulns to do this matching since the CVE-ID could have changed since the last time leading to a different hash
+	// to combat this we can map the existing/found vulns to their respective combinations of purl and CVE-ID and get two maps which reflect the different states
+	// then we can use the cve relationship information to determine if there are actually new vulns or if the name just changed since the last scan
 
-// 	// for id, rows := range idToRelations {
-// 	// 	bestFit := determineBestFit(rows)
+	//compare both sets: iterate over the found purls and handle each case
+	// there are existing vulns for this purl so we need to compare both sets of CVEs and filter out matches using the relationship information
+	uniqueFoundVulns := make([]models.DependencyVuln, 0, len(foundCVEs))
+	for _, foundCVE := range foundCVEs {
+		if utils.SafeDereference(foundCVE.CVEID) == "" {
+			continue
+		}
+		//note: since we grouped the maps by purls we know that each foundVuln and existingVuln we compare already has the same purl, so to have an exact match we just need to match the CVE between these two.
+		// if we have an exact vuln match in the existing vulns we can append the found vuln
+		if vulnSliceContainsCVEID(existingCVEs, *foundCVE.CVEID) {
+			if !vulnSliceContainsCVEID(uniqueFoundVulns, *foundCVE.CVEID) {
+				uniqueFoundVulns = append(uniqueFoundVulns, foundCVE)
+			}
+		} else {
 
-// 	// }
+		}
+	}
+	return nil
+}

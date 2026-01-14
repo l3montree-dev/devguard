@@ -54,17 +54,17 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Create test components with different license scenarios
 			componentWithInvalidLicense := models.Component{
-				Purl:    "pkg:npm/test-package@1.0.0",
+				ID:      "pkg:npm/test-package@1.0.0",
 				License: utils.Ptr("PROPRIETARY"), // Invalid OSI license
 			}
 
 			componentWithValidLicense := models.Component{
-				Purl:    "pkg:npm/valid-package@1.0.0",
+				ID:      "pkg:npm/valid-package@1.0.0",
 				License: utils.Ptr("MIT"), // Valid OSI license
 			}
 
 			componentWithoutLicense := models.Component{
-				Purl:    "pkg:npm/no-license-package@1.0.0",
+				ID:      "pkg:npm/no-license-package@1.0.0",
 				License: nil, // No license - will be handled by GetLicense
 			}
 
@@ -91,19 +91,19 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					DependencyPurl:   componentWithInvalidLicense.Purl,
+					DependencyID:     componentWithInvalidLicense.ID,
 					Dependency:       componentWithInvalidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					DependencyPurl:   componentWithValidLicense.Purl,
+					DependencyID:     componentWithValidLicense.ID,
 					Dependency:       componentWithValidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					DependencyPurl:   componentWithoutLicense.Purl,
+					DependencyID:     componentWithoutLicense.ID,
 					Dependency:       componentWithoutLicense,
 				},
 			}
@@ -140,7 +140,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			}
 
 			// Verify license risk for component with invalid license
-			invalidLicenseRisk, exists := licenseRiskPurls[componentWithInvalidLicense.Purl]
+			invalidLicenseRisk, exists := licenseRiskPurls[componentWithInvalidLicense.ID]
 			assert.True(t, exists, "License risk should exist for component with invalid license")
 			assert.Equal(t, dtos.VulnStateOpen, invalidLicenseRisk.State)
 			assert.Equal(t, artifact.ArtifactName, invalidLicenseRisk.Artifacts[0].ArtifactName)
@@ -148,12 +148,12 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.Equal(t, assetVersion.Name, invalidLicenseRisk.AssetVersionName)
 
 			// Verify license risk for component without license (should get "unknown")
-			unknownLicenseRisk, exists := licenseRiskPurls[componentWithoutLicense.Purl]
+			unknownLicenseRisk, exists := licenseRiskPurls[componentWithoutLicense.ID]
 			assert.True(t, exists, "License risk should exist for component with unknown license")
 			assert.Equal(t, dtos.VulnStateOpen, unknownLicenseRisk.State)
 
 			// Verify NO license risk was created for component with valid license
-			_, exists = licenseRiskPurls[componentWithValidLicense.Purl]
+			_, exists = licenseRiskPurls[componentWithValidLicense.ID]
 			assert.False(t, exists, "No license risk should exist for component with valid license")
 
 			// Verify that corresponding vuln events were created
@@ -180,7 +180,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Create component with invalid license
 			componentWithInvalidLicense := models.Component{
-				Purl:    "pkg:npm/test-package@1.0.0",
+				ID:      "pkg:npm/test-package@1.0.0",
 				License: utils.Ptr("PROPRIETARY"),
 			}
 			err := f.DB.Create(&componentWithInvalidLicense).Error
@@ -200,7 +200,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentDep := models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				DependencyPurl:   componentWithInvalidLicense.Purl,
+				DependencyID:     componentWithInvalidLicense.ID,
 				Dependency:       componentWithInvalidLicense,
 			}
 			err = f.DB.Create(&componentDep).Error
@@ -218,7 +218,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 					State:            dtos.VulnStateOpen,
 				},
 				Artifacts:     []models.Artifact{artifact},
-				ComponentPurl: componentWithInvalidLicense.Purl,
+				ComponentPurl: componentWithInvalidLicense.ID,
 			}
 			// Manually set the ID using the same calculation as the model
 			existingLicenseRisk.ID = existingLicenseRisk.CalculateHash()

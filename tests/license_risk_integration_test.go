@@ -40,7 +40,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 		t.Run("License risk is created and associated with multiple artifacts", func(t *testing.T) {
 			// Create a component with an invalid license
 			componentWithInvalidLicense := models.Component{
-				Purl:    "pkg:npm/test-package@1.0.0",
+				ID:      "pkg:npm/test-package@1.0.0",
 				License: utils.Ptr("PROPRIETARY"),
 			}
 

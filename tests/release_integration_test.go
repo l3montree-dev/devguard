@@ -63,8 +63,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		}
 
 		// ensure Component rows exist for the dependency purls (FK to components.purl)
-		compA := models.Component{Purl: "pkg:maven/org.example/component-a@1.0.0"}
-		compB := models.Component{Purl: "pkg:maven/org.example/component-b@2.0.0"}
+		compA := models.Component{ID: "pkg:maven/org.example/component-a@1.0.0"}
+		compB := models.Component{ID: "pkg:maven/org.example/component-b@2.0.0"}
 		if err := f.DB.Create(&compA).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -72,8 +72,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c1 := models.ComponentDependency{DependencyPurl: compA.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
-		c2 := models.ComponentDependency{DependencyPurl: compB.Purl, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
+		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
+		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
 		if err := f.DB.Create(&c1).Error; err != nil {
 			t.Fatal(err)
 		}

@@ -344,12 +344,12 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 
 	// now we check if a given component (dependency) is present in the overwrittenMap eg. it needs to be overwritten and flagged as such
 	for i, component := range componentDependencies {
-		if license, ok := isPurlOverwrittenMap[componentDependencies[i].DependencyPurl]; ok {
+		if license, ok := isPurlOverwrittenMap[componentDependencies[i].DependencyID]; ok {
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 		}
-		if component.ComponentPurl != nil {
-			if license, ok := isPurlOverwrittenMap[*component.ComponentPurl]; ok {
+		if component.ComponentID != nil {
+			if license, ok := isPurlOverwrittenMap[*component.ComponentID]; ok {
 				componentDependencies[i].Component.License = &license
 				componentDependencies[i].Component.IsLicenseOverwritten = true
 			}
@@ -367,7 +367,7 @@ func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Compo
 
 func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
-		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
+		return utils.SafeDereference(dep.ComponentID) + "->" + dep.DependencyID
 	})
 
 	artifact := models.Artifact{

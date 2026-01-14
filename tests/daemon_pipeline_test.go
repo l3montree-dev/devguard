@@ -46,7 +46,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 			// Create component
 			component := models.Component{
-				Purl: "pkg:npm/test-package@1.0.0",
+				ID: "pkg:npm/test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
 			assert.NoError(t, err)
@@ -67,9 +67,9 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				Artifacts: []models.Artifact{
 					artifact,
 				},
-				ComponentPurl:  nil,
-				DependencyPurl: "pkg:npm/test-package@1.0.0",
-				Dependency:     component,
+				ComponentID:  nil,
+				DependencyID: "pkg:npm/test-package@1.0.0",
+				Dependency:   component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)
@@ -380,7 +380,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 
 		// Create component
 		component := models.Component{
-			Purl: "pkg:npm/vulnerable-package@2.0.0",
+			ID: "pkg:npm/vulnerable-package@2.0.0",
 		}
 		err = f.DB.Create(&component).Error
 		assert.NoError(t, err)
@@ -401,9 +401,9 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			Artifacts: []models.Artifact{
 				artifact,
 			},
-			ComponentPurl:  nil,
-			DependencyPurl: "pkg:npm/vulnerable-package@2.0.0",
-			Dependency:     component,
+			ComponentID:  nil,
+			DependencyID: "pkg:npm/vulnerable-package@2.0.0",
+			Dependency:   component,
 		}
 		err = f.DB.Create(&componentDependency).Error
 		assert.NoError(t, err)
@@ -494,7 +494,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			// Create component
 			component := models.Component{
-				Purl: "pkg:npm/risk-test-package@1.0.0",
+				ID: "pkg:npm/risk-test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
 			assert.NoError(t, err)
@@ -515,9 +515,9 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				Artifacts: []models.Artifact{
 					artifact,
 				},
-				ComponentPurl:  nil,
-				DependencyPurl: "pkg:npm/risk-test-package@1.0.0",
-				Dependency:     component,
+				ComponentID:  nil,
+				DependencyID: "pkg:npm/risk-test-package@1.0.0",
+				Dependency:   component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)

@@ -1349,7 +1349,7 @@ func TestUploadVEX(t *testing.T) {
 
 		//create a component and save it to the db
 		component := models.Component{
-			Purl:    "pkg:npm/example1@1.0.0",
+			ID:      "pkg:npm/example1@1.0.0",
 			License: utils.Ptr("MIT"),
 		}
 

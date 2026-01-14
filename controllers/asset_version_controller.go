@@ -1051,7 +1051,7 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
 					el models.ComponentDependency,
 				) dtos.InformationSourceDTO {
-					return extractInformationSourceFromPurl(el.DependencyPurl)
+					return extractInformationSourceFromPurl(el.DependencyID)
 				}), func(s dtos.InformationSourceDTO) dtos.InformationSourceDTO {
 					return s
 				}),

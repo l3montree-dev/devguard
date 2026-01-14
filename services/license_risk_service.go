@@ -66,11 +66,11 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 					LastDetected:     time.Now(),
 				},
 				FinalLicenseDecision: nil,
-				ComponentPurl:        comp.Purl,
+				ComponentPurl:        comp.ID,
 			}
 			foundLicenseRisks = append(foundLicenseRisks, lr)
 		} else {
-			compToValidLicense[comp.Purl] = *comp.License
+			compToValidLicense[comp.ID] = *comp.License
 		}
 	}
 	//filter out duplicates in foundLicenseRisks

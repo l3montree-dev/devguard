@@ -637,7 +637,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 
 	existingComponentPurls := make(map[string]bool)
 	for _, currentComponent := range assetComponents {
-		existingComponentPurls[currentComponent.Component.Purl] = true
+		existingComponentPurls[currentComponent.Component.ID] = true
 	}
 
 	// we need to check if the SBOM is new or if it already exists.
@@ -674,8 +674,8 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 		depExistMap["nil->"+componentPackageURL] = true
 		dependencies = append(dependencies,
 			models.ComponentDependency{
-				ComponentPurl:  nil, // direct dependency - therefore set it to nil
-				DependencyPurl: componentPackageURL,
+				ComponentID:  nil, // direct dependency - therefore set it to nil
+				DependencyID: componentPackageURL,
 			},
 		)
 	}
@@ -693,8 +693,8 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 			depExistMap[compPackageURL+"->"+depPurlOrName] = true
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:  utils.Ptr(compPackageURL),
-					DependencyPurl: depPurlOrName,
+					ComponentID:  utils.Ptr(compPackageURL),
+					DependencyID: depPurlOrName,
 				},
 			)
 		}
@@ -703,7 +703,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
 		if _, ok := existingComponentPurls[c.PackageURL]; !ok {
 			components[c.PackageURL] = models.Component{
-				Purl:          c.PackageURL,
+				ID:            c.PackageURL,
 				ComponentType: dtos.ComponentType(c.Type),
 			}
 		}

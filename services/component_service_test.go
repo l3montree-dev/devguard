@@ -26,7 +26,7 @@ func TestHandleComponent(t *testing.T) {
 		service := NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
-			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
+			ID:      "pkg:golang/gorm.io/gorm@v1.25.12",
 			License: nil,
 		}
 
@@ -47,7 +47,7 @@ func TestHandleComponent(t *testing.T) {
 		service := NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		component := models.Component{
-			Purl:    "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
+			ID:      "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
 			License: nil,
 		}
 
@@ -65,7 +65,7 @@ func TestHandleComponent(t *testing.T) {
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
 		c := models.Component{
-			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
+			ID:      "pkg:golang/gorm.io/gorm@v1.25.12",
 			License: nil,
 		}
 
@@ -87,7 +87,7 @@ func TestHandleComponent(t *testing.T) {
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
 		c := models.Component{
-			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
+			ID:      "pkg:golang/gorm.io/gorm@v1.25.12",
 			License: nil,
 		}
 

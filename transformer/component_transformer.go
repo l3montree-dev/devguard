@@ -44,10 +44,10 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 		}
 	}
 
-	parsed, err := packageurl.FromString(m.Purl)
+	parsed, err := packageurl.FromString(m.ID)
 	if err != nil {
 		return dtos.ComponentDTO{
-			Purl:                m.Purl,
+			Purl:                m.ID,
 			Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
 			ComponentType:       m.ComponentType,
 			Version:             "",
@@ -59,7 +59,7 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 	}
 
 	return dtos.ComponentDTO{
-		Purl:                m.Purl,
+		Purl:                m.ID,
 		Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
 		ComponentType:       m.ComponentType,
 		Version:             parsed.Version,
@@ -73,8 +73,8 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDependencyDTO {
 	return dtos.ComponentDependencyDTO{
 		ID:             m.ID,
-		ComponentPurl:  utils.SafeDereference(m.ComponentPurl),
-		DependencyPurl: m.DependencyPurl,
+		ComponentPurl:  utils.SafeDereference(m.ComponentID),
+		DependencyPurl: m.DependencyID,
 		Artifacts:      utils.Map(m.Artifacts, ArtifactModelToDTO),
 		Component:      ComponentModelToDTO(m.Component),
 		Dependency:     ComponentModelToDTO(m.Dependency),

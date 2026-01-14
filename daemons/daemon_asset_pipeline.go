@@ -462,7 +462,7 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 					}
 
 					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
+						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
 						return origin
 					}), func(el string) bool {
 						return strings.HasPrefix(el, "http")
