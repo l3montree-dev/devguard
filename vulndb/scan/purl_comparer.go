@@ -52,7 +52,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	if ctx.VersionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
 		err = query.Where("version = ?", ctx.NormalizedVersion).
-			Preload("CVE").Preload("CVE.Exploits").
+			Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
 			Find(&affectedComponents).Error
 	} else {
 		// Version is semantic versioning - check version ranges

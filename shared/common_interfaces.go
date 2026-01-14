@@ -531,9 +531,9 @@ type ComponentService interface {
 }
 
 type CVERelationshipRepository interface {
-	utils.Repository[string, models.CVERelationShip, DB]
-	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationShip, error)
-	GetAllRelationshipsForCVEBatch(tx DB, targetCVEIDs []string) ([]models.CVERelationShip, error)
+	utils.Repository[string, models.CVERelationship, DB]
+	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationship, error)
+	GetAllRelationshipsForCVEBatch(tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
 	FilterOutRelationsWithInvalidTargetCVE(tx DB) error
 }
 

@@ -43,6 +43,7 @@ type CVE struct {
 	Vector                string              `json:"vector" gorm:"type:text;" cve:"vector"`
 	Risk                  dtos.RiskMetrics    `json:"risk" gorm:"-" cve:"risk"`
 	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;"`
+	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
 }
 
 type Weakness struct {

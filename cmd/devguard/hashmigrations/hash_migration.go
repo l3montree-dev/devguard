@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
 
@@ -283,14 +284,26 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	pc := scan.NewPurlComparer(db)
 
 	for purl, existingVulns := range vulnsByPurl {
-		vulnsInPackage, err := pc.GetVulns(purl)
+		// parse the purl
+		parsedPurl, err := packageurl.FromString(purl)
+		if err != nil {
+			panic(err)
+		}
+		vulnsInPackage, err := pc.GetVulns(parsedPurl)
+
+		result := resolveCVERelationsAndReturnFilteredFoundVulns(existingVulns, vulnsInPackage, v.GetCVERelationshipsMap())
 	}
 
 	slog.Info("finished scan")
 	return nil
 }
 
-func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ([]models.DependencyVuln, []models.DependencyVuln) {
+type resolveResult struct {
+	toSave   []models.DependencyVuln
+	toDelete []models.DependencyVuln
+}
+
+func resolveCVERelationsAndReturnFilteredFoundVulns(oldVulns []models.DependencyVuln, foundVulns []models.DependencyVuln) resolveResult {
 	if len(oldVulns) == 1 && len(foundVulns) == 1 {
 		oldVulns[0].CVEID = foundVulns[0].CVEID
 		return oldVulns, nil

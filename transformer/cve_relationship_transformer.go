@@ -13,11 +13,11 @@ import (
 )
 
 // need Optimus Prime here
-func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationShip {
-	relations := make([]models.CVERelationShip, 0)
+func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationship {
+	relations := make([]models.CVERelationship, 0)
 	for _, alias := range osv.Aliases {
 		if strings.HasPrefix(alias, "CVE-") {
-			relations = append(relations, models.CVERelationShip{
+			relations = append(relations, models.CVERelationship{
 				SourceCVE:        osv.ID,
 				TargetCVE:        alias,
 				RelationshipType: dtos.RelationshipTypeAlias,
@@ -27,7 +27,7 @@ func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationShip {
 
 	for _, upstream := range osv.Upstream {
 		if strings.HasPrefix(upstream, "CVE-") {
-			relations = append(relations, models.CVERelationShip{
+			relations = append(relations, models.CVERelationship{
 				SourceCVE:        osv.ID,
 				TargetCVE:        upstream,
 				RelationshipType: dtos.RelationshipTypeUpstream,
@@ -38,7 +38,7 @@ func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationShip {
 	// check if its related to a cve
 	for _, related := range osv.Related {
 		if strings.HasPrefix(related, "CVE-") {
-			relations = append(relations, models.CVERelationShip{
+			relations = append(relations, models.CVERelationship{
 				SourceCVE:        osv.ID,
 				TargetCVE:        related,
 				RelationshipType: dtos.RelationshipTypeRelated,

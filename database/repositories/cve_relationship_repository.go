@@ -9,25 +9,25 @@ import (
 
 type cveRelationshipRepository struct {
 	db *gorm.DB
-	utils.Repository[string, models.CVERelationShip, *gorm.DB]
+	utils.Repository[string, models.CVERelationship, *gorm.DB]
 }
 
 func NewCveRelationshipRepository(db *gorm.DB) *cveRelationshipRepository {
 	return &cveRelationshipRepository{
 		db:         db,
-		Repository: newGormRepository[string, models.CVERelationShip](db),
+		Repository: newGormRepository[string, models.CVERelationship](db),
 	}
 }
 
 // get all source CVEs which relate to this CVE
-func (repository *cveRelationshipRepository) GetAllRelationsForCVE(tx *gorm.DB, targetCVEID string) ([]models.CVERelationShip, error) {
-	var relations []models.CVERelationShip
+func (repository *cveRelationshipRepository) GetAllRelationsForCVE(tx *gorm.DB, targetCVEID string) ([]models.CVERelationship, error) {
+	var relations []models.CVERelationship
 	err := repository.GetDB(tx).Where("target_cve=?", targetCVEID).Find(&relations).Error
 	return relations, err
 }
 
-func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *gorm.DB, sourceCVEIDs []string) ([]models.CVERelationShip, error) {
-	var relations []models.CVERelationShip
+func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *gorm.DB, sourceCVEIDs []string) ([]models.CVERelationship, error) {
+	var relations []models.CVERelationship
 	err := repository.GetDB(tx).Raw("SELECT * FROM cve_relationships cr WHERE cr.source_cve IN ?", sourceCVEIDs).Find(&relations).Error
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *
 }
 
 func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(tx *gorm.DB) error {
-	var relationships []models.CVERelationShip
+	var relationships []models.CVERelationship
 	err := repository.GetDB(tx).Raw(`SELECT * FROM cve_relationships a WHERE NOT EXISTS
 	(SELECT * FROM cves b WHERE a.target_cve = b.cve);`).Find(&relationships).Error
 	if err != nil {
@@ -46,7 +46,7 @@ func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTarget
 	batchsize := 1000
 	counter := 0
 	for counter < len(relationships) {
-		var batch []models.CVERelationShip
+		var batch []models.CVERelationship
 		if counter+batchsize < len(relationships) {
 			batch = relationships[counter : counter+batchsize]
 			counter += batchsize
