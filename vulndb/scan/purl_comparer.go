@@ -36,10 +36,7 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 
 // GetAffectedComponents finds security vulnerabilities for a software package
 func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
-	ctx, err := normalize.ParsePurlForMatching(purl)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid package URL")
-	}
+	ctx := normalize.ParsePurlForMatching(purl)
 
 	if ctx.EmptyVersion {
 		return []models.AffectedComponent{}, nil // No version = no results
@@ -51,6 +48,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	query := comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", ctx.SearchPurl)
 	query = repositories.BuildQualifierQuery(query, ctx.Qualifiers, ctx.Namespace)
 
+	var err error
 	if ctx.VersionIsValid != nil {
 		// Version isn't semantic versioning - do exact match only
 		err = query.Where("version = ?", ctx.NormalizedVersion).
@@ -65,8 +63,6 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	return affectedComponents, err
 }
 
-// some purls do contain versions, which cannot be found in the database. An example is git.
-// the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
 func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
 	// get the affected components
 	affectedComponents, err := comparer.GetAffectedComponents(purl)

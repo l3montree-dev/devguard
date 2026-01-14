@@ -166,16 +166,19 @@ func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[strin
 	licenses := resolveLicense(c, componentLicenseOverwrites)
 	// parse the purl to set the version column
 	parsed, err := packageurl.FromString(c.DependencyID)
-	if err == nil {
+	if err != nil {
+		// parsing failed - ID is not a valid PURL (e.g., file path or fake node)
+		// Return component with empty PackageURL per CycloneDX spec
 		return cyclonedx.Component{
 			Licenses:   &licenses,
 			BOMRef:     c.DependencyID,
 			Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
-			PackageURL: c.DependencyID,
+			PackageURL: "", // Empty for non-PURL identifiers
 			Version:    "",
 			Name:       c.DependencyID,
 		}
 	}
+	// parsing succeeded - use version from PURL
 	return cyclonedx.Component{
 		Licenses:   &licenses,
 		BOMRef:     c.DependencyID,

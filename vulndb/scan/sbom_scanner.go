@@ -52,8 +52,9 @@ func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error
 
 		errgroup.Go(
 			func() ([]models.VulnInPackage, error) {
-				// check if CPE is present
+
 				vulns := []models.VulnInPackage{}
+				// if the component has no package url we cannot find anything
 				if component.PackageURL != "" {
 					var res []models.VulnInPackage
 					var err error

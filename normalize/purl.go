@@ -20,9 +20,8 @@ type PurlMatchContext struct {
 }
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
-func ParsePurlForMatching(purl packageurl.PackageURL) (*PurlMatchContext, error) {
+func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 	qualifier := purl.Qualifiers
-
 	// Try to normalize the version to semantic versioning format
 	normalizedVersion, versionIsValid := ConvertToSemver(purl.Version)
 
@@ -38,7 +37,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) (*PurlMatchContext, error)
 		Qualifiers:        qualifier,
 		Namespace:         purl.Namespace,
 		EmptyVersion:      normalizedVersion == "",
-	}, nil
+	}
 }
 
 // function to make purl look more visually appealing
