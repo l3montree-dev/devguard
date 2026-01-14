@@ -51,6 +51,10 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	foundLicenseRisks := make([]models.LicenseRisk, 0)
 	compToValidLicense := make(map[string]string)
 	for _, comp := range components {
+		if _, err := comp.GetPURL(); err != nil {
+			continue
+		}
+
 		if comp.License == nil {
 			slog.Warn("license is nil, avoided nil pointer dereference")
 			continue

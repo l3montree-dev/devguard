@@ -11,8 +11,8 @@ import (
 type LicenseRisk struct {
 	Vulnerability
 	FinalLicenseDecision *string    `json:"finalLicenseDecision" gorm:"type:text"`
-	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;"`
-	Component            Component  `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;"` // only valid purls
+	Component            Component  `json:"component" gorm:"foreignKey:ComponentPurl;references:ID;constraint:OnDelete:CASCADE;"`
 	Artifacts            []Artifact `json:"artifacts" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE"`
 }
 

@@ -1,18 +1,19 @@
 -- Copyright (C) 2026 l3montree GmbH
--- 
+--
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as
 -- published by the Free Software Foundation, either version 3 of the
 -- License, or (at your option) any later version.
--- 
+--
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU Affero General Public License for more details.
--- 
+--
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ALTER TABLE public.components RENAME COLUMN purl TO id;
-ALTER TABLE public.component_dependencies RENAME COLUMN component_purl TO component_id;
-ALTER TABLE public.component_dependencies RENAME COLUMN dependency_purl TO dependency_id;
+-- Revert column renames
+ALTER TABLE public.component_dependencies RENAME COLUMN dependency_id TO dependency_purl;
+ALTER TABLE public.component_dependencies RENAME COLUMN component_id TO component_purl;
+ALTER TABLE public.components RENAME COLUMN id TO purl;

@@ -59,14 +59,18 @@ type Component struct {
 	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
+func (c Component) GetPURL() (packageurl.PackageURL, error) {
+	return packageurl.FromString(c.ID)
+}
+
 type ComponentDependency struct {
 	ID uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	Component    Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+	Component    Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
 	ComponentID  *string   `json:"componentPurl" gorm:"column:component_id;index:component_purl_idx"` // will be nil, for direct dependencies
-	Dependency   Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+	Dependency   Component `json:"dependency" gorm:"foreignKey:DependencyID;references:ID;constraint:OnDelete:CASCADE;"`
 	DependencyID string    `json:"dependencyPurl" gorm:"column:dependency_id;index:dependency_purl_idx"`
 
 	// Foreign key fields for AssetVersion relationship
