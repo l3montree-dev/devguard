@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,18 +37,18 @@ func (_m *Message) EXPECT() *Message_Expecter {
 }
 
 // GetChannel provides a mock function for the type Message
-func (_mock *Message) GetChannel() database.Channel {
+func (_mock *Message) GetChannel() shared.PubSubChannel {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetChannel")
 	}
 
-	var r0 database.Channel
-	if returnFunc, ok := ret.Get(0).(func() database.Channel); ok {
+	var r0 shared.PubSubChannel
+	if returnFunc, ok := ret.Get(0).(func() shared.PubSubChannel); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(database.Channel)
+		r0 = ret.Get(0).(shared.PubSubChannel)
 	}
 	return r0
 }
@@ -70,12 +70,12 @@ func (_c *Message_GetChannel_Call) Run(run func()) *Message_GetChannel_Call {
 	return _c
 }
 
-func (_c *Message_GetChannel_Call) Return(channel database.Channel) *Message_GetChannel_Call {
+func (_c *Message_GetChannel_Call) Return(channel shared.PubSubChannel) *Message_GetChannel_Call {
 	_c.Call.Return(channel)
 	return _c
 }
 
-func (_c *Message_GetChannel_Call) RunAndReturn(run func() database.Channel) *Message_GetChannel_Call {
+func (_c *Message_GetChannel_Call) RunAndReturn(run func() shared.PubSubChannel) *Message_GetChannel_Call {
 	_c.Call.Return(run)
 	return _c
 }

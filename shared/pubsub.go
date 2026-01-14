@@ -12,32 +12,32 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package database
+package shared
 
 import "context"
 
-type Channel string
+type PubSubChannel string
 
 const (
 	PolicyChange = "policyChange"
 )
 
-type Message interface {
-	GetChannel() Channel
+type PubSubMessage interface {
+	GetChannel() PubSubChannel
 	GetPayload() map[string]any
 }
 
-type Broker interface {
-	Publish(ctx context.Context, message Message) error
-	Subscribe(topic Channel) (<-chan map[string]any, error)
+type PubSubBroker interface {
+	Publish(ctx context.Context, message PubSubMessage) error
+	Subscribe(topic PubSubChannel) (<-chan map[string]any, error)
 }
 
 type SimpleMessage struct {
-	Channel Channel
+	Channel PubSubChannel
 	Payload map[string]any
 }
 
-func (m SimpleMessage) GetChannel() Channel {
+func (m SimpleMessage) GetChannel() PubSubChannel {
 	return m.Channel
 }
 
@@ -45,8 +45,8 @@ func (m SimpleMessage) GetPayload() map[string]any {
 	return m.Payload
 }
 
-// NewSimpleMessage creates a new SimpleMessage instance.
-func NewSimpleMessage(channel Channel, payload map[string]any) *SimpleMessage {
+// NewSimplePubSubMessage creates a new SimpleMessage instance.
+func NewSimplePubSubMessage(channel PubSubChannel, payload map[string]any) *SimpleMessage {
 	return &SimpleMessage{
 		Channel: channel,
 		Payload: payload,

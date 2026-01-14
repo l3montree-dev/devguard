@@ -30,6 +30,15 @@ func NewReleaseController(service shared.ReleaseService, avService shared.AssetV
 	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
 }
 
+// @Summary List releases
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/releases [get]
 func (h *ReleaseController) List(c shared.Context) error {
 	project := shared.GetProject(c)
 
@@ -51,7 +60,15 @@ func (h *ReleaseController) List(c shared.Context) error {
 	return c.JSON(http.StatusOK, pagedDTO)
 }
 
-// SBOMJSON returns a merged CycloneDX BOM for a release in JSON format.
+// @Summary Get release SBOM as JSON
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.json [get]
 func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -80,7 +97,15 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(bom)
 }
 
-// SBOMXML returns a merged CycloneDX BOM for a release in XML format.
+// @Summary Get release SBOM as XML
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.xml [get]
 func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -109,7 +134,15 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatXML).Encode(bom)
 }
 
-// VEXJSON currently returns the merged CycloneDX BOM as JSON for compatibility.
+// @Summary Get release VEX as JSON
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.json [get]
 func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -138,7 +171,15 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(bom)
 }
 
-// VEXXML currently returns the merged CycloneDX BOM as XML for compatibility.
+// @Summary Get release VEX as XML
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.xml [get]
 func (h *ReleaseController) VEXXML(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -322,6 +363,15 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 	}, release.Name, boms...), nil
 }
 
+// @Summary Get release details
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} dtos.ReleaseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID} [get]
 func (h *ReleaseController) Read(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -337,6 +387,15 @@ func (h *ReleaseController) Read(c shared.Context) error {
 	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
+// @Summary Create release
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body dtos.ReleaseCreateRequest true "Release data"
+// @Success 201 {object} dtos.ReleaseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases [post]
 func (h *ReleaseController) Create(c shared.Context) error {
 	var req dtos.ReleaseCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -353,6 +412,16 @@ func (h *ReleaseController) Create(c shared.Context) error {
 	return c.JSON(http.StatusCreated, transformer.ReleaseToDTO(model))
 }
 
+// @Summary Update release
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Param body body dtos.ReleasePatchRequest true "Release data"
+// @Success 200 {object} dtos.ReleaseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID} [patch]
 func (h *ReleaseController) Update(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -379,6 +448,15 @@ func (h *ReleaseController) Update(c shared.Context) error {
 	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
 }
 
+// @Summary Delete release
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID} [delete]
 func (h *ReleaseController) Delete(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
 	id, err := uuid.Parse(idParam)
@@ -393,7 +471,16 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// add item to a release (artifact or child release)
+// @Summary Add item to release
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Param body body dtos.ReleaseItemDTO true "Release item data"
+// @Success 201 {object} dtos.ReleaseItemDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items [post]
 func (h *ReleaseController) AddItem(c shared.Context) error {
 	relIDParam := shared.GetParam(c, "releaseID")
 	relID, err := uuid.Parse(relIDParam)
@@ -422,7 +509,16 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 	return c.JSON(http.StatusCreated, transformer.ReleaseItemToDTO(item))
 }
 
-// remove an item from a release
+// @Summary Remove item from release
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Param itemID path string true "Item ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items/{itemID} [delete]
 func (h *ReleaseController) RemoveItem(c shared.Context) error {
 	itemIDParam := shared.GetParam(c, "itemID")
 	itemID, err := uuid.Parse(itemIDParam)
@@ -437,6 +533,15 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// @Summary List release candidates
+// @Tags Releases
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID query string false "Release ID"
+// @Success 200 {object} dtos.CandidatesResponseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/candidates [get]
 func (h *ReleaseController) ListCandidates(c shared.Context) error {
 	project := shared.GetProject(c)
 	// check if a release id is provided

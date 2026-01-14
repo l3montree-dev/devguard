@@ -31,16 +31,17 @@ import (
 
 func NewVexCommand() *cobra.Command {
 	vexCommand := &cobra.Command{
-		Use:   "vex <vex-file>",
-		Short: "Upload a VEX document to DevGuard",
+		Use:               "vex <vex-file>",
+		Short:             "Upload a VEX document to DevGuard",
+		DisableAutoGenTag: true,
 		Long: `Upload a VEX (Vulnerability Exploitability eXchange) document to DevGuard.
 The VEX document must be provided as a file argument. The request is signed using the
-configured token before upload.
-
-Example:
+configured token before upload.`,
+		Example: `  # Upload a VEX document
   devguard-scanner vex vex.json
-`,
 
+  # Upload VEX with custom asset name
+  devguard-scanner vex vex.json --assetName my-app`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// check the first argument and read the file

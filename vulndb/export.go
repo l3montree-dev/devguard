@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"strconv"
@@ -19,46 +18,23 @@ var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected
 // we are going to compare two tables to extract the diffs.
 // this means, for example for cve we need another cve table which holds the old state
 // THIS expects the cve table having the already synced new state: t0 and the cve_${compareWithSuffix} table holding the old state: t-1
-func ExportDiffs(compareWithSuffix string) error {
-	username := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	dbname := os.Getenv("POSTGRES_DB")
-
-	// replace with your PostgreSQL connection string
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
-
-	// create a connection pool with increased connections for parallel processing
+func (service importService) ExportDiffs(compareWithSuffix string) error {
 	ctx := context.Background()
-	config, err := pgxpool.ParseConfig(connStr)
-	if err != nil {
-		log.Fatalf("Unable to parse config: %v", err)
-	}
-
-	// increase pool size for parallel operations
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		slog.Error("error when trying to create conn pool", "err", err)
-		return err
-	}
-	defer pool.Close()
-
 	dirName := "diffs-tmp"
-	err = os.Mkdir(dirName, os.ModePerm)
+	err := os.Mkdir(dirName, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	for _, table := range vulndbTables {
-		err = createDiffs(ctx, pool, fmt.Sprintf("%s%s", table, compareWithSuffix), table)
+		err = createDiffs(ctx, service.pool, fmt.Sprintf("%s%s", table, compareWithSuffix), table)
 		if err != nil { // if one table fails we should stop the whole process
 			slog.Error("error when trying to calculate diffs", "table", table, "err", err)
 			os.RemoveAll("diffs-tmp/")
 			return err
 		}
 	}
-	cleanUpTables(ctx, pool, compareWithSuffix) //nolint
+	cleanUpTables(ctx, service.pool, compareWithSuffix) //nolint
 	return nil
 }
 

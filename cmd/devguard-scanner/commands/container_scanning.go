@@ -22,18 +22,21 @@ import (
 
 func NewContainerScanningCommand() *cobra.Command {
 	containerScanningCommand := &cobra.Command{
-		Use:   "container-scanning",
-		Short: "Software composition analysis of a container image",
+		Use:               "container-scanning",
+		Short:             "Software composition analysis of a container image",
+		DisableAutoGenTag: true,
 		Long: `Scan a container image for vulnerabilities. The image must either be a tar file (--path)
 or be available for download via a container registry (--image). The command generates or
 uploads an SBOM which is then analyzed by DevGuard. The request is signed using the
-configured token before upload.
-
-Example:
+configured token before upload.`,
+		Example: `  # Scan a container image from registry
   devguard-scanner container-scanning --image ghcr.io/org/image:tag
+
+  # Scan a container image tar file
   devguard-scanner container-scanning --path image.tar
-`,
-		// Args:  cobra.ExactArgs(0),
+
+  # Scan and ignore upstream attestations
+  devguard-scanner container-scanning --image ghcr.io/org/image:tag --ignoreUpstreamAttestations`,
 		RunE: scaCommand,
 	}
 

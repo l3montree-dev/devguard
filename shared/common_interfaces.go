@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -540,6 +541,13 @@ type LicenseRiskService interface {
 	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string, upstream dtos.UpstreamState) error
 	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState) (models.VulnEvent, error)
 	MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error
+}
+
+type VulnDBImportService interface {
+	ImportFromDiff(extraTableNameSuffix *string) error
+	CleanupOrphanedTables() error
+	CreateTablesWithSuffix(suffix string) error
+	ExportDiffs(extraTableNameSuffix string) error
 }
 
 type AccessControl interface {

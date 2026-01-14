@@ -15,8 +15,20 @@ import (
 
 func newSarifMarkdownCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sarif2markdown",
-		Short: "Convert a SARIF JSON file into a markdown report",
+		Use:               "sarif2markdown",
+		Short:             "Convert a SARIF JSON file into a markdown report",
+		DisableAutoGenTag: true,
+		Long: `Convert a SARIF JSON file into a human-readable markdown report.
+
+Supports both summary and detailed output formats.`,
+		Example: `  # Convert SARIF to markdown summary
+  devguard-scanner sarif2markdown -i results.sarif.json
+
+  # Generate detailed markdown report
+  devguard-scanner sarif2markdown -i results.sarif.json --detailed
+
+  # Save to file
+  devguard-scanner sarif2markdown -i results.sarif.json -o report.md`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inputFile, _ := cmd.Flags().GetString("input")
 			outputFile, _ := cmd.Flags().GetString("output")

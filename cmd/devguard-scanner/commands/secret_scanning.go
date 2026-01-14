@@ -16,22 +16,24 @@ import (
 
 func NewSecretScanningCommand() *cobra.Command {
 	secretScanningCommand := &cobra.Command{
-		Use:   "secret-scanning [path]",
-		Short: "Detect leaked secrets in source code",
+		Use:               "secret-scanning [path]",
+		Short:             "Detect leaked secrets in source code",
+		DisableAutoGenTag: true,
 		Long: `Scan a repository or directory for accidentally committed secrets and produce a SARIF report.
 
 This command runs the configured secret-scanning tool (gitleaks) and uploads the
 SARIF results to DevGuard for analysis and issue creation. The command signs the
 request using the configured token before uploading the SARIF results.
 
-You may pass the target as the first positional argument instead of using
---path.
+You may pass the target as the first positional argument instead of using --path.`,
+		Example: `  # Scan current repository for secrets
+  devguard-scanner secret-scanning ./my-repo
 
-Example:
-	devguard-scanner secret-scanning --path ./my-repo
-	devguard-scanner secret-scanning ./my-repo
-	devguard-scanner secret-scanning --path ./my-repo --outputPath secrets.sarif.json
-`,
+  # Scan with custom path flag
+  devguard-scanner secret-scanning --path ./my-repo
+
+  # Scan and save output locally
+  devguard-scanner secret-scanning ./my-repo --outputPath secrets.sarif.json`,
 		RunE: sarifCommandFactory("secret-scanning"),
 	}
 

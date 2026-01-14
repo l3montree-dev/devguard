@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 )
 
 type ProjectType string
@@ -34,7 +34,7 @@ type Project struct {
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
-	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
+	ConfigFiles databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	EnabledPolicies []Policy `json:"enabledPolicies" gorm:"many2many:project_enabled_policies;constraint:OnDelete:CASCADE;"`
 

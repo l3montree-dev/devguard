@@ -18,6 +18,7 @@ package monitoring
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
@@ -36,6 +37,7 @@ func Alert(message string, err error) {
 func RecoverAndAlert(message string, err error) {
 	evID := sentry.CurrentHub().Recover(err)
 	slog.Error("critical error encountered (recover)", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
+	sentry.Flush(10 * time.Second)
 }
 
 func RecoverPanic(msg string) {

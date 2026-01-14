@@ -68,15 +68,20 @@ func attestationsCmd(cmd *cobra.Command, args []string) error {
 
 func NewAttestationCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestations <oci@SHA>",
-		Short: "Discover attestations for an image and optionally evaluate a rego policy",
-		Long: `retrieving and validating security attestations for container images used in Helm charts or other deployment workflows.
-It automates what is normally a manual, time-consuming process of verifying that each image is properly hardened and accompanied by essential metadata such as SBOM, VEX, and SARIF.
+		Use:               "attestations <oci@SHA>",
+		Short:             "Discover attestations for an image and optionally evaluate a rego policy",
+		DisableAutoGenTag: true,
+		Long: `Retrieve and validate security attestations for container images used in Helm charts or other deployment workflows.
 
-Examples:
-	devguard-scanner attestations ghcr.io/org/image:tag
-	devguard-scanner attestations ghcr.io/org/image:tag --policy path/to/file.rego --outputPath report.sarif.json
-`,
+It automates what is normally a manual, time-consuming process of verifying that each image is properly hardened and accompanied by essential metadata such as SBOM, VEX, and SARIF.`,
+		Example: `  # Discover attestations for an image
+  devguard-scanner attestations ghcr.io/org/image:tag
+
+  # Evaluate against a rego policy
+  devguard-scanner attestations ghcr.io/org/image:tag --policy path/to/file.rego
+
+  # Save policy evaluation results as SARIF
+  devguard-scanner attestations ghcr.io/org/image:tag --policy path/to/file.rego --outputPath report.sarif.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestationsCmd(cmd, args)

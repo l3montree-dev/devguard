@@ -40,8 +40,8 @@ type CVEDTO struct {
 	Description           string          `json:"description"`
 	CVSS                  float32         `json:"cvss"`
 	References            string          `json:"references"`
-	CISAExploitAdd        *datatypes.Date `json:"cisaExploitAdd"`
-	CISAActionDue         *datatypes.Date `json:"cisaActionDue"`
+	CISAExploitAdd        *datatypes.Date `json:"cisaExploitAdd" swaggertype:"string" format:"date"`
+	CISAActionDue         *datatypes.Date `json:"cisaActionDue" swaggertype:"string" format:"date"`
 	CISARequiredAction    string          `json:"cisaRequiredAction"`
 	CISAVulnerabilityName string          `json:"cisaVulnerabilityName"`
 	EPSS                  *float64        `json:"epss"`

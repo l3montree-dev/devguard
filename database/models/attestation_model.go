@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 )
 
 type AttestationType string
@@ -20,7 +20,7 @@ type Attestation struct {
 	// Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID
 	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
 
-	Content database.JSONB `json:"content" gorm:"type:jsonb"`
+	Content databasetypes.JSONB `json:"content" gorm:"type:jsonb"`
 }
 
 func (m Attestation) TableName() string {

@@ -78,14 +78,21 @@ func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 func NewIaCCommand() *cobra.Command {
 	iacCommand := &cobra.Command{
-		Use:   "iac [path]",
-		Short: "Run an Infrastructure-as-Code (IaC) scan",
+		Use:               "iac [path]",
+		Short:             "Run an Infrastructure-as-Code (IaC) scan",
+		DisableAutoGenTag: true,
 		Long: `Run an Infrastructure-as-Code scan (e.g. checkov) against a repository or path and upload SARIF results to DevGuard.
 
-Example:
+This command scans Terraform, CloudFormation, Kubernetes manifests, and other IaC
+files for security issues and misconfigurations.`,
+		Example: `  # Scan Terraform directory
+  devguard-scanner iac ./terraform
+
+  # Scan with custom path flag
   devguard-scanner iac --path ./terraform
-  devguard-scanner iac --path ./terraform --outputPath iac-results.sarif.json
-`,
+
+  # Scan and save results locally
+  devguard-scanner iac ./terraform --outputPath iac-results.sarif.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return sarifCommandFactory("iac")(cmd, args)
 		},

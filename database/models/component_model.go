@@ -21,7 +21,7 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -36,9 +36,9 @@ type ComponentProject struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard      *database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
-	ScoreCardScore *float64        `json:"scoreCardScore" gorm:"column:score_card_score"`
-	UpdatedAt      time.Time       `json:"updatedAt" gorm:"column:updated_at"`
+	ScoreCard      *databasetypes.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
+	ScoreCardScore *float64             `json:"scoreCardScore" gorm:"column:score_card_score"`
+	UpdatedAt      time.Time            `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 func (c ComponentProject) TableName() string {

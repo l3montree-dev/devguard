@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -41,15 +42,17 @@ type importService struct {
 	exploitRepository            shared.ExploitRepository
 	affectedComponentsRepository shared.AffectedComponentRepository
 	configService                shared.ConfigService
+	pool                         *pgxpool.Pool
 }
 
-func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.CweRepository, exploitRepository shared.ExploitRepository, affectedComponentsRepository shared.AffectedComponentRepository, configService shared.ConfigService) *importService {
+func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.CweRepository, exploitRepository shared.ExploitRepository, affectedComponentsRepository shared.AffectedComponentRepository, configService shared.ConfigService, pool *pgxpool.Pool) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
 		cweRepository:                cweRepository,
 		exploitRepository:            exploitRepository,
 		affectedComponentsRepository: affectedComponentsRepository,
 		configService:                configService,
+		pool:                         pool,
 	}
 }
 
@@ -92,15 +95,8 @@ func (service importService) Import(tx shared.DB, tag string) error {
 
 func (service importService) CreateTablesWithSuffix(suffix string) error {
 	ctx := context.Background()
-	pool, err := establishConnection(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer pool.Close()
-
 	// create the tables with the suffix
-	return createTablesWithSuffix(ctx, pool, suffix)
+	return createTablesWithSuffix(ctx, service.pool, suffix)
 }
 
 func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix string) error {
@@ -120,11 +116,7 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 // if extraTableNameSuffix is not nil, the import will always import from the latest snapshot
 func (service importService) ImportFromDiff(extraTableNameSuffix *string) error {
 	ctx := context.Background()
-	pool, err := establishConnection(ctx)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
+
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb-diff"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
@@ -183,10 +175,11 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 			continue
 		}
 
-		tx, err := pool.Begin(ctx)
+		tx, err := service.pool.Begin(ctx)
 		if err != nil {
 			return err
 		}
+		defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
 		dirPath := fmt.Sprintf("%s/diffs-tmp", outpath)
 
@@ -210,33 +203,6 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 	slog.Info("finished updating tags", "duration", time.Since(begin))
 
 	return nil
-}
-
-// read envs to connect to postgres db and returns a pgx pool for it
-func establishConnection(ctx context.Context) (*pgxpool.Pool, error) {
-	username := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	dbname := os.Getenv("POSTGRES_DB")
-
-	// replace with your PostgreSQL connection string
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, dbname)
-	// create a connection pool with increased connections for parallel processing
-	config, err := pgxpool.ParseConfig(connStr)
-	if err != nil {
-		return nil, err
-	}
-	// increase pool size for parallel operations
-	config.MaxConns = 10
-	config.MinConns = 2
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		slog.Error("could not create pool", "err", err)
-		return nil, err
-	}
-	return pool, nil
 }
 
 func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix *string) error {
@@ -349,15 +315,10 @@ ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses
 
 func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string) error {
 	ctx := context.Background()
-	pool, err := establishConnection(ctx)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
 
 	// Clean up orphaned tables older than 24 hours at the start of import
 	// This helps prevent accumulation of tables from failed imports
-	if err := cleanupOrphanedTables(ctx, pool, 24); err != nil {
+	if err := cleanupOrphanedTables(ctx, service.pool, 24); err != nil {
 		monitoring.Alert("failed to cleanup orphaned tables", err)
 		return fmt.Errorf("failed to cleanup orphaned tables: %w", err)
 	}
@@ -384,7 +345,7 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 			}
 
 			slog.Info("importing CSV (prune)", "file", file, "strategy", "shadowTable")
-			backupTableName, err := importWithShadowTable(ctx, pool, tableName, csvFilePath)
+			backupTableName, err := importWithShadowTable(ctx, service.pool, tableName, csvFilePath)
 			if err != nil {
 				return "", fmt.Errorf("failed to import CSV %s: %w", file.Name(), err)
 			}
@@ -398,15 +359,15 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 	}
 
 	// fix the foreign keys
-	tx, err := pool.Begin(ctx)
+	tx, err := service.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
-
+	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
 	if err != nil {
-		return tx.Rollback(ctx)
+		return err
 	}
 
 	err = tx.Commit(ctx)
@@ -416,7 +377,7 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 	}
 
 	for _, backupTableName := range backupTableNames {
-		cleanupBackupTable(pool, backupTableName)
+		cleanupBackupTable(service.pool, backupTableName)
 	}
 
 	return nil
@@ -623,15 +584,9 @@ func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
 	slog.Error("Failed to drop backup table after all retry attempts", "table", backupTable)
 }
 
-func CleanupOrphanedTables() error {
+func (service importService) CleanupOrphanedTables() error {
 	ctx := context.Background()
-	pool, err := establishConnection(ctx)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
-	return cleanupOrphanedTables(ctx, pool, 24)
+	return cleanupOrphanedTables(ctx, service.pool, 24)
 }
 
 func filterTablesToCleanup(tables []string, olderThanHours int) []string {
@@ -708,11 +663,18 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 		monitoring.Alert("failed to begin transaction for foreign key check", err)
 		return fmt.Errorf("failed to begin transaction for foreign key check: %w", err)
 	}
+	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
 	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 	if err != nil {
 		monitoring.Alert("failed to ensure foreign keys before dropping orphaned tables", err)
 		return fmt.Errorf("failed to ensure foreign keys before dropping orphaned tables: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		monitoring.Alert("failed to commit foreign key check transaction", err)
+		return fmt.Errorf("failed to commit foreign key check transaction: %w", err)
 	}
 
 	// Drop the orphaned tables

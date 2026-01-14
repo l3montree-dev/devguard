@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/database"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
@@ -36,18 +36,18 @@ type Asset struct {
 	CVSSAutomaticTicketThreshold *float64              `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 	RiskAutomaticTicketThreshold *float64              `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 	// Auto-reopen configuration - number of days after which closed/accepted vulnerabilities should be reopened
-	VulnAutoReopenAfterDays  *int           `json:"vulnAutoReopenAfterDays" gorm:"type:integer;"`
-	SigningPubKey            *string        `json:"signingPubKey" gorm:"type:text;"`
-	ConfigFiles              database.JSONB `json:"configFiles" gorm:"type:jsonb"`
-	BadgeSecret              *uuid.UUID     `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
-	WebhookSecret            *uuid.UUID     `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
-	ExternalEntityID         *string        `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	ExternalEntityProviderID *string        `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	RepositoryProvider       *string        `json:"repositoryProvider" gorm:"type:text;"`
-	Metadata                 database.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
-	IsPublic                 bool           `json:"isPublic" gorm:"default:false;not null;"`
-	ParanoidMode             bool           `json:"paranoidMode" gorm:"default:false;not null;"`
-	SharesInformation        bool           `json:"shareInformation" gorm:"default:false;not null;"`
+	VulnAutoReopenAfterDays  *int                `json:"vulnAutoReopenAfterDays" gorm:"type:integer;"`
+	SigningPubKey            *string             `json:"signingPubKey" gorm:"type:text;"`
+	ConfigFiles              databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
+	BadgeSecret              *uuid.UUID          `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
+	WebhookSecret            *uuid.UUID          `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
+	ExternalEntityID         *string             `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID *string             `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	RepositoryProvider       *string             `json:"repositoryProvider" gorm:"type:text;"`
+	Metadata                 databasetypes.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
+	IsPublic                 bool                `json:"isPublic" gorm:"default:false;not null;"`
+	ParanoidMode             bool                `json:"paranoidMode" gorm:"default:false;not null;"`
+	SharesInformation        bool                `json:"shareInformation" gorm:"default:false;not null;"`
 
 	PipelineLastRun time.Time `json:"pipelineLastRun" gorm:"type:timestamp with time zone;"`
 	PipelineError   *string   `json:"pipelineError" gorm:"type:text;"`

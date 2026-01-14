@@ -1,6 +1,6 @@
 package models
 
-import "github.com/l3montree-dev/devguard/database"
+import databasetypes "github.com/l3montree-dev/devguard/database/types"
 
 type Org struct {
 	Model
@@ -28,7 +28,7 @@ type Org struct {
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
-	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
+	ConfigFiles databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	Language string `json:"language" gorm:"type:text;size:2"`
 

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/vulndb"
 )
 
 func (runner DaemonRunner) UpdateVulnDB() error {
@@ -21,9 +20,7 @@ func (runner DaemonRunner) UpdateVulnDB() error {
 
 	slog.Info("updating vulndb")
 
-	v := vulndb.NewImportService(runner.cveRepository, runner.cweRepository, runner.exploitsRepository, runner.affectedComponentsRepository, runner.configService)
-
-	err := v.ImportFromDiff(nil)
+	err := runner.vulnDBImportService.ImportFromDiff(nil)
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err

@@ -60,6 +60,17 @@ func informationSourceToString(source informationSource) string {
 	return r
 }
 
+// @Summary Create artifact
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param body body object true "Artifact data"
+// @Success 201 {object} models.Artifact
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts [post]
 func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -114,6 +125,17 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	return ctx.JSON(201, artifact)
 }
 
+// @Summary Delete artifact
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [delete]
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
@@ -161,6 +183,17 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Sync external sources for artifact
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync [post]
 func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -203,6 +236,18 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	return nil
 }
 
+// @Summary Update artifact
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Param body body object true "Artifact data"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [put]
 func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)

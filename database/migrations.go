@@ -8,43 +8,63 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"gorm.io/gorm"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
-//go:embed migrations/*.sql
-var migrationFiles embed.FS
+var (
+	//go:embed migrations/*.sql
+	migrationFiles   embed.FS
+	migrationVersion uint
+	migrator         *migrate.Migrate
+	migratorErr      error
+	migrationDirty   bool
+)
 
-// RunMigrationsWithDB runs all pending database migrations using an existing GORM database instance
-func RunMigrationsWithDB(gormDB *gorm.DB) error {
-	// Get the underlying sql.DB from GORM
+func getMigrator(gormDB shared.DB) (*migrate.Migrate, error) {
 	sqlDB, err := gormDB.DB()
 	if err != nil {
-		return fmt.Errorf("failed to get underlying sql.DB from GORM: %w", err)
+		migratorErr = err
+		return nil, migratorErr
 	}
 
-	// Test the connection
-	if err := sqlDB.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	// Create postgres driver instance
 	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
 	if err != nil {
-		return fmt.Errorf("failed to create postgres driver: %w", err)
+		migratorErr = err
+		return nil, migratorErr
 	}
 
-	// Create source from embedded files
-	sourceDriver, err := iofs.New(migrationFiles, "migrations")
+	source, err := iofs.New(migrationFiles, "migrations")
 	if err != nil {
-		return fmt.Errorf("failed to create source driver: %w", err)
+		migratorErr = err
+		return nil, migratorErr
 	}
 
-	// Create migrate instance
-	migrator, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", driver)
+	migrator, migratorErr = migrate.NewWithInstance(
+		"iofs",
+		source,
+		"postgres",
+		driver,
+	)
+
+	return migrator, migratorErr
+}
+
+// RunMigrations runs all pending database migrations using an existing GORM database instance
+func RunMigrations(db shared.DB) error {
+	// if no shared db is provided, create a new one
+	// only provide a db during testing
+	if db == nil {
+		db = NewGormDB(NewPgxConnPool(GetPoolConfigFromEnv()))
+	}
+	// Get the underlying sql.DB from GORM
+	migrator, err := getMigrator(db)
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-
+	if db == nil {
+		// only close the connetion pool if WE own it.
+		defer migrator.Close()
+	}
 	// Run all pending migrations
 	if err := migrator.Up(); err != nil {
 		if err == migrate.ErrNoChange {
@@ -54,35 +74,12 @@ func RunMigrationsWithDB(gormDB *gorm.DB) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
+	migrationVersion, migrationDirty, migratorErr = migrator.Version()
 	slog.Info("migrations completed successfully")
 	return nil
 }
 
 // GetMigrationVersionWithDB returns the current migration version using an existing GORM database instance
-func GetMigrationVersionWithDB(gormDB *gorm.DB) (uint, bool, error) {
-	// Get the underlying sql.DB from GORM
-	sqlDB, err := gormDB.DB()
-	if err != nil {
-		return 0, false, fmt.Errorf("failed to get underlying sql.DB from GORM: %w", err)
-	}
-
-	// Create postgres driver instance
-	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
-	if err != nil {
-		return 0, false, fmt.Errorf("failed to create postgres driver: %w", err)
-	}
-
-	// Create source from embedded files
-	sourceDriver, err := iofs.New(migrationFiles, "migrations")
-	if err != nil {
-		return 0, false, fmt.Errorf("failed to create source driver: %w", err)
-	}
-
-	// Create migrate instance
-	migrator, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", driver)
-	if err != nil {
-		return 0, false, fmt.Errorf("failed to create migrator: %w", err)
-	}
-
-	return migrator.Version()
+func GetMigrationVersionWithDB() (uint, bool, error) {
+	return migrationVersion, migrationDirty, migratorErr
 }

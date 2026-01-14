@@ -21,12 +21,16 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
+
+// Set to gitlab output size limit
+var rowLengthLimit = 80
 
 func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
@@ -39,12 +43,21 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 		return v.State == dtos.VulnStateOpen
 	})
 
+	tw := table.NewWriter()
+	tw.SetAllowedRowLength(rowLengthLimit)
+
 	switch scannerID {
 	case "secret-scanning":
-		PrintSecretScanResults(openVulns, webUI, assetName, assetVersionName)
+		PrintSecretScanResults(openVulns, webUI, assetName, assetVersionName, tw)
 	default:
-		PrintSastScanResults(openVulns, webUI, assetName, assetVersionName)
+		PrintSastScanResults(openVulns, webUI, assetName, assetVersionName, tw)
 	}
+
+	link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
+	wrappedLink := text.WrapText(link, rowLengthLimit)
+	tw.AppendRow(table.Row{"Link", wrappedLink})
+
+	fmt.Println(tw.Render())
 
 	if len(openVulns) > 0 {
 		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
@@ -53,22 +66,17 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 	return nil
 }
 
-func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
-	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
-
-	blue := text.FgBlue
-	green := text.FgGreen
+func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
 	for _, vuln := range firstPartyVulns {
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
-			{"File:", green.Sprint(vuln.URI)},
+			{"File:", text.FgGreen.Sprint(vuln.URI)},
 		}
 		tw.AppendRows(raw)
 		for _, snippet := range vuln.SnippetContents {
 			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
 		}
-		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, 80)},
+		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, rowLengthLimit)},
 
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
@@ -78,32 +86,23 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 		tw.AppendRows(raw)
 		tw.AppendSeparator()
 	}
-
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
-
-	fmt.Println(tw.Render())
 }
 
-func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
-	tw := table.NewWriter()
-	tw.SetAllowedRowLength(130)
+func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
 
-	blue := text.FgBlue
-	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
 		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
 		for _, snippet := range vuln.SnippetContents {
 			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
 		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 80)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, rowLengthLimit)})
 		if vuln.URI != "" {
-			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI)})
+			tw.AppendRow(table.Row{"File", text.FgGreen.Sprint(vuln.URI)})
 
 		}
 		tw.AppendSeparator()
 	}
-	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
-	fmt.Println(tw.Render())
+
 }
 
 // can be reused for container scanning as well.
@@ -165,7 +164,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 	fmt.Println(tw.Render())
 	if len(scanResponse.DependencyVulns) > 0 {
-		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
+		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
 		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
 	}
 

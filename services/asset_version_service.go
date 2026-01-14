@@ -15,8 +15,8 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -142,7 +142,7 @@ func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project
 				RuleName:        utils.OrDefault(rule.Name, ""),
 				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
 				RuleDescription: getBestDescription(rule),
-				RuleProperties:  database.JSONB(ruleProperties),
+				RuleProperties:  databasetypes.JSONB(ruleProperties),
 			}
 			if result.PartialFingerprints != nil {
 				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
@@ -409,116 +409,107 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 	return opened, closed, newState, nil
 }
 
-func (s *assetVersionService) migrateToPurlsWithQualifiers(newVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, existingVulnsOnOtherBranch []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, error) {
+func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
 
-	vulnsToUpdate := make([]models.DependencyVuln, 0)
+	var firstDetected []models.DependencyVuln
+	var fixedOnAll []models.DependencyVuln
+	var firstDetectedOnThisArtifactName []models.DependencyVuln
+	var fixedOnThisArtifactName []models.DependencyVuln
+	var nothingChanged []models.DependencyVuln
 
-	for _, newVuln := range newVulns {
-		if newVuln.ComponentPurl == nil {
-			continue
-		}
-		fullPurl := newVuln.ComponentPurl
-		purl := strings.SplitN(*fullPurl, "?", 2)[0]
-
-		for i, existingVuln := range existingVulns {
-			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
-				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
-				existingVulns[i].ComponentPurl = fullPurl
-				vulnsToUpdate = append(vulnsToUpdate, existingVulns[i])
-			}
-
-		}
-
-		for i, existingVuln := range existingVulnsOnOtherBranch {
-			if existingVuln.ComponentPurl != nil && *existingVuln.ComponentPurl == purl &&
-				existingVuln.CVEID != nil && newVuln.CVEID != nil && *existingVuln.CVEID == *newVuln.CVEID {
-				existingVulnsOnOtherBranch[i].ComponentPurl = fullPurl
-				vulnsToUpdate = append(vulnsToUpdate, existingVulnsOnOtherBranch[i])
-			}
-
+	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
+	for _, vuln := range foundVulnerabilities {
+		if _, ok := foundVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			foundVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 
-	if len(vulnsToUpdate) == 0 {
-		return existingVulns, existingVulnsOnOtherBranch, nil
+	for _, existingVulns := range existingDependencyVulns {
+		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
+			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
+				fixedOnAll = append(fixedOnAll, existingVulns)
+			} else {
+				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVulns)
+			}
+		} else {
+			// still exists and nothing changed
+			nothingChanged = append(nothingChanged, existingVulns)
+		}
+	}
+	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
+	for _, vuln := range existingDependencyVulns {
+		if _, ok := existingVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			existingVulnsMappedByID[vuln.CalculateHash()] = vuln
+		}
 	}
 
-	db := s.dependencyVulnRepository.GetDB(nil)
-
-	//save all updated vulns back to the database
-	for _, dependencyVuln := range vulnsToUpdate {
-		oldHash := dependencyVuln.ID
-		newHash := dependencyVuln.CalculateHash()
-
-		if oldHash == newHash {
-			continue
-		}
-
-		// Update the hash in the database
-		err := db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
-		if err != nil {
-			slog.Info("could not update dependencyVuln hash, trying to merge", "err", err)
-			// Handle duplicate key error by merging
-			var otherVuln models.DependencyVuln
-			err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).First(&otherVuln).Error
-			if err != nil {
-				slog.Error("could not fetch other dependencyVuln", "err", err)
-				return existingVulns, existingVulnsOnOtherBranch, err
-			}
-
-			// Update all vuln events BEFORE deleting the old record
-			err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
-			if err != nil {
-				slog.Error("could not update vuln events", "err", err)
-				return existingVulns, existingVulnsOnOtherBranch, err
-			}
-
-			// Update artifact dependency vulns BEFORE deleting the old record
-			err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
-			if err != nil {
-				//check if the error is because duplicate entries, then we need to ignore it, because the other vuln already has those entries and the id is being updated to the new hash
-				if !strings.Contains(err.Error(), "duplicate key value") {
-					slog.Error("could not update artifact dependency vulns", "err", err)
-					return existingVulns, existingVulnsOnOtherBranch, err
+	for _, foundVuln := range foundVulnerabilities {
+		if existingVuln, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
+			firstDetected = append(firstDetected, foundVuln)
+		} else {
+			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
+			alreadyDetectedOnThisArtifactName := false
+			for _, existingArtifact := range existingVuln.Artifacts {
+				if existingArtifact.ArtifactName == currentArtifactName {
+					alreadyDetectedOnThisArtifactName = true
+					break
 				}
 			}
-
-			// Now delete the old record after all references are updated
-			err = db.Model(&models.DependencyVuln{}).Where("id = ?", oldHash).Delete(&dependencyVuln).Error
-			if err != nil {
-				slog.Error("could not delete old dependencyVuln during merge", "err", err)
-				return existingVulns, existingVulnsOnOtherBranch, err
+			if !alreadyDetectedOnThisArtifactName {
+				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, existingVuln)
 			}
-
 		}
-
-		err = db.Model(&models.DependencyVuln{}).Where("id = ?", newHash).UpdateColumn("component_purl", dependencyVuln.ComponentPurl).Error
-		if err != nil {
-			slog.Error("could not update component purl during dependencyVuln merge", "err", err)
-			return existingVulns, existingVulnsOnOtherBranch, err
-		}
-
-		// Update all vuln events (in case the update succeeded on first try)
-		err = db.Model(&models.VulnEvent{}).Where("vuln_id = ?", oldHash).UpdateColumn("vuln_id", newHash).Error
-		if err != nil {
-			slog.Error("could not update vuln events", "err", err)
-			return existingVulns, existingVulnsOnOtherBranch, err
-		}
-
-		// update dependencyVuln in artifacts dependencyVuln table (in case the update succeeded on first try)
-		err = db.Table("artifact_dependency_vulns").Where("dependency_vuln_id = ?", oldHash).UpdateColumn("dependency_vuln_id", newHash).Error
-		if err != nil {
-			slog.Error("could not update artifact dependency vulns", "err", err)
-			return existingVulns, existingVulnsOnOtherBranch, err
-		}
-
 	}
 
-	return existingVulns, existingVulnsOnOtherBranch, nil
-
+	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
 }
 
-func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, foundDependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+type Diffable interface {
+	AssetVersionIndependentHash() string
+	GetAssetVersionName() string
+	GetEvents() []models.VulnEvent
+}
+
+func diffVulnsBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
+	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
+	newDetectedButOnOtherBranchExisting := make([]T, 0)
+	existingEvents := make([][]models.VulnEvent, 0)
+
+	// Create a map of existing vulnerabilities by hash for quick lookup
+	existingVulnsMap := make(map[string][]T)
+	for _, vuln := range existingVulns {
+		hash := vuln.AssetVersionIndependentHash()
+		existingVulnsMap[hash] = append(existingVulnsMap[hash], vuln)
+	}
+
+	for _, newDetectedVuln := range foundVulnerabilities {
+		hash := newDetectedVuln.AssetVersionIndependentHash()
+		if existingVulns, ok := existingVulnsMap[hash]; ok {
+
+			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
+
+			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
+			for _, existingVuln := range existingVulns {
+
+				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
+					return ev.OriginalAssetVersionName == nil && ev.Type != dtos.EventTypeRawRiskAssessmentUpdated
+				})
+
+				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
+					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
+					return event
+				})...)
+			}
+			existingEvents = append(existingEvents, existingVulnEventsOnOtherBranch)
+		} else {
+			newDetectedVulnsNotOnOtherBranch = append(newDetectedVulnsNotOnOtherBranch, newDetectedVuln)
+		}
+	}
+
+	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
+}
+
+func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -532,31 +523,12 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// this is just for migration.
-	// the call can be removed after all assets were scanned again
-	existingDependencyVulns, existingVulnsOnOtherBranch, err = s.migrateToPurlsWithQualifiers(foundDependencyVulns, existingDependencyVulns, existingVulnsOnOtherBranch)
-	if err != nil {
-		slog.Error("could not migrate dependencyVulns to purls with qualifiers", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	var filterFixed = func(dependencyVuln models.DependencyVuln) bool { return dependencyVuln.State != dtos.VulnStateFixed }
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
 
-	cveIDs := make([]string, 0, len(foundDependencyVulns))
-	for _, vuln := range foundDependencyVulns {
-		cveIDs = append(cveIDs, utils.SafeDereference(vuln.CVEID))
-	}
-	cveRelations, err := s.cveRelationshipRepository.GetAllRelationshipsForCVEBatch(nil, cveIDs)
-
-	relationsBySourceCVE := make(map[string][]models.CVERelationShip, len(cveRelations))
-	for _, relation := range cveRelations {
-		relationsBySourceCVE[relation.SourceCVE] = append(relationsBySourceCVE[relation.SourceCVE], relation)
-	}
-
-	diff := statemachine.DiffScanResults(artifactName, foundDependencyVulns, existingDependencyVulns, relationsBySourceCVE)
+	diff := statemachine.DiffScanResults(artifactName, existingDependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()

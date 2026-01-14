@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -33,6 +34,9 @@ type TestFixture struct {
 	T   *testing.T
 	App *TestApp
 	DB  shared.DB
+	// pool is the underlying pgx connection pool
+	// its used by the database broker and other components
+	Pool *pgxpool.Pool
 }
 
 // NewTestFixture creates a complete test environment with database container and FX app
@@ -40,7 +44,7 @@ func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *
 	t.Helper()
 
 	// Initialize database container
-	db, terminate := InitDatabaseContainer(sqlInitFile)
+	db, pool, terminate := InitDatabaseContainer(sqlInitFile)
 
 	if options == nil {
 		options = &TestAppOptions{
@@ -50,12 +54,13 @@ func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	// Create FX test app without automatic cleanup
-	app, fxApp := NewTestAppWithT(t, db, options)
+	app, fxApp := NewTestAppWithT(t, db, pool, options)
 
 	fixture := &TestFixture{
-		T:   t,
-		App: app,
-		DB:  db,
+		T:    t,
+		App:  app,
+		DB:   db,
+		Pool: pool,
 	}
 
 	// Register cleanup - this will be called in LIFO order
@@ -167,6 +172,7 @@ func (f *TestFixture) CreateDaemonRunner() daemons.DaemonRunner {
 		f.App.ScanService,
 		&testLeaderElector{}, // Use simple test leader elector
 		f.App.MaliciousPackageChecker,
+		f.App.VulnDBImportService,
 	)
 }
 

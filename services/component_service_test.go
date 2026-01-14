@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 
@@ -177,7 +177,7 @@ func TestHandleProject(t *testing.T) {
 			},
 		}
 
-		jsonB := database.MustJSONBFromStruct(scoreCard)
+		jsonB := databasetypes.MustJSONBFromStruct(scoreCard)
 		expectedProject := models.ComponentProject{
 			ProjectKey:  "github/test/project",
 			ScoreCard:   &jsonB,

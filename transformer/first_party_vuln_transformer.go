@@ -18,8 +18,8 @@ package transformer
 import (
 	"fmt"
 
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
@@ -83,9 +83,9 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVulnDTO {
 	}
 }
 
-func SnippetContentsToJSON(s dtos.SnippetContents) (database.JSONB, error) {
+func SnippetContentsToJSON(s dtos.SnippetContents) (databasetypes.JSONB, error) {
 	if len(s.Snippets) == 0 {
-		return database.JSONB{}, fmt.Errorf("no snippets to convert to JSON")
+		return databasetypes.JSONB{}, fmt.Errorf("no snippets to convert to JSON")
 	}
-	return database.JSONbFromStruct(s)
+	return databasetypes.JSONBFromStruct(s)
 }

@@ -1977,7 +1977,9 @@ func (j *ResultKind) UnmarshalJSON(value []byte) error {
 		}
 	}
 	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ResultKind, v)
+		// default to "informational" if empty
+		*j = ResultKindInformational
+		return nil
 	}
 	*j = ResultKind(v)
 	return nil

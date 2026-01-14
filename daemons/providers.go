@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -27,7 +26,7 @@ import (
 // DaemonRunner encapsulates daemon dependencies and lifecycle
 type DaemonRunner struct {
 	db                           shared.DB
-	broker                       database.Broker
+	broker                       shared.PubSubBroker
 	configService                shared.ConfigService
 	rbacProvider                 shared.RBACProvider
 	integrationAggregate         shared.IntegrationAggregate
@@ -52,12 +51,13 @@ type DaemonRunner struct {
 	scanService                  shared.ScanService
 	leaderElector                shared.LeaderElector
 	maliciousPackageChecker      shared.MaliciousPackageChecker
+	vulnDBImportService          shared.VulnDBImportService
 }
 
 // NewDaemonRunner creates a new daemon runner with injected dependencies
 func NewDaemonRunner(
 	db shared.DB,
-	broker database.Broker,
+	broker shared.PubSubBroker,
 	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
@@ -82,6 +82,7 @@ func NewDaemonRunner(
 	scanService shared.ScanService,
 	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
+	vulnDBImportService shared.VulnDBImportService,
 ) DaemonRunner {
 	return DaemonRunner{
 		db:                           db,
@@ -110,6 +111,7 @@ func NewDaemonRunner(
 		scanService:                  scanService,
 		leaderElector:                leaderElector,
 		maliciousPackageChecker:      maliciousPackageChecker,
+		vulnDBImportService:          vulnDBImportService,
 	}
 }
 

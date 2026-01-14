@@ -9,7 +9,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 
 	"github.com/labstack/echo/v4"
@@ -29,12 +28,6 @@ func Ptr[T any](t T) *T {
 func SanitizeParam(s string) string {
 	// remove trailing or leading slashes
 	return strings.Trim(s, "/")
-}
-
-func DatabaseFactory() (DB, error) {
-	db, err := database.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_PORT"))
-
-	return db, err
 }
 
 // InitLogger initializes the logger with a tint handler.

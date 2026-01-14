@@ -95,9 +95,7 @@ func isOnlyFoundInArtifact(vuln models.DependencyVuln, artifactName string) bool
 	return len(vuln.Artifacts) == 1 && vuln.Artifacts[0].ArtifactName == artifactName
 }
 
-func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, cveRelationships map[string][]models.CVERelationShip) ScanDiff {
-
-	foundVulns = resolveCVERelationsAndReturnFilteredFoundVulns(foundVulns, existingVulns, cveRelationships)
+func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, existingVulns []models.DependencyVuln) ScanDiff {
 
 	diff := ScanDiff{
 		NewlyDiscovered:     make([]models.DependencyVuln, 0),

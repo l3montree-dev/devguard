@@ -5,8 +5,8 @@ import (
 	_ "embed"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -53,9 +53,9 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 		return
 	}
 
-	var jsonbScorecard *database.JSONB = nil
+	var jsonbScorecard *databasetypes.JSONB = nil
 	if projectResp.Scorecard != nil {
-		jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
+		jsonb, err := databasetypes.JSONBFromStruct(*projectResp.Scorecard)
 		if err != nil {
 			slog.Warn("could not convert scorecard to jsonb", "err", err)
 		} else {
@@ -151,10 +151,10 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 				}
 
-				var jsonbScorecard *database.JSONB = nil
+				var jsonbScorecard *databasetypes.JSONB = nil
 				var scoreCardScore *float64 = nil
 				if projectResp.Scorecard != nil {
-					jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
+					jsonb, err := databasetypes.JSONBFromStruct(*projectResp.Scorecard)
 					scoreCardScore = &projectResp.Scorecard.OverallScore
 
 					if err != nil {

@@ -90,21 +90,26 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 
 func NewAttestCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attest <predicate> [container-image]",
-		Short: "Create and upload an attestation for an image or artifact",
+		Use:               "attest <predicate> [container-image]",
+		Short:             "Create and upload an attestation for an image or artifact",
+		DisableAutoGenTag: true,
 		Long: `Create and upload an attestation for an OCI image or a local predicate file.
 
 The first argument is a path to a local predicate JSON file that will be used as
 the attestation payload. Optionally provide a container image reference as the
 second argument to attach the attestation to that image.
 
-Examples:
-	devguard-scanner attest predicate.json ghcr.io/org/image:tag
-	devguard-scanner attest predicate.json
-
 This command validates the predicate file exists, signs the upload using the
 configured token, and sends it to the DevGuard backend. The HTTP header
 X-Predicate-Type is populated from the --predicateType flag (required).`,
+		Example: `  # Attest a container image with a VEX predicate
+  devguard-scanner attest vex.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/vex/1.0
+
+  # Attest with SLSA provenance
+  devguard-scanner attest provenance.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
+
+  # Upload attestation without attaching to an image
+  devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestCmd(cmd, args)

@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -30,6 +31,8 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
+	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/vulndb"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -46,9 +49,9 @@ import (
 
 var release string // Will be filled at build time
 
-//	@title			devguard API
+//	@title			DevGuard API
 //	@version		v1
-//	@description	devguard API
+//	@description	DevGuard Backend. Secure your Software Supply Chain. Attestation-based compliance as Code, manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Security Framework Documentation made easy. OWASP Incubating Project
 
 //	@contact.name	Support
 //	@contact.url	https://github.com/l3montree-dev/devguard/issues
@@ -56,8 +59,26 @@ var release string // Will be filled at build time
 //	@license.name	AGPL-3
 //	@license.url	https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
 
-// @host		localhost:8080
-// @BasePath	/api/v1
+// @servers.url {scheme}://{host}:{port}/api/v1
+// @servers.description Development server
+// @servers.variables.enum scheme http
+// @servers.variables.enum scheme https
+// @servers.variables.default scheme http
+// @servers.variables.default host localhost
+// @servers.variables.default port 8080
+
+// @servers.url https://api.devguard.org/api/v1
+// @servers.description Production server
+
+//	@securityDefinitions.apikey	CookieAuth
+//	@in							cookie
+//	@name						ory_kratos_session
+//	@description				Session-based authentication using Ory Kratos
+
+// @securityDefinitions.apikey	PATAuth
+// @in							header
+// @name						X-Signature
+// @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck
@@ -71,34 +92,46 @@ func main() {
 			if err := recover(); err != nil {
 				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
 				sentry.CurrentHub().Recover(err)
-				// Wait for events to be send to server
+				monitoring.RecoverAndAlert("could not recover from panic in main", fmt.Errorf("panic: %v", err))
 				sentry.Flush(time.Second * 5)
 			}
 		}()
 	}
 
-	// Initialize database connection first
-	db, err := shared.DatabaseFactory()
-	if err != nil {
-		slog.Error(err.Error()) // print detailed error message to stdout
-		panic(errors.New("Failed to setup database connection"))
-	}
-
 	var daemonRunner shared.DaemonRunner
 
+	// Run database migrations using the existing database connection
+	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
+	db := database.NewGormDB(pool)
+
+	var err error
+
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if err = database.RunMigrations(nil); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
+	}
+
+	pool.Close()
+
 	app := fx.New(
-		// fx.NopLogger,
-		fx.Supply(db),
-		fx.Provide(database.BrokerFactory),
+		fx.NopLogger,
+		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
+		database.Module,
 		repositories.Module,
 		controllers.ControllerModule,
 		services.ServiceModule,
 		router.RouterModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
+		vulndb.Module,
 		daemons.Module,
-
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
@@ -131,15 +164,7 @@ func main() {
 		fx.Populate(&daemonRunner),
 	)
 
-	// Run database migrations using the existing database connection
-	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
 	if disableAutoMigrate != "true" {
-		slog.Info("running database migrations...")
-		if err := database.RunMigrationsWithDB(db); err != nil {
-			slog.Error("failed to run database migrations", "error", err)
-			panic(errors.New("Failed to run database migrations"))
-		}
-
 		// Run hash migrations if needed (when algorithm version changes)
 		if err := hashmigrations.RunHashMigrationsIfNeeded(db, daemonRunner); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
@@ -148,7 +173,6 @@ func main() {
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-
 	app.Run()
 }
 
