@@ -36,7 +36,7 @@ import (
 
 const (
 	DefaultMaliciousPackageRepo = "https://github.com/ossf/malicious-packages/archive/refs/heads/main.tar.gz"
-	BatchSize                   = 500 // Insert in batches to avoid memory spikes
+	BatchSize                   = 700 // Insert in batches to avoid memory spikes
 	malPkgNumOfGoRoutines       = 7
 )
 
@@ -98,15 +98,7 @@ func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	// channel to pass the file contents from the main routine to the processing Worker functions
 	fileJobs := make(chan []byte, malPkgNumOfGoRoutines*20)
 	// channel to pass the results of the processing functions to the database writer function
-	dbJobs := make(chan processingResults, malPkgNumOfGoRoutines*20)
-
-	defer func() {
-		// if we return with an error we need to clean up the open channels
-		if outError != nil {
-			close(fileJobs)
-			close(dbJobs)
-		}
-	}()
+	dbJobs := make(chan processingResults, BatchSize*2)
 
 	// start the processing worker functions
 	for range malPkgNumOfGoRoutines {
@@ -179,7 +171,6 @@ func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 			"crates.io", counts["crates.io"],
 		)
 	}
-
 	return nil
 }
 
@@ -190,6 +181,7 @@ type processingResults struct {
 
 // this functions grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
 func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, results chan processingResults) {
+	defer waitGroup.Done()
 	for data := range jobs {
 		var entry dtos.OSV
 		if err := json.Unmarshal(data, &entry); err != nil {
@@ -219,11 +211,11 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 			AffectedComponents: components,
 		}
 	}
-	waitGroup.Done()
 }
 
 // this function runs in the background an grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
 func (c MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
+	defer waitGroup.Done()
 	// stash the received results until the batch size threshold is reached
 	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
 	affectedComponentsBatch := make([]models.MaliciousAffectedComponent, 0, BatchSize*4)
@@ -261,7 +253,6 @@ func (c MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, job
 			slog.Error("Failed to upsert final affected components batch", "error", err)
 		}
 	}
-	waitGroup.Done()
 }
 
 // deletes all entries from the malicious packages/affected_components table, in a single transaction
