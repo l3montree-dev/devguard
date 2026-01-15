@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
@@ -689,9 +690,21 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 		}
 	}
 
-	// check if the root has children, if not we need to add components which are not part of any subtree
+	// check if the root has children; if not, we need to add dependency refs which are not part of any subtree as direct children of root
 	if len(tree.Root.Children) == 0 {
 		newDep := getDependencyRefsNotIncludedInAnySubtree(bom.Dependencies)
+
+		//check if the root is part of the new dependencies - if so, remove it and warn
+		if slices.Contains(*newDep, bom.Metadata.Component.BOMRef) {
+			slog.Warn("root component had no children - but was part of dependencies - removing from direct dependencies to avoid cycle", "rootRef", bom.Metadata.Component.BOMRef)
+			filteredDeps := []string{}
+			for _, dep := range *newDep {
+				if dep != bom.Metadata.Component.BOMRef {
+					filteredDeps = append(filteredDeps, dep)
+				}
+			}
+			newDep = &filteredDeps
+		}
 		*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
 			Ref:          bom.Metadata.Component.BOMRef,
 			Dependencies: newDep,
@@ -704,7 +717,6 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 				tree.AddChild(tree.Root, newNode(node))
 			}
 		}
-
 	}
 	// set the vulnerabilities after normalization
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
