@@ -209,6 +209,7 @@ func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
 			percentiles[i] = *percentileValue
 		}
 	}
+
 	sql := `UPDATE cves SET epss = new.epss, percentile = new.percentile
 	FROM (SELECT 
 	unnest($1::text[]) as cve,

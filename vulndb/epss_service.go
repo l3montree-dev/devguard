@@ -3,6 +3,7 @@ package vulndb
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -102,6 +103,9 @@ func (s epssService) Mirror() (currentErr error) {
 
 	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
 	tx := s.cveRepository.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("could not start new transaction: %s", tx.Error)
+	}
 	defer func() {
 		if currentErr != nil {
 			rollbackError := tx.Rollback().Error
