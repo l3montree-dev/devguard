@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -100,6 +101,8 @@ func generateDebianMappings(mapping *PackageMapping) error {
 	return nil
 }
 
+var neverMapToSource = []string{"linux"}
+
 func parseDebianPackages(url string, mapping map[string]string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -132,6 +135,9 @@ func parseDebianPackages(url string, mapping map[string]string) error {
 			currentPackage = after
 		} else if after0, ok0 := strings.CutPrefix(line, "Source: "); ok0 {
 			source := after0
+			if slices.Contains(neverMapToSource, source) {
+				continue
+			}
 			// Source field might contain version info like "glibc (2.31-1)"
 			// Extract just the package name
 			if idx := strings.Index(source, " "); idx > 0 {

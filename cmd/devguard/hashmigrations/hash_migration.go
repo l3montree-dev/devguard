@@ -7,10 +7,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -98,16 +98,16 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// }
 	*/
 
-	cveRepository := repositories.NewCVERepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	// cveRepository := repositories.NewCVERepository(db)
+	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
-	v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+	// v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	slog.Info("Syncing vulndb")
-	err := v.Mirror()
-	if err != nil {
-		return err
-	}
+	// err := v.Mirror()
+	// if err != nil {
+	//		return err
+	// }
 
 	allVulns, err := dependencyVulnRepository.All()
 	if err != nil {
@@ -128,9 +128,7 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for purl, existingVulns := range vulnsByPurl {
 			i++
-			if i%100 == 0 {
-				slog.Info("Processing CVE hash migration for purl", "purl", purl, "index", i, "total", len(vulnsByPurl))
-			}
+
 			// parse the purl
 			parsedPurl, err := packageurl.FromString(purl)
 			if err != nil {
@@ -144,7 +142,7 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 			}
 
 			result := resolveCVERelations(existingVulns, vulnsInPackage)
-
+			slog.Info("Processing CVE hash migration for purl", "purl", purl, "index", i, "total", len(vulnsByPurl), "before_count", len(existingVulns), "after_count", len(vulnsInPackage), "creates", len(result.creates), "deletes", len(result.deletes))
 			// 1. Create all new vulns with copied state/artifacts/events
 			// Track already created vulns by their hash to avoid duplicates
 			createdVulnIDs := make(map[string]bool)
@@ -333,7 +331,7 @@ func resolveCVERelations(oldVulns []models.DependencyVuln, foundVulns []models.V
 
 func isRelatedCVE(cveID string, relationships []models.CVERelationship) bool {
 	for _, rel := range relationships {
-		if rel.TargetCVE == cveID {
+		if rel.TargetCVE == cveID && rel.RelationshipType == dtos.RelationshipTypeUpstream {
 			return true
 		}
 	}
