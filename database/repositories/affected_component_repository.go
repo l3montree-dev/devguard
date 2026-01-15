@@ -116,14 +116,14 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
 	names := make([]string, len(components))
 
 	// nil-able
-	namespaces := make([]string, len(components))
-	qualifiers := make([]string, len(components))
-	subpaths := make([]string, len(components))
-	versions := make([]string, len(components))
-	semversIntroduced := make([]string, len(components))
-	semversFixed := make([]string, len(components))
-	versionsIntroduced := make([]string, len(components))
-	versionsFixed := make([]string, len(components))
+	namespaces := make([]*string, len(components))
+	qualifiers := make([]*string, len(components))
+	subpaths := make([]*string, len(components))
+	versions := make([]*string, len(components))
+	semversIntroduced := make([]*string, len(components))
+	semversFixed := make([]*string, len(components))
+	versionsIntroduced := make([]*string, len(components))
+	versionsFixed := make([]*string, len(components))
 
 	for i := range components {
 		// non nil-able
@@ -136,19 +136,21 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
 		names[i] = components[i].Name
 
 		// nil-able
-		namespaces[i] = utils.SafeDereference(components[i].Namespace)
+		namespaces[i] = components[i].Namespace
 		if components[i].Qualifiers != nil {
 			b, _ := json.Marshal(components[i].Qualifiers)
-			qualifiers[i] = string(b)
+			s := string(b)
+			qualifiers[i] = &s
 		} else {
-			qualifiers[i] = "{}"
+			t := "{}"
+			qualifiers[i] = &t
 		}
-		subpaths[i] = utils.SafeDereference(components[i].Subpath)
-		versions[i] = utils.SafeDereference(components[i].Version)
-		semversIntroduced[i] = utils.SafeDereference(components[i].SemverIntroduced)
-		semversFixed[i] = utils.SafeDereference(components[i].SemverFixed)
-		versionsIntroduced[i] = utils.SafeDereference(components[i].VersionIntroduced)
-		versionsFixed[i] = utils.SafeDereference(components[i].VersionFixed)
+		subpaths[i] = components[i].Subpath
+		versions[i] = components[i].Version
+		semversIntroduced[i] = components[i].SemverIntroduced
+		semversFixed[i] = components[i].SemverFixed
+		versionsIntroduced[i] = components[i].VersionIntroduced
+		versionsFixed[i] = components[i].VersionFixed
 	}
 
 	query := `
@@ -165,8 +167,8 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
             unnest($9::text[])::jsonb,
             unnest($10::text[]),
             unnest($11::text[]),
-            NULLIF(unnest($12::text[]), '')::semver,
-            NULLIF(unnest($13::text[]), '')::semver,
+            unnest($12::text[])::semver,
+            unnest($13::text[])::semver,
             unnest($14::text[]),
 			unnest($15::text[])
 			ON CONFLICT (id) DO NOTHING`
