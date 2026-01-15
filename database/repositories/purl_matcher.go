@@ -18,6 +18,7 @@ package repositories
 import (
 	"strings"
 
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -76,7 +77,7 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 }
 
 // BuildVersionRangeQuery creates the database query for version range matching
-func BuildVersionRangeQuery(db *gorm.DB, normalizedVersion string) *gorm.DB {
+func buildVersionRangeQuery(db *gorm.DB, normalizedVersion string) *gorm.DB {
 	// Use GORM's group conditions to properly wrap OR clauses
 	return db.Where(
 		db.Session(&gorm.Session{NewDB: true}).Where("version = ?", normalizedVersion).
@@ -86,8 +87,29 @@ func BuildVersionRangeQuery(db *gorm.DB, normalizedVersion string) *gorm.DB {
 	)
 }
 
-func BuildEmptyVersionQuery(db *gorm.DB) *gorm.DB {
+func buildEmptyVersionQuery(db *gorm.DB) *gorm.DB {
 	return db.Where(
-		db.Session(&gorm.Session{NewDB: true}).Where("version IS NULL AND semver_introduced IS NULL AND semver_fixed IS NULL"),
+		db.Session(&gorm.Session{NewDB: true}).Where("version IS NULL AND semver_introduced IS NULL AND semver_fixed IS NULL AND version_introduced IS NULL AND version_fixed IS NULL"),
 	)
+}
+
+func BuildQueryBasedOnMatchContext(db *gorm.DB, ctx *normalize.PurlMatchContext) *gorm.DB {
+	query := db
+
+	switch ctx.HowToInterpretVersionString {
+	case normalize.ExactVersionString:
+		// Version is to be interpreted as exact string match only
+		query = query.Where("version = ?", ctx.NormalizedVersion)
+	case normalize.EmptyVersion:
+		// Version is empty, match only entries with no version info
+		query = buildEmptyVersionQuery(query)
+	case normalize.EcosystemSpecificVersion:
+		// Version is to be interpreted based on ecosystem-specific rules
+		// those rules CAN ONLY BE expressed in Golang code, not in SQL
+	case normalize.SemanticVersionString:
+		// Version is to be interpreted as semantic versioning range
+		query = buildVersionRangeQuery(query, ctx.NormalizedVersion)
+	}
+
+	return query
 }

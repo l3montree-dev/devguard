@@ -1149,7 +1149,7 @@ func createCVE2025_46569(db shared.DB) {
 		Type:               "golang",
 		Name:               "github.com/open-policy-agent/opa",
 		Namespace:          utils.Ptr(""),
-		Qualifiers:         utils.Ptr(""),
+		Qualifiers:         nil,
 		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 

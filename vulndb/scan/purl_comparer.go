@@ -16,8 +16,12 @@
 package scan
 
 import (
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/utils"
+
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/package-url/packageurl-go"
@@ -38,7 +42,7 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
 	ctx := normalize.ParsePurlForMatching(purl)
 
-	if ctx.EmptyVersion {
+	if ctx.HowToInterpretVersionString == normalize.EmptyVersion {
 		return []models.AffectedComponent{}, nil // No version = no results
 	}
 
@@ -48,16 +52,19 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	query := comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", ctx.SearchPurl)
 	query = repositories.BuildQualifierQuery(query, ctx.Qualifiers, ctx.Namespace)
 
-	var err error
-	if ctx.VersionIsValid != nil {
-		// Version isn't semantic versioning - do exact match only
-		err = query.Where("version = ?", ctx.NormalizedVersion).
-			Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
-			Find(&affectedComponents).Error
-	} else {
-		// Version is semantic versioning - check version ranges
-		query = repositories.BuildVersionRangeQuery(query, ctx.NormalizedVersion)
-		err = query.Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Find(&affectedComponents).Error
+	// build the query
+	query = repositories.BuildQueryBasedOnMatchContext(query, ctx)
+	err := query.
+		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
+		Find(&affectedComponents).Error
+	if err != nil {
+		slog.Error("error executing affected components query", "error", err)
+		return nil, err
+	}
+
+	if ctx.HowToInterpretVersionString == normalize.EcosystemSpecificVersion {
+		// Filter the results based on introduced/fixed versions or exact match
+		affectedComponents = filterMatchingComponentsByVersion(affectedComponents, ctx.NormalizedVersion)
 	}
 
 	return affectedComponents, err
@@ -91,4 +98,21 @@ func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.Vul
 	}
 
 	return vulnerabilities, nil
+}
+
+func filterMatchingComponentsByVersion(components []models.AffectedComponent, lookingForVersion string) []models.AffectedComponent {
+	matchingComponents := []models.AffectedComponent{}
+
+	for _, component := range components {
+		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, lookingForVersion, component.Type)
+		if err != nil {
+			slog.Warn("could not check version for affected component", "error", err, "lookingForVersion", lookingForVersion, "purl", component.PurlWithoutVersion, "introduced", utils.OrDefault(component.VersionIntroduced, "<nil>"), "fixed", utils.OrDefault(component.VersionFixed, "<nil>"))
+			continue
+		}
+		if match {
+			matchingComponents = append(matchingComponents, component)
+		}
+	}
+
+	return matchingComponents
 }

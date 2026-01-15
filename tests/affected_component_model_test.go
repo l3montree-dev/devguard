@@ -118,8 +118,8 @@ func TestFromOSV(t *testing.T) {
 		if *affectedComponents[0].Namespace != "" {
 			t.Errorf("Expected namespace to be '', got %s", *affectedComponents[0].Namespace)
 		}
-		if *affectedComponents[0].Qualifiers != "" {
-			t.Errorf("Expected qualifiers to be '', got %s", *affectedComponents[0].Qualifiers)
+		if affectedComponents[0].Qualifiers != nil {
+			t.Errorf("Expected qualifiers to be '', got %v", affectedComponents[0].Qualifiers)
 		}
 
 		// check the semver range

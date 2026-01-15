@@ -548,9 +548,9 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 		return nil, errors.Wrap(err, "could not load asset components")
 	}
 
-	existingComponentPurls := make(map[string]bool)
+	existingComponentID := make(map[string]bool)
 	for _, currentComponent := range assetComponents {
-		existingComponentPurls[currentComponent.Component.ID] = true
+		existingComponentID[currentComponent.Component.ID] = true
 	}
 
 	// we need to check if the SBOM is new or if it already exists.
@@ -579,16 +579,16 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 		component := bomRefMap[c.Ref]
 		// the sbom of a container image does not contain the scope. In a container image, we do not have
 		// anything like a deep nested dependency tree. Everything is a direct dependency.
-		componentPackageURL := normalize.Purl(component)
+		componentID := normalize.GetComponentID(component)
 		// create the direct dependency edge.
-		if _, ok := depExistMap["nil->"+componentPackageURL]; ok {
+		if _, ok := depExistMap["nil->"+componentID]; ok {
 			continue
 		}
-		depExistMap["nil->"+componentPackageURL] = true
+		depExistMap["nil->"+componentID] = true
 		dependencies = append(dependencies,
 			models.ComponentDependency{
 				ComponentID:  nil, // direct dependency - therefore set it to nil
-				DependencyID: componentPackageURL,
+				DependencyID: componentID,
 			},
 		)
 	}
@@ -596,25 +596,26 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	transitiveDependencies := *wholeAssetSBOM.GetTransitiveDependencies()
 	for _, c := range transitiveDependencies {
 		comp := bomRefMap[c.Ref]
-		compPackageURL := normalize.Purl(comp)
+		componentID := normalize.GetComponentID(comp)
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName := normalize.Purl(dep)
-			if _, ok := depExistMap[compPackageURL+"->"+depPurlOrName]; ok {
+			depComponentID := normalize.GetComponentID(dep)
+			if _, ok := depExistMap[componentID+"->"+depComponentID]; ok {
 				continue
 			}
-			depExistMap[compPackageURL+"->"+depPurlOrName] = true
+			depExistMap[componentID+"->"+depComponentID] = true
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentID:  utils.Ptr(compPackageURL),
-					DependencyID: depPurlOrName,
+					ComponentID:  utils.Ptr(componentID),
+					DependencyID: depComponentID,
 				},
 			)
 		}
 	}
 
 	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
-		if _, ok := existingComponentPurls[c.PackageURL]; !ok {
+		componentID := normalize.GetComponentID(c)
+		if _, ok := existingComponentID[componentID]; !ok {
 			components[c.PackageURL] = models.Component{
 				ID:            c.PackageURL,
 				ComponentType: dtos.ComponentType(c.Type),

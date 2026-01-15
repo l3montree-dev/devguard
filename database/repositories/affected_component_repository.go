@@ -15,6 +15,7 @@
 package repositories
 
 import (
+	"encoding/json"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -136,7 +137,12 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
 
 		// nil-able
 		namespaces[i] = utils.SafeDereference(components[i].Namespace)
-		qualifiers[i] = utils.SafeDereference(components[i].Qualifiers)
+		if components[i].Qualifiers != nil {
+			b, _ := json.Marshal(components[i].Qualifiers)
+			qualifiers[i] = string(b)
+		} else {
+			qualifiers[i] = "{}"
+		}
 		subpaths[i] = utils.SafeDereference(components[i].Subpath)
 		versions[i] = utils.SafeDereference(components[i].Version)
 		semversIntroduced[i] = utils.SafeDereference(components[i].SemverIntroduced)
@@ -156,7 +162,7 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
             unnest($6::text[]),
             unnest($7::text[]),
             unnest($8::text[]),
-            unnest($9::text[]),
+            unnest($9::text[])::jsonb,
             unnest($10::text[]),
             unnest($11::text[]),
             NULLIF(unnest($12::text[]), '')::semver,

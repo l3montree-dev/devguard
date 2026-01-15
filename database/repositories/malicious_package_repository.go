@@ -53,14 +53,8 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl package
 	// Align version matching behavior with PurlComparer:
 	// - If VersionIsValid is not nil, perform an exact version match.
 	// - Otherwise, fall back to semver range matching.
-	if ctx.VersionIsValid != nil {
-		query = query.Where("version = ?", ctx.NormalizedVersion)
-	} else if ctx.EmptyVersion {
-		query = BuildEmptyVersionQuery(query)
-	} else {
-		query = BuildVersionRangeQuery(query, ctx.NormalizedVersion)
-	}
-	err := query.Preload("MaliciousPackage").Find(&components).Error
+
+	err := BuildQueryBasedOnMatchContext(query, ctx).Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
 

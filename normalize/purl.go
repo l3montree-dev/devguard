@@ -3,27 +3,55 @@ package normalize
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 )
 
+type VersionInterpretationType string
+
+const (
+	ExactVersionString       VersionInterpretationType = "exact"
+	SemanticVersionString    VersionInterpretationType = "semver_range"
+	EmptyVersion             VersionInterpretationType = "empty_version"
+	EcosystemSpecificVersion VersionInterpretationType = "ecosystem_specific"
+)
+
 // PurlMatchContext holds the parsed purl information for matching
 type PurlMatchContext struct {
-	SearchPurl        string
-	NormalizedVersion string
-	VersionIsValid    error
-	Qualifiers        packageurl.Qualifiers
-	Namespace         string
-	EmptyVersion      bool
+	SearchPurl                  string
+	NormalizedVersion           string
+	HowToInterpretVersionString VersionInterpretationType
+	Qualifiers                  packageurl.Qualifiers
+	Namespace                   string
 }
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
 func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 	qualifier := purl.Qualifiers
+
+	var normalizedVersion string
+	var versionInterpretation VersionInterpretationType
+
 	// Try to normalize the version to semantic versioning format
-	normalizedVersion, versionIsValid := ConvertToSemver(purl.Version)
+	if purl.Version == "" {
+		versionInterpretation = EmptyVersion
+		normalizedVersion = ""
+	} else if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
+		versionInterpretation = EcosystemSpecificVersion
+		normalizedVersion = purl.Version
+	} else {
+		maybeSemver, err := ConvertToSemver(purl.Version)
+		if err == nil && normalizedVersion != "" {
+			versionInterpretation = SemanticVersionString
+			normalizedVersion = maybeSemver
+		} else {
+			versionInterpretation = ExactVersionString
+			normalizedVersion = purl.Version
+		}
+	}
 
 	// Create search key (purl without version)
 	purl.Version = ""
@@ -31,12 +59,11 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 	searchPurl := purl.ToString()
 
 	return &PurlMatchContext{
-		SearchPurl:        searchPurl,
-		NormalizedVersion: normalizedVersion,
-		VersionIsValid:    versionIsValid,
-		Qualifiers:        qualifier,
-		Namespace:         purl.Namespace,
-		EmptyVersion:      normalizedVersion == "",
+		SearchPurl:                  searchPurl,
+		NormalizedVersion:           normalizedVersion,
+		Qualifiers:                  qualifier,
+		Namespace:                   purl.Namespace,
+		HowToInterpretVersionString: versionInterpretation,
 	}
 }
 
@@ -54,9 +81,14 @@ func BeautifyPURL(pURL string) (string, error) {
 	}
 }
 
+func ToPurlWithoutVersion(purl packageurl.PackageURL) string {
+	purl.Version = ""
+	purl.Qualifiers = nil
+	return purl.ToString()
+}
+
 // returns the normalized purl AND the component type
 func normalizePurl(purl string) string {
-
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
 		purl, err := url.PathUnescape(purl)
@@ -74,7 +106,7 @@ func normalizePurl(purl string) string {
 	return purl
 }
 
-func Purl(component cdx.Component) string {
+func GetComponentID(component cdx.Component) string {
 	var purl string
 	if component.PackageURL != "" {
 		return component.PackageURL
@@ -104,7 +136,6 @@ func Purl(component cdx.Component) string {
 // limitations under the License.
 
 // PURL conversion utilities
-
 var PURLEcosystems = map[string]string{
 	"Alpine":    "apk",
 	"crates.io": "cargo",
@@ -182,4 +213,18 @@ func Purlify(artifactName string, assetVersionName string) string {
 	}
 
 	return base + qualifiers
+}
+
+func QualifiersMapToString(qualifiers map[string]string) string {
+	// create an URL string out of the qualifiers and sort them by key to ensure consistent hashing
+	qualifiersStr := ""
+	if len(qualifiers) > 0 {
+		var qualifierPairs []string
+		for key, value := range qualifiers {
+			qualifierPairs = append(qualifierPairs, fmt.Sprintf("%s=%s", key, value))
+		}
+		slices.Sort(qualifierPairs)
+		qualifiersStr = strings.Join(qualifierPairs, "&")
+	}
+	return qualifiersStr
 }

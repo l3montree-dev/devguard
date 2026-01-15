@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -60,6 +61,7 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 // this function handles the migration for importing new CVEs from the OSV.
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
 func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
+
 	/*slog.Info("start running cve migration...")
 
 	// Drop all foreign key constraints that reference cves table before deleting
@@ -96,16 +98,16 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// }
 	*/
 
-	// cveRepository := repositories.NewCVERepository(db)
-	//affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	cveRepository := repositories.NewCVERepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
-	//v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
+	v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	slog.Info("Syncing vulndb")
-	/*err = v.Mirror()
+	err := v.Mirror()
 	if err != nil {
 		return err
-	}*/
+	}
 
 	allVulns, err := dependencyVulnRepository.All()
 	if err != nil {
@@ -121,9 +123,14 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 
 	pc := scan.NewPurlComparer(db)
 
+	i := 0
 	// Wrap the entire migration in a single transaction
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for purl, existingVulns := range vulnsByPurl {
+			i++
+			if i%100 == 0 {
+				slog.Info("Processing CVE hash migration for purl", "purl", purl, "index", i, "total", len(vulnsByPurl))
+			}
 			// parse the purl
 			parsedPurl, err := packageurl.FromString(purl)
 			if err != nil {

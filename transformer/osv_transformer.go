@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
@@ -83,7 +84,7 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 					Type:               base.Type,
 					Name:               base.Name,
 					Namespace:          base.Namespace,
-					Qualifiers:         base.Qualifiers,
+					Qualifiers:         databasetypes.MustJSONBFromStruct(base.Qualifiers),
 					Subpath:            base.Subpath,
 					Version:            base.Version,
 					SemverIntroduced:   base.SemverIntroduced,
@@ -159,39 +160,36 @@ func affectedComponentBaseFromAffected(affected dtos.Affected) []models.Affected
 		return nil
 	}
 
-	qualifiersStr := purl.Qualifiers.String()
-	purlWithoutVersion := strings.Split(purlStr, "?")[0]
-
 	// Try processing ranges first
-	bases := processRanges(affected.Ranges, affected.Package.Ecosystem, purlWithoutVersion, purl, qualifiersStr)
+	bases := processRanges(affected.Ranges, affected.Package.Ecosystem, purl)
 
 	// If no ranges produced results, fall back to explicit versions
 	if len(bases) == 0 && len(affected.Versions) > 0 {
-		bases = processVersions(affected.Versions, affected.Package.Ecosystem, purlWithoutVersion, purl, qualifiersStr)
+		bases = processVersions(affected.Versions, affected.Package.Ecosystem, purl)
 	}
 
 	// If still nothing, all versions are affected
 	if len(bases) == 0 {
-		bases = []models.AffectedComponentBase{createBase(purlWithoutVersion, affected.Package.Ecosystem, purl, qualifiersStr, nil, nil, nil)}
+		bases = []models.AffectedComponentBase{createBase(affected.Package.Ecosystem, purl, nil, nil, nil, nil, nil)}
 	}
 
 	return bases
 }
 
-func processRanges(ranges []dtos.Range, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []models.AffectedComponentBase {
+func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
 	bases := make([]models.AffectedComponentBase, 0)
 
 	for _, r := range ranges {
 		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
 			// Try to process all ECOSYSTEM ranges - conversion will fail naturally if not compatible
-			bases = append(bases, processRange(r, ecosystem, purlWithoutVersion, purl, qualifiersStr)...)
+			bases = append(bases, processRange(r, ecosystem, purl)...)
 		}
 	}
 
 	return bases
 }
 
-func processRange(r dtos.Range, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []models.AffectedComponentBase {
+func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
 	bases := make([]models.AffectedComponentBase, 0)
 
 	for i := 0; i < len(r.Events); i += 2 {
@@ -201,50 +199,66 @@ func processRange(r dtos.Range, ecosystem, purlWithoutVersion string, purl packa
 			fixed = r.Events[i+1].Fixed
 		}
 
-		semverIntroduced, err := normalize.ConvertToSemver(introduced)
-		if err != nil {
-			continue
-		}
-
-		var semverFixed *string
-		if fixed != "" {
-			converted, err := normalize.ConvertToSemver(fixed)
-			if err != nil {
-				continue
+		// versionIntroduced and semverIntroduced should be nil if introduced is "0"
+		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
+		if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
+			if introduced != "0" && introduced != "" {
+				versionIntroduced = &introduced
 			}
-			semverFixed = &converted
+
+			if fixed != "" {
+				versionFixed = &fixed
+			}
+		} else {
+			if introduced != "0" && introduced != "" {
+				semverInt, err := normalize.ConvertToSemver(introduced)
+				if err != nil {
+					continue
+				}
+				semverIntroduced = &semverInt
+			}
+
+			if fixed != "" {
+				converted, err := normalize.ConvertToSemver(fixed)
+				if err != nil {
+					continue
+				}
+				semverFixed = &converted
+			}
 		}
 
-		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, &semverIntroduced, semverFixed, nil))
+		bases = append(bases, createBase(ecosystem, purl, semverIntroduced, semverFixed, nil, versionIntroduced, versionFixed))
 	}
 
 	return bases
 }
 
-func processVersions(versions []string, ecosystem, purlWithoutVersion string, purl packageurl.PackageURL, qualifiersStr string) []models.AffectedComponentBase {
+func processVersions(versions []string, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
 	bases := make([]models.AffectedComponentBase, 0, len(versions))
 
 	for _, v := range versions {
 		version := v
-		bases = append(bases, createBase(purlWithoutVersion, ecosystem, purl, qualifiersStr, nil, nil, &version))
+		bases = append(bases, createBase(ecosystem, purl, nil, nil, &version, nil, nil))
 	}
 
 	return bases
 }
 
-func createBase(purlWithoutVersion, ecosystem string, purl packageurl.PackageURL, qualifiersStr string, semverIntroduced, semverFixed, version *string) models.AffectedComponentBase {
+func createBase(ecosystem string, purl packageurl.PackageURL, semverIntroduced, semverFixed, version, versionIntroduced, versionFixed *string) models.AffectedComponentBase {
 	return models.AffectedComponentBase{
-		PurlWithoutVersion: purlWithoutVersion,
+		PurlWithoutVersion: normalize.ToPurlWithoutVersion(purl),
 		Ecosystem:          ecosystem,
 		Scheme:             "pkg",
 		Type:               purl.Type,
 		Name:               purl.Name,
 		Namespace:          &purl.Namespace,
-		Qualifiers:         &qualifiersStr,
+		Qualifiers:         purl.Qualifiers.Map(),
 		Subpath:            &purl.Subpath,
 		SemverIntroduced:   semverIntroduced,
 		SemverFixed:        semverFixed,
 		Version:            version,
+		VersionIntroduced:  versionIntroduced,
+		VersionFixed:       versionFixed,
 	}
 }
 

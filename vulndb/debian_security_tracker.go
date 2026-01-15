@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -172,7 +173,7 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 				Type:               "deb",
 				Name:               packageName,
 				Namespace:          utils.Ptr("debian"),
-				Qualifiers:         utils.Ptr("arch=source"),
+				Qualifiers:         databasetypes.JSONB{"arch": "source"},
 				Source:             "debian-security-tracker",
 				Version:            utils.Ptr(v),
 				// we just fake a semver version here

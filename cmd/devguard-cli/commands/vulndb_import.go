@@ -6,6 +6,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
@@ -25,8 +26,9 @@ func newImportCommand() *cobra.Command {
 				fx.NopLogger,
 				database.Module,
 				fx.Supply(database.GetPoolConfigFromEnv()),
-				vulndb.Module,
 				repositories.Module,
+				services.ServiceModule,
+				vulndb.Module,
 				fx.Invoke(func(
 					importService shared.VulnDBImportService,
 				) error {
