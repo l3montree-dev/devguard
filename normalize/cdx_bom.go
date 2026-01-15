@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	_ "embed"
-
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 )
@@ -433,7 +431,6 @@ type cdxBomNode struct {
 
 func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
-	component = applyPackageAlias(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
 
 	// if its a valid purl we expect this to be of type component -

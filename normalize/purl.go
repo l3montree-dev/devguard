@@ -30,6 +30,7 @@ type PurlMatchContext struct {
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
 func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
+	purl = applyPackageAliasToPurl(purl)
 	qualifier := purl.Qualifiers
 
 	var normalizedVersion string

@@ -11,9 +11,11 @@
         "ghinstallation",
         "gorm",
         "Kyverno",
+        "libc",
         "montree",
-        "pypi",
         "nolint",
+        "packageurl",
+        "pypi",
         "sarif",
         "Vulns"
     ],
