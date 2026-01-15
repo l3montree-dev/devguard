@@ -37,7 +37,7 @@ import (
 const (
 	DefaultMaliciousPackageRepo = "https://github.com/ossf/malicious-packages/archive/refs/heads/main.tar.gz"
 	BatchSize                   = 500 // Insert in batches to avoid memory spikes
-	malPkgNumOfGoRoutines       = 3
+	malPkgNumOfGoRoutines       = 7
 )
 
 // MaliciousPackageChecker checks packages against the malicious package database
@@ -91,31 +91,37 @@ func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	tr := tar.NewReader(gzr)
 
 	ecosystems := []string{"npm", "go", "maven", "pypi", "crates.io"}
-	waitGroupWorker := &sync.WaitGroup{}
-	waitGroupDB := &sync.WaitGroup{}
+	// need 2 different wait groups to handle the completion of the process functions independently of the completion of the db function
+	processWaitGroup := &sync.WaitGroup{}
+	dbWaitGroup := &sync.WaitGroup{}
 
-	fileJobs := make(chan []byte, malPkgNumOfGoRoutines*10)
-	dbJobs := make(chan processingResults, malPkgNumOfGoRoutines*10)
+	// channel to pass the file contents from the main routine to the processing Worker functions
+	fileJobs := make(chan []byte, malPkgNumOfGoRoutines*20)
+	// channel to pass the results of the processing functions to the database writer function
+	dbJobs := make(chan processingResults, malPkgNumOfGoRoutines*20)
 
 	defer func() {
+		// if we return with an error we need to clean up the open channels
 		if outError != nil {
 			close(fileJobs)
 			close(dbJobs)
 		}
 	}()
 
-	// start the worker functions
+	// start the processing worker functions
 	for range malPkgNumOfGoRoutines {
-		waitGroupWorker.Add(1)
-		go processMaliciousPackageFile(waitGroupWorker, fileJobs, dbJobs)
+		processWaitGroup.Add(1)
+		go processMaliciousPackageFile(processWaitGroup, fileJobs, dbJobs)
 	}
 
-	waitGroupDB.Add(1)
-	go c.dbWriterFunction(waitGroupDB, dbJobs)
+	// start the function which writes the malicious packages/components to the database when the batch SIze is reached
+	dbWaitGroup.Add(1)
+	go c.dbWriterFunction(dbWaitGroup, dbJobs)
 
 	slog.Info("start working...")
 	// feed the jobs into the worker functions
 	for {
+		// read the next file and determine if we want to process it
 		header, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
@@ -123,9 +129,12 @@ func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 			}
 			return fmt.Errorf("failed to read tar: %w", err)
 		}
+		// is this a file? is this a json file?
 		if !strings.HasSuffix(header.Name, ".json") || header.Typeflag != tar.TypeReg {
 			continue
 		}
+
+		// filter out ecosystems which we don't process
 		isTargetEcosystem := false
 		for _, eco := range ecosystems {
 			if strings.Contains(header.Name, "/osv/malicious/"+eco+"/") {
@@ -133,22 +142,24 @@ func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 				break
 			}
 		}
-
 		if !isTargetEcosystem {
 			continue
 		}
+
 		data, err := io.ReadAll(tr)
 		if err != nil {
 			slog.Debug("Failed to read file from tar", "name", header.Name, "error", err)
 			continue
 		}
-
+		// pass the data to processing functions
 		fileJobs <- data
 	}
+	// there are no more jobs to give so we close the channel and wait for the processing workers to finish
 	close(fileJobs)
-	waitGroupWorker.Wait()
+	processWaitGroup.Wait()
+	// when the processing workers are finished we can close the channel for the db jobs and wait for db to finish writing
 	close(dbJobs)
-	waitGroupDB.Wait()
+	dbWaitGroup.Wait()
 
 	// Add fake test packages
 	if err := c.loadFakePackages(); err != nil {
@@ -177,6 +188,7 @@ type processingResults struct {
 	AffectedComponents []models.MaliciousAffectedComponent
 }
 
+// this functions grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
 func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, results chan processingResults) {
 	for data := range jobs {
 		var entry dtos.OSV
@@ -200,6 +212,8 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 
 		// Create affected components
 		components := models.MaliciousAffectedComponentFromOSV(entry, entry.ID)
+
+		// send both as a job to the db writer function
 		results <- processingResults{
 			Package:            pkg,
 			AffectedComponents: components,
@@ -208,14 +222,18 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 	waitGroup.Done()
 }
 
+// this function runs in the background an grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
 func (c MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
-	total := 0
+	// stash the received results until the batch size threshold is reached
 	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
 	affectedComponentsBatch := make([]models.MaliciousAffectedComponent, 0, BatchSize*4)
+
+	total := 0
 	for job := range jobs {
 		packagesBatch = append(packagesBatch, job.Package)
 		affectedComponentsBatch = append(affectedComponentsBatch, job.AffectedComponents...)
 		if len(packagesBatch) >= BatchSize {
+			// if we reached the threshold save all to the db
 			if err := c.repository.UpsertPackages(packagesBatch); err != nil {
 				slog.Error("Failed to upsert packages batch", "error", err)
 			}
@@ -226,11 +244,12 @@ func (c MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, job
 			}
 			affectedComponentsBatch = affectedComponentsBatch[:0] // Reset slice
 			total += 1
-			if total*BatchSize%10000 == 0 {
+			if total*BatchSize%50000 == 0 {
 				slog.Info(fmt.Sprintf("processed %d Packages", total*BatchSize))
 			}
 		}
 	}
+
 	// Insert remaining batches
 	if len(packagesBatch) > 0 {
 		if err := c.repository.UpsertPackages(packagesBatch); err != nil {
