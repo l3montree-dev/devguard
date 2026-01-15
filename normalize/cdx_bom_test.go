@@ -47,6 +47,204 @@ func TestFromCdxBom(t *testing.T) {
 		assert.Contains(t, component.PackageURL, "test-component")
 	})
 
+	t.Run("root ref not in dependencies - single top-level component", func(t *testing.T) {
+		// This tests the case where the root BOMRef is NOT part of any dependency entry
+		// The function should find all components not referenced by any other dependency
+		// and add them as direct children of root
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			// Note: root is NOT in dependencies, only component-a has an entry
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/component-a@1.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
+
+		// Verify the component is reachable from root
+		components := result.GetComponents()
+		assert.NotNil(t, components)
+
+		// Check that component-a is included
+		found := false
+		for _, comp := range *components {
+			if comp.BOMRef == "pkg:npm/component-a@1.0.0" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "component-a should be reachable from root")
+
+		// Check that root has component-a as dependency
+		deps := result.GetDependencies()
+		assert.NotNil(t, deps)
+	})
+
+	t.Run("root ref not in dependencies - multiple top-level components", func(t *testing.T) {
+		// Tests case where multiple components are not referenced by any other dependency
+		// All should become direct children of root
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/component-b@2.0.0",
+					Name:       "component-b",
+					Version:    "2.0.0",
+					PackageURL: "pkg:npm/component-b@2.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			// Neither component is referenced by any other - both should become root children
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/component-a@1.0.0", Dependencies: &[]string{}},
+				{Ref: "pkg:npm/component-b@2.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
+		components := result.GetComponents()
+		assert.NotNil(t, components)
+
+		// Both components should be reachable
+		componentRefs := make(map[string]bool)
+		for _, comp := range *components {
+			componentRefs[comp.BOMRef] = true
+		}
+		assert.True(t, componentRefs["pkg:npm/component-a@1.0.0"], "component-a should be included")
+		assert.True(t, componentRefs["pkg:npm/component-b@2.0.0"], "component-b should be included")
+	})
+
+	t.Run("root ref not in dependencies - nested dependency tree", func(t *testing.T) {
+		// Tests case where there's a dependency tree but root is not connected
+		// Only top-level components (not referenced by others) should become root children
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/parent@1.0.0",
+					Name:       "parent",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/parent@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/child@1.0.0",
+					Name:       "child",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/child@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/grandchild@1.0.0",
+					Name:       "grandchild",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/grandchild@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			// parent -> child -> grandchild, but root is not connected
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/parent@1.0.0", Dependencies: &[]string{"pkg:npm/child@1.0.0"}},
+				{Ref: "pkg:npm/child@1.0.0", Dependencies: &[]string{"pkg:npm/grandchild@1.0.0"}},
+				{Ref: "pkg:npm/grandchild@1.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
+		components := result.GetComponents()
+		assert.NotNil(t, components)
+
+		// All components should be reachable (parent becomes root child, others through parent)
+		componentRefs := make(map[string]bool)
+		for _, comp := range *components {
+			componentRefs[comp.BOMRef] = true
+		}
+		assert.True(t, componentRefs["pkg:npm/parent@1.0.0"], "parent should be included")
+		assert.True(t, componentRefs["pkg:npm/child@1.0.0"], "child should be included")
+		assert.True(t, componentRefs["pkg:npm/grandchild@1.0.0"], "grandchild should be included")
+	})
+
+	t.Run("root ref not in dependencies - mixed top-level and nested", func(t *testing.T) {
+		// Tests case with multiple separate subtrees - each top-level should become root child
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "root",
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/tree1-root@1.0.0",
+					Name:       "tree1-root",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/tree1-root@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/tree1-child@1.0.0",
+					Name:       "tree1-child",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/tree1-child@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/tree2-root@1.0.0",
+					Name:       "tree2-root",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/tree2-root@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			// Two separate subtrees, neither connected to root
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/tree1-root@1.0.0", Dependencies: &[]string{"pkg:npm/tree1-child@1.0.0"}},
+				{Ref: "pkg:npm/tree1-child@1.0.0", Dependencies: &[]string{}},
+				{Ref: "pkg:npm/tree2-root@1.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := normalize.FromCdxBom(bom, artifactName, origin, "sbom")
+		components := result.GetComponents()
+		assert.NotNil(t, components)
+
+		// All three components should be reachable
+		componentRefs := make(map[string]bool)
+		for _, comp := range *components {
+			componentRefs[comp.BOMRef] = true
+		}
+		assert.True(t, componentRefs["pkg:npm/tree1-root@1.0.0"], "tree1-root should be included")
+		assert.True(t, componentRefs["pkg:npm/tree1-child@1.0.0"], "tree1-child should be included")
+		assert.True(t, componentRefs["pkg:npm/tree2-root@1.0.0"], "tree2-root should be included")
+	})
+
 }
 
 func TestMergeCdxBoms(t *testing.T) {

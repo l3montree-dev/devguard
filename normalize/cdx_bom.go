@@ -30,6 +30,31 @@ func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
 	bom.tree.ReplaceRoot(newRoot)
 }
 
+func getDependencyRefsNotIncludedInAnySubtree(dependencies *[]cdx.Dependency) *[]string {
+	// Collect all dependency refs
+	dependencyRefsNotInAnySubtree := make(map[string]struct{}, len(*dependencies))
+	for _, dependency := range *dependencies {
+		dependencyRefsNotInAnySubtree[dependency.Ref] = struct{}{}
+	}
+
+	// Remove refs that are children of any dependency (they are in a subtree)
+	for _, dep := range *dependencies {
+		if dep.Dependencies != nil {
+			for _, child := range *dep.Dependencies {
+				delete(dependencyRefsNotInAnySubtree, child)
+			}
+		}
+	}
+
+	// Collect remaining refs (these are not in any subtree)
+	newDependencyRefs := make([]string, 0, len(dependencyRefsNotInAnySubtree))
+	for depRef := range dependencyRefsNotInAnySubtree {
+		newDependencyRefs = append(newDependencyRefs, depRef)
+	}
+
+	return &newDependencyRefs
+}
+
 func (bom *CdxBom) AddDirectChildWhichInheritsChildren(parent cdxBomNode, child cdxBomNode) {
 	bom.tree.AddDirectChildWhichInheritsChildren(parent, child)
 }
@@ -662,6 +687,24 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 		if !tree.Reachable(ref) {
 			tree.AddChild(tree.Root, newNode(node))
 		}
+	}
+
+	// check if the root has children, if not we need to add components which are not part of any subtree
+	if len(tree.Root.Children) == 0 {
+		newDep := getDependencyRefsNotIncludedInAnySubtree(bom.Dependencies)
+		*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
+			Ref:          bom.Metadata.Component.BOMRef,
+			Dependencies: newDep,
+		})
+
+		// rebuild the tree
+		tree = BuildDependencyTree(newCdxBomNode(bom.Metadata.Component), sbomNodes, buildDependencyMap(*bom.Dependencies))
+		for ref, node := range vulnerableRefs {
+			if !tree.Reachable(ref) {
+				tree.AddChild(tree.Root, newNode(node))
+			}
+		}
+
 	}
 	// set the vulnerabilities after normalization
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
