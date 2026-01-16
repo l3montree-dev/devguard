@@ -48,15 +48,15 @@ type MaliciousPackageChecker struct {
 
 func NewMaliciousPackageChecker(
 	repository *repositories.MaliciousPackageRepository,
-) (MaliciousPackageChecker, error) {
-	return MaliciousPackageChecker{
+) (*MaliciousPackageChecker, error) {
+	return &MaliciousPackageChecker{
 		repository: repository,
 		repoURL:    DefaultMaliciousPackageRepo,
 	}, nil
 }
 
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
-func (c MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
+func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	tx := c.repository.GetDB().Begin()
 	if err := tx.Error; err != nil {
 		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
@@ -179,7 +179,7 @@ type processingResults struct {
 	AffectedComponents []models.MaliciousAffectedComponent
 }
 
-// this functions grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
+// this function grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
 func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, results chan processingResults) {
 	defer waitGroup.Done()
 	for data := range jobs {
@@ -213,8 +213,8 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 	}
 }
 
-// this function runs in the background an grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
-func (c MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
+// this function runs in the background and grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
+func (c *MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
 	defer waitGroup.Done()
 	// stash the received results until the batch size threshold is reached
 	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
@@ -324,7 +324,7 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 	return c.repository.UpsertAffectedComponents(affectedComponents)
 }
 
-func (c MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
+func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
 	// Build a purl for the package
 	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
 

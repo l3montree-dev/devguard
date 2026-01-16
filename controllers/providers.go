@@ -62,7 +62,7 @@ func ProvideMaliciousPackageChecker(
 	}
 
 	slog.Info("Malicious package firewall enabled")
-	return &checker
+	return checker
 }
 
 // ControllerModule provides all HTTP controller constructors

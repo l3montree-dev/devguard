@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
@@ -30,8 +31,8 @@ func newSyncCommand() *cobra.Command {
 Use --databases flag to sync specific sources only.`,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// after, _ := cmd.Flags().GetString("after")
-			// startIndex, _ := cmd.Flags().GetInt("startIndex")
+			after, _ := cmd.Flags().GetString("after")
+			startIndex, _ := cmd.Flags().GetInt("startIndex")
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			shared.LoadConfig() // nolint
@@ -50,98 +51,98 @@ Use --databases flag to sync specific sources only.`,
 					exploitRepository shared.ExploitRepository,
 					maliciousPackageChecker shared.MaliciousPackageChecker,
 				) error {
-					// nvdService := vulndb.NewNVDService(cveRepository)
-					// mitreService := vulndb.NewMitreService(cweRepository)
-					// epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-					// osvService := vulndb.NewOSVService(affectedCmpRepository)
-					// debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
-					// expoitDBService := vulndb.NewExploitDBService(nvdService, exploitRepository)
-					// githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
+					nvdService := vulndb.NewNVDService(cveRepository)
+					mitreService := vulndb.NewMitreService(cweRepository)
+					epssService := vulndb.NewEPSSService(nvdService, cveRepository)
+					osvService := vulndb.NewOSVService(affectedCmpRepository)
+					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
+					expoitDBService := vulndb.NewExploitDBService(nvdService, exploitRepository)
+					githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
 
-					// if emptyOrContains(databasesToSync, "cwe") {
-					// 	now := time.Now()
-					// 	slog.Info("starting cwe database sync")
-					// 	if err := mitreService.Mirror(); err != nil {
-					// 		slog.Error("could not mirror cwe database", "err", err)
-					// 	}
-					// 	slog.Info("finished cwe database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "cwe") {
+						now := time.Now()
+						slog.Info("starting cwe database sync")
+						if err := mitreService.Mirror(); err != nil {
+							slog.Error("could not mirror cwe database", "err", err)
+						}
+						slog.Info("finished cwe database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "nvd") {
-					// 	slog.Info("starting nvd database sync")
-					// 	now := time.Now()
-					// 	if after != "" {
-					// 		// we do a partial sync
-					// 		// try to parse the date
-					// 		afterDate, err := time.Parse("2006-01-02", after)
-					// 		if err != nil {
-					// 			slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-					// 		}
-					// 		err = nvdService.FetchAfter(afterDate)
-					// 		if err != nil {
-					// 			slog.Error("could not fetch after date", "err", err)
-					// 		}
-					// 	} else {
-					// 		if startIndex != 0 {
-					// 			err := nvdService.FetchAfterIndex(startIndex)
-					// 			if err != nil {
-					// 				slog.Error("could not fetch after index", "err", err)
-					// 			}
-					// 		} else {
-					// 			err := nvdService.Sync()
-					// 			if err != nil {
-					// 				slog.Error("could not do initial sync", "err", err)
-					// 			}
-					// 		}
-					// 	}
-					// 	slog.Info("finished nvd database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "nvd") {
+						slog.Info("starting nvd database sync")
+						now := time.Now()
+						if after != "" {
+							// we do a partial sync
+							// try to parse the date
+							afterDate, err := time.Parse("2006-01-02", after)
+							if err != nil {
+								slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
+							}
+							err = nvdService.FetchAfter(afterDate)
+							if err != nil {
+								slog.Error("could not fetch after date", "err", err)
+							}
+						} else {
+							if startIndex != 0 {
+								err := nvdService.FetchAfterIndex(startIndex)
+								if err != nil {
+									slog.Error("could not fetch after index", "err", err)
+								}
+							} else {
+								err := nvdService.Sync()
+								if err != nil {
+									slog.Error("could not do initial sync", "err", err)
+								}
+							}
+						}
+						slog.Info("finished nvd database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "epss") {
-					// 	slog.Info("starting epss database sync")
-					// 	now := time.Now()
+					if emptyOrContains(databasesToSync, "epss") {
+						slog.Info("starting epss database sync")
+						now := time.Now()
 
-					// 	if err := epssService.Mirror(); err != nil {
-					// 		slog.Error("could not sync epss database", "err", err)
-					// 	}
-					// 	slog.Info("finished epss database sync", "duration", time.Since(now))
-					// }
+						if err := epssService.Mirror(); err != nil {
+							slog.Error("could not sync epss database", "err", err)
+						}
+						slog.Info("finished epss database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "osv") {
-					// 	slog.Info("starting osv database sync")
-					// 	now := time.Now()
-					// 	if err := osvService.Mirror(); err != nil {
-					// 		slog.Error("could not sync osv database", "err", err)
-					// 	}
-					// 	slog.Info("finished osv database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "osv") {
+						slog.Info("starting osv database sync")
+						now := time.Now()
+						if err := osvService.Mirror(); err != nil {
+							slog.Error("could not sync osv database", "err", err)
+						}
+						slog.Info("finished osv database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "exploitdb") {
-					// 	slog.Info("starting exploitdb database sync")
-					// 	now := time.Now()
-					// 	if err := expoitDBService.Mirror(); err != nil {
-					// 		slog.Error("could not sync exploitdb database", "err", err)
-					// 	}
-					// 	slog.Info("finished exploitdb database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "exploitdb") {
+						slog.Info("starting exploitdb database sync")
+						now := time.Now()
+						if err := expoitDBService.Mirror(); err != nil {
+							slog.Error("could not sync exploitdb database", "err", err)
+						}
+						slog.Info("finished exploitdb database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "github-poc") {
-					// 	slog.Info("starting github-poc database sync")
-					// 	now := time.Now()
-					// 	if err := githubExploitDBService.Mirror(); err != nil {
-					// 		slog.Error("could not sync github-poc database", "err", err)
-					// 	}
-					// 	slog.Info("finished github-poc database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "github-poc") {
+						slog.Info("starting github-poc database sync")
+						now := time.Now()
+						if err := githubExploitDBService.Mirror(); err != nil {
+							slog.Error("could not sync github-poc database", "err", err)
+						}
+						slog.Info("finished github-poc database sync", "duration", time.Since(now))
+					}
 
-					// if emptyOrContains(databasesToSync, "dsa") {
-					// 	slog.Info("starting dsa database sync")
-					// 	now := time.Now()
-					// 	if err := debianSecurityTracker.Mirror(); err != nil {
-					// 		slog.Error("could not sync dsa database", "err", err)
-					// 	}
-					// 	slog.Info("finished dsa database sync", "duration", time.Since(now))
-					// }
+					if emptyOrContains(databasesToSync, "dsa") {
+						slog.Info("starting dsa database sync")
+						now := time.Now()
+						if err := debianSecurityTracker.Mirror(); err != nil {
+							slog.Error("could not sync dsa database", "err", err)
+						}
+						slog.Info("finished dsa database sync", "duration", time.Since(now))
+					}
 
 					if emptyOrContains(databasesToSync, "malicious-packages") {
 						slog.Info("starting malicious packages database sync")

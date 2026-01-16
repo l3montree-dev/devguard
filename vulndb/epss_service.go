@@ -104,7 +104,7 @@ func (s epssService) Mirror() (currentErr error) {
 	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
 	tx := s.cveRepository.Begin()
 	if tx.Error != nil {
-		return fmt.Errorf("could not start new transaction: %s", tx.Error)
+		return fmt.Errorf("could not start new transaction: %w", tx.Error)
 	}
 	defer func() {
 		if currentErr != nil {
