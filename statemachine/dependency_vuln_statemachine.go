@@ -20,6 +20,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -199,10 +200,20 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 				Apply(currentVuln, ev)
 			}
 
+			// Update VulnHash on events to match current branch vulnerability
+			currentHash := currentVuln.CalculateHash()
+			eventsWithCorrectHash := make([]models.VulnEvent, len(events))
+			for i, ev := range events {
+				ev.VulnID = currentHash
+				// Clear the ID so GORM creates a new event instead of updating the old one
+				ev.ID = uuid.Nil
+				eventsWithCorrectHash[i] = ev
+			}
+
 			match := BranchVulnMatch[T]{
 				CurrentBranchVuln: currentVuln,
 				OtherBranchVulns:  matchingVulns,
-				EventsToCopy:      events,
+				EventsToCopy:      eventsWithCorrectHash,
 			}
 
 			diff.ExistingOnOtherBranches = append(diff.ExistingOnOtherBranches, match)

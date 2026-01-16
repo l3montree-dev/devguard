@@ -55,7 +55,7 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 	// build the query
 	query = repositories.BuildQueryBasedOnMatchContext(query, ctx)
 	err := query.
-		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Debug().
+		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
 		Find(&affectedComponents).Error
 	if err != nil {
 		slog.Error("error executing affected components query", "error", err)

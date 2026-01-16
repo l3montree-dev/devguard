@@ -26,7 +26,7 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 	dependencyVulns := []models.DependencyVuln{}
 	var err error
 	if artifactName == nil && assetVersionName == nil {
-		err = r.db.Debug().Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
