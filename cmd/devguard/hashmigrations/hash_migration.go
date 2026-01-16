@@ -109,10 +109,10 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 		return err
 	}
 	// the import will create foreign keys we need to disable temporarily
-	vulndb.DISABLE_FOREIGN_KEY_FIX = true
+	vulndb.DisableForeignKeyFix = true
 	// slog.Info("Step 1: Importing new vulnDB state")
 	err = v.ImportFromDiff(nil)
-	vulndb.DISABLE_FOREIGN_KEY_FIX = false
+	vulndb.DisableForeignKeyFix = false
 	return err
 }
 
@@ -124,7 +124,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		Addr: ":8080",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("migration in progress"))
+			w.Write([]byte("migration in progress")) //nolint:errcheck
 		}),
 	}
 

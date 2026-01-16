@@ -272,10 +272,10 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 	return nil
 }
 
-var DISABLE_FOREIGN_KEY_FIX = false
+var DisableForeignKeyFix = false
 
 func MakeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
-	if DISABLE_FOREIGN_KEY_FIX {
+	if DisableForeignKeyFix {
 		slog.Info("foreign key fix is disabled, skipping...")
 		return nil
 	}

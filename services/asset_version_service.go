@@ -387,45 +387,6 @@ type Diffable interface {
 	GetEvents() []models.VulnEvent
 }
 
-func diffVulnsBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
-	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
-	newDetectedButOnOtherBranchExisting := make([]T, 0)
-	existingEvents := make([][]models.VulnEvent, 0)
-
-	// Create a map of existing vulnerabilities by hash for quick lookup
-	existingVulnsMap := make(map[string][]T)
-	for _, vuln := range existingVulns {
-		hash := vuln.AssetVersionIndependentHash()
-		existingVulnsMap[hash] = append(existingVulnsMap[hash], vuln)
-	}
-
-	for _, newDetectedVuln := range foundVulnerabilities {
-		hash := newDetectedVuln.AssetVersionIndependentHash()
-		if existingVulns, ok := existingVulnsMap[hash]; ok {
-
-			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
-
-			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
-			for _, existingVuln := range existingVulns {
-
-				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
-					return ev.OriginalAssetVersionName == nil && ev.Type != dtos.EventTypeRawRiskAssessmentUpdated
-				})
-
-				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
-					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
-					return event
-				})...)
-			}
-			existingEvents = append(existingEvents, existingVulnEventsOnOtherBranch)
-		} else {
-			newDetectedVulnsNotOnOtherBranch = append(newDetectedVulnsNotOnOtherBranch, newDetectedVuln)
-		}
-	}
-
-	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
-}
-
 func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
