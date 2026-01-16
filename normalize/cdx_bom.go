@@ -549,7 +549,7 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersion
 
 	bom.Vulnerabilities = &vulns
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
@@ -607,7 +607,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func newCdxBom(bom *cdx.BOM) *CdxBom {
@@ -618,6 +618,9 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	}
 	if bom.Dependencies == nil {
 		bom.Dependencies = &[]cdx.Dependency{}
+	}
+	if bom.Metadata == nil {
+		bom.Metadata = &cdx.Metadata{}
 	}
 	if bom.Metadata.Component == nil {
 		bom = addFakeMetadataRootComponent(bom)
@@ -879,7 +882,7 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
+func fromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
 	rootPurl := ""
 	if artifactName != "" {
 		rootPurl = Purlify(artifactName, assetVersionName)
