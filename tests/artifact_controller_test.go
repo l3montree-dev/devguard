@@ -64,6 +64,17 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		}
 		assert.NoError(t, f.DB.Create(&cve).Error)
 
+		// Create components (required by foreign key constraint)
+		component1 := models.Component{
+			ID: "pkg:npm/vulnerable-package@1.0.0",
+		}
+		assert.NoError(t, f.DB.Create(&component1).Error)
+
+		component2 := models.Component{
+			ID: "pkg:npm/multi-artifact-package@1.0.0",
+		}
+		assert.NoError(t, f.DB.Create(&component2).Error)
+
 		t.Run("should close ticket for vulnerability that only belongs to deleted artifact", func(t *testing.T) {
 			// Create a vulnerability that only belongs to artifact1
 			vuln1 := models.DependencyVuln{

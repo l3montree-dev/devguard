@@ -207,6 +207,20 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		panic(err)
 	}
 
+	// create the components referenced by the dependency vulns
+	component1 := models.Component{
+		ID: "pkg:npm/next@14.2.13",
+	}
+	if err = db.Create(&component1).Error; err != nil {
+		panic(err)
+	}
+	component2 := models.Component{
+		ID: "pkg:npm/axios@1.7.7",
+	}
+	if err = db.Create(&component2).Error; err != nil {
+		panic(err)
+	}
+
 	//create our 2 dependency vuln referencing the cve
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},

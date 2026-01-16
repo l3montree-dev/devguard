@@ -413,7 +413,7 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 					}
 
 					if err != nil {
-						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						continue
 					}

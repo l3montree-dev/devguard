@@ -199,9 +199,19 @@ func PurlToEcosystem(purlType string) string {
 }
 
 func Purlify(artifactName string, assetVersionName string) string {
-	// the artifactName might contain qualifiers like pkg:oci/k8s-tools?repository_url=registry.opencode.de/open-code/oci/k8s-tool&tag=main-amd64
-	// we want to remove them for the purl normalization
-	// the correct purl for this would be pkg:oci/k8s-tools@main?repository_url=registry.opencode.de/open-code/oci/k8s-tools&tag=main-amd64
+	const (
+		defaultType    = "generic"
+		defaultName    = "unknown"
+		defaultVersion = "0.0.0"
+	)
+
+	// Version default
+	version := assetVersionName
+	if version == "" {
+		version = defaultVersion
+	}
+
+	// Split qualifiers
 	parts := strings.SplitN(artifactName, "?", 2)
 	base := parts[0]
 	var qualifiers string
@@ -209,11 +219,30 @@ func Purlify(artifactName string, assetVersionName string) string {
 		qualifiers = "?" + parts[1]
 	}
 
-	if assetVersionName != "" {
-		base = fmt.Sprintf("%s@%s", base, assetVersionName)
+	// Remove existing version if present
+	if at := strings.LastIndex(base, "@"); at != -1 {
+		base = base[:at]
 	}
 
-	return base + qualifiers
+	// If not a purl, treat artifactName as the name
+	if !strings.HasPrefix(base, "pkg:") {
+		name := strings.Trim(base, "/")
+		if name == "" {
+			name = defaultName
+		}
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, name)
+	}
+
+	// Validate structure after pkg:
+	afterScheme := strings.TrimPrefix(base, "pkg:")
+	if afterScheme == "" || strings.HasSuffix(afterScheme, "/") {
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, defaultName)
+	} else if !strings.Contains(afterScheme, "/") {
+		// missing type/name separator
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, afterScheme)
+	}
+
+	return base + "@" + version + qualifiers
 }
 
 func QualifiersMapToString(qualifiers map[string]string) string {
