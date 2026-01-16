@@ -2,6 +2,7 @@ package hashmigrations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -39,6 +40,19 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	db := database.NewGormDB(pool)
 	err := db.Where("key = ?", HashMigrationVersionKey).First(&config).Error
 
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		config = models.Config{
+			Key: HashMigrationVersionKey,
+			Val: "0",
+		}
+		// save initial version
+		if err := db.Create(&config).Error; err != nil {
+			return fmt.Errorf("failed to initialize hash migration version: %w", err)
+		}
+
+		err = nil
+
+	}
 	currentVersion := 0
 	if err == nil {
 		// Parse the version from config
