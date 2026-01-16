@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -56,19 +57,19 @@ func (mp MaliciousPackage) ToOSV() dtos.OSV {
 
 // AffectedComponentBase contains common fields for both CVE and malicious package affected components
 type AffectedComponentBase struct {
-	PurlWithoutVersion string            `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem          string            `json:"ecosystem" gorm:"type:text;"`
-	Scheme             string            `json:"scheme" gorm:"type:text;"`
-	Type               string            `json:"type" gorm:"type:text;"`
-	Name               string            `json:"name" gorm:"type:text;"`
-	Namespace          *string           `json:"namespace" gorm:"type:text;"`
-	Qualifiers         map[string]string `json:"qualifiers" gorm:"type:text;"`
-	Subpath            *string           `json:"subpath" gorm:"type:text;"`
-	Version            *string           `json:"version" gorm:"index"`
-	SemverIntroduced   *string           `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed        *string           `json:"semverEnd" gorm:"type:semver;index"`
-	VersionIntroduced  *string           `json:"versionIntroduced" gorm:"index"`
-	VersionFixed       *string           `json:"versionFixed" gorm:"index"`
+	PurlWithoutVersion string              `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string              `json:"ecosystem" gorm:"type:text;"`
+	Scheme             string              `json:"scheme" gorm:"type:text;"`
+	Type               string              `json:"type" gorm:"type:text;"`
+	Name               string              `json:"name" gorm:"type:text;"`
+	Namespace          *string             `json:"namespace" gorm:"type:text;"`
+	Qualifiers         databasetypes.JSONB `json:"qualifiers" gorm:"type:text;"`
+	Subpath            *string             `json:"subpath" gorm:"type:text;"`
+	Version            *string             `json:"version" gorm:"index"`
+	SemverIntroduced   *string             `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed        *string             `json:"semverEnd" gorm:"type:semver;index"`
+	VersionIntroduced  *string             `json:"versionIntroduced" gorm:"index"`
+	VersionFixed       *string             `json:"versionFixed" gorm:"index"`
 }
 
 func (base AffectedComponentBase) calculateBaseHash(prefix string) string {
@@ -78,7 +79,7 @@ func (base AffectedComponentBase) calculateBaseHash(prefix string) string {
 		base.Ecosystem,
 		base.Name,
 		utils.SafeDereference(base.Namespace),
-		normalize.QualifiersMapToString(base.Qualifiers),
+		normalize.QualifiersMapToString(convertToStringMap(base.Qualifiers)),
 		utils.SafeDereference(base.Subpath),
 		utils.SafeDereference(base.Version),
 		utils.SafeDereference(base.SemverIntroduced),
