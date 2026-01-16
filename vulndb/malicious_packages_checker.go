@@ -262,8 +262,13 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
-	// Build a purl for the package
-	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	// Build a purl for the package (include version for proper version matching)
+	var purl string
+	if version != "" {
+		purl = fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
+	} else {
+		purl = fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	}
 
 	// Parse to normalize
 	parsedPurl, err := packageurl.FromString(purl)
