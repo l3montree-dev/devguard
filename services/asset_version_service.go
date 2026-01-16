@@ -445,7 +445,7 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
 
-	diff := statemachine.DiffScanResults(artifactName, existingDependencyVulns, existingDependencyVulns)
+	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
