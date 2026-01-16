@@ -213,8 +213,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 // Function to dynamically change the format of the table row depending on the input parameters
 func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO) table.Row {
-	var cvss float32 = 0.0
-	cvss = v.CVE.CVSS
+	cvss := v.CVE.CVSS
 
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
 		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
