@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
@@ -26,6 +27,31 @@ type CdxBom struct {
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
 	bom.tree.ReplaceRoot(newRoot)
+}
+
+func getDependencyRefsNotIncludedInAnySubtree(dependencies *[]cdx.Dependency) *[]string {
+	// Collect all dependency refs
+	dependencyRefsNotInAnySubtree := make(map[string]struct{}, len(*dependencies))
+	for _, dependency := range *dependencies {
+		dependencyRefsNotInAnySubtree[dependency.Ref] = struct{}{}
+	}
+
+	// Remove refs that are children of any dependency (they are in a subtree)
+	for _, dep := range *dependencies {
+		if dep.Dependencies != nil {
+			for _, child := range *dep.Dependencies {
+				delete(dependencyRefsNotInAnySubtree, child)
+			}
+		}
+	}
+
+	// Collect remaining refs (these are not in any subtree)
+	newDependencyRefs := make([]string, 0, len(dependencyRefsNotInAnySubtree))
+	for depRef := range dependencyRefsNotInAnySubtree {
+		newDependencyRefs = append(newDependencyRefs, depRef)
+	}
+
+	return &newDependencyRefs
 }
 
 func (bom *CdxBom) AddDirectChildWhichInheritsChildren(parent cdxBomNode, child cdxBomNode) {
@@ -655,6 +681,35 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	for ref, node := range vulnerableRefs {
 		if !tree.Reachable(ref) {
 			tree.AddChild(tree.Root, newNode(node))
+		}
+	}
+
+	// check if the root has children; if not, we need to add dependency refs which are not part of any subtree as direct children of root
+	if len(tree.Root.Children) == 0 {
+		newDep := getDependencyRefsNotIncludedInAnySubtree(bom.Dependencies)
+
+		//check if the root is part of the new dependencies - if so, remove it and warn
+		if slices.Contains(*newDep, bom.Metadata.Component.BOMRef) {
+			slog.Warn("root component had no children - but was part of dependencies - removing from direct dependencies to avoid cycle", "rootRef", bom.Metadata.Component.BOMRef)
+			filteredDeps := []string{}
+			for _, dep := range *newDep {
+				if dep != bom.Metadata.Component.BOMRef {
+					filteredDeps = append(filteredDeps, dep)
+				}
+			}
+			newDep = &filteredDeps
+		}
+		*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
+			Ref:          bom.Metadata.Component.BOMRef,
+			Dependencies: newDep,
+		})
+
+		// rebuild the tree
+		tree = BuildDependencyTree(newCdxBomNode(bom.Metadata.Component), sbomNodes, buildDependencyMap(*bom.Dependencies))
+		for ref, node := range vulnerableRefs {
+			if !tree.Reachable(ref) {
+				tree.AddChild(tree.Root, newNode(node))
+			}
 		}
 	}
 	// set the vulnerabilities after normalization
