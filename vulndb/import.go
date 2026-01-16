@@ -274,7 +274,7 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 
 var DISABLE_FOREIGN_KEY_FIX = false
 
-func makeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+func MakeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
 	if DISABLE_FOREIGN_KEY_FIX {
 		slog.Info("foreign key fix is disabled, skipping...")
 		return nil
@@ -315,7 +315,14 @@ WHERE NOT EXISTS (
 );
 
 ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
- FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
+FOREIGN KEY (cve_id) REFERENCES cves(cve);
+ 
+ALTER TABLE ONLY public.cve_relationships 
+ADD CONSTRAINT fk_cve_relationships_cve 
+FOREIGN KEY (source_cve) REFERENCES public.cves(cve)
+ON UPDATE CASCADE ON DELETE CASCADE;
+
+`)
 	return err
 }
 
@@ -370,7 +377,7 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
-	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	err = MakeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
 	if err != nil {
 		return err
@@ -671,7 +678,7 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
-	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	err = MakeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 	if err != nil {
 		monitoring.Alert("failed to ensure foreign keys before dropping orphaned tables", err)
 		return fmt.Errorf("failed to ensure foreign keys before dropping orphaned tables: %w", err)

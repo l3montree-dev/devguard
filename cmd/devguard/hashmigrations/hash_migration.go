@@ -114,7 +114,6 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 	err = v.ImportFromDiff(nil)
 	vulndb.DISABLE_FOREIGN_KEY_FIX = false
 	return err
-
 }
 
 // this function handles the migration for importing new CVEs from the OSV.
@@ -422,7 +421,14 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			ON DELETE CASCADE ON UPDATE CASCADE;
 
 			ALTER TABLE ONLY public.cve_affected_component
-			ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components(id) ON UPDATE CASCADE ON DELETE CASCADE;
+			ADD CONSTRAINT fk_cve_affected_component_affected_component 
+			FOREIGN KEY (affected_component_id) REFERENCES public.affected_components(id) 
+			ON UPDATE CASCADE ON DELETE CASCADE;
+
+			ALTER TABLE ONLY public.cve_relationships 
+    		ADD CONSTRAINT fk_cve_relationships_cve 
+			FOREIGN KEY (source_cve) REFERENCES public.cves(cve)
+			ON UPDATE CASCADE ON DELETE CASCADE;
 		`).Error
 
 	if err != nil {
