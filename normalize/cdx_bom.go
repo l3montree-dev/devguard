@@ -99,7 +99,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 		}
 	}
 
-	visit(bom.tree.Root, 1)
+	visit(bom.tree.Root, 0)
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
 	for id := range bom.tree.cursors {
@@ -610,7 +610,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
-func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
+func newCdxBom(bom *cdx.BOM) *CdxBom {
 	// convert components to sbomNodes
 	// first make sure components exist
 	if bom.Components == nil {
@@ -879,8 +879,15 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
-	cdxBom := newCdxBom(bom, artifactName)
+func FromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
+	rootPurl := ""
+	if artifactName != "" {
+		rootPurl = Purlify(artifactName, assetVersionName)
+	} else {
+		rootPurl = Purlify(assetSlug, assetVersionName)
+	}
+
+	cdxBom := newCdxBom(bom)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     rootPurl,
 		Name:       rootPurl,
@@ -921,7 +928,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)
 	}
 
-	cdxBom := newCdxBom(bom, artifactName)
+	cdxBom := newCdxBom(bom)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     artifactName,
 		Name:       artifactName,
@@ -943,7 +950,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) *CdxBom {
+func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -956,7 +963,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) 
 
 	vulnMap := make(map[string]cdx.Vulnerability)
 
-	newBom := newCdxBom(merged, artifactName)
+	newBom := newCdxBom(merged)
 	for _, bom := range boms {
 		if bom == nil {
 			continue

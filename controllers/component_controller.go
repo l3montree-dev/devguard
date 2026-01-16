@@ -100,7 +100,7 @@ func (ComponentController ComponentController) ListPaged(ctx shared.Context) err
 
 	// make sure to only load valid purls
 	filter = append(filter, shared.FilterQuery{
-		Field:      "purl",
+		Field:      "component_dependencies.dependency_id",
 		FieldValue: "pkg:%",
 		Operator:   "like",
 	})

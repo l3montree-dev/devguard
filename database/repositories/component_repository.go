@@ -209,7 +209,7 @@ func (c *componentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionNa
     COUNT(DISTINCT cd.dependency_id) AS count
 	FROM license_risks AS lr
 	JOIN components AS c
-		ON lr.component_id = c.id
+		ON lr.component_purl = c.id
 	JOIN component_dependencies AS cd
 		ON c.id = cd.dependency_id
 	WHERE lr.state = ?
@@ -224,7 +224,7 @@ func (c *componentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionNa
 	RIGHT JOIN component_dependencies as cd
 	ON c.id = cd.dependency_id
 	WHERE NOT EXISTS
-	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_id = c.id AND lr.state = ?)
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.id AND lr.state = ?)
 	AND asset_version_name = ?
 	AND asset_id = ?
 	GROUP BY c.license`,

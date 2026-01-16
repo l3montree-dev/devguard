@@ -10,7 +10,7 @@ import (
 
 var rootMetadata = &cdx.Metadata{
 	Component: &cdx.Component{
-		BOMRef: "root",
+		BOMRef: "pkg:root",
 	},
 }
 
@@ -87,7 +87,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -150,7 +150,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(bom1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(bom2, "artifact-2", "test", "sbom"))
 
 		expected := &cdx.BOM{
 			Metadata: rootMetadata,
@@ -204,7 +204,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := normalize.MergeCdxBoms(rootMetadata, "merged-artifact", normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
+	merged := normalize.MergeCdxBoms(rootMetadata, normalize.FromCdxBom(b1, "artifact-1", "test", "sbom"), normalize.FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -492,7 +492,7 @@ func TestCalculateDepth(t *testing.T) {
 		bom := normalize.FromCdxBom(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -511,7 +511,7 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: "pkg:devguard/testorg/testgroup/testdepth",
 					Dependencies: &[]string{
 						"pkg:golang/a",
 					},
@@ -552,12 +552,12 @@ func TestCalculateDepth(t *testing.T) {
 		bom := normalize.FromCdxBom(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
 				},
 				{
 					BOMRef: "go.mod",
@@ -571,7 +571,7 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: "pkg:devguard/testorg/testgroup/testdepth",
 					Dependencies: &[]string{
 						"go.mod",
 					},
@@ -589,7 +589,7 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "artifact", "test", "origin")
+		}, "pkg:artifact", "test", "origin")
 
 		actual := bom.CalculateDepth()
 
@@ -608,32 +608,22 @@ func TestCalculateDepth(t *testing.T) {
 
 	t.Run("calculateDepth with empty tree", func(t *testing.T) {
 		bom := normalize.FromCdxBom(&cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "root",
-				},
-			},
 			Components:   &[]cdx.Component{},
 			Dependencies: &[]cdx.Dependency{},
-		}, "artifact", "test", "origin")
+		}, "pkg:artifact", "test", "origin")
 
 		actual := bom.CalculateDepth()
 
-		if len(actual) != 3 || actual["artifact"] != 1 && actual["test"] != 1 && actual["root"] != 1 {
+		if len(actual) != 3 || actual["pkg:artifact"] != 0 && actual["test"] != 1 && actual["root"] != 1 {
 			t.Errorf("expected depth map to contain only artifact and origin with depth 1, got %v", actual)
 		}
 	})
 
 	t.Run("calculate depth with vex AND sbom path", func(t *testing.T) {
 		bom := normalize.FromCdxBom(&cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "root",
-				},
-			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
 				},
 				{
 					BOMRef: "pkg:golang/a",
@@ -647,7 +637,7 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: "pkg:devguard/testorg/testgroup/testdepth",
 					Dependencies: &[]string{
 						"pkg:golang/a",
 					},
@@ -669,13 +659,13 @@ func TestCalculateDepth(t *testing.T) {
 					Dependencies: &[]string{},
 				},
 			},
-		}, "artifact", "test", "sbom")
+		}, "pkg:artifact", "test", "sbom")
 
 		// lets merge a vex that adds a false positive to golang/c
 		vex := normalize.FromCdxBom(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: "pkg:root",
 				},
 			},
 			Vulnerabilities: &[]cdx.Vulnerability{
@@ -688,8 +678,8 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "artifact", "test", "vex")
-		bom = normalize.MergeCdxBoms(rootMetadata, "artifact", bom, vex)
+		}, "pkg:artifact", "test", "vex")
+		bom = normalize.MergeCdxBoms(rootMetadata, bom, vex)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
