@@ -33,9 +33,9 @@ type ComponentProjectDTO struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard      map[string]any
-	ScoreCardScore *float64  `json:"scoreCardScore" gorm:"column:score_card_score"`
-	UpdatedAt      time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	ScoreCard      map[string]any `json:"scoreCard"`
+	ScoreCardScore *float64       `json:"scoreCardScore" gorm:"column:score_card_score"`
+	UpdatedAt      time.Time      `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 type ComponentDTO struct {
