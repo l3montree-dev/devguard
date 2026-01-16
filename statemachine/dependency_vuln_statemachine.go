@@ -110,7 +110,8 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 
 	// Process existing vulnerabilities: what disappeared?
 	for _, existing := range existingVulns {
-		if !foundSet.Contains(existing) {
+		foundVuln, ok := foundSet.Get(existing)
+		if !ok {
 			// This vulnerability was not found in current scan
 			if isOnlyFoundInArtifact(existing, artifactName) {
 				// Fixed everywhere (this was the only artifact reporting it)
@@ -120,6 +121,8 @@ func DiffScanResults(artifactName string, foundVulns []models.DependencyVuln, ex
 				diff.RemovedFromArtifact = append(diff.RemovedFromArtifact, existing)
 			}
 		} else {
+			// update the existing component_depth using the value from the found vulnerability
+			existing.ComponentDepth = foundVuln.ComponentDepth
 			// Still exists, nothing changed
 			diff.Unchanged = append(diff.Unchanged, existing)
 		}
