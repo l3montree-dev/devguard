@@ -84,6 +84,10 @@ func (bom *CdxBom) AddChild(parent *TreeNode[cdxBomNode], child *TreeNode[cdxBom
 
 func (bom *CdxBom) CalculateDepth() map[string]int {
 	depthMap := make(map[string]int)
+	// handle the case of an empty bom to avoid out of bounds slice access
+	if len(bom.tree.Root.Children) == 0 {
+		return depthMap
+	}
 
 	var visit func(node *TreeNode[cdxBomNode], depth int)
 	visit = func(node *TreeNode[cdxBomNode], depth int) {
@@ -101,7 +105,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 		}
 	}
 	// since the root of the sbom is the artifact itself we need to start counting at 0
-	visit(bom.tree.Root, 0)
+	visit(bom.tree.Root.Children[0], 1)
 
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
