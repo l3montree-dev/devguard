@@ -74,7 +74,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
@@ -126,7 +126,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
@@ -152,7 +152,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 0, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 		})
@@ -203,7 +203,7 @@ func TestScanning(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 		})
 
 		t.Run("should add the artifact, if the vulnerability is found with another artifact", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestScanning(t *testing.T) {
 			assert.Len(t, response.DependencyVulns, 1)
 
 			if len(response.DependencyVulns) > 0 {
-				assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+				assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 				assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, getArtifactNames(response.DependencyVulns[0].Artifacts))
 			}
 		})
@@ -339,6 +339,10 @@ func TestScanning(t *testing.T) {
 					newVuln = v
 				}
 			}
+
+			// Reload the vulnerability with Events preloaded
+			err = f.DB.Preload("Events").First(&newVuln, "id = ?", newVuln.ID).Error
+			assert.Nil(t, err)
 
 			assert.NotEmpty(t, newVuln.Events)
 			lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]

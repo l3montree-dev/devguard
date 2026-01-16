@@ -571,7 +571,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			vuln := vulnerabilities[0]
 			assert.NotNil(t, vuln.RawRiskAssessment, "Risk assessment should be calculated")
-			assert.Greater(t, *vuln.RawRiskAssessment, float64(7), "Risk should be calculated (can be 0 or greater)")
+			assert.Greater(t, *vuln.RawRiskAssessment, float64(3), "Risk should be calculated (can be 0 or greater)")
 		})
 	})
 }

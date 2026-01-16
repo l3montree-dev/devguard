@@ -311,7 +311,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 		distinctFields = append(distinctFields, f.GetField())
 	}
 
-	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") *"
+	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") component_dependencies.*"
 
 	if search != "" {
 		query = query.Where("dependency_id ILIKE ?", "pkg:%"+search+"%")

@@ -616,8 +616,8 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
 		componentID := normalize.GetComponentID(c)
 		if _, ok := existingComponentID[componentID]; !ok {
-			components[c.PackageURL] = models.Component{
-				ID:            c.PackageURL,
+			components[componentID] = models.Component{
+				ID:            componentID,
 				ComponentType: dtos.ComponentType(c.Type),
 			}
 		}

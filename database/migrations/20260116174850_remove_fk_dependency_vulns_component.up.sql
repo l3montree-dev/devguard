@@ -1,0 +1,2 @@
+ALTER TABLE public.dependency_vulns
+DROP CONSTRAINT IF EXISTS fk_dependency_vulns_component;
