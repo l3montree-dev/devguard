@@ -426,10 +426,8 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 		if !ok {
 			if len(existingVuln.Artifacts) == 1 && existingVuln.Artifacts[0].ArtifactName == currentArtifactName {
 				// before we append the existingVuln we check if the found Vuln has any updated attributes and apply those
-				existingVuln = returnVulnWithUpdatedAttributes(existingVuln, foundVuln)
 				fixedOnAll = append(fixedOnAll, existingVuln)
 			} else {
-				existingVuln = returnVulnWithUpdatedAttributes(existingVuln, foundVuln)
 				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVuln)
 			}
 		} else {
@@ -467,10 +465,10 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
 }
 
-// this functions checks if any (relevant) attribute changed between the new and the old state and returns the new state
+// this function checks if any (relevant) attribute changed between the new and the old state and returns the new state
 func returnVulnWithUpdatedAttributes(existingVuln models.DependencyVuln, foundVuln models.DependencyVuln) models.DependencyVuln {
 	// here we can list all attributes we want to keep a lookout for
-	// Attribute 1: check if the depth changed
+	// Attribute 1: check if the depth changed (+avoid nil pointer dereference)
 	if foundVuln.ComponentDepth != nil && existingVuln.ComponentDepth != nil && *foundVuln.ComponentDepth != *existingVuln.ComponentDepth {
 		existingVuln.ComponentDepth = foundVuln.ComponentDepth
 	}

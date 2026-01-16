@@ -292,6 +292,21 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName), "Should detect that current artifact found existing vulnerability for first time")
 		assert.Empty(t, fixedOnThisArtifactName, "BUG: Should be empty - current artifact was never detecting this vulnerability before!")
 	})
+	t.Run("should change the depth of existing vulnerabilities if the found vulns have a different depth", func(t *testing.T) {
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234"), ComponentDepth: utils.Ptr(7)},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234"), ComponentDepth: utils.Ptr(77), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
+		}
+
+		_, _, _, _, nothingChanged := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
+		assert.Len(t, nothingChanged, 1)
+		assert.Equal(t, *nothingChanged[0].ComponentDepth, 7)
+	})
 }
 
 func TestYamlMetadata(t *testing.T) {
