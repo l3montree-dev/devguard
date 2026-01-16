@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
@@ -84,6 +85,11 @@ func (bom *CdxBom) AddChild(parent *TreeNode[cdxBomNode], child *TreeNode[cdxBom
 
 func (bom *CdxBom) CalculateDepth() map[string]int {
 	depthMap := make(map[string]int)
+	// check if the bom is empty to avoid running into out of bounds slice access
+	if len(bom.tree.Root.Children) == 0 {
+		slog.Warn("empty sbom detected")
+		return depthMap
+	}
 
 	var visit func(node *TreeNode[cdxBomNode], depth int)
 	visit = func(node *TreeNode[cdxBomNode], depth int) {
