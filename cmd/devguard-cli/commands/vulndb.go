@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
@@ -63,16 +64,18 @@ func migrateDB() {
 		fx.New(
 			// fx.NopLogger,
 			fx.Supply(db),
+			fx.Provide(fx.Annotate(database.NewPostgreSQLBroker, fx.As(new(shared.PubSubBroker)))),
 			fx.Provide(database.NewPostgreSQLBroker),
 			fx.Provide(api.NewServer),
 			repositories.Module,
 			controllers.ControllerModule,
 			services.ServiceModule,
+			fx.Supply(pool),
 			router.RouterModule,
 			accesscontrol.AccessControlModule,
 			integrations.Module,
 			daemons.Module,
-
+			vulndb.Module,
 			// we need to invoke all routers to register their routes
 			fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 			fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
