@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -108,165 +110,207 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 		}
 	}
 
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Println("PURL INSPECTION RESULT")
-	fmt.Println(strings.Repeat("=", 80))
+	// Summary table
+	fmt.Println(text.FgHiCyan.Sprint("\nPURL INSPECTION RESULT"))
+	fmt.Println(strings.Repeat("─", 60))
 
-	fmt.Printf("\n%-20s %s\n", "Input PURL:", inputPurl)
-	fmt.Printf("%-20s %s\n", "Search PURL:", matchCtx.SearchPurl)
-	fmt.Printf("%-20s %s\n", "Version:", purl.Version)
-	fmt.Printf("%-20s %s\n", "Version Type:", matchCtx.HowToInterpretVersionString)
-	fmt.Printf("%-20s %s\n", "PURL Type:", purl.Type)
+	summaryTable := table.NewWriter()
+	summaryTable.SetStyle(table.StyleLight)
+	summaryTable.AppendRows([]table.Row{
+		{"Input PURL", inputPurl},
+		{"Search PURL", matchCtx.SearchPurl},
+		{"Version", purl.Version},
+		{"Version Type", matchCtx.HowToInterpretVersionString},
+		{"PURL Type", purl.Type},
+	})
 	if purl.Namespace != "" {
-		fmt.Printf("%-20s %s\n", "Namespace:", purl.Namespace)
+		summaryTable.AppendRow(table.Row{"Namespace", purl.Namespace})
 	}
 	if matchCtx.Qualifiers.String() != "" {
-		fmt.Printf("%-20s %s\n", "Qualifiers:", matchCtx.Qualifiers.String())
+		summaryTable.AppendRow(table.Row{"Qualifiers", matchCtx.Qualifiers.String()})
 	}
+	summaryTable.AppendSeparator()
+	summaryTable.AppendRows([]table.Row{
+		{"Affected Components", len(affectedComponents)},
+		{"Raw CVEs", len(rawCVEMap)},
+		{"After Deduplication", text.FgHiGreen.Sprintf("%d", len(dedupCVEMap))},
+	})
+	fmt.Println(summaryTable.Render())
 
-	fmt.Printf("\n%-20s %d\n", "Affected Cmps:", len(affectedComponents))
-	fmt.Printf("%-20s %d\n", "Raw CVEs:", len(rawCVEMap))
-	fmt.Printf("%-20s %d\n", "After Dedup:", len(dedupCVEMap))
 	// Show deduplication details
 	if len(removedByAlias) > 0 {
-		fmt.Println(strings.Repeat("-", 80))
-		fmt.Println("ALIAS DEDUPLICATION")
-		fmt.Println(strings.Repeat("-", 80))
-		fmt.Printf("\n%d CVE(s) removed as duplicates due to aliasing:\n", len(removedByAlias))
+		fmt.Println(text.FgHiYellow.Sprint("\nALIAS DEDUPLICATION"))
+		fmt.Println(strings.Repeat("─", 60))
+		fmt.Printf("%d CVE(s) removed as duplicates:\n", len(removedByAlias))
+
+		dedupTable := table.NewWriter()
+		dedupTable.SetStyle(table.StyleLight)
+		dedupTable.AppendHeader(table.Row{"Removed CVE", "Alias Of"})
+
 		for _, removedCVE := range removedByAlias {
 			if cve, exists := rawCVEMap[removedCVE]; exists {
-				// Find which CVE it's an alias of
-				aliasOf := ""
-				for _, rel := range cve.Relationships {
-					if rel.RelationshipType == "alias" {
-						if _, kept := dedupCVEMap[rel.TargetCVE]; kept {
-							aliasOf = rel.TargetCVE
-							break
-						}
-					}
-				}
-				// Also check if another CVE points to this one
-				if aliasOf == "" {
-					for keptCVE, keptVuln := range dedupCVEMap {
-						for _, rel := range keptVuln.CVE.Relationships {
-							if rel.RelationshipType == "alias" && rel.TargetCVE == removedCVE {
-								aliasOf = keptCVE
-								break
-							}
-						}
-						if aliasOf != "" {
-							break
-						}
-					}
-				}
+				aliasOf := findAliasOf(cve, dedupCVEMap, removedCVE)
 				if aliasOf != "" {
-					fmt.Printf("  - %s (alias of %s)\n", removedCVE, aliasOf)
+					dedupTable.AppendRow(table.Row{text.FgRed.Sprint(removedCVE), text.FgGreen.Sprint(aliasOf)})
 				} else {
-					fmt.Printf("  - %s\n", removedCVE)
+					dedupTable.AppendRow(table.Row{text.FgRed.Sprint(removedCVE), "-"})
 				}
 			}
 		}
+		fmt.Println(dedupTable.Render())
 	}
 
+	// CVE table
 	if len(rawCVEMap) > 0 {
-		fmt.Println(strings.Repeat("-", 80))
-		fmt.Println("MATCHED CVEs (after deduplication)")
-		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println(text.FgHiCyan.Sprint("\nMATCHED CVEs"))
+		fmt.Println(strings.Repeat("─", 60))
+
+		cveTable := table.NewWriter()
+		cveTable.SetStyle(table.StyleLight)
+		cveTable.AppendHeader(table.Row{"CVE", "CVSS", "EPSS", "CWEs", "Exploits", "Status"})
 
 		for _, cve := range rawCVEMap {
-			// Mark if this CVE was removed by deduplication
-			removed := ""
+			status := text.FgGreen.Sprint("KEPT")
 			if _, exists := dedupCVEMap[cve.CVE]; !exists {
-				removed = " [REMOVED - alias]"
+				status = text.FgRed.Sprint("REMOVED")
 			}
-			fmt.Printf("\n[%s]%s CVSS: %.1f\n", cve.CVE, removed, cve.CVSS)
+
+			epssStr := "-"
+			if cve.EPSS != nil {
+				epssStr = fmt.Sprintf("%.4f", *cve.EPSS)
+			}
+
+			cwes := []string{}
+			for _, w := range cve.Weaknesses {
+				cwes = append(cwes, w.CWEID)
+			}
+			cweStr := "-"
+			if len(cwes) > 0 {
+				cweStr = strings.Join(cwes, ", ")
+			}
+
+			exploitStr := "-"
+			if len(cve.Exploits) > 0 {
+				exploitStr = fmt.Sprintf("%d", len(cve.Exploits))
+			}
+
+			cvssColor := text.FgGreen
+			if cve.CVSS >= 7.0 {
+				cvssColor = text.FgRed
+			} else if cve.CVSS >= 4.0 {
+				cvssColor = text.FgYellow
+			}
+
+			cveTable.AppendRow(table.Row{
+				cve.CVE,
+				cvssColor.Sprintf("%.1f", cve.CVSS),
+				epssStr,
+				cweStr,
+				exploitStr,
+				status,
+			})
+		}
+		fmt.Println(cveTable.Render())
+
+		// Detailed CVE info
+		fmt.Println(text.FgHiCyan.Sprint("\nCVE DETAILS"))
+		fmt.Println(strings.Repeat("─", 60))
+		for _, cve := range rawCVEMap {
+			statusMark := text.FgGreen.Sprint("●")
+			if _, exists := dedupCVEMap[cve.CVE]; !exists {
+				statusMark = text.FgRed.Sprint("○")
+			}
+			fmt.Printf("%s %s (CVSS: %.1f)\n", statusMark, text.Bold.Sprint(cve.CVE), cve.CVSS)
 
 			desc := cve.Description
-			if len(desc) > 200 {
-				desc = desc[:200] + "..."
+			if len(desc) > 120 {
+				desc = desc[:120] + "..."
 			}
-			fmt.Printf("  Description: %s\n", desc)
-
-			if cve.EPSS != nil {
-				fmt.Printf("  EPSS: %.4f", *cve.EPSS)
-				if cve.Percentile != nil {
-					fmt.Printf(" (Percentile: %.2f%%)", *cve.Percentile*100)
-				}
-				fmt.Println()
-			}
-
-			if len(cve.Weaknesses) > 0 {
-				cwes := []string{}
-				for _, w := range cve.Weaknesses {
-					cwes = append(cwes, w.CWEID)
-				}
-				fmt.Printf("  CWEs: %s\n", strings.Join(cwes, ", "))
-			}
-
-			if len(cve.Exploits) > 0 {
-				fmt.Printf("  Exploits: %d known\n", len(cve.Exploits))
-				for _, e := range cve.Exploits {
-					verified := ""
-					if e.Verified {
-						verified = " [VERIFIED]"
-					}
-					fmt.Printf("    - %s%s\n", e.ID, verified)
-				}
-			}
+			fmt.Printf("   %s\n", text.FgHiBlack.Sprint(desc))
 
 			if len(cve.Relationships) > 0 {
-				fmt.Printf("  Relationships:\n")
+				rels := []string{}
 				for _, r := range cve.Relationships {
-					fmt.Printf("    - %s (%s)\n", r.TargetCVE, r.RelationshipType)
+					rels = append(rels, fmt.Sprintf("%s→%s", r.RelationshipType, r.TargetCVE))
 				}
+				fmt.Printf("   Relationships: %s\n", strings.Join(rels, ", "))
 			}
+			fmt.Println()
 		}
 	}
 
+	// Affected components table
 	if len(affectedComponents) > 0 {
-		fmt.Println(strings.Repeat("-", 80))
-		fmt.Println("AFFECTED COMPONENTS (matching rules)")
-		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println(text.FgHiCyan.Sprint("\nAFFECTED COMPONENTS"))
+		fmt.Println(strings.Repeat("─", 60))
+
+		acTable := table.NewWriter()
+		acTable.SetStyle(table.StyleLight)
+		acTable.AppendHeader(table.Row{"#", "PURL", "Source", "Version Range", "CVEs"})
 
 		for i, ac := range affectedComponents {
-			fmt.Printf("\n[%d] %s (source: %s)\n", i+1, ac.PurlWithoutVersion, ac.Source)
-
+			versionRange := "-"
 			if ac.Version != nil {
-				fmt.Printf("    Exact version: %s\n", *ac.Version)
-			}
-			if ac.SemverIntroduced != nil || ac.SemverFixed != nil {
-				intro := "<any>"
+				versionRange = fmt.Sprintf("=%s", *ac.Version)
+			} else if ac.SemverIntroduced != nil || ac.SemverFixed != nil {
+				intro := "0"
 				if ac.SemverIntroduced != nil {
 					intro = *ac.SemverIntroduced
 				}
-				fixed := "<unfixed>"
+				fixed := "∞"
 				if ac.SemverFixed != nil {
 					fixed = *ac.SemverFixed
 				}
-				fmt.Printf("    Semver range: [%s, %s)\n", intro, fixed)
-			}
-			if ac.VersionIntroduced != nil || ac.VersionFixed != nil {
-				intro := "<any>"
+				versionRange = fmt.Sprintf("[%s, %s)", intro, fixed)
+			} else if ac.VersionIntroduced != nil || ac.VersionFixed != nil {
+				intro := "0"
 				if ac.VersionIntroduced != nil {
 					intro = *ac.VersionIntroduced
 				}
-				fixed := "<unfixed>"
+				fixed := "∞"
 				if ac.VersionFixed != nil {
 					fixed = *ac.VersionFixed
 				}
-				fmt.Printf("    Version range: [%s, %s)\n", intro, fixed)
+				versionRange = fmt.Sprintf("[%s, %s)", intro, fixed)
 			}
 
 			cveIDs := []string{}
 			for _, cve := range ac.CVE {
 				cveIDs = append(cveIDs, cve.CVE)
 			}
-			fmt.Printf("    CVEs: %s\n", strings.Join(cveIDs, ", "))
+
+			acTable.AppendRow(table.Row{
+				i + 1,
+				ac.PurlWithoutVersion,
+				ac.Source,
+				versionRange,
+				strings.Join(cveIDs, ", "),
+			})
 		}
+		fmt.Println(acTable.Render())
 	}
 
 	fmt.Println()
-	fmt.Println(strings.Repeat("=", 80))
-
 	return nil
+}
+
+// findAliasOf finds which kept CVE the removed CVE is an alias of
+func findAliasOf(cve models.CVE, dedupCVEMap map[string]models.VulnInPackage, removedCVE string) string {
+	// Check if removed CVE points to a kept CVE
+	for _, rel := range cve.Relationships {
+		if rel.RelationshipType == "alias" {
+			if _, kept := dedupCVEMap[rel.TargetCVE]; kept {
+				return rel.TargetCVE
+			}
+		}
+	}
+	// Check if a kept CVE points to the removed CVE
+	for keptCVE, keptVuln := range dedupCVEMap {
+		for _, rel := range keptVuln.CVE.Relationships {
+			if rel.RelationshipType == "alias" && rel.TargetCVE == removedCVE {
+				return keptCVE
+			}
+		}
+	}
+	return ""
 }
