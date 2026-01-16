@@ -132,7 +132,7 @@ UPDATE public.component_dependencies SET dependency_purl = going_to_delete.tmp_p
 
 DELETE from public.components where tmp_purl != purl;
 
-DELETE FROM public.dependency_vulns WHERE NOT EXISTS(SELECT FROM components where component_purl = purl);
+DELETE FROM public.dependency_vulns WHERE NOT EXISTS(SELECT FROM public.components where component_purl = purl);
 
 DELETE FROM public.vuln_events ve WHERE ve.vuln_type = 'dependencyVuln' AND NOT EXISTS (
     SELECT public.dependency_vulns.id FROM public.dependency_vulns WHERE public.dependency_vulns.id = ve.vuln_id
