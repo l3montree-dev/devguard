@@ -60,9 +60,9 @@ func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- 
 	// recalculate risk for vulnerabilities
 	ch = monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, runner.RecalculateRiskForVulnerabilities)(ch, errChan)
 	// sync tickets
-	ch = monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(ch, errChan)
+	// ch = monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(ch, errChan)
 	// resolve differences in ticket state
-	ch = monitorStage(monitoring.ResolveDifferencesInTicketState, runner.ResolveDifferencesInTicketState)(ch, errChan)
+	// ch = monitorStage(monitoring.ResolveDifferencesInTicketState, runner.ResolveDifferencesInTicketState)(ch, errChan)
 	// collect stats
 	ch = monitorStage(monitoring.StatisticsUpdateDuration, runner.CollectStats)(ch, errChan)
 	utils.WaitForChannelDrain(ch)
@@ -413,7 +413,7 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 					}
 
 					if err != nil {
-						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						continue
 					}
@@ -462,7 +462,7 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 					}
 
 					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
+						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
 						return origin
 					}), func(el string) bool {
 						return strings.HasPrefix(el, "http")

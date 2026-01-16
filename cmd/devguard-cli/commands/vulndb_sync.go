@@ -31,8 +31,6 @@ func newSyncCommand() *cobra.Command {
 Use --databases flag to sync specific sources only.`,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			after, _ := cmd.Flags().GetString("after")
-			startIndex, _ := cmd.Flags().GetInt("startIndex")
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			shared.LoadConfig() // nolint
@@ -47,16 +45,17 @@ Use --databases flag to sync specific sources only.`,
 				fx.Invoke(func(
 					cveRepository shared.CveRepository,
 					cweRepository shared.CweRepository,
+					cveRelationshipRepository shared.CVERelationshipRepository,
 					affectedCmpRepository shared.AffectedComponentRepository,
 					exploitRepository shared.ExploitRepository,
 					maliciousPackageChecker shared.MaliciousPackageChecker,
 				) error {
-					nvdService := vulndb.NewNVDService(cveRepository)
+
 					mitreService := vulndb.NewMitreService(cweRepository)
-					epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-					osvService := vulndb.NewOSVService(affectedCmpRepository)
+					epssService := vulndb.NewEPSSService(cveRepository)
+					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
 					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
-					expoitDBService := vulndb.NewExploitDBService(nvdService, exploitRepository)
+					expoitDBService := vulndb.NewExploitDBService(exploitRepository)
 					githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
 
 					if emptyOrContains(databasesToSync, "cwe") {
@@ -66,36 +65,6 @@ Use --databases flag to sync specific sources only.`,
 							slog.Error("could not mirror cwe database", "err", err)
 						}
 						slog.Info("finished cwe database sync", "duration", time.Since(now))
-					}
-
-					if emptyOrContains(databasesToSync, "nvd") {
-						slog.Info("starting nvd database sync")
-						now := time.Now()
-						if after != "" {
-							// we do a partial sync
-							// try to parse the date
-							afterDate, err := time.Parse("2006-01-02", after)
-							if err != nil {
-								slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-							}
-							err = nvdService.FetchAfter(afterDate)
-							if err != nil {
-								slog.Error("could not fetch after date", "err", err)
-							}
-						} else {
-							if startIndex != 0 {
-								err := nvdService.FetchAfterIndex(startIndex)
-								if err != nil {
-									slog.Error("could not fetch after index", "err", err)
-								}
-							} else {
-								err := nvdService.Sync()
-								if err != nil {
-									slog.Error("could not do initial sync", "err", err)
-								}
-							}
-						}
-						slog.Info("finished nvd database sync", "duration", time.Since(now))
 					}
 
 					if emptyOrContains(databasesToSync, "epss") {
@@ -168,9 +137,7 @@ Use --databases flag to sync specific sources only.`,
 			return app.Stop(stopCtx)
 		},
 	}
-	syncCmd.Flags().String("after", "", "allows to only sync a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
-	syncCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa, malicious-packages")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, osv, dsa, malicious-packages")
 
 	return &syncCmd
 }

@@ -329,7 +329,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*Client, in
 
 func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
-	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -365,7 +365,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 			},
 			Description: description,
 			Labels:      labels,
-			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
+			Summary:     fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:")),
 		},
 	}
 
@@ -671,7 +671,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 }
 
 func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
-	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -709,7 +709,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 				AccountID: jiraIntegration.AccountID,
 			},
 			Description: GenerateADF(exp, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree),
-			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
+			Summary:     fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:")),
 		},
 	}
 

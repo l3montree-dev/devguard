@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected_component", "exploits", "malicious_packages", "malicious_affected_components"}
+var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected_component", "exploits", "malicious_packages", "malicious_affected_components", "cve_relationships"}
 
 // we are going to compare two tables to extract the diffs.
 // this means, for example for cve we need another cve table which holds the old state
@@ -84,13 +84,16 @@ func createDiffs(ctx context.Context, pool *pgxpool.Pool, tMinus1Table string, t
 
 	// query all the entries which are in the new table and not in the old table
 	var rows pgx.Rows
-	if len(primaryKeys) == 1 {
+	switch len(primaryKeys) {
+	case 1:
 		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL;", t0Table, tMinus1Table, primaryKeys[0], primaryKeys[0]))
-	} else if len(primaryKeys) == 2 {
+	case 2:
 		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL;", t0Table, tMinus1Table, primaryKeys[0]+", "+primaryKeys[1], primaryKeys[0], primaryKeys[1]))
-	} else {
-		slog.Error("3 or more primary keys in a table are not currently implemented", "table", t0Table)
-		return fmt.Errorf("3 or more primary keys in a table are not currently implemented")
+	case 3:
+		rows, err = conn.Query(ctx, fmt.Sprintf("SELECT new.* FROM %s new LEFT JOIN %s old USING (%s) WHERE old.%s IS NULL OR old.%s IS NULL OR old.%s IS NULL;", t0Table, tMinus1Table, primaryKeys[0]+", "+primaryKeys[1]+", "+primaryKeys[2], primaryKeys[0], primaryKeys[1], primaryKeys[2]))
+	default:
+		slog.Error("4 or more primary keys in a table are not currently implemented", "table", t0Table)
+		return fmt.Errorf("4 or more primary keys in a table are not currently implemented")
 	}
 	if err != nil {
 		return err

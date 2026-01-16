@@ -50,7 +50,7 @@ func TestGetExpectedIssueState(t *testing.T) {
 				State:                state,
 				ManualTicketCreation: manual,
 			},
-			CVE:               &models.CVE{CVSS: cvss},
+			CVE:               models.CVE{CVSS: cvss},
 			RawRiskAssessment: risk,
 		}
 	}

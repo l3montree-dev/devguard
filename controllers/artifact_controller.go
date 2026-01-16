@@ -205,7 +205,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	}
 
 	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
-		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyPurl)
+		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
 		return origin
 	}), func(el string) string {
 		return el
@@ -281,7 +281,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	comparison := utils.CompareSlices(utils.Map(body.InformationSources, informationSourceToString), utils.Map(oldSources, func(el models.ComponentDependency) string {
-		return el.DependencyPurl
+		return el.DependencyID
 	}), func(e string) string { return e })
 
 	toAdd := comparison.OnlyInA

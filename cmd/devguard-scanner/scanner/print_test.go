@@ -38,8 +38,8 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		componentFixedVersion := "Example Version"
 
 		v := dtos.DependencyVulnDTO{}
-		v.CVEID = &cveid
-		v.CVE = transformer.CVEToDTO(&models.CVE{
+		v.CVEID = cveid
+		v.CVE = transformer.CVEToDTO(models.CVE{
 			CVSS: 7.0,
 		})
 
@@ -64,8 +64,8 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		componentFixedVersion := "Example Version"
 
 		v := dtos.DependencyVulnDTO{}
-		v.CVEID = &cveid
-		v.CVE = transformer.CVEToDTO(&models.CVE{
+		v.CVEID = cveid
+		v.CVE = transformer.CVEToDTO(models.CVE{
 			CVSS: 7.0,
 		})
 		v.RawRiskAssessment = &rawRiskAssessment
@@ -101,23 +101,23 @@ func TestPrintScaResults(t *testing.T) {
 		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
-					CVEID:             utils.Ptr("CVE-2023-12345"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
+					CVEID:             "CVE-2023-12345",
+					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
 					State:             "closed",       // CLOSED vulnerability should not cause failure
 					RawRiskAssessment: utils.Ptr(9.5), // High risk but closed
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 9.0, // High CVSS but closed
 					}),
 				},
 				{
-					CVEID:             utils.Ptr("CVE-2023-67890"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib2@v1.0.0"),
+					CVEID:             "CVE-2023-67890",
+					ComponentPurl:     "pkg:golang/github.com/example/lib2@v1.0.0",
 					State:             "accepted",      // ACCEPTED vulnerability should not cause failure
 					RawRiskAssessment: utils.Ptr(10.0), // High risk but accepted
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-67890",
 						CVSS: 9.8, // High CVSS but accepted
 					}),
@@ -156,12 +156,12 @@ func TestPrintScaResults(t *testing.T) {
 				scanResponse := dtos.ScanResponse{
 					DependencyVulns: []dtos.DependencyVulnDTO{
 						{
-							CVEID:             utils.Ptr("CVE-2023-12345"),
-							ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
+							CVEID:             "CVE-2023-12345",
+							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
 							State:             "open",
 							RawRiskAssessment: utils.Ptr(tc.risk),
 							AssetVersionName:  "main",
-							CVE: transformer.CVEToDTO(&models.CVE{
+							CVE: transformer.CVEToDTO(models.CVE{
 								CVE:  "CVE-2023-12345",
 								CVSS: 5.0,
 							}),
@@ -206,12 +206,12 @@ func TestPrintScaResults(t *testing.T) {
 				scanResponse := dtos.ScanResponse{
 					DependencyVulns: []dtos.DependencyVulnDTO{
 						{
-							CVEID:             utils.Ptr("CVE-2023-12345"),
-							ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
+							CVEID:             "CVE-2023-12345",
+							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
 							State:             "open",
 							RawRiskAssessment: utils.Ptr(1.0),
 							AssetVersionName:  "main",
-							CVE: transformer.CVEToDTO(&models.CVE{
+							CVE: transformer.CVEToDTO(models.CVE{
 								CVE:  "CVE-2023-12345",
 								CVSS: tc.cvss,
 							}),
@@ -232,72 +232,49 @@ func TestPrintScaResults(t *testing.T) {
 		}
 	})
 
-	// Test edge cases
-	t.Run("should handle vulnerabilities without CVE (no CVSS)", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{
-				{
-					CVEID:             nil, // No CVE ID
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
-					State:             "open",
-					RawRiskAssessment: utils.Ptr(5.0),
-					AssetVersionName:  "main",
-					CVE:               nil, // No CVE data - should default CVSS to 0.0
-				},
-			},
-			AmountOpened: 1,
-			AmountClosed: 0,
-		}
-
-		// Should fail on risk but pass on CVSS (defaults to 0.0)
-		err := PrintScaResults(scanResponse, "medium", "critical", assetName, webUI)
-		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "max risk exceeds threshold 5.00")
-	})
-
 	t.Run("should only consider OPEN vulnerabilities - mixed states scenario", func(t *testing.T) {
 		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
-					CVEID:             utils.Ptr("CVE-2023-12345"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib1@v1.0.0"),
+					CVEID:             "CVE-2023-12345",
+					ComponentPurl:     "pkg:golang/github.com/example/lib1@v1.0.0",
 					State:             "open", // OPEN - should be considered
 					RawRiskAssessment: utils.Ptr(3.0),
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 5.0,
 					}),
 				},
 				{
-					CVEID:             utils.Ptr("CVE-2023-67890"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib2@v2.0.0"),
+					CVEID:             "CVE-2023-67890",
+					ComponentPurl:     "pkg:golang/github.com/example/lib2@v2.0.0",
 					State:             "open",         // OPEN - should be considered (highest values)
 					RawRiskAssessment: utils.Ptr(8.5), // Higher risk
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-67890",
 						CVSS: 7.8, // Higher CVSS
 					}),
 				},
 				{
-					CVEID:             utils.Ptr("CVE-2023-11111"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib3@v3.0.0"),
+					CVEID:             "CVE-2023-11111",
+					ComponentPurl:     "pkg:golang/github.com/example/lib3@v3.0.0",
 					State:             "closed",        // CLOSED - should be IGNORED even though it has highest values
 					RawRiskAssessment: utils.Ptr(10.0), // Highest risk but closed
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-11111",
 						CVSS: 10.0, // Highest CVSS but closed
 					}),
 				},
 				{
-					CVEID:             utils.Ptr("CVE-2023-22222"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib4@v4.0.0"),
+					CVEID:             "CVE-2023-22222",
+					ComponentPurl:     "pkg:golang/github.com/example/lib4@v4.0.0",
 					State:             "accepted",     // ACCEPTED - should be IGNORED even though it has highest values
 					RawRiskAssessment: utils.Ptr(9.8), // Very high risk but accepted
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-22222",
 						CVSS: 9.9, // Very high CVSS but accepted
 					}),
@@ -322,12 +299,12 @@ func TestPrintScaResults(t *testing.T) {
 		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
-					CVEID:             utils.Ptr("CVE-2023-12345"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
+					CVEID:             "CVE-2023-12345",
+					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
 					State:             "open",
 					RawRiskAssessment: nil, // Should default to 0
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 5.0,
 					}),
@@ -346,12 +323,12 @@ func TestPrintScaResults(t *testing.T) {
 		scanResponse := dtos.ScanResponse{
 			DependencyVulns: []dtos.DependencyVulnDTO{
 				{
-					CVEID:             utils.Ptr("CVE-2023-12345"),
-					ComponentPurl:     utils.Ptr("pkg:golang/github.com/example/lib@v1.0.0"),
+					CVEID:             "CVE-2023-12345",
+					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
 					State:             "open",
 					RawRiskAssessment: utils.Ptr(10.0),
 					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(&models.CVE{
+					CVE: transformer.CVEToDTO(models.CVE{
 						CVE:  "CVE-2023-12345",
 						CVSS: 10.0,
 					}),

@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
@@ -363,7 +364,8 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		// create a new event based on the comment
 		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, vuln.GetScannerIDsOrArtifactNames())
 
-		vulnEvent.Apply(vuln)
+		statemachine.Apply(vuln, vulnEvent)
+
 		// save the vuln and the event in a transaction
 		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
 			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
@@ -789,7 +791,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 
 func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, orgSlug, projectSlug, owner, repo string) error {
 
-	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -805,7 +807,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 	labels := commonint.GetLabels(dependencyVuln)
 	issueRequest := &github.IssueRequest{
 		State:  github.String(expectedIssueState.ToGithub()),
-		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
+		Title:  github.String(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
 		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
 		Labels: &labels,
 	}
@@ -950,7 +952,7 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 }
 
 func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	riskMetrics, vector := vulndb.RiskCalculation(*dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -962,8 +964,8 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	}
 
 	issue := &github.IssueRequest{
-		Title: github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID),
-			utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
+		Title: github.String(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,
+			utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
 		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
 		Labels: &labels,
 	}

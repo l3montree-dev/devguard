@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
@@ -161,6 +162,8 @@ type CveRepository interface {
 	FindCVE(tx DB, id string) (models.CVE, error)
 	FindCVEs(tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
+	CreateCVEWithConflictHandling(tx DB, cve *models.CVE) error
+	CreateCVEAffectedComponentsEntries(tx DB, cve *models.CVE, components []models.AffectedComponent) error
 }
 
 type CweRepository interface {
@@ -179,6 +182,7 @@ type AffectedComponentRepository interface {
 	Save(tx DB, affectedComponent *models.AffectedComponent) error
 	SaveBatch(tx DB, affectedPkgs []models.AffectedComponent) error
 	DeleteAll(tx DB, ecosystem string) error
+	CreateAffectedComponentsUsingUnnest(tx DB, components []models.AffectedComponent) error
 }
 
 type MaliciousPackageChecker interface {
@@ -343,7 +347,7 @@ type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
 	UserDetectedDependencyVulns(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, upstream dtos.UpstreamState) error
-	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error)
@@ -383,7 +387,7 @@ type AssetVersionRepository interface {
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
-	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
@@ -524,6 +528,13 @@ type ComponentService interface {
 	GetLicense(component models.Component) (models.Component, error)
 	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
 	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
+}
+
+type CVERelationshipRepository interface {
+	utils.Repository[string, models.CVERelationship, DB]
+	GetAllRelationsForCVE(tx DB, targetCVEID string) ([]models.CVERelationship, error)
+	GetAllRelationshipsForCVEBatch(tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
+	FilterOutRelationsWithInvalidTargetCVE(tx DB) error
 }
 
 type LicenseRiskService interface {

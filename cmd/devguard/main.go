@@ -26,6 +26,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/cmd/devguard/hashmigrations"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -97,9 +98,10 @@ func main() {
 		}()
 	}
 
+	var daemonRunner shared.DaemonRunner
+
 	// Run database migrations using the existing database connection
 	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
-	db := database.NewGormDB(pool)
 
 	var err error
 
@@ -110,17 +112,9 @@ func main() {
 			slog.Error("failed to run database migrations", "error", err)
 			panic(errors.New("Failed to run database migrations"))
 		}
-
-		// Run hash migrations if needed (when algorithm version changes)
-		if err := vulndb.RunHashMigrationsIfNeeded(db); err != nil {
-			slog.Error("failed to run hash migrations", "error", err)
-			panic(errors.New("Failed to run hash migrations"))
-		}
 	} else {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-
-	pool.Close()
 
 	app := fx.New(
 		fx.NopLogger,
@@ -164,13 +158,20 @@ func main() {
 				},
 			})
 		}),
+		fx.Populate(&daemonRunner),
 	)
 
-	if err := app.Err(); err != nil {
-		slog.Error("failed to create app", "error", err)
-		panic(err)
+	if disableAutoMigrate != "true" {
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
-
+	// this is a separate pool to not interfere with the main app's DB connections
+	pool.Close()
 	app.Run()
 }
 

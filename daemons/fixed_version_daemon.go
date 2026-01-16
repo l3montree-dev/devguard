@@ -9,12 +9,19 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/package-url/packageurl-go"
 )
 
 func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
-	affected, err := purlComparer.GetAffectedComponents(*dependencyVuln.ComponentPurl, "")
+	parsed, err := packageurl.FromString(dependencyVuln.ComponentPurl)
+	if err != nil {
+		slog.Warn("could not parse purl", "purl", dependencyVuln.ComponentPurl, "err", err)
+		return nil, err
+	}
+
+	affected, err := purlComparer.GetAffectedComponents(parsed)
 	if err != nil {
 		return nil, err
 	}
@@ -23,14 +30,14 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 		// check if this affected component comes from the same cve
 		if !utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
 			return c.CVE
-		}), *dependencyVuln.CVEID) {
+		}), dependencyVuln.CVEID) {
 			continue
 		}
 
 		if c.SemverFixed != nil {
-			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.SemverFixed), nil
+			return normalize.FixFixedVersion(dependencyVuln.ComponentPurl, c.SemverFixed), nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.VersionFixed), nil
+			return normalize.FixFixedVersion(dependencyVuln.ComponentPurl, c.VersionFixed), nil
 		}
 	}
 

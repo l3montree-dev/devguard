@@ -43,6 +43,17 @@ func Map[T, U any](s []T, f func(T) U) []U {
 	return r
 }
 
+func DereferenceSlice[T any](s []*T) []T {
+	r := make([]T, len(s))
+	for i, v := range s {
+		if v == nil {
+			continue
+		}
+		r[i] = *v
+	}
+	return r
+}
+
 func Reduce[T, U any](s []T, f func(U, T) U, init U) U {
 	r := init
 	for _, v := range s {

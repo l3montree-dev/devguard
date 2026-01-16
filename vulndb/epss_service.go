@@ -17,14 +17,12 @@ import (
 )
 
 type epssService struct {
-	nvdService    NVDService
 	cveRepository shared.CveRepository
 	httpClient    *http.Client
 }
 
-func NewEPSSService(nvdService NVDService, cveRepository shared.CveRepository) epssService {
+func NewEPSSService(cveRepository shared.CveRepository) epssService {
 	return epssService{
-		nvdService:    nvdService,
 		cveRepository: cveRepository,
 		httpClient:    &http.Client{},
 	}
@@ -98,7 +96,7 @@ func (s epssService) Mirror() error {
 	group := errgroup.Group{}
 	group.SetLimit(10) // 10 because, i do not really know.
 	if err != nil {
-		slog.Error("Could not fetch EPSS data", "error", err)
+		slog.Error("could not fetch EPSS data", "error", err)
 		return err
 	} else {
 		start := time.Now()
@@ -116,7 +114,7 @@ func (s epssService) Mirror() error {
 					return nil
 				},
 			)
-			if i > 0 && i%1000 == 0 {
+			if i > 0 && i%10000 == 0 {
 				slog.Info("Processed CVEs", "amount", i, "duration", time.Since(start))
 			}
 		}

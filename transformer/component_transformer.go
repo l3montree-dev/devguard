@@ -19,6 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
@@ -43,11 +44,25 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 		}
 	}
 
+	parsed, err := packageurl.FromString(m.ID)
+	if err != nil {
+		return dtos.ComponentDTO{
+			Purl:                m.ID,
+			Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+			ComponentType:       m.ComponentType,
+			Version:             "",
+			License:             m.License,
+			Published:           m.Published,
+			ComponentProject:    componentProject,
+			ComponentProjectKey: m.ComponentProjectKey,
+		}
+	}
+
 	return dtos.ComponentDTO{
-		Purl:                m.Purl,
+		Purl:                m.ID,
 		Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
 		ComponentType:       m.ComponentType,
-		Version:             m.Version,
+		Version:             parsed.Version,
 		License:             m.License,
 		Published:           m.Published,
 		ComponentProject:    componentProject,
@@ -58,8 +73,8 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDependencyDTO {
 	return dtos.ComponentDependencyDTO{
 		ID:             m.ID,
-		ComponentPurl:  utils.SafeDereference(m.ComponentPurl),
-		DependencyPurl: m.DependencyPurl,
+		ComponentPurl:  utils.SafeDereference(m.ComponentID),
+		DependencyPurl: m.DependencyID,
 		Artifacts:      utils.Map(m.Artifacts, ArtifactModelToDTO),
 		Component:      ComponentModelToDTO(m.Component),
 		Dependency:     ComponentModelToDTO(m.Dependency),

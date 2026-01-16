@@ -892,10 +892,10 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 	for _, vuln := range vulnsForCVE {
 		// first append the component itself
 		productName := &gocsaf.FullProductName{
-			Name:      vuln.ComponentPurl,
-			ProductID: utils.Ptr(gocsaf.ProductID(*vuln.ComponentPurl)),
+			Name:      &vuln.ComponentPurl,
+			ProductID: utils.Ptr(gocsaf.ProductID(vuln.ComponentPurl)),
 			ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-				PURL: utils.Ptr(gocsaf.PURL(*vuln.ComponentPurl)),
+				PURL: utils.Ptr(gocsaf.PURL(vuln.ComponentPurl)),
 			},
 		}
 		productNames = append(productNames, productName)
@@ -904,14 +904,14 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
 			relationship := gocsaf.Relationship{
 				Category:                  utils.Ptr(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
-				ProductReference:          utils.Ptr(gocsaf.ProductID(*vuln.ComponentPurl)),
+				ProductReference:          utils.Ptr(gocsaf.ProductID(vuln.ComponentPurl)),
 				RelatesToProductReference: utils.Ptr(gocsaf.ProductID(artifactPurl)),
 				FullProductName: &gocsaf.FullProductName{
 					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-						PURL: (*gocsaf.PURL)(vuln.ComponentPurl),
+						PURL: (*gocsaf.PURL)(&vuln.ComponentPurl),
 					},
-					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, "", *vuln.ComponentPurl)),
-					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", *vuln.ComponentPurl, artifactPurl)),
+					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, "", vuln.ComponentPurl)),
+					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", vuln.ComponentPurl, artifactPurl)),
 				},
 			}
 			relationships = append(relationships, &relationship)
@@ -938,7 +938,7 @@ func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*g
 	// maps a cve ID to a set of asset versions where it is present to reduce clutter
 	cveGroups := make(map[string][]models.DependencyVuln)
 	for _, vuln := range allVulnsOfAsset {
-		cveGroups[utils.SafeDereference(vuln.CVEID)] = append(cveGroups[utils.SafeDereference(vuln.CVEID)], vuln)
+		cveGroups[vuln.CVEID] = append(cveGroups[vuln.CVEID], vuln)
 	}
 
 	// then make a vulnerability object for every cve and list the asset version in the product status property
@@ -968,7 +968,7 @@ func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*g
 
 			productIDs := make([]*gocsaf.ProductID, 0)
 			for _, artifact := range vuln.Artifacts {
-				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, *vuln.ComponentPurl))))
+				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))))
 			}
 
 			switch vuln.State {
@@ -1105,14 +1105,14 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocs
 			recentJustification := vuln.Events[len(vuln.Events)-1].Justification
 			eventType := vuln.Events[len(vuln.Events)-1].Type
 			if recentJustification != nil && eventType != dtos.EventTypeMitigate {
-				id := string(artifactNameAndComponentPurlToProductID(artifact, "", *vuln.ComponentPurl))
+				id := string(artifactNameAndComponentPurlToProductID(artifact, "", vuln.ComponentPurl))
 				notes = append(notes, &gocsaf.Note{
 					Title:        utils.Ptr(fmt.Sprintf("Justification for %s", id)),
 					NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
 					Text:         recentJustification,
 				})
 			}
-			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), *vuln.ComponentPurl))
+			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), vuln.ComponentPurl))
 		}
 		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(normalize.SortStringsSlice(vulnStates), ", ")))
 	}
@@ -1227,15 +1227,15 @@ func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent)
 
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", *vuln.CVEID, *vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
 	default:
 		return "", fmt.Errorf("unknown event type: %s (%s)", event.Type, artifactNameString)
 	}

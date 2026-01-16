@@ -46,7 +46,7 @@ func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth in
 		ExploitExists: len(cve.Exploits) > 0,
 		VerifiedExploitExists: utils.Any(
 			cve.Exploits,
-			func(e *models.Exploit) bool {
+			func(e models.Exploit) bool {
 				return e.Verified
 			},
 		),

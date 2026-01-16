@@ -29,7 +29,7 @@ import (
 func TestGetVulnerabilitiesObject(t *testing.T) {
 	t.Run("should respect if two vulnerabilities have a different state", func(t *testing.T) {
 		openVuln := models.DependencyVuln{
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVE: "CVE-2017-16136",
 			},
 			Vulnerability: models.Vulnerability{
@@ -40,7 +40,7 @@ func TestGetVulnerabilitiesObject(t *testing.T) {
 			},
 		}
 		falsePositiveVuln := models.DependencyVuln{
-			CVE: &models.CVE{
+			CVE: models.CVE{
 				CVE: "CVE-2017-16137",
 			},
 			Vulnerability: models.Vulnerability{

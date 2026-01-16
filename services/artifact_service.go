@@ -247,10 +247,15 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 		vulnsInPackage := []models.VulnInPackage{}
 		for cveID, state := range expectedMap {
 			if cve, exists := cvesMap[cveID]; exists {
+				parsed, err := packageurl.FromString(state.purl)
+				if err != nil {
+					slog.Warn("could not parse purl", "purl", state.purl, "err", err)
+					continue
+				}
 				// skip CVEs that do not exist in the database
 				vulnInPackage := models.VulnInPackage{
 					CVE:   cve,
-					Purl:  state.purl,
+					Purl:  parsed,
 					CVEID: cveID,
 				}
 				vulnsInPackage = append(vulnsInPackage, vulnInPackage)
@@ -271,11 +276,11 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 
 	outer:
 		for i := range newState {
-			if expected, ok := expectedMap[*newState[i].CVEID]; ok {
+			if expected, ok := expectedMap[newState[i].CVEID]; ok {
 
 				expectedVulnState, err := models.EventTypeToVulnState(expected.eventType)
 				if err != nil {
-					slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
+					slog.Error("could not map event type to vuln state", "err", err, "cve", newState[i].CVEID)
 					continue
 				}
 
@@ -284,7 +289,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					event := newState[i].Events[j]
 					vulnState, err := models.EventTypeToVulnState(event.Type)
 					if err != nil {
-						slog.Error("could not map event type to vuln state", "err", err, "cve", *newState[i].CVEID)
+						slog.Error("could not map event type to vuln state", "err", err, "cve", newState[i].CVEID)
 						continue
 					}
 					// only consider non-internal upstream events
@@ -304,7 +309,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 
 				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
-					slog.Error("could not update dependency vuln state", "err", err, "cve", *newState[i].CVEID)
+					slog.Error("could not update dependency vuln state", "err", err, "cve", newState[i].CVEID)
 					continue
 				}
 			}

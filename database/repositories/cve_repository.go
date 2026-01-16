@@ -191,3 +191,28 @@ func (g *cveRepository) FindCVEs(tx *gorm.DB, cveIds []string) ([]models.CVE, er
 	err := g.GetDB(tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
+
+func (g *cveRepository) CreateCVEWithConflictHandling(tx *gorm.DB, cve *models.CVE) error {
+	return g.GetDB(tx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "cve"}},
+		UpdateAll: true,
+	}).Create(cve).Error
+}
+
+func (g *cveRepository) CreateCVEAffectedComponentsEntries(tx *gorm.DB, cve *models.CVE, components []models.AffectedComponent) error {
+	cves := make([]string, len(components))
+	affectedComponents := make([]string, len(components))
+
+	for i := range components {
+		cves[i] = cve.CVE
+		affectedComponents[i] = components[i].CalculateHash()
+	}
+
+	query := `INSERT INTO cve_affected_component (affected_component_id,cvecve) 
+	SELECT 
+	unnest($1::text[]),
+	unnest($2::text[])
+	ON CONFLICT DO NOTHING`
+
+	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, affectedComponents, cves).Error
+}

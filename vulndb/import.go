@@ -57,15 +57,15 @@ func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.
 }
 
 // maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
-var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}}
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}, "cve_relationships": {"target_cve", "source_cve", "relationship_type"}}
 
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
-var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}}
+var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}, "cve_relationships": {}}
 
 func (service importService) Import(tx shared.DB, tag string) error {
 	begin := time.Now()
 
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
@@ -117,7 +117,7 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 func (service importService) ImportFromDiff(extraTableNameSuffix *string) error {
 	ctx := context.Background()
 
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb-diff"
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
@@ -272,7 +272,13 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 	return nil
 }
 
-func makeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+var DisableForeignKeyFix = false
+
+func MakeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+	if DisableForeignKeyFix {
+		slog.Info("foreign key fix is disabled, skipping...")
+		return nil
+	}
 	_, err := tx.Exec(ctx, `
 -- Drop the foreign key constraint first
 ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
@@ -309,7 +315,14 @@ WHERE NOT EXISTS (
 );
 
 ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
- FOREIGN KEY (cve_id) REFERENCES cves(cve);`)
+FOREIGN KEY (cve_id) REFERENCES cves(cve);
+ 
+ALTER TABLE ONLY public.cve_relationships 
+ADD CONSTRAINT fk_cve_relationships_cve 
+FOREIGN KEY (source_cve) REFERENCES public.cves(cve)
+ON UPDATE CASCADE ON DELETE CASCADE;
+
+`)
 	return err
 }
 
@@ -364,7 +377,7 @@ func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string
 		return fmt.Errorf("failed to begin transaction for foreign key fix: %w", err)
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
-	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	err = MakeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 
 	if err != nil {
 		return err
@@ -665,7 +678,7 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
 
-	err = makeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
+	err = MakeSureForeignKeysAreSetOnCorrectTables(ctx, tx)
 	if err != nil {
 		monitoring.Alert("failed to ensure foreign keys before dropping orphaned tables", err)
 		return fmt.Errorf("failed to ensure foreign keys before dropping orphaned tables: %w", err)

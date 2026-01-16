@@ -61,8 +61,8 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		// create a dependency vuln referencing the CVE and the artifact
 		dv := models.DependencyVuln{
 			Vulnerability:  models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
-			CVEID:          &cve.CVE,
-			ComponentPurl:  utils.Ptr("pkg:maven/org.example/component-x@1.2.3"),
+			CVEID:          cve.CVE,
+			ComponentPurl:  "pkg:maven/org.example/component-x@1.2.3",
 			Artifacts:      []models.Artifact{a},
 			ComponentDepth: utils.Ptr(1),
 		}

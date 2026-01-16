@@ -81,8 +81,8 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 }
 
 func (s *ComponentService) GetLicense(component models.Component) (models.Component, error) {
-	pURL := component.Purl
-	validatedPURL, err := packageurl.FromString(pURL)
+	pURL := component.ID
+	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
 		component.License = utils.Ptr("unknown")
@@ -90,9 +90,9 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	}
 
 	// check the pURL type, if its a debian or alpine package we get the license from memory
-	switch validatedPURL.Type {
+	switch parsedPurl.Type {
 	case "deb":
-		l := licenses.GetDebianLicense(validatedPURL, component.Version)
+		l := licenses.GetDebianLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -100,7 +100,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 		}
 		component.License = &l
 	case "apk":
-		l := licenses.GetAlpineLicense(validatedPURL, component.Version)
+		l := licenses.GetAlpineLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
@@ -110,9 +110,9 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
 			context.Background(),
-			validatedPURL.Type,
-			combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name),
-			validatedPURL.Version,
+			parsedPurl.Type,
+			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
+			parsedPurl.Version,
 		)
 
 		if err != nil {
@@ -194,8 +194,8 @@ func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.Asse
 	componentsWithoutLicense := make([]models.Component, 0)
 	seen := make(map[string]bool)
 	for _, componentDependency := range componentDependencies {
-		if _, ok := seen[componentDependency.DependencyPurl]; !ok && (forceRefresh || componentDependency.Dependency.License == nil) {
-			seen[componentDependency.DependencyPurl] = true
+		if _, ok := seen[componentDependency.DependencyID]; !ok && (forceRefresh || componentDependency.Dependency.License == nil) {
+			seen[componentDependency.DependencyID] = true
 			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
 		}
 	}
@@ -224,7 +224,7 @@ func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.Asse
 	allComponents := components
 	// get all the components - with licenses and without
 	for _, componentDependency := range componentDependencies {
-		if !seen[componentDependency.DependencyPurl] {
+		if !seen[componentDependency.DependencyID] {
 			// if the component is not in the seen map, it means it was not processed to get a new license
 			allComponents = append(allComponents, componentDependency.Dependency)
 		}
@@ -234,7 +234,7 @@ func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.Asse
 
 		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
 			//check if the purl is valid and has a version
-			_, err = packageurl.FromString(component.Purl)
+			_, err = packageurl.FromString(component.ID)
 			return err == nil
 		})
 		// find potential license risks

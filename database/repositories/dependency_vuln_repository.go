@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -40,7 +41,7 @@ func (repository *dependencyVulnRepository) ApplyAndSave(tx *gorm.DB, dependency
 
 func (repository *dependencyVulnRepository) applyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	ev.Apply(dependencyVuln)
+	statemachine.Apply(dependencyVuln, *ev)
 
 	// run the updates in the transaction to keep a valid state
 	err := repository.Save(tx, dependencyVuln)
@@ -227,13 +228,13 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, 
 	}
 
 	packageNameQuery := repository.GetDB(tx).Table("components").
-		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.purl as package_name").
-		Joins("INNER JOIN dependency_vulns ON components.purl = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
+		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.id as package_name").
+		Joins("INNER JOIN dependency_vulns ON components.id = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
 		Joins("INNER JOIN cves \"CVE\" ON dependency_vulns.cve_id = \"CVE\".cve").
 		Where("dependency_vulns.asset_version_name = ?", assetVersionName).
 		Where("dependency_vulns.asset_id = ?", assetID).
-		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
+		Group("components.id").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 	// apply the same filters to the packageNameQuery
 	for _, f := range filter {
 		packageNameQuery = packageNameQuery.Where(f.SQL(), f.Value())

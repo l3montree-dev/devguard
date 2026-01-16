@@ -12,6 +12,11 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Package normalize provides utilities for normalizing package identifiers.
+// This file handles mapping binary package names to their source package names
+// for Linux distributions (Debian, Alpine), enabling vulnerability matching
+// against security advisories that reference source packages.
 package normalize
 
 import (
@@ -21,17 +26,24 @@ import (
 
 	_ "embed"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 )
 
 var (
+	// packageMappingsJSON contains the embedded JSON mapping file.
+	// Format: {"ecosystem": {"binary-pkg": "source-pkg", ...}, ...}
 	//go:embed package_mappings.json
 	packageMappingsJSON []byte
+
+	// packageMappingsOnce ensures the mappings are loaded only once.
 	packageMappingsOnce sync.Once
-	mappings            map[string]map[string]string
+
+	// mappings holds the parsed package mappings keyed by ecosystem then binary package name.
+	mappings map[string]map[string]string
 )
 
+// loadPackageMappings lazily loads and parses the embedded package mappings JSON.
+// It panics if the embedded JSON is malformed (should never happen in production).
 func loadPackageMappings() map[string]map[string]string {
 	packageMappingsOnce.Do(func() {
 		err := json.Unmarshal(packageMappingsJSON, &mappings)
@@ -42,18 +54,19 @@ func loadPackageMappings() map[string]map[string]string {
 	return mappings
 }
 
-func applyPackageAlias(component *cdx.Component) *cdx.Component {
-	// Parse the purl to extract ecosystem and package name
-	if component.PackageURL == "" {
-		return component
-	}
-
-	purl, err := packageurl.FromString(component.PackageURL)
-	if err != nil {
-		return component
-	}
-
-	// Only handle debian and alpine packages
+// applyPackageAliasToPurl maps a binary package purl to its source package equivalent.
+// This is necessary because vulnerability databases (like Debian Security Tracker)
+// publish advisories against source packages, but SBOMs typically contain binary
+// package names (e.g., "libc6" is the binary, "glibc" is the source).
+//
+// Currently supports:
+//   - Debian packages (pkg:deb/...)
+//   - Alpine packages (pkg:apk/...)
+//
+// Returns the original purl unchanged if:
+//   - The package type is not supported
+//   - No mapping exists for the package name
+func applyPackageAliasToPurl(purl packageurl.PackageURL) packageurl.PackageURL {
 	var ecosystem string
 	switch purl.Type {
 	case "deb":
@@ -61,24 +74,19 @@ func applyPackageAlias(component *cdx.Component) *cdx.Component {
 	case "apk":
 		ecosystem = "alpine"
 	default:
-		return component
+		return purl
 	}
 
-	// Load package mappings
 	mappings := loadPackageMappings()
 	if mappings[ecosystem] == nil {
-		return component
+		return purl
 	}
 
-	// Look up the source package name
 	sourcePackage, exists := mappings[ecosystem][purl.Name]
 	if !exists || sourcePackage == "" {
-		return component
+		return purl
 	}
 
-	// Replace the package name in the purl
 	purl.Name = sourcePackage
-	component.PackageURL = purl.ToString()
-
-	return component
+	return purl
 }

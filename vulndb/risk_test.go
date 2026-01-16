@@ -31,10 +31,10 @@ type tableTest struct {
 	vector             string
 	metrics            dtos.RiskMetrics
 	env                shared.Environmental
-	exploits           []*models.Exploit
+	exploits           []models.Exploit
 	expectedVector     string
 	cvss               float32
-	affectedComponents []*models.AffectedComponent
+	affectedComponents []models.AffectedComponent
 }
 
 func ptr[T any](s T) *T {
@@ -133,7 +133,7 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
@@ -154,14 +154,14 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
 			},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: ptr("v1.0.0"), // this should not matter. Reducing the score, since a fix is available, makes no sense in this application. Actually we want those cves to be handled first, since they are easy to handle.
 			}},
 		},
@@ -178,14 +178,14 @@ func TestCalculateRisk(t *testing.T) {
 				IntegrityRequirements:       "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
 			},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
 			}},
 		},
@@ -230,12 +230,12 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
 			},
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: ptr("v1.0.0"),
 			}},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
@@ -254,12 +254,12 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "H",
 				AvailabilityRequirements:    "H",
 			},
-			exploits: []*models.Exploit{
+			exploits: []models.Exploit{
 				{
 					Verified: true,
 				},
 			},
-			affectedComponents: []*models.AffectedComponent{{
+			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
 			}},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
@@ -294,7 +294,7 @@ func TestCalculateRisk(t *testing.T) {
 				ConfidentialityRequirements: "L",
 				AvailabilityRequirements:    "L",
 			},
-			exploits:       []*models.Exploit{{Verified: true}},
+			exploits:       []models.Exploit{{Verified: true}},
 			cvss:           7.5,
 			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P/CR:L/IR:L/AR:L",
 		},
@@ -313,7 +313,7 @@ func TestCalculateRisk(t *testing.T) {
 			},
 			expectedVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N/E:F/RC:C/CR:H/IR:M/AR:M",
 			cvss:           6.1,
-			exploits:       []*models.Exploit{{Verified: true}},
+			exploits:       []models.Exploit{{Verified: true}},
 		},
 	}
 
@@ -650,8 +650,8 @@ func TestExploitMessage(t *testing.T) {
 	for _, exploitType := range []string{"P", "POC", "F"} {
 		t.Run(fmt.Sprintf("should be deterministic: %s", exploitType), func(t *testing.T) {
 			v := models.DependencyVuln{
-				CVE: &models.CVE{
-					Exploits: []*models.Exploit{
+				CVE: models.CVE{
+					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit1.com"},
 						{SourceURL: "http://exploit2.com"},
 					},
@@ -663,8 +663,8 @@ func TestExploitMessage(t *testing.T) {
 
 			// create another instance with exploits in different order
 			v2 := models.DependencyVuln{
-				CVE: &models.CVE{
-					Exploits: []*models.Exploit{
+				CVE: models.CVE{
+					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit2.com"},
 						{SourceURL: "http://exploit1.com"},
 					},

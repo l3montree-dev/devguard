@@ -74,7 +74,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
@@ -126,7 +126,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 			// Scan again with same origin but empty SBOM to close the vulnerability for that origin
@@ -152,7 +152,7 @@ func TestMultipleOrigins(t *testing.T) {
 			assert.Equal(t, 0, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 			assert.Len(t, response.DependencyVulns[0].Artifacts, 1)
 
 		})
@@ -203,7 +203,7 @@ func TestScanning(t *testing.T) {
 			assert.Equal(t, 1, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 1)
-			assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 		})
 
 		t.Run("should add the artifact, if the vulnerability is found with another artifact", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestScanning(t *testing.T) {
 			assert.Len(t, response.DependencyVulns, 1)
 
 			if len(response.DependencyVulns) > 0 {
-				assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
+				assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 				assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, getArtifactNames(response.DependencyVulns[0].Artifacts))
 			}
 		})
@@ -339,6 +339,10 @@ func TestScanning(t *testing.T) {
 					newVuln = v
 				}
 			}
+
+			// Reload the vulnerability with Events preloaded
+			err = f.DB.Preload("Events").First(&newVuln, "id = ?", newVuln.ID).Error
+			assert.Nil(t, err)
 
 			assert.NotEmpty(t, newVuln.Events)
 			lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
@@ -967,8 +971,8 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1001,8 +1005,8 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1042,8 +1046,8 @@ func TestTicketHandling(t *testing.T) {
 			}
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					State:            dtos.VulnStateAccepted,
 					AssetVersionName: "main",
@@ -1082,8 +1086,8 @@ func TestTicketHandling(t *testing.T) {
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
-				CVEID:         utils.Ptr("CVE-2025-46569"),
-				ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
+				CVEID:         "CVE-2025-46569",
+				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
 					State:            dtos.VulnStateOpen,
 					AssetVersionName: "main",
@@ -1149,7 +1153,7 @@ func createCVE2025_46569(db shared.DB) {
 		Type:               "golang",
 		Name:               "github.com/open-policy-agent/opa",
 		Namespace:          utils.Ptr(""),
-		Qualifiers:         utils.Ptr(""),
+		Qualifiers:         nil,
 		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 
@@ -1325,9 +1329,9 @@ func TestUploadVEX(t *testing.T) {
 
 		dv1 := models.DependencyVuln{
 			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     utils.Ptr("pkg:npm/example1@1.0.0"),
-			CVE:               &newCVE,
-			CVEID:             &newCVE.CVE,
+			ComponentPurl:     "pkg:npm/example1@1.0.0",
+			CVE:               newCVE,
+			CVEID:             newCVE.CVE,
 			RawRiskAssessment: utils.Ptr(1.23),
 			ComponentDepth:    utils.Ptr(1),
 		}
@@ -1337,9 +1341,9 @@ func TestUploadVEX(t *testing.T) {
 
 		dv2 := models.DependencyVuln{
 			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     utils.Ptr("pkg:npm/example2@2.0.0"),
-			CVE:               &newCVE2,
-			CVEID:             &newCVE2.CVE,
+			ComponentPurl:     "pkg:npm/example2@2.0.0",
+			CVE:               newCVE2,
+			CVEID:             newCVE2.CVE,
 			RawRiskAssessment: utils.Ptr(2.34),
 			ComponentDepth:    utils.Ptr(2),
 		}
@@ -1349,7 +1353,7 @@ func TestUploadVEX(t *testing.T) {
 
 		//create a component and save it to the db
 		component := models.Component{
-			Purl:    "pkg:npm/example1@1.0.0",
+			ID:      "pkg:npm/example1@1.0.0",
 			License: utils.Ptr("MIT"),
 		}
 
@@ -1424,7 +1428,7 @@ func TestUploadVEX(t *testing.T) {
 		assert.GreaterOrEqual(t, len(dv), 2)
 
 		for _, d := range dv {
-			switch *d.CVEID {
+			switch d.CVEID {
 			case "CVE-2025-00001":
 				// i think its a race condition and the ordering of events is non deterministic
 				assert.Equal(t, dtos.VulnStateFalsePositive, d.State)

@@ -62,7 +62,7 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 
@@ -73,7 +73,7 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a *models.Exploit, b *models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 
@@ -300,7 +300,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)
-	componentPurl := utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")
+	componentPurl := utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:")
 
 	return Explanation{
 		ExploitMessage: struct {
@@ -321,10 +321,10 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		Depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		CVEID:          utils.SafeDereference(dependencyVuln.CVEID),
+		CVEID:          dependencyVuln.CVEID,
 		CVEDescription: dependencyVuln.CVE.Description,
 
-		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		ComponentPurl: dependencyVuln.ComponentPurl,
 		ArtifactNames: dependencyVuln.GetScannerIDsOrArtifactNames(),
 		FixedVersion:  dependencyVuln.ComponentFixedVersion,
 

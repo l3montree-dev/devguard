@@ -296,7 +296,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, boms...), nil
+	}, boms...), nil
 }
 
 func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
@@ -360,7 +360,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 			Type: cdx.ComponentTypeApplication,
 			Name: release.Name,
 		},
-	}, release.Name, boms...), nil
+	}, boms...), nil
 }
 
 // @Summary Get release details

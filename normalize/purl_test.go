@@ -18,6 +18,7 @@ package normalize
 import (
 	"testing"
 
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,4 +43,10 @@ func TestBeautifyPURL(t *testing.T) {
 		result, _ := BeautifyPURL(inputString)
 		assert.Equal(t, "integrations", result)
 	})
+}
+
+func TestParsePurlForMatching(t *testing.T) {
+	p, _ := packageurl.FromString("pkg:npm/next@15.4.5")
+	ctx := ParsePurlForMatching(p)
+	assert.Equal(t, SemanticVersionString, ctx.HowToInterpretVersionString)
 }

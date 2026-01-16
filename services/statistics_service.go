@@ -42,10 +42,7 @@ func (s *statisticsService) GetComponentRisk(artifactName *string, assetVersionN
 	distributionPerComponent := make(map[string]models.Distribution)
 
 	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.ComponentPurl == nil {
-			continue
-		}
-		componentName := *dependencyVuln.ComponentPurl
+		componentName := dependencyVuln.ComponentPurl
 		if _, exists := distributionPerComponent[componentName]; !exists {
 			distributionPerComponent[componentName] = models.Distribution{}
 		}

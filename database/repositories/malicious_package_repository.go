@@ -20,6 +20,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -40,11 +41,8 @@ func (r *MaliciousPackageRepository) GetDB() *gorm.DB {
 }
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)
-func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, version string) ([]models.MaliciousAffectedComponent, error) {
-	ctx, err := normalize.ParsePurlForMatching(purl, version)
-	if err != nil {
-		return nil, err
-	}
+func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl packageurl.PackageURL) ([]models.MaliciousAffectedComponent, error) {
+	ctx := normalize.ParsePurlForMatching(purl)
 
 	var components []models.MaliciousAffectedComponent
 
@@ -55,14 +53,8 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl, versio
 	// Align version matching behavior with PurlComparer:
 	// - If VersionIsValid is not nil, perform an exact version match.
 	// - Otherwise, fall back to semver range matching.
-	if ctx.VersionIsValid != nil {
-		query = query.Where("version = ?", ctx.TargetVersion)
-	} else if ctx.EmptyVersion {
-		query = BuildEmptyVersionQuery(query)
-	} else {
-		query = BuildVersionRangeQuery(query, ctx.TargetVersion, ctx.NormalizedVersion)
-	}
-	err = query.Preload("MaliciousPackage").Find(&components).Error
+
+	err := BuildQueryBasedOnMatchContext(query, ctx).Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
 

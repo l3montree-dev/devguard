@@ -83,8 +83,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 			// Create a component that might be associated with this artifact
 			testComponent := models.Component{
-				Purl:    "pkg:npm/test-component@1.0.0",
-				Version: "1.0.0",
+				ID: "pkg:npm/test-component@1.0.0",
 			}
 			err = f.DB.Create(&testComponent).Error
 			assert.NoError(t, err)
@@ -106,8 +105,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 					AssetID:          asset.ID,
 					State:            dtos.VulnStateOpen,
 				},
-				CVEID:         &testCVE.CVE,
-				ComponentPurl: &testComponent.Purl,
+				CVEID:         testCVE.CVE,
+				ComponentPurl: testComponent.ID,
 				Artifacts:     []models.Artifact{testArtifact}, // Associate artifact immediately
 			}
 			err = f.DB.Create(&testDepVuln).Error

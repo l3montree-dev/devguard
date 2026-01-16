@@ -2,14 +2,12 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
 	"slices"
 	"strings"
-	"time"
-
-	_ "embed"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -28,6 +26,31 @@ type CdxBom struct {
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
 	bom.tree.ReplaceRoot(newRoot)
+}
+
+func getDependencyRefsNotIncludedInAnySubtree(dependencies *[]cdx.Dependency) *[]string {
+	// Collect all dependency refs
+	dependencyRefsNotInAnySubtree := make(map[string]struct{}, len(*dependencies))
+	for _, dependency := range *dependencies {
+		dependencyRefsNotInAnySubtree[dependency.Ref] = struct{}{}
+	}
+
+	// Remove refs that are children of any dependency (they are in a subtree)
+	for _, dep := range *dependencies {
+		if dep.Dependencies != nil {
+			for _, child := range *dep.Dependencies {
+				delete(dependencyRefsNotInAnySubtree, child)
+			}
+		}
+	}
+
+	// Collect remaining refs (these are not in any subtree)
+	newDependencyRefs := make([]string, 0, len(dependencyRefsNotInAnySubtree))
+	for depRef := range dependencyRefsNotInAnySubtree {
+		newDependencyRefs = append(newDependencyRefs, depRef)
+	}
+
+	return &newDependencyRefs
 }
 
 func (bom *CdxBom) AddDirectChildWhichInheritsChildren(parent cdxBomNode, child cdxBomNode) {
@@ -101,7 +124,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 		}
 	}
 
-	visit(bom.tree.Root, 1)
+	visit(bom.tree.Root, 0)
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
 	for id := range bom.tree.cursors {
@@ -433,14 +456,7 @@ type cdxBomNode struct {
 
 func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
-	component = applyPackageAlias(component)
 	component.PackageURL = normalizePurl(component.PackageURL)
-	if (strings.Contains(component.PackageURL, "pkg:rpm/") || strings.Contains(component.PackageURL, "pkg:deb/") || strings.Contains(component.PackageURL, "pkg:apk/")) && component.Version != "" {
-		version, err := ConvertToSemver(component.Version)
-		if err == nil && version != "" {
-			component.Version = version
-		}
-	}
 
 	// if its a valid purl we expect this to be of type component -
 	if strings.HasPrefix(component.BOMRef, "pkg:") || strings.HasPrefix(component.PackageURL, "pkg:") {
@@ -540,47 +556,17 @@ type CdxComponent interface {
 }
 
 func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, vulns []cdx.Vulnerability) *CdxBom {
-	rootPurl := ""
-	if artifactName != "" {
-		rootPurl = Purlify(artifactName, assetVersionName)
-	} else {
-		rootPurl = Purlify(assetSlug, assetVersionName)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
+	bom := cdx.BOM{}
 	bom.Vulnerabilities = &vulns
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
-	rootPurl := ""
-	if artifactName != "" {
-		rootPurl = Purlify(artifactName, assetVersionName)
-	} else {
-		rootPurl = Purlify(assetSlug, assetVersionName)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
-	// add all components AND the root
-	bomComponents := make([]cdx.Component, 0, len(components)+1)
+	bom := cdx.BOM{}
+	// add all components (root is created in fromNormalizedCdxBom)
+	bomComponents := make([]cdx.Component, 0, len(components))
 	processedComponents := make(map[string]struct{}, len(components))
-	bomComponents = append(bomComponents, *bom.Metadata.Component)
 
 	for _, component := range components {
 		if _, alreadyProcessed := processedComponents[component.GetPurl()]; alreadyProcessed {
@@ -595,9 +581,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
 		var purl string
-		if c.GetDependentPurl() == nil {
-			purl = rootPurl
-		} else {
+		if c.GetDependentPurl() != nil {
 			purl = *c.GetDependentPurl()
 		}
 		dependencyMap[purl] = append(dependencyMap[purl], c.GetPurl())
@@ -616,10 +600,10 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return FromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
-func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
+func newCdxBom(bom *cdx.BOM) *CdxBom {
 	// convert components to sbomNodes
 	// first make sure components exist
 	if bom.Components == nil {
@@ -627,6 +611,9 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	}
 	if bom.Dependencies == nil {
 		bom.Dependencies = &[]cdx.Dependency{}
+	}
+	if bom.Metadata == nil {
+		bom.Metadata = &cdx.Metadata{}
 	}
 	if bom.Metadata.Component == nil {
 		bom = addFakeMetadataRootComponent(bom)
@@ -661,6 +648,35 @@ func newCdxBom(bom *cdx.BOM, artifactName string) *CdxBom {
 	for ref, node := range vulnerableRefs {
 		if !tree.Reachable(ref) {
 			tree.AddChild(tree.Root, newNode(node))
+		}
+	}
+
+	// check if the root has children; if not, we need to add dependency refs which are not part of any subtree as direct children of root
+	if len(tree.Root.Children) == 0 {
+		newDep := getDependencyRefsNotIncludedInAnySubtree(bom.Dependencies)
+
+		//check if the root is part of the new dependencies - if so, remove it and warn
+		if slices.Contains(*newDep, bom.Metadata.Component.BOMRef) {
+			slog.Warn("root component had no children - but was part of dependencies - removing from direct dependencies to avoid cycle", "rootRef", bom.Metadata.Component.BOMRef)
+			filteredDeps := []string{}
+			for _, dep := range *newDep {
+				if dep != bom.Metadata.Component.BOMRef {
+					filteredDeps = append(filteredDeps, dep)
+				}
+			}
+			newDep = &filteredDeps
+		}
+		*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
+			Ref:          bom.Metadata.Component.BOMRef,
+			Dependencies: newDep,
+		})
+
+		// rebuild the tree
+		tree = BuildDependencyTree(newCdxBomNode(bom.Metadata.Component), sbomNodes, buildDependencyMap(*bom.Dependencies))
+		for ref, node := range vulnerableRefs {
+			if !tree.Reachable(ref) {
+				tree.AddChild(tree.Root, newNode(node))
+			}
 		}
 	}
 	// set the vulnerabilities after normalization
@@ -888,16 +904,36 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func FromNormalizedCdxBom(bom *cdx.BOM, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
-	cdxBom := newCdxBom(bom, artifactName)
-	newRoot := newCdxBomNode(&cdx.Component{
+func fromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
+	rootPurl := ""
+	if artifactName != "" {
+		rootPurl = Purlify(artifactName, assetVersionName)
+	} else {
+		rootPurl = Purlify(assetSlug, assetVersionName)
+	}
+
+	// fix dependencies with empty Ref to use the root purl
+	// this handles components with no parent (direct dependencies of root)
+	if bom.Dependencies != nil {
+		for i := range *bom.Dependencies {
+			if (*bom.Dependencies)[i].Ref == "" {
+				(*bom.Dependencies)[i].Ref = rootPurl
+			}
+		}
+	}
+
+	// set the root component metadata so newCdxBom uses it
+	if bom.Metadata == nil {
+		bom.Metadata = &cdx.Metadata{}
+	}
+	bom.Metadata.Component = &cdx.Component{
 		BOMRef:     rootPurl,
 		Name:       rootPurl,
 		PackageURL: rootPurl,
 		Type:       "application",
-	})
+	}
 
-	cdxBom.ReplaceRoot(newRoot)
+	cdxBom := newCdxBom(bom)
 	cdxBom.artifactName = artifactName
 	cdxBom.assetVersionSlug = assetVersionSlug
 	cdxBom.assetSlug = assetSlug
@@ -930,7 +966,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)
 	}
 
-	cdxBom := newCdxBom(bom, artifactName)
+	cdxBom := newCdxBom(bom)
 	newRoot := newCdxBomNode(&cdx.Component{
 		BOMRef:     artifactName,
 		Name:       artifactName,
@@ -952,7 +988,7 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) *CdxBom {
+func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -965,7 +1001,7 @@ func MergeCdxBoms(metadata *cdx.Metadata, artifactName string, boms ...*CdxBom) 
 
 	vulnMap := make(map[string]cdx.Vulnerability)
 
-	newBom := newCdxBom(merged, artifactName)
+	newBom := newCdxBom(merged)
 	for _, bom := range boms {
 		if bom == nil {
 			continue

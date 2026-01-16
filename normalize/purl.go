@@ -3,56 +3,69 @@ package normalize
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 )
 
+type VersionInterpretationType string
+
+const (
+	ExactVersionString       VersionInterpretationType = "exact"
+	SemanticVersionString    VersionInterpretationType = "semver_range"
+	EmptyVersion             VersionInterpretationType = "empty_version"
+	EcosystemSpecificVersion VersionInterpretationType = "ecosystem_specific"
+)
+
 // PurlMatchContext holds the parsed purl information for matching
 type PurlMatchContext struct {
-	SearchPurl        string
-	TargetVersion     string
-	NormalizedVersion string
-	VersionIsValid    error
-	Qualifiers        packageurl.Qualifiers
-	Namespace         string
-	EmptyVersion      bool
+	SearchPurl                  string
+	NormalizedVersion           string
+	HowToInterpretVersionString VersionInterpretationType
+	Qualifiers                  packageurl.Qualifiers
+	Namespace                   string
 }
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
-func ParsePurlForMatching(purl, version string) (*PurlMatchContext, error) {
-	// Parse the package URL (purl)
-	parsedPurl, err := packageurl.FromString(purl)
-	if err != nil {
-		return nil, err
-	}
+func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
+	purl = applyPackageAliasToPurl(purl)
+	qualifier := purl.Qualifiers
 
-	qualifier := parsedPurl.Qualifiers
-
-	// Determine which version to use
-	targetVersion := version
-	if targetVersion == "" {
-		targetVersion = parsedPurl.Version
-	}
+	var normalizedVersion string
+	var versionInterpretation VersionInterpretationType
 
 	// Try to normalize the version to semantic versioning format
-	normalizedVersion, versionIsValid := ConvertToSemver(targetVersion)
+	if purl.Version == "" {
+		versionInterpretation = EmptyVersion
+		normalizedVersion = ""
+	} else if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
+		versionInterpretation = EcosystemSpecificVersion
+		normalizedVersion = purl.Version
+	} else {
+		maybeSemver, err := ConvertToSemver(purl.Version)
+		if err == nil && maybeSemver != "" {
+			versionInterpretation = SemanticVersionString
+			normalizedVersion = maybeSemver
+		} else {
+			versionInterpretation = ExactVersionString
+			normalizedVersion = purl.Version
+		}
+	}
 
 	// Create search key (purl without version)
-	parsedPurl.Version = ""
-	parsedPurl.Qualifiers = nil
-	searchPurl := parsedPurl.ToString()
+	purl.Version = ""
+	purl.Qualifiers = nil
+	searchPurl := purl.ToString()
 
 	return &PurlMatchContext{
-		SearchPurl:        searchPurl,
-		TargetVersion:     targetVersion,
-		NormalizedVersion: normalizedVersion,
-		VersionIsValid:    versionIsValid,
-		Qualifiers:        qualifier,
-		Namespace:         parsedPurl.Namespace,
-		EmptyVersion:      targetVersion == "" && normalizedVersion == "",
-	}, nil
+		SearchPurl:                  searchPurl,
+		NormalizedVersion:           normalizedVersion,
+		Qualifiers:                  qualifier,
+		Namespace:                   purl.Namespace,
+		HowToInterpretVersionString: versionInterpretation,
+	}
 }
 
 // function to make purl look more visually appealing
@@ -69,9 +82,14 @@ func BeautifyPURL(pURL string) (string, error) {
 	}
 }
 
+func ToPurlWithoutVersion(purl packageurl.PackageURL) string {
+	purl.Version = ""
+	purl.Qualifiers = nil
+	return purl.ToString()
+}
+
 // returns the normalized purl AND the component type
 func normalizePurl(purl string) string {
-
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
 		purl, err := url.PathUnescape(purl)
@@ -89,7 +107,7 @@ func normalizePurl(purl string) string {
 	return purl
 }
 
-func Purl(component cdx.Component) string {
+func GetComponentID(component cdx.Component) string {
 	var purl string
 	if component.PackageURL != "" {
 		return component.PackageURL
@@ -119,7 +137,6 @@ func Purl(component cdx.Component) string {
 // limitations under the License.
 
 // PURL conversion utilities
-
 var PURLEcosystems = map[string]string{
 	"Alpine":    "apk",
 	"crates.io": "cargo",
@@ -182,9 +199,19 @@ func PurlToEcosystem(purlType string) string {
 }
 
 func Purlify(artifactName string, assetVersionName string) string {
-	// the artifactName might contain qualifiers like pkg:oci/k8s-tools?repository_url=registry.opencode.de/open-code/oci/k8s-tool&tag=main-amd64
-	// we want to remove them for the purl normalization
-	// the correct purl for this would be pkg:oci/k8s-tools@main?repository_url=registry.opencode.de/open-code/oci/k8s-tools&tag=main-amd64
+	const (
+		defaultType    = "generic"
+		defaultName    = "unknown"
+		defaultVersion = "0.0.0"
+	)
+
+	// Version default
+	version := assetVersionName
+	if version == "" {
+		version = defaultVersion
+	}
+
+	// Split qualifiers
 	parts := strings.SplitN(artifactName, "?", 2)
 	base := parts[0]
 	var qualifiers string
@@ -192,9 +219,42 @@ func Purlify(artifactName string, assetVersionName string) string {
 		qualifiers = "?" + parts[1]
 	}
 
-	if assetVersionName != "" {
-		base = fmt.Sprintf("%s@%s", base, assetVersionName)
+	// Remove existing version if present
+	if at := strings.LastIndex(base, "@"); at != -1 {
+		base = base[:at]
 	}
 
-	return base + qualifiers
+	// If not a purl, treat artifactName as the name
+	if !strings.HasPrefix(base, "pkg:") {
+		name := strings.Trim(base, "/")
+		if name == "" {
+			name = defaultName
+		}
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, name)
+	}
+
+	// Validate structure after pkg:
+	afterScheme := strings.TrimPrefix(base, "pkg:")
+	if afterScheme == "" || strings.HasSuffix(afterScheme, "/") {
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, defaultName)
+	} else if !strings.Contains(afterScheme, "/") {
+		// missing type/name separator
+		base = fmt.Sprintf("pkg:%s/%s", defaultType, afterScheme)
+	}
+
+	return base + "@" + version + qualifiers
+}
+
+func QualifiersMapToString(qualifiers map[string]string) string {
+	// create an URL string out of the qualifiers and sort them by key to ensure consistent hashing
+	qualifiersStr := ""
+	if len(qualifiers) > 0 {
+		var qualifierPairs []string
+		for key, value := range qualifiers {
+			qualifierPairs = append(qualifierPairs, fmt.Sprintf("%s=%s", key, value))
+		}
+		slices.Sort(qualifierPairs)
+		qualifiersStr = strings.Join(qualifierPairs, "&")
+	}
+	return qualifiersStr
 }

@@ -25,7 +25,7 @@ type Asset struct {
 	Description                  string                `json:"description" gorm:"type:text"`
 	Type                         AssetType             `json:"type" gorm:"type:text;not null;"`
 	AssetVersions                []AssetVersion        `json:"refs" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	Project                      Project               `json:"project" gorm:"foreignKey:ProjectID;references:ID;"`
+	Project                      Project               `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
 	Importance                   int                   `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet        bool                  `json:"reachableFromInternet" gorm:"default:false;"`
 	ConfidentialityRequirement   dtos.RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`

@@ -24,6 +24,7 @@ import (
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type ComponentProject struct {
@@ -46,10 +47,10 @@ func (c ComponentProject) TableName() string {
 }
 
 type Component struct {
-	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"`
+	// ID might be a PURL - but not always. Sometimes it is a file path to a binary or a "fake node" we are adding during normalization
+	ID            string                `json:"id" gorm:"primaryKey;column:id"`
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
-	Version       string                `json:"version"`
 	License       *string               `json:"license"`
 	Published     *time.Time            `json:"published"`
 
@@ -58,23 +59,26 @@ type Component struct {
 	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
+func (c Component) GetPURL() (packageurl.PackageURL, error) {
+	return packageurl.FromString(c.ID)
+}
+
 type ComponentDependency struct {
 	ID uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	Component      Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
-	ComponentPurl  *string   `json:"componentPurl" gorm:"column:component_purl;index:component_purl_idx"` // will be nil, for direct dependencies
-	Dependency     Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
-	DependencyPurl string    `json:"dependencyPurl" gorm:"column:dependency_purl;index:dependency_purl_idx"`
+	Component    Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
+	ComponentID  *string   `json:"componentPurl" gorm:"column:component_id;index:component_purl_idx"` // will be nil, for direct dependencies
+	Dependency   Component `json:"dependency" gorm:"foreignKey:DependencyID;references:ID;constraint:OnDelete:CASCADE;"`
+	DependencyID string    `json:"dependencyPurl" gorm:"column:dependency_id;index:dependency_purl_idx"`
 
 	// Foreign key fields for AssetVersion relationship
-	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;not null;"`
-	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;not null;type:uuid;"`
+	AssetVersionName string       `json:"assetVersionName" gorm:"column:asset_version_name;not null;"`
+	AssetID          uuid.UUID    `json:"assetId" gorm:"column:asset_id;not null;type:uuid;"`
+	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE"`
-
-	Depth int `json:"depth" gorm:"column:depth"`
 }
 
 const Root string = "root"
@@ -90,13 +94,13 @@ func (c ComponentDependencyNode) GetID() string {
 func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
 	// a component dependency represents an edge in the dependency tree
 	// thus we can represent it as two nodes
-	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentPurl)}, ComponentDependencyNode{ID: c.DependencyPurl}}
+	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentID)}, ComponentDependencyNode{ID: c.DependencyID}}
 }
 
 func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {
 	licenses := cyclonedx.Licenses{}
 	//first check if the license is overwritten by a license risk#
-	overwrite, exists := componentLicenseOverwrites[component.DependencyPurl]
+	overwrite, exists := componentLicenseOverwrites[component.DependencyID]
 	componentLicense := utils.SafeDereference(component.Dependency.License)
 	if exists && overwrite != "" {
 		// TO-DO: check if the license provided by the user is a valid license or not
@@ -164,31 +168,46 @@ func isLicenseExpression(license string) bool {
 
 func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[string]string) cyclonedx.Component {
 	licenses := resolveLicense(c, componentLicenseOverwrites)
+	// parse the purl to set the version column
+	parsed, err := packageurl.FromString(c.DependencyID)
+	if err != nil {
+		// parsing failed - ID is not a valid PURL (e.g., file path or fake node)
+		// Return component with empty PackageURL per CycloneDX spec
+		return cyclonedx.Component{
+			Licenses:   &licenses,
+			BOMRef:     c.DependencyID,
+			Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
+			PackageURL: "", // Empty for non-PURL identifiers
+			Version:    "",
+			Name:       c.DependencyID,
+		}
+	}
+	// parsing succeeded - use version from PURL
 	return cyclonedx.Component{
 		Licenses:   &licenses,
-		BOMRef:     c.DependencyPurl,
+		BOMRef:     c.DependencyID,
 		Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
-		PackageURL: c.DependencyPurl,
-		Version:    c.Dependency.Version,
-		Name:       c.DependencyPurl,
+		PackageURL: c.DependencyID,
+		Version:    parsed.Version,
+		Name:       c.DependencyID,
 	}
 }
 
 func (c ComponentDependency) GetPurl() string {
-	return c.DependencyPurl
+	return c.DependencyID
 }
 
 func (c ComponentDependency) GetDependentPurl() *string {
-	return c.ComponentPurl
+	return c.ComponentID
 }
 
 func BuildDepMap(deps []ComponentDependency) map[string][]string {
 	depMap := make(map[string][]string)
 	for _, dep := range deps {
-		if _, ok := depMap[utils.SafeDereference(dep.ComponentPurl)]; !ok {
-			depMap[utils.SafeDereference(dep.ComponentPurl)] = []string{}
+		if _, ok := depMap[utils.SafeDereference(dep.ComponentID)]; !ok {
+			depMap[utils.SafeDereference(dep.ComponentID)] = []string{}
 		}
-		depMap[utils.SafeDereference(dep.ComponentPurl)] = append(depMap[utils.SafeDereference(dep.ComponentPurl)], dep.DependencyPurl)
+		depMap[utils.SafeDereference(dep.ComponentID)] = append(depMap[utils.SafeDereference(dep.ComponentID)], dep.DependencyID)
 	}
 	return depMap
 }
@@ -197,7 +216,7 @@ const NoVersion = "0.0.0"
 
 func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {
 	return utils.Filter(deps, func(dep ComponentDependency) bool {
-		return dep.ComponentPurl == nil
+		return dep.ComponentID == nil
 	})
 }
 
@@ -212,7 +231,7 @@ func (c ComponentDependency) TableName() string {
 type VulnInPackage struct {
 	CVEID        string
 	CVE          CVE
-	Purl         string
+	Purl         packageurl.PackageURL
 	FixedVersion *string
 }
 

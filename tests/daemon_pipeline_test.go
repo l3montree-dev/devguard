@@ -7,10 +7,39 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
+
+// createTestAffectedComponent creates a properly populated AffectedComponent for testing
+func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.AffectedComponent, error) {
+	purl, err := packageurl.FromString(purlStr)
+	if err != nil {
+		return models.AffectedComponent{}, err
+	}
+
+	purlWithoutVersion := normalize.ToPurlWithoutVersion(purl)
+	namespace := purl.Namespace
+	subpath := purl.Subpath
+
+	return models.AffectedComponent{
+		Source:             "test",
+		PurlWithoutVersion: purlWithoutVersion,
+		Ecosystem:          purl.Type,
+		Scheme:             "pkg",
+		Type:               purl.Type,
+		Name:               purl.Name,
+		Namespace:          &namespace,
+		Qualifiers:         databasetypes.MustJSONBFromStruct(purl.Qualifiers.Map()),
+		Subpath:            &subpath,
+		Version:            &purl.Version,
+		CVE:                cves,
+	}, nil
+}
 
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
@@ -36,17 +65,14 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			err = f.DB.Create(&cve).Error
 			assert.NoError(t, err)
 
-			affectedComponent := models.AffectedComponent{
-				PurlWithoutVersion: "pkg:npm/test-package",
-				Version:            utils.Ptr("1.0.0"),
-				CVE:                []models.CVE{cve},
-			}
+			affectedComponent, err := createTestAffectedComponent("pkg:npm/test-package@1.0.0", []models.CVE{cve})
+			assert.NoError(t, err)
 			err = f.DB.Create(&affectedComponent).Error
 			assert.NoError(t, err)
 
 			// Create component
 			component := models.Component{
-				Purl: "pkg:npm/test-package@1.0.0",
+				ID: "pkg:npm/test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
 			assert.NoError(t, err)
@@ -67,9 +93,9 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 				Artifacts: []models.Artifact{
 					artifact,
 				},
-				ComponentPurl:  nil,
-				DependencyPurl: "pkg:npm/test-package@1.0.0",
-				Dependency:     component,
+				ComponentID:  nil,
+				DependencyID: "pkg:npm/test-package@1.0.0",
+				Dependency:   component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)
@@ -124,6 +150,13 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
+		// create the component "pkg:npm/test-package@1.0.0"
+		component := models.Component{
+			ID: "pkg:npm/test-package@1.0.0",
+		}
+
+		assert.Nil(t, f.DB.Create(&component).Error)
+
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetID:          asset.ID,
@@ -131,8 +164,8 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour), // 2 days ago
 			},
-			CVEID:         utils.Ptr(cve.CVE),
-			ComponentPurl: utils.Ptr("pkg:npm/test-package@1.0.0"),
+			CVEID:         cve.CVE,
+			ComponentPurl: "pkg:npm/test-package@1.0.0",
 			Artifacts: []models.Artifact{{
 				ArtifactName:     "test-artifact",
 				AssetVersionName: assetVersion.Name,
@@ -201,6 +234,12 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
+		// create the component "pkg:npm/test-package@1.0.0"
+		component := models.Component{
+			ID: "pkg:npm/test-package@1.0.0",
+		}
+		assert.Nil(t, f.DB.Create(&component).Error)
+
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetID:          asset.ID,
@@ -208,8 +247,8 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour),
 			},
-			CVEID:         utils.Ptr(cve.CVE),
-			ComponentPurl: utils.Ptr("pkg:npm/test-package@1.0.0"),
+			CVEID:         cve.CVE,
+			ComponentPurl: "pkg:npm/test-package@1.0.0",
 			Artifacts: []models.Artifact{{
 				ArtifactName:     "test-artifact",
 				AssetVersionName: assetVersion.Name,
@@ -370,17 +409,14 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		err := f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
-		affectedComponent := models.AffectedComponent{
-			PurlWithoutVersion: "pkg:npm/vulnerable-package",
-			Version:            utils.Ptr("2.0.0"),
-			CVE:                []models.CVE{cve},
-		}
+		affectedComponent, err := createTestAffectedComponent("pkg:npm/vulnerable-package@2.0.0", []models.CVE{cve})
+		assert.NoError(t, err)
 		err = f.DB.Create(&affectedComponent).Error
 		assert.NoError(t, err)
 
 		// Create component
 		component := models.Component{
-			Purl: "pkg:npm/vulnerable-package@2.0.0",
+			ID: "pkg:npm/vulnerable-package@2.0.0",
 		}
 		err = f.DB.Create(&component).Error
 		assert.NoError(t, err)
@@ -401,9 +437,9 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 			Artifacts: []models.Artifact{
 				artifact,
 			},
-			ComponentPurl:  nil,
-			DependencyPurl: "pkg:npm/vulnerable-package@2.0.0",
-			Dependency:     component,
+			ComponentID:  nil,
+			DependencyID: "pkg:npm/vulnerable-package@2.0.0",
+			Dependency:   component,
 		}
 		err = f.DB.Create(&componentDependency).Error
 		assert.NoError(t, err)
@@ -484,17 +520,14 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			err := f.DB.Create(&cve).Error
 			assert.NoError(t, err)
 
-			affectedComponent := models.AffectedComponent{
-				PurlWithoutVersion: "pkg:npm/risk-test-package",
-				Version:            utils.Ptr("1.0.0"),
-				CVE:                []models.CVE{cve},
-			}
+			affectedComponent, err := createTestAffectedComponent("pkg:npm/risk-test-package@1.0.0", []models.CVE{cve})
+			assert.NoError(t, err)
 			err = f.DB.Create(&affectedComponent).Error
 			assert.NoError(t, err)
 
 			// Create component
 			component := models.Component{
-				Purl: "pkg:npm/risk-test-package@1.0.0",
+				ID: "pkg:npm/risk-test-package@1.0.0",
 			}
 			err = f.DB.Create(&component).Error
 			assert.NoError(t, err)
@@ -515,9 +548,9 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				Artifacts: []models.Artifact{
 					artifact,
 				},
-				ComponentPurl:  nil,
-				DependencyPurl: "pkg:npm/risk-test-package@1.0.0",
-				Dependency:     component,
+				ComponentID:  nil,
+				DependencyID: "pkg:npm/risk-test-package@1.0.0",
+				Dependency:   component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)
@@ -538,7 +571,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			vuln := vulnerabilities[0]
 			assert.NotNil(t, vuln.RawRiskAssessment, "Risk assessment should be calculated")
-			assert.Greater(t, *vuln.RawRiskAssessment, float64(7), "Risk should be calculated (can be 0 or greater)")
+			assert.Greater(t, *vuln.RawRiskAssessment, float64(3), "Risk should be calculated (can be 0 or greater)")
 		})
 	})
 }

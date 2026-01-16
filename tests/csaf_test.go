@@ -207,12 +207,26 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		panic(err)
 	}
 
+	// create the components referenced by the dependency vulns
+	component1 := models.Component{
+		ID: "pkg:npm/next@14.2.13",
+	}
+	if err = db.Create(&component1).Error; err != nil {
+		panic(err)
+	}
+	component2 := models.Component{
+		ID: "pkg:npm/axios@1.7.7",
+	}
+	if err = db.Create(&component2).Error; err != nil {
+		panic(err)
+	}
+
 	//create our 2 dependency vuln referencing the cve
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
-		ComponentPurl:     utils.Ptr("pkg:npm/next@14.2.13"),
-		CVE:               &cve,
-		CVEID:             &cve.CVE,
+		ComponentPurl:     "pkg:npm/next@14.2.13",
+		CVE:               cve,
+		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
 		ComponentDepth:    utils.Ptr(8),
 		Artifacts:         []models.Artifact{artifact},
@@ -223,9 +237,9 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	}
 	vuln2 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "falsePositive"},
-		ComponentPurl:     utils.Ptr("pkg:npm/axios@1.7.7"),
-		CVE:               &cve2,
-		CVEID:             &cve2.CVE,
+		ComponentPurl:     "pkg:npm/axios@1.7.7",
+		CVE:               cve2,
+		CVEID:             cve2.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
 		ComponentDepth:    utils.Ptr(2),
 		Artifacts:         []models.Artifact{artifact},

@@ -16,16 +16,17 @@
 package transformer
 
 import (
+	"net/url"
+
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func CVEToDTO(cve *models.CVE) *dtos.CVEDTO {
-	if cve == nil {
-		return nil
-	}
-	return &dtos.CVEDTO{
+func CVEToDTO(cve models.CVE) dtos.CVEDTO {
+	return dtos.CVEDTO{
 		CVE:                   cve.CVE,
 		CreatedAt:             cve.CreatedAt,
 		UpdatedAt:             cve.UpdatedAt,
@@ -119,4 +120,46 @@ func GetAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string 
 		return *ev.OriginalAssetVersionName
 	}
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
+}
+
+func VulnInPackageToDependencyVuln(vuln models.VulnInPackage, depthMap map[string]int, assetID uuid.UUID, assetVersionName string, artifactName string) models.DependencyVuln {
+	v := VulnInPackageToDependencyVulnWithoutArtifact(vuln, depthMap, assetID, assetVersionName)
+
+	// set the artifact
+	v.Artifacts = []models.Artifact{
+		{
+			ArtifactName:     artifactName,
+			AssetVersionName: assetVersionName,
+			AssetID:          assetID,
+		},
+	}
+
+	return v
+}
+
+func VulnInPackageToDependencyVulnWithoutArtifact(vuln models.VulnInPackage, depthMap map[string]int, assetID uuid.UUID, assetVersionName string) models.DependencyVuln {
+	v := vuln
+	// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
+	stringPurl, _ := url.PathUnescape(v.Purl.ToString())
+	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
+	// check if we could calculate a depth for this component
+	if _, ok := depthMap[stringPurl]; !ok {
+		// if not, set it to 1 (direct dependency)
+		depthMap[stringPurl] = 1
+	}
+
+	dependencyVuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			AssetVersionName: assetVersionName,
+			AssetID:          assetID,
+		},
+
+		CVEID:                 v.CVEID,
+		ComponentPurl:         stringPurl,
+		ComponentFixedVersion: fixedVersion,
+		ComponentDepth:        utils.Ptr(depthMap[stringPurl]),
+		CVE:                   v.CVE,
+	}
+
+	return dependencyVuln
 }

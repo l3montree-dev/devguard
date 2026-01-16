@@ -54,9 +54,9 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: nil, DependencyID: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
+			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: utils.Ptr("testDependency"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -77,9 +77,9 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "test@PURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: nil, DependencyID: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
+			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: utils.Ptr("testDependency"), DependencyID: "test@PURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)

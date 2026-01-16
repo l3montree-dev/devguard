@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -156,7 +157,7 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 		packages = append(packages, pkg)
 
 		// Create affected components
-		components := models.MaliciousAffectedComponentFromOSV(entry, entry.ID)
+		components := transformer.MaliciousAffectedComponentFromOSV(entry, entry.ID)
 		affectedComponents = append(affectedComponents, components...)
 
 		totalLoaded++
@@ -229,7 +230,7 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 				Details: "This is a fake malicious package entry used for testing the dependency proxy",
 				Affected: []dtos.Affected{
 					{
-						Package: dtos.Pkg{
+						Package: dtos.Package{
 							Ecosystem: ecosystem,
 							Name:      pkgName,
 							Purl:      fmt.Sprintf("pkg:%s/%s", ecosystem, pkgName),
@@ -249,7 +250,7 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 			}
 			packages = append(packages, pkg)
 
-			components := models.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)
+			components := transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)
 			affectedComponents = append(affectedComponents, components...)
 		}
 	}
@@ -261,8 +262,13 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
-	// Build a purl for the package
-	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	// Build a purl for the package (include version for proper version matching)
+	var purl string
+	if version != "" {
+		purl = fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
+	} else {
+		purl = fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	}
 
 	// Parse to normalize
 	parsedPurl, err := packageurl.FromString(purl)
@@ -271,12 +277,8 @@ func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version st
 		return false, nil
 	}
 
-	// Remove version for lookup
-	parsedPurl.Version = ""
-	searchPurl := parsedPurl.ToString()
-
 	// Query database using purl matching (similar to PurlComparer)
-	components, err := c.repository.GetMaliciousAffectedComponents(searchPurl, version)
+	components, err := c.repository.GetMaliciousAffectedComponents(parsedPurl)
 	if err != nil {
 		slog.Debug("Failed to query malicious packages", "error", err)
 		return false, nil

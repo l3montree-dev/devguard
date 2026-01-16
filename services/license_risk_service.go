@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	component "github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -50,6 +51,10 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	foundLicenseRisks := make([]models.LicenseRisk, 0)
 	compToValidLicense := make(map[string]string)
 	for _, comp := range components {
+		if _, err := comp.GetPURL(); err != nil {
+			continue
+		}
+
 		if comp.License == nil {
 			slog.Warn("license is nil, avoided nil pointer dereference")
 			continue
@@ -65,11 +70,11 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 					LastDetected:     time.Now(),
 				},
 				FinalLicenseDecision: nil,
-				ComponentPurl:        comp.Purl,
+				ComponentPurl:        comp.ID,
 			}
 			foundLicenseRisks = append(foundLicenseRisks, lr)
 		} else {
-			compToValidLicense[comp.Purl] = *comp.License
+			compToValidLicense[comp.ID] = *comp.License
 		}
 	}
 	//filter out duplicates in foundLicenseRisks
@@ -191,7 +196,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisks(tx shared.DB, userID string, 
 	events := make([]models.VulnEvent, len(licenseRisks))
 	for i := range licenseRisks {
 		ev := models.NewFixedEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, userID, "", upstream)
-		ev.Apply(&licenseRisks[i])
+		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
 	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisks); err != nil {
@@ -210,7 +215,7 @@ func (s *LicenseRiskService) UserDetectedLicenseRisks(tx shared.DB, assetID uuid
 		// ensure artifact association exists in the object
 		licenseRisks[i].Artifacts = append(licenseRisks[i].Artifacts, models.Artifact{ArtifactName: artifactName, AssetID: assetID, AssetVersionName: assetVersionName})
 		ev := models.NewDetectedEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, "system", dtos.RiskCalculationReport{}, artifactName, upstream)
-		ev.Apply(&licenseRisks[i])
+		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
 	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisks); err != nil {
@@ -260,7 +265,7 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(tx
 			return 0
 		})
 		for _, ev := range events[i] {
-			ev.Apply(&licenseRisks[i])
+			statemachine.Apply(&licenseRisks[i], ev)
 		}
 	}
 
@@ -322,7 +327,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(tx shared.D
 		ev := models.NewLicenseDecisionEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, userID, "Automatically fixed by license refresh", artifactName, licenseRisks[i].NewFinalLicense)
 		events[i] = ev
 		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
-		ev.Apply(&licenseRisks[i].LicenseRisk)
+		statemachine.Apply(&licenseRisks[i].LicenseRisk, ev)
 	}
 	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisksToSave); err != nil {
 		return err

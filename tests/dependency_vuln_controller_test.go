@@ -85,6 +85,11 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			}
 			assert.Nil(t, f.DB.Create(&cve).Error)
 
+			// create the component "pkg:npm/test-package@1.0.0"
+			component := models.Component{
+				ID: "pkg:npm/test-package@1.0.0",
+			}
+			assert.Nil(t, f.DB.Create(&component).Error)
 			// Create a dependency vuln with a ticket ID
 			depVuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
@@ -94,7 +99,8 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 					TicketID:             utils.Ptr("gitlab:0/123"),
 					ManualTicketCreation: true,
 				},
-				CVEID: utils.Ptr(cve.CVE),
+				ComponentPurl: "pkg:npm/test-package@1.0.0",
+				CVEID:         cve.CVE,
 			}
 			assert.Nil(t, f.DB.Create(&depVuln).Error)
 

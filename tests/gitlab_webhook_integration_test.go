@@ -52,7 +52,12 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			DefaultBranch: true,
 		}
 		assert.Nil(t, f.DB.Create(&assetVersion).Error)
-
+		// create the cve
+		cve := models.CVE{
+			CVE:         "CVE-2222",
+			Description: "Test CVE for gitlab webhook",
+		}
+		assert.Nil(t, f.DB.Create(&cve).Error)
 		// add a vulnerability to the asset version
 		vuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
@@ -61,6 +66,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 				AssetID:          asset.ID,
 				TicketID:         utils.Ptr("gitlab:0/123"),
 			},
+			CVEID: "CVE-2222",
 		}
 		assert.Nil(t, f.DB.Create(&vuln).Error)
 

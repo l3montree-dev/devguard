@@ -1,11 +1,10 @@
 package dtos
 
 import (
-	"strings"
 	"time"
 )
 
-type Pkg struct {
+type Package struct {
 	Name      string `json:"name"`
 	Ecosystem string `json:"ecosystem"`
 	Purl      string `json:"purl"`
@@ -16,7 +15,7 @@ type SemverEvent struct {
 	Fixed      string `json:"fixed,omitempty"`
 }
 
-type Rng struct {
+type Range struct {
 	Type   string        `json:"type"`
 	Repo   string        `json:"repo"`
 	Events []SemverEvent `json:"events"`
@@ -30,8 +29,8 @@ type EcosystemSpecific struct {
 }
 
 type Affected struct {
-	Package           Pkg                `json:"package"`
-	Ranges            []Rng              `json:"ranges"`
+	Package           Package            `json:"package"`
+	Ranges            []Range            `json:"ranges"`
 	Versions          []string           `json:"versions"`
 	EcosystemSpecific *EcosystemSpecific `json:"ecosystem_specific"`
 }
@@ -47,36 +46,8 @@ type OSV struct {
 	Upstream      []string   `json:"upstream"`
 	Affected      []Affected `json:"affected"`
 	SchemaVersion string     `json:"schema_version"`
-}
-
-func (osv OSV) GetCVE() []string {
-	cves := make([]string, 0)
-	for _, alias := range osv.Aliases {
-		if strings.HasPrefix(alias, "CVE-") {
-			cves = append(cves, alias)
-		}
-	}
-
-	for _, upstream := range osv.Upstream {
-		if strings.HasPrefix(upstream, "CVE-") {
-			cves = append(cves, upstream)
-		}
-	}
-
-	// check if the osv itself is a cve
-	if strings.HasPrefix(osv.ID, "CVE-") {
-		cves = append(cves, osv.ID)
-	}
-
-	// check if its related to a cve
-	for _, related := range osv.Related {
-		if strings.HasPrefix(related, "CVE-") {
-			cves = append(cves, related)
-		}
-	}
-
-	return cves
-}
-func (osv OSV) IsCVE() bool {
-	return len(osv.GetCVE()) > 0
+	Severity      []struct {
+		Type  string `json:"type"`
+		Score string `json:"score"`
+	} `json:"severity"`
 }
