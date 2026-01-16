@@ -564,10 +564,9 @@ func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersion
 
 func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
 	bom := cdx.BOM{}
-	// add all components AND the root
-	bomComponents := make([]cdx.Component, 0, len(components)+1)
+	// add all components (root is created in fromNormalizedCdxBom)
+	bomComponents := make([]cdx.Component, 0, len(components))
 	processedComponents := make(map[string]struct{}, len(components))
-	bomComponents = append(bomComponents, *bom.Metadata.Component)
 
 	for _, component := range components {
 		if _, alreadyProcessed := processedComponents[component.GetPurl()]; alreadyProcessed {
@@ -913,15 +912,28 @@ func fromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVer
 		rootPurl = Purlify(assetSlug, assetVersionName)
 	}
 
-	cdxBom := newCdxBom(bom)
-	newRoot := newCdxBomNode(&cdx.Component{
+	// fix dependencies with empty Ref to use the root purl
+	// this handles components with no parent (direct dependencies of root)
+	if bom.Dependencies != nil {
+		for i := range *bom.Dependencies {
+			if (*bom.Dependencies)[i].Ref == "" {
+				(*bom.Dependencies)[i].Ref = rootPurl
+			}
+		}
+	}
+
+	// set the root component metadata so newCdxBom uses it
+	if bom.Metadata == nil {
+		bom.Metadata = &cdx.Metadata{}
+	}
+	bom.Metadata.Component = &cdx.Component{
 		BOMRef:     rootPurl,
 		Name:       rootPurl,
 		PackageURL: rootPurl,
 		Type:       "application",
-	})
+	}
 
-	cdxBom.ReplaceRoot(newRoot)
+	cdxBom := newCdxBom(bom)
 	cdxBom.artifactName = artifactName
 	cdxBom.assetVersionSlug = assetVersionSlug
 	cdxBom.assetSlug = assetSlug
