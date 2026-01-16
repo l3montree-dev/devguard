@@ -103,15 +103,15 @@ func (c *componentRepository) LoadPathToComponent(tx *gorm.DB, assetVersionName 
 		// using postgresql CYCLE Keyword to detect possible loops
 		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 	SELECT
-		cd.component_purl,
-		cd.dependency_purl,
+		cd.component_id,
+		cd.dependency_id,
 		cd.asset_id,
 		0 AS depth,
-		ARRAY[cd.dependency_purl] AS path
+		ARRAY[cd.dependency_id] AS path
 	FROM component_dependencies cd
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
 	WHERE
-		cd.dependency_purl = @pURL AND
+		cd.dependency_id = @pURL AND
 		cd.asset_id = @assetID AND
 		cd.asset_version_name = @assetVersionName AND
 		acd.artifact_asset_version_name = @assetVersionName AND
@@ -120,18 +120,18 @@ func (c *componentRepository) LoadPathToComponent(tx *gorm.DB, assetVersionName 
 	UNION ALL
 
 	SELECT
-		co.component_purl,
-		co.dependency_purl,
+		co.component_id,
+		co.dependency_id,
 		co.asset_id,
 		cte.depth + 1,
-		co.dependency_purl || cte.path
+		co.dependency_id || cte.path
 	FROM component_dependencies co
 	INNER JOIN components_cte cte
-		ON co.dependency_purl = cte.component_purl
+		ON co.dependency_id = cte.component_id
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
-		NOT co.dependency_purl = ANY(cte.path) AND cte.depth < 100
+		NOT co.dependency_id = ANY(cte.path) AND cte.depth < 100
 ),
 target_path AS (
 	SELECT * FROM components_cte
@@ -144,15 +144,15 @@ SELECT * FROM target_path;
 		// using postgresql CYCLE Keyword to detect possible loops
 		query = c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 	SELECT
-		cd.component_purl,
-		cd.dependency_purl,
+		cd.component_id,
+		cd.dependency_id,
 		cd.asset_id,
 		0 AS depth,
-		ARRAY[cd.dependency_purl] AS path
+		ARRAY[cd.dependency_id] AS path
 	FROM component_dependencies cd
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
 	WHERE
-		cd.dependency_purl = @pURL AND
+		cd.dependency_id = @pURL AND
 		cd.asset_id = @assetID AND
 		cd.asset_version_name = @assetVersionName AND
 		acd.artifact_artifact_name = @artifactName AND
@@ -162,20 +162,20 @@ SELECT * FROM target_path;
 	UNION ALL
 
 	SELECT
-		co.component_purl,
-		co.dependency_purl,
+		co.component_id,
+		co.dependency_id,
 		co.asset_id,
 		cte.depth + 1,
-		co.dependency_purl || cte.path
+		co.dependency_id || cte.path
 	FROM component_dependencies co
 	INNER JOIN components_cte cte
-		ON co.dependency_purl = cte.component_purl
+		ON co.dependency_id = cte.component_id
 	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
 	WHERE
 		co.asset_id = @assetID AND
 		co.asset_version_name = @assetVersionName AND
 		acd.artifact_artifact_name = @artifactName AND
-		NOT co.dependency_purl = ANY(cte.path) AND cte.depth < 100
+		NOT co.dependency_id = ANY(cte.path) AND cte.depth < 100
 ),
 target_path AS (
 	SELECT * FROM components_cte
@@ -204,14 +204,14 @@ func (c *componentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionNa
 	var otherLicenses License
 	//We want to get all components with an overwritten license and all components without one and then just merge the two
 	//Components WITH an overwrite
-	overwrittenLicensesQuery := c.GetDB(tx).Raw(`SELECT 
+	overwrittenLicensesQuery := c.GetDB(tx).Raw(`SELECT
     lr.final_license_decision as license,
-    COUNT(DISTINCT cd.dependency_purl) AS count
+    COUNT(DISTINCT cd.dependency_id) AS count
 	FROM license_risks AS lr
 	JOIN components AS c
-		ON lr.component_purl = c.purl
+		ON lr.component_id = c.id
 	JOIN component_dependencies AS cd
-		ON c.purl = cd.dependency_purl
+		ON c.id = cd.dependency_id
 	WHERE lr.state = ?
 	AND cd.asset_version_name = ?
 	AND cd.asset_id = ?
@@ -219,12 +219,12 @@ func (c *componentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionNa
 		dtos.VulnStateFixed, assetVersionName, assetID)
 
 	//Components WITHOUT an overwrite
-	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(DISTINCT cd.component_purl) AS count
-	FROM components as c 
-	RIGHT JOIN component_dependencies as cd 
-	ON c.purl = cd.dependency_purl 
-	WHERE NOT EXISTS 
-	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl AND lr.state = ?)
+	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license, COUNT(DISTINCT cd.component_id) AS count
+	FROM components as c
+	RIGHT JOIN component_dependencies as cd
+	ON c.id = cd.dependency_id
+	WHERE NOT EXISTS
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_id = c.id AND lr.state = ?)
 	AND asset_version_name = ?
 	AND asset_id = ?
 	GROUP BY c.license`,
@@ -294,7 +294,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Joins("LEFT JOIN components as dependency ON dependency.purl = dependency_purl").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Joins("LEFT JOIN components as dependency ON dependency.id = dependency_id").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -306,7 +306,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 		}
 	}
 
-	distinctFields := []string{"dependency_purl"}
+	distinctFields := []string{"dependency_id"}
 	for _, f := range sort {
 		distinctFields = append(distinctFields, f.GetField())
 	}
@@ -314,11 +314,11 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") *"
 
 	if search != "" {
-		query = query.Where("dependency_purl ILIKE ?", "pkg:%"+search+"%")
+		query = query.Where("dependency_id ILIKE ?", "pkg:%"+search+"%")
 	}
 
 	var total int64
-	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
+	query.Session(&gorm.Session{}).Distinct("dependency_id").Count(&total)
 
 	// if page size is -1, we want to return all results
 	if pageInfo.PageSize == -1 {
@@ -481,14 +481,14 @@ func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName st
 
 func (c *componentRepository) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	var result []models.ComponentDependency
-	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_purl IS NULL AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id AND component_dependency_id = id)", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
+	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_id IS NULL AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id AND component_dependency_id = id)", artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 func (c *componentRepository) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
-	return c.GetDB(nil).Where("component_purl IS NULL AND dependency_purl IN (?) AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", rootNodePurls, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
+	return c.GetDB(nil).Where("component_id IS NULL AND dependency_id IN (?) AND EXISTS (SELECT 1 from artifact_component_dependencies WHERE artifact_artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND component_dependencies.asset_version_name = asset_version_name AND asset_id = component_dependencies.asset_id)", rootNodePurls, artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }
 
 func (c *componentRepository) SearchComponentOccurrencesByProject(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {

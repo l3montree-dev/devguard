@@ -48,7 +48,7 @@ func (c ComponentProject) TableName() string {
 
 type Component struct {
 	// ID might be a PURL - but not always. Sometimes it is a file path to a binary or a "fake node" we are adding during normalization
-	ID            string                `json:"id" gorm:"primaryKey;column:purl"`
+	ID            string                `json:"id" gorm:"primaryKey;column:id"`
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
 	License       *string               `json:"license"`

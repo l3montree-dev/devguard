@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -142,11 +143,11 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		),
 	})
 
-	/*slog.Info("Syncing vulndb")
+	slog.Info("Syncing vulndb")
 	if err := manuallyLoadNewVulnDB(db, pool); err != nil {
 		slog.Error("could not initialize database for migration", "err", err)
 		panic(err)
-	}*/
+	}
 
 	slog.Info("start running cve migration...")
 	// Load all vulns with artifacts and events
@@ -311,6 +312,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 			// copyStateFrom is guaranteed to be non-nil now (we filter above)
 			for _, event := range create.copyStateFrom.Events {
+				event.ID = uuid.New() // Generate new ID to avoid duplicates
 				event.VulnID = vulnHash
 				eventsToCreate = append(eventsToCreate, event)
 			}
@@ -412,8 +414,9 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 	if err != nil {
 		return err
 	}
+
+	daemonRunner.RunAssetPipeline(true)
 	return nil
-	// daemonRunner.RunAssetPipeline(true)
 }
 
 type vulnCreate struct {
@@ -453,20 +456,11 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 		// Find which old CVE (if any) should donate state to this new CVE
 		// Priority: 1) exact CVE ID match, 2) relationship match
 		var copyStateFrom *models.DependencyVuln = nil
-		for i := range oldVulns {
-			// Exact match - same CVE ID
-			if oldVulns[i].CVEID == foundVuln.CVEID {
-				copyStateFrom = &oldVulns[i]
-				break
-			}
-		}
 		// If no exact match, check relationships
-		if copyStateFrom == nil {
-			for i := range oldVulns {
-				if isRelatedCVE(oldVulns[i].CVEID, foundVuln.CVE.Relationships) {
-					copyStateFrom = &oldVulns[i]
-					break // First match wins
-				}
+		for i := range oldVulns {
+			if isRelatedCVE(oldVulns[i].CVEID, foundVuln.CVE.Relationships) {
+				copyStateFrom = &oldVulns[i]
+				break // First match wins
 			}
 		}
 
@@ -483,11 +477,6 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 	}
 
 	return resolveResult{creates: creates}
-}
-
-// Legacy function kept for compatibility - processes single old vuln
-func resolveCVERelations(oldVuln models.DependencyVuln, foundVulns []models.VulnInPackage) resolveResult {
-	return resolveCVERelationsForPurl([]models.DependencyVuln{oldVuln}, foundVulns)
 }
 
 func isRelatedCVE(cveID string, relationships []models.CVERelationship) bool {

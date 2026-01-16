@@ -60,9 +60,9 @@ func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- 
 	// recalculate risk for vulnerabilities
 	ch = monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, runner.RecalculateRiskForVulnerabilities)(ch, errChan)
 	// sync tickets
-	ch = monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(ch, errChan)
+	// ch = monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(ch, errChan)
 	// resolve differences in ticket state
-	ch = monitorStage(monitoring.ResolveDifferencesInTicketState, runner.ResolveDifferencesInTicketState)(ch, errChan)
+	// ch = monitorStage(monitoring.ResolveDifferencesInTicketState, runner.ResolveDifferencesInTicketState)(ch, errChan)
 	// collect stats
 	ch = monitorStage(monitoring.StatisticsUpdateDuration, runner.CollectStats)(ch, errChan)
 	utils.WaitForChannelDrain(ch)
