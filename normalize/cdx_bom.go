@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -557,43 +556,14 @@ type CdxComponent interface {
 }
 
 func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, vulns []cdx.Vulnerability) *CdxBom {
-	rootPurl := ""
-	if artifactName != "" {
-		rootPurl = Purlify(artifactName, assetVersionName)
-	} else {
-		rootPurl = Purlify(assetSlug, assetVersionName)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
+	bom := cdx.BOM{}
 	bom.Vulnerabilities = &vulns
 
-	return fromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
-	rootPurl := ""
-	if artifactName != "" {
-		rootPurl = Purlify(artifactName, assetVersionName)
-	} else {
-		rootPurl = Purlify(assetSlug, assetVersionName)
-	}
-
-	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef: rootPurl,
-			},
-		},
-	}
-
+	bom := cdx.BOM{}
 	// add all components AND the root
 	bomComponents := make([]cdx.Component, 0, len(components)+1)
 	processedComponents := make(map[string]struct{}, len(components))
@@ -612,9 +582,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
 		var purl string
-		if c.GetDependentPurl() == nil {
-			purl = rootPurl
-		} else {
+		if c.GetDependentPurl() != nil {
 			purl = *c.GetDependentPurl()
 		}
 		dependencyMap[purl] = append(dependencyMap[purl], c.GetPurl())
@@ -633,7 +601,7 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 
-	return fromNormalizedCdxBom(&bom, rootPurl, artifactName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
 }
 
 func newCdxBom(bom *cdx.BOM) *CdxBom {
