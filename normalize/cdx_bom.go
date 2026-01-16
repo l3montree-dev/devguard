@@ -2,7 +2,6 @@ package normalize
 
 import (
 	"fmt"
-	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
@@ -85,11 +84,6 @@ func (bom *CdxBom) AddChild(parent *TreeNode[cdxBomNode], child *TreeNode[cdxBom
 
 func (bom *CdxBom) CalculateDepth() map[string]int {
 	depthMap := make(map[string]int)
-	// check if the bom is empty to avoid running into out of bounds slice access
-	if len(bom.tree.Root.Children) == 0 {
-		slog.Warn("empty sbom detected")
-		return depthMap
-	}
 
 	var visit func(node *TreeNode[cdxBomNode], depth int)
 	visit = func(node *TreeNode[cdxBomNode], depth int) {
@@ -106,8 +100,8 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 			visit(child, depth)
 		}
 	}
-	// we need to start the depth calculation at the origin of the SBOM rather than the root of the tree (being the artifact)
-	visit(bom.tree.Root.Children[0], 1)
+	// since the root of the sbom is the artifact itself we need to start counting at 0
+	visit(bom.tree.Root, 0)
 
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
