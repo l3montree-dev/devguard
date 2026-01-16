@@ -65,7 +65,7 @@ var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modif
 func (service importService) Import(tx shared.DB, tag string) error {
 	begin := time.Now()
 
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
@@ -117,7 +117,7 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 func (service importService) ImportFromDiff(extraTableNameSuffix *string) error {
 	ctx := context.Background()
 
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb-diff"
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
@@ -272,7 +272,13 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 	return nil
 }
 
+var DISABLE_FOREIGN_KEY_FIX = false
+
 func makeSureForeignKeysAreSetOnCorrectTables(ctx context.Context, tx pgx.Tx) error {
+	if DISABLE_FOREIGN_KEY_FIX {
+		slog.Info("foreign key fix is disabled, skipping...")
+		return nil
+	}
 	_, err := tx.Exec(ctx, `
 -- Drop the foreign key constraint first
 ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;

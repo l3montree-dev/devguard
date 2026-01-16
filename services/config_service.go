@@ -42,3 +42,7 @@ func (service ConfigService) SetJSONConfig(key string, v any) error {
 
 	return service.repository.Save(nil, &config)
 }
+
+func (service ConfigService) RemoveConfig(key string) error {
+	return service.repository.GetDB(nil).Where("key = ?", key).Delete(&models.Config{}).Error
+}

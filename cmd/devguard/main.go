@@ -102,7 +102,6 @@ func main() {
 
 	// Run database migrations using the existing database connection
 	pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
-	db := database.NewGormDB(pool)
 
 	var err error
 
@@ -164,7 +163,7 @@ func main() {
 
 	if disableAutoMigrate != "true" {
 		// Run hash migrations if needed (when algorithm version changes)
-		if err := hashmigrations.RunHashMigrationsIfNeeded(db, daemonRunner); err != nil {
+		if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner); err != nil {
 			slog.Error("failed to run hash migrations", "error", err)
 			panic(errors.New("Failed to run hash migrations"))
 		}

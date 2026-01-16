@@ -79,7 +79,7 @@ jobs:
           PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM malicious_packages) TO STDOUT WITH DELIMITER ',' CSV HEADER" > malicious_packages.csv 
           PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM malicious_affected_components) TO STDOUT WITH DELIMITER ',' CSV HEADER" > malicious_affected_components.csv 
           # PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM weaknesses) TO STDOUT WITH DELIMITER ',' CSV HEADER" > weaknesses.csv
-
+          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_relationships) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_relationships.csv
       - name: Export the diff csv files (this does not take some time)
         if: ${{ github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
         run: |
@@ -91,7 +91,7 @@ jobs:
 
       - name: Zip the CSV files
         if: ${{ github.event.inputs.run_generate_snapshot == 'true' }}
-        run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv malicious_packages.csv malicious_affected_components.csv
+        run: zip vulndb.zip affected_components.csv  cve_affected_component.csv cves.csv cwes.csv exploits.csv malicious_packages.csv malicious_affected_components.csv cve_relationships.csv
       - name: Zip the CSV files
         if: ${{  github.event.inputs.run_generate_snapshot == 'false' || github.event.inputs.run_generate_snapshot == '' }}
         run: zip -r vulndb.zip diffs-tmp

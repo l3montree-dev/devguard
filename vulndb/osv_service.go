@@ -275,9 +275,6 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 
 // checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
 func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
-	if osv.ID == "ALPINE-CVE-2025-4517" {
-		slog.Info("test")
-	}
 	for _, severity := range osv.Severity {
 		// currently only supporting CVSS Version 3 and 4
 		if strings.HasPrefix(severity.Score, "CVSS:3.1") {
