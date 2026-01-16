@@ -97,7 +97,83 @@ func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.Vul
 		}
 	}
 
-	return vulnerabilities, nil
+	return deduplicateByAlias(vulnerabilities), nil
+}
+
+// deduplicateByAlias removes duplicate vulnerabilities caused by CVE aliasing.
+// When the same vulnerability is reported under multiple CVE IDs (aliases),
+// this function keeps only the canonical one to avoid double-counting.
+//
+// Rules:
+//   - If A --alias--> B exists, keep A (source) and remove B (target)
+//   - If bidirectional (A --alias--> B and B --alias--> A), keep the lexicographically smaller one
+func deduplicateByAlias(vulns []models.VulnInPackage) []models.VulnInPackage {
+	if len(vulns) <= 1 {
+		return vulns
+	}
+
+	// Build a map of CVE ID to its vuln for quick lookup
+	vulnMap := make(map[string]models.VulnInPackage)
+	for _, v := range vulns {
+		vulnMap[v.CVEID] = v
+	}
+
+	// Build alias graph: source -> set of targets
+	// A CVE "points to" its aliases (targets)
+	aliasTargets := make(map[string]map[string]bool)
+	for _, v := range vulns {
+		for _, rel := range v.CVE.Relationships {
+			if rel.RelationshipType == "alias" {
+				if aliasTargets[rel.SourceCVE] == nil {
+					aliasTargets[rel.SourceCVE] = make(map[string]bool)
+				}
+				aliasTargets[rel.SourceCVE][rel.TargetCVE] = true
+			}
+		}
+	}
+
+	// Determine which CVEs to exclude
+	exclude := make(map[string]bool)
+	for _, v := range vulns {
+		cveID := v.CVEID
+
+		// Skip if already marked for exclusion
+		if exclude[cveID] {
+			continue
+		}
+
+		// Check if any other CVE in our result set aliases to this one
+		for otherCVE := range vulnMap {
+			if otherCVE == cveID {
+				continue
+			}
+
+			// Check if otherCVE --alias--> cveID
+			if aliasTargets[otherCVE][cveID] {
+				// Check for bidirectional alias
+				if aliasTargets[cveID][otherCVE] {
+					// Bidirectional: keep lexicographically smaller
+					if cveID > otherCVE {
+						exclude[cveID] = true
+					}
+				} else {
+					// Unidirectional: cveID is a target, exclude it
+					exclude[cveID] = true
+				}
+				break
+			}
+		}
+	}
+
+	// Build result excluding duplicates
+	result := make([]models.VulnInPackage, 0, len(vulns)-len(exclude))
+	for _, v := range vulns {
+		if !exclude[v.CVEID] {
+			result = append(result, v)
+		}
+	}
+
+	return result
 }
 
 func filterMatchingComponentsByVersion(components []models.AffectedComponent, lookingForVersion string) []models.AffectedComponent {

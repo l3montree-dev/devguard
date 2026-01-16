@@ -37,10 +37,12 @@ func newInspectCommand() *cobra.Command {
 		Long: `Inspects a Package URL (PURL) against the vulnerability database and displays
 detailed information about matching CVEs, affected components, and relationships.
 
+Shows both raw matches and deduplicated results (after alias resolution).
+
 Examples:
-  devguard-cli inspect "pkg:npm/lodash@4.17.20"
-  devguard-cli inspect "pkg:deb/debian/libc6@2.31-1"
-  devguard-cli inspect -v "pkg:pypi/requests@2.25.0"`,
+  devguard-cli vulndb inspect "pkg:npm/lodash@4.17.20"
+  devguard-cli vulndb inspect "pkg:deb/debian/libc6@2.31-1"
+  devguard-cli vulndb inspect "pkg:pypi/requests@2.25.0"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			purlString := args[0]
@@ -56,31 +58,53 @@ Examples:
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 
-			var affectedComponents []models.AffectedComponent
-			var matchCtx *normalize.PurlMatchContext
 			pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
 			db := database.NewGormDB(pool)
 
-			matchCtx = normalize.ParsePurlForMatching(purl)
+			matchCtx := normalize.ParsePurlForMatching(purl)
 			comparer := scan.NewPurlComparer(db)
-			affectedComponents, err = comparer.GetAffectedComponents(purl)
+
+			// Get raw affected components (before deduplication)
+			affectedComponents, err := comparer.GetAffectedComponents(purl)
 			if err != nil {
 				slog.Error("error getting affected components", "error", err, "purl", purlString)
 				return fmt.Errorf("error getting affected components: %w", err)
 			}
-			return outputInspectResult(purlString, purl, matchCtx, affectedComponents)
+
+			// Get deduplicated vulns (after alias resolution)
+			vulns, err := comparer.GetVulns(purl)
+			if err != nil {
+				slog.Error("error getting vulns", "error", err, "purl", purlString)
+				return fmt.Errorf("error getting vulns: %w", err)
+			}
+
+			return outputInspectResult(purlString, purl, matchCtx, affectedComponents, vulns)
 		},
 	}
 
 	return inspectCmd
 }
 
-func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx *normalize.PurlMatchContext, affectedComponents []models.AffectedComponent) error {
-	// Collect unique CVEs
-	cveMap := make(map[string]models.CVE)
+func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx *normalize.PurlMatchContext, affectedComponents []models.AffectedComponent, vulns []models.VulnInPackage) error {
+	// Collect unique CVEs from raw affected components
+	rawCVEMap := make(map[string]models.CVE)
 	for _, ac := range affectedComponents {
 		for _, cve := range ac.CVE {
-			cveMap[cve.CVE] = cve
+			rawCVEMap[cve.CVE] = cve
+		}
+	}
+
+	// Collect deduplicated CVEs
+	dedupCVEMap := make(map[string]models.VulnInPackage)
+	for _, v := range vulns {
+		dedupCVEMap[v.CVEID] = v
+	}
+
+	// Find which CVEs were removed by deduplication
+	removedByAlias := []string{}
+	for cveID := range rawCVEMap {
+		if _, exists := dedupCVEMap[cveID]; !exists {
+			removedByAlias = append(removedByAlias, cveID)
 		}
 	}
 
@@ -101,15 +125,61 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 	}
 
 	fmt.Printf("\n%-20s %d\n", "Affected Cmps:", len(affectedComponents))
-	fmt.Printf("%-20s %d\n", "Total CVEs:", len(cveMap))
-
-	if len(cveMap) > 0 {
+	fmt.Printf("%-20s %d\n", "Raw CVEs:", len(rawCVEMap))
+	fmt.Printf("%-20s %d\n", "After Dedup:", len(dedupCVEMap))
+	// Show deduplication details
+	if len(removedByAlias) > 0 {
 		fmt.Println(strings.Repeat("-", 80))
-		fmt.Println("MATCHED CVEs")
+		fmt.Println("ALIAS DEDUPLICATION")
+		fmt.Println(strings.Repeat("-", 80))
+		fmt.Printf("\n%d CVE(s) removed as duplicates due to aliasing:\n", len(removedByAlias))
+		for _, removedCVE := range removedByAlias {
+			if cve, exists := rawCVEMap[removedCVE]; exists {
+				// Find which CVE it's an alias of
+				aliasOf := ""
+				for _, rel := range cve.Relationships {
+					if rel.RelationshipType == "alias" {
+						if _, kept := dedupCVEMap[rel.TargetCVE]; kept {
+							aliasOf = rel.TargetCVE
+							break
+						}
+					}
+				}
+				// Also check if another CVE points to this one
+				if aliasOf == "" {
+					for keptCVE, keptVuln := range dedupCVEMap {
+						for _, rel := range keptVuln.CVE.Relationships {
+							if rel.RelationshipType == "alias" && rel.TargetCVE == removedCVE {
+								aliasOf = keptCVE
+								break
+							}
+						}
+						if aliasOf != "" {
+							break
+						}
+					}
+				}
+				if aliasOf != "" {
+					fmt.Printf("  - %s (alias of %s)\n", removedCVE, aliasOf)
+				} else {
+					fmt.Printf("  - %s\n", removedCVE)
+				}
+			}
+		}
+	}
+
+	if len(rawCVEMap) > 0 {
+		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println("MATCHED CVEs (after deduplication)")
 		fmt.Println(strings.Repeat("-", 80))
 
-		for _, cve := range cveMap {
-			fmt.Printf("\n[%s] CVSS: %.1f\n", cve.CVE, cve.CVSS)
+		for _, cve := range rawCVEMap {
+			// Mark if this CVE was removed by deduplication
+			removed := ""
+			if _, exists := dedupCVEMap[cve.CVE]; !exists {
+				removed = " [REMOVED - alias]"
+			}
+			fmt.Printf("\n[%s]%s CVSS: %.1f\n", cve.CVE, removed, cve.CVSS)
 
 			desc := cve.Description
 			if len(desc) > 200 {
