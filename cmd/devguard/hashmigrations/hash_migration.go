@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -62,10 +63,10 @@ func RunHashMigrationsIfNeeded(db *gorm.DB, daemonRunner shared.DaemonRunner) er
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
 func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 
-	/*slog.Info("start running cve migration...")
+	slog.Info("start running cve migration...")
 
 	// Drop all foreign key constraints that reference cves table before deleting
-	err := db.Exec(`
+	/*err := db.Exec(`
 		ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
 		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
 		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
@@ -96,39 +97,29 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 	// if err != nil {
 	// 	slog.Error("error when trying to import with diff files", "err", err)
 	// }
-	*/
+	cveRepository := repositories.NewCVERepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
-	// cveRepository := repositories.NewCVERepository(db)
-	// affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+	v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
 
-	// v := vulndb.NewOSVService(affectedComponentsRepository, cveRepository, repositories.NewCveRelationshipRepository(db))
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	slog.Info("Syncing vulndb")
-	// err := v.Mirror()
-	// if err != nil {
-	//		return err
-	// }
-
+	err = v.Mirror()
+	if err != nil {
+		return err
+	}
+	*/
+	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	allVulns, err := dependencyVulnRepository.All()
 	if err != nil {
 		panic(err)
 	}
 
-	//map vulns by purl
-	vulnsByPurl := make(map[string][]models.DependencyVuln)
-	for _, vuln := range allVulns {
-		purl := vuln.ComponentPurl
-		vulnsByPurl[purl] = append(vulnsByPurl[purl], vuln)
-	}
-
 	pc := scan.NewPurlComparer(db)
 
-	i := 0
 	// Wrap the entire migration in a single transaction
 	err = db.Transaction(func(tx *gorm.DB) error {
-		for purl, existingVulns := range vulnsByPurl {
-			i++
-
+		for i, v := range allVulns {
+			purl := v.ComponentPurl
 			// parse the purl
 			parsedPurl, err := packageurl.FromString(purl)
 			if err != nil {
@@ -141,15 +132,18 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 				return err
 			}
 
-			result := resolveCVERelations(existingVulns, vulnsInPackage)
-			slog.Info("Processing CVE hash migration for purl", "purl", purl, "index", i, "total", len(vulnsByPurl), "before_count", len(existingVulns), "after_count", len(vulnsInPackage), "creates", len(result.creates), "deletes", len(result.deletes))
+			result := resolveCVERelations(v, vulnsInPackage)
+			slog.Info("Processing CVE hash migration for purl", "purl", purl, "index", i, "after", len(vulnsInPackage))
 			// 1. Create all new vulns with copied state/artifacts/events
 			// Track already created vulns by their hash to avoid duplicates
 			createdVulnIDs := make(map[string]bool)
 			for _, create := range result.creates {
 				// Create new vuln record (BeforeSave hook will set the ID)
 				newVuln := create.newVuln
-				newVuln.State = create.copyStateFrom.State
+				// check if we should copy the state from an old vuln
+				if create.copyStateFrom != nil {
+					newVuln.State = create.copyStateFrom.State
+				}
 
 				// Calculate the hash to check for duplicates
 				vulnHash := newVuln.CalculateHash()
@@ -159,9 +153,19 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 				}
 				createdVulnIDs[vulnHash] = true
 
-				if err := tx.Create(&newVuln).Error; err != nil {
-					slog.Error("could not create new dependency vuln", "cve_id", newVuln.CVEID, "component_purl", newVuln.ComponentPurl, "err", err)
+				if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&newVuln).Error; err != nil {
 					return err
+				}
+
+				if create.copyStateFrom == nil {
+					// we need to create an initial event for this vuln creation
+					ev := models.NewDetectedEvent(newVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, "system", dtos.RiskCalculationReport{}, "", dtos.UpstreamStateInternal)
+
+					if err := tx.Model(&newVuln).Association("Events").Append(&ev); err != nil {
+						slog.Error("could not create initial detected event for new vuln", "vuln_id", newVuln.ID, "err", err)
+						return err
+					}
+					continue
 				}
 
 				// Copy artifact associations
@@ -183,7 +187,8 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 			}
 
 			// 2. Delete all old vulns
-			for _, oldVuln := range result.deletes {
+			if result.delete != nil {
+				oldVuln := *result.delete
 				// Delete events (polymorphic, no FK)
 				if err := tx.Where("vuln_id = ? AND vuln_type = ?", oldVuln.ID, "dependencyVuln").Delete(&models.VulnEvent{}).Error; err != nil {
 					slog.Error("could not delete events for old vuln", "id", oldVuln.ID, "err", err)
@@ -228,104 +233,53 @@ func runCVEHashMigration(db *gorm.DB, daemonRunner shared.DaemonRunner) error {
 
 type vulnCreate struct {
 	newVuln       models.DependencyVuln
-	copyStateFrom models.DependencyVuln // Copy state/artifacts/events from this vuln
+	copyStateFrom *models.DependencyVuln // Copy state/artifacts/events from this vuln
 }
 
 type resolveResult struct {
 	creates []vulnCreate
-	deletes []models.DependencyVuln
+	delete  *models.DependencyVuln
 }
 
-func resolveCVERelations(oldVulns []models.DependencyVuln, foundVulns []models.VulnInPackage) resolveResult {
+func resolveCVERelations(oldVuln models.DependencyVuln, foundVulns []models.VulnInPackage) resolveResult {
 	creates := []vulnCreate{}
 
 	// No new vulns found - just delete all old ones (CVEs no longer apply)
 	if len(foundVulns) == 0 {
 		return resolveResult{
 			creates: creates,
-			deletes: oldVulns,
+			delete:  &oldVuln,
 		}
 	}
 
-	if len(oldVulns) == 1 && len(foundVulns) == 1 {
-		// Simple 1-to-1 mapping
-		depthMap := map[string]int{
-			oldVulns[0].ComponentPurl: utils.OrDefault(oldVulns[0].ComponentDepth, 1),
+	// CVE split: one old vuln maps to multiple new vulns
+	depthMap := map[string]int{
+		oldVuln.ComponentPurl: utils.OrDefault(oldVuln.ComponentDepth, 1),
+	}
+
+	for _, foundVuln := range foundVulns {
+		newVuln := transformer.VulnInPackageToDependencyVulnWithoutArtifact(
+			foundVuln,
+			depthMap,
+			oldVuln.AssetID,
+			oldVuln.AssetVersionName,
+		)
+		var copyStateFrom *models.DependencyVuln = nil
+		if isRelatedCVE(oldVuln.CVEID, foundVuln.CVE.Relationships) {
+			copyStateFrom = &oldVuln
 		}
 
-		newVuln := transformer.VulnInPackageToDependencyVulnWithoutArtifact(
-			foundVulns[0],
-			depthMap,
-			oldVulns[0].AssetID,
-			oldVulns[0].AssetVersionName,
-		)
+		newVuln.ID = newVuln.CalculateHash()
 
 		creates = append(creates, vulnCreate{
 			newVuln:       newVuln,
-			copyStateFrom: oldVulns[0],
+			copyStateFrom: copyStateFrom,
 		})
+	}
 
-		return resolveResult{
-			creates: creates,
-			deletes: oldVulns,
-		}
-	} else if len(oldVulns) == 1 {
-		// CVE split: one old vuln maps to multiple new vulns
-		depthMap := map[string]int{
-			oldVulns[0].ComponentPurl: utils.OrDefault(oldVulns[0].ComponentDepth, 1),
-		}
-
-		for _, foundVuln := range foundVulns {
-			newVuln := transformer.VulnInPackageToDependencyVulnWithoutArtifact(
-				foundVuln,
-				depthMap,
-				oldVulns[0].AssetID,
-				oldVulns[0].AssetVersionName,
-			)
-
-			creates = append(creates, vulnCreate{
-				newVuln:       newVuln,
-				copyStateFrom: oldVulns[0],
-			})
-		}
-
-		return resolveResult{
-			creates: creates,
-			deletes: oldVulns,
-		}
-	} else {
-		// Many-to-many mapping (including merges where oldVulns > foundVulns)
-		// Inspect CVE relationships to find matches
-		// Build depth map from old vulns
-		depthMap := make(map[string]int)
-		for _, oldVuln := range oldVulns {
-			depthMap[oldVuln.ComponentPurl] = utils.OrDefault(oldVuln.ComponentDepth, 1)
-		}
-
-		// For each old vuln, find all matching found vulns and create new entries
-		for _, oldVuln := range oldVulns {
-			for _, foundVuln := range foundVulns {
-				// Check if the old vuln's CVE is related to the found vuln's CVE
-				if isRelatedCVE(oldVuln.CVEID, foundVuln.CVE.Relationships) {
-					newVuln := transformer.VulnInPackageToDependencyVulnWithoutArtifact(
-						foundVuln,
-						depthMap,
-						oldVuln.AssetID,
-						oldVuln.AssetVersionName,
-					)
-
-					creates = append(creates, vulnCreate{
-						newVuln:       newVuln,
-						copyStateFrom: oldVuln,
-					})
-				}
-			}
-		}
-
-		return resolveResult{
-			creates: creates,
-			deletes: oldVulns,
-		}
+	return resolveResult{
+		creates: creates,
+		delete:  &oldVuln,
 	}
 }
 

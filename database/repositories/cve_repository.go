@@ -195,7 +195,7 @@ func (g *cveRepository) FindCVEs(tx *gorm.DB, cveIds []string) ([]models.CVE, er
 func (g *cveRepository) CreateCVEWithConflictHandling(tx *gorm.DB, cve *models.CVE) error {
 	return g.GetDB(tx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "cve"}},
-		DoNothing: true,
+		UpdateAll: true,
 	}).Create(cve).Error
 }
 

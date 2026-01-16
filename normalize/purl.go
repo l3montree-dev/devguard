@@ -45,7 +45,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 		normalizedVersion = purl.Version
 	} else {
 		maybeSemver, err := ConvertToSemver(purl.Version)
-		if err == nil && normalizedVersion != "" {
+		if err == nil && maybeSemver != "" {
 			versionInterpretation = SemanticVersionString
 			normalizedVersion = maybeSemver
 		} else {
