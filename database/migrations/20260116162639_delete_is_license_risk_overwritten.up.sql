@@ -1,0 +1,1 @@
+ALTER TABLE public.components DROP COLUMN IF EXISTS is_license_overwritten;

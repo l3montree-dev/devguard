@@ -99,7 +99,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 		}
 	}
 
-	visit(bom.tree.Root, 0)
+	visit(bom.tree.Root, 1)
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
 	for id := range bom.tree.cursors {
