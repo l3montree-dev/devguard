@@ -100,8 +100,9 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 			visit(child, depth)
 		}
 	}
+	// we need to start the depth calculation at the origin of the SBOM rather than the root of the tree (being the artifact)
+	visit(bom.tree.Root.Children[0], 1)
 
-	visit(bom.tree.Root, 1)
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
 	for id := range bom.tree.cursors {

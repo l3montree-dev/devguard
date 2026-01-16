@@ -421,18 +421,24 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 		}
 	}
 
-	for _, existingVulns := range existingDependencyVulns {
-		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
-			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
-				fixedOnAll = append(fixedOnAll, existingVulns)
+	for _, existingVuln := range existingDependencyVulns {
+		foundVuln, ok := foundVulnsMappedByID[existingVuln.CalculateHash()]
+		if !ok {
+			if len(existingVuln.Artifacts) == 1 && existingVuln.Artifacts[0].ArtifactName == currentArtifactName {
+				// before we append the existingVuln we check if the found Vuln has any updated attributes and apply those
+				existingVuln = returnVulnWithUpdatedAttributes(existingVuln, foundVuln)
+				fixedOnAll = append(fixedOnAll, existingVuln)
 			} else {
-				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVulns)
+				existingVuln = returnVulnWithUpdatedAttributes(existingVuln, foundVuln)
+				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVuln)
 			}
 		} else {
-			// still exists and nothing changed
-			nothingChanged = append(nothingChanged, existingVulns)
+			// still exists, check if the depth changed
+			existingVuln = returnVulnWithUpdatedAttributes(existingVuln, foundVuln)
+			nothingChanged = append(nothingChanged, existingVuln)
 		}
 	}
+
 	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range existingDependencyVulns {
 		if _, ok := existingVulnsMappedByID[vuln.CalculateHash()]; !ok {
@@ -459,6 +465,16 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	}
 
 	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName, nothingChanged
+}
+
+// this functions checks if any (relevant) attribute changed between the new and the old state and returns the new state
+func returnVulnWithUpdatedAttributes(existingVuln models.DependencyVuln, foundVuln models.DependencyVuln) models.DependencyVuln {
+	// here we can list all attributes we want to keep a lookout for
+	// Attribute 1: check if the depth changed
+	if foundVuln.ComponentDepth != nil && existingVuln.ComponentDepth != nil && *foundVuln.ComponentDepth != *existingVuln.ComponentDepth {
+		existingVuln.ComponentDepth = foundVuln.ComponentDepth
+	}
+	return existingVuln
 }
 
 type Diffable interface {
