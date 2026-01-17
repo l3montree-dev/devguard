@@ -566,7 +566,8 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 					continue
 				}
 
-				_, err = runner.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "System recalculated raw risk assessment", assetVersion.Asset)
+				// Use asset from assetWithDetails to ensure environmental requirements are loaded
+				_, err = runner.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", dependencyVulns, "System recalculated raw risk assessment", assetWithDetails.asset)
 				if err != nil {
 					slog.Error("failed to recalculate raw risk assessment for asset version", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID, "error", err)
 					errs = append(errs, err)
