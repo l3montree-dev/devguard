@@ -141,7 +141,7 @@ func (f *TestFixture) CreateAssetVersion(assetID uuid.UUID, name string, isDefau
 }
 
 // CreateDaemonRunner creates a DaemonRunner instance with all dependencies from the test app
-func (f *TestFixture) CreateDaemonRunner() daemons.DaemonRunner {
+func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 	f.T.Helper()
 
 	// Create a daemon runner using the NewDaemonRunner constructor with all dependencies from TestApp

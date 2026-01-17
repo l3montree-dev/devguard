@@ -64,7 +64,92 @@ func (s *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 }
 
 func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	return s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
+	err := s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
+	if err != nil {
+		return err
+	}
+
+	// Recalculate depths for vulnerabilities based on remaining artifacts
+	return s.recalculateDepthsAfterArtifactDeletion(assetID, assetVersionName)
+}
+
+func (s *ArtifactService) recalculateDepthsAfterArtifactDeletion(assetID uuid.UUID, assetVersionName string) error {
+	// Get remaining artifacts for this asset version
+	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
+	if err != nil {
+		slog.Error("failed to get artifacts after deletion", "assetID", assetID, "error", err)
+		return err
+	}
+
+	if len(artifacts) == 0 {
+		return nil
+	}
+
+	// Load asset and asset version once
+	asset, err := s.assetRepository.Read(assetID)
+	if err != nil {
+		slog.Error("failed to get asset for depth recalculation", "assetID", assetID, "error", err)
+		return err
+	}
+
+	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, assetID)
+	if err != nil {
+		slog.Error("failed to get asset version for depth recalculation", "assetVersionName", assetVersionName, "error", err)
+		return err
+	}
+
+	// Build depth map for each artifact once, then find minimum depth per component
+	minDepthMap := make(map[string]int) // componentPurl -> minDepth
+
+	for _, artifact := range artifacts {
+		components, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, &artifact.ArtifactName)
+		if err != nil {
+			slog.Error("failed to load components", "artifactName", artifact.ArtifactName, "error", err)
+			continue
+		}
+
+		sbom, err := s.assetVersionService.BuildSBOM("", "", "", "", asset, assetVersion, artifact.ArtifactName, components)
+		if err != nil {
+			slog.Error("failed to build SBOM", "artifactName", artifact.ArtifactName, "error", err)
+			continue
+		}
+
+		depthMap := sbom.CalculateDepth()
+		for purl, depth := range depthMap {
+			if minDepth, exists := minDepthMap[purl]; !exists || depth < minDepth {
+				minDepthMap[purl] = depth
+			}
+		}
+	}
+
+	if len(minDepthMap) == 0 {
+		return nil
+	}
+
+	// Batch update all vulnerabilities with new depths using single SQL query
+	var valueClauses []string
+	for purl, depth := range minDepthMap {
+		valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", purl, depth))
+	}
+
+	values := strings.Join(valueClauses, ",")
+	query := fmt.Sprintf(`
+		UPDATE dependency_vulns
+		SET component_depth = data.component_depth
+		FROM (VALUES %s) AS data(component_purl, component_depth)
+		WHERE dependency_vulns.asset_id = ?
+		AND dependency_vulns.asset_version_name = ?
+		AND dependency_vulns.component_purl = data.component_purl
+	`, values)
+
+	err = s.dependencyVulnRepository.GetDB(nil).Exec(query, assetID, assetVersionName).Error
+	if err != nil {
+		slog.Error("failed to batch update vulnerability depths", "error", err)
+		return err
+	}
+
+	slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(minDepthMap))
+	return nil
 }
 
 func (s *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {

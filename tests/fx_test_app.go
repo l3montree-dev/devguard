@@ -102,6 +102,9 @@ type TestApp struct {
 	GitlabIntegration    *gitlabint.GitlabIntegration
 	IntegrationAggregate shared.IntegrationAggregate
 	VulnDBImportService  shared.VulnDBImportService
+
+	// Daemons
+	DaemonRunner shared.DaemonRunner
 }
 
 // TestAppOptions configures the test application

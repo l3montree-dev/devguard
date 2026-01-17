@@ -53,7 +53,7 @@ func (runner *DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<-
 	ch = monitorStage(monitoring.DeleteOldAssetVersionsDuration, runner.DeleteOldAssetVersions)(ch, errChan)
 	// scan assets
 	ch = monitorStage(monitoring.ScanDaemonDuration, runner.ScanAsset)(ch, errChan)
-	// sync upstream
+
 	ch = monitorStage(monitoring.UpstreamSyncDuration, runner.SyncUpstream)(ch, errChan)
 	// auto-reopen tickets
 	ch = monitorStage(monitoring.ReopenVulnsStageDuration, runner.AutoReopenTickets)(ch, errChan)
