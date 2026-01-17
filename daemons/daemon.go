@@ -44,7 +44,7 @@ func markMirrored(configService shared.ConfigService, key string) error {
 	})
 }
 
-func (runner DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
+func (runner *DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 	if shouldMirror(runner.configService, key) {
 		// always mark as mirrored - even in case of error to avoid endless loops
 		err1 := markMirrored(runner.configService, key)
@@ -59,7 +59,7 @@ func (runner DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 	return nil
 }
 
-func (runner DaemonRunner) runDaemons() {
+func (runner *DaemonRunner) runDaemons() {
 	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", runner.UpdateOpenSourceInsightInformation); err != nil {
 		slog.Error("could not update deps dev information", "err", err)
 	}

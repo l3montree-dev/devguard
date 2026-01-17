@@ -458,10 +458,10 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 			}
 			// Join the value clauses with commas
 			values := strings.Join(valueClauses, ",")
-			// Construct the SQL query
+			// Construct the SQL query - use LEAST to keep the minimum depth (shallowest = highest risk)
 			query := fmt.Sprintf(`
 				UPDATE dependency_vulns
-				SET component_depth = data.component_depth
+				SET component_depth = LEAST(dependency_vulns.component_depth, data.component_depth)
 				FROM (VALUES %s) AS data(id, component_depth)
 				WHERE dependency_vulns.asset_id = ?
 				AND dependency_vulns.asset_version_name = ?

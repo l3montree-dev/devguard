@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
@@ -33,6 +34,7 @@ func NewDaemonCommand() *cobra.Command {
 	}
 
 	daemon.AddCommand(newTriggerCommand())
+	daemon.AddCommand(newRunPipelineForAssetCommand())
 	return &daemon
 }
 
@@ -51,6 +53,73 @@ func newTriggerCommand() *cobra.Command {
 	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
 
 	return trigger
+}
+
+func newRunPipelineForAssetCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "runPipeline [asset-id]",
+		Short: "Run the asset pipeline for a single asset",
+		Long: `Runs the full asset pipeline (scan, risk recalculation, ticket sync, etc.) for a single asset.
+Useful for debugging. You can further scope with --asset-version and --vuln-id flags.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shared.LoadConfig() // nolint
+			assetID := args[0]
+			assetVersion, _ := cmd.Flags().GetString("assetVersionSlug")
+			return runPipelineForAsset(assetID, assetVersion)
+		},
+	}
+	cmd.Flags().StringP("assetVersionSlug", "v", "", "Scope to a specific asset version name")
+
+	return cmd
+}
+
+func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
+	assetID, err := uuid.Parse(assetIDStr)
+	if err != nil {
+		slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
+		return err
+	}
+
+	var daemonRunner shared.DaemonRunner
+	var dependencyVulnRepository shared.DependencyVulnRepository
+	var dependencyVulnService shared.DependencyVulnService
+	var assetRepository shared.AssetRepository
+	var assetVersionRepository shared.AssetVersionRepository
+
+	app := fx.New(
+		fx.Supply(database.GetPoolConfigFromEnv()),
+		fx.NopLogger,
+		database.Module,
+		fx.Provide(database.NewPostgreSQLBroker),
+		repositories.Module,
+		services.ServiceModule,
+		accesscontrol.AccessControlModule,
+		controllers.ControllerModule,
+		integrations.Module,
+		vulndb.Module,
+		daemons.Module,
+		fx.Populate(&daemonRunner, &dependencyVulnRepository, &dependencyVulnService, &assetRepository, &assetVersionRepository),
+	)
+
+	if err := app.Err(); err != nil {
+		return err
+	}
+	runner := daemonRunner.(*daemons.DaemonRunner)
+
+	// Otherwise run full pipeline for asset
+	slog.Info("running full asset pipeline", "assetID", assetID)
+	runner.SetDebugOptions(daemons.DebugOptions{
+		LimitToAssetVersionSlug: assetVersionSlug,
+	})
+
+	if err := runner.RunDaemonPipelineForAsset(assetID); err != nil {
+		slog.Error("pipeline failed", "assetID", assetID, "err", err)
+		return err
+	}
+
+	slog.Info("successfully ran asset pipeline", "assetID", assetID)
+	return nil
 }
 
 func triggerDaemon(selectedDaemons []string) error {

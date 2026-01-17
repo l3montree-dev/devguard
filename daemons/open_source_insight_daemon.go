@@ -7,7 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 )
 
-func (runner DaemonRunner) UpdateOpenSourceInsightInformation() error {
+func (runner *DaemonRunner) UpdateOpenSourceInsightInformation() error {
 	start := time.Now()
 	defer func() {
 		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(start).Minutes())

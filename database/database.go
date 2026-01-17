@@ -109,8 +109,9 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 	gormDB, err := gorm.Open(postgres.New(postgres.Config{
 		Conn: db,
 	}), &gorm.Config{
+
 		Logger: &sentryLogger{
-			defaultLogger: logger.Default,
+			defaultLogger: logger.Discard,
 		},
 	})
 

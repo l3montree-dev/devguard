@@ -46,7 +46,7 @@ type pipelineError struct {
 	err   error
 }
 
-func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
+func (runner *DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
 	// fetch asset details
 	ch := monitorStage(monitoring.FetchAssetStageDuration, runner.FetchAssetDetails)(idsChan, errChan)
 	// delete old asset versions
@@ -72,7 +72,7 @@ func (runner DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<- 
 }
 
 // this creates a channel which will be used to pipeline asset processing in daemons
-func (runner DaemonRunner) RunAssetPipeline(forceAll bool) {
+func (runner *DaemonRunner) RunAssetPipeline(forceAll bool) {
 	// fetch all assets from the database
 	errChan := make(chan pipelineError, 100)
 	runner.collectErrors(errChan)
@@ -86,7 +86,7 @@ func (runner DaemonRunner) RunAssetPipeline(forceAll bool) {
 	runner.runPipeline(idsChan, errChan)
 }
 
-func (runner DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
+func (runner *DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
 	idsChan := make(chan uuid.UUID, 1)
 	go func() {
 		idsChan <- assetID
@@ -129,7 +129,7 @@ func monitorStage[In any, Out any](
 	}
 }
 
-func (runner DaemonRunner) collectErrors(input <-chan pipelineError) {
+func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	go func() {
 		for assetWithDetails := range input {
 			slog.Error("error during asset pipeline", "assetID", assetWithDetails.asset.ID, "err", assetWithDetails.err)
@@ -146,7 +146,7 @@ func (runner DaemonRunner) collectErrors(input <-chan pipelineError) {
 	}()
 }
 
-func (runner DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
+func (runner *DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 	go func() {
 		defer func() {
@@ -166,7 +166,7 @@ func (runner DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
 	return out
 }
 
-func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
+func (runner *DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 
 	go func() {
@@ -189,7 +189,7 @@ func (runner DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 
 // fetches the asset details for each element in the input channel
 // This approach is intended to avoid overloading the database with large queries or too many concurrent requests.
-func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -216,6 +216,15 @@ func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan cha
 					err:   fmt.Errorf("could not fetch asset versions: %w", err),
 				}
 				continue
+			}
+
+			if runner.debugOptions.LimitToAssetVersionSlug != "" {
+				assetVersions = utils.Filter(assetVersions, func(av models.AssetVersion) bool {
+					return av.Slug == runner.debugOptions.LimitToAssetVersionSlug
+				})
+				if len(assetVersions) == 0 {
+					panic("no asset version with slug found")
+				}
 			}
 
 			project, err := runner.projectRepository.Read(asset.ProjectID)
@@ -261,7 +270,7 @@ func (runner DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan cha
 	return out
 }
 
-func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
 		defer func() {
@@ -271,7 +280,7 @@ func (runner DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errC
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
-			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
+			if !commonint.IsConnectedToThirdPartyIntegration(asset) || runner.DebugMode() {
 				slog.Info("asset not connected to third party integration - skipping SyncTickets", "assetID", asset.ID)
 				out <- assetWithDetails
 				continue
@@ -315,7 +324,7 @@ func parseDisabledExternalEntityProviderIDs() map[string]struct{} {
 	}
 	return disabledIDs
 }
-func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	// parse the disabled external entity provider IDs
 	disabledExternalEntityProviderIDs := parseDisabledExternalEntityProviderIDs()
@@ -337,7 +346,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 				}
 			}
 
-			if !commonint.IsConnectedToThirdPartyIntegration(asset) {
+			if !commonint.IsConnectedToThirdPartyIntegration(asset) || runner.DebugMode() {
 				slog.Info("asset not connected to third party integration - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
 				out <- assetWithDetails
 				continue
@@ -370,7 +379,7 @@ func (runner DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWit
 	return out
 }
 
-func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -435,7 +444,7 @@ func (runner DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCha
 	return out
 }
 
-func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -494,7 +503,7 @@ func (runner DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, err
 	return out
 }
 
-func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
 		defer func() {
@@ -531,7 +540,7 @@ func (runner DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, err
 	return out
 }
 
-func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -579,7 +588,7 @@ func (runner DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan assetW
 	return out
 }
 
-func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {
@@ -636,7 +645,7 @@ func (runner DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOrg
 	return out
 }
 
-func (runner DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
 	go func() {

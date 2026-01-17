@@ -23,6 +23,10 @@ import (
 	"go.uber.org/fx"
 )
 
+type DebugOptions struct {
+	LimitToAssetVersionSlug string
+}
+
 // DaemonRunner encapsulates daemon dependencies and lifecycle
 type DaemonRunner struct {
 	db                           shared.DB
@@ -52,6 +56,16 @@ type DaemonRunner struct {
 	leaderElector                shared.LeaderElector
 	maliciousPackageChecker      shared.MaliciousPackageChecker
 	vulnDBImportService          shared.VulnDBImportService
+
+	debugOptions DebugOptions
+}
+
+func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
+	runner.debugOptions = options
+}
+
+func (runner *DaemonRunner) DebugMode() bool {
+	return runner.debugOptions.LimitToAssetVersionSlug != ""
 }
 
 // NewDaemonRunner creates a new daemon runner with injected dependencies
@@ -83,8 +97,8 @@ func NewDaemonRunner(
 	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBImportService,
-) DaemonRunner {
-	return DaemonRunner{
+) *DaemonRunner {
+	return &DaemonRunner{
 		db:                           db,
 		broker:                       broker,
 		configService:                configService,
@@ -116,7 +130,7 @@ func NewDaemonRunner(
 }
 
 // Start initiates all background daemons
-func (runner DaemonRunner) Start() {
+func (runner *DaemonRunner) Start() {
 	go func() {
 		runner.tick()
 		ticker := time.NewTicker(5 * time.Minute)
@@ -127,7 +141,7 @@ func (runner DaemonRunner) Start() {
 	}()
 }
 
-func (runner DaemonRunner) tick() {
+func (runner *DaemonRunner) tick() {
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()
@@ -137,7 +151,7 @@ func (runner DaemonRunner) tick() {
 	}
 }
 
-var _ shared.DaemonRunner = DaemonRunner{}
+var _ shared.DaemonRunner = (*DaemonRunner)(nil)
 
 var Module = fx.Module("daemons",
 	fx.Provide(fx.Annotate(NewDaemonRunner, fx.As(new(shared.DaemonRunner)))),

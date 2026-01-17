@@ -23,12 +23,13 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
+	daemonRunner             shared.DaemonRunner
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, daemonRunner shared.DaemonRunner) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -39,6 +40,7 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		assetVersionService:       assetVersionService,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
+		daemonRunner:              daemonRunner,
 	}
 }
 
@@ -179,6 +181,15 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// Run the asset pipeline to recalculate depths and risks after artifact deletion
+	// This ensures all depths, vulnerabilities, and statistics are updated correctly
+	c.FireAndForget(func() {
+		slog.Info("triggering asset pipeline after artifact deletion", "assetID", asset.ID)
+		if err := c.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
+			slog.Error("failed to run asset pipeline after artifact deletion", "err", err, "assetID", asset.ID)
+		}
+	})
 
 	return ctx.NoContent(200)
 }

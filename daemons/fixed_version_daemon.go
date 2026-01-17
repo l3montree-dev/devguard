@@ -44,7 +44,7 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 	return nil, nil
 }
 
-func (runner DaemonRunner) UpdateFixedVersions() error {
+func (runner *DaemonRunner) UpdateFixedVersions() error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.

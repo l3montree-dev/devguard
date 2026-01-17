@@ -18,6 +18,20 @@
                 "assetPipeline"
             ],
         },
+                {
+            "name": "Launch specific Daemon Pipeline",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "daemon",
+                "runPipeline",
+                "e1f24270-6e68-4571-9168-9c151c639c97",
+                "--assetVersionSlug","main"
+            ],
+        },
         {
             "name": "Launch Server",
             "type": "go",

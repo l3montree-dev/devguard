@@ -8,7 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 )
 
-func (runner DaemonRunner) UpdateVulnDB() error {
+func (runner *DaemonRunner) UpdateVulnDB() error {
 	begin := time.Now()
 	defer func() {
 		monitoring.VulnDBUpdateDuration.Observe(time.Since(begin).Minutes())
