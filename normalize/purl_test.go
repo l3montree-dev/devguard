@@ -46,7 +46,38 @@ func TestBeautifyPURL(t *testing.T) {
 }
 
 func TestParsePurlForMatching(t *testing.T) {
-	p, _ := packageurl.FromString("pkg:npm/next@15.4.5")
-	ctx := ParsePurlForMatching(p)
-	assert.Equal(t, SemanticVersionString, ctx.HowToInterpretVersionString)
+	t.Run("npm package should use semantic versioning", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:npm/next@15.4.5")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, SemanticVersionString, ctx.HowToInterpretVersionString)
+	})
+
+	t.Run("debian package without epoch should use version as-is", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=amd64")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		assert.Equal(t, "2.47.3-0+deb13u1", ctx.NormalizedVersion)
+	})
+
+	t.Run("debian package with epoch qualifier should prepend epoch to version", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=amd64&epoch=1")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		assert.Equal(t, "1:2.47.3-0+deb13u1", ctx.NormalizedVersion)
+	})
+
+	t.Run("debian package with epoch 0 should prepend epoch to version", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:deb/debian/curl@8.0.0-1?epoch=0")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		assert.Equal(t, "0:8.0.0-1", ctx.NormalizedVersion)
+	})
+
+	t.Run("rpm package should not be affected by epoch qualifier", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:rpm/centos/bash@5.0.17-2.el8?arch=x86_64&epoch=1")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		// RPM epoch handling is different - not implemented here yet
+		assert.Equal(t, "5.0.17-2.el8", ctx.NormalizedVersion)
+	})
 }

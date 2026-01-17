@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"slices"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -101,7 +101,21 @@ func generateDebianMappings(mapping *PackageMapping) error {
 	return nil
 }
 
-var neverMapToSource = []string{"linux"}
+var neverMapToSource = []*regexp.Regexp{
+	regexp.MustCompile(`^linux$`),
+}
+var doNeverMap = []*regexp.Regexp{
+	regexp.MustCompile(`^git-man$`),
+}
+
+func matchesAny(s string, patterns []*regexp.Regexp) bool {
+	for _, pattern := range patterns {
+		if pattern.MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
 
 func parseDebianPackages(url string, mapping map[string]string) error {
 	resp, err := http.Get(url)
@@ -133,9 +147,12 @@ func parseDebianPackages(url string, mapping map[string]string) error {
 
 		if after, ok := strings.CutPrefix(line, "Package: "); ok {
 			currentPackage = after
+			if matchesAny(currentPackage, doNeverMap) {
+				currentPackage = ""
+			}
 		} else if after0, ok0 := strings.CutPrefix(line, "Source: "); ok0 {
 			source := after0
-			if slices.Contains(neverMapToSource, source) {
+			if matchesAny(source, neverMapToSource) {
 				continue
 			}
 			// Source field might contain version info like "glibc (2.31-1)"

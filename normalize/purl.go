@@ -43,6 +43,14 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 	} else if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
 		versionInterpretation = EcosystemSpecificVersion
 		normalizedVersion = purl.Version
+
+		// For Debian packages, prepend epoch from qualifier if present
+		// e.g., pkg:deb/debian/git@2.47.3-0+deb13u1?epoch=1 -> "1:2.47.3-0+deb13u1"
+		if purl.Type == "deb" {
+			if epoch := qualifier.Map()["epoch"]; epoch != "" {
+				normalizedVersion = epoch + ":" + normalizedVersion
+			}
+		}
 	} else {
 		maybeSemver, err := ConvertToSemver(purl.Version)
 		if err == nil && maybeSemver != "" {
