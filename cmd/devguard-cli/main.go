@@ -32,6 +32,7 @@ package main
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
 	"github.com/l3montree-dev/devguard/shared"
@@ -41,6 +42,7 @@ func Execute() {
 	err := commands.GetRootCmd().Execute()
 	if err != nil {
 		slog.Error("Error executing command", "err", err)
+		os.Exit(1)
 	}
 }
 
