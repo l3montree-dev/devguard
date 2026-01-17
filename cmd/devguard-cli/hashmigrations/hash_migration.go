@@ -285,6 +285,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 	// Phase 2: Prepare all data for bulk operations
 	createdVulnIDs := make(map[string]bool)
+	copiedTicketIDs := make(map[string]bool) // Track which ticket IDs have already been assigned
 	var vulnsToCreate []models.DependencyVuln
 	var eventsToCreate []models.VulnEvent
 
@@ -305,9 +306,14 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 				newVuln.Priority = create.copyStateFrom.Priority
 				newVuln.RiskRecalculatedAt = create.copyStateFrom.RiskRecalculatedAt
 				newVuln.Message = create.copyStateFrom.Message
-				newVuln.TicketID = create.copyStateFrom.TicketID
-				newVuln.TicketURL = create.copyStateFrom.TicketURL
-				newVuln.ManualTicketCreation = create.copyStateFrom.ManualTicketCreation
+
+				// Only copy ticket ID and URL once per ticket to avoid duplicate ticket associations
+				if create.copyStateFrom.TicketID != nil && !copiedTicketIDs[*create.copyStateFrom.TicketID] {
+					newVuln.TicketID = create.copyStateFrom.TicketID
+					newVuln.TicketURL = create.copyStateFrom.TicketURL
+					newVuln.ManualTicketCreation = create.copyStateFrom.ManualTicketCreation
+					copiedTicketIDs[*create.copyStateFrom.TicketID] = true
+				}
 
 				// Copy artifacts
 				newVuln.Artifacts = create.copyStateFrom.Artifacts
