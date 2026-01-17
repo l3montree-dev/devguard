@@ -119,7 +119,7 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 	summaryTable.AppendRows([]table.Row{
 		{"Input PURL", inputPurl},
 		{"Search PURL", matchCtx.SearchPurl},
-		{"Version", purl.Version},
+		{"Version", matchCtx.NormalizedVersion},
 		{"Version Type", matchCtx.HowToInterpretVersionString},
 		{"PURL Type", purl.Type},
 	})
