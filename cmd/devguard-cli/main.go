@@ -48,6 +48,7 @@ func init() {
 	commands.GetRootCmd().AddCommand(commands.NewVulndbCommand())
 	commands.GetRootCmd().AddCommand(commands.NewDaemonCommand())
 	commands.GetRootCmd().AddCommand(commands.NewLicensesCommand())
+	commands.GetRootCmd().AddCommand(commands.NewMigrateCommand())
 }
 
 func main() {

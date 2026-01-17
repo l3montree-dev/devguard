@@ -14,5 +14,3 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 -- Revert qualifiers column from jsonb back to text
-ALTER TABLE public.affected_components
-ALTER COLUMN qualifiers TYPE text USING qualifiers::text;

@@ -43,15 +43,14 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		config = models.Config{
 			Key: HashMigrationVersionKey,
-			Val: "0",
+			Val: "2",
 		}
-		// save initial version
+		// save initial version - no migration needed if empty
 		if err := db.Create(&config).Error; err != nil {
 			return fmt.Errorf("failed to initialize hash migration version: %w", err)
 		}
 
-		err = nil
-
+		return nil
 	}
 	currentVersion := 0
 	if err == nil {
@@ -435,7 +434,6 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		return err
 	}
 
-	daemonRunner.RunAssetPipeline(true)
 	return nil
 }
 

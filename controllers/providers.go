@@ -61,7 +61,6 @@ func ProvideMaliciousPackageChecker(
 		return nil
 	}
 
-	slog.Info("Malicious package firewall enabled")
 	return checker
 }
 
