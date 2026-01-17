@@ -82,6 +82,29 @@ services:
     networks:
       - devguard-local
 
+  devguard-migrate:
+    image: ghcr.io/l3montree-dev/devguard:v1.0.0-rc.5
+    read_only: true
+    tmpfs:
+      - /tmp:size=8G
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "53111"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing
+      - POSTGRES_DB=devguard
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+    command: ["devguard-cli", "migrate"]
+    networks:
+      - devguard-local
+
   devguard-api:
     image: ghcr.io/l3montree-dev/devguard:v1.0.0-rc.5
     container_name: devguard-api
@@ -98,6 +121,8 @@ services:
         condition: service_healthy
       kratos:
         condition: service_started
+      devguard-migrate:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     environment:
