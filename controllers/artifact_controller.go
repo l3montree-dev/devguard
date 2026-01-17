@@ -176,20 +176,12 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 		})
 	}
 
+	// DeleteArtifact now handles depth recalculation internally
 	err = c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err
 	}
-
-	// Run the asset pipeline to recalculate depths and risks after artifact deletion
-	// This ensures all depths, vulnerabilities, and statistics are updated correctly
-	c.FireAndForget(func() {
-		slog.Info("triggering asset pipeline after artifact deletion", "assetID", asset.ID)
-		if err := c.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
-			slog.Error("failed to run asset pipeline after artifact deletion", "err", err, "assetID", asset.ID)
-		}
-	})
 
 	return ctx.NoContent(200)
 }

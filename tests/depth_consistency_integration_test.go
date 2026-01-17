@@ -38,7 +38,8 @@ func TestDepthConsistencyAcrossMultipleArtifacts(t *testing.T) {
 			SemverFixed:        utils.Ptr("2.0.0"),
 		}
 		f.DB.Create(&affectedComponent)
-		f.DB.Model(&cve).Association("AffectedComponents").Append(&affectedComponent)
+		err := f.DB.Model(&cve).Association("AffectedComponents").Append(&affectedComponent)
+		assert.NoError(t, err)
 
 		// Create test asset with environmental requirements
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
@@ -116,10 +117,12 @@ func TestDepthConsistencyAcrossMultipleArtifacts(t *testing.T) {
 			ctx.Request().Header.Set("X-Asset-Default-Branch", "main")
 			ctx.Request().Header.Set("X-Asset-Ref", assetVersion.Name)
 
-			f.App.ScanController.ScanDependencyVulnFromProject(ctx)
+			err := f.App.ScanController.ScanDependencyVulnFromProject(ctx)
+			assert.NoError(t, err)
 
 			var response dtos.ScanResponse
-			json.Unmarshal(rec.Body.Bytes(), &response)
+			err = json.Unmarshal(rec.Body.Bytes(), &response)
+			assert.NoError(t, err)
 			return response
 		}
 
@@ -138,7 +141,8 @@ func TestDepthConsistencyAcrossMultipleArtifacts(t *testing.T) {
 		assert.Greater(t, risk2, risk1, "Risk should be higher at depth 1")
 
 		// Step 3: Run pipeline - depth should remain stable
-		f.App.DaemonRunner.RunDaemonPipelineForAsset(asset.ID)
+		err = f.App.DaemonRunner.RunDaemonPipelineForAsset(asset.ID)
+		assert.NoError(t, err)
 		f.DB.Where("cve_id = ? AND asset_id = ?", "CVE-2024-DEPTH-TEST", asset.ID).First(&vuln)
 		assert.Equal(t, 1, *vuln.ComponentDepth, "Depth should remain at 1 after pipeline")
 		assert.Equal(t, risk2, *vuln.RawRiskAssessment, "Risk should remain consistent")
@@ -161,7 +165,8 @@ func TestDepthConsistencyAcrossMultipleArtifacts(t *testing.T) {
 		shared.SetArtifact(ctx, scannerArtifact)
 		shared.SetAssetVersion(ctx, assetVersion)
 
-		f.App.ArtifactController.DeleteArtifact(ctx)
+		err = f.App.ArtifactController.DeleteArtifact(ctx)
+		assert.NoError(t, err)
 
 		// Step 5: Verify depth recalculated to 2 from remaining artifact
 		f.DB.Where("cve_id = ? AND asset_id = ?", "CVE-2024-DEPTH-TEST", asset.ID).First(&vuln)
