@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -31,11 +32,13 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 )
 
 const (
 	DefaultMaliciousPackageRepo = "https://github.com/ossf/malicious-packages/archive/refs/heads/main.tar.gz"
-	BatchSize                   = 500 // Insert in batches to avoid memory spikes
+	BatchSize                   = 700 // Insert in batches to avoid memory spikes
+	malPkgNumOfGoRoutines       = 7
 )
 
 // MaliciousPackageChecker checks packages against the malicious package database
@@ -54,26 +57,19 @@ func NewMaliciousPackageChecker(
 }
 
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
-func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
-	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
-	// make sure both tables are empty before loading, in a single transaction
+func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	tx := c.repository.GetDB().Begin()
 	if err := tx.Error; err != nil {
 		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
 	}
 
-	if err := tx.Exec("DELETE FROM malicious_affected_components").Error; err != nil {
-		_ = tx.Rollback()
-		return fmt.Errorf("failed to clear affected components table: %w", err)
-	}
-	if err := tx.Exec("DELETE FROM malicious_packages").Error; err != nil {
-		_ = tx.Rollback()
-		return fmt.Errorf("failed to clear packages table: %w", err)
-	}
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction for clearing tables: %w", err)
+	// make sure both tables are empty before loading
+	err := clearMaliciousPackagesDB(tx)
+	if err != nil {
+		return fmt.Errorf("could not delete malicious package database: %w", err)
 	}
 
+	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
 	// Download the archive
 	resp, err := http.Get(c.repoURL)
 	if err != nil {
@@ -96,27 +92,42 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 	tr := tar.NewReader(gzr)
 
 	ecosystems := []string{"npm", "go", "maven", "pypi", "crates.io"}
-	totalLoaded := 0
+	// need 2 different wait groups to handle the completion of the process functions independently of the completion of the db function
+	processWaitGroup := &sync.WaitGroup{}
+	dbWaitGroup := &sync.WaitGroup{}
 
-	// Batch collections
-	packages := make([]models.MaliciousPackage, 0, BatchSize)
-	affectedComponents := make([]models.MaliciousAffectedComponent, 0, BatchSize*2)
+	// channel to pass the file contents from the main routine to the processing Worker functions
+	fileJobs := make(chan []byte, malPkgNumOfGoRoutines*20)
+	// channel to pass the results of the processing functions to the database writer function
+	dbJobs := make(chan processingResults, BatchSize*2)
 
+	// start the processing worker functions
+	for range malPkgNumOfGoRoutines {
+		processWaitGroup.Add(1)
+		go processMaliciousPackageFile(processWaitGroup, fileJobs, dbJobs)
+	}
+
+	// start the function which writes the malicious packages/components to the database when the batch SIze is reached
+	dbWaitGroup.Add(1)
+	go c.dbWriterFunction(dbWaitGroup, dbJobs)
+
+	slog.Info("start working...")
+	// feed the jobs into the worker functions
 	for {
+		// read the next file and determine if we want to process it
 		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			return fmt.Errorf("failed to read tar: %w", err)
 		}
-
-		// Only process JSON files in the malicious package directories
-		if header.Typeflag != tar.TypeReg || !strings.HasSuffix(header.Name, ".json") {
+		// is this a file? is this a json file?
+		if !strings.HasSuffix(header.Name, ".json") || header.Typeflag != tar.TypeReg {
 			continue
 		}
 
-		// Check if file is in one of our target ecosystems
+		// filter out ecosystems which we don't process
 		isTargetEcosystem := false
 		for _, eco := range ecosystems {
 			if strings.Contains(header.Name, "/osv/malicious/"+eco+"/") {
@@ -124,21 +135,58 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 				break
 			}
 		}
-
 		if !isTargetEcosystem {
 			continue
 		}
 
-		// Read and parse JSON directly from tar stream
 		data, err := io.ReadAll(tr)
 		if err != nil {
 			slog.Debug("Failed to read file from tar", "name", header.Name, "error", err)
 			continue
 		}
+		// pass the data to processing functions
+		fileJobs <- data
+	}
+	// there are no more jobs to give so we close the channel and wait for the processing workers to finish
+	close(fileJobs)
+	processWaitGroup.Wait()
+	// when the processing workers are finished we can close the channel for the db jobs and wait for db to finish writing
+	close(dbJobs)
+	dbWaitGroup.Wait()
 
+	// Add fake test packages
+	if err := c.loadFakePackages(); err != nil {
+		slog.Warn("Failed to load fake packages", "error", err)
+	}
+
+	slog.Info("Processed malicious packages from archive")
+
+	// Log ecosystem counts
+	counts, err := c.repository.CountByEcosystem()
+	if err == nil {
+		slog.Info("Malicious package database loaded",
+			"npm", counts["npm"],
+			"go", counts["go"],
+			"pypi", counts["pypi"],
+			"maven", counts["maven"],
+			"crates.io", counts["crates.io"],
+		)
+	}
+	return nil
+}
+
+type processingResults struct {
+	Package            models.MaliciousPackage
+	AffectedComponents []models.MaliciousAffectedComponent
+}
+
+// this function grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
+func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, results chan processingResults) {
+	defer waitGroup.Done()
+	for data := range jobs {
 		var entry dtos.OSV
 		if err := json.Unmarshal(data, &entry); err != nil {
-			slog.Debug("Failed to unmarshal JSON", "name", header.Name, "error", err)
+			slog.Debug("Failed to unmarshal JSON", "error", err)
 			continue
 		}
 
@@ -154,58 +202,73 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() error {
 			Published: entry.Published,
 			Modified:  entry.Modified,
 		}
-		packages = append(packages, pkg)
 
 		// Create affected components
 		components := transformer.MaliciousAffectedComponentFromOSV(entry, entry.ID)
-		affectedComponents = append(affectedComponents, components...)
+		// send both as a job to the db writer function
+		results <- processingResults{
+			Package:            pkg,
+			AffectedComponents: components,
+		}
+	}
+}
 
-		totalLoaded++
+// this function runs in the background and grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
+func (c *MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
+	defer waitGroup.Done()
+	// stash the received results until the batch size threshold is reached
+	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
+	affectedComponentsBatch := make([]models.MaliciousAffectedComponent, 0, BatchSize*4)
 
-		// Batch insert when we reach batch size
-		if len(packages) >= BatchSize {
-			if err := c.repository.UpsertPackages(packages); err != nil {
+	total := 0
+	for job := range jobs {
+		packagesBatch = append(packagesBatch, job.Package)
+		affectedComponentsBatch = append(affectedComponentsBatch, job.AffectedComponents...)
+		if len(packagesBatch) >= BatchSize {
+			// if we reached the threshold save all to the db
+			if err := c.repository.UpsertPackages(packagesBatch); err != nil {
 				slog.Error("Failed to upsert packages batch", "error", err)
 			}
-			packages = packages[:0] // Reset slice
-			if err := c.repository.UpsertAffectedComponents(affectedComponents); err != nil {
+			packagesBatch = packagesBatch[:0] // Reset slice
+
+			if err := c.repository.UpsertAffectedComponents(affectedComponentsBatch); err != nil {
 				slog.Error("Failed to upsert affected components batch", "error", err)
 			}
-			affectedComponents = affectedComponents[:0] // Reset slice
+			affectedComponentsBatch = affectedComponentsBatch[:0] // Reset slice
+			total += 1
+			if total*BatchSize%50000 == 0 {
+				slog.Info(fmt.Sprintf("processed %d Packages", total*BatchSize))
+			}
 		}
 	}
 
 	// Insert remaining batches
-	if len(packages) > 0 {
-		if err := c.repository.UpsertPackages(packages); err != nil {
+	if len(packagesBatch) > 0 {
+		if err := c.repository.UpsertPackages(packagesBatch); err != nil {
 			slog.Error("Failed to upsert final packages batch", "error", err)
 		}
 	}
-	if len(affectedComponents) > 0 {
-		if err := c.repository.UpsertAffectedComponents(affectedComponents); err != nil {
+	if len(affectedComponentsBatch) > 0 {
+		if err := c.repository.UpsertAffectedComponents(affectedComponentsBatch); err != nil {
 			slog.Error("Failed to upsert final affected components batch", "error", err)
 		}
 	}
+}
 
-	// Add fake test packages
-	if err := c.loadFakePackages(); err != nil {
-		slog.Warn("Failed to load fake packages", "error", err)
+// deletes all entries from the malicious packages/affected_components table, in a single transaction
+func clearMaliciousPackagesDB(tx *gorm.DB) error {
+	if err := tx.Exec("DELETE FROM malicious_affected_components").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to clear affected components table: %w", err)
+	}
+	if err := tx.Exec("DELETE FROM malicious_packages").Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to clear packages table: %w", err)
 	}
 
-	slog.Info("Processed malicious packages from archive", "total", totalLoaded)
-
-	// Log ecosystem counts
-	counts, err := c.repository.CountByEcosystem()
-	if err == nil {
-		slog.Info("Malicious package database loaded",
-			"npm", counts["npm"],
-			"go", counts["go"],
-			"pypi", counts["pypi"],
-			"maven", counts["maven"],
-			"crates.io", counts["crates.io"],
-		)
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction for clearing tables: %w", err)
 	}
-
 	return nil
 }
 

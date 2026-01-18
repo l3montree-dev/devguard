@@ -268,7 +268,10 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 	}
 
 	cve.CVE = osv.ID
-	cve.Description = osv.Summary
+	cve.Description = osv.Details
+	if cve.Description == "" {
+		cve.Description = osv.Summary
+	}
 
 	return cve
 }

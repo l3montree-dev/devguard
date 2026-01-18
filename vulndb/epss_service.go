@@ -3,6 +3,7 @@ package vulndb
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 type epssService struct {
@@ -88,36 +88,50 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 	return results, nil
 }
 
-func (s epssService) Mirror() error {
+const epssBatchSize int = 10_000
+
+func (s epssService) Mirror() (currentErr error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	cves, err := s.fetchCSV(ctx)
 	cancel()
-
-	group := errgroup.Group{}
-	group.SetLimit(10) // 10 because, i do not really know.
 	if err != nil {
 		slog.Error("could not fetch EPSS data", "error", err)
 		return err
-	} else {
-		start := time.Now()
-		for i, cve := range cves {
-			tmpCVE := cve
-			group.Go(
-				func() error {
-					if err := s.cveRepository.GetDB(nil).Model(&models.CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
-						"epss":       tmpCVE.EPSS,
-						"percentile": tmpCVE.Percentile,
-					}).Error; err != nil {
-						slog.Error("could not save EPSS data", "err", err, "cve", tmpCVE.CVE)
-						// just swallow the error
-					}
-					return nil
-				},
-			)
-			if i > 0 && i%10000 == 0 {
-				slog.Info("Processed CVEs", "amount", i, "duration", time.Since(start))
+	}
+
+	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
+	tx := s.cveRepository.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("could not start new transaction: %w", tx.Error)
+	}
+	defer func() {
+		if currentErr != nil {
+			rollbackError := tx.Rollback().Error
+			if rollbackError != nil {
+				slog.Error("could not rollback transaction,there might be a corrupted database state")
 			}
 		}
+	}()
+
+	// process the CVEs in batches to avoid memory problems
+	i := 0
+	for {
+		if i+epssBatchSize < len(cves) {
+			err := s.cveRepository.UpdateEpssBatch(tx, cves[i:i+epssBatchSize])
+			if err != nil {
+				slog.Error("error when trying to save epss information batch")
+				return err
+			}
+			i += epssBatchSize
+		} else {
+			// not enough cves for a whole batch so we just save the rest
+			err := s.cveRepository.UpdateEpssBatch(tx, cves[i:])
+			if err != nil {
+				slog.Error("error when trying to save epss information batch")
+				return err
+			}
+			break
+		}
 	}
-	return group.Wait()
+	return tx.Commit().Error
 }

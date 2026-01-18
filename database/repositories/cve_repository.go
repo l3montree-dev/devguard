@@ -216,3 +216,32 @@ func (g *cveRepository) CreateCVEAffectedComponentsEntries(tx *gorm.DB, cve *mod
 
 	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, affectedComponents, cves).Error
 }
+
+// this function is used by the epss mirror function to update the epss information for all cves
+func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
+	ids := make([]string, len(batch))
+	epss := make([]float64, len(batch))
+	percentiles := make([]float32, len(batch))
+
+	for i := range batch {
+		ids[i] = batch[i].CVE
+		epssValue := batch[i].EPSS
+		if epssValue != nil {
+			epss[i] = *epssValue
+		}
+		percentileValue := batch[i].Percentile
+		if percentileValue != nil {
+			percentiles[i] = *percentileValue
+		}
+	}
+
+	sql := `UPDATE cves SET epss = new.epss, percentile = new.percentile
+	FROM (SELECT 
+	unnest($1::text[]) as cve,
+	unnest($2::numeric(6,5)[]) as epss,
+	unnest($3::numeric(6,5)[]) as percentile
+	) as new
+	WHERE cves.cve = new.cve;`
+	// avoid slow sql log
+	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, epss, percentiles).Error
+}

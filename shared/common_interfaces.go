@@ -164,6 +164,7 @@ type CveRepository interface {
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
 	CreateCVEWithConflictHandling(tx DB, cve *models.CVE) error
 	CreateCVEAffectedComponentsEntries(tx DB, cve *models.CVE, components []models.AffectedComponent) error
+	UpdateEpssBatch(tx DB, batch []models.CVE) error
 }
 
 type CweRepository interface {
