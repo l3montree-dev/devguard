@@ -236,7 +236,7 @@ func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
 	}
 
 	sql := `UPDATE cves SET epss = new.epss, percentile = new.percentile
-	FROM (SELECT 
+	FROM (SELECT
 	unnest($1::text[]) as cve,
 	unnest($2::numeric(6,5)[]) as epss,
 	unnest($3::numeric(6,5)[]) as percentile
@@ -244,4 +244,41 @@ func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
 	WHERE cves.cve = new.cve;`
 	// avoid slow sql log
 	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, epss, percentiles).Error
+}
+
+// this function is used by the CISA KEV mirror function to update the KEV information for all cves
+func (g *cveRepository) UpdateCISAKEVBatch(tx *gorm.DB, batch []models.CVE) error {
+	ids := make([]string, len(batch))
+	exploitAdds := make([]any, len(batch))
+	actionDues := make([]any, len(batch))
+	requiredActions := make([]string, len(batch))
+	vulnNames := make([]string, len(batch))
+
+	for i := range batch {
+		ids[i] = batch[i].CVE
+		if batch[i].CISAExploitAdd != nil {
+			exploitAdds[i] = time.Time(*batch[i].CISAExploitAdd).Format("2006-01-02")
+		}
+		if batch[i].CISAActionDue != nil {
+			actionDues[i] = time.Time(*batch[i].CISAActionDue).Format("2006-01-02")
+		}
+		requiredActions[i] = batch[i].CISARequiredAction
+		vulnNames[i] = batch[i].CISAVulnerabilityName
+	}
+
+	sql := `UPDATE cves SET
+		cisa_exploit_add = new.cisa_exploit_add::date,
+		cisa_action_due = new.cisa_action_due::date,
+		cisa_required_action = new.cisa_required_action,
+		cisa_vulnerability_name = new.cisa_vulnerability_name
+	FROM (SELECT
+		unnest($1::text[]) as cve,
+		unnest($2::text[]) as cisa_exploit_add,
+		unnest($3::text[]) as cisa_action_due,
+		unnest($4::text[]) as cisa_required_action,
+		unnest($5::text[]) as cisa_vulnerability_name
+	) as new
+	WHERE cves.cve = new.cve;`
+
+	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, exploitAdds, actionDues, requiredActions, vulnNames).Error
 }

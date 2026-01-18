@@ -20,10 +20,10 @@ func newSyncCommand() *cobra.Command {
 		Use:   "sync",
 		Short: "Synchronize vulnerability data from upstream sources",
 		Long: `Synchronizes vulnerability data from multiple upstream sources including:
-  - NVD (National Vulnerability Database)
   - CWE (Common Weakness Enumeration)
   - EPSS (Exploit Prediction Scoring System)
   - OSV (Open Source Vulnerabilities)
+  - CISA KEV (Known Exploited Vulnerabilities)
   - ExploitDB and GitHub POCs
   - Debian Security Tracker
   - Malicious package databases
@@ -53,6 +53,7 @@ Use --databases flag to sync specific sources only.`,
 
 					mitreService := vulndb.NewMitreService(cweRepository)
 					epssService := vulndb.NewEPSSService(cveRepository, cveRelationshipRepository)
+					cisaKEVService := vulndb.NewCISAKEVService(cveRepository, cveRelationshipRepository)
 					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
 					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 					expoitDBService := vulndb.NewExploitDBService(exploitRepository)
@@ -75,6 +76,16 @@ Use --databases flag to sync specific sources only.`,
 							slog.Error("could not sync epss database", "err", err)
 						}
 						slog.Info("finished epss database sync", "duration", time.Since(now))
+					}
+
+					if emptyOrContains(databasesToSync, "cisa-kev") {
+						slog.Info("starting cisa-kev database sync")
+						now := time.Now()
+
+						if err := cisaKEVService.Mirror(); err != nil {
+							slog.Error("could not sync cisa-kev database", "err", err)
+						}
+						slog.Info("finished cisa-kev database sync", "duration", time.Since(now))
 					}
 
 					if emptyOrContains(databasesToSync, "osv") {
@@ -137,7 +148,7 @@ Use --databases flag to sync specific sources only.`,
 			return app.Stop(stopCtx)
 		},
 	}
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, osv, dsa, malicious-packages")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, cisa-kev, osv, dsa, malicious-packages")
 
 	return &syncCmd
 }

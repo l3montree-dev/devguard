@@ -165,6 +165,7 @@ type CveRepository interface {
 	CreateCVEWithConflictHandling(tx DB, cve *models.CVE) error
 	CreateCVEAffectedComponentsEntries(tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(tx DB, batch []models.CVE) error
+	UpdateCISAKEVBatch(tx DB, batch []models.CVE) error
 }
 
 type CweRepository interface {
