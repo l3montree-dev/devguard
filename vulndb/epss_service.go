@@ -17,14 +17,16 @@ import (
 )
 
 type epssService struct {
-	cveRepository shared.CveRepository
-	httpClient    *http.Client
+	cveRepository             shared.CveRepository
+	cveRelationshipRepository shared.CVERelationshipRepository
+	httpClient                *http.Client
 }
 
-func NewEPSSService(cveRepository shared.CveRepository) epssService {
+func NewEPSSService(cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository) epssService {
 	return epssService{
-		cveRepository: cveRepository,
-		httpClient:    &http.Client{},
+		cveRepository:             cveRepository,
+		cveRelationshipRepository: cveRelationshipRepository,
+		httpClient:                &http.Client{},
 	}
 }
 
@@ -88,7 +90,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 	return results, nil
 }
 
-const epssBatchSize int = 10_000
+const epssBatchSize int = 50_000
 
 func (s epssService) Mirror() (currentErr error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -112,6 +114,46 @@ func (s epssService) Mirror() (currentErr error) {
 			}
 		}
 	}()
+
+	// build a map of CVE ID -> EPSS data for quick lookup
+	epssMap := make(map[string]models.CVE, len(cves))
+	cveIDs := make([]string, len(cves))
+	for i, cve := range cves {
+		epssMap[cve.CVE] = cve
+		cveIDs[i] = cve.CVE
+	}
+
+	// query relationships where target_cve matches any of our CVE IDs
+	// this allows us to propagate EPSS scores to related CVEs (e.g., GHSA -> CVE aliases)
+	// process in batches to avoid PostgreSQL parameter limit
+	var relationships []models.CVERelationship
+	for i := 0; i < len(cveIDs); i += epssBatchSize {
+		end := min(i+epssBatchSize, len(cveIDs))
+		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(tx, cveIDs[i:end])
+		if err != nil {
+			slog.Error("could not fetch CVE relationships", "error", err)
+			return err
+		}
+		relationships = append(relationships, batch...)
+	}
+
+	// expand CVE list with related source CVEs that should inherit EPSS scores
+	for _, rel := range relationships {
+		if epssData, ok := epssMap[rel.TargetCVE]; ok {
+			// only add if not already in the map to avoid duplicates
+			if _, exists := epssMap[rel.SourceCVE]; !exists {
+				relatedCVE := models.CVE{
+					CVE:        rel.SourceCVE,
+					EPSS:       epssData.EPSS,
+					Percentile: epssData.Percentile,
+				}
+				cves = append(cves, relatedCVE)
+				epssMap[rel.SourceCVE] = relatedCVE
+			}
+		}
+	}
+
+	slog.Info("updating EPSS scores", "direct", len(cveIDs), "via_relationships", len(cves)-len(cveIDs))
 
 	// process the CVEs in batches to avoid memory problems
 	i := 0

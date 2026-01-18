@@ -52,7 +52,7 @@ Use --databases flag to sync specific sources only.`,
 				) error {
 
 					mitreService := vulndb.NewMitreService(cweRepository)
-					epssService := vulndb.NewEPSSService(cveRepository)
+					epssService := vulndb.NewEPSSService(cveRepository, cveRelationshipRepository)
 					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
 					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 					expoitDBService := vulndb.NewExploitDBService(exploitRepository)

@@ -35,6 +35,15 @@ func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *
 	return relations, nil
 }
 
+func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
+	var relations []models.CVERelationship
+	err := repository.GetDB(tx).Where("target_cve IN ?", targetCVEIDs).Find(&relations).Error
+	if err != nil {
+		return nil, err
+	}
+	return relations, nil
+}
+
 func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(tx *gorm.DB) error {
 	var relationships []models.CVERelationship
 	err := repository.GetDB(tx).Raw(`SELECT * FROM cve_relationships a WHERE NOT EXISTS
