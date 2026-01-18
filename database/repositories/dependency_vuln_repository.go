@@ -280,7 +280,7 @@ func (repository dependencyVulnRepository) Read(id string) (models.DependencyVul
 	var t models.DependencyVuln
 	err := repository.db.Preload("CVE.Weaknesses").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("CVE").Preload("CVE.Exploits").Preload("Artifacts").First(&t, "id = ?", id).Error
+	}).Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t, "id = ?", id).Error
 
 	return t, err
 }

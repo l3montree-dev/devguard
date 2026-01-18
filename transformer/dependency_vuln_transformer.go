@@ -44,9 +44,16 @@ func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 		Vector:                cve.Vector,
 		Risk:                  cve.Risk,
 		Exploits:              utils.Map(cve.Exploits, ExploitModelToDTO),
+		Relationships:         utils.Map(cve.Relationships, RelationshipToDTO),
 	}
 }
 
+func RelationshipToDTO(relation models.CVERelationship) dtos.RelationshipDTO {
+	return dtos.RelationshipDTO{
+		RelationshipType: relation.RelationshipType,
+		TargetCVE:        relation.TargetCVE,
+	}
+}
 func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 	return dtos.DependencyVulnDTO{
 		ID:                    f.ID,
