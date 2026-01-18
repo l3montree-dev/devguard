@@ -27,14 +27,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	gocvss30 "github.com/pandatix/go-cvss/30"
-	gocvss31 "github.com/pandatix/go-cvss/31"
-	gocvss40 "github.com/pandatix/go-cvss/40"
 	"github.com/pkg/errors"
 )
 
@@ -217,7 +213,7 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		// first build the CVE based on the OSV and save it to the db
 		tx := s.cveRepository.Begin()
 
-		newCVE := OSVToCVE(&osv)
+		newCVE := transformer.OSVToCVE(&osv)
 
 		err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
 		if err != nil {
@@ -254,55 +250,6 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		tx.Commit()
 	}
 	waitGroup.Done()
-}
-
-func OSVToCVE(osv *dtos.OSV) models.CVE {
-	cve := models.CVE{}
-	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
-	if ok {
-		cve.CVSS = float32(cvssScore)
-		cve.Vector = cvssVector
-	} else {
-		// if we cannot parse a CVSS score we save the CVE with a CVSS score of -1
-		cve.CVSS = float32(-1)
-	}
-
-	cve.CVE = osv.ID
-	cve.Description = osv.Details
-	if cve.Description == "" {
-		cve.Description = osv.Summary
-	}
-
-	return cve
-}
-
-// checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
-func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
-	for _, severity := range osv.Severity {
-		// currently only supporting CVSS Version 3 and 4
-		if strings.HasPrefix(severity.Score, "CVSS:3.1") {
-			cvssScore, err := gocvss31.ParseVector(severity.Score)
-			if err == nil {
-				return cvssScore.BaseScore(), cvssScore.Vector(), true
-			}
-			panic(err)
-		} else if strings.HasPrefix(severity.Score, "CVSS:3.0") {
-			cvssScore, err := gocvss30.ParseVector(severity.Score)
-			if err == nil {
-				return cvssScore.BaseScore(), cvssScore.Vector(), true
-			}
-			panic(err)
-		} else if strings.HasPrefix(severity.Score, "CVSS:4.0") {
-			cvssScore, err := gocvss40.ParseVector(severity.Score)
-			if err == nil {
-				return cvssScore.Score(), cvssScore.Vector(), true
-			}
-			panic(err)
-		} else {
-			panic(severity.Score)
-		}
-	}
-	return 0, "", false
 }
 
 func shouldIgnoreVulnerabilityID(id string) bool {
@@ -381,7 +328,7 @@ func (s osvService) MirrorNoConcurrency() error {
 				continue
 			}
 
-			newCVE := OSVToCVE(&osv)
+			newCVE := transformer.OSVToCVE(&osv)
 
 			err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
 			if err != nil {

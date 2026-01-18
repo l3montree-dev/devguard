@@ -11,6 +11,9 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
+	gocvss30 "github.com/pandatix/go-cvss/30"
+	gocvss31 "github.com/pandatix/go-cvss/31"
+	gocvss40 "github.com/pandatix/go-cvss/40"
 )
 
 // need Optimus Prime here
@@ -47,6 +50,58 @@ func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationship {
 		}
 	}
 	return relations
+}
+
+func OSVToCVE(osv *dtos.OSV) models.CVE {
+	cve := models.CVE{}
+	cvssScore, cvssVector, ok := hasValidCVSSScore(osv)
+	if ok {
+		cve.CVSS = float32(cvssScore)
+		cve.Vector = cvssVector
+	} else {
+		// if we cannot parse a CVSS score we save the CVE with a CVSS score of -1
+		cve.CVSS = float32(-1)
+	}
+
+	cve.CVE = osv.ID
+	cve.Description = osv.Details
+	if cve.Description == "" {
+		cve.Description = osv.Summary
+	}
+
+	cve.DatePublished = osv.Published
+	cve.DateLastModified = osv.Modified
+
+	return cve
+}
+
+// checks if a valid CVSS score is available, if so return the score as well as the corresponding vector
+func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
+	for _, severity := range osv.Severity {
+		// currently only supporting CVSS Version 3 and 4
+		if strings.HasPrefix(severity.Score, "CVSS:3.1") {
+			cvssScore, err := gocvss31.ParseVector(severity.Score)
+			if err == nil {
+				return cvssScore.BaseScore(), cvssScore.Vector(), true
+			}
+			panic(err)
+		} else if strings.HasPrefix(severity.Score, "CVSS:3.0") {
+			cvssScore, err := gocvss30.ParseVector(severity.Score)
+			if err == nil {
+				return cvssScore.BaseScore(), cvssScore.Vector(), true
+			}
+			panic(err)
+		} else if strings.HasPrefix(severity.Score, "CVSS:4.0") {
+			cvssScore, err := gocvss40.ParseVector(severity.Score)
+			if err == nil {
+				return cvssScore.Score(), cvssScore.Vector(), true
+			}
+			panic(err)
+		} else {
+			panic(severity.Score)
+		}
+	}
+	return 0, "", false
 }
 
 func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
