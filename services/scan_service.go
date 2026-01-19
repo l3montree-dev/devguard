@@ -75,6 +75,8 @@ func (s *scanService) ScanNormalizedSBOM(org models.Org, project models.Project,
 }
 
 func (s *scanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	// remove all other artifacts from the bom
+	normalizedBom = normalizedBom.ExtractArtifactBom(artifact.ArtifactName)
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
 	if err != nil {
@@ -83,7 +85,7 @@ func (s *scanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, pro
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return nil, nil, nil, err

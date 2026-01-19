@@ -605,6 +605,92 @@ func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(org m
 	return _c
 }
 
+// LoadFullSBOM provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) LoadFullSBOM(frontendURL string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion) (*normalize.CdxBom, error) {
+	ret := _mock.Called(frontendURL, organizationSlug, projectSlug, asset, assetVersion)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadFullSBOM")
+	}
+
+	var r0 *normalize.CdxBom
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, models.Asset, models.AssetVersion) (*normalize.CdxBom, error)); ok {
+		return returnFunc(frontendURL, organizationSlug, projectSlug, asset, assetVersion)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, string, models.Asset, models.AssetVersion) *normalize.CdxBom); ok {
+		r0 = returnFunc(frontendURL, organizationSlug, projectSlug, asset, assetVersion)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*normalize.CdxBom)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, string, models.Asset, models.AssetVersion) error); ok {
+		r1 = returnFunc(frontendURL, organizationSlug, projectSlug, asset, assetVersion)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionService_LoadFullSBOM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadFullSBOM'
+type AssetVersionService_LoadFullSBOM_Call struct {
+	*mock.Call
+}
+
+// LoadFullSBOM is a helper method to define mock.On call
+//   - frontendURL string
+//   - organizationSlug string
+//   - projectSlug string
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+func (_e *AssetVersionService_Expecter) LoadFullSBOM(frontendURL interface{}, organizationSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}) *AssetVersionService_LoadFullSBOM_Call {
+	return &AssetVersionService_LoadFullSBOM_Call{Call: _e.mock.On("LoadFullSBOM", frontendURL, organizationSlug, projectSlug, asset, assetVersion)}
+}
+
+func (_c *AssetVersionService_LoadFullSBOM_Call) Run(run func(frontendURL string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion)) *AssetVersionService_LoadFullSBOM_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_LoadFullSBOM_Call) Return(cdxBom *normalize.CdxBom, err error) *AssetVersionService_LoadFullSBOM_Call {
+	_c.Call.Return(cdxBom, err)
+	return _c
+}
+
+func (_c *AssetVersionService_LoadFullSBOM_Call) RunAndReturn(run func(frontendURL string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion) (*normalize.CdxBom, error)) *AssetVersionService_LoadFullSBOM_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateSBOM provides a mock function for the type AssetVersionService
 func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
 	ret := _mock.Called(org, project, asset, assetVersion, artifactName, sbom, upstream)

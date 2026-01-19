@@ -22,7 +22,7 @@ func TestRenderPathToComponent(t *testing.T) {
 	t.Run("Everything works as expected with empty lists", func(t *testing.T) {
 		components := []models.ComponentDependency{}
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
@@ -33,13 +33,14 @@ func TestRenderPathToComponent(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n\nclassDef default stroke-width:2px\n```\n", result)
+		// With empty components, the pURL is not reachable, so we get empty string
+		assert.Equal(t, "", result)
 
 	})
 	t.Run("LoadPathToComponent fails somehow should return an error", func(t *testing.T) {
 		components := []models.ComponentDependency{}
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, fmt.Errorf("Something went wrong"))
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, fmt.Errorf("Something went wrong"))
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
@@ -54,17 +55,17 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
-			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
-			{ComponentID: utils.Ptr("testDependency"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: nil, DependencyID: "testDependency"}, // root --> testDependency
+			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL"},
+			{ComponentID: utils.Ptr("testDependency"), DependencyID: "testPURL"},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
 		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
-		pURL := "pkg:npm:test"
+		pURL := "testPURL" // Use a pURL that's actually in the component list
 
 		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
@@ -77,17 +78,17 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "testDependency", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}}, // root --> testDependency
-			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
-			{ComponentID: utils.Ptr("testDependency"), DependencyID: "test@PURL", Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{ComponentID: nil, DependencyID: "testDependency"}, // root --> testDependency
+			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL"},
+			{ComponentID: utils.Ptr("testDependency"), DependencyID: "test@PURL"},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
 		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
-		pURL := "pkg:npm:test"
+		pURL := "test@PURL" // Use a pURL that's actually in the component list
 
 		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {

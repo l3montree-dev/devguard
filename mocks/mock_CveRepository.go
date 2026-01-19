@@ -312,6 +312,126 @@ func (_c *CveRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts
 	return _c
 }
 
+// CreateCVEAffectedComponentsEntries provides a mock function for the type CveRepository
+func (_mock *CveRepository) CreateCVEAffectedComponentsEntries(tx shared.DB, cve *models.CVE, components []models.AffectedComponent) error {
+	ret := _mock.Called(tx, cve, components)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCVEAffectedComponentsEntries")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVE, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(tx, cve, components)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CveRepository_CreateCVEAffectedComponentsEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCVEAffectedComponentsEntries'
+type CveRepository_CreateCVEAffectedComponentsEntries_Call struct {
+	*mock.Call
+}
+
+// CreateCVEAffectedComponentsEntries is a helper method to define mock.On call
+//   - tx shared.DB
+//   - cve *models.CVE
+//   - components []models.AffectedComponent
+func (_e *CveRepository_Expecter) CreateCVEAffectedComponentsEntries(tx interface{}, cve interface{}, components interface{}) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
+	return &CveRepository_CreateCVEAffectedComponentsEntries_Call{Call: _e.mock.On("CreateCVEAffectedComponentsEntries", tx, cve, components)}
+}
+
+func (_c *CveRepository_CreateCVEAffectedComponentsEntries_Call) Run(run func(tx shared.DB, cve *models.CVE, components []models.AffectedComponent)) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 *models.CVE
+		if args[1] != nil {
+			arg1 = args[1].(*models.CVE)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_CreateCVEAffectedComponentsEntries_Call) Return(err error) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CveRepository_CreateCVEAffectedComponentsEntries_Call) RunAndReturn(run func(tx shared.DB, cve *models.CVE, components []models.AffectedComponent) error) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateCVEWithConflictHandling provides a mock function for the type CveRepository
+func (_mock *CveRepository) CreateCVEWithConflictHandling(tx shared.DB, cve *models.CVE) error {
+	ret := _mock.Called(tx, cve)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCVEWithConflictHandling")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVE) error); ok {
+		r0 = returnFunc(tx, cve)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CveRepository_CreateCVEWithConflictHandling_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCVEWithConflictHandling'
+type CveRepository_CreateCVEWithConflictHandling_Call struct {
+	*mock.Call
+}
+
+// CreateCVEWithConflictHandling is a helper method to define mock.On call
+//   - tx shared.DB
+//   - cve *models.CVE
+func (_e *CveRepository_Expecter) CreateCVEWithConflictHandling(tx interface{}, cve interface{}) *CveRepository_CreateCVEWithConflictHandling_Call {
+	return &CveRepository_CreateCVEWithConflictHandling_Call{Call: _e.mock.On("CreateCVEWithConflictHandling", tx, cve)}
+}
+
+func (_c *CveRepository_CreateCVEWithConflictHandling_Call) Run(run func(tx shared.DB, cve *models.CVE)) *CveRepository_CreateCVEWithConflictHandling_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 *models.CVE
+		if args[1] != nil {
+			arg1 = args[1].(*models.CVE)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_CreateCVEWithConflictHandling_Call) Return(err error) *CveRepository_CreateCVEWithConflictHandling_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CveRepository_CreateCVEWithConflictHandling_Call) RunAndReturn(run func(tx shared.DB, cve *models.CVE) error) *CveRepository_CreateCVEWithConflictHandling_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type CveRepository
 func (_mock *CveRepository) Delete(tx shared.DB, id string) error {
 	ret := _mock.Called(tx, id)
@@ -1262,6 +1382,120 @@ func (_c *CveRepository_Transaction_Call) Return(err error) *CveRepository_Trans
 }
 
 func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *CveRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateCISAKEVBatch provides a mock function for the type CveRepository
+func (_mock *CveRepository) UpdateCISAKEVBatch(tx shared.DB, batch []models.CVE) error {
+	ret := _mock.Called(tx, batch)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateCISAKEVBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVE) error); ok {
+		r0 = returnFunc(tx, batch)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CveRepository_UpdateCISAKEVBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateCISAKEVBatch'
+type CveRepository_UpdateCISAKEVBatch_Call struct {
+	*mock.Call
+}
+
+// UpdateCISAKEVBatch is a helper method to define mock.On call
+//   - tx shared.DB
+//   - batch []models.CVE
+func (_e *CveRepository_Expecter) UpdateCISAKEVBatch(tx interface{}, batch interface{}) *CveRepository_UpdateCISAKEVBatch_Call {
+	return &CveRepository_UpdateCISAKEVBatch_Call{Call: _e.mock.On("UpdateCISAKEVBatch", tx, batch)}
+}
+
+func (_c *CveRepository_UpdateCISAKEVBatch_Call) Run(run func(tx shared.DB, batch []models.CVE)) *CveRepository_UpdateCISAKEVBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.CVE
+		if args[1] != nil {
+			arg1 = args[1].([]models.CVE)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_UpdateCISAKEVBatch_Call) Return(err error) *CveRepository_UpdateCISAKEVBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CveRepository_UpdateCISAKEVBatch_Call) RunAndReturn(run func(tx shared.DB, batch []models.CVE) error) *CveRepository_UpdateCISAKEVBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateEpssBatch provides a mock function for the type CveRepository
+func (_mock *CveRepository) UpdateEpssBatch(tx shared.DB, batch []models.CVE) error {
+	ret := _mock.Called(tx, batch)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateEpssBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVE) error); ok {
+		r0 = returnFunc(tx, batch)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CveRepository_UpdateEpssBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateEpssBatch'
+type CveRepository_UpdateEpssBatch_Call struct {
+	*mock.Call
+}
+
+// UpdateEpssBatch is a helper method to define mock.On call
+//   - tx shared.DB
+//   - batch []models.CVE
+func (_e *CveRepository_Expecter) UpdateEpssBatch(tx interface{}, batch interface{}) *CveRepository_UpdateEpssBatch_Call {
+	return &CveRepository_UpdateEpssBatch_Call{Call: _e.mock.On("UpdateEpssBatch", tx, batch)}
+}
+
+func (_c *CveRepository_UpdateEpssBatch_Call) Run(run func(tx shared.DB, batch []models.CVE)) *CveRepository_UpdateEpssBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.CVE
+		if args[1] != nil {
+			arg1 = args[1].([]models.CVE)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_UpdateEpssBatch_Call) Return(err error) *CveRepository_UpdateEpssBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CveRepository_UpdateEpssBatch_Call) RunAndReturn(run func(tx shared.DB, batch []models.CVE) error) *CveRepository_UpdateEpssBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

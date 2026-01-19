@@ -69,66 +69,34 @@ func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName str
 		return err
 	}
 
+	// delete the component dependencies associated with this artifact
+	err = s.componentRepository.GetDB(nil).Where("asset_id = ? AND asset_version_name = ? AND component_id IS NULL and dependency_id = ?", assetID, assetVersionName, "artifact:"+artifactName).Delete(&models.ComponentDependency{}).Error
+	if err != nil {
+		slog.Error("failed to delete component dependencies for deleted artifact", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+		return err
+	}
+
 	// Recalculate depths for vulnerabilities based on remaining artifacts
 	return s.recalculateDepthsAfterArtifactDeletion(assetID, assetVersionName)
 }
 
 func (s *ArtifactService) recalculateDepthsAfterArtifactDeletion(assetID uuid.UUID, assetVersionName string) error {
-	// Get remaining artifacts for this asset version
-	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
+	sbom, _, err := s.assetVersionService.LoadFullSBOM(
+		models.AssetVersion{
+			AssetID: assetID,
+			Name:    assetVersionName,
+		},
+	)
 	if err != nil {
-		slog.Error("failed to get artifacts after deletion", "assetID", assetID, "error", err)
+		slog.Error("failed to load full SBOM for depth recalculation", "assetID", assetID, "assetVersionName", assetVersionName, "error", err)
 		return err
 	}
 
-	if len(artifacts) == 0 {
-		return nil
-	}
-
-	// Load asset and asset version once
-	asset, err := s.assetRepository.Read(assetID)
-	if err != nil {
-		slog.Error("failed to get asset for depth recalculation", "assetID", assetID, "error", err)
-		return err
-	}
-
-	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, assetID)
-	if err != nil {
-		slog.Error("failed to get asset version for depth recalculation", "assetVersionName", assetVersionName, "error", err)
-		return err
-	}
-
-	// Build depth map for each artifact once, then find minimum depth per component
-	minDepthMap := make(map[string]int) // componentPurl -> minDepth
-
-	for _, artifact := range artifacts {
-		components, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, &artifact.ArtifactName)
-		if err != nil {
-			slog.Error("failed to load components", "artifactName", artifact.ArtifactName, "error", err)
-			continue
-		}
-
-		sbom, err := s.assetVersionService.BuildSBOM("", "", "", "", asset, assetVersion, artifact.ArtifactName, components)
-		if err != nil {
-			slog.Error("failed to build SBOM", "artifactName", artifact.ArtifactName, "error", err)
-			continue
-		}
-
-		depthMap := sbom.CalculateDepth()
-		for purl, depth := range depthMap {
-			if minDepth, exists := minDepthMap[purl]; !exists || depth < minDepth {
-				minDepthMap[purl] = depth
-			}
-		}
-	}
-
-	if len(minDepthMap) == 0 {
-		return nil
-	}
+	depthMap := sbom.CalculateDepth()
 
 	// Batch update all vulnerabilities with new depths using single SQL query
 	var valueClauses []string
-	for purl, depth := range minDepthMap {
+	for purl, depth := range depthMap {
 		valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", purl, depth))
 	}
 
@@ -148,7 +116,7 @@ func (s *ArtifactService) recalculateDepthsAfterArtifactDeletion(assetID uuid.UU
 		return err
 	}
 
-	slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(minDepthMap))
+	slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(depthMap))
 	return nil
 }
 
@@ -236,7 +204,7 @@ func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string,
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, ref, url))
+		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, ref))
 	}
 
 	return boms, validURLs, invalidURLs
@@ -347,13 +315,13 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 			}
 		}
 
-		_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
+		bom, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
-		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
+		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, bom, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
 		if err != nil {
 			slog.Error("could not handle scan result", "err", err)
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)

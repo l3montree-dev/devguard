@@ -97,7 +97,7 @@ func main() {
 	}
 
 	app := fx.New(
-		fx.NopLogger,
+		// fx.NopLogger,
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
 		database.Module,

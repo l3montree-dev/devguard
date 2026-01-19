@@ -87,22 +87,40 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
+			// Create the artifact root component (needed for FK constraint)
+			artifactRoot := "artifact:" + artifact.ArtifactName
+			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
+			assert.NoError(t, err)
+
+			// Create artifact root node dependency (NULL -> artifact:name)
+			err = f.DB.Create(&models.ComponentDependency{
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+				ComponentID:      nil,
+				DependencyID:     artifactRoot,
+			}).Error
+			assert.NoError(t, err)
+
+			// Create component dependencies pointing to artifact root
 			componentDeps := []models.ComponentDependency{
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
+					ComponentID:      &artifactRoot,
 					DependencyID:     componentWithInvalidLicense.ID,
 					Dependency:       componentWithInvalidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
+					ComponentID:      &artifactRoot,
 					DependencyID:     componentWithValidLicense.ID,
 					Dependency:       componentWithValidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
+					ComponentID:      &artifactRoot,
 					DependencyID:     componentWithoutLicense.ID,
 					Dependency:       componentWithoutLicense,
 				},
@@ -110,10 +128,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			for _, dep := range componentDeps {
 				err = f.DB.Create(&dep).Error
-				assert.NoError(t, err)
-
-				// Now create the many-to-many relationship with artifacts
-				err = f.DB.Model(&dep).Association("Artifacts").Append(&artifact)
 				assert.NoError(t, err)
 			}
 
@@ -124,7 +138,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Verify that license risks were created for components with invalid licenses
 			var licenseRisks []models.LicenseRisk
-			err = f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&licenseRisks).Error
+			err = f.DB.Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&licenseRisks).Error
 			assert.NoError(t, err)
 
 			// We should have license risks for:
@@ -143,7 +157,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			invalidLicenseRisk, exists := licenseRiskPurls[componentWithInvalidLicense.ID]
 			assert.True(t, exists, "License risk should exist for component with invalid license")
 			assert.Equal(t, dtos.VulnStateOpen, invalidLicenseRisk.State)
-			assert.Equal(t, artifact.ArtifactName, invalidLicenseRisk.Artifacts[0].ArtifactName)
 			assert.Equal(t, assetVersion.AssetID, invalidLicenseRisk.AssetID)
 			assert.Equal(t, assetVersion.Name, invalidLicenseRisk.AssetVersionName)
 
@@ -196,18 +209,29 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create component dependency
+			// Create the artifact root component (needed for FK constraint)
+			artifactRoot := "artifact:" + artifact.ArtifactName
+			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
+			assert.NoError(t, err)
+
+			// Create artifact root node dependency (NULL -> artifact:name)
+			err = f.DB.Create(&models.ComponentDependency{
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+				ComponentID:      nil,
+				DependencyID:     artifactRoot,
+			}).Error
+			assert.NoError(t, err)
+
+			// Create component dependency pointing to artifact root
 			componentDep := models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
+				ComponentID:      &artifactRoot,
 				DependencyID:     componentWithInvalidLicense.ID,
 				Dependency:       componentWithInvalidLicense,
 			}
 			err = f.DB.Create(&componentDep).Error
-			assert.NoError(t, err)
-
-			// Create the many-to-many relationship with artifacts
-			err = f.DB.Model(&componentDep).Association("Artifacts").Append(&artifact)
 			assert.NoError(t, err)
 
 			// Create existing license risk
@@ -217,7 +241,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 					AssetID:          assetVersion.AssetID,
 					State:            dtos.VulnStateOpen,
 				},
-				Artifacts:     []models.Artifact{artifact},
 				ComponentPurl: componentWithInvalidLicense.ID,
 			}
 			// Manually set the ID using the same calculation as the model

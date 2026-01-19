@@ -9,7 +9,7 @@ import (
 
 var rootMetadata = &cdx.Metadata{
 	Component: &cdx.Component{
-		BOMRef: "pkg:root",
+		BOMRef: "root",
 	},
 }
 
@@ -21,7 +21,7 @@ func TestFromCdxBom(t *testing.T) {
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "pkg:root",
+					BOMRef: ROOT,
 				},
 			},
 			Components: &[]cdx.Component{{
@@ -32,14 +32,14 @@ func TestFromCdxBom(t *testing.T) {
 				Type:       cdx.ComponentTypeLibrary,
 			}},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "pkg:root", Dependencies: &[]string{
+				{Ref: "ROOT", Dependencies: &[]string{
 					"pkg:npm/test-component@1.0.0",
 				}},
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin, "sbom")
-		component := (*result.GetComponents())[0]
+		result := FromCdxBom(bom, artifactName, origin)
+		component := (*result.GetComponents())[0] // index 0 is the artifact name
 
 		assert.Equal(t, "test-component", component.Name)
 		assert.Equal(t, "1.0.0", component.Version)
@@ -53,7 +53,7 @@ func TestFromCdxBom(t *testing.T) {
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: ROOT,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -71,7 +71,7 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin, "sbom")
+		result := FromCdxBom(bom, artifactName, origin)
 
 		// Verify the component is reachable from root
 		components := result.GetComponents()
@@ -98,7 +98,7 @@ func TestFromCdxBom(t *testing.T) {
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: ROOT,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -124,7 +124,7 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin, "sbom")
+		result := FromCdxBom(bom, artifactName, origin)
 		components := result.GetComponents()
 		assert.NotNil(t, components)
 
@@ -177,7 +177,7 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin, "sbom")
+		result := FromCdxBom(bom, artifactName, origin)
 		components := result.GetComponents()
 		assert.NotNil(t, components)
 
@@ -230,7 +230,7 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin, "sbom")
+		result := FromCdxBom(bom, artifactName, origin)
 		components := result.GetComponents()
 		assert.NotNil(t, components)
 
@@ -284,13 +284,17 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := MergeCdxBoms(rootMetadata, FromCdxBom(bom1, "artifact-1", "test", "sbom"), FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := MergeCdxBoms(FromCdxBom(bom1, "artifact-1", "test"), FromCdxBom(bom2, "artifact-2", "test"))
 
 		expected := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "merged-artifact",
+				},
+			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "merged-artifact",
 				},
 				{
 					BOMRef: "pkg:npm/component-2@2.0.0",
@@ -300,13 +304,15 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "pkg:root", Dependencies: &[]string{"pkg:npm/component-1@1.0.0", "pkg:npm/component-2@2.0.0"}},
+				{Ref: "merged-artifact", Dependencies: &[]string{"pkg:npm/component-1@1.0.0", "pkg:npm/component-2@2.0.0"}},
 				{Ref: "pkg:npm/component-1@1.0.0", Dependencies: &[]string{}},
 				{Ref: "pkg:npm/component-2@2.0.0", Dependencies: &[]string{}},
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(nil), expected))
+		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(BOMMetadata{
+			ArtifactName: "merged-artifact",
+		}), expected))
 	})
 
 	t.Run("merge BOMs with duplicate components", func(t *testing.T) {
@@ -346,25 +352,31 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		result := MergeCdxBoms(rootMetadata, FromCdxBom(bom1, "artifact-1", "test", "sbom"), FromCdxBom(bom2, "artifact-2", "test", "sbom"))
+		result := MergeCdxBoms(FromCdxBom(bom1, "artifact-1", "test"), FromCdxBom(bom2, "artifact-2", "test"))
 
 		expected := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: "merged-artifact",
+				},
+			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "merged-artifact",
 				},
 				{
 					BOMRef: "pkg:npm/component-1@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "pkg:root", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
+				{Ref: "merged-artifact", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
 				{Ref: "pkg:npm/component-1@1.0.0", Dependencies: &[]string{}},
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(nil), expected))
+		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(BOMMetadata{
+			ArtifactName: "merged-artifact",
+		}), expected))
 	})
 }
 
@@ -377,7 +389,7 @@ func TestShouldNotCrashWithEmptyMetadataComponent(t *testing.T) {
 		}},
 	}
 
-	normalized := FromCdxBom(b1, "test", "test", "sbom")
+	normalized := FromCdxBom(b1, "test", "test")
 	assert.NotNil(t, normalized)
 }
 
@@ -400,7 +412,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := MergeCdxBoms(rootMetadata, FromCdxBom(b1, "artifact-1", "test", "sbom"), FromCdxBom(b2, "artifact-2", "test", "sbom")).EjectVex(nil)
+	merged := MergeCdxBoms(FromCdxBom(b1, "artifact-1", "test"), FromCdxBom(b2, "artifact-2", "test")).EjectVex(BOMMetadata{})
 
 	assert.Len(t, *merged.Vulnerabilities, 1)
 }
@@ -413,7 +425,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:container",
@@ -421,7 +433,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:container",
 					},
@@ -432,7 +444,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:source",
@@ -440,7 +452,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:source",
 					},
@@ -448,8 +460,9 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		rootCdx := FromCdxBom(currentSbom, artifactName, "test", "container-scan")
-		subtree := FromCdxBom(newSubtree, artifactName, "test", "source-scan")
+		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan").ExtractArtifactBom(artifactName)
+
+		subtree := FromCdxBom(newSubtree, artifactName, "source-scan")
 		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
 			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
 		}
@@ -489,8 +502,11 @@ func TestReplaceSubtree(t *testing.T) {
 				},
 			},
 		}
+		bom := rootCdx.ExtractArtifactBom(artifactName)
 
-		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
+		assert.Nil(t, StructuralCompareCdxBoms(bom.EjectSBOM(BOMMetadata{
+			ArtifactName: artifactName,
+		}), expected))
 	})
 
 	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
@@ -498,7 +514,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:container@1.0.0",
@@ -506,7 +522,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:container@1.0.0",
 					},
@@ -517,7 +533,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:container@2.0.0",
@@ -525,7 +541,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:container@2.0.0",
 					},
@@ -533,8 +549,9 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		rootCdx := FromCdxBom(currentSbom, artifactName, "test", "container-scan")
-		subtree := FromCdxBom(newSubtree, artifactName, "test", "container-scan")
+		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan")
+		rootCdx = rootCdx.ExtractArtifactBom(artifactName)
+		subtree := FromCdxBom(newSubtree, artifactName, "container-scan")
 		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
 			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
 		}
@@ -567,7 +584,9 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
+		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(BOMMetadata{
+			ArtifactName: artifactName,
+		}), expected))
 	})
 
 	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
@@ -575,7 +594,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:container@1.0.0",
@@ -583,7 +602,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:container@1.0.0",
 					},
@@ -595,7 +614,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:source@1.0.0",
@@ -603,7 +622,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:source@1.0.0",
 					},
@@ -612,8 +631,9 @@ func TestReplaceSubtree(t *testing.T) {
 		}
 
 		// add the source tree first
-		rootCdx := FromCdxBom(currentSbom, artifactName, "test", "container-scan")
-		sourceSubtree := FromCdxBom(sourceTree, artifactName, "test", "source-scan")
+		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan")
+		rootCdx = rootCdx.ExtractArtifactBom(artifactName)
+		sourceSubtree := FromCdxBom(sourceTree, artifactName, "source-scan")
 		for _, informationSourceNode := range sourceSubtree.GetInformationSourceNodes() {
 			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
 		}
@@ -622,7 +642,7 @@ func TestReplaceSubtree(t *testing.T) {
 			Metadata: rootMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:root",
+					BOMRef: "root",
 				},
 				{
 					BOMRef: "pkg:container@2.0.0",
@@ -630,7 +650,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "root",
 					Dependencies: &[]string{
 						"pkg:container@2.0.0",
 					},
@@ -638,7 +658,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		subtree := FromCdxBom(newSubtree, artifactName, "test", "container-scan")
+		subtree := FromCdxBom(newSubtree, artifactName, "container-scan")
 		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
 			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
 		}
@@ -679,7 +699,9 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(nil), expected))
+		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(BOMMetadata{
+			ArtifactName: artifactName,
+		}), expected))
 	})
 }
 
@@ -726,7 +748,7 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "pkg:artifact", "test", "origin")
+		}, "pkg:artifact", "origin")
 
 		actual := bom.CalculateDepth()
 
@@ -785,7 +807,7 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "pkg:artifact", "test", "origin")
+		}, "pkg:artifact", "origin")
 
 		actual := bom.CalculateDepth()
 
@@ -806,7 +828,7 @@ func TestCalculateDepth(t *testing.T) {
 		bom := FromCdxBom(&cdx.BOM{
 			Components:   &[]cdx.Component{},
 			Dependencies: &[]cdx.Dependency{},
-		}, "pkg:artifact", "test", "origin")
+		}, "pkg:artifact", "origin")
 
 		actual := bom.CalculateDepth()
 
@@ -855,7 +877,7 @@ func TestCalculateDepth(t *testing.T) {
 					Dependencies: &[]string{},
 				},
 			},
-		}, "pkg:artifact", "test", "sbom")
+		}, "pkg:artifact", "test")
 
 		// lets merge a vex that adds a false positive to golang/c
 		vex := FromCdxBom(&cdx.BOM{
@@ -874,12 +896,12 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "pkg:artifact", "test", "vex")
-		bom = MergeCdxBoms(rootMetadata, bom, vex)
+		}, "pkg:artifact", "vex")
+		bom = MergeCdxBoms(bom, vex)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
-			"pkg:golang/c": 5, // pkg:root -> pkg:artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
+			"pkg:golang/c": 3, // root -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
 		}
 
 		for node, expectedDepth := range expectedDepths {

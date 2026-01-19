@@ -137,7 +137,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	upstreamBOMS := []*normalize.CdxBom{}
 	// check if there are components or vulnerabilities in the bom
 	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
-		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, assetVersionName, origin))
+		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, origin))
 	}
 
 	for _, url := range externalURLs {
@@ -198,7 +198,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
-	normalized := normalize.FromCdxBom(bom, artifactName, assetVersionName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
+	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {

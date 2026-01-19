@@ -3,6 +3,7 @@ package normalize
 import (
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/url"
 	"os"
 	"regexp"
@@ -11,17 +12,19 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/package-url/packageurl-go"
 )
 
+const ROOT = "ROOT"
+
+// A normalized CycloneDX BOM always has the following structure
+// - Root Node (ROOT, see const)
+// --- Artifact Nodes (one per artifact in the asset version)
+// ----- Information Source Nodes (one or more, representing SBOMs or VEX documents)
+// --------- Component Nodes (the actual components, dependencies)
 type CdxBom struct {
-	tree             Tree[cdxBomNode]
-	vulnerabilities  *[]cdx.Vulnerability
-	artifactName     string
-	assetVersionSlug string
-	assetSlug        string
-	projectSlug      string
-	orgSlug          string
-	frontendURL      string
+	tree            Tree[cdxBomNode]
+	vulnerabilities *[]cdx.Vulnerability
 }
 
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
@@ -61,7 +64,25 @@ func (bom *CdxBom) AddSourceChildrenToTarget(source *TreeNode[cdxBomNode], targe
 	bom.tree.AddSourceChildrenToTarget(source, target)
 }
 
+func (bom *CdxBom) ReplaceOrAddArtifact(subTree *CdxBom) {
+	// check if already exists
+	for _, existingArtifactNode := range bom.tree.Root.Children {
+		if existingArtifactNode.ID == subTree.tree.Root.ID {
+			// replace the subtree
+			bom.tree.ReplaceSubtree(subTree.tree.Root)
+			return
+		}
+	}
+	// if we reach here - we did not find an existing node - so we add the subtree to the root
+	bom.AddChild(bom.tree.Root, subTree.tree.Root)
+}
+
 func (bom *CdxBom) ReplaceOrAddInformationSourceNode(subTree *TreeNode[cdxBomNode]) {
+	// its only allowed to call this function if bom.tree.Root is an artifact
+	if bom.tree.Root == nil || bom.tree.Root.element.Type() != NodeTypeArtifact {
+		panic("ReplaceOrAddInformationSourceNode called on 'not artifact' scoped bom. Use ExtractArtifactBom before")
+	}
+
 	// check if we have a node with the same ID already
 	existingNodes := bom.GetInformationSourceNodes()
 	for _, existingNode := range existingNodes {
@@ -124,7 +145,7 @@ func (bom *CdxBom) CalculateDepth() map[string]int {
 		}
 	}
 
-	visit(bom.tree.Root, 0)
+	visit(bom.tree.Root, 1)
 	// make sure the depth map is complete.
 	// since we do not traverse vex paths - we might miss some nodes
 	for id := range bom.tree.cursors {
@@ -190,6 +211,201 @@ func (bom *CdxBom) GetAllParentNodes(nodeID string) []string {
 	}
 	visit(bom.tree.Root, []string{})
 	return result
+}
+
+func (bom *CdxBom) GetComponentIDsIncludingFakeNodes() map[string]struct{} {
+	components := bom.GetComponentsIncludingFakeNodes()
+	componentIDs := make(map[string]struct{})
+	for _, component := range *components {
+		id := GetComponentID(component)
+		componentIDs[id] = struct{}{}
+	}
+	return componentIDs
+}
+
+// GetComponentNode returns the tree node for a given component ID
+func (bom *CdxBom) GetComponentNode(componentID string) (*TreeNode[cdxBomNode], bool) {
+	if bom == nil || bom.tree.cursors == nil {
+		return nil, false
+	}
+	node, exists := bom.tree.cursors[componentID]
+	return node, exists
+}
+
+// FindAllPathsToComponent finds all dependency paths from root to the specified component.
+// Returns a minimal tree containing only the paths that lead to the target component.
+//
+// To filter by artifact, first call ExtractArtifactBom() to get a filtered bom:
+//
+//	artifactBom := fullBom.ExtractArtifactBom("manifest.json")
+//	paths := artifactBom.FindAllPathsToComponent("pkg:npm/lodash@4.17.21")
+func (bom *CdxBom) FindAllPathsToComponent(componentID string) *minimalTreeNode {
+	if bom == nil || bom.tree.Root == nil {
+		return nil
+	}
+
+	// Build a minimal tree containing only paths to the target component
+	var buildMinimalTree func(node *TreeNode[cdxBomNode], visited map[string]bool) *minimalTreeNode
+	buildMinimalTree = func(node *TreeNode[cdxBomNode], visited map[string]bool) *minimalTreeNode {
+		if node == nil {
+			return nil
+		}
+
+		// Check for cycles
+		if visited[node.ID] {
+			return nil
+		}
+
+		// Mark as visited for this path
+		newVisited := make(map[string]bool)
+		maps.Copy(newVisited, visited)
+		newVisited[node.ID] = true
+
+		// Check if this is the target component
+		if node.ID == componentID {
+			return &minimalTreeNode{
+				Name:     node.ID,
+				Children: []*minimalTreeNode{},
+			}
+		}
+
+		// Recursively check children
+		var validChildren []*minimalTreeNode
+		for _, child := range node.Children {
+			minChild := buildMinimalTree(child, newVisited)
+			if minChild != nil {
+				validChildren = append(validChildren, minChild)
+			}
+		}
+
+		// If any child leads to the target, include this node
+		if len(validChildren) > 0 {
+			return &minimalTreeNode{
+				Name:     node.ID,
+				Children: validChildren,
+			}
+		}
+
+		return nil
+	}
+
+	return buildMinimalTree(bom.tree.Root, make(map[string]bool))
+}
+
+// ExtractArtifactBom returns a new CdxBom containing only the subtree rooted at the specified artifact.
+// The artifact becomes the new root of the returned bom.
+// Returns nil if the artifact is not found.
+//
+// Example usage:
+//
+//	fullBom := assetVersionService.LoadFullSBOM(...)
+//	artifactBom := fullBom.ExtractArtifactBom("manifest.json")
+//	paths := artifactBom.FindAllPathsToComponent("pkg:npm/lodash@4.17.21")
+func (bom *CdxBom) ExtractArtifactBom(artifactName string) *CdxBom {
+	if bom == nil || bom.tree.Root == nil {
+		return nil
+	}
+
+	artifactID := "artifact:" + artifactName
+	artifactNode, exists := bom.tree.cursors[artifactID]
+	if !exists {
+		return nil
+	}
+
+	// Create a new CdxBom with the artifact as root
+	newBom := &CdxBom{
+		tree: Tree[cdxBomNode]{
+			Root:    artifactNode, // will copy the all of the children as well
+			cursors: make(map[string]*TreeNode[cdxBomNode]),
+		},
+		vulnerabilities: bom.vulnerabilities,
+	}
+
+	// Populate cursors for the subtree
+	var addToCursors func(node *TreeNode[cdxBomNode])
+	addToCursors = func(node *TreeNode[cdxBomNode]) {
+		if node == nil {
+			return
+		}
+		newBom.tree.cursors[node.ID] = node
+		for _, child := range node.Children {
+			addToCursors(child)
+		}
+	}
+	addToCursors(artifactNode)
+
+	return newBom
+}
+
+func (bom *CdxBom) GetSubtree(nodeID string) (Tree[cdxBomNode], error) {
+	// returns the subtree rooted at the given nodeID
+	if bom == nil || bom.tree.Root == nil {
+		return Tree[cdxBomNode]{}, fmt.Errorf("bom or bom tree is nil")
+	}
+
+	subtreeRoot, exists := bom.tree.cursors[nodeID]
+	if !exists {
+		return Tree[cdxBomNode]{}, fmt.Errorf("nodeID %s not found in bom", nodeID)
+	}
+
+	newTree := Tree[cdxBomNode]{
+		Root:    subtreeRoot,
+		cursors: make(map[string]*TreeNode[cdxBomNode]),
+	}
+
+	// Populate cursors for the subtree
+	var addToCursors func(node *TreeNode[cdxBomNode])
+	addToCursors = func(node *TreeNode[cdxBomNode]) {
+		if node == nil {
+			return
+		}
+		newTree.cursors[node.ID] = node
+		for _, child := range node.Children {
+			addToCursors(child)
+		}
+	}
+	addToCursors(subtreeRoot)
+
+	return newTree, nil
+}
+
+// GetSubtreeNodeIDs returns all node IDs reachable from the specified artifact root.
+// This includes the artifact node itself and all its descendants.
+// For a filtered CdxBom, use ExtractArtifactBom() instead.
+func (bom *CdxBom) GetSubtreeNodeIDs(nodeID string) ([]string, error) {
+	tree, err := bom.GetSubtree(nodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	// we can use the cursors of the subtree tree
+	nodeIDs := make([]string, 0, len(tree.cursors))
+	for id := range tree.cursors {
+		nodeIDs = append(nodeIDs, id)
+	}
+	return nodeIDs, nil
+}
+
+// GetComponentsForArtifact returns all component dependencies that belong to the specified artifact.
+// This is useful for filtering the full SBOM to just one artifact's dependencies.
+func (bom *CdxBom) GetComponentsForArtifact(artifactName string) ([]cdx.Component, error) {
+	subtreeIDs, err := bom.GetSubtreeNodeIDs(artifactName)
+	if err != nil {
+		return nil, err
+	}
+
+	idSet := make(map[string]bool, len(subtreeIDs))
+	for _, id := range subtreeIDs {
+		idSet[id] = true
+	}
+
+	var components []cdx.Component
+	for _, node := range bom.tree.cursors {
+		if idSet[node.ID] && node.element.Type() == NodeTypeComponent {
+			components = append(components, *node.element.Data())
+		}
+	}
+	return components, nil
 }
 
 // this returns direct csaf children of csaf information source nodes
@@ -356,11 +572,36 @@ func (bom *CdxBom) GetComponents() *[]cdx.Component {
 	}
 
 	visit(bom.tree.Root)
-	// always add the root component as well
-	if !alreadyAdded[bom.tree.Root.ID] {
-		components = append(components, *bom.tree.Root.element.Data())
-	}
 	return &components
+}
+
+// GetLicenseDistribution returns a map of license ID to count of components with that license.
+// Components without a license are counted as "unknown".
+func (bom *CdxBom) GetLicenseDistribution() map[string]int {
+	if bom == nil {
+		return map[string]int{}
+	}
+
+	distribution := make(map[string]int)
+	components := bom.GetComponents()
+
+	for _, component := range *components {
+		license := "unknown"
+		if component.Licenses != nil && len(*component.Licenses) > 0 {
+			// Use the first license choice's ID or expression
+			licenseChoice := (*component.Licenses)[0]
+			if licenseChoice.License != nil && licenseChoice.License.ID != "" {
+				license = licenseChoice.License.ID
+			} else if licenseChoice.License != nil && licenseChoice.License.Name != "" {
+				license = licenseChoice.License.Name
+			} else if licenseChoice.Expression != "" {
+				license = licenseChoice.Expression
+			}
+		}
+		distribution[license]++
+	}
+
+	return distribution
 }
 
 func (bom *CdxBom) GetInformationSources() []string {
@@ -405,6 +646,7 @@ func (bom *CdxBom) GetDependencies() *[]cdx.Dependency {
 	}
 
 	for _, child := range bom.tree.Root.Children {
+		// since we pass the root as parent, IT WILL ALWAYS BE part of the dependencies slice
 		visit(bom.tree.Root, child)
 	}
 	dependencies := []cdx.Dependency{}
@@ -422,16 +664,6 @@ func (bom *CdxBom) GetDependencies() *[]cdx.Dependency {
 	return &dependencies
 }
 
-func (bom *CdxBom) GetMetadata() *cdx.Metadata {
-	if bom == nil {
-		return &cdx.Metadata{}
-	}
-
-	return &cdx.Metadata{
-		Component: bom.tree.Root.element.Component,
-	}
-}
-
 func (bom *CdxBom) GetVulnerabilities() *[]cdx.Vulnerability {
 	if bom == nil {
 		return &[]cdx.Vulnerability{}
@@ -446,6 +678,7 @@ const (
 	NodeTypeSbomInformationSource nodeType = "sbom"
 	NodeTypeVexInformationSource  nodeType = "vex"
 	NodeTypeCSAFInformationSource nodeType = "csaf"
+	NodeTypeArtifact              nodeType = "artifact"
 	NodeTypeUnknown               nodeType = "unknown"
 )
 
@@ -456,7 +689,9 @@ type cdxBomNode struct {
 
 func newCdxBomNode(component *cdx.Component) cdxBomNode {
 	//  make sure to normalize the purl
-	component.PackageURL = normalizePurl(component.PackageURL)
+	if component.PackageURL != "" {
+		component.PackageURL = normalizePurl(component.PackageURL)
+	}
 
 	// if its a valid purl we expect this to be of type component -
 	if strings.HasPrefix(component.BOMRef, "pkg:") || strings.HasPrefix(component.PackageURL, "pkg:") {
@@ -479,6 +714,11 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 		return cdxBomNode{
 			Component: component,
 			nodeType:  NodeTypeCSAFInformationSource,
+		}
+	} else if strings.HasPrefix(component.BOMRef, fmt.Sprintf("%s:", NodeTypeArtifact)) {
+		return cdxBomNode{
+			Component: component,
+			nodeType:  NodeTypeArtifact,
 		}
 	}
 
@@ -512,67 +752,38 @@ func buildDependencyMap(dependencies []cdx.Dependency) map[string][]string {
 	return depMap
 }
 
-func addFakeMetadataRootComponent(bom *cdx.BOM) *cdx.BOM {
-	// we have no root component, we need to create a fake one.
-	// besides that we need to create the dependency tree of that fake root
-	// lets do this by getting all existing dependencies which are not referenced by any other component
-	// those will be direct children of the fake root
-	rootComponent := &cdx.Component{
-		BOMRef:     "root-component",
-		Name:       "root-component",
-		PackageURL: "root-component",
-		Type:       "application",
-	}
-	bom.Metadata.Component = rootComponent
-	// find all referenced components
-	referencedComponents := make(map[string]bool)
-	for _, d := range *bom.Dependencies {
-		if d.Dependencies != nil {
-			for _, dep := range *d.Dependencies {
-				referencedComponents[dep] = true
-			}
-		}
-	}
-	// find all components which are not referenced
-	rootDependencies := []string{}
-	for _, c := range *bom.Components {
-		if !referencedComponents[c.BOMRef] {
-			rootDependencies = append(rootDependencies, c.BOMRef)
-		}
-	}
-	// add a dependency entry for the fake root
-	*bom.Dependencies = append(*bom.Dependencies, cdx.Dependency{
-		Ref:          rootComponent.BOMRef,
-		Dependencies: &rootDependencies,
-	})
-
-	return bom
-}
-
 type CdxComponent interface {
-	GetPurl() string
-	GetDependentPurl() *string
+	GetID() string
+	GetDependentID() *string
 	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
 }
 
-func FromVulnerabilities(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, vulns []cdx.Vulnerability) *CdxBom {
+func FromVulnerabilities(vulns []cdx.Vulnerability) *CdxBom {
 	bom := cdx.BOM{}
 	bom.Vulnerabilities = &vulns
-
-	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	bom.Metadata = &cdx.Metadata{
+		Component: &cdx.Component{
+			BOMRef: ROOT,
+			Name:   ROOT,
+		},
+	}
+	return newCdxBom(&bom)
 }
 
-func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug, projectSlug, orgSlug, frontendURL string, components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
+// This function expects the components to already have a normalized structure
+// this means it includes artifact nodes and information source nodes
+// AND the linking between artifacts, information sources and components is already done
+func FromComponents(components []CdxComponent, licenseOverwrites map[string]string) *CdxBom {
 	bom := cdx.BOM{}
 	// add all components (root is created in fromNormalizedCdxBom)
 	bomComponents := make([]cdx.Component, 0, len(components))
 	processedComponents := make(map[string]struct{}, len(components))
 
 	for _, component := range components {
-		if _, alreadyProcessed := processedComponents[component.GetPurl()]; alreadyProcessed {
+		if _, alreadyProcessed := processedComponents[component.GetID()]; alreadyProcessed {
 			continue
 		}
-		processedComponents[component.GetPurl()] = struct{}{}
+		processedComponents[component.GetID()] = struct{}{}
 		bomComponents = append(bomComponents, component.ToCdxComponent(licenseOverwrites))
 	}
 
@@ -581,26 +792,39 @@ func FromComponents(assetSlug, artifactName, assetVersionName, assetVersionSlug,
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
 		var purl string
-		if c.GetDependentPurl() != nil {
-			purl = *c.GetDependentPurl()
+		if c.GetDependentID() != nil {
+			purl = *c.GetDependentID()
+		} else {
+			// if the dependant ID is nil, its a direct dependency from root.
+			// we are NOT storing ROOT inside the database but NULL instead.
+			// this if statement converts NULL to ROOT for the purpose of building the bom
+			purl = ROOT
 		}
-		dependencyMap[purl] = append(dependencyMap[purl], c.GetPurl())
+		dependencyMap[purl] = append(dependencyMap[purl], c.GetID())
 	}
 
 	// build up the dependencies
 	bomDependencies := make([]cdx.Dependency, 0, len(dependencyMap))
 	for k, v := range dependencyMap {
-		vtmp := v
-
 		bomDependencies = append(bomDependencies, cdx.Dependency{
 			Ref:          k,
-			Dependencies: &vtmp,
+			Dependencies: &v,
 		})
 	}
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
+	// what is the ROOT of this? Actually its the asset version itself.
+	// but since we do not store that as a component - we create a fake root component
+	// this will be the root of the tree structure.
+	rootComponent := cdx.Component{
+		BOMRef: ROOT,
+		Name:   ROOT,
+	}
+	bom.Metadata = &cdx.Metadata{
+		Component: &rootComponent,
+	}
 
-	return fromNormalizedCdxBom(&bom, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug, frontendURL)
+	return newCdxBom(&bom)
 }
 
 func newCdxBom(bom *cdx.BOM) *CdxBom {
@@ -616,7 +840,12 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 		bom.Metadata = &cdx.Metadata{}
 	}
 	if bom.Metadata.Component == nil {
-		bom = addFakeMetadataRootComponent(bom)
+		bom.Metadata.Component = &cdx.Component{
+			BOMRef: ROOT,
+			Name:   ROOT,
+		}
+		// if no root can be found, ALL components are unvisitable from root
+		// this gets handled in the tree building below
 	}
 
 	sbomNodes := make([]cdxBomNode, 0, len(*bom.Components))
@@ -635,7 +864,6 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 			for _, affected := range *v.Affects {
 				vulnerableRefs[normalizePurl(affected.Ref)] = newCdxBomNode(&cdx.Component{
 					BOMRef:     normalizePurl(affected.Ref),
-					Name:       normalizePurl(affected.Ref),
 					PackageURL: normalizePurl(affected.Ref),
 				})
 				sbomNodes = append(sbomNodes, vulnerableRefs[normalizePurl(affected.Ref)])
@@ -683,16 +911,16 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
 
-func (bom *CdxBom) calculateExternalURLs(docURL string) (string, string) {
+func (bom *CdxBom) calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string) {
 	dashboardURL := ""
-	if bom.frontendURL != "" && bom.orgSlug != "" && bom.projectSlug != "" && bom.assetSlug != "" {
-		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", bom.frontendURL, bom.orgSlug, bom.projectSlug, bom.assetSlug)
+	if metadata.FrontendURL != "" && metadata.OrgSlug != "" && metadata.ProjectSlug != "" && metadata.AssetSlug != "" {
+		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", metadata.FrontendURL, metadata.OrgSlug, metadata.ProjectSlug, metadata.AssetSlug)
 	}
 
-	if bom.assetVersionSlug != "" {
-		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(bom.assetVersionSlug))
+	if metadata.AssetVersionSlug != "" {
+		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(metadata.AssetVersionSlug))
 		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(bom.assetVersionSlug))
+			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(metadata.AssetVersionSlug))
 		}
 	} else {
 		if dashboardURL != "" {
@@ -700,25 +928,25 @@ func (bom *CdxBom) calculateExternalURLs(docURL string) (string, string) {
 		}
 	}
 
-	if bom.assetVersionSlug != "" && bom.artifactName != "" {
-		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+	if metadata.AssetVersionSlug != "" && metadata.ArtifactName != "" {
+		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
 		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(bom.artifactName))
+			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(metadata.ArtifactName))
 		}
-	} else if bom.artifactName != "" {
-		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(bom.artifactName))
+	} else if metadata.ArtifactName != "" {
+		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
 	}
 
 	return docURL, dashboardURL
 }
 
-func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
+func (bom *CdxBom) EjectVex(metadata BOMMetadata) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
-	if assetID != nil {
+	if metadata.AddExternalReferences && metadata.AssetID != nil {
 		apiURL := os.Getenv("API_URL")
-		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, assetID.String())
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, metadata.AssetID.String())
 
-		vexURL, dashboardURL := bom.calculateExternalURLs(vexURL)
+		vexURL, dashboardURL := bom.calculateExternalURLs(vexURL, metadata)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
@@ -735,14 +963,36 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 		}
 	}
 
+	// check if valid purl
+	p, err := packageurl.FromString(metadata.ArtifactName)
+	pURL := ""
+	if err == nil {
+		pURL = p.String()
+	}
+
+	rootCdxComponent := &cdx.Component{
+		BOMRef:     metadata.ArtifactName,
+		Name:       metadata.ArtifactName,
+		Type:       cdx.ComponentTypeApplication,
+		PackageURL: pURL,
+	}
+
+	bom.tree.Root.ID = metadata.ArtifactName
+	bom.tree.Root.element = cdxBomNode{
+		Component: rootCdxComponent,
+		nodeType:  NodeTypeComponent, // otherwise it will be excluded from the components list
+	}
+
 	b := cdx.BOM{
-		SpecVersion:        cdx.SpecVersion1_6,
-		BOMFormat:          "CycloneDX",
-		XMLNS:              "http://cyclonedx.org/schema/bom/1.6",
-		Version:            1,
-		Components:         bom.GetComponents(),
-		Dependencies:       bom.GetDependencies(),
-		Metadata:           bom.GetMetadata(),
+		SpecVersion:  cdx.SpecVersion1_6,
+		BOMFormat:    "CycloneDX",
+		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
+		Version:      1,
+		Components:   bom.GetComponents(),
+		Dependencies: bom.GetDependencies(),
+		Metadata: &cdx.Metadata{
+			Component: rootCdxComponent,
+		},
 		Vulnerabilities:    bom.GetVulnerabilities(),
 		ExternalReferences: externalRefs,
 	}
@@ -750,13 +1000,24 @@ func (bom *CdxBom) EjectVex(assetID *uuid.UUID) *cdx.BOM {
 	return &b
 }
 
-func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
-	var externalRefs *[]cdx.ExternalReference
-	if assetID != nil {
-		apiURL := os.Getenv("API_URL")
-		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, assetID.String())
+type BOMMetadata struct {
+	AssetVersionSlug      string
+	AssetSlug             string
+	ProjectSlug           string
+	OrgSlug               string
+	FrontendURL           string
+	ArtifactName          string
+	AssetID               *uuid.UUID
+	AddExternalReferences bool
+}
 
-		sbomURL, dashboardURL := bom.calculateExternalURLs(sbomURL)
+func (bom *CdxBom) EjectSBOM(metadata BOMMetadata) *cdx.BOM {
+	var externalRefs *[]cdx.ExternalReference
+	if metadata.AddExternalReferences && metadata.AssetID != nil {
+		apiURL := os.Getenv("API_URL")
+		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/sbom.json", apiURL, metadata.AssetID.String())
+
+		sbomURL, dashboardURL := bom.calculateExternalURLs(sbomURL, metadata)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     sbomURL,
@@ -772,15 +1033,36 @@ func (bom *CdxBom) EjectSBOM(assetID *uuid.UUID) *cdx.BOM {
 			})
 		}
 	}
+	// check if valid purl
+	p, err := packageurl.FromString(metadata.ArtifactName)
+	pURL := ""
+	if err == nil {
+		pURL = p.String()
+	}
+
+	rootCdxComponent := &cdx.Component{
+		BOMRef:     metadata.ArtifactName,
+		Name:       metadata.ArtifactName,
+		Type:       cdx.ComponentTypeApplication,
+		PackageURL: pURL,
+	}
+
+	bom.tree.Root.ID = metadata.ArtifactName
+	bom.tree.Root.element = cdxBomNode{
+		Component: rootCdxComponent,
+		nodeType:  NodeTypeComponent, // otherwise it will be excluded from the components list
+	}
 
 	b := cdx.BOM{
-		SpecVersion:        cdx.SpecVersion1_6,
-		BOMFormat:          "CycloneDX",
-		XMLNS:              "http://cyclonedx.org/schema/bom/1.6",
-		Version:            1,
-		Components:         bom.GetComponents(),
-		Dependencies:       bom.GetDependencies(),
-		Metadata:           bom.GetMetadata(),
+		SpecVersion:  cdx.SpecVersion1_6,
+		BOMFormat:    "CycloneDX",
+		XMLNS:        "http://cyclonedx.org/schema/bom/1.6",
+		Version:      1,
+		Components:   bom.GetComponents(),
+		Dependencies: bom.GetDependencies(),
+		Metadata: &cdx.Metadata{
+			Component: rootCdxComponent,
+		},
 		ExternalReferences: externalRefs,
 	}
 
@@ -813,6 +1095,41 @@ func (bom *CdxBom) EjectMinimalDependencyTree() *minimalTreeNode {
 	return convert(bom.tree.Root)
 }
 
+// GetRootID returns the ID of the root node of the BOM tree
+func (bom *CdxBom) GetRootID() string {
+	if bom == nil || bom.tree.Root == nil {
+		return ""
+	}
+	return bom.tree.Root.ID
+}
+
+// NodeIDsAndEdges returns all node IDs and edges in the BOM tree
+func (bom *CdxBom) NodeIDsAndEdges() FlatTree {
+	return bom.tree.NodeIDsAndEdges()
+}
+
+// NewEmptyArtifactBom creates a new CdxBom with just an artifact root node
+// This is used when creating a new artifact that doesn't exist yet
+func NewEmptyArtifactBom(artifactName string) *CdxBom {
+	artifactID := "artifact:" + artifactName
+	artifactNode := &TreeNode[cdxBomNode]{
+		ID: artifactID,
+		element: cdxBomNode{
+			Component: &cdx.Component{BOMRef: artifactID},
+			nodeType:  NodeTypeArtifact,
+		},
+		Children: []*TreeNode[cdxBomNode]{},
+	}
+
+	return &CdxBom{
+		tree: Tree[cdxBomNode]{
+			Root:    artifactNode,
+			cursors: map[string]*TreeNode[cdxBomNode]{artifactID: artifactNode},
+		},
+		vulnerabilities: &[]cdx.Vulnerability{},
+	}
+}
+
 func normalizeVulnerabilities(vulns *[]cdx.Vulnerability) *[]cdx.Vulnerability {
 	if vulns == nil {
 		return &[]cdx.Vulnerability{}
@@ -836,6 +1153,8 @@ func RemoveOriginTypePrefixIfExists(origin string) (nodeType, string) {
 		return NodeTypeSbomInformationSource, after
 	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", NodeTypeCSAFInformationSource)); ok {
 		return NodeTypeCSAFInformationSource, after
+	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", NodeTypeArtifact)); ok {
+		return NodeTypeArtifact, after
 	}
 
 	return "", origin
@@ -904,46 +1223,6 @@ func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
 	return nil
 }
 
-func fromNormalizedCdxBom(bom *cdx.BOM, artifactName, assetVersionName, assetVersionSlug, assetSlug, projectSlug, orgSlug string, frontendURL string) *CdxBom {
-	rootPurl := ""
-	if artifactName != "" {
-		rootPurl = Purlify(artifactName, assetVersionName)
-	} else {
-		rootPurl = Purlify(assetSlug, assetVersionName)
-	}
-
-	// fix dependencies with empty Ref to use the root purl
-	// this handles components with no parent (direct dependencies of root)
-	if bom.Dependencies != nil {
-		for i := range *bom.Dependencies {
-			if (*bom.Dependencies)[i].Ref == "" {
-				(*bom.Dependencies)[i].Ref = rootPurl
-			}
-		}
-	}
-
-	// set the root component metadata so newCdxBom uses it
-	if bom.Metadata == nil {
-		bom.Metadata = &cdx.Metadata{}
-	}
-	bom.Metadata.Component = &cdx.Component{
-		BOMRef:     rootPurl,
-		Name:       rootPurl,
-		PackageURL: rootPurl,
-		Type:       "application",
-	}
-
-	cdxBom := newCdxBom(bom)
-	cdxBom.artifactName = artifactName
-	cdxBom.assetVersionSlug = assetVersionSlug
-	cdxBom.assetSlug = assetSlug
-	cdxBom.projectSlug = projectSlug
-	cdxBom.orgSlug = orgSlug
-	cdxBom.frontendURL = frontendURL
-
-	return cdxBom
-}
-
 // example: csaf:pkg:npm/%40angular/animation@12.3.1:https://example.com/csaf/1234
 var csafInformationSourceRegex = regexp.MustCompile(`^(?:csaf:)?(pkg:[a-zA-Z0-9\/\.\-_]+(?:@[a-zA-Z0-9\.\-_]+)?):(https?:\/\/[^\s\/$.?#][^\s]*)$`)
 
@@ -951,7 +1230,10 @@ func isCSAFInformationSource(informationSource string) bool {
 	return csafInformationSourceRegex.MatchString(informationSource)
 }
 
-func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string) *CdxBom {
+// This function builds a normalized CdxBom structure
+// This means: Root --> Artifact --> InformationSource --> Components
+// Thus this function needs the artifact name and information source as parameters
+func FromCdxBom(bom *cdx.BOM, artifactName, informationSource string) *CdxBom {
 	// default to sbom
 	bomType := NodeTypeSbomInformationSource
 	// check if a purl is inside the string - if so we treat it as a csaf information source
@@ -966,29 +1248,43 @@ func FromCdxBom(bom *cdx.BOM, artifactName, ref string, informationSource string
 		informationSource = fmt.Sprintf("%s:%s", bomType, informationSource)
 	}
 
-	cdxBom := newCdxBom(bom)
-	newRoot := newCdxBomNode(&cdx.Component{
-		BOMRef:     artifactName,
-		Name:       artifactName,
-		PackageURL: artifactName,
+	// build the artifact node
+	artifactNode := newCdxBomNode(&cdx.Component{
+		BOMRef: fmt.Sprintf("artifact:%s", artifactName),
+		Name:   artifactName,
+		Type:   "artifact",
 	})
 
+	// build the information source node
 	informationSourceNode := newCdxBomNode(&cdx.Component{
-		BOMRef:     informationSource,
-		Name:       informationSource,
-		PackageURL: informationSource,
+		BOMRef: informationSource,
+		Name:   informationSource,
 	})
 
-	cdxBom.ReplaceRoot(newRoot)
+	if bom.Dependencies != nil {
+		for i := range *bom.Dependencies {
+			if (*bom.Dependencies)[i].Ref == "" {
+				(*bom.Dependencies)[i].Ref = informationSource
+			}
+		}
+	}
+
+	cdxBom := newCdxBom(bom)
+
+	// add the artifact and information source nodes to the tree Root --> Artifact --> InformationSource
 	cdxBom.AddDirectChildWhichInheritsChildren(
-		newRoot,
+		cdxBom.tree.Root.element,
+		artifactNode,
+	)
+	cdxBom.AddDirectChildWhichInheritsChildren(
+		artifactNode,
 		informationSourceNode,
 	)
 
 	return cdxBom
 }
 
-func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *CdxBom {
+func MergeCdxBoms(boms ...*CdxBom) *CdxBom {
 	merged := &cdx.BOM{
 		SpecVersion:  cdx.SpecVersion1_6,
 		BOMFormat:    "CycloneDX",
@@ -996,7 +1292,12 @@ func MergeCdxBoms(metadata *cdx.Metadata, boms ...*CdxBom) *CdxBom {
 		Version:      1,
 		Components:   &[]cdx.Component{},
 		Dependencies: &[]cdx.Dependency{},
-		Metadata:     metadata,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: ROOT,
+				Name:   ROOT,
+			},
+		},
 	}
 
 	vulnMap := make(map[string]cdx.Vulnerability)

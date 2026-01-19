@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -522,16 +523,16 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(r
 }
 
 // UserDetectedExistingVulnOnDifferentBranch provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
-	ret := _mock.Called(tx, artifactName, dependencyVulns, alreadyExistingEvents, assetVersion, asset)
+func (_mock *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(tx shared.DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _mock.Called(tx, artifactName, dependencyVulns, assetVersion, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedExistingVulnOnDifferentBranch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.DependencyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
-		r0 = returnFunc(tx, artifactName, dependencyVulns, alreadyExistingEvents, assetVersion, asset)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []statemachine.BranchVulnMatch[*models.DependencyVuln], models.AssetVersion, models.Asset) error); ok {
+		r0 = returnFunc(tx, artifactName, dependencyVulns, assetVersion, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -546,15 +547,14 @@ type DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call struct
 // UserDetectedExistingVulnOnDifferentBranch is a helper method to define mock.On call
 //   - tx shared.DB
 //   - artifactName string
-//   - dependencyVulns []models.DependencyVuln
-//   - alreadyExistingEvents [][]models.VulnEvent
+//   - dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln]
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserDetectedExistingVulnOnDifferentBranch(tx interface{}, artifactName interface{}, dependencyVulns interface{}, alreadyExistingEvents interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
-	return &DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingVulnOnDifferentBranch", tx, artifactName, dependencyVulns, alreadyExistingEvents, assetVersion, asset)}
+func (_e *DependencyVulnService_Expecter) UserDetectedExistingVulnOnDifferentBranch(tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+	return &DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingVulnOnDifferentBranch", tx, artifactName, dependencyVulns, assetVersion, asset)}
 }
 
-func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) Run(run func(tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) Run(run func(tx shared.DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -564,21 +564,17 @@ func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []models.DependencyVuln
+		var arg2 []statemachine.BranchVulnMatch[*models.DependencyVuln]
 		if args[2] != nil {
-			arg2 = args[2].([]models.DependencyVuln)
+			arg2 = args[2].([]statemachine.BranchVulnMatch[*models.DependencyVuln])
 		}
-		var arg3 [][]models.VulnEvent
+		var arg3 models.AssetVersion
 		if args[3] != nil {
-			arg3 = args[3].([][]models.VulnEvent)
+			arg3 = args[3].(models.AssetVersion)
 		}
-		var arg4 models.AssetVersion
+		var arg4 models.Asset
 		if args[4] != nil {
-			arg4 = args[4].(models.AssetVersion)
-		}
-		var arg5 models.Asset
-		if args[5] != nil {
-			arg5 = args[5].(models.Asset)
+			arg4 = args[4].(models.Asset)
 		}
 		run(
 			arg0,
@@ -586,7 +582,6 @@ func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) 
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -597,7 +592,7 @@ func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) 
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) RunAndReturn(run func(tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) RunAndReturn(run func(tx shared.DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
 	_c.Call.Return(run)
 	return _c
 }

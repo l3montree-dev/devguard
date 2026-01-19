@@ -33,6 +33,131 @@ type Tree[Element Node] struct {
 	cursors map[string]*TreeNode[Element]
 }
 
+type NodeChangeType string
+
+const (
+	NodeAdded   NodeChangeType = "added"
+	NodeRemoved NodeChangeType = "removed"
+)
+
+type EdgeChangeType string
+
+const (
+	EdgeAdded   EdgeChangeType = "added"
+	EdgeRemoved EdgeChangeType = "removed"
+)
+
+type NodeDiff[Element Node] struct {
+	ID   string
+	Type NodeChangeType
+	Node *TreeNode[Element]
+}
+
+type EdgeDiff struct {
+	From string
+	To   string
+	Type EdgeChangeType
+}
+
+func flatten[E Node](
+	n *TreeNode[E],
+	nodes map[string]*TreeNode[E],
+	edges map[[2]string]struct{},
+	parent *TreeNode[E],
+) {
+	if n == nil {
+		return
+	}
+
+	nodes[n.ID] = n
+
+	if parent != nil {
+		edges[[2]string{parent.ID, n.ID}] = struct{}{}
+	}
+
+	for _, c := range n.Children {
+		flatten(c, nodes, edges, n)
+	}
+}
+
+type TreeDiff[Element Node] struct {
+	Nodes []NodeDiff[Element]
+	Edges []EdgeDiff
+}
+
+func diffNodes[E Node](
+	a, b map[string]*TreeNode[E],
+) []NodeDiff[E] {
+
+	var out []NodeDiff[E]
+
+	for id, n := range a {
+		if _, ok := b[id]; !ok {
+			out = append(out, NodeDiff[E]{
+				ID:   id,
+				Type: NodeRemoved,
+				Node: n,
+			})
+		}
+	}
+
+	for id, n := range b {
+		if _, ok := a[id]; !ok {
+			out = append(out, NodeDiff[E]{
+				ID:   id,
+				Type: NodeAdded,
+				Node: n,
+			})
+		}
+	}
+
+	return out
+}
+
+func diffEdges(
+	a, b map[[2]string]struct{},
+) []EdgeDiff {
+
+	var out []EdgeDiff
+
+	for e := range a {
+		if _, ok := b[e]; !ok {
+			out = append(out, EdgeDiff{
+				From: e[0],
+				To:   e[1],
+				Type: EdgeRemoved,
+			})
+		}
+	}
+
+	for e := range b {
+		if _, ok := a[e]; !ok {
+			out = append(out, EdgeDiff{
+				From: e[0],
+				To:   e[1],
+				Type: EdgeAdded,
+			})
+		}
+	}
+
+	return out
+}
+
+func Diff[E Node](a, b *Tree[E]) TreeDiff[E] {
+	aNodes := map[string]*TreeNode[E]{}
+	bNodes := map[string]*TreeNode[E]{}
+	aEdges := map[[2]string]struct{}{}
+	bEdges := map[[2]string]struct{}{}
+
+	flatten(a.Root, aNodes, aEdges, nil)
+	flatten(b.Root, bNodes, bEdges, nil)
+
+	return TreeDiff[E]{
+		Nodes: diffNodes(aNodes, bNodes),
+		Edges: diffEdges(aEdges, bEdges),
+	}
+}
+
 func newNode[Element Node](el Element) *TreeNode[Element] {
 	return &TreeNode[Element]{
 		ID:       el.GetID(),
@@ -114,11 +239,13 @@ func (tree *Tree[Element]) ReplaceNode(old *TreeNode[Element], new *TreeNode[Ele
 
 func (tree *Tree[Element]) ReplaceSubtree(other *TreeNode[Element]) {
 	var overlay func(node *TreeNode[Element])
+
 	overlay = func(node *TreeNode[Element]) {
 		if node == nil {
 			return
 		}
 		if node.ID == other.ID {
+
 			// replace by other nodes children
 			node.Children = other.Children
 			// ensure all children are in the tree cursors
@@ -160,6 +287,40 @@ func (tree *Tree[Element]) Visitable() ([]string, []string) {
 	}
 
 	return visitable, unvisitable
+}
+
+type FlatTree struct {
+	Nodes []string
+	Edges [][2]string
+}
+
+func (tree *Tree[Element]) NodeIDsAndEdges() FlatTree {
+	visited := make(map[string]bool)
+
+	var nodes []string
+	var edges [][2]string
+
+	var visit func(node *TreeNode[Element])
+	visit = func(node *TreeNode[Element]) {
+		if node == nil {
+			return
+		}
+		if visited[node.ID] {
+			return // Already visited, avoid infinite loops
+		}
+		visited[node.ID] = true
+		nodes = append(nodes, node.ID)
+		for _, child := range node.Children {
+			edges = append(edges, [2]string{node.ID, child.ID})
+			visit(child)
+		}
+	}
+
+	visit(tree.Root)
+	return FlatTree{
+		Nodes: nodes,
+		Edges: edges,
+	}
 }
 
 func (tree *Tree[Element]) addElement(source Element, dep Element) {
@@ -326,4 +487,72 @@ func (tree *Tree[Data]) RenderToMermaid() string {
 	renderPaths(tree.Root)
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
+}
+
+// FindAllPathsTo finds all paths from root to the specified node ID.
+// Returns a slice of paths, where each path is a slice of node IDs from root to target.
+func (tree *Tree[Data]) FindAllPathsTo(targetID string) [][]string {
+	var paths [][]string
+
+	var visit func(node *TreeNode[Data], currentPath []string)
+	visit = func(node *TreeNode[Data], currentPath []string) {
+		if node == nil {
+			return
+		}
+
+		// Check for cycles
+		if slices.Contains(currentPath, node.ID) {
+			return
+		}
+
+		// Add current node to path
+		newPath := append([]string{}, currentPath...)
+		newPath = append(newPath, node.ID)
+
+		// Found target
+		if node.ID == targetID {
+			paths = append(paths, newPath)
+			return
+		}
+
+		// Continue to children
+		for _, child := range node.Children {
+			visit(child, newPath)
+		}
+	}
+
+	visit(tree.Root, []string{})
+	return paths
+}
+
+// ExtractSubtree returns all node IDs reachable from a starting node.
+func (tree *Tree[Data]) ExtractSubtree(startID string) []string {
+	startNode, exists := tree.cursors[startID]
+	if !exists {
+		return nil
+	}
+
+	reachable := make(map[string]bool)
+	var visit func(node *TreeNode[Data])
+	visit = func(node *TreeNode[Data]) {
+		if node == nil || reachable[node.ID] {
+			return
+		}
+		reachable[node.ID] = true
+		for _, child := range node.Children {
+			visit(child)
+		}
+	}
+	visit(startNode)
+
+	result := make([]string, 0, len(reachable))
+	for nodeID := range reachable {
+		result = append(result, nodeID)
+	}
+	return result
+}
+
+// GetNode returns the tree node for the given ID, or nil if not found.
+func (tree *Tree[Data]) GetNode(id string) *TreeNode[Data] {
+	return tree.cursors[id]
 }

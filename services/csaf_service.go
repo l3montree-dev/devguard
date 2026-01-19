@@ -313,7 +313,7 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 	}
 
 	// artifact name should be something without the version
-	return normalize.FromCdxBom(bom, purlToStringWithoutVersion(purl), ref, realURL), nil
+	return normalize.FromCdxBom(bom, purlToStringWithoutVersion(purl), ref), nil
 }
 
 func purlToStringWithoutVersion(purl packageurl.PackageURL) string {

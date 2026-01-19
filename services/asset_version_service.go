@@ -51,6 +51,8 @@ type assetVersionService struct {
 	utils.FireAndForgetSynchronizer
 }
 
+var _ shared.AssetVersionService = &assetVersionService{}
+
 func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, cveRelationshipRepository shared.CVERelationshipRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
@@ -315,22 +317,11 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return nil, nil, nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
-	}
+func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+	sbom = sbom.ExtractArtifactBom(artifactName)
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
-	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
-	if err != nil {
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
-	}
-
-	// calculate the depth of each component
-	sbom, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, *assetVersion, artifactName, assetComponents)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
 	}
@@ -485,116 +476,60 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
-	res := make(map[string]cdx.Component)
-	if bom.GetComponents() == nil {
-		return res
-	}
-
-	for _, component := range *bom.GetComponentsIncludingFakeNodes() {
-		res[component.BOMRef] = component
-	}
-	return res
-}
-
 func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not load asset components")
-	}
-
-	existingComponentID := make(map[string]bool)
-	for _, currentComponent := range assetComponents {
-		existingComponentID[currentComponent.Component.ID] = true
-	}
-
-	// we need to check if the SBOM is new or if it already exists.
-	// if it already exists, we need to update the existing SBOM
-	// update the sbom for the asset in the database.
-	components := make(map[string]models.Component)
-	dependencies := make([]models.ComponentDependency, 0)
-	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
-	// first we need to replace the subtree.
-
-	wholeAssetSBOM, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifactName, assetComponents)
+	wholeAssetSBOM, components, err := s.LoadFullSBOM(assetVersion)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build whole asset sbom")
 	}
+	flatTreeBefore := wholeAssetSBOM.NodeIDsAndEdges()
+
+	// now we have the dependency tree only scoped on this artifact.
+	artifactBom := wholeAssetSBOM.ExtractArtifactBom(artifactName)
+
+	if artifactBom == nil {
+		// Create a minimal artifact bom to add information sources to
+		artifactBom = normalize.NewEmptyArtifactBom(artifactName)
+	} else {
+		flatTreeBefore = artifactBom.NodeIDsAndEdges()
+	}
 
 	for _, informationSource := range sbom.GetInformationSourceNodes() {
-		wholeAssetSBOM.ReplaceOrAddInformationSourceNode(informationSource)
+		artifactBom.ReplaceOrAddInformationSourceNode(informationSource)
 	}
-
-	// build a map of all components
-	bomRefMap := buildBomRefMap(wholeAssetSBOM)
-
-	depExistMap := make(map[string]bool)
-	// create all direct dependencies
-	for _, c := range *wholeAssetSBOM.GetDirectDependencies() {
-		component := bomRefMap[c.Ref]
-		// the sbom of a container image does not contain the scope. In a container image, we do not have
-		// anything like a deep nested dependency tree. Everything is a direct dependency.
-		componentID := normalize.GetComponentID(component)
-		// create the direct dependency edge.
-		if _, ok := depExistMap["nil->"+componentID]; ok {
-			continue
-		}
-		depExistMap["nil->"+componentID] = true
-		dependencies = append(dependencies,
-			models.ComponentDependency{
-				ComponentID:  nil, // direct dependency - therefore set it to nil
-				DependencyID: componentID,
-			},
-		)
-	}
-
-	transitiveDependencies := *wholeAssetSBOM.GetTransitiveDependencies()
-	for _, c := range transitiveDependencies {
-		comp := bomRefMap[c.Ref]
-		componentID := normalize.GetComponentID(comp)
-		for _, d := range *c.Dependencies {
-			dep := bomRefMap[d]
-			depComponentID := normalize.GetComponentID(dep)
-			if _, ok := depExistMap[componentID+"->"+depComponentID]; ok {
-				continue
-			}
-			depExistMap[componentID+"->"+depComponentID] = true
-			dependencies = append(dependencies,
-				models.ComponentDependency{
-					ComponentID:  utils.Ptr(componentID),
-					DependencyID: depComponentID,
-				},
-			)
-		}
-	}
-
-	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
-		componentID := normalize.GetComponentID(c)
-		if _, ok := existingComponentID[componentID]; !ok {
-			components[componentID] = models.Component{
-				ID:            componentID,
-				ComponentType: dtos.ComponentType(c.Type),
-			}
-		}
-	}
-
-	componentsSlice := make([]models.Component, 0, len(components))
-	for _, c := range components {
-		componentsSlice = append(componentsSlice, c)
-	}
+	// update the artifact bom
+	wholeAssetSBOM.ReplaceOrAddArtifact(artifactBom)
+	flatTreeAfter := wholeAssetSBOM.NodeIDsAndEdges()
+	// now we use the comparison of the two trees to figure out, which components were added/removed
+	nodeComparisonResult := utils.CompareSlices(flatTreeBefore.Nodes, flatTreeAfter.Nodes, func(nodeID string) string {
+		return nodeID
+	})
 
 	// make sure, that the components exist
-	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
+	if err := s.componentRepository.CreateBatch(nil, utils.Map(nodeComparisonResult.OnlyInB, func(componentID string) models.Component {
+		return models.Component{
+			ID: componentID,
+		}
+	})); err != nil {
 		return nil, err
 	}
 
-	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
+	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, components, utils.Map(slices.Concat(flatTreeAfter.Edges, [][2]string{{"", artifactBom.GetRootID()}}), func(el [2]string) models.ComponentDependency {
+		if el[0] == "" || el[0] == normalize.ROOT {
+			return models.ComponentDependency{
+				ComponentID:  nil,
+				DependencyID: el[1],
+			}
+		}
+		return models.ComponentDependency{
+			ComponentID:  utils.Ptr(el[0]),
+			DependencyID: el[1],
+		}
+	}), artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +555,13 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 				Artifact: shared.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.EjectSBOM(nil),
+				SBOM: sbom.EjectSBOM(normalize.BOMMetadata{
+					ProjectSlug:      project.Slug,
+					AssetSlug:        asset.Slug,
+					AssetVersionSlug: assetVersion.Slug,
+					ArtifactName:     artifactName,
+					FrontendURL:      frontendURL,
+				}),
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
@@ -628,14 +569,18 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 			}
 		})
 	}
-
+	wholeAssetSBOM.ReplaceOrAddArtifact(artifactBom)
 	return wholeAssetSBOM, nil
 }
 
-func (s *assetVersionService) BuildSBOM(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
+// LoadFullSBOM loads all components for an asset version and builds a complete SBOM tree.
+// This provides a high-level abstraction for navigating the dependency graph without complex SQL queries.
+// Use the returned CdxBom's methods like ExtractArtifactBom() to filter by artifact,
+// then FindAllPathsToComponent() for tree traversal operations.
+func (s *assetVersionService) LoadFullSBOM(assetVersion models.AssetVersion) (*normalize.CdxBom, []models.ComponentDependency, error) {
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
 	for i := range licenseRisks {
@@ -644,7 +589,13 @@ func (s *assetVersionService) BuildSBOM(frontendURL string, organizationName str
 		}
 	}
 
-	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
+	// Load ALL components for the asset version - no artifact filtering at the SQL level
+	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, nil)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not load components")
+	}
+
+	return normalize.FromComponents(utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), components, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -761,7 +712,7 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, vulnerabilities)
+	return normalize.FromVulnerabilities(vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

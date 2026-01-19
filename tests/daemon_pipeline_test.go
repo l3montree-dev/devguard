@@ -86,16 +86,28 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create component dependency
+			// Create artifact root component (needed for FK constraint)
+			artifactRoot := "artifact:" + artifact.ArtifactName
+			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
+			assert.NoError(t, err)
+
+			// Create artifact root node dependency (NULL -> artifact:name)
+			artifactRootDep := models.ComponentDependency{
+				AssetID:          asset.ID,
+				AssetVersionName: assetVersion.Name,
+				ComponentID:      nil,
+				DependencyID:     artifactRoot,
+			}
+			err = f.DB.Create(&artifactRootDep).Error
+			assert.NoError(t, err)
+
+			// Create component dependency (artifact:name -> pkg:...)
 			componentDependency := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				Artifacts: []models.Artifact{
-					artifact,
-				},
-				ComponentID:  nil,
-				DependencyID: "pkg:npm/test-package@1.0.0",
-				Dependency:   component,
+				ComponentID:      &artifactRoot,
+				DependencyID:     "pkg:npm/test-package@1.0.0",
+				Dependency:       component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)
@@ -430,16 +442,24 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
 
-		// Create component dependency
+		// Create artifact root node dependency (NULL -> artifact:name)
+		artifactRoot := "artifact:" + artifact.ArtifactName
+		artifactRootDep := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			ComponentID:      nil,
+			DependencyID:     artifactRoot,
+		}
+		err = f.DB.Create(&artifactRootDep).Error
+		assert.NoError(t, err)
+
+		// Create component dependency (artifact:name -> pkg:...)
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			Artifacts: []models.Artifact{
-				artifact,
-			},
-			ComponentID:  nil,
-			DependencyID: "pkg:npm/vulnerable-package@2.0.0",
-			Dependency:   component,
+			ComponentID:      &artifactRoot,
+			DependencyID:     "pkg:npm/vulnerable-package@2.0.0",
+			Dependency:       component,
 		}
 		err = f.DB.Create(&componentDependency).Error
 		assert.NoError(t, err)
@@ -541,16 +561,24 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create component dependency
+			// Create artifact root node dependency (NULL -> artifact:name)
+			artifactRoot := "artifact:" + artifact.ArtifactName
+			artifactRootDep := models.ComponentDependency{
+				AssetID:          asset.ID,
+				AssetVersionName: assetVersion.Name,
+				ComponentID:      nil,
+				DependencyID:     artifactRoot,
+			}
+			err = f.DB.Create(&artifactRootDep).Error
+			assert.NoError(t, err)
+
+			// Create component dependency (artifact:name -> pkg:...)
 			componentDependency := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				Artifacts: []models.Artifact{
-					artifact,
-				},
-				ComponentID:  nil,
-				DependencyID: "pkg:npm/risk-test-package@1.0.0",
-				Dependency:   component,
+				ComponentID:      &artifactRoot,
+				DependencyID:     "pkg:npm/risk-test-package@1.0.0",
+				Dependency:       component,
 			}
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)

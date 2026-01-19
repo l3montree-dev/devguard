@@ -72,8 +72,21 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
-		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
+		// Create artifact root node dependencies (NULL -> artifact:name)
+		artifactRoot1 := "artifact:" + a1.ArtifactName
+		artifactRoot2 := "artifact:" + a2.ArtifactName
+		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
+		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
+		if err := f.DB.Create(&rootDep1).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := f.DB.Create(&rootDep2).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		// Create component dependencies (artifact:name -> pkg:...)
+		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot1}
+		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot2}
 		if err := f.DB.Create(&c1).Error; err != nil {
 			t.Fatal(err)
 		}

@@ -253,6 +253,63 @@ func (_c *AffectedComponentRepository_Create_Call) RunAndReturn(run func(tx shar
 	return _c
 }
 
+// CreateAffectedComponentsUsingUnnest provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) CreateAffectedComponentsUsingUnnest(tx shared.DB, components []models.AffectedComponent) error {
+	ret := _mock.Called(tx, components)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateAffectedComponentsUsingUnnest")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(tx, components)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateAffectedComponentsUsingUnnest'
+type AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call struct {
+	*mock.Call
+}
+
+// CreateAffectedComponentsUsingUnnest is a helper method to define mock.On call
+//   - tx shared.DB
+//   - components []models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) CreateAffectedComponentsUsingUnnest(tx interface{}, components interface{}) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+	return &AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call{Call: _e.mock.On("CreateAffectedComponentsUsingUnnest", tx, components)}
+}
+
+func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) Run(run func(tx shared.DB, components []models.AffectedComponent)) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 []models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) Return(err error) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) RunAndReturn(run func(tx shared.DB, components []models.AffectedComponent) error) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateBatch provides a mock function for the type AffectedComponentRepository
 func (_mock *AffectedComponentRepository) CreateBatch(tx shared.DB, ts []models.AffectedComponent) error {
 	ret := _mock.Called(tx, ts)

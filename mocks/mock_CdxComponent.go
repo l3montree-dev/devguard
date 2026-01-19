@@ -36,12 +36,12 @@ func (_m *CdxComponent) EXPECT() *CdxComponent_Expecter {
 	return &CdxComponent_Expecter{mock: &_m.Mock}
 }
 
-// GetDependentPurl provides a mock function for the type CdxComponent
-func (_mock *CdxComponent) GetDependentPurl() *string {
+// GetDependentID provides a mock function for the type CdxComponent
+func (_mock *CdxComponent) GetDependentID() *string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetDependentPurl")
+		panic("no return value specified for GetDependentID")
 	}
 
 	var r0 *string
@@ -55,39 +55,39 @@ func (_mock *CdxComponent) GetDependentPurl() *string {
 	return r0
 }
 
-// CdxComponent_GetDependentPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependentPurl'
-type CdxComponent_GetDependentPurl_Call struct {
+// CdxComponent_GetDependentID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependentID'
+type CdxComponent_GetDependentID_Call struct {
 	*mock.Call
 }
 
-// GetDependentPurl is a helper method to define mock.On call
-func (_e *CdxComponent_Expecter) GetDependentPurl() *CdxComponent_GetDependentPurl_Call {
-	return &CdxComponent_GetDependentPurl_Call{Call: _e.mock.On("GetDependentPurl")}
+// GetDependentID is a helper method to define mock.On call
+func (_e *CdxComponent_Expecter) GetDependentID() *CdxComponent_GetDependentID_Call {
+	return &CdxComponent_GetDependentID_Call{Call: _e.mock.On("GetDependentID")}
 }
 
-func (_c *CdxComponent_GetDependentPurl_Call) Run(run func()) *CdxComponent_GetDependentPurl_Call {
+func (_c *CdxComponent_GetDependentID_Call) Run(run func()) *CdxComponent_GetDependentID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *CdxComponent_GetDependentPurl_Call) Return(s *string) *CdxComponent_GetDependentPurl_Call {
+func (_c *CdxComponent_GetDependentID_Call) Return(s *string) *CdxComponent_GetDependentID_Call {
 	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *CdxComponent_GetDependentPurl_Call) RunAndReturn(run func() *string) *CdxComponent_GetDependentPurl_Call {
+func (_c *CdxComponent_GetDependentID_Call) RunAndReturn(run func() *string) *CdxComponent_GetDependentID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetPurl provides a mock function for the type CdxComponent
-func (_mock *CdxComponent) GetPurl() string {
+// GetID provides a mock function for the type CdxComponent
+func (_mock *CdxComponent) GetID() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetPurl")
+		panic("no return value specified for GetID")
 	}
 
 	var r0 string
@@ -99,29 +99,29 @@ func (_mock *CdxComponent) GetPurl() string {
 	return r0
 }
 
-// CdxComponent_GetPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPurl'
-type CdxComponent_GetPurl_Call struct {
+// CdxComponent_GetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetID'
+type CdxComponent_GetID_Call struct {
 	*mock.Call
 }
 
-// GetPurl is a helper method to define mock.On call
-func (_e *CdxComponent_Expecter) GetPurl() *CdxComponent_GetPurl_Call {
-	return &CdxComponent_GetPurl_Call{Call: _e.mock.On("GetPurl")}
+// GetID is a helper method to define mock.On call
+func (_e *CdxComponent_Expecter) GetID() *CdxComponent_GetID_Call {
+	return &CdxComponent_GetID_Call{Call: _e.mock.On("GetID")}
 }
 
-func (_c *CdxComponent_GetPurl_Call) Run(run func()) *CdxComponent_GetPurl_Call {
+func (_c *CdxComponent_GetID_Call) Run(run func()) *CdxComponent_GetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *CdxComponent_GetPurl_Call) Return(s string) *CdxComponent_GetPurl_Call {
+func (_c *CdxComponent_GetID_Call) Return(s string) *CdxComponent_GetID_Call {
 	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *CdxComponent_GetPurl_Call) RunAndReturn(run func() string) *CdxComponent_GetPurl_Call {
+func (_c *CdxComponent_GetID_Call) RunAndReturn(run func() string) *CdxComponent_GetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

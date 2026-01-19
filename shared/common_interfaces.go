@@ -196,12 +196,10 @@ type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
-	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)
 	SearchComponentOccurrencesByProject(tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
-	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
 	CreateComponents(tx DB, components []models.ComponentDependency) error
 	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
 	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
@@ -358,13 +356,17 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
 	BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error)
-	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
+	// LoadFullSBOM loads all components for an asset version into a complete SBOM tree.
+	// Use the returned CdxBom's methods like ExtractArtifactBom() to filter by artifact,
+	// then FindAllPathsToComponent() for navigating the dependency graph.
+
+	LoadFullSBOM(assetVersion models.AssetVersion) (*normalize.CdxBom, []models.ComponentDependency, error)
 }
 
 type AssetVersionRepository interface {

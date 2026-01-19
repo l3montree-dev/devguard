@@ -139,7 +139,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
@@ -234,7 +234,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		expectedEvent := models.VulnEvent{
 			Type:   dtos.EventTypeMitigate,

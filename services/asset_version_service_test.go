@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
@@ -351,7 +352,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).EjectVex(nil)
+		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).EjectVex(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)

@@ -16,7 +16,6 @@ import (
 	"text/template"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -189,23 +188,8 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
-	asset := shared.GetAsset(ctx)
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return fmt.Errorf("FRONTEND_URL environment variable is not set")
-	}
-
-	artifactName := ctx.QueryParam("artifactName")
-
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, utils.EmptyThenNil(artifactName))
-	if err != nil {
-		return err
-	}
-
-	sbom, err := a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, app, artifactName, components)
+	sbom, _, err := a.assetVersionService.LoadFullSBOM(app)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -217,30 +201,29 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 
 // function to return a graph of all dependencies which lead to the requested pURL
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return fmt.Errorf("FRONTEND_URL environment variable is not set")
-	}
 
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	pURL := ctx.QueryParam("purl")
-
 	artifactName := ctx.QueryParam("artifactName")
 
-	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, utils.EmptyThenNil(artifactName))
+	// Load the full SBOM and find paths using in-memory tree traversal
+	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 	}
 
-	sbom, err := a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, shared.GetAsset(ctx), assetVersion, artifactName, components)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
+	// If artifact name is specified, extract just that artifact's subtree
+	targetBom := sbom
+	if artifactName != "" {
+		targetBom = sbom.ExtractArtifactBom(artifactName)
+		if targetBom == nil {
+			return echo.NewHTTPError(404, "artifact not found")
+		}
 	}
 
-	return ctx.JSON(200, sbom.EjectMinimalDependencyTree())
+	// Find all paths to the component using CdxBom's tree traversal
+	return ctx.JSON(200, targetBom.FindAllPathsToComponent(pURL))
 }
 
 // @Summary Get SBOM in JSON format
@@ -255,35 +238,28 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json [get]
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
-	sbom, err := a.buildSBOM(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
 	if err != nil {
 		return err
-
 	}
 	asset := shared.GetAsset(ctx)
-	var assetID *uuid.UUID = nil
-	if asset.SharesInformation {
-		assetID = &asset.ID
-	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.EjectSBOM(assetID))
+	return encoder.Encode(sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
-	sbom, err := a.buildSBOM(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
 	if err != nil {
 		return err
 	}
 	asset := shared.GetAsset(ctx)
-	var assetID *uuid.UUID = nil
-	if asset.SharesInformation {
-		assetID = &asset.ID
-	}
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.EjectSBOM(assetID))
+	return encoder.Encode(sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
@@ -292,13 +268,9 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 		return err
 	}
 	asset := shared.GetAsset(ctx)
-	var assetID *uuid.UUID = nil
-	if asset.SharesInformation {
-		assetID = &asset.ID
-	}
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.EjectVex(assetID))
+	return encoder.Encode(sbom.EjectVex(ctxToBOMMetadata(ctx, asset)))
 }
 
 // @Summary Get VEX in JSON format
@@ -318,14 +290,10 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 		return err
 	}
 	asset := shared.GetAsset(ctx)
-	var assetID *uuid.UUID = nil
-	if asset.SharesInformation {
-		assetID = &asset.ID
-	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.EjectVex(assetID))
+	return encoder.Encode(sbom.EjectVex(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
@@ -335,45 +303,6 @@ func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
 	}
 
 	return vex.ToJSON(ctx.Response().Writer)
-}
-
-func (a *AssetVersionController) buildSBOM(ctx shared.Context) (*normalize.CdxBom, error) {
-	assetVersion := shared.GetAssetVersion(ctx)
-	asset := shared.GetAsset(ctx)
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
-	}
-
-	// get artifact from path
-	artifact, err := shared.MaybeGetArtifact(ctx)
-
-	filter := shared.GetFilterQuery(ctx)
-	// set artifact name filter if artifact is set in path
-	if err == nil {
-		filter = append(filter, shared.FilterQuery{
-			Field:      "artifacts.artifact_name",
-			Operator:   "is",
-			FieldValue: artifact.ArtifactName,
-		})
-	}
-
-	overwrittenLicenses, err := a.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, shared.PageInfo{
-		PageSize: -1,
-		Page:     1,
-	}, "", filter, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return a.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
@@ -760,22 +689,18 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 }
 
 func (a *AssetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
-
-	//build the SBOM of this asset version
-	bom, err := a.buildSBOM(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
 	if err != nil {
 		return err
+
 	}
 
 	asset := shared.GetAsset(ctx)
-	var assetID *uuid.UUID = nil
-	if asset.SharesInformation {
-		assetID = &asset.ID
-	}
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = services.MarkdownTableFromSBOM(&markdownFile, bom.EjectSBOM(assetID))
+	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
 	if err != nil {
 		return err
 	}

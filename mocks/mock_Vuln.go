@@ -80,6 +80,94 @@ func (_c *Vuln_AddScannerID_Call) RunAndReturn(run func(scannerID string)) *Vuln
 	return _c
 }
 
+// AssetVersionIndependentHash provides a mock function for the type Vuln
+func (_mock *Vuln) AssetVersionIndependentHash() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for AssetVersionIndependentHash")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// Vuln_AssetVersionIndependentHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AssetVersionIndependentHash'
+type Vuln_AssetVersionIndependentHash_Call struct {
+	*mock.Call
+}
+
+// AssetVersionIndependentHash is a helper method to define mock.On call
+func (_e *Vuln_Expecter) AssetVersionIndependentHash() *Vuln_AssetVersionIndependentHash_Call {
+	return &Vuln_AssetVersionIndependentHash_Call{Call: _e.mock.On("AssetVersionIndependentHash")}
+}
+
+func (_c *Vuln_AssetVersionIndependentHash_Call) Run(run func()) *Vuln_AssetVersionIndependentHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_AssetVersionIndependentHash_Call) Return(s string) *Vuln_AssetVersionIndependentHash_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *Vuln_AssetVersionIndependentHash_Call) RunAndReturn(run func() string) *Vuln_AssetVersionIndependentHash_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CalculateHash provides a mock function for the type Vuln
+func (_mock *Vuln) CalculateHash() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CalculateHash")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// Vuln_CalculateHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CalculateHash'
+type Vuln_CalculateHash_Call struct {
+	*mock.Call
+}
+
+// CalculateHash is a helper method to define mock.On call
+func (_e *Vuln_Expecter) CalculateHash() *Vuln_CalculateHash_Call {
+	return &Vuln_CalculateHash_Call{Call: _e.mock.On("CalculateHash")}
+}
+
+func (_c *Vuln_CalculateHash_Call) Run(run func()) *Vuln_CalculateHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_CalculateHash_Call) Return(s string) *Vuln_CalculateHash_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *Vuln_CalculateHash_Call) RunAndReturn(run func() string) *Vuln_CalculateHash_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetArtifacts provides a mock function for the type Vuln
 func (_mock *Vuln) GetArtifacts() []models.Artifact {
 	ret := _mock.Called()
@@ -212,6 +300,52 @@ func (_c *Vuln_GetAssetVersionName_Call) Return(s string) *Vuln_GetAssetVersionN
 }
 
 func (_c *Vuln_GetAssetVersionName_Call) RunAndReturn(run func() string) *Vuln_GetAssetVersionName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEvents provides a mock function for the type Vuln
+func (_mock *Vuln) GetEvents() []models.VulnEvent {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEvents")
+	}
+
+	var r0 []models.VulnEvent
+	if returnFunc, ok := ret.Get(0).(func() []models.VulnEvent); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VulnEvent)
+		}
+	}
+	return r0
+}
+
+// Vuln_GetEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEvents'
+type Vuln_GetEvents_Call struct {
+	*mock.Call
+}
+
+// GetEvents is a helper method to define mock.On call
+func (_e *Vuln_Expecter) GetEvents() *Vuln_GetEvents_Call {
+	return &Vuln_GetEvents_Call{Call: _e.mock.On("GetEvents")}
+}
+
+func (_c *Vuln_GetEvents_Call) Run(run func()) *Vuln_GetEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_GetEvents_Call) Return(vulnEvents []models.VulnEvent) *Vuln_GetEvents_Call {
+	_c.Call.Return(vulnEvents)
+	return _c
+}
+
+func (_c *Vuln_GetEvents_Call) RunAndReturn(run func() []models.VulnEvent) *Vuln_GetEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -325,17 +325,24 @@ func RenderPathToComponent(componentRepository shared.ComponentRepository, asset
 		artifactName = artifacts[0].ArtifactName
 	}
 
-	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, utils.EmptyThenNil(artifactName))
+	// Load all components for the asset version
+	components, err := componentRepository.LoadComponents(nil, assetVersionName, assetID, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return "", err
 	}
 
+	// Build the dependency tree from components
 	tree := normalize.BuildDependencyTree(models.ComponentDependencyNode{
 		// nil will be mapped to empty string in BuildDepMap
 		ID: "",
 	}, utils.Flat(utils.Map(components, func(el models.ComponentDependency) []models.ComponentDependencyNode {
 		return el.ToNodes()
 	})), models.BuildDepMap(components))
+
+	// Check if the target pURL is reachable in the tree
+	if !tree.Reachable(pURL) {
+		return "", nil
+	}
 
 	return tree.RenderToMermaid(), nil
 }
