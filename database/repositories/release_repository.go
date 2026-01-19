@@ -203,7 +203,6 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		Joins("JOIN asset_versions av ON av.asset_id = artifacts.asset_id AND av.name = artifacts.asset_version_name").
 		Joins("JOIN assets ON assets.id = artifacts.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
-		Where("av.default_branch = true OR av.type = 'tag'").
 		Where("projects.id IN ?", projectIDs).
 		Find(&artifacts).Error; err != nil {
 		return nil, nil, err
