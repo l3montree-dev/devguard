@@ -131,24 +131,29 @@ func (s *assetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) str
 		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{
 			{Key: "unknown", Value: 0, Color: "#808080"},
 		})
-	} else {
-
-		CVSS := results[0].Distribution
-
-		if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
-			return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{
-				{Key: "all clear", Value: 0, Color: "#008000"},
-			})
-		}
-
-		values := []shared.BadgeValues{
-			{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
-			{Key: "H", Value: CVSS.High, Color: "#B22222"},
-			{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
-			{Key: "L", Value: CVSS.Low, Color: "#F08080"},
-		}
-		return shared.GetBadgeSVG("CVSS", values)
 	}
+	var CVSS models.Distribution
+
+	for _, result := range results {
+		CVSS.Critical += result.CriticalCVSS
+		CVSS.High += result.HighCVSS
+		CVSS.Medium += result.MediumCVSS
+		CVSS.Low += result.LowCVSS
+	}
+
+	if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
+		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{
+			{Key: "all clear", Value: 0, Color: "#008000"},
+		})
+	}
+
+	values := []shared.BadgeValues{
+		{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
+		{Key: "H", Value: CVSS.High, Color: "#B22222"},
+		{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
+		{Key: "L", Value: CVSS.Low, Color: "#F08080"},
+	}
+	return shared.GetBadgeSVG("CVSS", values)
 
 }
 

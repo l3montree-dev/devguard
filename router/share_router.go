@@ -27,6 +27,7 @@ type ShareRouter struct {
 }
 
 func NewShareRouter(apiV1Router APIV1Router,
+	assetController *controllers.AssetController,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
 	assetRepository shared.AssetRepository,
@@ -37,6 +38,7 @@ func NewShareRouter(apiV1Router APIV1Router,
 	shareRouter := apiV1Router.Group.Group("/public/:assetID", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
 	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	shareRouter.GET("/badges/:badge/", assetController.GetBadges)
 
 	return ShareRouter{
 		Group: shareRouter,

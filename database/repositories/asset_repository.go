@@ -237,15 +237,6 @@ func (repository *assetRepository) Delete(tx *gorm.DB, id uuid.UUID) error {
 	return repository.db.Select("AssetVersions").Delete(&asset).Error
 }
 
-func (repository *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
-	var asset models.Asset
-	err := repository.db.Where("badge_secret = ?", badgeSecret).First(&asset).Error
-	if err != nil {
-		return models.Asset{}, err
-	}
-	return asset, nil
-}
-
 func (repository *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
 	err := repository.db.Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error

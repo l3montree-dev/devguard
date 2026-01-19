@@ -15,7 +15,6 @@ import (
 func TestApplyToModel(t *testing.T) {
 
 	webhookSecret := uuid.New()
-	badgeSecret := uuid.New()
 
 	tests := []struct {
 		name     string
@@ -103,19 +102,6 @@ func TestApplyToModel(t *testing.T) {
 			updated: true,
 		},
 		{
-			name: "Update nil Webhook Secret",
-			patch: dtos.AssetPatchRequest{
-				BadgeSecret: utils.Ptr(badgeSecret.String()),
-			},
-			initial: models.Asset{
-				BadgeSecret: nil,
-			},
-			expected: models.Asset{
-				BadgeSecret: &badgeSecret,
-			},
-			updated: true,
-		},
-		{
 			name: "Update Webhook Secret",
 			patch: dtos.AssetPatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
@@ -125,19 +111,6 @@ func TestApplyToModel(t *testing.T) {
 			},
 			expected: models.Asset{
 				WebhookSecret: &webhookSecret,
-			},
-			updated: true,
-		},
-		{
-			name: "Update Badge Secret",
-			patch: dtos.AssetPatchRequest{
-				BadgeSecret: utils.Ptr(badgeSecret.String()),
-			},
-			initial: models.Asset{
-				BadgeSecret: utils.Ptr(uuid.New()),
-			},
-			expected: models.Asset{
-				BadgeSecret: &badgeSecret,
 			},
 			updated: true,
 		},
