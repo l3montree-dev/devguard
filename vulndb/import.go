@@ -316,11 +316,6 @@ WHERE NOT EXISTS (
 
 ALTER TABLE weaknesses ADD CONSTRAINT fk_cves_weaknesses 
 FOREIGN KEY (cve_id) REFERENCES cves(cve);
- 
-ALTER TABLE ONLY public.cve_relationships 
-ADD CONSTRAINT fk_cve_relationships_cve 
-FOREIGN KEY (source_cve) REFERENCES public.cves(cve)
-ON UPDATE CASCADE ON DELETE CASCADE;
 
 `)
 	return err
