@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -164,10 +163,6 @@ func (a *AssetController) GetSecrets(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	secrets := map[string]string{}
-
-	if asset.BadgeSecret != nil {
-		secrets["badgeSecret"] = asset.BadgeSecret.String()
-	}
 
 	if asset.WebhookSecret != nil {
 		secrets["webhookSecret"] = asset.WebhookSecret.String()
@@ -399,38 +394,31 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 
 func (a *AssetController) GetBadges(ctx shared.Context) error {
 
-	badgeSecret := ctx.Param("badgeSecret")
-	if badgeSecret == "" {
-		return echo.NewHTTPError(400, "missing badge secret")
-	}
-
 	badge := ctx.Param("badge")
 	if badge == "" {
 		return echo.NewHTTPError(400, "missing badge")
 	}
 
-	//delete the slashes from the badge secret
-	badgeSecret = strings.ReplaceAll(badgeSecret, "/", "")
+	asset := shared.GetAsset(ctx)
 
-	badgeSecretUUID, err := uuid.Parse(badgeSecret)
+	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid badge secret").WithInternal(err)
+		// get default asset version
+		assetVersion, err = a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			slog.Error("Error getting default asset version", "error", err)
+		}
 	}
-
-	asset, err := a.assetRepository.GetAssetIDByBadgeSecret(badgeSecretUUID)
-	if err != nil {
-		return echo.NewHTTPError(404, "asset not found").WithInternal(err)
-	}
-
-	assetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
-	if err != nil {
-		slog.Error("Error getting default asset version", "error", err)
+	var artifactName *string
+	artifact, err := shared.MaybeGetArtifact(ctx)
+	if err == nil {
+		artifactName = &artifact.ArtifactName
 	}
 
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetArtifactRiskHistory(nil, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		results, err := a.statisticsService.GetArtifactRiskHistory(artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
 		if err != nil {
 			return err
 		}

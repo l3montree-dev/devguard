@@ -676,66 +676,6 @@ func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) RunAndReturn(run fun
 	return _c
 }
 
-// GetAssetIDByBadgeSecret provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
-	ret := _mock.Called(badgeSecret)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAssetIDByBadgeSecret")
-	}
-
-	var r0 models.Asset
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Asset, error)); ok {
-		return returnFunc(badgeSecret)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Asset); ok {
-		r0 = returnFunc(badgeSecret)
-	} else {
-		r0 = ret.Get(0).(models.Asset)
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(badgeSecret)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// AssetRepository_GetAssetIDByBadgeSecret_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetIDByBadgeSecret'
-type AssetRepository_GetAssetIDByBadgeSecret_Call struct {
-	*mock.Call
-}
-
-// GetAssetIDByBadgeSecret is a helper method to define mock.On call
-//   - badgeSecret uuid.UUID
-func (_e *AssetRepository_Expecter) GetAssetIDByBadgeSecret(badgeSecret interface{}) *AssetRepository_GetAssetIDByBadgeSecret_Call {
-	return &AssetRepository_GetAssetIDByBadgeSecret_Call{Call: _e.mock.On("GetAssetIDByBadgeSecret", badgeSecret)}
-}
-
-func (_c *AssetRepository_GetAssetIDByBadgeSecret_Call) Run(run func(badgeSecret uuid.UUID)) *AssetRepository_GetAssetIDByBadgeSecret_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AssetRepository_GetAssetIDByBadgeSecret_Call) Return(asset models.Asset, err error) *AssetRepository_GetAssetIDByBadgeSecret_Call {
-	_c.Call.Return(asset, err)
-	return _c
-}
-
-func (_c *AssetRepository_GetAssetIDByBadgeSecret_Call) RunAndReturn(run func(badgeSecret uuid.UUID) (models.Asset, error)) *AssetRepository_GetAssetIDByBadgeSecret_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetAssetIDBySlug provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	ret := _mock.Called(projectID, slug)

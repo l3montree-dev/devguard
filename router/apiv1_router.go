@@ -196,7 +196,6 @@ func NewAPIV1Router(srv api.Server,
 			"status": "healthy",
 		})
 	})
-	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)

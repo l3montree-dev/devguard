@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -273,16 +274,16 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run
 }
 
 // UserDetectedExistingFirstPartyVulnOnDifferentBranch provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
-	ret := _mock.Called(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
+func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _mock.Called(tx, scannerID, firstPartyVulns, assetVersion, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedExistingFirstPartyVulnOnDifferentBranch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []models.FirstPartyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
-		r0 = returnFunc(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, []statemachine.BranchVulnMatch[*models.FirstPartyVuln], models.AssetVersion, models.Asset) error); ok {
+		r0 = returnFunc(tx, scannerID, firstPartyVulns, assetVersion, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -297,15 +298,14 @@ type FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_C
 // UserDetectedExistingFirstPartyVulnOnDifferentBranch is a helper method to define mock.On call
 //   - tx shared.DB
 //   - scannerID string
-//   - firstPartyVulns []models.FirstPartyVuln
-//   - alreadyExistingEvents [][]models.VulnEvent
+//   - firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln]
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx interface{}, scannerID interface{}, firstPartyVulns interface{}, alreadyExistingEvents interface{}, assetVersion interface{}, asset interface{}) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
-	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)}
+func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx interface{}, scannerID interface{}, firstPartyVulns interface{}, assetVersion interface{}, asset interface{}) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", tx, scannerID, firstPartyVulns, assetVersion, asset)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -315,21 +315,17 @@ func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBra
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []models.FirstPartyVuln
+		var arg2 []statemachine.BranchVulnMatch[*models.FirstPartyVuln]
 		if args[2] != nil {
-			arg2 = args[2].([]models.FirstPartyVuln)
+			arg2 = args[2].([]statemachine.BranchVulnMatch[*models.FirstPartyVuln])
 		}
-		var arg3 [][]models.VulnEvent
+		var arg3 models.AssetVersion
 		if args[3] != nil {
-			arg3 = args[3].([][]models.VulnEvent)
+			arg3 = args[3].(models.AssetVersion)
 		}
-		var arg4 models.AssetVersion
+		var arg4 models.Asset
 		if args[4] != nil {
-			arg4 = args[4].(models.AssetVersion)
-		}
-		var arg5 models.Asset
-		if args[5] != nil {
-			arg5 = args[5].(models.Asset)
+			arg4 = args[4].(models.Asset)
 		}
 		run(
 			arg0,
@@ -337,7 +333,6 @@ func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBra
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -348,7 +343,7 @@ func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBra
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) RunAndReturn(run func(tx shared.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) RunAndReturn(run func(tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	_c.Call.Return(run)
 	return _c
 }

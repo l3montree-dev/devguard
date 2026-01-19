@@ -121,7 +121,6 @@ type AssetRepository interface {
 	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAllAssetsFromDB() ([]models.Asset, error)
 	Delete(tx DB, id uuid.UUID) error
-	GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error)
 	ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error)
 	GetAssetsWithVulnSharingEnabled(orgID uuid.UUID) ([]models.Asset, error)
 }
