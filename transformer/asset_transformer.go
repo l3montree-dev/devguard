@@ -79,7 +79,6 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 func toDTOWithSecrets(asset models.Asset) dtos.AssetWithSecretsDTO {
 	return dtos.AssetWithSecretsDTO{
 		AssetDTO:      AssetModelToDTO(asset),
-		BadgeSecret:   asset.BadgeSecret,
 		WebhookSecret: asset.WebhookSecret,
 	}
 }
@@ -173,20 +172,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 		if err == nil {
 			asset.WebhookSecret = &webhookUUID
 
-		}
-	}
-
-	if assetPatch.BadgeSecret != nil {
-		updated = true
-
-		if *assetPatch.BadgeSecret == "" {
-			asset.BadgeSecret = nil
-		}
-
-		badgeUUID, err := uuid.Parse(*assetPatch.BadgeSecret)
-
-		if err == nil {
-			asset.BadgeSecret = &badgeUUID
 		}
 	}
 

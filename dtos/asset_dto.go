@@ -67,7 +67,6 @@ type AssetDTO struct {
 
 type AssetWithSecretsDTO struct {
 	AssetDTO
-	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
 	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 }
 
@@ -124,7 +123,6 @@ type AssetPatchRequest struct {
 	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
 
 	WebhookSecret *string `json:"webhookSecret"`
-	BadgeSecret   *string `json:"badgeSecret"`
 
 	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 	IsPublic           *bool   `json:"isPublic"`

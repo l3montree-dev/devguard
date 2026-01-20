@@ -123,7 +123,7 @@ func GetComponentID(component cdx.Component) string {
 		purl = component.CPE
 	} else if component.Version != "" {
 		purl = component.Name + "@" + component.Version
-	} else if purl == "" {
+	} else {
 		purl = component.Name
 	}
 
