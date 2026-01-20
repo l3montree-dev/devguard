@@ -55,6 +55,7 @@ func NewAssetRouter(
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
+	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
 
 	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
