@@ -15,6 +15,11 @@
 
 version: "2"
 linters:
+  enable:
+  - deadcode
+  - unused
+  - gosimple
+  - staticcheck
   default: standard
   settings:
     staticcheck:

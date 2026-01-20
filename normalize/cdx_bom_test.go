@@ -710,7 +710,7 @@ func TestCalculateDepth(t *testing.T) {
 		bom := FromCdxBom(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
+					BOMRef: "pkg:root",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -729,7 +729,7 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:devguard/testorg/testgroup/testdepth",
+					Ref: "pkg:root",
 					Dependencies: &[]string{
 						"pkg:golang/a",
 					},
@@ -877,7 +877,7 @@ func TestCalculateDepth(t *testing.T) {
 					Dependencies: &[]string{},
 				},
 			},
-		}, "pkg:artifact", "test")
+		}, "artifact", "test")
 
 		// lets merge a vex that adds a false positive to golang/c
 		vex := FromCdxBom(&cdx.BOM{
@@ -896,12 +896,12 @@ func TestCalculateDepth(t *testing.T) {
 					},
 				},
 			},
-		}, "pkg:artifact", "vex")
+		}, "artifact", "vex")
 		bom = MergeCdxBoms(bom, vex)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
-			"pkg:golang/c": 3, // root -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
+			"pkg:golang/c": 4, // root -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
 		}
 
 		for node, expectedDepth := range expectedDepths {

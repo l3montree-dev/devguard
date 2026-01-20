@@ -233,6 +233,7 @@ func (tree *Tree[Element]) ReplaceNode(old *TreeNode[Element], new *TreeNode[Ele
 			}
 		}
 	}
+	delete(tree.cursors, old.ID)
 	tree.addNode(new)
 }
 

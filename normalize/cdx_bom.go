@@ -680,6 +680,7 @@ const (
 	NodeTypeCSAFInformationSource nodeType = "csaf"
 	NodeTypeArtifact              nodeType = "artifact"
 	NodeTypeUnknown               nodeType = "unknown"
+	NodeTypeRoot                  nodeType = "root"
 )
 
 type cdxBomNode struct {
@@ -693,6 +694,12 @@ func newCdxBomNode(component *cdx.Component) cdxBomNode {
 		component.PackageURL = normalizePurl(component.PackageURL)
 	}
 
+	if component.BOMRef == ROOT {
+		return cdxBomNode{
+			Component: component,
+			nodeType:  NodeTypeRoot,
+		}
+	}
 	// if its a valid purl we expect this to be of type component -
 	if strings.HasPrefix(component.BOMRef, "pkg:") || strings.HasPrefix(component.PackageURL, "pkg:") {
 		return cdxBomNode{
@@ -836,16 +843,8 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 	if bom.Dependencies == nil {
 		bom.Dependencies = &[]cdx.Dependency{}
 	}
-	if bom.Metadata == nil {
-		bom.Metadata = &cdx.Metadata{}
-	}
-	if bom.Metadata.Component == nil {
-		bom.Metadata.Component = &cdx.Component{
-			BOMRef: ROOT,
-			Name:   ROOT,
-		}
-		// if no root can be found, ALL components are unvisitable from root
-		// this gets handled in the tree building below
+	if bom.Metadata.Component.BOMRef != ROOT {
+		panic("not called with root in metadata.component, cannot transform bom")
 	}
 
 	sbomNodes := make([]cdxBomNode, 0, len(*bom.Components))
@@ -907,6 +906,7 @@ func newCdxBom(bom *cdx.BOM) *CdxBom {
 			}
 		}
 	}
+
 	// set the vulnerabilities after normalization
 	return &CdxBom{tree: tree, vulnerabilities: vulns}
 }
@@ -1261,10 +1261,25 @@ func FromCdxBom(bom *cdx.BOM, artifactName, informationSource string) *CdxBom {
 		Name:   informationSource,
 	})
 
+	// Normalize the metadata component to ROOT before processing
+	// This handles cases where the BOM was ejected with a custom root (e.g., empty artifact name)
+	originalRootRef := ""
+	if bom.Metadata == nil {
+		bom.Metadata = &cdx.Metadata{}
+	}
+	if bom.Metadata.Component != nil {
+		originalRootRef = bom.Metadata.Component.BOMRef
+	}
+	bom.Metadata.Component = &cdx.Component{
+		BOMRef: ROOT,
+		Name:   ROOT,
+	}
+
 	if bom.Dependencies != nil {
 		for i := range *bom.Dependencies {
-			if (*bom.Dependencies)[i].Ref == "" {
-				(*bom.Dependencies)[i].Ref = informationSource
+			// Replace empty refs or refs matching the original root with ROOT
+			if (*bom.Dependencies)[i].Ref == "" || (*bom.Dependencies)[i].Ref == originalRootRef {
+				(*bom.Dependencies)[i].Ref = ROOT
 			}
 		}
 	}
