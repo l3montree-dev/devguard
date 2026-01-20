@@ -116,6 +116,9 @@ func normalizePurl(purl string) string {
 }
 
 func GetComponentID(component cdx.Component) string {
+	if component.BOMRef == ROOT {
+		return "" // replace with nil before storing.
+	}
 	var purl string
 	if component.PackageURL != "" {
 		return component.PackageURL

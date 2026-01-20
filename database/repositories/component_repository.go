@@ -16,13 +16,16 @@
 package repositories
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -145,46 +148,68 @@ func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Compo
 	return component, err
 }
 
-// HandleStateDiff handles the difference between old and new component dependency states.
-// Components are now linked to artifacts via the component_id prefix pattern (artifact:{name}).
-func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
-	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
-		return utils.SafeDereference(dep.ComponentID) + "->" + dep.DependencyID
-	})
+func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph normalize.SBOMGraph, diff normalize.GraphDiff) error {
+	// Create new components in the database
+	if err := c.CreateBatch(nil, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
+		return models.Component{
+			ID: normalize.GetComponentID(*node.Component),
+		}
+	})); err != nil {
+		return err
+	}
 
-	removed := comparison.OnlyInA
-	added := comparison.OnlyInB
+	// delete removed components from the database
+	if err := c.DeleteBatch(nil, utils.Map(diff.RemovedNodeIDs(), func(componentID string) models.Component {
+		return models.Component{
+			ID: componentID,
+		}
+	})); err != nil {
+		return err
+	}
 
-	// Simple approach: remove old edges, add new edges
-	// The artifact association is now implicit via the component_id prefix pattern
-	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+	// delete the removed edges from the database
+	// we can only find them by componentID and dependencyID
+	// thus the query needs to be built here
 
-		if len(removed) > 0 {
-			// Delete removed edges
-			ids := make([]uuid.UUID, len(removed))
-			for i, r := range removed {
-				ids[i] = r.ID
-			}
-			err := c.db.Where("id IN ?", ids).Delete(&models.ComponentDependency{}).Error
-			if err != nil {
-				return err
-			}
+	var valueClauses []string
+	for _, edge := range diff.RemovedEdges {
+		valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s')", edge[0], edge[1]))
+	}
+	// Join the value clauses with commas
+	values := strings.Join(valueClauses, ",")
+	// Construct the SQL query
+	query := fmt.Sprintf(`
+			DELETE FROM component_dependencies
+			WHERE (component_id, dependency_id) IN (VALUES %s)
+			AND asset_id = ?
+			AND asset_version_name = ?
+		`, values)
+	// execute the query
+	err := c.GetDB(nil).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
+
+	if err != nil {
+		return err
+	}
+
+	// for added edges, create them in the database
+	deps := []models.ComponentDependency{}
+	for _, edge := range diff.AddedEdges {
+		c1 := wholeAssetGraph.Node(edge[0])
+		c2 := wholeAssetGraph.Node(edge[1])
+		componentDependency := models.ComponentDependency{
+			AssetID:          assetVersion.AssetID,
+			AssetVersionName: assetVersion.Name,
+			ComponentID:      utils.EmptyThenNil(normalize.GetComponentID(*c1.Component)),
+			DependencyID:     normalize.GetComponentID(*c2.Component),
 		}
 
-		if len(added) > 0 {
-			// Set asset version info and create new edges
-			for i := range added {
-				added[i].AssetID = assetID
-				added[i].AssetVersionName = assetVersionName
-			}
-			err := c.CreateComponents(tx, added)
-			if err != nil {
-				return err
-			}
-		}
+		deps = append(deps, componentDependency)
+	}
 
-		return nil
-	})
+	if err := c.CreateComponents(nil, deps); err != nil {
+		return errors.Wrap(err, "could not create component dependencies")
+	}
+	return nil
 }
 
 func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {

@@ -476,62 +476,22 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
+func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	wholeAssetSBOM, components, err := s.LoadFullSBOM(assetVersion)
+	// Load the full SBOM graph from the database
+	wholeAssetGraph, err := s.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not build whole asset sbom")
-	}
-	flatTreeBefore := wholeAssetSBOM.NodeIDsAndEdges()
-
-	// now we have the dependency tree only scoped on this artifact.
-	artifactBom := wholeAssetSBOM.ExtractArtifactBom(artifactName)
-
-	if artifactBom == nil {
-		// Create a minimal artifact bom to add information sources to
-		artifactBom = normalize.NewEmptyArtifactBom(artifactName)
-	} else {
-		flatTreeBefore = artifactBom.NodeIDsAndEdges()
+		return nil, errors.Wrap(err, "could not build whole asset sbom graph")
 	}
 
-	for _, informationSource := range sbom.GetInformationSourceNodes() {
-		artifactBom.ReplaceOrAddInformationSourceNode(informationSource)
-	}
-	// update the artifact bom
-	wholeAssetSBOM.ReplaceOrAddArtifact(artifactBom)
-	flatTreeAfter := wholeAssetSBOM.NodeIDsAndEdges()
-	// now we use the comparison of the two trees to figure out, which components were added/removed
-	nodeComparisonResult := utils.CompareSlices(flatTreeBefore.Nodes, flatTreeAfter.Nodes, func(nodeID string) string {
-		return nodeID
-	})
+	diff := wholeAssetGraph.MergeGraph(sbom)
 
-	// make sure, that the components exist
-	if err := s.componentRepository.CreateBatch(nil, utils.Map(nodeComparisonResult.OnlyInB, func(componentID string) models.Component {
-		return models.Component{
-			ID: componentID,
-		}
-	})); err != nil {
-		return nil, err
-	}
-
-	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, components, utils.Map(slices.Concat(flatTreeAfter.Edges, [][2]string{{"", artifactBom.GetRootID()}}), func(el [2]string) models.ComponentDependency {
-		if el[0] == "" || el[0] == normalize.ROOT {
-			return models.ComponentDependency{
-				ComponentID:  nil,
-				DependencyID: el[1],
-			}
-		}
-		return models.ComponentDependency{
-			ComponentID:  utils.Ptr(el[0]),
-			DependencyID: el[1],
-		}
-	}), artifactName)
-	if err != nil {
-		return nil, err
+	if err := s.componentRepository.HandleStateDiff(tx, assetVersion, diff); err != nil {
+		return nil, errors.Wrap(err, "could not handle state diff")
 	}
 
 	// update the license information in the background
@@ -547,6 +507,8 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		s.FireAndForget(func() {
+			// Export the updated graph back to CycloneDX format for the event
+			exportedBOM := wholeAssetGraph.ToCycloneDX(artifactName)
 			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
@@ -555,13 +517,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 				Artifact: shared.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.EjectSBOM(normalize.BOMMetadata{
-					ProjectSlug:      project.Slug,
-					AssetSlug:        asset.Slug,
-					AssetVersionSlug: assetVersion.Slug,
-					ArtifactName:     artifactName,
-					FrontendURL:      frontendURL,
-				}),
+				SBOM: exportedBOM,
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
@@ -569,18 +525,16 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 			}
 		})
 	}
-	wholeAssetSBOM.ReplaceOrAddArtifact(artifactBom)
-	return wholeAssetSBOM, nil
+
+	return wholeAssetGraph, nil
 }
 
-// LoadFullSBOM loads all components for an asset version and builds a complete SBOM tree.
-// This provides a high-level abstraction for navigating the dependency graph without complex SQL queries.
-// Use the returned CdxBom's methods like ExtractArtifactBom() to filter by artifact,
-// then FindAllPathsToComponent() for tree traversal operations.
-func (s *assetVersionService) LoadFullSBOM(assetVersion models.AssetVersion) (*normalize.CdxBom, []models.ComponentDependency, error) {
+// LoadFullSBOMGraph loads all components for an asset version and builds a complete SBOMGraph.
+// This is the new graph-based approach that will eventually replace LoadFullSBOM.
+func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
 	for i := range licenseRisks {
@@ -589,13 +543,13 @@ func (s *assetVersionService) LoadFullSBOM(assetVersion models.AssetVersion) (*n
 		}
 	}
 
-	// Load ALL components for the asset version - no artifact filtering at the SQL level
+	// Load ALL components for the asset version
 	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, nil)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not load components")
+		return nil, errors.Wrap(err, "could not load components")
 	}
 
-	return normalize.FromComponents(utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), components, nil
+	return normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {

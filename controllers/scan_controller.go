@@ -198,7 +198,8 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
-	normalized := normalize.FromCdxBom(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
+
+	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
@@ -221,8 +222,10 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		slog.Error("could not save artifact", "err", err)
 		return scanResults, err
 	}
+	// start a transaction for sbom updating AND scanning
+	tx := s.assetVersionRepository.GetDB(nil).Begin()
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
