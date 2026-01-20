@@ -208,7 +208,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	}
 
 	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
-		_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
+		_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
 		return origin
 	}), func(el string) string {
 		return el
@@ -304,17 +304,18 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 			slog.Error("could not sync vex reports", "err", err)
 		}
 	} else if len(toDelete) > 0 {
+		tx := c.artifactRepository.Begin()
 		// make sure that we at least update the sbom once if there were deletions
 		// updating with nil, will just renormalize the sbom and remove all components which are not
 		// reachable anymore from the root nodes - we might have removed some root nodes above
-		sbom, err := c.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, nil, dtos.UpstreamStateExternal)
+		sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, nil, dtos.UpstreamStateExternal)
 		if err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 		// scan the sbom
 		// issue sync is already handled in scan normalized sbom
-		_, _, vulns, err = c.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+		_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
 		if err != nil {
 			slog.Error("could not scan sbom after updating it", "err", err)
 			return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)

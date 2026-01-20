@@ -352,7 +352,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).EjectVex(normalize.BOMMetadata{})
+		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)

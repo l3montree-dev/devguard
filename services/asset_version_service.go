@@ -317,8 +317,9 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
-	sbom = sbom.ExtractArtifactBom(artifactName)
+func (s *assetVersionService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+	// scope the sbom to the current artifact only
+	sbom.ScopeToArtifact(artifactName)
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
@@ -334,7 +335,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom, dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(tx, userID, artifactName, assetVersion, sbom, dependencyVulns, asset, upstream)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -345,7 +346,7 @@ func (s *assetVersionService) HandleScanResult(org models.Org, project models.Pr
 
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", newState, "", asset)
+	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, "system", newState, "", asset)
 
 	if err != nil {
 		slog.Error("could not recalculate raw risk assessment", "err", err)
@@ -378,7 +379,7 @@ type Diffable interface {
 	GetEvents() []models.VulnEvent
 }
 
-func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *assetVersionService) handleScanResult(tx shared.DB, userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -386,7 +387,7 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	}
 
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -400,7 +401,7 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
-	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
+	unfixablePurls := sbom.ComponentsWithMultipleSources()
 	filterPredicate := func(dv models.DependencyVuln) bool {
 		return !slices.Contains(unfixablePurls, dv.ComponentPurl)
 	}
@@ -411,46 +412,45 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 	// newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(diff.NewlyDiscovered, existingVulnsOnOtherBranch)
 	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
 
-	if err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
-		// make sure to first create a user detected event for vulnerabilities with just upstream events
-		// this way we preserve the event history
-		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
-			slog.Error("error when trying to add events for existing vulnerability on different branch")
-			return err // this will cancel the transaction
-		}
-		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset, upstream); err != nil {
-			return err // this will cancel the transaction
-		}
+	// make sure to first create a user detected event for vulnerabilities with just upstream events
+	// this way we preserve the event history
+	if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
+		slog.Error("error when trying to add events for existing vulnerability on different branch")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+	// We can create the newly found one without checking anything
+	if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset, upstream); err != nil {
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(tx, diff.NewInArtifact, artifactName)
-		if err != nil {
-			slog.Error("error when trying to add events for adding scanner to vulnerability")
-			return err
-		}
+	err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(tx, diff.NewInArtifact, artifactName)
+	if err != nil {
+		slog.Error("error when trying to add events for adding scanner to vulnerability")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
 
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(tx, fixedOnThisArtifactName, artifactName)
-		if err != nil {
-			slog.Error("error when trying to add events for removing scanner from vulnerability")
-			return err
-		}
+	err = s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(tx, fixedOnThisArtifactName, artifactName)
+	if err != nil {
+		slog.Error("error when trying to add events for removing scanner from vulnerability")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
 
-		if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
-			slog.Error("error when trying to add fix event")
-			return err
-		}
+	if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
+		slog.Error("error when trying to add fix event")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
 
-		if len(diff.Unchanged) > 0 {
-			var valueClauses []string
-			for _, dv := range diff.Unchanged {
-				hash := dv.CalculateHash()
-				depth := utils.OrDefault(dv.ComponentDepth, 1)
-				valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
-			}
-			// Join the value clauses with commas
-			values := strings.Join(valueClauses, ",")
-			// Construct the SQL query - use LEAST to keep the minimum depth (shallowest = highest risk)
-			query := fmt.Sprintf(`
+	if len(diff.Unchanged) > 0 {
+		var valueClauses []string
+		for _, dv := range diff.Unchanged {
+			hash := dv.CalculateHash()
+			depth := utils.OrDefault(dv.ComponentDepth, 1)
+			valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
+		}
+		// Join the value clauses with commas
+		values := strings.Join(valueClauses, ",")
+		// Construct the SQL query - use LEAST to keep the minimum depth (shallowest = highest risk)
+		query := fmt.Sprintf(`
 				UPDATE dependency_vulns
 				SET component_depth = LEAST(dependency_vulns.component_depth, data.component_depth)
 				FROM (VALUES %s) AS data(id, component_depth)
@@ -458,13 +458,11 @@ func (s *assetVersionService) handleScanResult(userID string, artifactName strin
 				AND dependency_vulns.asset_version_name = ?
 				AND dependency_vulns.id = data.id
 			`, values)
-			// update just the component depth for nothingChanged vulns
-			return s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
+		// update just the component depth for nothingChanged vulns
+		if err := s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error; err != nil {
+			slog.Error("could not update component depth for unchanged dependency vulns", "err", err)
+			return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 		}
-		return nil
-	}); err != nil {
-		slog.Error("could not save dependencyVulns", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
 	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, &artifactName)
@@ -490,7 +488,7 @@ func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project m
 
 	diff := wholeAssetGraph.MergeGraph(sbom)
 
-	if err := s.componentRepository.HandleStateDiff(tx, assetVersion, diff); err != nil {
+	if err := s.componentRepository.HandleStateDiff(tx, assetVersion, wholeAssetGraph, diff); err != nil {
 		return nil, errors.Wrap(err, "could not handle state diff")
 	}
 
@@ -508,7 +506,9 @@ func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project m
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		s.FireAndForget(func() {
 			// Export the updated graph back to CycloneDX format for the event
-			exportedBOM := wholeAssetGraph.ToCycloneDX(artifactName)
+			exportedBOM := wholeAssetGraph.ToCycloneDX(normalize.BOMMetadata{
+				RootName: artifactName,
+			})
 			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
@@ -604,8 +604,7 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-
+func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
@@ -666,7 +665,7 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.FromVulnerabilities(vulnerabilities)
+	return normalize.SBOMGraphFromVulnerabilities(vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

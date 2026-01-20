@@ -411,7 +411,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 			errs := make([]error, 0)
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
-				bom, _, err := runner.assetVersionService.LoadFullSBOM(assetVersions[i])
+				bom, err := runner.assetVersionService.LoadFullSBOMGraph(assetVersions[i])
 				if err != nil {
 					slog.Error("failed to load full sbom", "error", err, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 					errs = append(errs, err)
@@ -419,13 +419,16 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 				}
 
 				for _, artifact := range artifacts {
-					_, _, _, err = runner.scanService.ScanNormalizedSBOMWithoutEventHandling(org, project, asset, assetVersions[i], artifact, bom, "system")
+					tx := runner.db.Begin()
+					_, _, _, err = runner.scanService.ScanNormalizedSBOMWithoutEventHandling(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
 					if err != nil {
+						tx.Rollback()
 						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						continue
 					}
+					tx.Commit()
 
 					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				}
@@ -471,7 +474,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 					}
 
 					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
+						_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
 						return origin
 					}), func(el string) bool {
 						return strings.HasPrefix(el, "http")

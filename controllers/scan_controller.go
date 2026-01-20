@@ -134,10 +134,10 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			}
 		}
 	}
-	upstreamBOMS := []*normalize.CdxBom{}
+	upstreamBOMS := []*normalize.SBOMGraph{}
 	// check if there are components or vulnerabilities in the bom
 	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
-		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, origin))
+		upstreamBOMS = append(upstreamBOMS, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
 	}
 
 	for _, url := range externalURLs {
@@ -224,6 +224,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
+	defer tx.Rollback()
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
@@ -231,11 +232,13 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		return scanResults, err
 	}
 
-	opened, closed, newState, err := s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, wholeSBOM, userID)
+	opened, closed, newState, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID)
 	if err != nil {
 		slog.Error("could not scan normalized sbom", "err", err)
 		return scanResults, err
 	}
+
+	tx.Commit()
 
 	return dtos.ScanResponse{
 		AmountOpened:    opened,

@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"iter"
 	"maps"
+	"net/url"
+	"os"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
+	"github.com/package-url/packageurl-go"
 )
-
-const ROOT = "ROOT"
 
 // =============================================================================
 // NODE TYPES
@@ -105,6 +107,7 @@ func NewSBOMGraph() *SBOMGraph {
 		edges:           make(map[string]map[string]struct{}),
 		vulnerabilities: make(map[string]*cdx.Vulnerability),
 		rootID:          GraphRootNodeID,
+		scopeID:         GraphRootNodeID,
 	}
 	// Always create root node
 	g.nodes[GraphRootNodeID] = &GraphNode{ID: GraphRootNodeID, Type: GraphNodeTypeRoot}
@@ -181,7 +184,12 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 
 // AddVulnerability adds a vulnerability.
 func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
-	g.vulnerabilities[vuln.ID] = &vuln
+	affectsStr := ""
+	for _, aff := range *vuln.Affects {
+		affectsStr += aff.Ref + ";"
+	}
+
+	g.vulnerabilities[vuln.ID+"@"+affectsStr] = &vuln
 }
 
 func (g *SBOMGraph) ClearScope() {
@@ -197,223 +205,16 @@ func (g *SBOMGraph) Scope(id string) error {
 	return fmt.Errorf("node %s not reachable from current scope", id)
 }
 
-// =============================================================================
-// MUTATIONS WITH DIFF SUPPORT
-// =============================================================================
-
-// ReplaceInfoSourceSubtree replaces an information source subtree and returns the diff.
-// The newSubtree should be a graph containing:
-//   - An artifact node (matching artifactID)
-//   - An info source node (matching infoSourceID)
-//   - All components under that info source
-//
-// Returns the diff of what changed (added/removed nodes and edges).
-// If the info source doesn't exist, it will be added.
-func (g *SBOMGraph) ReplaceInfoSourceSubtree(artifactID, infoSourceID string, newSubtree *SBOMGraph) GraphDiff {
-	// Snapshot the current state for diff calculation
-	oldSnapshot := g.snapshotSubtree(infoSourceID)
-
-	// Remove the old subtree (nodes and edges under this info source)
-	g.removeSubtree(infoSourceID)
-
-	// Import the new subtree
-	g.importSubtree(artifactID, infoSourceID, newSubtree)
-
-	// Calculate diff
-	newSnapshot := g.snapshotSubtree(infoSourceID)
-	return g.diffSnapshots(oldSnapshot, newSnapshot)
+func (g *SBOMGraph) CurrentScopeID() string {
+	return g.scopeID
+}
+func (g *SBOMGraph) ScopeToArtifact(artifactName string) error {
+	artifactID := "artifact:" + artifactName
+	return g.Scope(artifactID)
 }
 
-// snapshotSubtree captures all nodes and edges reachable from a given node.
-type subtreeSnapshot struct {
-	nodes map[string]*GraphNode
-	edges map[[2]string]struct{}
-}
-
-func (g *SBOMGraph) snapshotSubtree(rootID string) subtreeSnapshot {
-	snapshot := subtreeSnapshot{
-		nodes: make(map[string]*GraphNode),
-		edges: make(map[[2]string]struct{}),
-	}
-
-	if g.nodes[rootID] == nil {
-		return snapshot
-	}
-
-	var visit func(id string)
-	visit = func(id string) {
-		if _, seen := snapshot.nodes[id]; seen {
-			return
-		}
-		if node := g.nodes[id]; node != nil {
-			snapshot.nodes[id] = node
-		}
-		for childID := range g.edges[id] {
-			snapshot.edges[[2]string{id, childID}] = struct{}{}
-			visit(childID)
-		}
-	}
-	visit(rootID)
-
-	return snapshot
-}
-
-func (g *SBOMGraph) diffSnapshots(old, new subtreeSnapshot) GraphDiff {
-	diff := GraphDiff{}
-
-	// Find removed nodes
-	for id, node := range old.nodes {
-		if _, exists := new.nodes[id]; !exists {
-			diff.RemovedNodes = append(diff.RemovedNodes, node)
-		}
-	}
-
-	// Find added nodes
-	for id, node := range new.nodes {
-		if _, exists := old.nodes[id]; !exists {
-			diff.AddedNodes = append(diff.AddedNodes, node)
-		}
-	}
-
-	// Find removed edges
-	for edge := range old.edges {
-		if _, exists := new.edges[edge]; !exists {
-			diff.RemovedEdges = append(diff.RemovedEdges, edge)
-		}
-	}
-
-	// Find added edges
-	for edge := range new.edges {
-		if _, exists := old.edges[edge]; !exists {
-			diff.AddedEdges = append(diff.AddedEdges, edge)
-		}
-	}
-
-	return diff
-}
-
-// removeSubtree removes a node and all nodes reachable only through it.
-// Nodes that are still reachable from other paths are kept.
-func (g *SBOMGraph) removeSubtree(rootID string) {
-	if g.nodes[rootID] == nil {
-		return
-	}
-
-	// First, collect all nodes in the subtree
-	subtreeNodes := make(map[string]bool)
-	var collectSubtree func(id string)
-	collectSubtree = func(id string) {
-		if subtreeNodes[id] {
-			return
-		}
-		subtreeNodes[id] = true
-		for childID := range g.edges[id] {
-			collectSubtree(childID)
-		}
-	}
-	collectSubtree(rootID)
-
-	// Remove edge from parent to this root
-	for parentID, children := range g.edges {
-		delete(children, rootID)
-		if len(children) == 0 && parentID != g.rootID {
-			// Keep empty edge sets for root
-		}
-	}
-
-	// Remove the root node's edges
-	delete(g.edges, rootID)
-
-	// Remove the root node
-	delete(g.nodes, rootID)
-
-	// For other nodes in subtree, check if they're still reachable from root
-	// If not, remove them
-	stillReachable := g.reachableNodes()
-	for nodeID := range subtreeNodes {
-		if nodeID == rootID {
-			continue
-		}
-		if !stillReachable[nodeID] {
-			delete(g.nodes, nodeID)
-			delete(g.edges, nodeID)
-			// Also remove any edges pointing to this node
-			for _, children := range g.edges {
-				delete(children, nodeID)
-			}
-		}
-	}
-}
-
-// importSubtree imports nodes and edges from another graph's info source.
-func (g *SBOMGraph) importSubtree(artifactID, infoSourceID string, source *SBOMGraph) {
-	// Ensure artifact exists and is connected to root
-	if g.nodes[artifactID] == nil {
-		_, name := ParseGraphNodeID(artifactID)
-		g.AddArtifact(name)
-	}
-
-	// Find the info source in the source graph
-	var sourceInfoNode *GraphNode
-	for _, node := range source.nodes {
-		if node.ID == infoSourceID && node.Type == GraphNodeTypeInfoSource {
-			sourceInfoNode = node
-			break
-		}
-	}
-
-	if sourceInfoNode == nil {
-		return
-	}
-
-	// Add the info source node
-	g.nodes[infoSourceID] = &GraphNode{
-		ID:        sourceInfoNode.ID,
-		Type:      sourceInfoNode.Type,
-		InfoType:  sourceInfoNode.InfoType,
-		Component: sourceInfoNode.Component,
-	}
-	g.edges[infoSourceID] = make(map[string]struct{})
-
-	// Connect artifact to info source
-	g.AddEdge(artifactID, infoSourceID)
-
-	// Import all nodes and edges reachable from the info source
-	var importNode func(id string)
-	importNode = func(id string) {
-		if id == infoSourceID {
-			// Already added, just process children
-			for childID := range source.edges[id] {
-				importNode(childID)
-				g.AddEdge(id, childID)
-			}
-			return
-		}
-
-		sourceNode := source.nodes[id]
-		if sourceNode == nil {
-			return
-		}
-
-		// Add node if not exists
-		if g.nodes[id] == nil {
-			g.nodes[id] = &GraphNode{
-				ID:        sourceNode.ID,
-				Type:      sourceNode.Type,
-				InfoType:  sourceNode.InfoType,
-				Component: sourceNode.Component,
-			}
-			g.edges[id] = make(map[string]struct{})
-		}
-
-		// Process children
-		for childID := range source.edges[id] {
-			importNode(childID)
-			g.AddEdge(id, childID)
-		}
-	}
-
-	importNode(infoSourceID)
+func (g *SBOMGraph) IsScoped() bool {
+	return g.scopeID != g.rootID
 }
 
 // Clone creates a deep copy of the graph.
@@ -452,50 +253,6 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 	return clone
 }
 
-// ExtractSubgraph returns a new graph containing only the subtree rooted at the given node.
-// The extracted node becomes the root of the new graph.
-func (g *SBOMGraph) ExtractSubgraph(nodeID string) *SBOMGraph {
-	if g.nodes[nodeID] == nil {
-		return nil
-	}
-
-	sub := NewSBOMGraph()
-
-	var extract func(id string)
-	extract = func(id string) {
-		if sub.nodes[id] != nil {
-			return // Already added
-		}
-
-		sourceNode := g.nodes[id]
-		if sourceNode == nil {
-			return
-		}
-
-		// Copy node
-		sub.nodes[id] = &GraphNode{
-			ID:        sourceNode.ID,
-			Type:      sourceNode.Type,
-			InfoType:  sourceNode.InfoType,
-			Component: sourceNode.Component,
-		}
-		sub.edges[id] = make(map[string]struct{})
-
-		// Copy children
-		for childID := range g.edges[id] {
-			extract(childID)
-			sub.edges[id][childID] = struct{}{}
-		}
-	}
-
-	extract(nodeID)
-
-	// Connect to root
-	sub.edges[GraphRootNodeID][nodeID] = struct{}{}
-
-	return sub
-}
-
 // GetInfoSourceNode returns the info source node by ID, or nil if not found.
 func (g *SBOMGraph) GetInfoSourceNode(infoSourceID string) *GraphNode {
 	if node := g.nodes[infoSourceID]; node != nil && node.Type == GraphNodeTypeInfoSource {
@@ -511,6 +268,7 @@ func (g *SBOMGraph) HasInfoSource(infoSourceID string) bool {
 
 // MergeGraph merges another graph into this one, returning the diff.
 // Artifacts from the other graph are added/merged under this graph's root.
+// When an info source with the same ID exists, it replaces the entire subtree.
 func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 	beforeNodes := g.reachableNodes()
 	beforeEdges := make(map[[2]string]bool)
@@ -518,18 +276,34 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 		beforeEdges[[2]string{parent, child}] = true
 	}
 
+	// Find info sources that need to be replaced (exist in both graphs)
+	infoSourcesToReplace := make(map[string]bool)
+	for id, node := range other.nodes {
+		if node.Type == GraphNodeTypeInfoSource {
+			if existingNode := g.nodes[id]; existingNode != nil && existingNode.Type == GraphNodeTypeInfoSource {
+				infoSourcesToReplace[id] = true
+			}
+		}
+	}
+
+	// Remove old subtrees for info sources that will be replaced
+	for infoSourceID := range infoSourcesToReplace {
+		g.removeSubtree(infoSourceID)
+	}
+
 	// Import all nodes
 	for id, node := range other.nodes {
 		if id == GraphRootNodeID {
 			continue // Skip root
 		}
-		if g.nodes[id] == nil {
-			g.nodes[id] = &GraphNode{
-				ID:        node.ID,
-				Type:      node.Type,
-				InfoType:  node.InfoType,
-				Component: node.Component,
-			}
+		// Always overwrite if node already exists (for replacement semantics)
+		g.nodes[id] = &GraphNode{
+			ID:        node.ID,
+			Type:      node.Type,
+			InfoType:  node.InfoType,
+			Component: node.Component,
+		}
+		if g.edges[id] == nil {
 			g.edges[id] = make(map[string]struct{})
 		}
 	}
@@ -543,6 +317,10 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 			}
 		} else {
 			if g.edges[parentID] == nil {
+				g.edges[parentID] = make(map[string]struct{})
+			}
+			// Clear existing edges for replaced info sources
+			if infoSourcesToReplace[parentID] {
 				g.edges[parentID] = make(map[string]struct{})
 			}
 			for childID := range children {
@@ -569,67 +347,65 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 			diff.AddedEdges = append(diff.AddedEdges, edge)
 		}
 	}
-
+	// add vulnerabilities
+	maps.Copy(g.vulnerabilities, other.vulnerabilities)
 	return diff
 }
 
-// ReplaceOrAddArtifact replaces an existing artifact subtree or adds a new one.
-// Returns the diff of changes made.
-func (g *SBOMGraph) ReplaceOrAddArtifact(artifactSubgraph *SBOMGraph) GraphDiff {
-	// Find the artifact node in the subgraph
-	var artifactID string
-	for _, node := range artifactSubgraph.nodes {
-		if node.Type == GraphNodeTypeArtifact {
-			artifactID = node.ID
-			break
+// DeleteArtifactFromGraph removes an artifact and all its subtree from the graph.
+// Returns a GraphDiff representing what was removed.
+func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
+	artifactID := "artifact:" + artifactName
+
+	beforeNodes := g.reachableNodes()
+	beforeEdges := make(map[[2]string]bool)
+	for parent, child := range g.Edges() {
+		beforeEdges[[2]string{parent, child}] = true
+	}
+
+	// Check if artifact exists
+	if g.nodes[artifactID] == nil {
+		return GraphDiff{} // Nothing to delete
+	}
+
+	// Remove the entire subtree under the artifact
+	g.removeSubtree(artifactID)
+
+	// Remove the artifact node itself
+	delete(g.nodes, artifactID)
+	delete(g.edges, artifactID)
+
+	// Remove the edge from root to artifact
+	delete(g.edges[g.rootID], artifactID)
+
+	// Calculate diff
+	diff := GraphDiff{}
+	afterNodes := g.reachableNodes()
+
+	// Find removed nodes
+	for id := range beforeNodes {
+		if !afterNodes[id] {
+			if node := g.nodes[id]; node != nil {
+				diff.RemovedNodes = append(diff.RemovedNodes, node)
+			}
 		}
 	}
 
-	if artifactID == "" {
-		return GraphDiff{} // No artifact found
-	}
-
-	// Check if artifact already exists
-	if g.nodes[artifactID] != nil {
-		// Snapshot old state
-		oldSnapshot := g.snapshotSubtree(artifactID)
-
-		// Remove old artifact subtree
-		g.removeSubtree(artifactID)
-
-		// Import new artifact subtree
-		for id, node := range artifactSubgraph.nodes {
-			if id == GraphRootNodeID {
-				continue
-			}
-			g.nodes[id] = &GraphNode{
-				ID:        node.ID,
-				Type:      node.Type,
-				InfoType:  node.InfoType,
-				Component: node.Component,
-			}
-			g.edges[id] = make(map[string]struct{})
-		}
-
-		for parentID, children := range artifactSubgraph.edges {
-			if parentID == GraphRootNodeID {
-				for childID := range children {
-					g.edges[g.rootID][childID] = struct{}{}
-				}
-			} else {
-				for childID := range children {
-					g.AddEdge(parentID, childID)
-				}
+	// Find removed edges
+	for edge := range beforeEdges {
+		found := false
+		for parent, child := range g.Edges() {
+			if [2]string{parent, child} == edge {
+				found = true
+				break
 			}
 		}
-
-		// Calculate diff
-		newSnapshot := g.snapshotSubtree(artifactID)
-		return g.diffSnapshots(oldSnapshot, newSnapshot)
+		if !found {
+			diff.RemovedEdges = append(diff.RemovedEdges, edge)
+		}
 	}
 
-	// Artifact doesn't exist, just merge
-	return g.MergeGraph(artifactSubgraph)
+	return diff
 }
 
 // GetArtifactIDs returns all artifact IDs in the graph.
@@ -666,6 +442,23 @@ func (g *SBOMGraph) GetParentIDs(nodeID string) []string {
 // =============================================================================
 // QUERIES
 // =============================================================================
+
+func (g *SBOMGraph) LicenseDistribution() map[string]int {
+	licenseCount := make(map[string]int)
+	for component := range g.Components() {
+		if component.Component != nil {
+			licenses := component.Component.Licenses
+			if licenses != nil && len(*licenses) > 0 {
+				for _, lic := range *licenses {
+					if lic.License != nil && lic.License.Name != "" {
+						licenseCount[lic.License.Name]++
+					}
+				}
+			}
+		}
+	}
+	return licenseCount
+}
 
 // Node returns a node by ID, or nil if not reachable from scope.
 func (g *SBOMGraph) Node(id string) *GraphNode {
@@ -851,6 +644,9 @@ func (g *SBOMGraph) CalculateDepth() map[string]int {
 
 	// Start BFS from all info source children (the root components)
 	for infoSource := range g.InfoSources() {
+		if infoSource.InfoType != InfoSourceSBOM {
+			continue
+		}
 		for childID := range g.edges[infoSource.ID] {
 			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
 				queue = append(queue, item{id: childID, depth: 1})
@@ -869,7 +665,15 @@ func (g *SBOMGraph) CalculateDepth() map[string]int {
 
 		for childID := range g.edges[curr.id] {
 			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
-				queue = append(queue, item{id: childID, depth: curr.depth + 1})
+				// only increment the depth if this component had a valid purl
+				_, err := packageurl.FromString(node.Component.PackageURL)
+				depth := curr.depth
+
+				if err == nil {
+					depth++
+				}
+
+				queue = append(queue, item{id: childID, depth: depth})
 			}
 		}
 	}
@@ -878,7 +682,16 @@ func (g *SBOMGraph) CalculateDepth() map[string]int {
 }
 
 // FindAllPathsTo finds all paths from info source roots to a target component.
-func (g *SBOMGraph) FindAllPathsTo(targetID string) [][]string {
+func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
+	// first we need to find the target node ID
+	var targetID string
+	for node := range g.Components() {
+		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
+			targetID = node.ID
+			break
+		}
+	}
+
 	var paths [][]string
 
 	var visit func(id string, path []string, visited map[string]bool)
@@ -948,58 +761,97 @@ func (d GraphDiff) RemovedNodeIDs() []string {
 	return ids
 }
 
-// Diff compares this graph with another and returns the differences.
-func (g *SBOMGraph) Diff(other *SBOMGraph) GraphDiff {
-	diff := GraphDiff{}
-
-	thisNodes := g.reachableNodes()
-	otherNodes := other.reachableNodes()
-
-	for id := range thisNodes {
-		if !otherNodes[id] {
-			if node := g.nodes[id]; node != nil {
-				diff.RemovedNodes = append(diff.RemovedNodes, node)
-			}
-		}
-	}
-	for id := range otherNodes {
-		if !thisNodes[id] {
-			if node := other.nodes[id]; node != nil {
-				diff.AddedNodes = append(diff.AddedNodes, node)
-			}
-		}
-	}
-
-	thisEdges := make(map[[2]string]bool)
-	for parent, child := range g.Edges() {
-		thisEdges[[2]string{parent, child}] = true
-	}
-
-	otherEdges := make(map[[2]string]bool)
-	for parent, child := range other.Edges() {
-		otherEdges[[2]string{parent, child}] = true
-	}
-
-	for edge := range thisEdges {
-		if !otherEdges[edge] {
-			diff.RemovedEdges = append(diff.RemovedEdges, edge)
-		}
-	}
-	for edge := range otherEdges {
-		if !thisEdges[edge] {
-			diff.AddedEdges = append(diff.AddedEdges, edge)
-		}
-	}
-
-	return diff
+type BOMMetadata struct {
+	AssetVersionSlug      string
+	AssetSlug             string
+	OrgSlug               string
+	ProjectSlug           string
+	FrontendURL           string
+	ArtifactName          string
+	AssetID               uuid.UUID
+	AddExternalReferences bool
+	RootName              string // defaults to ArtifactName if empty
 }
 
 // =============================================================================
 // EXPORT
 // =============================================================================
 
+type minimalTreeNode struct {
+	Name     string             `json:"name"`
+	Children []*minimalTreeNode `json:"children"`
+}
+
+func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
+	root := &minimalTreeNode{
+		Name:     "ROOT",
+		Children: []*minimalTreeNode{},
+	}
+
+	var buildTree func(nodeID string) *minimalTreeNode
+	buildTree = func(nodeID string) *minimalTreeNode {
+		node := g.nodes[nodeID]
+		if node == nil {
+			return nil
+		}
+		treeNode := &minimalTreeNode{
+			Name:     node.ID,
+			Children: []*minimalTreeNode{},
+		}
+		for childID := range g.edges[nodeID] {
+			childTreeNode := buildTree(childID)
+			if childTreeNode != nil {
+				treeNode.Children = append(treeNode.Children, childTreeNode)
+			}
+		}
+		return treeNode
+	}
+
+	for childID := range g.edges[g.scopeID] {
+		childTreeNode := buildTree(childID)
+		if childTreeNode != nil {
+			root.Children = append(root.Children, childTreeNode)
+		}
+	}
+	return root
+}
+
 // ToCycloneDX exports the scoped view as a CycloneDX BOM.
-func (g *SBOMGraph) ToCycloneDX(rootName string) *cdx.BOM {
+func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
+	var externalRefs *[]cdx.ExternalReference
+	if metadata.AddExternalReferences {
+		apiURL := os.Getenv("API_URL")
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, metadata.AssetID.String())
+
+		vexURL, dashboardURL := calculateExternalURLs(vexURL, metadata)
+
+		externalRefs = &[]cdx.ExternalReference{{
+			URL:     vexURL,
+			Comment: "Up to date Vulnerability exploitability information.",
+			Type:    cdx.ERTypeExploitabilityStatement,
+		}}
+
+		if dashboardURL != "" {
+			*externalRefs = append(*externalRefs, cdx.ExternalReference{
+				URL:     dashboardURL,
+				Comment: "Dynamic analysis report",
+				Type:    cdx.ERTypeDynamicAnalysisReport,
+			})
+		}
+	}
+
+	rootName := metadata.RootName
+	if rootName == "" {
+		rootName = metadata.ArtifactName
+	}
+
+	// check if valid purl
+	p, err := packageurl.FromString(rootName)
+	pURL := ""
+	if err == nil {
+		pURL = p.String()
+	}
+
 	components := []cdx.Component{}
 	for node := range g.Components() {
 		if node.Component != nil {
@@ -1007,10 +859,20 @@ func (g *SBOMGraph) ToCycloneDX(rootName string) *cdx.BOM {
 		}
 	}
 
+	// we always need to add the root component
+	rootComponent := cdx.Component{
+		BOMRef:     rootName,
+		Name:       rootName,
+		Type:       cdx.ComponentTypeApplication,
+		PackageURL: pURL,
+	}
+	components = append(components, rootComponent)
+
 	// Build dependency map: component -> its component children
 	depMap := make(map[string][]string)
 	depMap[rootName] = []string{}
 
+	// componentEdges wont return the root's direct deps, so we add them later
 	for parent, child := range g.ComponentEdges() {
 		depMap[parent] = append(depMap[parent], child)
 	}
@@ -1025,12 +887,20 @@ func (g *SBOMGraph) ToCycloneDX(rootName string) *cdx.BOM {
 	}
 
 	dependencies := []cdx.Dependency{}
-	for ref, deps := range depMap {
+	for c := range g.Components() {
+		deps := depMap[c.ID]
 		dependencies = append(dependencies, cdx.Dependency{
-			Ref:          ref,
+			Ref:          c.Component.BOMRef,
 			Dependencies: &deps,
 		})
 	}
+
+	// include the depMap entries for root
+	rootDeps := depMap[rootName]
+	dependencies = append(dependencies, cdx.Dependency{
+		Ref:          rootName,
+		Dependencies: &rootDeps,
+	})
 
 	vulns := []cdx.Vulnerability{}
 	for v := range g.Vulnerabilities() {
@@ -1043,15 +913,92 @@ func (g *SBOMGraph) ToCycloneDX(rootName string) *cdx.BOM {
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Component: &cdx.Component{
-				BOMRef: rootName,
-				Name:   rootName,
-				Type:   cdx.ComponentTypeApplication,
+				BOMRef:     rootName,
+				Name:       rootName,
+				Type:       cdx.ComponentTypeApplication,
+				PackageURL: pURL,
 			},
 		},
-		Components:      &components,
-		Dependencies:    &dependencies,
-		Vulnerabilities: &vulns,
+		Components:         &components,
+		Dependencies:       &dependencies,
+		Vulnerabilities:    &vulns,
+		ExternalReferences: externalRefs,
 	}
+}
+
+func RemoveInformationSourcePrefixIfExists(origin string) (InfoSourceType, string) {
+	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceVEX)); ok {
+		return InfoSourceVEX, after
+	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceSBOM)); ok {
+		return InfoSourceSBOM, after
+	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceCSAF)); ok {
+		return InfoSourceSBOM, after
+	}
+
+	return "", origin
+}
+
+func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
+	// check root ref is the same
+	if a.Metadata == nil || b.Metadata == nil || a.Metadata.Component == nil || b.Metadata.Component == nil {
+		return fmt.Errorf("one of the boms has no metadata or component")
+	}
+	if a.Metadata.Component.BOMRef != b.Metadata.Component.BOMRef {
+		return fmt.Errorf("root bom refs do not match: %s != %s", a.Metadata.Component.BOMRef, b.Metadata.Component.BOMRef)
+	}
+	// check components count is the same
+	if a.Components == nil || b.Components == nil {
+		return fmt.Errorf("one of the boms has no components")
+	}
+	if len(*a.Components) != len(*b.Components) {
+		return fmt.Errorf("component counts do not match: %d != %d", len(*a.Components), len(*b.Components))
+	}
+	// check dependencies count is the same
+	if a.Dependencies == nil || b.Dependencies == nil {
+		return fmt.Errorf("one of the boms has no dependencies")
+	}
+	if len(*a.Dependencies) != len(*b.Dependencies) {
+		return fmt.Errorf("dependency counts do not match: %d != %d", len(*a.Dependencies), len(*b.Dependencies))
+	}
+
+	// check the component refs
+	componentRefsA := make(map[string]bool)
+	for _, comp := range *a.Components {
+		componentRefsA[comp.BOMRef] = true
+	}
+	for _, comp := range *b.Components {
+		if _, exists := componentRefsA[comp.BOMRef]; !exists {
+			return fmt.Errorf("component ref %s not found in both boms", comp.BOMRef)
+		}
+	}
+
+	// check the dependency refs
+	dependencyRefsA := make(map[string][]string)
+	for _, dep := range *a.Dependencies {
+		dependencyRefsA[dep.Ref] = *dep.Dependencies
+	}
+	for _, dep := range *b.Dependencies {
+		if _, exists := dependencyRefsA[dep.Ref]; !exists {
+			return fmt.Errorf("dependency ref %s not found in both boms", dep.Ref)
+		}
+		// check the dependencies are the same
+		depsA := dependencyRefsA[dep.Ref]
+		depsB := *dep.Dependencies
+		if len(depsA) != len(depsB) {
+			return fmt.Errorf("dependency counts for ref %s do not match: %d != %d", dep.Ref, len(depsA), len(depsB))
+		}
+		depMap := make(map[string]bool)
+		for _, d := range depsA {
+			depMap[d] = true
+		}
+		for _, d := range depsB {
+			if _, exists := depMap[d]; !exists {
+				return fmt.Errorf("dependency %s for ref %s not found in both boms", d, dep.Ref)
+			}
+		}
+	}
+
+	return nil
 }
 
 // =============================================================================
@@ -1074,74 +1021,68 @@ func (g *SBOMGraph) reachableNodes() map[string]bool {
 	return reachable
 }
 
+// removeSubtree removes all nodes and edges in the subtree rooted at the given node.
+// The node itself is kept but its children are removed.
+func (g *SBOMGraph) removeSubtree(rootID string) {
+	// Find all nodes in the subtree (but not the root itself)
+	nodesToRemove := make(map[string]bool)
+	var visit func(id string)
+	visit = func(id string) {
+		for childID := range g.edges[id] {
+			if !nodesToRemove[childID] {
+				nodesToRemove[childID] = true
+				visit(childID)
+			}
+		}
+	}
+	visit(rootID)
+
+	// Remove the nodes and their edges
+	for nodeID := range nodesToRemove {
+		delete(g.nodes, nodeID)
+		delete(g.edges, nodeID)
+
+		// Remove any edges pointing to this node
+		for parentID := range g.edges {
+			delete(g.edges[parentID], nodeID)
+		}
+	}
+
+	// Clear the root node's children edges
+	g.edges[rootID] = make(map[string]struct{})
+}
+
 func (g *SBOMGraph) isReachable(id string) bool {
 	return g.reachableNodes()[id]
 }
 
-// =============================================================================
-// BUILDER
-// =============================================================================
-
-// SBOMGraphBuilder provides a fluent API for constructing graphs.
-type SBOMGraphBuilder struct {
-	graph             *SBOMGraph
-	currentArtifact   string
-	currentInfoSource string
-}
-
-// NewSBOMGraphBuilder creates a new builder.
-func NewSBOMGraphBuilder() *SBOMGraphBuilder {
-	return &SBOMGraphBuilder{graph: NewSBOMGraph()}
-}
-
-// Artifact sets the current artifact context.
-func (b *SBOMGraphBuilder) Artifact(name string) *SBOMGraphBuilder {
-	b.currentArtifact = b.graph.AddArtifact(name)
-	b.currentInfoSource = "" // Reset info source when changing artifact
-	return b
-}
-
-// InfoSource sets the current info source context (requires artifact).
-func (b *SBOMGraphBuilder) InfoSource(sourceID string, sourceType InfoSourceType) *SBOMGraphBuilder {
-	if b.currentArtifact == "" {
-		panic("must set artifact before info source")
+func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string) {
+	dashboardURL := ""
+	if metadata.FrontendURL != "" && metadata.OrgSlug != "" && metadata.ProjectSlug != "" && metadata.AssetSlug != "" {
+		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", metadata.FrontendURL, metadata.OrgSlug, metadata.ProjectSlug, metadata.AssetSlug)
 	}
-	b.currentInfoSource = b.graph.AddInfoSource(b.currentArtifact, sourceID, sourceType)
-	return b
-}
 
-// Component adds a component as a root of the current info source.
-func (b *SBOMGraphBuilder) Component(comp cdx.Component) *SBOMGraphBuilder {
-	if b.currentInfoSource == "" {
-		panic("must set info source before adding components")
+	if metadata.AssetVersionSlug != "" {
+		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(metadata.AssetVersionSlug))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(metadata.AssetVersionSlug))
+		}
+	} else {
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
+		}
 	}
-	compID := b.graph.AddComponent(comp)
-	b.graph.AddEdge(b.currentInfoSource, compID)
-	return b
-}
 
-// Dependency adds a dependency edge between two components.
-func (b *SBOMGraphBuilder) Dependency(parentPurl, childPurl string) *SBOMGraphBuilder {
-	// Ensure both components exist
-	if b.graph.nodes[parentPurl] == nil {
-		b.graph.AddComponent(cdx.Component{BOMRef: parentPurl, PackageURL: parentPurl})
+	if metadata.AssetVersionSlug != "" && metadata.ArtifactName != "" {
+		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
+		if dashboardURL != "" {
+			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(metadata.ArtifactName))
+		}
+	} else if metadata.ArtifactName != "" {
+		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
 	}
-	if b.graph.nodes[childPurl] == nil {
-		b.graph.AddComponent(cdx.Component{BOMRef: childPurl, PackageURL: childPurl})
-	}
-	b.graph.AddEdge(parentPurl, childPurl)
-	return b
-}
 
-// Vulnerability adds a vulnerability.
-func (b *SBOMGraphBuilder) Vulnerability(vuln cdx.Vulnerability) *SBOMGraphBuilder {
-	b.graph.AddVulnerability(vuln)
-	return b
-}
-
-// Build returns the constructed graph.
-func (b *SBOMGraphBuilder) Build() *SBOMGraph {
-	return b.graph
+	return docURL, dashboardURL
 }
 
 func getInfoSourceTypeByInspectingSBOM(bom *cdx.BOM) InfoSourceType {
@@ -1196,7 +1137,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	// Add edges
 	for parent, children := range depMap {
 		// If parent is root, add as info source children
-		if parent == rootRef || parent == "" || parent == ROOT {
+		if parent == rootRef || parent == "" || parent == GraphRootNodeID {
 			for _, child := range children {
 				if g.nodes[child] != nil {
 					g.AddEdge(infoID, child)
@@ -1247,6 +1188,14 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 		}
 	}
 
+	return g
+}
+
+func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
+	g := NewSBOMGraph()
+	for _, vuln := range vulns {
+		g.AddVulnerability(vuln)
+	}
 	return g
 }
 

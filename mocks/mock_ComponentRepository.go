@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
@@ -664,29 +665,20 @@ func (_c *ComponentRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) sh
 }
 
 // HandleStateDiff provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) HandleStateDiff(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, oldState, newState, artifactName)
+func (_mock *ComponentRepository) HandleStateDiff(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
+	ret := _mock.Called(tx, assetVersion, wholeAssetGraph, diff)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleStateDiff")
 	}
 
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) (bool, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) bool); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.AssetVersion, *normalize.SBOMGraph, normalize.GraphDiff) error); ok {
+		r0 = returnFunc(tx, assetVersion, wholeAssetGraph, diff)
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // ComponentRepository_HandleStateDiff_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleStateDiff'
@@ -696,59 +688,47 @@ type ComponentRepository_HandleStateDiff_Call struct {
 
 // HandleStateDiff is a helper method to define mock.On call
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - oldState []models.ComponentDependency
-//   - newState []models.ComponentDependency
-//   - artifactName string
-func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersionName interface{}, assetID interface{}, oldState interface{}, newState interface{}, artifactName interface{}) *ComponentRepository_HandleStateDiff_Call {
-	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersionName, assetID, oldState, newState, artifactName)}
+//   - assetVersion models.AssetVersion
+//   - wholeAssetGraph *normalize.SBOMGraph
+//   - diff normalize.GraphDiff
+func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersion interface{}, wholeAssetGraph interface{}, diff interface{}) *ComponentRepository_HandleStateDiff_Call {
+	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersion, wholeAssetGraph, diff)}
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
 			arg0 = args[0].(shared.DB)
 		}
-		var arg1 string
+		var arg1 models.AssetVersion
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(models.AssetVersion)
 		}
-		var arg2 uuid.UUID
+		var arg2 *normalize.SBOMGraph
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*normalize.SBOMGraph)
 		}
-		var arg3 []models.ComponentDependency
+		var arg3 normalize.GraphDiff
 		if args[3] != nil {
-			arg3 = args[3].([]models.ComponentDependency)
-		}
-		var arg4 []models.ComponentDependency
-		if args[4] != nil {
-			arg4 = args[4].([]models.ComponentDependency)
-		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg3 = args[3].(normalize.GraphDiff)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
-			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Return(b bool, err error) *ComponentRepository_HandleStateDiff_Call {
-	_c.Call.Return(b, err)
+func (_c *ComponentRepository_HandleStateDiff_Call) Return(err error) *ComponentRepository_HandleStateDiff_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Return(run)
 	return _c
 }

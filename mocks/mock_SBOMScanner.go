@@ -38,7 +38,7 @@ func (_m *SBOMScanner) EXPECT() *SBOMScanner_Expecter {
 }
 
 // Scan provides a mock function for the type SBOMScanner
-func (_mock *SBOMScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error) {
+func (_mock *SBOMScanner) Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
 	ret := _mock.Called(bom)
 
 	if len(ret) == 0 {
@@ -47,17 +47,17 @@ func (_mock *SBOMScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, e
 
 	var r0 []models.VulnInPackage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*normalize.CdxBom) ([]models.VulnInPackage, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(*normalize.SBOMGraph) ([]models.VulnInPackage, error)); ok {
 		return returnFunc(bom)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*normalize.CdxBom) []models.VulnInPackage); ok {
+	if returnFunc, ok := ret.Get(0).(func(*normalize.SBOMGraph) []models.VulnInPackage); ok {
 		r0 = returnFunc(bom)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnInPackage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(*normalize.CdxBom) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(*normalize.SBOMGraph) error); ok {
 		r1 = returnFunc(bom)
 	} else {
 		r1 = ret.Error(1)
@@ -71,16 +71,16 @@ type SBOMScanner_Scan_Call struct {
 }
 
 // Scan is a helper method to define mock.On call
-//   - bom *normalize.CdxBom
+//   - bom *normalize.SBOMGraph
 func (_e *SBOMScanner_Expecter) Scan(bom interface{}) *SBOMScanner_Scan_Call {
 	return &SBOMScanner_Scan_Call{Call: _e.mock.On("Scan", bom)}
 }
 
-func (_c *SBOMScanner_Scan_Call) Run(run func(bom *normalize.CdxBom)) *SBOMScanner_Scan_Call {
+func (_c *SBOMScanner_Scan_Call) Run(run func(bom *normalize.SBOMGraph)) *SBOMScanner_Scan_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *normalize.CdxBom
+		var arg0 *normalize.SBOMGraph
 		if args[0] != nil {
-			arg0 = args[0].(*normalize.CdxBom)
+			arg0 = args[0].(*normalize.SBOMGraph)
 		}
 		run(
 			arg0,
@@ -94,7 +94,7 @@ func (_c *SBOMScanner_Scan_Call) Return(vulnInPackages []models.VulnInPackage, e
 	return _c
 }
 
-func (_c *SBOMScanner_Scan_Call) RunAndReturn(run func(bom *normalize.CdxBom) ([]models.VulnInPackage, error)) *SBOMScanner_Scan_Call {
+func (_c *SBOMScanner_Scan_Call) RunAndReturn(run func(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error)) *SBOMScanner_Scan_Call {
 	_c.Call.Return(run)
 	return _c
 }

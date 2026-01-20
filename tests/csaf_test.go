@@ -174,7 +174,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			// iterate over the vulns.
 			// expect CVE-2024-0001 and CVE-2024-0002 to be present,
 			// CVE-2024-0001 should be open, CVE-2024-0002 should be marked as false positive
-			for _, vuln := range *boms[0].GetVulnerabilities() {
+			for vuln := range boms[0].Vulnerabilities() {
 				switch vuln.ID {
 				case "CVE-2024-0001":
 					assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)

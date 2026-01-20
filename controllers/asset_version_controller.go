@@ -189,12 +189,12 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 
-	sbom, _, err := a.assetVersionService.LoadFullSBOM(app)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(app)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
-	minimalTree := sbom.EjectMinimalDependencyTree()
+	minimalTree := sbom.ToMinimalTree()
 
 	return ctx.JSON(200, minimalTree)
 }
@@ -208,7 +208,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	artifactName := ctx.QueryParam("artifactName")
 
 	// Load the full SBOM and find paths using in-memory tree traversal
-	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 	}
@@ -216,14 +216,14 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	// If artifact name is specified, extract just that artifact's subtree
 	targetBom := sbom
 	if artifactName != "" {
-		targetBom = sbom.ExtractArtifactBom(artifactName)
+		err = sbom.ScopeToArtifact(artifactName)
 		if targetBom == nil {
 			return echo.NewHTTPError(404, "artifact not found")
 		}
 	}
 
 	// Find all paths to the component using CdxBom's tree traversal
-	return ctx.JSON(200, targetBom.FindAllPathsToComponent(pURL))
+	return ctx.JSON(200, targetBom.FindAllPathsToPURL(pURL))
 }
 
 // @Summary Get SBOM in JSON format
@@ -239,7 +239,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json [get]
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
 		return err
 	}
@@ -248,18 +248,18 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) SBOMXML(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
 		return err
 	}
 	asset := shared.GetAsset(ctx)
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
@@ -270,7 +270,7 @@ func (a *AssetVersionController) VEXXML(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.EjectVex(ctxToBOMMetadata(ctx, asset)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx, asset)))
 }
 
 // @Summary Get VEX in JSON format
@@ -293,7 +293,7 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.EjectVex(ctxToBOMMetadata(ctx, asset)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx, asset)))
 }
 
 func (a *AssetVersionController) OpenVEXJSON(ctx shared.Context) error {
@@ -361,7 +361,7 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	return dependencyVulns, nil
 }
 
-func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.CdxBom, error) {
+func (a *AssetVersionController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph, error) {
 	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -523,7 +523,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 				m[dv.CVEID] = dv
 			}
 
-			for _, v := range *vex.GetVulnerabilities() {
+			for v := range vex.Vulnerabilities() {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue
@@ -690,7 +690,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx shared.Context)
 
 func (a *AssetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, _, err := a.assetVersionService.LoadFullSBOM(assetVersion)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
 		return err
 
@@ -700,7 +700,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx shared.Context) error {
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.EjectSBOM(ctxToBOMMetadata(ctx, asset)))
+	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.ToCycloneDX(ctxToBOMMetadata(ctx, asset)))
 	if err != nil {
 		return err
 	}

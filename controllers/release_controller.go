@@ -215,7 +215,9 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		return nil, err
 	}
 
-	return merged.EjectSBOM(normalize.BOMMetadata{}), nil
+	return merged.ToCycloneDX(normalize.BOMMetadata{
+		RootName: release.Name,
+	}), nil
 }
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
@@ -225,20 +227,22 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 		return nil, err
 	}
 
-	return merged.EjectVex(normalize.BOMMetadata{}), nil
+	return merged.ToCycloneDX(normalize.BOMMetadata{
+		RootName: release.Name,
+	}), nil
 }
 
 // mergeReleaseSBOM loops over release items, resolving each item either as an artifact
 // reference (by asset ID, asset version name, or artifact name) or as a child release
 // reference with no asset fields, and guards against bugs such as nil-pointer access.
-func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
 	visiting[release.ID] = struct{}{}
 	defer delete(visiting, release.ID)
 
-	var boms []*normalize.CdxBom
+	var boms []*normalize.SBOMGraph
 
 	for _, item := range release.Items {
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
@@ -267,26 +271,32 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		bom, _, err := h.assetVersionService.LoadFullSBOM(models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName})
+		bom, err := h.assetVersionService.LoadFullSBOMGraph(models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName})
 		if err != nil {
 			return nil, err
 		}
 
+		bom.ScopeToArtifact(*item.ArtifactName)
 		// scope to artifact
-		boms = append(boms, bom.ExtractArtifactBom(*item.ArtifactName))
+		boms = append(boms, bom)
 	}
 
-	return normalize.MergeCdxBoms(boms...), nil
+	result := normalize.NewSBOMGraph()
+	for _, b := range boms {
+		result.MergeGraph(b)
+	}
+
+	return result, nil
 }
 
-func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.CdxBom, error) {
+func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
 	visiting[release.ID] = struct{}{}
 	defer delete(visiting, release.ID)
 
-	var boms []*normalize.CdxBom
+	var boms []*normalize.SBOMGraph
 
 	for _, item := range release.Items {
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
@@ -334,8 +344,12 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 			boms = append(boms, bom)
 		}
 	}
+	result := normalize.NewSBOMGraph()
+	for _, b := range boms {
+		result.MergeGraph(b)
+	}
 
-	return normalize.MergeCdxBoms(boms...), nil
+	return result, nil
 }
 
 // @Summary Get release details

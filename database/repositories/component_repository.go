@@ -34,6 +34,8 @@ type componentRepository struct {
 	db *gorm.DB
 }
 
+var _ shared.ComponentRepository = (*componentRepository)(nil)
+
 func NewComponentRepository(db *gorm.DB) *componentRepository {
 	return &componentRepository{
 		Repository: newGormRepository[string, models.Component](db),
@@ -148,47 +150,61 @@ func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Compo
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph normalize.SBOMGraph, diff normalize.GraphDiff) error {
+func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
 	// Create new components in the database
-	if err := c.CreateBatch(nil, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
-		return models.Component{
-			ID: normalize.GetComponentID(*node.Component),
+	if len(diff.AddedNodes) > 0 {
+		if err := c.CreateBatch(nil, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
+			return models.Component{
+				ID: normalize.GetComponentID(*node.Component),
+			}
+		})); err != nil {
+			return err
 		}
-	})); err != nil {
-		return err
 	}
 
 	// delete removed components from the database
-	if err := c.DeleteBatch(nil, utils.Map(diff.RemovedNodeIDs(), func(componentID string) models.Component {
-		return models.Component{
-			ID: componentID,
+	removedNodeIDs := diff.RemovedNodeIDs()
+	if len(removedNodeIDs) > 0 {
+		if err := c.DeleteBatch(nil, utils.Map(removedNodeIDs, func(componentID string) models.Component {
+			return models.Component{
+				ID: componentID,
+			}
+		})); err != nil {
+			return err
 		}
-	})); err != nil {
-		return err
 	}
 
 	// delete the removed edges from the database
 	// we can only find them by componentID and dependencyID
 	// thus the query needs to be built here
 
-	var valueClauses []string
-	for _, edge := range diff.RemovedEdges {
-		valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s')", edge[0], edge[1]))
-	}
-	// Join the value clauses with commas
-	values := strings.Join(valueClauses, ",")
-	// Construct the SQL query
-	query := fmt.Sprintf(`
+	if len(diff.RemovedEdges) > 0 {
+		var valueClauses []string
+		for _, edge := range diff.RemovedEdges {
+			var componentID string = edge[0]
+			if componentID == normalize.GraphRootNodeID {
+				componentID = "NULL"
+			} else {
+				componentID = fmt.Sprintf("'%s'", componentID)
+			}
+
+			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, edge[1]))
+		}
+		// Join the value clauses with commas
+		values := strings.Join(valueClauses, ",")
+		// Construct the SQL query
+		query := fmt.Sprintf(`
 			DELETE FROM component_dependencies
 			WHERE (component_id, dependency_id) IN (VALUES %s)
 			AND asset_id = ?
 			AND asset_version_name = ?
 		`, values)
-	// execute the query
-	err := c.GetDB(nil).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
+		// execute the query
+		err := c.GetDB(nil).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	// for added edges, create them in the database
@@ -196,10 +212,17 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	for _, edge := range diff.AddedEdges {
 		c1 := wholeAssetGraph.Node(edge[0])
 		c2 := wholeAssetGraph.Node(edge[1])
+		var componentID *string = nil
+		if c1.Component != nil {
+			// only happens for root node
+			id := normalize.GetComponentID(*c1.Component)
+			componentID = &id
+		}
+
 		componentDependency := models.ComponentDependency{
 			AssetID:          assetVersion.AssetID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      utils.EmptyThenNil(normalize.GetComponentID(*c1.Component)),
+			ComponentID:      componentID,
 			DependencyID:     normalize.GetComponentID(*c2.Component),
 		}
 

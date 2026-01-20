@@ -52,21 +52,21 @@ func (componentController ComponentController) LicenseDistribution(ctx shared.Co
 	}
 
 	// Load the full SBOM
-	sbom, _, err := componentController.assetVersionService.LoadFullSBOM(assetVersion)
+	sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 	}
 
 	// If artifact name is specified, extract just that artifact's subtree
 	if artifactName != "" {
-		sbom = sbom.ExtractArtifactBom(artifactName)
-		if sbom == nil {
+		err := sbom.ScopeToArtifact(artifactName)
+		if err != nil {
 			return ctx.JSON(200, []licenseResponse{})
 		}
 	}
 
 	// Get license distribution from the SBOM
-	fetchedLicenses := sbom.GetLicenseDistribution()
+	fetchedLicenses := sbom.LicenseDistribution()
 
 	var res = make([]licenseResponse, 0, len(fetchedLicenses))
 	for id, count := range fetchedLicenses {

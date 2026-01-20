@@ -18,7 +18,6 @@ package controllers
 import (
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -41,13 +40,6 @@ func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetad
 		}
 	}
 
-	var assetID *uuid.UUID
-	addExternalReferences := false
-	if asset.SharesInformation {
-		assetID = &asset.ID
-		addExternalReferences = true
-	}
-
 	return normalize.BOMMetadata{
 		AssetVersionSlug:      assetVersionSlug,
 		AssetSlug:             assetSlug,
@@ -55,7 +47,7 @@ func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetad
 		ProjectSlug:           projectSlug,
 		FrontendURL:           frontendURL,
 		ArtifactName:          artifactName,
-		AssetID:               assetID,
-		AddExternalReferences: addExternalReferences,
+		AssetID:               asset.ID,
+		AddExternalReferences: asset.SharesInformation,
 	}
 }

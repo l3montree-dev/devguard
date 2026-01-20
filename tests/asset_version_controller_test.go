@@ -210,7 +210,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln2 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability: models.Vulnerability{
+			AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               cve,
 		CVEID:             cve.CVE,

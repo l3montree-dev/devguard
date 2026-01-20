@@ -116,7 +116,7 @@ func normalizePurl(purl string) string {
 }
 
 func GetComponentID(component cdx.Component) string {
-	if component.BOMRef == ROOT {
+	if component.BOMRef == GraphRootNodeID {
 		return "" // replace with nil before storing.
 	}
 	var purl string

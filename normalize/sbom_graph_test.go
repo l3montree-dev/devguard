@@ -1,19 +1,20 @@
 package normalize
 
 import (
+	"slices"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/stretchr/testify/assert"
 )
 
-var rootMetadata = &cdx.Metadata{
+var GraphRootNodeIDMetadata = &cdx.Metadata{
 	Component: &cdx.Component{
-		BOMRef: "root",
+		BOMRef: GraphRootNodeID,
 	},
 }
 
-func TestFromCdxBom(t *testing.T) {
+func TestSBOMGraphFromCycloneDX(t *testing.T) {
 	artifactName := "test-artifact"
 	origin := "test-origin"
 
@@ -21,7 +22,7 @@ func TestFromCdxBom(t *testing.T) {
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: ROOT,
+					BOMRef: GraphRootNodeID,
 				},
 			},
 			Components: &[]cdx.Component{{
@@ -32,28 +33,28 @@ func TestFromCdxBom(t *testing.T) {
 				Type:       cdx.ComponentTypeLibrary,
 			}},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "ROOT", Dependencies: &[]string{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{
 					"pkg:npm/test-component@1.0.0",
 				}},
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin)
-		component := (*result.GetComponents())[0] // index 0 is the artifact name
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		component := slices.Collect(result.Components())[0] // index 0 is the artifact name
 
-		assert.Equal(t, "test-component", component.Name)
-		assert.Equal(t, "1.0.0", component.Version)
-		assert.Contains(t, component.PackageURL, "test-component")
+		assert.Equal(t, "test-component", component.Component.Name)
+		assert.Equal(t, "1.0.0", component.Component.Version)
+		assert.Contains(t, component.Component.PackageURL, "test-component")
 	})
 
-	t.Run("root ref not in dependencies - single top-level component", func(t *testing.T) {
-		// This tests the case where the root BOMRef is NOT part of any dependency entry
+	t.Run("GraphRootNodeID ref not in dependencies - single top-level component", func(t *testing.T) {
+		// This tests the case where the GraphRootNodeID BOMRef is NOT part of any dependency entry
 		// The function should find all components not referenced by any other dependency
-		// and add them as direct children of root
+		// and add them as direct children of GraphRootNodeID
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: ROOT,
+					BOMRef: GraphRootNodeID,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -65,40 +66,36 @@ func TestFromCdxBom(t *testing.T) {
 					Type:       cdx.ComponentTypeLibrary,
 				},
 			},
-			// Note: root is NOT in dependencies, only component-a has an entry
+			// Note: GraphRootNodeID is NOT in dependencies, only component-a has an entry
 			Dependencies: &[]cdx.Dependency{
 				{Ref: "pkg:npm/component-a@1.0.0", Dependencies: &[]string{}},
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
 
-		// Verify the component is reachable from root
-		components := result.GetComponents()
+		// Verify the component is reachable from GraphRootNodeID
+		components := result.Components()
 		assert.NotNil(t, components)
 
 		// Check that component-a is included
 		found := false
-		for _, comp := range *components {
-			if comp.BOMRef == "pkg:npm/component-a@1.0.0" {
+		for comp := range components {
+			if comp.Component.BOMRef == "pkg:npm/component-a@1.0.0" {
 				found = true
 				break
 			}
 		}
-		assert.True(t, found, "component-a should be reachable from root")
-
-		// Check that root has component-a as dependency
-		deps := result.GetDependencies()
-		assert.NotNil(t, deps)
+		assert.True(t, found, "component-a should be reachable from GraphRootNodeID")
 	})
 
-	t.Run("root ref not in dependencies - multiple top-level components", func(t *testing.T) {
+	t.Run("GraphRootNodeID ref not in dependencies - multiple top-level components", func(t *testing.T) {
 		// Tests case where multiple components are not referenced by any other dependency
-		// All should become direct children of root
+		// All should become direct children of GraphRootNodeID
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: ROOT,
+					BOMRef: GraphRootNodeID,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -117,33 +114,33 @@ func TestFromCdxBom(t *testing.T) {
 					Type:       cdx.ComponentTypeLibrary,
 				},
 			},
-			// Neither component is referenced by any other - both should become root children
+			// Neither component is referenced by any other - both should become GraphRootNodeID children
 			Dependencies: &[]cdx.Dependency{
 				{Ref: "pkg:npm/component-a@1.0.0", Dependencies: &[]string{}},
 				{Ref: "pkg:npm/component-b@2.0.0", Dependencies: &[]string{}},
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin)
-		components := result.GetComponents()
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		components := result.Components()
 		assert.NotNil(t, components)
 
 		// Both components should be reachable
 		componentRefs := make(map[string]bool)
-		for _, comp := range *components {
-			componentRefs[comp.BOMRef] = true
+		for comp := range components {
+			componentRefs[comp.Component.BOMRef] = true
 		}
 		assert.True(t, componentRefs["pkg:npm/component-a@1.0.0"], "component-a should be included")
 		assert.True(t, componentRefs["pkg:npm/component-b@2.0.0"], "component-b should be included")
 	})
 
-	t.Run("root ref not in dependencies - nested dependency tree", func(t *testing.T) {
-		// Tests case where there's a dependency tree but root is not connected
-		// Only top-level components (not referenced by others) should become root children
+	t.Run("GraphRootNodeID ref not in dependencies - nested dependency tree", func(t *testing.T) {
+		// Tests case where there's a dependency tree but GraphRootNodeID is not connected
+		// Only top-level components (not referenced by others) should become GraphRootNodeID children
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -169,7 +166,7 @@ func TestFromCdxBom(t *testing.T) {
 					Type:       cdx.ComponentTypeLibrary,
 				},
 			},
-			// parent -> child -> grandchild, but root is not connected
+			// parent -> child -> grandchild, but GraphRootNodeID is not connected
 			Dependencies: &[]cdx.Dependency{
 				{Ref: "pkg:npm/parent@1.0.0", Dependencies: &[]string{"pkg:npm/child@1.0.0"}},
 				{Ref: "pkg:npm/child@1.0.0", Dependencies: &[]string{"pkg:npm/grandchild@1.0.0"}},
@@ -177,34 +174,34 @@ func TestFromCdxBom(t *testing.T) {
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin)
-		components := result.GetComponents()
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		components := result.Components()
 		assert.NotNil(t, components)
 
-		// All components should be reachable (parent becomes root child, others through parent)
+		// All components should be reachable (parent becomes GraphRootNodeID child, others through parent)
 		componentRefs := make(map[string]bool)
-		for _, comp := range *components {
-			componentRefs[comp.BOMRef] = true
+		for comp := range components {
+			componentRefs[comp.Component.BOMRef] = true
 		}
 		assert.True(t, componentRefs["pkg:npm/parent@1.0.0"], "parent should be included")
 		assert.True(t, componentRefs["pkg:npm/child@1.0.0"], "child should be included")
 		assert.True(t, componentRefs["pkg:npm/grandchild@1.0.0"], "grandchild should be included")
 	})
 
-	t.Run("root ref not in dependencies - mixed top-level and nested", func(t *testing.T) {
-		// Tests case with multiple separate subtrees - each top-level should become root child
+	t.Run("GraphRootNodeID ref not in dependencies - mixed top-level and nested", func(t *testing.T) {
+		// Tests case with multiple separate subtrees - each top-level should become GraphRootNodeID child
 		bom := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef:     "pkg:npm/tree1-root@1.0.0",
-					Name:       "tree1-root",
+					BOMRef:     "pkg:npm/tree1-GraphRootNodeID@1.0.0",
+					Name:       "tree1-GraphRootNodeID",
 					Version:    "1.0.0",
-					PackageURL: "pkg:npm/tree1-root@1.0.0",
+					PackageURL: "pkg:npm/tree1-GraphRootNodeID@1.0.0",
 					Type:       cdx.ComponentTypeLibrary,
 				},
 				{
@@ -215,33 +212,33 @@ func TestFromCdxBom(t *testing.T) {
 					Type:       cdx.ComponentTypeLibrary,
 				},
 				{
-					BOMRef:     "pkg:npm/tree2-root@1.0.0",
-					Name:       "tree2-root",
+					BOMRef:     "pkg:npm/tree2-GraphRootNodeID@1.0.0",
+					Name:       "tree2-GraphRootNodeID",
 					Version:    "1.0.0",
-					PackageURL: "pkg:npm/tree2-root@1.0.0",
+					PackageURL: "pkg:npm/tree2-GraphRootNodeID@1.0.0",
 					Type:       cdx.ComponentTypeLibrary,
 				},
 			},
-			// Two separate subtrees, neither connected to root
+			// Two separate subtrees, neither connected to GraphRootNodeID
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "pkg:npm/tree1-root@1.0.0", Dependencies: &[]string{"pkg:npm/tree1-child@1.0.0"}},
+				{Ref: "pkg:npm/tree1-GraphRootNodeID@1.0.0", Dependencies: &[]string{"pkg:npm/tree1-child@1.0.0"}},
 				{Ref: "pkg:npm/tree1-child@1.0.0", Dependencies: &[]string{}},
-				{Ref: "pkg:npm/tree2-root@1.0.0", Dependencies: &[]string{}},
+				{Ref: "pkg:npm/tree2-GraphRootNodeID@1.0.0", Dependencies: &[]string{}},
 			},
 		}
 
-		result := FromCdxBom(bom, artifactName, origin)
-		components := result.GetComponents()
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		components := result.Components()
 		assert.NotNil(t, components)
 
 		// All three components should be reachable
 		componentRefs := make(map[string]bool)
-		for _, comp := range *components {
-			componentRefs[comp.BOMRef] = true
+		for comp := range components {
+			componentRefs[comp.Component.BOMRef] = true
 		}
-		assert.True(t, componentRefs["pkg:npm/tree1-root@1.0.0"], "tree1-root should be included")
+		assert.True(t, componentRefs["pkg:npm/tree1-GraphRootNodeID@1.0.0"], "tree1-GraphRootNodeID should be included")
 		assert.True(t, componentRefs["pkg:npm/tree1-child@1.0.0"], "tree1-child should be included")
-		assert.True(t, componentRefs["pkg:npm/tree2-root@1.0.0"], "tree2-root should be included")
+		assert.True(t, componentRefs["pkg:npm/tree2-GraphRootNodeID@1.0.0"], "tree2-GraphRootNodeID should be included")
 	})
 
 }
@@ -250,7 +247,7 @@ func TestMergeCdxBoms(t *testing.T) {
 	t.Run("merge two BOMs with different components", func(t *testing.T) {
 		bom1 := &cdx.BOM{
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "root-bom-1"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -262,13 +259,13 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "root-bom-1", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
+				{Ref: "GraphRootNodeID-bom-1", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
 			},
 		}
 
 		bom2 := &cdx.BOM{
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "root-bom-2"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -280,11 +277,13 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "root-bom-2", Dependencies: &[]string{"pkg:npm/component-2@2.0.0"}},
+				{Ref: "GraphRootNodeID-bom-2", Dependencies: &[]string{"pkg:npm/component-2@2.0.0"}},
 			},
 		}
 
-		result := MergeCdxBoms(FromCdxBom(bom1, "artifact-1", "test"), FromCdxBom(bom2, "artifact-2", "test"))
+		result := NewSBOMGraph()
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "sbom-1"))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "sbom-2"))
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -310,15 +309,17 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(BOMMetadata{
+		actual := result.ToCycloneDX(BOMMetadata{
 			ArtifactName: "merged-artifact",
-		}), expected))
+		})
+
+		assert.Nil(t, StructuralCompareCdxBoms(actual, expected))
 	})
 
 	t.Run("merge BOMs with duplicate components", func(t *testing.T) {
 		bom1 := &cdx.BOM{
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "root-bom-1"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -330,13 +331,13 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "root-bom-1", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
+				{Ref: "GraphRootNodeID-bom-1", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
 			},
 		}
 
 		bom2 := &cdx.BOM{
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "root-bom-2"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -348,11 +349,13 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "root-bom-2", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
+				{Ref: "GraphRootNodeID-bom-2", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
 			},
 		}
 
-		result := MergeCdxBoms(FromCdxBom(bom1, "artifact-1", "test"), FromCdxBom(bom2, "artifact-2", "test"))
+		result := NewSBOMGraph()
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "test"))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "test"))
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -374,7 +377,7 @@ func TestMergeCdxBoms(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(result.EjectSBOM(BOMMetadata{
+		assert.Nil(t, StructuralCompareCdxBoms(result.ToCycloneDX(BOMMetadata{
 			ArtifactName: "merged-artifact",
 		}), expected))
 	})
@@ -389,20 +392,20 @@ func TestShouldNotCrashWithEmptyMetadataComponent(t *testing.T) {
 		}},
 	}
 
-	normalized := FromCdxBom(b1, "test", "test")
+	normalized := SBOMGraphFromCycloneDX(b1, "test", "test")
 	assert.NotNil(t, normalized)
 }
 
 func TestMergeCdxBomsSimple(t *testing.T) {
 	b1 := &cdx.BOM{
-		Metadata: rootMetadata,
+		Metadata: GraphRootNodeIDMetadata,
 		Components: &[]cdx.Component{{
 			Name:       "comp-a",
 			PackageURL: "pkg:maven/org.example/comp-a@1.0.0",
 		}},
 	}
 	b2 := &cdx.BOM{
-		Metadata: rootMetadata,
+		Metadata: GraphRootNodeIDMetadata,
 		Components: &[]cdx.Component{{
 			Name:       "comp-b",
 			PackageURL: "pkg:maven/org.example/comp-b@2.0.0",
@@ -412,20 +415,23 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 		}},
 	}
 
-	merged := MergeCdxBoms(FromCdxBom(b1, "artifact-1", "test"), FromCdxBom(b2, "artifact-2", "test")).EjectVex(BOMMetadata{})
+	result := NewSBOMGraph()
+	result.MergeGraph(SBOMGraphFromCycloneDX(b1, "artifact-1", "test"))
+	result.MergeGraph(SBOMGraphFromCycloneDX(b2, "artifact-2", "test"))
+	result.ToCycloneDX(BOMMetadata{})
 
-	assert.Len(t, *merged.Vulnerabilities, 1)
+	assert.Len(t, slices.Collect(result.Vulnerabilities()), 1)
 }
 
-func TestReplaceSubtree(t *testing.T) {
+func TestMergeComplex(t *testing.T) {
 	artifactName := "test-artifact"
 
 	t.Run("should add the subtree if it does not exist", func(t *testing.T) {
 		currentSbom := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 				{
 					BOMRef: "pkg:container",
@@ -433,7 +439,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: GraphRootNodeID,
 					Dependencies: &[]string{
 						"pkg:container",
 					},
@@ -441,10 +447,10 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 		newSubtree := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 				{
 					BOMRef: "pkg:source",
@@ -452,7 +458,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: GraphRootNodeID,
 					Dependencies: &[]string{
 						"pkg:source",
 					},
@@ -460,12 +466,9 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan").ExtractArtifactBom(artifactName)
-
-		subtree := FromCdxBom(newSubtree, artifactName, "source-scan")
-		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
-			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
-		}
+		currentGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan")
+		newGraph := SBOMGraphFromCycloneDX(newSubtree, artifactName, "source-scan")
+		currentGraph.MergeGraph(newGraph)
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -502,19 +505,18 @@ func TestReplaceSubtree(t *testing.T) {
 				},
 			},
 		}
-		bom := rootCdx.ExtractArtifactBom(artifactName)
 
-		assert.Nil(t, StructuralCompareCdxBoms(bom.EjectSBOM(BOMMetadata{
+		assert.Nil(t, StructuralCompareCdxBoms(currentGraph.ToCycloneDX(BOMMetadata{
 			ArtifactName: artifactName,
 		}), expected))
 	})
 
 	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
 		currentSbom := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 				{
 					BOMRef: "pkg:container@1.0.0",
@@ -522,7 +524,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: GraphRootNodeID,
 					Dependencies: &[]string{
 						"pkg:container@1.0.0",
 					},
@@ -530,10 +532,10 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 		newSubtree := &cdx.BOM{
-			Metadata: rootMetadata,
+			Metadata: GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "root",
+					BOMRef: GraphRootNodeID,
 				},
 				{
 					BOMRef: "pkg:container@2.0.0",
@@ -541,7 +543,7 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "root",
+					Ref: GraphRootNodeID,
 					Dependencies: &[]string{
 						"pkg:container@2.0.0",
 					},
@@ -549,12 +551,10 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan")
-		rootCdx = rootCdx.ExtractArtifactBom(artifactName)
-		subtree := FromCdxBom(newSubtree, artifactName, "container-scan")
-		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
-			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
-		}
+		resultGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan")
+
+		subtree := SBOMGraphFromCycloneDX(newSubtree, artifactName, "container-scan")
+		resultGraph.MergeGraph(subtree)
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -584,133 +584,19 @@ func TestReplaceSubtree(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(BOMMetadata{
+		assert.Nil(t, StructuralCompareCdxBoms(resultGraph.ToCycloneDX(BOMMetadata{
 			ArtifactName: artifactName,
 		}), expected))
 	})
 
-	t.Run("should replace ONLY the passed subtree", func(t *testing.T) {
-		currentSbom := &cdx.BOM{
-			Metadata: rootMetadata,
-			Components: &[]cdx.Component{
-				{
-					BOMRef: "root",
-				},
-				{
-					BOMRef: "pkg:container@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "root",
-					Dependencies: &[]string{
-						"pkg:container@1.0.0",
-					},
-				},
-			},
-		}
-
-		sourceTree := &cdx.BOM{
-			Metadata: rootMetadata,
-			Components: &[]cdx.Component{
-				{
-					BOMRef: "root",
-				},
-				{
-					BOMRef: "pkg:source@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "root",
-					Dependencies: &[]string{
-						"pkg:source@1.0.0",
-					},
-				},
-			},
-		}
-
-		// add the source tree first
-		rootCdx := FromCdxBom(currentSbom, artifactName, "container-scan")
-		rootCdx = rootCdx.ExtractArtifactBom(artifactName)
-		sourceSubtree := FromCdxBom(sourceTree, artifactName, "source-scan")
-		for _, informationSourceNode := range sourceSubtree.GetInformationSourceNodes() {
-			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
-		}
-
-		newSubtree := &cdx.BOM{
-			Metadata: rootMetadata,
-			Components: &[]cdx.Component{
-				{
-					BOMRef: "root",
-				},
-				{
-					BOMRef: "pkg:container@2.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "root",
-					Dependencies: &[]string{
-						"pkg:container@2.0.0",
-					},
-				},
-			},
-		}
-
-		subtree := FromCdxBom(newSubtree, artifactName, "container-scan")
-		for _, informationSourceNode := range subtree.GetInformationSourceNodes() {
-			rootCdx.ReplaceOrAddInformationSourceNode(informationSourceNode)
-		}
-
-		expected := &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: artifactName,
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef: artifactName,
-				},
-				{
-					BOMRef: "pkg:container@2.0.0",
-				},
-				{
-					BOMRef: "pkg:source@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: artifactName,
-					Dependencies: &[]string{
-						"pkg:container@2.0.0",
-						"pkg:source@1.0.0",
-					},
-				},
-				{
-					Ref:          "pkg:source@1.0.0",
-					Dependencies: &[]string{},
-				},
-				{
-					Ref:          "pkg:container@2.0.0",
-					Dependencies: &[]string{},
-				},
-			},
-		}
-
-		assert.Nil(t, StructuralCompareCdxBoms(rootCdx.EjectSBOM(BOMMetadata{
-			ArtifactName: artifactName,
-		}), expected))
-	})
 }
 
 func TestCalculateDepth(t *testing.T) {
 	t.Run("calculateDepth with valid tree", func(t *testing.T) {
-		bom := FromCdxBom(&cdx.BOM{
+		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "pkg:root",
+					BOMRef: "pkg:GraphRootNodeID",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -729,7 +615,7 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:root",
+					Ref: "pkg:GraphRootNodeID",
 					Dependencies: &[]string{
 						"pkg:golang/a",
 					},
@@ -767,7 +653,7 @@ func TestCalculateDepth(t *testing.T) {
 	})
 
 	t.Run("calculateDepth with invalid PURL", func(t *testing.T) {
-		bom := FromCdxBom(&cdx.BOM{
+		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
@@ -825,32 +711,36 @@ func TestCalculateDepth(t *testing.T) {
 	})
 
 	t.Run("calculateDepth with empty tree", func(t *testing.T) {
-		bom := FromCdxBom(&cdx.BOM{
+		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Components:   &[]cdx.Component{},
 			Dependencies: &[]cdx.Dependency{},
 		}, "pkg:artifact", "origin")
 
 		actual := bom.CalculateDepth()
 
-		if len(actual) != 3 || actual["pkg:artifact"] != 0 && actual["test"] != 1 && actual["pkg:root"] != 1 {
-			t.Errorf("expected depth map to contain only artifact and origin with depth 1, got %v", actual)
+		if len(actual) != 0 {
+			t.Errorf("expected empty depth map, got %v", actual)
 		}
 	})
 
 	t.Run("calculate depth with vex AND sbom path", func(t *testing.T) {
-		bom := FromCdxBom(&cdx.BOM{
+		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
+					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth",
+					PackageURL: "pkg:devguard/testorg/testgroup/testdepth",
 				},
 				{
-					BOMRef: "pkg:golang/a",
+					BOMRef:     "pkg:golang/a",
+					PackageURL: "pkg:golang/a",
 				},
 				{
-					BOMRef: "pkg:golang/b",
+					BOMRef:     "pkg:golang/b",
+					PackageURL: "pkg:golang/b",
 				},
 				{
-					BOMRef: "pkg:golang/c",
+					BOMRef:     "pkg:golang/c",
+					PackageURL: "pkg:golang/c",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -880,12 +770,8 @@ func TestCalculateDepth(t *testing.T) {
 		}, "artifact", "test")
 
 		// lets merge a vex that adds a false positive to golang/c
-		vex := FromCdxBom(&cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "pkg:root",
-				},
-			},
+		vex := SBOMGraphFromCycloneDX(&cdx.BOM{
+
 			Vulnerabilities: &[]cdx.Vulnerability{
 				{
 					ID: "CVE-2021",
@@ -897,11 +783,11 @@ func TestCalculateDepth(t *testing.T) {
 				},
 			},
 		}, "artifact", "vex")
-		bom = MergeCdxBoms(bom, vex)
+		vex.MergeGraph(bom)
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
-			"pkg:golang/c": 4, // root -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
+			"pkg:golang/c": 4, // GraphRootNodeID -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
 		}
 
 		for node, expectedDepth := range expectedDepths {
