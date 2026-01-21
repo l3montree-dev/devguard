@@ -227,7 +227,7 @@ func scanExternalImage(ctx context.Context) error {
 
 	buff := &bytes.Buffer{}
 	// marshal the bom back to json
-	err = cyclonedx.NewBOMEncoder(buff, cyclonedx.BOMFileFormatJSON).Encode(bom)
+	err = cyclonedx.NewBOMEncoder(buff, cyclonedx.BOMFileFormatJSON).SetEscapeHTML(false).Encode(bom)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func scanExternalImage(ctx context.Context) error {
 	if vex != nil {
 		vexBuff := &bytes.Buffer{}
 		// marshal the bom back to json
-		err = cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).Encode(vex)
+		err = cyclonedx.NewBOMEncoder(vexBuff, cyclonedx.BOMFileFormatJSON).SetEscapeHTML(false).Encode(vex)
 		if err != nil {
 			return err
 		}
