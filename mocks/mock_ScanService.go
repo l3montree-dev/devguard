@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,39 +39,43 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // ScanNormalizedSBOM provides a mock function for the type ScanService
-func (_mock *ScanService) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error) {
-	ret := _mock.Called(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+func (_mock *ScanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScanNormalizedSBOM")
 	}
 
-	var r0 int
-	var r1 int
+	var r0 []models.DependencyVuln
+	var r1 []models.DependencyVuln
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) (int, int, []models.DependencyVuln, error)); ok {
-		return returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
+		return returnFunc(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) int); ok {
-		r0 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) int); ok {
-		r1 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string) []models.DependencyVuln); ok {
+		r1 = returnFunc(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
-		r1 = ret.Get(1).(int)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]models.DependencyVuln)
+		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
-		r2 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if returnFunc, ok := ret.Get(2).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string) []models.DependencyVuln); ok {
+		r2 = returnFunc(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) error); ok {
-		r3 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if returnFunc, ok := ret.Get(3).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string) error); ok {
+		r3 = returnFunc(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -83,46 +88,51 @@ type ScanService_ScanNormalizedSBOM_Call struct {
 }
 
 // ScanNormalizedSBOM is a helper method to define mock.On call
+//   - tx shared.DB
 //   - org models.Org
 //   - project models.Project
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
-//   - normalizedBom *normalize.CdxBom
+//   - normalizedBom *normalize.SBOMGraph
 //   - userID string
-func (_e *ScanService_Expecter) ScanNormalizedSBOM(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, normalizedBom interface{}, userID interface{}) *ScanService_ScanNormalizedSBOM_Call {
-	return &ScanService_ScanNormalizedSBOM_Call{Call: _e.mock.On("ScanNormalizedSBOM", org, project, asset, assetVersion, artifact, normalizedBom, userID)}
+func (_e *ScanService_Expecter) ScanNormalizedSBOM(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, normalizedBom interface{}, userID interface{}) *ScanService_ScanNormalizedSBOM_Call {
+	return &ScanService_ScanNormalizedSBOM_Call{Call: _e.mock.On("ScanNormalizedSBOM", tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)}
 }
 
-func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string)) *ScanService_ScanNormalizedSBOM_Call {
+func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string)) *ScanService_ScanNormalizedSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Org
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(models.Org)
+			arg0 = args[0].(shared.DB)
 		}
-		var arg1 models.Project
+		var arg1 models.Org
 		if args[1] != nil {
-			arg1 = args[1].(models.Project)
+			arg1 = args[1].(models.Org)
 		}
-		var arg2 models.Asset
+		var arg2 models.Project
 		if args[2] != nil {
-			arg2 = args[2].(models.Asset)
+			arg2 = args[2].(models.Project)
 		}
-		var arg3 models.AssetVersion
+		var arg3 models.Asset
 		if args[3] != nil {
-			arg3 = args[3].(models.AssetVersion)
+			arg3 = args[3].(models.Asset)
 		}
-		var arg4 models.Artifact
+		var arg4 models.AssetVersion
 		if args[4] != nil {
-			arg4 = args[4].(models.Artifact)
+			arg4 = args[4].(models.AssetVersion)
 		}
-		var arg5 *normalize.CdxBom
+		var arg5 models.Artifact
 		if args[5] != nil {
-			arg5 = args[5].(*normalize.CdxBom)
+			arg5 = args[5].(models.Artifact)
 		}
-		var arg6 string
+		var arg6 *normalize.SBOMGraph
 		if args[6] != nil {
-			arg6 = args[6].(string)
+			arg6 = args[6].(*normalize.SBOMGraph)
+		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
 		}
 		run(
 			arg0,
@@ -132,131 +142,18 @@ func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(org models.Org, proj
 			arg4,
 			arg5,
 			arg6,
+			arg7,
 		)
 	})
 	return _c
 }
 
-func (_c *ScanService_ScanNormalizedSBOM_Call) Return(n int, n1 int, dependencyVulns []models.DependencyVuln, err error) *ScanService_ScanNormalizedSBOM_Call {
-	_c.Call.Return(n, n1, dependencyVulns, err)
-	return _c
-}
-
-func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOM_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ScanNormalizedSBOMWithoutEventHandling provides a mock function for the type ScanService
-func (_mock *ScanService) ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ret := _mock.Called(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ScanNormalizedSBOMWithoutEventHandling")
-	}
-
-	var r0 []models.DependencyVuln
-	var r1 []models.DependencyVuln
-	var r2 []models.DependencyVuln
-	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
-		return returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
-		r1 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]models.DependencyVuln)
-		}
-	}
-	if returnFunc, ok := ret.Get(2).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) []models.DependencyVuln); ok {
-		r2 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]models.DependencyVuln)
-		}
-	}
-	if returnFunc, ok := ret.Get(3).(func(models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.CdxBom, string) error); ok {
-		r3 = returnFunc(org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	} else {
-		r3 = ret.Error(3)
-	}
-	return r0, r1, r2, r3
-}
-
-// ScanService_ScanNormalizedSBOMWithoutEventHandling_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ScanNormalizedSBOMWithoutEventHandling'
-type ScanService_ScanNormalizedSBOMWithoutEventHandling_Call struct {
-	*mock.Call
-}
-
-// ScanNormalizedSBOMWithoutEventHandling is a helper method to define mock.On call
-//   - org models.Org
-//   - project models.Project
-//   - asset models.Asset
-//   - assetVersion models.AssetVersion
-//   - artifact models.Artifact
-//   - normalizedBom *normalize.CdxBom
-//   - userID string
-func (_e *ScanService_Expecter) ScanNormalizedSBOMWithoutEventHandling(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, normalizedBom interface{}, userID interface{}) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
-	return &ScanService_ScanNormalizedSBOMWithoutEventHandling_Call{Call: _e.mock.On("ScanNormalizedSBOMWithoutEventHandling", org, project, asset, assetVersion, artifact, normalizedBom, userID)}
-}
-
-func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string)) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Org
-		if args[0] != nil {
-			arg0 = args[0].(models.Org)
-		}
-		var arg1 models.Project
-		if args[1] != nil {
-			arg1 = args[1].(models.Project)
-		}
-		var arg2 models.Asset
-		if args[2] != nil {
-			arg2 = args[2].(models.Asset)
-		}
-		var arg3 models.AssetVersion
-		if args[3] != nil {
-			arg3 = args[3].(models.AssetVersion)
-		}
-		var arg4 models.Artifact
-		if args[4] != nil {
-			arg4 = args[4].(models.Artifact)
-		}
-		var arg5 *normalize.CdxBom
-		if args[5] != nil {
-			arg5 = args[5].(*normalize.CdxBom)
-		}
-		var arg6 string
-		if args[6] != nil {
-			arg6 = args[6].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) Return(dependencyVulns []models.DependencyVuln, dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, err error) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
+func (_c *ScanService_ScanNormalizedSBOM_Call) Return(dependencyVulns []models.DependencyVuln, dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, err error) *ScanService_ScanNormalizedSBOM_Call {
 	_c.Call.Return(dependencyVulns, dependencyVulns1, dependencyVulns2, err)
 	return _c
 }
 
-func (_c *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOMWithoutEventHandling_Call {
+func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

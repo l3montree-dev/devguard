@@ -43,11 +43,11 @@ func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *
 	}
 }
 
-func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
 
 	// iterate through all components
-	for _, c := range *bom.GetComponents() {
+	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
 		component := c
 
 		errgroup.Go(
@@ -55,19 +55,19 @@ func (s *sbomScanner) Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error
 
 				vulns := []models.VulnInPackage{}
 				// if the component has no package url we cannot find anything
-				if component.PackageURL != "" {
+				if component.Component.PackageURL != "" {
 					var res []models.VulnInPackage
 					var err error
 
-					parsed, err := packageurl.FromString(component.PackageURL)
+					parsed, err := packageurl.FromString(component.Component.PackageURL)
 					if err != nil {
-						slog.Warn("could not parse purl", "purl", component.PackageURL, "err", err)
+						slog.Warn("could not parse purl", "purl", component.Component.PackageURL, "err", err)
 						return nil, err
 					}
 
 					res, err = s.purlComparer.GetVulns(parsed)
 					if err != nil {
-						slog.Warn("could not get cves", "purl", component.PackageURL)
+						slog.Warn("could not get cves", "purl", component.Component.PackageURL)
 					}
 
 					vulns = append(vulns, res...)

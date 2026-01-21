@@ -62,7 +62,7 @@ func migrateDB() {
 		var daemonRunner shared.DaemonRunner
 
 		fx.New(
-			// fx.NopLogger,
+			fx.NopLogger,
 			fx.Supply(db),
 			fx.Provide(fx.Annotate(database.NewPostgreSQLBroker, fx.As(new(shared.PubSubBroker)))),
 			fx.Provide(database.NewPostgreSQLBroker),

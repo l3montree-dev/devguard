@@ -20,17 +20,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func VulnEventDTOToModel(dto dtos.VulnEventDTO) models.VulnEvent {
-	return models.VulnEvent{
-		Type:          dto.Type,
-		VulnID:        dto.VulnID,
-		UserID:        dto.UserID,
-		Justification: dto.Justification,
-		VulnType:      dto.VulnType,
-		Upstream:      dto.Upstream,
-	}
-}
-
 func ConvertVulnEventsToDtos(event []models.VulnEventDetail) []dtos.VulnEventDTO {
 	var result []dtos.VulnEventDTO
 	for _, e := range event {

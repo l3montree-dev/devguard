@@ -271,6 +271,8 @@ func (runner *DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan ch
 }
 
 func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+	disabledExternalEntityProviderIDs := parseDisabledExternalEntityProviderIDs()
+
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
 		defer func() {
@@ -280,6 +282,14 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
+			if asset.ExternalEntityProviderID != nil {
+				if _, disabled := disabledExternalEntityProviderIDs[strings.ToUpper(*asset.ExternalEntityProviderID)]; disabled {
+					// we skip this.
+					slog.Info("asset connected to disabled external entity provider - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
+					out <- assetWithDetails
+					continue
+				}
+			}
 			if !commonint.IsConnectedToThirdPartyIntegration(asset) || runner.DebugMode() {
 				slog.Info("asset not connected to third party integration - skipping SyncTickets", "assetID", asset.ID)
 				out <- assetWithDetails
@@ -401,31 +411,25 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 			errs := make([]error, 0)
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
+				bom, err := runner.assetVersionService.LoadFullSBOMGraph(assetVersions[i])
+				if err != nil {
+					slog.Error("failed to load full sbom", "error", err, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					errs = append(errs, err)
+					continue
+				}
+
 				for _, artifact := range artifacts {
-					components, err := runner.componentRepository.LoadComponents(nil, assetVersions[i].Name, assetVersions[i].AssetID, &artifact.ArtifactName)
-					if err != nil {
-						slog.Error("failed to load components", "error", err)
-						errs = append(errs, err)
-						continue
-					}
+					tx := runner.db.Begin()
+					bom.ClearScope()
+					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
-					bom, err := runner.assetVersionService.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersions[i], artifact.ArtifactName, components)
-					if err != nil {
-						slog.Error("error when building SBOM")
-						errs = append(errs, err)
-						continue
-					}
-					if len(components) <= 0 {
-						continue
-					} else {
-						_, _, _, err = runner.scanService.ScanNormalizedSBOMWithoutEventHandling(org, project, asset, assetVersions[i], artifact, bom, "system")
-					}
-
-					if err != nil {
+					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {
+						tx.Rollback()
 						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						continue
 					}
+					tx.Commit()
 
 					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				}
@@ -471,7 +475,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 					}
 
 					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveOriginTypePrefixIfExists(el.DependencyID)
+						_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
 						return origin
 					}), func(el string) bool {
 						return strings.HasPrefix(el, "http")

@@ -249,7 +249,7 @@ func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageur
 	return cdxVulns, nil
 }
 
-func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.CdxBom, error) {
+func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.SBOMGraph, error) {
 	// download all advisories
 	advisories, err := service.downloadCsafReports(domain)
 	if err != nil {
@@ -313,7 +313,7 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 	}
 
 	// artifact name should be something without the version
-	return normalize.FromCdxBom(bom, purlToStringWithoutVersion(purl), ref, realURL), nil
+	return normalize.SBOMGraphFromCycloneDX(bom, purlToStringWithoutVersion(purl), ref), nil
 }
 
 func purlToStringWithoutVersion(purl packageurl.PackageURL) string {

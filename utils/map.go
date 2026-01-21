@@ -20,15 +20,6 @@ import (
 	"os"
 )
 
-func Mapper[Key comparable, T any](s []T, f func(T) Key) map[Key]T {
-	res := make(map[Key]T)
-	for _, v := range s {
-		res[f(v)] = v
-	}
-
-	return res
-}
-
 func Values[K comparable, T any](m map[K]T) []T {
 	res := make([]T, 0, len(m))
 	for _, v := range m {

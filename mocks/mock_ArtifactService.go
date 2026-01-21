@@ -102,24 +102,24 @@ func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uui
 }
 
 // FetchBomsFromUpstream provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
+func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
 	ret := _mock.Called(artifactName, ref, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchBomsFromUpstream")
 	}
 
-	var r0 []*normalize.CdxBom
+	var r0 []*normalize.SBOMGraph
 	var r1 []string
 	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.CdxBom, []string, []string)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.SBOMGraph, []string, []string)); ok {
 		return returnFunc(artifactName, ref, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.CdxBom); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.SBOMGraph); ok {
 		r0 = returnFunc(artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*normalize.CdxBom)
+			r0 = ret.Get(0).([]*normalize.SBOMGraph)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
@@ -175,12 +175,12 @@ func (_c *ArtifactService_FetchBomsFromUpstream_Call) Run(run func(artifactName 
 	return _c
 }
 
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) Return(cdxBoms []*normalize.CdxBom, strings []string, strings1 []string) *ArtifactService_FetchBomsFromUpstream_Call {
-	_c.Call.Return(cdxBoms, strings, strings1)
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, strings1 []string) *ArtifactService_FetchBomsFromUpstream_Call {
+	_c.Call.Return(sBOMGraphs, strings, strings1)
 	return _c
 }
 
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
+func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -377,7 +377,7 @@ func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(artifact *mod
 }
 
 // SyncUpstreamBoms provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+func (_mock *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(boms, org, project, asset, assetVersion, artifact, userID)
 
 	if len(ret) == 0 {
@@ -386,17 +386,17 @@ func (_mock *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org mod
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) ([]models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func([]*normalize.SBOMGraph, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) ([]models.DependencyVuln, error)); ok {
 		return returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) []models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func([]*normalize.SBOMGraph, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) []models.DependencyVuln); ok {
 		r0 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]*normalize.CdxBom, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func([]*normalize.SBOMGraph, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
 		r1 = returnFunc(boms, org, project, asset, assetVersion, artifact, userID)
 	} else {
 		r1 = ret.Error(1)
@@ -410,7 +410,7 @@ type ArtifactService_SyncUpstreamBoms_Call struct {
 }
 
 // SyncUpstreamBoms is a helper method to define mock.On call
-//   - boms []*normalize.CdxBom
+//   - boms []*normalize.SBOMGraph
 //   - org models.Org
 //   - project models.Project
 //   - asset models.Asset
@@ -421,11 +421,11 @@ func (_e *ArtifactService_Expecter) SyncUpstreamBoms(boms interface{}, org inter
 	return &ArtifactService_SyncUpstreamBoms_Call{Call: _e.mock.On("SyncUpstreamBoms", boms, org, project, asset, assetVersion, artifact, userID)}
 }
 
-func (_c *ArtifactService_SyncUpstreamBoms_Call) Run(run func(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncUpstreamBoms_Call {
+func (_c *ArtifactService_SyncUpstreamBoms_Call) Run(run func(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ArtifactService_SyncUpstreamBoms_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []*normalize.CdxBom
+		var arg0 []*normalize.SBOMGraph
 		if args[0] != nil {
-			arg0 = args[0].([]*normalize.CdxBom)
+			arg0 = args[0].([]*normalize.SBOMGraph)
 		}
 		var arg1 models.Org
 		if args[1] != nil {
@@ -469,7 +469,7 @@ func (_c *ArtifactService_SyncUpstreamBoms_Call) Return(dependencyVulns []models
 	return _c
 }
 
-func (_c *ArtifactService_SyncUpstreamBoms_Call) RunAndReturn(run func(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)) *ArtifactService_SyncUpstreamBoms_Call {
+func (_c *ArtifactService_SyncUpstreamBoms_Call) RunAndReturn(run func(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)) *ArtifactService_SyncUpstreamBoms_Call {
 	_c.Call.Return(run)
 	return _c
 }

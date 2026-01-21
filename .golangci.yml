@@ -15,6 +15,9 @@
 
 version: "2"
 linters:
+  enable:
+  - unused
+  - staticcheck
   default: standard
   settings:
     staticcheck:

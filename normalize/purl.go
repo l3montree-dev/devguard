@@ -116,19 +116,16 @@ func normalizePurl(purl string) string {
 }
 
 func GetComponentID(component cdx.Component) string {
-	var purl string
-	if component.PackageURL != "" {
-		return component.PackageURL
-	} else if component.CPE != "" {
-		purl = component.CPE
-	} else if component.Version != "" {
-		purl = component.Name + "@" + component.Version
+	if component.BOMRef == GraphRootNodeID {
+		return "" // replace with nil before storing.
+	} else if component.BOMRef != "" {
+		// For artifact and info-source nodes, use BOMRef (e.g., "artifact:source", "sbom:DEFAULT@scanner")
+		return component.BOMRef
+	} else if component.PackageURL != "" {
+		return normalizePurl(component.PackageURL)
 	} else {
-		purl = component.Name
+		return component.Name // fallback to name
 	}
-
-	// remove any query parameters
-	return purl
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py
@@ -160,50 +157,6 @@ var PURLEcosystems = map[string]string{
 	"Pub":       "pub",
 	"PyPI":      "pypi",
 	"RubyGems":  "gem",
-}
-
-func urlEncode(packageName string) string {
-	parts := strings.Split(packageName, "/")
-	for i, part := range parts {
-		parts[i] = url.PathEscape(part)
-	}
-	return strings.Join(parts, "/")
-}
-
-func PackageToPurl(ecosystem, packageName string) string {
-	purlType, exists := PURLEcosystems[ecosystem]
-	if !exists {
-		return ""
-	}
-
-	var suffix string
-
-	switch purlType {
-	case "maven":
-		// PURLs use / to separate the group ID and the artifact ID.
-		packageName = strings.Replace(packageName, ":", "/", 1)
-	case "deb":
-		if ecosystem == "Debian" {
-			packageName = "debian/" + packageName
-			suffix = "?arch=source"
-		}
-	case "apk":
-		if ecosystem == "Alpine" {
-			packageName = "alpine/" + packageName
-			suffix = "?arch=source"
-		}
-	}
-
-	return "pkg:" + purlType + "/" + urlEncode(packageName) + suffix
-}
-
-func PurlToEcosystem(purlType string) string {
-	for key, value := range PURLEcosystems {
-		if value == purlType {
-			return key
-		}
-	}
-	return ""
 }
 
 func Purlify(artifactName string, assetVersionName string) string {

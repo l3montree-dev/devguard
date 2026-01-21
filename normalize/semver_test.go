@@ -20,6 +20,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func ptr(s string) *string {
+	return &s
+}
+
 func TestSemverFix(t *testing.T) {
 	t.Run("empty string", func(t *testing.T) {
 		semver, err := ConvertToSemver("")

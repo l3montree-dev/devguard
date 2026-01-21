@@ -69,11 +69,11 @@ type PersonalAccessTokenService interface {
 }
 
 type CSAFService interface {
-	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.CdxBom, error)
+	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.SBOMGraph, error)
 }
 
 type SBOMScanner interface {
-	Scan(bom *normalize.CdxBom) ([]models.VulnInPackage, error)
+	Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error)
 }
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
@@ -195,12 +195,10 @@ type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
-	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)
 	SearchComponentOccurrencesByProject(tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)
-	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)
+	HandleStateDiff(tx DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error
 	CreateComponents(tx DB, components []models.ComponentDependency) error
 	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
 	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
@@ -222,7 +220,7 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
-	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -340,8 +338,8 @@ type ArtifactService interface {
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string)
-	SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
+	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
+	SyncUpstreamBoms(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -357,13 +355,11 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error)
-	BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom
+	BuildVeX(frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
-	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error)
-	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	UpdateSBOM(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
+	LoadFullSBOMGraph(assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
 type AssetVersionRepository interface {
@@ -395,8 +391,9 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
-	ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) (int, int, []models.DependencyVuln, error)
-	ScanNormalizedSBOMWithoutEventHandling(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.CdxBom, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
+	ScanNormalizedSBOM(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
+	HandleScanResult(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 }
 
 type ConfigRepository interface {
@@ -625,15 +622,6 @@ const (
 	// was added
 	RoleUnknown Role = "unknown"
 )
-
-func ValidRole(role Role) bool {
-	switch role {
-	case RoleOwner, RoleAdmin, RoleMember, RoleGuest:
-		return true
-	default:
-		return false
-	}
-}
 
 type Action string
 

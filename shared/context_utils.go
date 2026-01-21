@@ -179,10 +179,6 @@ func IsPublicRequest(ctx Context) bool {
 	return ctx.Get("publicRequest") != nil
 }
 
-func GetOryClient(ctx Context) *client.APIClient {
-	return ctx.Get("ory").(*client.APIClient)
-}
-
 func GetSession(ctx Context) AuthSession {
 	return ctx.Get("session").(AuthSession)
 }
@@ -324,22 +320,6 @@ func SetProject(ctx Context, project models.Project) {
 
 func GetProject(ctx Context) models.Project {
 	return ctx.Get("project").(models.Project)
-}
-
-func MaybeGetProject(ctx Context) (models.Project, error) {
-	project, ok := ctx.Get("project").(models.Project)
-	if !ok {
-		return models.Project{}, fmt.Errorf("could not get project")
-	}
-	return project, nil
-}
-
-func GetAttestation(ctx Context) models.Attestation {
-	return ctx.Get("attestation").(models.Attestation)
-}
-
-func SetAttestation(ctx Context, attestation models.Attestation) {
-	ctx.Set("attestation", attestation)
 }
 
 func GetRepositoryID(asset *models.Asset) (string, error) {

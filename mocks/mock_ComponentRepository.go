@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
@@ -663,110 +664,21 @@ func (_c *ComponentRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) sh
 	return _c
 }
 
-// GetLicenseDistribution provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) GetLicenseDistribution(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetLicenseDistribution")
-	}
-
-	var r0 map[string]int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) (map[string]int, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, artifactName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) map[string]int); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]int)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, *string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ComponentRepository_GetLicenseDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicenseDistribution'
-type ComponentRepository_GetLicenseDistribution_Call struct {
-	*mock.Call
-}
-
-// GetLicenseDistribution is a helper method to define mock.On call
-//   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - artifactName *string
-func (_e *ComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_GetLicenseDistribution_Call {
-	return &ComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, artifactName)}
-}
-
-func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *ComponentRepository_GetLicenseDistribution_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 *string
-		if args[3] != nil {
-			arg3 = args[3].(*string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentRepository_GetLicenseDistribution_Call) Return(stringToInt map[string]int, err error) *ComponentRepository_GetLicenseDistribution_Call {
-	_c.Call.Return(stringToInt, err)
-	return _c
-}
-
-func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) (map[string]int, error)) *ComponentRepository_GetLicenseDistribution_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // HandleStateDiff provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) HandleStateDiff(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, oldState, newState, artifactName)
+func (_mock *ComponentRepository) HandleStateDiff(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
+	ret := _mock.Called(tx, assetVersion, wholeAssetGraph, diff)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleStateDiff")
 	}
 
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) (bool, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) bool); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.AssetVersion, *normalize.SBOMGraph, normalize.GraphDiff) error); ok {
+		r0 = returnFunc(tx, assetVersion, wholeAssetGraph, diff)
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, oldState, newState, artifactName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // ComponentRepository_HandleStateDiff_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleStateDiff'
@@ -776,59 +688,47 @@ type ComponentRepository_HandleStateDiff_Call struct {
 
 // HandleStateDiff is a helper method to define mock.On call
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - oldState []models.ComponentDependency
-//   - newState []models.ComponentDependency
-//   - artifactName string
-func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersionName interface{}, assetID interface{}, oldState interface{}, newState interface{}, artifactName interface{}) *ComponentRepository_HandleStateDiff_Call {
-	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersionName, assetID, oldState, newState, artifactName)}
+//   - assetVersion models.AssetVersion
+//   - wholeAssetGraph *normalize.SBOMGraph
+//   - diff normalize.GraphDiff
+func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersion interface{}, wholeAssetGraph interface{}, diff interface{}) *ComponentRepository_HandleStateDiff_Call {
+	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersion, wholeAssetGraph, diff)}
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
 			arg0 = args[0].(shared.DB)
 		}
-		var arg1 string
+		var arg1 models.AssetVersion
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(models.AssetVersion)
 		}
-		var arg2 uuid.UUID
+		var arg2 *normalize.SBOMGraph
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*normalize.SBOMGraph)
 		}
-		var arg3 []models.ComponentDependency
+		var arg3 normalize.GraphDiff
 		if args[3] != nil {
-			arg3 = args[3].([]models.ComponentDependency)
-		}
-		var arg4 []models.ComponentDependency
-		if args[4] != nil {
-			arg4 = args[4].([]models.ComponentDependency)
-		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg3 = args[3].(normalize.GraphDiff)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
-			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Return(b bool, err error) *ComponentRepository_HandleStateDiff_Call {
-	_c.Call.Return(b, err)
+func (_c *ComponentRepository_HandleStateDiff_Call) Return(err error) *ComponentRepository_HandleStateDiff_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error)) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx shared.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1073,92 +973,6 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Return(paged share
 }
 
 func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// LoadPathToComponent provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadPathToComponent(tx shared.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, pURL, artifactName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for LoadPathToComponent")
-	}
-
-	var r0 []models.ComponentDependency
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, string, *string) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, string, *string) []models.ComponentDependency); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ComponentDependency)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, string, *string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, pURL, artifactName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ComponentRepository_LoadPathToComponent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadPathToComponent'
-type ComponentRepository_LoadPathToComponent_Call struct {
-	*mock.Call
-}
-
-// LoadPathToComponent is a helper method to define mock.On call
-//   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - pURL string
-//   - artifactName *string
-func (_e *ComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, artifactName interface{}) *ComponentRepository_LoadPathToComponent_Call {
-	return &ComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, artifactName)}
-}
-
-func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string)) *ComponentRepository_LoadPathToComponent_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 *string
-		if args[4] != nil {
-			arg4 = args[4].(*string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentRepository_LoadPathToComponent_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentRepository_LoadPathToComponent_Call {
-	_c.Call.Return(componentDependencys, err)
-	return _c
-}
-
-func (_c *ComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName *string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }

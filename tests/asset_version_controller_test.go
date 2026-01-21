@@ -50,8 +50,8 @@ func TestBuildVEX(t *testing.T) {
 			assert.Nil(t, err)
 
 			//test general metadata
-			assert.Equal(t, "pkg:generic/test-artifact@main", VEXResult.Metadata.Component.BOMRef)
-			assert.Equal(t, "pkg:generic/test-artifact@main", VEXResult.Metadata.Component.Name)
+			assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.BOMRef)
+			assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.Name)
 
 			assert.Empty(t, VEXResult.Vulnerabilities)
 		})
@@ -210,7 +210,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln2 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability: models.Vulnerability{
+			AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               cve,
 		CVEID:             cve.CVE,

@@ -59,7 +59,7 @@ type Component struct {
 	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
-func (c Component) GetPURL() (packageurl.PackageURL, error) {
+func (c Component) GetID() (packageurl.PackageURL, error) {
 	return packageurl.FromString(c.ID)
 }
 
@@ -77,8 +77,6 @@ type ComponentDependency struct {
 	AssetVersionName string       `json:"assetVersionName" gorm:"column:asset_version_name;not null;"`
 	AssetID          uuid.UUID    `json:"assetId" gorm:"column:asset_id;not null;type:uuid;"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
-
-	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE"`
 }
 
 const Root string = "root"
@@ -193,11 +191,11 @@ func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[strin
 	}
 }
 
-func (c ComponentDependency) GetPurl() string {
+func (c ComponentDependency) GetID() string {
 	return c.DependencyID
 }
 
-func (c ComponentDependency) GetDependentPurl() *string {
+func (c ComponentDependency) GetDependentID() *string {
 	return c.ComponentID
 }
 
@@ -213,12 +211,6 @@ func BuildDepMap(deps []ComponentDependency) map[string][]string {
 }
 
 const NoVersion = "0.0.0"
-
-func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {
-	return utils.Filter(deps, func(dep ComponentDependency) bool {
-		return dep.ComponentID == nil
-	})
-}
 
 func (c Component) TableName() string {
 	return "components"

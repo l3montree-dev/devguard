@@ -75,7 +75,7 @@ func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDepend
 		ID:             m.ID,
 		ComponentPurl:  utils.SafeDereference(m.ComponentID),
 		DependencyPurl: m.DependencyID,
-		Artifacts:      utils.Map(m.Artifacts, ArtifactModelToDTO),
+		Artifacts:      []dtos.ArtifactDTO{}, // Artifacts are now determined via component_id prefix pattern
 		Component:      ComponentModelToDTO(m.Component),
 		Dependency:     ComponentModelToDTO(m.Dependency),
 	}

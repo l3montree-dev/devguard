@@ -134,10 +134,10 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			}
 		}
 	}
-	upstreamBOMS := []*normalize.CdxBom{}
+	upstreamBOMS := []*normalize.SBOMGraph{}
 	// check if there are components or vulnerabilities in the bom
 	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
-		upstreamBOMS = append(upstreamBOMS, normalize.FromCdxBom(&bom, artifactName, assetVersionName, origin))
+		upstreamBOMS = append(upstreamBOMS, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
 	}
 
 	for _, url := range externalURLs {
@@ -198,16 +198,18 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
-	normalized := normalize.FromCdxBom(bom, artifactName, assetVersionName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
+
+	// Generate default artifact name BEFORE creating the SBOM graph
+	if artifactName == "" {
+		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
+	}
+
+	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return scanResults, err
-	}
-
-	if artifactName == "" {
-		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
 
 	artifact := models.Artifact{
@@ -221,22 +223,42 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		slog.Error("could not save artifact", "err", err)
 		return scanResults, err
 	}
+	// start a transaction for sbom updating AND scanning
+	tx := s.assetVersionRepository.GetDB(nil).Begin()
+	defer tx.Rollback()
 	// do NOT update the sbom in parallel, because we load the components during the scan from the database
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
 
-	opened, closed, newState, err := s.ScanNormalizedSBOM(org, project, asset, assetVersion, artifact, wholeSBOM, userID)
+	opened, closed, newState, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID)
 	if err != nil {
 		slog.Error("could not scan normalized sbom", "err", err)
 		return scanResults, err
 	}
 
+	tx.Commit()
+
+	//Check if we want to create an issue for this assetVersion
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+		}
+	})
+
 	return dtos.ScanResponse{
-		AmountOpened:    opened,
-		AmountClosed:    closed,
+		AmountOpened:    len(opened),
+		AmountClosed:    len(closed),
 		DependencyVulns: utils.Map(newState, transformer.DependencyVulnToDTO),
 	}, nil
 }
@@ -297,7 +319,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
+	opened, closed, newState, err := s.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not handle scan result"})

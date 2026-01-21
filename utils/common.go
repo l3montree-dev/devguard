@@ -16,12 +16,9 @@
 package utils
 
 import (
-	"encoding/csv"
-	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 )
@@ -83,64 +80,6 @@ func Or[T any](
 		return fallback
 	}
 	return val
-}
-
-func ReadCsvInChunks(reader *csv.Reader, chunkSize int, fn func(rows [][]string) error) (int, error) {
-	count := 0
-
-	chunk := make([][]string, 0, chunkSize)
-	for {
-		rows, err := reader.Read()
-		if err != nil {
-			break
-		}
-		count++
-
-		chunk = append(chunk, rows)
-
-		if len(chunk) == chunkSize {
-			err := fn(chunk)
-			if err != nil {
-				return count, err
-			}
-			chunk = make([][]string, 0, chunkSize)
-		}
-	}
-
-	if len(chunk) > 0 {
-		return count, fn(chunk)
-	}
-
-	return count, nil
-}
-
-func ReadCsv(reader *csv.Reader, fn func(row []string) error) (int, error) {
-	count := 0
-
-	for {
-		row, err := reader.Read()
-		if err != nil {
-			break
-		}
-		count++
-
-		err = fn(row)
-		if err != nil {
-			return count, err
-		}
-	}
-
-	return count, nil
-}
-
-func PrintBuildInformation() {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				slog.Info("Build information", "revision", setting.Value)
-			}
-		}
-	}
 }
 
 func AddToWhitespaceSeparatedStringList(s string, item string) string {

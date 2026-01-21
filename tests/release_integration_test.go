@@ -61,6 +61,9 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&a2).Error; err != nil {
 			t.Fatal(err)
 		}
+		// Create artifact root node dependencies (NULL -> artifact:name)
+		artifactRoot1 := "artifact:" + a1.ArtifactName
+		artifactRoot2 := "artifact:" + a2.ArtifactName
 
 		// ensure Component rows exist for the dependency purls (FK to components.purl)
 		compA := models.Component{ID: "pkg:maven/org.example/component-a@1.0.0"}
@@ -71,9 +74,25 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&compB).Error; err != nil {
 			t.Fatal(err)
 		}
+		f.DB.Create(models.Component{
+			ID: artifactRoot1,
+		})
+		f.DB.Create(models.Component{
+			ID: artifactRoot2,
+		})
 
-		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a1}}
-		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, Artifacts: []models.Artifact{a2}}
+		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
+		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
+		if err := f.DB.Create(&rootDep1).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := f.DB.Create(&rootDep2).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		// Create component dependencies (artifact:name -> pkg:...)
+		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot1}
+		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot2}
 		if err := f.DB.Create(&c1).Error; err != nil {
 			t.Fatal(err)
 		}

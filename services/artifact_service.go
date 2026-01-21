@@ -12,6 +12,7 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -32,11 +33,12 @@ type ArtifactService struct {
 	assetVersionRepository   shared.AssetVersionRepository
 	assetVersionService      shared.AssetVersionService
 	dependencyVulnService    shared.DependencyVulnService
+	scanService              shared.ScanService
 }
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
 	return &ArtifactService{
 		csafService:              csafService,
 		artifactRepository:       artifactRepository,
@@ -47,6 +49,7 @@ func NewArtifactService(artifactRepository shared.ArtifactRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetVersionService:      assetVersionService,
 		dependencyVulnService:    dependencyVulnService,
+		scanService:              scanService,
 	}
 }
 
@@ -64,100 +67,77 @@ func (s *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
 }
 
 func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	err := s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
-	if err != nil {
-		return err
+	assetVersion := models.AssetVersion{
+		AssetID: assetID,
+		Name:    assetVersionName,
 	}
 
-	// Recalculate depths for vulnerabilities based on remaining artifacts
-	return s.recalculateDepthsAfterArtifactDeletion(assetID, assetVersionName)
-}
-
-func (s *ArtifactService) recalculateDepthsAfterArtifactDeletion(assetID uuid.UUID, assetVersionName string) error {
-	// Get remaining artifacts for this asset version
-	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
-	if err != nil {
-		slog.Error("failed to get artifacts after deletion", "assetID", assetID, "error", err)
-		return err
-	}
-
-	if len(artifacts) == 0 {
-		return nil
-	}
-
-	// Load asset and asset version once
-	asset, err := s.assetRepository.Read(assetID)
-	if err != nil {
-		slog.Error("failed to get asset for depth recalculation", "assetID", assetID, "error", err)
-		return err
-	}
-
-	assetVersion, err := s.assetVersionRepository.Read(assetVersionName, assetID)
-	if err != nil {
-		slog.Error("failed to get asset version for depth recalculation", "assetVersionName", assetVersionName, "error", err)
-		return err
-	}
-
-	// Build depth map for each artifact once, then find minimum depth per component
-	minDepthMap := make(map[string]int) // componentPurl -> minDepth
-
-	for _, artifact := range artifacts {
-		components, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, &artifact.ArtifactName)
+	// Execute deletion in a transaction
+	return s.componentRepository.GetDB(nil).Transaction(func(tx *gorm.DB) error {
+		// Load the full SBOM graph before deletion
+		wholeAssetGraph, err := s.assetVersionService.LoadFullSBOMGraph(assetVersion)
 		if err != nil {
-			slog.Error("failed to load components", "artifactName", artifact.ArtifactName, "error", err)
-			continue
+			slog.Error("failed to load full SBOM for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "error", err)
+			return err
 		}
 
-		sbom, err := s.assetVersionService.BuildSBOM("", "", "", "", asset, assetVersion, artifact.ArtifactName, components)
-		if err != nil {
-			slog.Error("failed to build SBOM", "artifactName", artifact.ArtifactName, "error", err)
-			continue
+		// Delete the artifact and its subtree from the graph
+		diff := wholeAssetGraph.DeleteArtifactFromGraph(artifactName)
+
+		// Use HandleStateDiff to properly delete component dependencies
+		if err := s.componentRepository.HandleStateDiff(tx, assetVersion, wholeAssetGraph, diff); err != nil {
+			slog.Error("failed to handle state diff for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+			return err
 		}
 
-		depthMap := sbom.CalculateDepth()
-		for purl, depth := range depthMap {
-			if minDepth, exists := minDepthMap[purl]; !exists || depth < minDepth {
-				minDepthMap[purl] = depth
+		// Delete the artifact record itself
+		err = s.artifactRepository.GetDB(tx).Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ?", assetID, assetVersionName, artifactName).Delete(&models.Artifact{}).Error
+		if err != nil {
+			slog.Error("failed to delete artifact record", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+			return err
+		}
+
+		// Recalculate depths after deletion
+		depthMap := wholeAssetGraph.CalculateDepth()
+
+		// If there are no components (all artifacts deleted), skip depth update
+		if len(depthMap) > 0 {
+			// Batch update all vulnerabilities with new depths using single SQL query
+			var valueClauses []string
+			for purl, depth := range depthMap {
+				valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", purl, depth))
 			}
+
+			values := strings.Join(valueClauses, ",")
+			query := fmt.Sprintf(`
+				UPDATE dependency_vulns
+				SET component_depth = data.component_depth
+				FROM (VALUES %s) AS data(component_purl, component_depth)
+				WHERE dependency_vulns.asset_id = ?
+				AND dependency_vulns.asset_version_name = ?
+				AND dependency_vulns.component_purl = data.component_purl
+			`, values)
+
+			err = tx.Exec(query, assetID, assetVersionName).Error
+			if err != nil {
+				slog.Error("failed to batch update vulnerability depths", "error", err)
+				return err
+			}
+
+			slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(depthMap))
 		}
-	}
 
-	if len(minDepthMap) == 0 {
+		slog.Info("artifact deleted successfully", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName)
 		return nil
-	}
-
-	// Batch update all vulnerabilities with new depths using single SQL query
-	var valueClauses []string
-	for purl, depth := range minDepthMap {
-		valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", purl, depth))
-	}
-
-	values := strings.Join(valueClauses, ",")
-	query := fmt.Sprintf(`
-		UPDATE dependency_vulns
-		SET component_depth = data.component_depth
-		FROM (VALUES %s) AS data(component_purl, component_depth)
-		WHERE dependency_vulns.asset_id = ?
-		AND dependency_vulns.asset_version_name = ?
-		AND dependency_vulns.component_purl = data.component_purl
-	`, values)
-
-	err = s.dependencyVulnRepository.GetDB(nil).Exec(query, assetID, assetVersionName).Error
-	if err != nil {
-		slog.Error("failed to batch update vulnerability depths", "error", err)
-		return err
-	}
-
-	slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(minDepthMap))
-	return nil
+	})
 }
 
 func (s *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
 }
 
-func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.CdxBom, []string, []string) {
-	var boms []*normalize.CdxBom
+func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
+	var boms []*normalize.SBOMGraph
 
 	var validURLs []string
 	var invalidURLs []string
@@ -237,7 +217,7 @@ func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string,
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, normalize.FromCdxBom(&bom, artifactName, ref, url))
+		boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, ref))
 	}
 
 	return boms, validURLs, invalidURLs
@@ -256,7 +236,7 @@ func extractCVE(s string) string {
 	return s
 }
 
-func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
+func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error) {
 
 	upstream := dtos.UpstreamStateExternalAccepted
 	if asset.ParanoidMode {
@@ -279,9 +259,9 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 
 	allVulns := make([]models.DependencyVuln, 0)
 	for _, bom := range boms {
-		vulns := bom.GetVulnerabilities()
+		vulns := bom.Vulnerabilities()
 		if vulns != nil {
-			for _, vuln := range *vulns {
+			for vuln := range vulns {
 				cveID := extractCVE(vuln.ID)
 				if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
 					cveID = extractCVE(vuln.Source.URL)
@@ -348,14 +328,18 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 			}
 		}
 
-		_, err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
+		tx := s.assetVersionRepository.GetDB(nil).Begin()
+
+		bom, err = s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
+			tx.Rollback()
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
-		_, _, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
+		_, _, newState, err := s.scanService.HandleScanResult(tx, org, project, asset, &assetVersion, bom, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
 		if err != nil {
+			tx.Rollback()
 			slog.Error("could not handle scan result", "err", err)
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
@@ -393,7 +377,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 					expected.eventType = dtos.EventTypeReopened
 				}
 
-				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(tx, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", newState[i].CVEID)
 					continue
@@ -402,6 +386,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.CdxBom, org models.
 		}
 
 		allVulns = append(allVulns, newState...)
+		tx.Commit()
 	}
 
 	return allVulns, nil

@@ -16,13 +16,10 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/statemachine"
-	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -33,23 +30,24 @@ import (
 )
 
 type assetVersionService struct {
-	dependencyVulnRepository  shared.DependencyVulnRepository
-	firstPartyVulnRepository  shared.FirstPartyVulnRepository
-	componentRepository       shared.ComponentRepository
-	dependencyVulnService     shared.DependencyVulnService
-	firstPartyVulnService     shared.FirstPartyVulnService
-	assetVersionRepository    shared.AssetVersionRepository
-	assetRepository           shared.AssetRepository
-	projectRepository         shared.ProjectRepository
-	orgRepository             shared.OrganizationRepository
-	vulnEventRepository       shared.VulnEventRepository
-	componentService          shared.ComponentService
-	httpClient                *http.Client
-	thirdPartyIntegration     shared.IntegrationAggregate
-	licenseRiskRepository     shared.LicenseRiskRepository
-	cveRelationshipRepository shared.CVERelationshipRepository
+	dependencyVulnRepository shared.DependencyVulnRepository
+	firstPartyVulnRepository shared.FirstPartyVulnRepository
+	componentRepository      shared.ComponentRepository
+	dependencyVulnService    shared.DependencyVulnService
+	firstPartyVulnService    shared.FirstPartyVulnService
+	assetVersionRepository   shared.AssetVersionRepository
+	assetRepository          shared.AssetRepository
+	projectRepository        shared.ProjectRepository
+	orgRepository            shared.OrganizationRepository
+	vulnEventRepository      shared.VulnEventRepository
+	componentService         shared.ComponentService
+	httpClient               *http.Client
+	thirdPartyIntegration    shared.IntegrationAggregate
+	licenseRiskRepository    shared.LicenseRiskRepository
 	utils.FireAndForgetSynchronizer
 }
+
+var _ shared.AssetVersionService = &assetVersionService{}
 
 func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, cveRelationshipRepository shared.CVERelationshipRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
@@ -67,7 +65,6 @@ func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		licenseRiskRepository:     licenseRiskRepository,
-		cveRelationshipRepository: cveRelationshipRepository,
 		FireAndForgetSynchronizer: synchronizer,
 	}
 }
@@ -106,497 +103,22 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 	return text.Text
 }
 
-func (s *assetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
-
-	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
-
-	ruleMap := make(map[string]sarif.ReportingDescriptor)
-	for _, run := range sarifScan.Runs {
-		for _, rule := range run.Tool.Driver.Rules {
-			ruleMap[rule.ID] = rule
-		}
-	}
-
-	for _, run := range sarifScan.Runs {
-		for _, result := range run.Results {
-			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, string(result.Kind)) {
-				continue
-			}
-
-			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
-
-			ruleProperties := map[string]any{}
-			if rule.Properties != nil {
-				ruleProperties = rule.Properties.AdditionalProperties
-			}
-
-			firstPartyVulnerability := models.FirstPartyVuln{
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
-					Message:          &result.Message.Text,
-				},
-				ScannerIDs:      scannerID,
-				RuleID:          utils.OrDefault(result.RuleID, ""),
-				RuleHelp:        preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),
-				RuleName:        utils.OrDefault(rule.Name, ""),
-				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
-				RuleDescription: getBestDescription(rule),
-				RuleProperties:  databasetypes.JSONB(ruleProperties),
-			}
-			if result.PartialFingerprints != nil {
-				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
-				firstPartyVulnerability.Email = result.PartialFingerprints["email"]
-				firstPartyVulnerability.Author = result.PartialFingerprints["author"]
-				firstPartyVulnerability.Date = result.PartialFingerprints["date"]
-			}
-
-			var hash string
-			if result.Fingerprints != nil {
-				if result.Fingerprints["calculatedFingerprint"] != "" {
-					firstPartyVulnerability.Fingerprint = result.Fingerprints["calculatedFingerprint"]
-				}
-			}
-
-			if len(result.Locations) > 0 {
-				loc := result.Locations[0]
-				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
-
-				snippetContent := dtos.SnippetContent{
-					StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
-					EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
-					StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
-					EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
-					Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
-				}
-
-				hash = firstPartyVulnerability.CalculateHash()
-				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
-					snippetContents, err := transformer.FromJSONSnippetContents(existingVuln)
-					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
-					}
-					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
-					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
-					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
-					}
-
-				} else {
-
-					snippetContents := dtos.SnippetContents{
-						Snippets: []dtos.SnippetContent{snippetContent},
-					}
-					var err error
-					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
-					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
-					}
-
-				}
-				firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
-
-			}
-
-		}
-	}
-	var firstPartyVulnerabilities []models.FirstPartyVuln
-	for _, vuln := range firstPartyVulnerabilitiesMap {
-		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
-	}
-
-	opened, closed, newState, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
-	if err != nil {
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	if assetVersion.Metadata == nil {
-		assetVersion.Metadata = make(map[string]any)
-	}
-
-	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-
-	return opened, closed, newState, nil
-}
-
-func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
-	// get all existing vulns from the database, which are not fixed yet - this is the old state
-	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
-	if err != nil {
-		slog.Error("could not get existing first party vulns", "err", err)
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
-	if err != nil {
-		slog.Error("could not get existing vulns on other branches", "err", err)
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.FirstPartyVuln) bool {
-		return dependencyVuln.State != dtos.VulnStateFixed
-	})
-
-	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
-		return vuln.CalculateHash()
-	})
-
-	newVulns := comparison.OnlyInB
-	inBoth := comparison.InBoth // these are the vulns that are already in the database, but we need to update them
-	updatedFirstPartyVulns := make([]models.FirstPartyVuln, 0)
-
-	for i := range inBoth {
-		for n := range vulns {
-			if inBoth[i].ID == vulns[n].ID {
-				// we found a new vuln that is already in the database, we need to update it
-				inBoth[i].SnippetContents = vulns[n].SnippetContents
-				updatedFirstPartyVulns = append(updatedFirstPartyVulns, inBoth[i])
-			}
-		}
-	}
-	// filter out any vulnerabilities which were already fixed, by only keeping the open ones
-	fixedVulns := utils.Filter(comparison.OnlyInA, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State == dtos.VulnStateOpen
-	})
-
-	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(newVulns, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
-
-	// get a transaction
-	if err := s.firstPartyVulnRepository.Transaction(func(tx shared.DB) error {
-		// Process new vulnerabilities that exist on other branches with lifecycle management
-		if err := s.firstPartyVulnService.UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx, scannerID, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
-			slog.Error("error when trying to add events for existing first party vulnerability on different branch", "err", err)
-			return err
-		}
-
-		// Process new vulnerabilities that don't exist on other branches
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, utils.DereferenceSlice(branchDiff.NewToAllBranches)); err != nil {
-			return err
-		}
-
-		// Process fixed vulnerabilities
-		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns); err != nil {
-			return err
-		}
-
-		// update existing first party vulns within the transaction
-		for _, v := range updatedFirstPartyVulns {
-			if err := s.firstPartyVulnRepository.Save(tx, &v); err != nil {
-				slog.Error("could not update existing first party vulns", "err", err)
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		slog.Error("could not save vulns", "err", err)
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	if len(branchDiff.NewToAllBranches) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
-		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(shared.FirstPartyVulnsDetectedEvent{
-				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Vulns:        utils.Map(utils.DereferenceSlice(branchDiff.NewToAllBranches), transformer.FirstPartyVulnToDto),
-			}); err != nil {
-				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
-			}
-		})
-	}
-
-	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
-	if err != nil {
-		slog.Error("could not get existing first party vulns", "err", err)
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
-}
-
-func (s *assetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return nil, nil, nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
-	}
-	// create dependencyVulns out of those vulnerabilities
-	dependencyVulns := []models.DependencyVuln{}
-
-	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
-	if err != nil {
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
-	}
-
-	// calculate the depth of each component
-	sbom, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, *assetVersion, artifactName, assetComponents)
-	if err != nil {
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
-	}
-	depthMap := sbom.CalculateDepth()
-	for _, vuln := range vulns {
-		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVuln(vuln, depthMap, asset.ID, assetVersion.Name, artifactName))
-	}
-
-	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
-		return f.CalculateHash()
-	})
-
-	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, sbom, dependencyVulns, asset, upstream)
-	if err != nil {
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	if assetVersion.Metadata == nil {
-		assetVersion.Metadata = make(map[string]any)
-	}
-
-	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-
-	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(nil, "system", newState, "", asset)
-
-	if err != nil {
-		slog.Error("could not recalculate raw risk assessment", "err", err)
-		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")
-	}
-
-	if len(opened) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
-		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(shared.DependencyVulnsDetectedEvent{
-				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Vulns:        utils.Map(opened, transformer.DependencyVulnToDTO),
-				Artifact: shared.ArtifactObject{
-					ArtifactName: artifactName,
-				},
-			}); err != nil {
-				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
-			}
-		})
-	}
-
-	return opened, closed, newState, nil
-}
-
-type Diffable interface {
-	AssetVersionIndependentHash() string
-	GetAssetVersionName() string
-	GetEvents() []models.VulnEvent
-}
-
-func (s *assetVersionService) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.CdxBom, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
-	if err != nil {
-		slog.Error("could not get existing dependencyVulns", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID)
-	if err != nil {
-		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	// remove all fixed dependencyVulns from the existing dependencyVulns
-	var filterFixed = func(dependencyVuln models.DependencyVuln) bool { return dependencyVuln.State != dtos.VulnStateFixed }
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
-	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
-
-	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
-	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
-	// this means, that another source is still saying, its part of this artifact
-	unfixablePurls := sbom.InformationFromVexOrMultipleSBOMs()
-	filterPredicate := func(dv models.DependencyVuln) bool {
-		return !slices.Contains(unfixablePurls, dv.ComponentPurl)
-	}
-
-	fixedVulns := utils.Filter(diff.FixedEverywhere, filterPredicate)
-	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
-
-	// newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(diff.NewlyDiscovered, existingVulnsOnOtherBranch)
-	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
-
-	if err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
-		// make sure to first create a user detected event for vulnerabilities with just upstream events
-		// this way we preserve the event history
-		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
-			slog.Error("error when trying to add events for existing vulnerability on different branch")
-			return err // this will cancel the transaction
-		}
-		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset, upstream); err != nil {
-			return err // this will cancel the transaction
-		}
-
-		err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(tx, diff.NewInArtifact, artifactName)
-		if err != nil {
-			slog.Error("error when trying to add events for adding scanner to vulnerability")
-			return err
-		}
-
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(tx, fixedOnThisArtifactName, artifactName)
-		if err != nil {
-			slog.Error("error when trying to add events for removing scanner from vulnerability")
-			return err
-		}
-
-		if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
-			slog.Error("error when trying to add fix event")
-			return err
-		}
-
-		if len(diff.Unchanged) > 0 {
-			var valueClauses []string
-			for _, dv := range diff.Unchanged {
-				hash := dv.CalculateHash()
-				depth := utils.OrDefault(dv.ComponentDepth, 1)
-				valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
-			}
-			// Join the value clauses with commas
-			values := strings.Join(valueClauses, ",")
-			// Construct the SQL query - use LEAST to keep the minimum depth (shallowest = highest risk)
-			query := fmt.Sprintf(`
-				UPDATE dependency_vulns
-				SET component_depth = LEAST(dependency_vulns.component_depth, data.component_depth)
-				FROM (VALUES %s) AS data(id, component_depth)
-				WHERE dependency_vulns.asset_id = ?
-				AND dependency_vulns.asset_version_name = ?
-				AND dependency_vulns.id = data.id
-			`, values)
-			// update just the component depth for nothingChanged vulns
-			return s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
-		}
-		return nil
-	}); err != nil {
-		slog.Error("could not save dependencyVulns", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, &artifactName)
-	if err != nil {
-		slog.Error("could not get existing dependencyVulns", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
-}
-
-func buildBomRefMap(bom *normalize.CdxBom) map[string]cdx.Component {
-	res := make(map[string]cdx.Component)
-	if bom.GetComponents() == nil {
-		return res
-	}
-
-	for _, component := range *bom.GetComponentsIncludingFakeNodes() {
-		res[component.BOMRef] = component
-	}
-	return res
-}
-
-func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.CdxBom, upstream dtos.UpstreamState) (*normalize.CdxBom, error) {
+func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, &artifactName)
+	// Load the full SBOM graph from the database
+	wholeAssetGraph, err := s.LoadFullSBOMGraph(assetVersion)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not load asset components")
+		return nil, errors.Wrap(err, "could not build whole asset sbom graph")
 	}
 
-	existingComponentID := make(map[string]bool)
-	for _, currentComponent := range assetComponents {
-		existingComponentID[currentComponent.Component.ID] = true
-	}
+	diff := wholeAssetGraph.MergeGraph(sbom)
 
-	// we need to check if the SBOM is new or if it already exists.
-	// if it already exists, we need to update the existing SBOM
-	// update the sbom for the asset in the database.
-	components := make(map[string]models.Component)
-	dependencies := make([]models.ComponentDependency, 0)
-	// if the sbom only represents a subtree of the actual asset, we cannot update the whole asset.
-	// first we need to replace the subtree.
-
-	wholeAssetSBOM, err := s.BuildSBOM(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifactName, assetComponents)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not build whole asset sbom")
-	}
-
-	for _, informationSource := range sbom.GetInformationSourceNodes() {
-		wholeAssetSBOM.ReplaceOrAddInformationSourceNode(informationSource)
-	}
-
-	// build a map of all components
-	bomRefMap := buildBomRefMap(wholeAssetSBOM)
-
-	depExistMap := make(map[string]bool)
-	// create all direct dependencies
-	for _, c := range *wholeAssetSBOM.GetDirectDependencies() {
-		component := bomRefMap[c.Ref]
-		// the sbom of a container image does not contain the scope. In a container image, we do not have
-		// anything like a deep nested dependency tree. Everything is a direct dependency.
-		componentID := normalize.GetComponentID(component)
-		// create the direct dependency edge.
-		if _, ok := depExistMap["nil->"+componentID]; ok {
-			continue
-		}
-		depExistMap["nil->"+componentID] = true
-		dependencies = append(dependencies,
-			models.ComponentDependency{
-				ComponentID:  nil, // direct dependency - therefore set it to nil
-				DependencyID: componentID,
-			},
-		)
-	}
-
-	transitiveDependencies := *wholeAssetSBOM.GetTransitiveDependencies()
-	for _, c := range transitiveDependencies {
-		comp := bomRefMap[c.Ref]
-		componentID := normalize.GetComponentID(comp)
-		for _, d := range *c.Dependencies {
-			dep := bomRefMap[d]
-			depComponentID := normalize.GetComponentID(dep)
-			if _, ok := depExistMap[componentID+"->"+depComponentID]; ok {
-				continue
-			}
-			depExistMap[componentID+"->"+depComponentID] = true
-			dependencies = append(dependencies,
-				models.ComponentDependency{
-					ComponentID:  utils.Ptr(componentID),
-					DependencyID: depComponentID,
-				},
-			)
-		}
-	}
-
-	for _, c := range *wholeAssetSBOM.GetComponentsIncludingFakeNodes() {
-		componentID := normalize.GetComponentID(c)
-		if _, ok := existingComponentID[componentID]; !ok {
-			components[componentID] = models.Component{
-				ID:            componentID,
-				ComponentType: dtos.ComponentType(c.Type),
-			}
-		}
-	}
-
-	componentsSlice := make([]models.Component, 0, len(components))
-	for _, c := range components {
-		componentsSlice = append(componentsSlice, c)
-	}
-
-	// make sure, that the components exist
-	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
-		return nil, err
-	}
-
-	_, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
-	if err != nil {
-		return nil, err
+	if err := s.componentRepository.HandleStateDiff(tx, assetVersion, wholeAssetGraph, diff); err != nil {
+		return nil, errors.Wrap(err, "could not handle state diff")
 	}
 
 	// update the license information in the background
@@ -612,6 +134,10 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		s.FireAndForget(func() {
+			// Export the updated graph back to CycloneDX format for the event
+			exportedBOM := wholeAssetGraph.ToCycloneDX(normalize.BOMMetadata{
+				RootName: artifactName,
+			})
 			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
@@ -620,7 +146,7 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 				Artifact: shared.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-				SBOM: sbom.EjectSBOM(nil),
+				SBOM: exportedBOM,
 			}); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
@@ -629,10 +155,12 @@ func (s *assetVersionService) UpdateSBOM(org models.Org, project models.Project,
 		})
 	}
 
-	return wholeAssetSBOM, nil
+	return wholeAssetGraph, nil
 }
 
-func (s *assetVersionService) BuildSBOM(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, components []models.ComponentDependency) (*normalize.CdxBom, error) {
+// LoadFullSBOMGraph loads all components for an asset version and builds a complete SBOMGraph.
+// This is the new graph-based approach that will eventually replace LoadFullSBOM.
+func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
@@ -644,7 +172,13 @@ func (s *assetVersionService) BuildSBOM(frontendURL string, organizationName str
 		}
 	}
 
-	return normalize.FromComponents(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, utils.MapType[normalize.CdxComponent](components), componentLicenseOverwrites), nil
+	// Load ALL components for the asset version
+	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load components")
+	}
+
+	return normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -699,8 +233,7 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.CdxBom {
-
+func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
@@ -761,7 +294,7 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.FromVulnerabilities(asset.Slug, artifactName, assetVersion.Name, assetVersion.Slug, projectSlug, organizationSlug, frontendURL, vulnerabilities)
+	return normalize.SBOMGraphFromVulnerabilities(vulnerabilities)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {
@@ -877,7 +410,6 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 // write the components from bom to the output file following the template
 func MarkdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
-
 	type componentData struct {
 		Package  string
 		Version  string
