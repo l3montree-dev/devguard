@@ -210,13 +210,15 @@ func (g *SBOMGraph) ClearScope() {
 	g.scopeID = g.rootID
 }
 
+var ErrNodeNotReachable = fmt.Errorf("node not reachable from current scope")
+
 func (g *SBOMGraph) Scope(id string) error {
 	// check if valid
 	if g.reachableNodes()[id] {
 		g.scopeID = id
 		return nil
 	}
-	return fmt.Errorf("node %s not reachable from current scope", id)
+	return ErrNodeNotReachable
 }
 
 func (g *SBOMGraph) CurrentScopeID() string {
@@ -745,11 +747,9 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 		}
 	}
 
-	// Start from info source children
-	for infoSource := range g.InfoSources() {
-		for childID := range g.edges[infoSource.ID] {
-			visit(childID, []string{}, make(map[string]bool))
-		}
+	// Start from artifacts and prepend "root" to paths
+	for artifact := range g.Artifacts() {
+		visit(artifact.ID, []string{"root"}, make(map[string]bool))
 	}
 
 	return paths

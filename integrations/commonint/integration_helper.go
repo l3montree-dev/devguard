@@ -318,6 +318,91 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 	return nil
 }
 
+func escapeNodeID(s string) string {
+	if s == "" {
+		return "root"
+	}
+	// Creates a safe Mermaid node ID by removing special characters
+	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
+}
+
+func escapeAtSign(pURL string) string {
+	if pURL == "" {
+		return "root"
+	}
+	// escape @ sign in purl
+	return strings.ReplaceAll(pURL, "@", "\\@")
+}
+
+// beautifyNodeLabel creates a more readable label for graph nodes
+func beautifyNodeLabel(nodeID string) string {
+	if nodeID == "" || nodeID == "root" {
+		return "Root"
+	}
+	
+	// Check if it's an info source node (sbom:, vex:, csaf:)
+	if strings.HasPrefix(nodeID, "sbom:") {
+		parts := strings.Split(nodeID, "@")
+		if len(parts) == 2 {
+			origin := strings.TrimPrefix(parts[0], "sbom:")
+			return fmt.Sprintf("SBOM (%s)", origin)
+		}
+		return "SBOM"
+	}
+	if strings.HasPrefix(nodeID, "vex:") {
+		parts := strings.Split(nodeID, "@")
+		if len(parts) == 2 {
+			origin := strings.TrimPrefix(parts[0], "vex:")
+			return fmt.Sprintf("VEX (%s)", origin)
+		}
+		return "VEX"
+	}
+	if strings.HasPrefix(nodeID, "csaf:") {
+		parts := strings.Split(nodeID, "@")
+		if len(parts) == 2 {
+			origin := strings.TrimPrefix(parts[0], "csaf:")
+			return fmt.Sprintf("CSAF (%s)", origin)
+		}
+		return "CSAF"
+	}
+	
+	// Check if it's an artifact node
+	if strings.HasPrefix(nodeID, "artifact:") {
+		artifactName := strings.TrimPrefix(nodeID, "artifact:")
+		return artifactName
+	}
+	
+	// Regular component - just escape @ sign
+	return strings.ReplaceAll(nodeID, "@", "\\@")
+}
+
+func pathsToMermaid(paths [][]string) string {
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
+
+	var builder strings.Builder
+	builder.WriteString(mermaidFlowChart)
+
+	var existingPaths = make(map[string]bool)
+
+	for _, path := range paths {
+		for i := 0; i < len(path)-1; i++ {
+			fromLabel := path[i]
+			toLabel := path[i+1]
+			mermaidPath := fmt.Sprintf("%s([\"%s\"]) --- %s([\"%s\"])\n",
+				escapeNodeID(fromLabel), beautifyNodeLabel(fromLabel), escapeNodeID(toLabel), beautifyNodeLabel(toLabel))
+			if existingPaths[mermaidPath] {
+				// skip if path already exists
+				continue
+			}
+			existingPaths[mermaidPath] = true
+
+			builder.WriteString(mermaidPath)
+		}
+	}
+
+	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
+}
+
 // this function returns a string containing a mermaids js flow chart to the given pURL
 func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
 	artifactName := ""
@@ -331,20 +416,11 @@ func RenderPathToComponent(componentRepository shared.ComponentRepository, asset
 		return "", err
 	}
 
-	// Build the dependency tree from components
-	tree := normalize.BuildDependencyTree(models.ComponentDependencyNode{
-		// nil will be mapped to empty string in BuildDepMap
-		ID: "",
-	}, utils.Flat(utils.Map(components, func(el models.ComponentDependency) []models.ComponentDependencyNode {
-		return el.ToNodes()
-	})), models.BuildDepMap(components))
+	bom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
 
-	// Check if the target pURL is reachable in the tree
-	if !tree.Reachable(pURL) {
-		return "", nil
-	}
+	paths := bom.FindAllPathsToPURL(pURL)
 
-	return tree.RenderToMermaid(), nil
+	return pathsToMermaid(paths), nil
 }
 
 func stateToLabel(state dtos.VulnState) string {

@@ -33,8 +33,8 @@ func TestRenderPathToComponent(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		// With empty components, the pURL is not reachable, so we get empty string
-		assert.Equal(t, "", result)
+		// With empty components, the pURL is not reachable, so we get empty mermaid diagram
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 	t.Run("LoadPathToComponent fails somehow should return an error", func(t *testing.T) {
@@ -55,17 +55,17 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "testDependency"}, // root --> testDependency
-			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL"},
-			{ComponentID: utils.Ptr("testDependency"), DependencyID: "testPURL"},
+			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}}, // root --> artifact
+			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
+			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
-		pURL := "testPURL" // Use a pURL that's actually in the component list
+		artifacts := []models.Artifact{{ArtifactName: "test-artifact"}}
+		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
 
 		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
@@ -73,29 +73,29 @@ func TestRenderPathToComponent(t *testing.T) {
 		}
 
 		//String for the empty graph + 1 node being root with a linebreak
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- testDependency([\"testDependency\"])\ntestDependency([\"testDependency\"]) --- testPURL([\"testPURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"Root\"]) --- artifact_test_artifact([\"test-artifact\"])\nartifact_test_artifact([\"test-artifact\"]) --- sbom_test_test_artifact([\"SBOM (test)\"])\nsbom_test_test_artifact([\"SBOM (test)\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "testDependency"}, // root --> testDependency
-			{ComponentID: utils.Ptr("testomatL"), DependencyID: "testPURL"},
-			{ComponentID: utils.Ptr("testDependency"), DependencyID: "test@PURL"},
+			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}}, // root --> artifact
+			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
+			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
 		assetVersionName := "TestName"
-		artifacts := []models.Artifact{{ArtifactName: "SBOM-File-Upload"}}
-		pURL := "test@PURL" // Use a pURL that's actually in the component list
+		artifacts := []models.Artifact{{ArtifactName: "test-artifact"}}
+		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
 
 		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, artifacts, pURL)
 		if err != nil {
 			t.Fail()
 		}
 
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- testDependency([\"testDependency\"])\ntestDependency([\"testDependency\"]) --- test_PURL([\"test\\@PURL\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"Root\"]) --- artifact_test_artifact([\"test-artifact\"])\nartifact_test_artifact([\"test-artifact\"]) --- sbom_test_test_artifact([\"SBOM (test)\"])\nsbom_test_test_artifact([\"SBOM (test)\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 }

@@ -423,7 +423,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 					bom.ClearScope()
 					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
-					if err != nil {
+					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {
 						tx.Rollback()
 						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
