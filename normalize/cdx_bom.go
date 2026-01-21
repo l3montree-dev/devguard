@@ -24,6 +24,13 @@ type CdxBom struct {
 	frontendURL      string
 }
 
+func SanitizeExternalReferencesURL(url string) string {
+	// when attesting with cosign, & get replaced with \u0026
+	// we need to revert that here
+	sanitizedURL := strings.ReplaceAll(url, `\u0026`, `&`)
+	return sanitizedURL
+}
+
 func (bom *CdxBom) ReplaceRoot(newRoot cdxBomNode) {
 	bom.tree.ReplaceRoot(newRoot)
 }
