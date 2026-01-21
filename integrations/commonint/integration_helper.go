@@ -339,7 +339,7 @@ func beautifyNodeLabel(nodeID string) string {
 	if nodeID == "" || nodeID == "root" {
 		return "Root"
 	}
-	
+
 	// Check if it's an info source node (sbom:, vex:, csaf:)
 	if strings.HasPrefix(nodeID, "sbom:") {
 		parts := strings.Split(nodeID, "@")
@@ -365,13 +365,13 @@ func beautifyNodeLabel(nodeID string) string {
 		}
 		return "CSAF"
 	}
-	
+
 	// Check if it's an artifact node
-	if strings.HasPrefix(nodeID, "artifact:") {
-		artifactName := strings.TrimPrefix(nodeID, "artifact:")
+	if after, ok := strings.CutPrefix(nodeID, "artifact:"); ok {
+		artifactName := after
 		return artifactName
 	}
-	
+
 	// Regular component - just escape @ sign
 	return strings.ReplaceAll(nodeID, "@", "\\@")
 }
