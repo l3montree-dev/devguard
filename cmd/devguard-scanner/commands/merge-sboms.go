@@ -127,6 +127,7 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 	// print the sbom to stdout
 	encoder := cyclonedx.NewBOMEncoder(os.Stdout, cyclonedx.BOMFileFormatJSON)
 	encoder.SetPretty(true)
+	encoder.SetEscapeHTML(false)
 	err := encoder.Encode(result)
 	if err != nil {
 		return err

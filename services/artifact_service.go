@@ -144,6 +144,7 @@ func (s *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string,
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
+		url = normalize.SanitizeExternalReferencesURL(url)
 		// check if csaf provider-metadata.json is appended
 		if strings.HasSuffix(url, "/provider-metadata.json") {
 			// we need to use the csaf ingestion here.

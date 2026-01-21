@@ -94,7 +94,7 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 	}
 
 	c.Response().Header().Set(echo.HeaderContentType, "application/json")
-	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(bom)
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false).Encode(bom)
 }
 
 // @Summary Get release SBOM as XML
@@ -168,7 +168,7 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 	}
 
 	c.Response().Header().Set(echo.HeaderContentType, "application/json")
-	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(bom)
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false).Encode(bom)
 }
 
 // @Summary Get release VEX as XML
