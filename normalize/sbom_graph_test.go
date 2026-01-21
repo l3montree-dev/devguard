@@ -602,40 +602,40 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef:     "pkg:golang/a",
-					PackageURL: "pkg:golang/a",
+					BOMRef:     "pkg:golang/a@1.0.0",
+					PackageURL: "pkg:golang/a@1.0.0",
 				},
 				{
-					BOMRef:     "pkg:golang/b",
-					PackageURL: "pkg:golang/b",
+					BOMRef:     "pkg:golang/b@1.0.0",
+					PackageURL: "pkg:golang/b@1.0.0",
 				},
 				{
-					BOMRef:     "pkg:golang/c",
-					PackageURL: "pkg:golang/c",
+					BOMRef:     "pkg:golang/c@1.0.0",
+					PackageURL: "pkg:golang/c@1.0.0",
 				},
 				{
-					PackageURL: "pkg:golang/d",
-					BOMRef:     "pkg:golang/d",
+					PackageURL: "pkg:golang/d@1.0.0",
+					BOMRef:     "pkg:golang/d@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
 					Ref: "pkg:GraphRootNodeID",
 					Dependencies: &[]string{
-						"pkg:golang/a",
+						"pkg:golang/a@1.0.0",
 					},
 				},
 				{
-					Ref: "pkg:golang/a",
+					Ref: "pkg:golang/a@1.0.0",
 					Dependencies: &[]string{
-						"pkg:golang/b",
-						"pkg:golang/c",
+						"pkg:golang/b@1.0.0",
+						"pkg:golang/c@1.0.0",
 					},
 				},
 				{
-					Ref: "pkg:golang/b",
+					Ref: "pkg:golang/b@1.0.0",
 					Dependencies: &[]string{
-						"pkg:golang/d",
+						"pkg:golang/d@1.0.0",
 					},
 				},
 			},
@@ -644,10 +644,10 @@ func TestCalculateDepth(t *testing.T) {
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
-			"pkg:golang/a": 1,
-			"pkg:golang/b": 2,
-			"pkg:golang/c": 2,
-			"pkg:golang/d": 3,
+			"pkg:golang/a@1.0.0": 1,
+			"pkg:golang/b@1.0.0": 2,
+			"pkg:golang/c@1.0.0": 2,
+			"pkg:golang/d@1.0.0": 3,
 		}
 
 		for node, expectedDepth := range expectedDepths {

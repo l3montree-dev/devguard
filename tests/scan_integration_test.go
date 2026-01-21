@@ -1388,6 +1388,12 @@ func TestUploadVEX(t *testing.T) {
 				},
 			},
 			Vulnerabilities: &[]cyclonedx.Vulnerability{vuln},
+			Components: &[]cyclonedx.Component{
+				{
+					BOMRef:     "pkg:npm/example1@1.0.0",
+					PackageURL: "pkg:npm/example1@1.0.0",
+				},
+			},
 		}
 
 		// encode BOM into multipart form
@@ -1526,9 +1532,11 @@ func TestIdempotency(t *testing.T) {
 			assert.ElementsMatch(t, *firstSBOM.Components, *secondSBOM.Components)
 			// build a dependency map
 			for _, firstDep := range *firstSBOM.Dependencies {
-
 				for _, secondDep := range *secondSBOM.Dependencies {
 					if secondDep.Ref == firstDep.Ref {
+						if firstDep.Dependencies == nil && secondDep.Dependencies == nil {
+							continue
+						}
 						assert.ElementsMatch(t, *firstDep.Dependencies, *secondDep.Dependencies)
 					}
 				}

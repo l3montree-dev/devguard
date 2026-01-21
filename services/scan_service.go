@@ -17,7 +17,6 @@ package services
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -51,30 +50,7 @@ func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersi
 
 var _ shared.ScanService = &scanService{}
 
-func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) (int, int, []models.DependencyVuln, error) {
-	opened, closed, newState, err := s.ScanNormalizedSBOMWithoutEventHandling(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
-	if err != nil {
-		return 0, 0, nil, err
-	}
-	//Check if we want to create an issue for this assetVersion
-	s.FireAndForget(func() {
-		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	s.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
-
-	return len(opened), len(closed), newState, nil
-}
-
-func (s *scanService) ScanNormalizedSBOMWithoutEventHandling(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// remove all other artifacts from the bom
 	normalizedBom.ScopeToArtifact(artifact.ArtifactName)
 	vulns, err := s.sbomScanner.Scan(normalizedBom)

@@ -118,19 +118,14 @@ func normalizePurl(purl string) string {
 func GetComponentID(component cdx.Component) string {
 	if component.BOMRef == GraphRootNodeID {
 		return "" // replace with nil before storing.
-	}
-	var purl string
-	if component.PackageURL != "" {
-		return component.PackageURL
-	} else if component.Version != "" && component.Name != "" {
-		return component.Name + "@" + component.Version
 	} else if component.BOMRef != "" {
 		// For artifact and info-source nodes, use BOMRef (e.g., "artifact:source", "sbom:DEFAULT@scanner")
 		return component.BOMRef
+	} else if component.PackageURL != "" {
+		return normalizePurl(component.PackageURL)
 	} else {
-		return component.Name
+		return component.Name // fallback to name
 	}
-	return purl
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py

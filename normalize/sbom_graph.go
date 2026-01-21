@@ -1249,25 +1249,16 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 				if isRootProjectComponent(comp) {
 					continue // Skip root project components
 				}
-				purl := comp.PackageURL
-				if purl == "" {
-					purl = comp.BOMRef
-				}
 				// Check if this component is a child of any other
 				isChild := false
 				for _, children := range depMap {
-					for _, child := range children {
-						if child == purl {
-							isChild = true
-							break
-						}
-					}
-					if isChild {
+					if slices.Contains(children, GetComponentID(comp)) {
+						isChild = true
 						break
 					}
 				}
 				if !isChild {
-					g.AddEdge(infoID, purl)
+					g.AddEdge(infoID, GetComponentID(comp))
 				}
 			}
 		}
@@ -1277,6 +1268,14 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	if bom.Vulnerabilities != nil {
 		for _, vuln := range *bom.Vulnerabilities {
 			g.AddVulnerability(vuln)
+			// build edges to affected components
+			if vuln.Affects != nil {
+				for _, aff := range *vuln.Affects {
+					if g.nodes[aff.Ref] != nil {
+						g.AddEdge(infoID, GetComponentID(*g.nodes[aff.Ref].Component)) // link vuln to info source)
+					}
+				}
+			}
 		}
 	}
 

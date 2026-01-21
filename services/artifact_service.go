@@ -327,14 +327,17 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org mode
 		}
 
 		tx := s.assetVersionRepository.GetDB(nil).Begin()
+
 		bom, err = s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, bom, upstream)
 		if err != nil {
+			tx.Rollback()
 			slog.Error("could not update sbom", "err", err)
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
 		_, _, newState, err := s.assetVersionService.HandleScanResult(tx, org, project, asset, &assetVersion, bom, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
 		if err != nil {
+			tx.Rollback()
 			slog.Error("could not handle scan result", "err", err)
 			return nil, echo.NewHTTPError(500, "could not handle scan result").WithInternal(err)
 		}
@@ -372,7 +375,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org mode
 					expected.eventType = dtos.EventTypeReopened
 				}
 
-				_, err = s.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(tx, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", newState[i].CVEID)
 					continue
@@ -381,6 +384,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org mode
 		}
 
 		allVulns = append(allVulns, newState...)
+		tx.Commit()
 	}
 
 	return allVulns, nil

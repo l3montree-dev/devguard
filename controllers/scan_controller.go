@@ -240,9 +240,24 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 
 	tx.Commit()
 
+	//Check if we want to create an issue for this assetVersion
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+
+	s.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+		}
+	})
+
 	return dtos.ScanResponse{
-		AmountOpened:    opened,
-		AmountClosed:    closed,
+		AmountOpened:    len(opened),
+		AmountClosed:    len(closed),
 		DependencyVulns: utils.Map(newState, transformer.DependencyVulnToDTO),
 	}, nil
 }

@@ -420,7 +420,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
-					_, _, _, err = runner.scanService.ScanNormalizedSBOMWithoutEventHandling(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
+					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
 					if err != nil {
 						tx.Rollback()

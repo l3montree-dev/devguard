@@ -2099,8 +2099,8 @@ func (_c *DependencyVulnRepository_ListByAssetIDWithoutHandledExternalEvents_Cal
 }
 
 // ListUnfixedByAssetAndAssetVersion provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(assetVersionName, assetID, artifactName)
+func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListUnfixedByAssetAndAssetVersion")
@@ -2108,18 +2108,18 @@ func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVe
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, *string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, *string) []models.DependencyVuln); ok {
-		r0 = returnFunc(assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, *string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, *string) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2132,31 +2132,37 @@ type DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call struct {
 }
 
 // ListUnfixedByAssetAndAssetVersion is a helper method to define mock.On call
+//   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - artifactName *string
-func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersion(assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
-	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersion", assetVersionName, assetID, artifactName)}
+func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
+	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersion", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) Run(run func(assetVersionName string, assetID uuid.UUID, artifactName *string)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(shared.DB)
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(string)
 		}
-		var arg2 *string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *string
+		if args[3] != nil {
+			arg3 = args[3].(*string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -2167,7 +2173,7 @@ func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) Retur
 	return _c
 }
 
-func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
