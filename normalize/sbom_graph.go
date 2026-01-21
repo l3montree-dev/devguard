@@ -530,22 +530,25 @@ func (g *SBOMGraph) ChildrenOfType(nodeID string, nodeType GraphNodeType) iter.S
 func (g *SBOMGraph) NodesOfType(nodeType GraphNodeType) iter.Seq[*GraphNode] {
 	return func(yield func(*GraphNode) bool) {
 		visited := make(map[string]bool)
-		var visit func(id string)
-		visit = func(id string) {
+		var visit func(id string) bool
+		visit = func(id string) bool {
 			if visited[id] {
-				return
+				return true
 			}
 			visited[id] = true
 
 			if node := g.nodes[id]; node != nil && node.Type == nodeType {
 				if !yield(node) {
-					return
+					return false
 				}
 			}
 
 			for childID := range g.edges[id] {
-				visit(childID)
+				if !visit(childID) {
+					return false
+				}
 			}
+			return true
 		}
 		visit(g.scopeID)
 	}
