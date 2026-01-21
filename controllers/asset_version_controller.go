@@ -214,16 +214,16 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	}
 
 	// If artifact name is specified, extract just that artifact's subtree
-	targetBom := sbom
+
 	if artifactName != "" {
 		err = sbom.ScopeToArtifact(artifactName)
-		if targetBom == nil {
-			return echo.NewHTTPError(404, "artifact not found")
+		if err != nil {
+			return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 		}
 	}
 
 	// Find all paths to the component using CdxBom's tree traversal
-	return ctx.JSON(200, targetBom.FindAllPathsToPURL(pURL))
+	return ctx.JSON(200, sbom.FindAllPathsToPURL(pURL))
 }
 
 // @Summary Get SBOM in JSON format

@@ -52,7 +52,11 @@ var _ shared.ScanService = &scanService{}
 
 func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// remove all other artifacts from the bom
-	normalizedBom.ScopeToArtifact(artifact.ArtifactName)
+	err := normalizedBom.ScopeToArtifact(artifact.ArtifactName)
+	if err != nil {
+		slog.Error("could not scope bom to artifact", "err", err)
+		return nil, nil, nil, err
+	}
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
 	if err != nil {

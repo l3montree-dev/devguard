@@ -181,7 +181,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	if len(diff.RemovedEdges) > 0 {
 		var valueClauses []string
 		for _, edge := range diff.RemovedEdges {
-			var componentID string = edge[0]
+			componentID := edge[0]
 			if componentID == normalize.GraphRootNodeID {
 				componentID = "NULL"
 			} else {

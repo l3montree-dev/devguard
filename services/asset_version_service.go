@@ -319,7 +319,10 @@ func (s *assetVersionService) handleFirstPartyVulnResult(userID string, scannerI
 
 func (s *assetVersionService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	// scope the sbom to the current artifact only
-	sbom.ScopeToArtifact(artifactName)
+	err = sbom.ScopeToArtifact(artifactName)
+	if err != nil {
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not scope sbom to artifact")
+	}
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 

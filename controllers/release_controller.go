@@ -276,7 +276,10 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 			return nil, err
 		}
 
-		bom.ScopeToArtifact(*item.ArtifactName)
+		err = bom.ScopeToArtifact(*item.ArtifactName)
+		if err != nil {
+			return nil, err
+		}
 		// scope to artifact
 		boms = append(boms, bom)
 	}
