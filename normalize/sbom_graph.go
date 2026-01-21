@@ -139,8 +139,12 @@ func (g *SBOMGraph) AddArtifact(name string) string {
 }
 
 // AddInfoSource adds an information source node as a child of an artifact.
+// The info source ID is unique per artifact to prevent conflicts when merging graphs.
 func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSourceType) string {
-	id := fmt.Sprintf("%s:%s", sourceType, sourceID)
+	// Extract artifact name from artifactID (e.g., "artifact:my-app" -> "my-app")
+	_, artifactName := ParseGraphNodeID(artifactID)
+	// Create a unique ID that includes the artifact name
+	id := fmt.Sprintf("%s:%s@%s", sourceType, sourceID, artifactName)
 	if g.nodes[id] == nil {
 		g.nodes[id] = &GraphNode{
 			ID:       id,
