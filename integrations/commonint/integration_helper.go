@@ -326,14 +326,6 @@ func escapeNodeID(s string) string {
 	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
 }
 
-func escapeAtSign(pURL string) string {
-	if pURL == "" {
-		return "root"
-	}
-	// escape @ sign in purl
-	return strings.ReplaceAll(pURL, "@", "\\@")
-}
-
 // beautifyNodeLabel creates a more readable label for graph nodes
 func beautifyNodeLabel(nodeID string) string {
 	if nodeID == "" || nodeID == "root" {
