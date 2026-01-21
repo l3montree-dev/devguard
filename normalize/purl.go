@@ -167,42 +167,6 @@ func urlEncode(packageName string) string {
 	return strings.Join(parts, "/")
 }
 
-func PackageToPurl(ecosystem, packageName string) string {
-	purlType, exists := PURLEcosystems[ecosystem]
-	if !exists {
-		return ""
-	}
-
-	var suffix string
-
-	switch purlType {
-	case "maven":
-		// PURLs use / to separate the group ID and the artifact ID.
-		packageName = strings.Replace(packageName, ":", "/", 1)
-	case "deb":
-		if ecosystem == "Debian" {
-			packageName = "debian/" + packageName
-			suffix = "?arch=source"
-		}
-	case "apk":
-		if ecosystem == "Alpine" {
-			packageName = "alpine/" + packageName
-			suffix = "?arch=source"
-		}
-	}
-
-	return "pkg:" + purlType + "/" + urlEncode(packageName) + suffix
-}
-
-func PurlToEcosystem(purlType string) string {
-	for key, value := range PURLEcosystems {
-		if value == purlType {
-			return key
-		}
-	}
-	return ""
-}
-
 func Purlify(artifactName string, assetVersionName string) string {
 	const (
 		defaultType    = "generic"

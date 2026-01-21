@@ -524,32 +524,6 @@ func GetAllRiskLabelsWithColors() []Label {
 	}
 }
 
-func AddPipelineTemplate(content []byte, template string) string { //nolint:unused
-	fileStr := string(content)
-	includeIndex := -1
-	// split the file on each line
-	for index, line := range strings.Split(fileStr, "\n") {
-		// check if the line contains the include key
-		if strings.Contains(line, "include:") {
-			// include does exist
-			includeIndex = index
-			break
-		}
-	}
-
-	if includeIndex != -1 {
-		// insert it right after that index
-		fileArr := strings.Split(fileStr, "\n")
-		fileArr = append(fileArr[:includeIndex+1], append(strings.Split(template, "\n")[1:], fileArr[includeIndex+1:]...)...)
-		fileStr = strings.Join(fileArr, "\n")
-	} else {
-		// include does not exist - just insert it at the end
-		fileStr += fmt.Sprintf("\ninclude:\n%s\n", template)
-	}
-
-	return fileStr
-}
-
 func GenerateFourDigitNumber() int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // we don't need a secure random number here
 	return 1000 + r.Intn(9000)

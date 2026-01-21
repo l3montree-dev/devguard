@@ -623,15 +623,6 @@ const (
 	RoleUnknown Role = "unknown"
 )
 
-func ValidRole(role Role) bool {
-	switch role {
-	case RoleOwner, RoleAdmin, RoleMember, RoleGuest:
-		return true
-	default:
-		return false
-	}
-}
-
 type Action string
 
 const (

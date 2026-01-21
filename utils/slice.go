@@ -62,29 +62,6 @@ func Reduce[T, U any](s []T, f func(U, T) U, init U) U {
 	return r
 }
 
-func Disjoin[T any](a []T, predicate func(el T) bool) ([]T, []T) {
-	trueList := make([]T, 0)
-	falseList := make([]T, 0)
-	for _, el := range a {
-		if predicate(el) {
-			trueList = append(trueList, el)
-		} else {
-			falseList = append(falseList, el)
-		}
-	}
-	return trueList, falseList
-}
-
-func Intersect[T comparable](a, b []T) []T {
-	res := make([]T, 0)
-	for _, el := range a {
-		if Contains(b, el) {
-			res = append(res, el)
-		}
-	}
-	return res
-}
-
 func Flat[T any](s [][]T) []T {
 	res := make([]T, 0)
 	for _, subslice := range s {
@@ -182,15 +159,4 @@ func ContainsAll[T comparable](s []T, needed []T) bool {
 	return All(needed, func(n T) bool {
 		return Contains(s, n)
 	})
-}
-
-func MergeUnrelated[A, B any](a []A, b []B) []any {
-	res := make([]any, 0)
-	for _, v := range a {
-		res = append(res, v)
-	}
-	for _, v := range b {
-		res = append(res, v)
-	}
-	return res
 }
