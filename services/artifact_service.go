@@ -33,11 +33,12 @@ type ArtifactService struct {
 	assetVersionRepository   shared.AssetVersionRepository
 	assetVersionService      shared.AssetVersionService
 	dependencyVulnService    shared.DependencyVulnService
+	scanService              shared.ScanService
 }
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
 	return &ArtifactService{
 		csafService:              csafService,
 		artifactRepository:       artifactRepository,
@@ -48,6 +49,7 @@ func NewArtifactService(artifactRepository shared.ArtifactRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetVersionService:      assetVersionService,
 		dependencyVulnService:    dependencyVulnService,
+		scanService:              scanService,
 	}
 }
 
@@ -335,7 +337,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org mode
 			return nil, echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
 
-		_, _, newState, err := s.assetVersionService.HandleScanResult(tx, org, project, asset, &assetVersion, bom, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
+		_, _, newState, err := s.scanService.HandleScanResult(tx, org, project, asset, &assetVersion, bom, vulnsInPackage, artifact.ArtifactName, userID, asset.UpstreamState())
 		if err != nil {
 			tx.Rollback()
 			slog.Error("could not handle scan result", "err", err)

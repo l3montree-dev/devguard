@@ -319,7 +319,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
+	opened, closed, newState, err := s.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not handle scan result"})
