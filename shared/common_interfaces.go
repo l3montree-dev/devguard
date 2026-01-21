@@ -220,7 +220,7 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
-	ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)

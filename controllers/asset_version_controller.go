@@ -179,7 +179,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 		return nil, nil, err
 	}
 
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -327,7 +327,7 @@ func (a *AssetVersionController) buildOpenVeX(ctx shared.Context) (vex.VEX, erro
 
 func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 
 	if err != nil {
 		return nil, err

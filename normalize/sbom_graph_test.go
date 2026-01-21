@@ -376,10 +376,11 @@ func TestMergeCdxBoms(t *testing.T) {
 				{Ref: "pkg:npm/component-1@1.0.0", Dependencies: &[]string{}},
 			},
 		}
-
-		assert.Nil(t, StructuralCompareCdxBoms(result.ToCycloneDX(BOMMetadata{
+		actual := result.ToCycloneDX(BOMMetadata{
 			ArtifactName: "merged-artifact",
-		}), expected))
+		})
+
+		assert.Nil(t, StructuralCompareCdxBoms(actual, expected))
 	})
 }
 
@@ -601,16 +602,20 @@ func TestCalculateDepth(t *testing.T) {
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:golang/a",
+					BOMRef:     "pkg:golang/a",
+					PackageURL: "pkg:golang/a",
 				},
 				{
-					BOMRef: "pkg:golang/b",
+					BOMRef:     "pkg:golang/b",
+					PackageURL: "pkg:golang/b",
 				},
 				{
-					BOMRef: "pkg:golang/c",
+					BOMRef:     "pkg:golang/c",
+					PackageURL: "pkg:golang/c",
 				},
 				{
-					BOMRef: "pkg:golang/d",
+					PackageURL: "pkg:golang/d",
+					BOMRef:     "pkg:golang/d",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -656,12 +661,13 @@ func TestCalculateDepth(t *testing.T) {
 		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
+					BOMRef: "root",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "pkg:devguard/testorg/testgroup/testdepth",
+					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
+					PackageURL: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
 				},
 				{
 					BOMRef: "go.mod",
@@ -670,12 +676,19 @@ func TestCalculateDepth(t *testing.T) {
 					BOMRef: "tmp",
 				},
 				{
-					BOMRef: "pkg:golang/github.com/gorilla/websocket",
+					BOMRef:     "pkg:golang/github.com/gorilla/websocket@1.0.0",
+					PackageURL: "pkg:golang/github.com/gorilla/websocket@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:devguard/testorg/testgroup/testdepth",
+					Ref: "root",
+					Dependencies: &[]string{
+						"pkg:devguard/testorg/testgroup/testdepth@1.0.0",
+					},
+				},
+				{
+					Ref: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
 					Dependencies: &[]string{
 						"go.mod",
 					},
@@ -689,7 +702,7 @@ func TestCalculateDepth(t *testing.T) {
 				{
 					Ref: "tmp",
 					Dependencies: &[]string{
-						"pkg:golang/github.com/gorilla/websocket",
+						"pkg:golang/github.com/gorilla/websocket@1.0.0",
 					},
 				},
 			},
@@ -700,7 +713,8 @@ func TestCalculateDepth(t *testing.T) {
 		expectedDepths := map[string]int{
 			"go.mod": 1,
 			"tmp":    1,
-			"pkg:golang/github.com/gorilla/websocket": 1,
+			"pkg:golang/github.com/gorilla/websocket@1.0.0":  2,
+			"pkg:devguard/testorg/testgroup/testdepth@1.0.0": 1,
 		}
 
 		for node, expectedDepth := range expectedDepths {
@@ -727,43 +741,43 @@ func TestCalculateDepth(t *testing.T) {
 		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
 			Components: &[]cdx.Component{
 				{
-					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth",
-					PackageURL: "pkg:devguard/testorg/testgroup/testdepth",
+					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
+					PackageURL: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
 				},
 				{
-					BOMRef:     "pkg:golang/a",
-					PackageURL: "pkg:golang/a",
+					BOMRef:     "pkg:golang/a@1.0.0",
+					PackageURL: "pkg:golang/a@1.0.0",
 				},
 				{
-					BOMRef:     "pkg:golang/b",
-					PackageURL: "pkg:golang/b",
+					BOMRef:     "pkg:golang/b@1.0.0",
+					PackageURL: "pkg:golang/b@1.0.0",
 				},
 				{
-					BOMRef:     "pkg:golang/c",
-					PackageURL: "pkg:golang/c",
+					BOMRef:     "pkg:golang/c@1.0.0",
+					PackageURL: "pkg:golang/c@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: "pkg:devguard/testorg/testgroup/testdepth",
+					Ref: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
 					Dependencies: &[]string{
-						"pkg:golang/a",
+						"pkg:golang/a@1.0.0",
 					},
 				},
 				{
-					Ref: "pkg:golang/a",
+					Ref: "pkg:golang/a@1.0.0",
 					Dependencies: &[]string{
-						"pkg:golang/b",
+						"pkg:golang/b@1.0.0",
 					},
 				},
 				{
-					Ref: "pkg:golang/b",
+					Ref: "pkg:golang/b@1.0.0",
 					Dependencies: &[]string{
-						"pkg:golang/c",
+						"pkg:golang/c@1.0.0",
 					},
 				},
 				{
-					Ref:          "pkg:golang/c",
+					Ref:          "pkg:golang/c@1.0.0",
 					Dependencies: &[]string{},
 				},
 			},
@@ -777,7 +791,7 @@ func TestCalculateDepth(t *testing.T) {
 					ID: "CVE-2021",
 					Affects: &[]cdx.Affects{
 						{
-							Ref: "pkg:golang/c",
+							Ref: "pkg:golang/c@1.0.0",
 						},
 					},
 				},
@@ -787,7 +801,7 @@ func TestCalculateDepth(t *testing.T) {
 		actual := bom.CalculateDepth()
 
 		expectedDepths := map[string]int{
-			"pkg:golang/c": 4, // GraphRootNodeID -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
+			"pkg:golang/c@1.0.0": 4, // GraphRootNodeID -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
 		}
 
 		for node, expectedDepth := range expectedDepths {

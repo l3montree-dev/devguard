@@ -41,6 +41,99 @@ func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.Affe
 	}, nil
 }
 
+// createSBOMStructure creates a complete SBOM tree structure for testing
+// This includes: artifact root, info source, and component dependencies
+func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, origin string) error {
+	// Create artifact root component (needed for FK constraint)
+	artifactRoot := "artifact:" + artifact.ArtifactName
+	if err := f.DB.Create(&models.Component{ID: artifactRoot}).Error; err != nil {
+		return err
+	}
+
+	// Create info source component (needed for FK constraint)
+	infoSourceID := "sbom:" + origin + "@" + artifact.ArtifactName
+	if err := f.DB.Create(&models.Component{ID: infoSourceID}).Error; err != nil {
+		return err
+	}
+
+	// Create artifact root node dependency (NULL -> artifact:name)
+	artifactRootDep := models.ComponentDependency{
+		AssetID:          asset.ID,
+		AssetVersionName: assetVersion.Name,
+		ComponentID:      nil,
+		DependencyID:     artifactRoot,
+	}
+	if err := f.DB.Create(&artifactRootDep).Error; err != nil {
+		return err
+	}
+
+	// Create info source dependency (artifact:name -> sbom:origin@artifact)
+	infoSourceDep := models.ComponentDependency{
+		AssetID:          asset.ID,
+		AssetVersionName: assetVersion.Name,
+		ComponentID:      &artifactRoot,
+		DependencyID:     infoSourceID,
+	}
+	if err := f.DB.Create(&infoSourceDep).Error; err != nil {
+		return err
+	}
+
+	// Create component dependencies (sbom:origin@artifact -> pkg:...)
+	for _, purl := range componentPurls {
+		componentDependency := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			ComponentID:      &infoSourceID,
+			DependencyID:     purl,
+		}
+		if err := f.DB.Create(&componentDependency).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createVEXStructure creates a VEX info source and links vulnerabilities to components
+// This simulates a VEX document that reports specific CVEs affecting specific components
+func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, cves []string, origin string) error {
+	// Create artifact root (should already exist but check)
+	artifactRoot := "artifact:" + artifact.ArtifactName
+
+	// Create VEX info source component (needed for FK constraint)
+	vexInfoSourceID := "vex:" + origin + "@" + artifact.ArtifactName
+	if err := f.DB.Create(&models.Component{ID: vexInfoSourceID}).Error; err != nil {
+		return err
+	}
+
+	// Create VEX info source dependency (artifact:name -> vex:origin@artifact)
+	vexInfoSourceDep := models.ComponentDependency{
+		AssetID:          asset.ID,
+		AssetVersionName: assetVersion.Name,
+		ComponentID:      &artifactRoot,
+		DependencyID:     vexInfoSourceID,
+	}
+	if err := f.DB.Create(&vexInfoSourceDep).Error; err != nil {
+		return err
+	}
+
+	// Create component dependencies from VEX to affected components
+	// This represents the VEX document saying "these components have vulnerabilities"
+	for _, purl := range componentPurls {
+		componentDependency := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			ComponentID:      &vexInfoSourceID,
+			DependencyID:     purl,
+		}
+		if err := f.DB.Create(&componentDependency).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
@@ -154,7 +247,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		err := f.App.AssetRepository.Save(nil, &asset)
 		assert.NoError(t, err)
 
-		// Create a vulnerability
+		// Create a CVE
 		cve := models.CVE{
 			CVE:  "CVE-2025-TEST-002",
 			CVSS: 7.5,
@@ -162,27 +255,41 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
-		// create the component "pkg:npm/test-package@1.0.0"
+		// Create artifact
+		artifact := models.Artifact{
+			ArtifactName:     "test-artifact",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          asset.ID,
+		}
+		err = f.DB.Create(&artifact).Error
+		assert.NoError(t, err)
+
+		// Create component
 		component := models.Component{
 			ID: "pkg:npm/test-package@1.0.0",
 		}
+		err = f.DB.Create(&component).Error
+		assert.NoError(t, err)
 
-		assert.Nil(t, f.DB.Create(&component).Error)
+		// Create SBOM structure
+		err = createSBOMStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, "test-origin")
+		assert.NoError(t, err)
 
+		// Create VEX structure that reports the CVE for this component
+		err = createVEXStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, []string{cve.CVE}, "test-origin")
+		assert.NoError(t, err)
+
+		// Create the vulnerability in accepted state (2 days ago)
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
 				State:            dtos.VulnStateAccepted,
-				LastDetected:     time.Now().Add(-48 * time.Hour), // 2 days ago
+				LastDetected:     time.Now().Add(-48 * time.Hour),
 			},
 			CVEID:         cve.CVE,
 			ComponentPurl: "pkg:npm/test-package@1.0.0",
-			Artifacts: []models.Artifact{{
-				ArtifactName:     "test-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
-			}},
+			Artifacts:     []models.Artifact{artifact},
 		}
 		err = f.DB.Create(&vulnerability).Error
 		assert.NoError(t, err)
@@ -199,7 +306,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		err = f.DB.Create(&acceptEvent).Error
 		assert.NoError(t, err)
 
-		// Run the pipeline
+		// Run the full pipeline
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(asset.ID)
 		assert.NoError(t, err)
@@ -238,7 +345,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		err := f.App.AssetRepository.Save(nil, &asset)
 		assert.NoError(t, err)
 
-		// Create a vulnerability accepted 2 days ago (within 7 day threshold)
+		// Create a CVE
 		cve := models.CVE{
 			CVE:  "CVE-2025-TEST-003",
 			CVSS: 7.5,
@@ -246,12 +353,31 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
-		// create the component "pkg:npm/test-package@1.0.0"
+		// Create artifact
+		artifact := models.Artifact{
+			ArtifactName:     "test-artifact",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          asset.ID,
+		}
+		err = f.DB.Create(&artifact).Error
+		assert.NoError(t, err)
+
+		// Create component
 		component := models.Component{
 			ID: "pkg:npm/test-package@1.0.0",
 		}
-		assert.Nil(t, f.DB.Create(&component).Error)
+		err = f.DB.Create(&component).Error
+		assert.NoError(t, err)
 
+		// Create SBOM structure
+		err = createSBOMStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, "test-origin")
+		assert.NoError(t, err)
+
+		// Create VEX structure that reports the CVE for this component
+		err = createVEXStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, []string{cve.CVE}, "test-origin")
+		assert.NoError(t, err)
+
+		// Create vulnerability accepted 2 days ago (within 7 day threshold)
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetID:          asset.ID,
@@ -261,16 +387,12 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 			},
 			CVEID:         cve.CVE,
 			ComponentPurl: "pkg:npm/test-package@1.0.0",
-			Artifacts: []models.Artifact{{
-				ArtifactName:     "test-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
-			}},
+			Artifacts:     []models.Artifact{artifact},
 		}
 		err = f.DB.Create(&vulnerability).Error
 		assert.NoError(t, err)
 
-		// Run the pipeline
+		// Run the full pipeline
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(asset.ID)
 		assert.NoError(t, err)

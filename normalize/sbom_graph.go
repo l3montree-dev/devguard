@@ -21,6 +21,7 @@ import (
 	"maps"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -196,8 +197,10 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 // AddVulnerability adds a vulnerability.
 func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 	affectsStr := ""
-	for _, aff := range *vuln.Affects {
-		affectsStr += aff.Ref + ";"
+	if vuln.Affects != nil {
+		for _, aff := range *vuln.Affects {
+			affectsStr += aff.Ref + ";"
+		}
 	}
 
 	g.vulnerabilities[vuln.ID+"@"+affectsStr] = &vuln
@@ -365,6 +368,9 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 
 // DeleteArtifactFromGraph removes an artifact and all its subtree from the graph.
 // Returns a GraphDiff representing what was removed.
+// DeleteArtifactFromGraph removes an artifact and all its subtree from the graph.
+// Returns a GraphDiff representing what was removed.
+// Only deletes nodes that are exclusively reachable through this artifact.
 func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 	artifactID := "artifact:" + artifactName
 
@@ -379,15 +385,28 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 		return GraphDiff{} // Nothing to delete
 	}
 
-	// Remove the entire subtree under the artifact
-	g.removeSubtree(artifactID)
-
-	// Remove the artifact node itself
-	delete(g.nodes, artifactID)
-	delete(g.edges, artifactID)
-
-	// Remove the edge from root to artifact
+	// Remove the edge from root to artifact (disconnect it)
 	delete(g.edges[g.rootID], artifactID)
+
+	// Now see what's still reachable - anything that became unreachable should be deleted
+	stillReachable := g.reachableNodes()
+
+	// Delete nodes that are no longer reachable
+	for id := range beforeNodes {
+		if !stillReachable[id] {
+			delete(g.nodes, id)
+			delete(g.edges, id)
+		}
+	}
+
+	// Delete edges where either endpoint is no longer reachable
+	for parentID, children := range g.edges {
+		for childID := range children {
+			if !stillReachable[parentID] || !stillReachable[childID] {
+				delete(g.edges[parentID], childID)
+			}
+		}
+	}
 
 	// Calculate diff
 	diff := GraphDiff{}
@@ -885,6 +904,10 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	// componentEdges wont return the root's direct deps, so we add them later
 	for parent, child := range g.ComponentEdges() {
+		// check if child is already in depMap
+		if slices.Contains(depMap[parent], child) {
+			continue
+		}
 		depMap[parent] = append(depMap[parent], child)
 	}
 
@@ -892,6 +915,9 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	for infoSource := range g.InfoSources() {
 		for childID := range g.edges[infoSource.ID] {
 			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
+				if slices.Contains(depMap[rootName], childID) {
+					continue
+				}
 				depMap[rootName] = append(depMap[rootName], childID)
 			}
 		}
@@ -1101,7 +1127,7 @@ func getInfoSourceTypeByInspectingSBOM(bom *cdx.BOM) InfoSourceType {
 	infoSourceType := InfoSourceSBOM
 
 	// Inspect vulnerabilities for VEX indicators
-	if bom.Vulnerabilities != nil {
+	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
 		return InfoSourceVEX
 	}
 	return infoSourceType
@@ -1110,6 +1136,32 @@ func getInfoSourceTypeByInspectingSBOM(bom *cdx.BOM) InfoSourceType {
 // =============================================================================
 // PARSING FROM CYCLONEDX
 // =============================================================================
+
+// isRootProjectComponent detects components that represent the scanned project itself
+// rather than actual dependencies. These are typically PURLs without versions that
+// scanners like Trivy add for the project being analyzed.
+// We skip these to avoid conflicts when merging multiple SBOMs that scan the same project
+// with different dependency sets.
+//
+// Detection criteria:
+// - Has a valid PURL without a version
+// - Component type is "library" (Trivy marks the scanned module as library, not application)
+// - Has a namespace (real projects typically have org/repo structure like github.com/org/repo)
+func isRootProjectComponent(comp cdx.Component) bool {
+	if comp.PackageURL == "" {
+		return false
+	}
+	p, err := packageurl.FromString(comp.PackageURL)
+	if err != nil {
+		return false
+	}
+	// Must have no version
+	if p.Version != "" {
+		return false
+	}
+
+	return true
+}
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
 func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SBOMGraph {
@@ -1122,9 +1174,27 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 
 	infoID := g.AddInfoSource(artifactID, infoSourceID, infoSourceType)
 
-	// Add all components
+	// Build a set of root project components to skip
+	// These represent the scanned project itself, not real dependencies
+	rootProjectComponents := make(map[string]bool)
 	if bom.Components != nil {
 		for _, comp := range *bom.Components {
+			if isRootProjectComponent(comp) {
+				id := comp.PackageURL
+				if id == "" {
+					id = comp.BOMRef
+				}
+				rootProjectComponents[id] = true
+			}
+		}
+	}
+
+	// Add all components (except root project components)
+	if bom.Components != nil {
+		for _, comp := range *bom.Components {
+			if isRootProjectComponent(comp) {
+				continue // Skip root project components
+			}
 			g.AddComponent(comp)
 		}
 	}
@@ -1147,9 +1217,13 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 
 	// Add edges
 	for parent, children := range depMap {
-		// If parent is root, add as info source children
-		if parent == rootRef || parent == "" || parent == GraphRootNodeID {
+		// If parent is root or a root project component, add children as info source children
+		if parent == rootRef || parent == "" || parent == GraphRootNodeID || rootProjectComponents[parent] {
 			for _, child := range children {
+				// Skip edges to other root project components
+				if rootProjectComponents[child] {
+					continue
+				}
 				if g.nodes[child] != nil {
 					g.AddEdge(infoID, child)
 				}
@@ -1157,6 +1231,10 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 		} else {
 			// Component to component edge
 			for _, child := range children {
+				// Skip edges to root project components
+				if rootProjectComponents[child] {
+					continue
+				}
 				if g.nodes[parent] != nil && g.nodes[child] != nil {
 					g.AddEdge(parent, child)
 				}
@@ -1168,6 +1246,9 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	if len(depMap[rootRef]) == 0 && len(depMap[""]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
+				if isRootProjectComponent(comp) {
+					continue // Skip root project components
+				}
 				purl := comp.PackageURL
 				if purl == "" {
 					purl = comp.BOMRef

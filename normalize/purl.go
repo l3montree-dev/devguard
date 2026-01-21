@@ -122,15 +122,14 @@ func GetComponentID(component cdx.Component) string {
 	var purl string
 	if component.PackageURL != "" {
 		return component.PackageURL
-	} else if component.CPE != "" {
-		purl = component.CPE
-	} else if component.Version != "" {
-		purl = component.Name + "@" + component.Version
+	} else if component.Version != "" && component.Name != "" {
+		return component.Name + "@" + component.Version
+	} else if component.BOMRef != "" {
+		// For artifact and info-source nodes, use BOMRef (e.g., "artifact:source", "sbom:DEFAULT@scanner")
+		return component.BOMRef
 	} else {
-		purl = component.Name
+		return component.Name
 	}
-
-	// remove any query parameters
 	return purl
 }
 

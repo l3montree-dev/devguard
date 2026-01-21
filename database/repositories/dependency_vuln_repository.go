@@ -181,9 +181,9 @@ func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVers
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+	q := repository.Repository.GetDB(tx).Preload("Artifacts").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 
