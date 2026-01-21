@@ -73,24 +73,40 @@ func TestBuildVEX(t *testing.T) {
 			err = json.Unmarshal(body, &VEXResult)
 			assert.Nil(t, err)
 
+			//test Vulnerability id as well as purls
+			assert.Len(t, *VEXResult.Vulnerabilities, 2)
+
+			// Find vulnerabilities by component PURL (order is not guaranteed)
+			var nextVuln, axiosVuln *cyclonedx.Vulnerability
+			for i := range *VEXResult.Vulnerabilities {
+				v := &(*VEXResult.Vulnerabilities)[i]
+				if len(*v.Affects) > 0 && (*v.Affects)[0].Ref == "pkg:npm/next@14.2.13" {
+					nextVuln = v
+				} else if len(*v.Affects) > 0 && (*v.Affects)[0].Ref == "pkg:npm/axios@1.7.7" {
+					axiosVuln = v
+				}
+			}
+
+			assert.NotNil(t, nextVuln, "Should find next vulnerability")
+			assert.NotNil(t, axiosVuln, "Should find axios vulnerability")
+
+			assert.Equal(t, "CVE-2024-51479", nextVuln.ID)
+			assert.Equal(t, "CVE-2024-51479", axiosVuln.ID)
+			assert.Equal(t, "pkg:npm/next@14.2.13", (*nextVuln.Affects)[0].Ref)
+			assert.Equal(t, "pkg:npm/axios@1.7.7", (*axiosVuln.Affects)[0].Ref)
+
 			//test timestamps if they have the right format
-			propertyValue1 := (*(*VEXResult.Vulnerabilities)[0].Properties)[0].Value
+			propertyValue1 := (*nextVuln.Properties)[0].Value
 			responseTime1, err := time.Parse(time.RFC3339, propertyValue1)
 			assert.Nil(t, err)
-			propertyValue2 := (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value
+			propertyValue2 := (*axiosVuln.Properties)[0].Value
 			responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 			assert.Nil(t, err)
 			//test if the first responded timestamp is calculated about right
 			assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
 			assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
 			//last updated should be the same as first responded when only 1 updateEvent happens
-			assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated, (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value)
-
-			//test Vulnerability id as well as purls
-			assert.Len(t, *VEXResult.Vulnerabilities, 2)
-			assert.Equal(t, (*VEXResult.Vulnerabilities)[1].ID, "CVE-2024-51479", (*VEXResult.Vulnerabilities)[0].ID)
-			assert.Equal(t, (*(*VEXResult.Vulnerabilities)[0].Affects)[0].Ref, "pkg:npm/next@14.2.13")
-			assert.Equal(t, (*(*VEXResult.Vulnerabilities)[1].Affects)[0].Ref, "pkg:npm/axios@1.7.7")
+			assert.Equal(t, axiosVuln.Analysis.LastUpdated, (*axiosVuln.Properties)[0].Value)
 		})
 
 		t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
