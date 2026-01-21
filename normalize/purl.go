@@ -159,14 +159,6 @@ var PURLEcosystems = map[string]string{
 	"RubyGems":  "gem",
 }
 
-func urlEncode(packageName string) string {
-	parts := strings.Split(packageName, "/")
-	for i, part := range parts {
-		parts[i] = url.PathEscape(part)
-	}
-	return strings.Join(parts, "/")
-}
-
 func Purlify(artifactName string, assetVersionName string) string {
 	const (
 		defaultType    = "generic"
