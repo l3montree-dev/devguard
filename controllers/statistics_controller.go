@@ -18,17 +18,13 @@ type StatisticsController struct {
 	statisticsService      shared.StatisticsService
 	statisticsRepository   shared.StatisticsRepository
 	assetVersionRepository shared.AssetVersionRepository
-	assetRepository        shared.AssetRepository
-	projectService         shared.ProjectService
 }
 
-func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, projectService shared.ProjectService) *StatisticsController {
+func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetVersionRepository shared.AssetVersionRepository) *StatisticsController {
 	return &StatisticsController{
 		statisticsService:      statisticsService,
 		statisticsRepository:   statisticsRepository,
 		assetVersionRepository: assetVersionRepository,
-		projectService:         projectService,
-		assetRepository:        assetRepository,
 	}
 }
 

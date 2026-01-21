@@ -13,23 +13,17 @@ import (
 
 type statisticsService struct {
 	statisticsRepository          shared.StatisticsRepository
-	componentRepository           shared.ComponentRepository
 	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
 	dependencyVulnRepository      shared.DependencyVulnRepository
 	assetVersionRepository        shared.AssetVersionRepository
-	projectRepository             shared.ProjectRepository
-	releaseRepository             shared.ReleaseRepository
 }
 
-func NewStatisticsService(statisticsRepository shared.StatisticsRepository, componentRepository shared.ComponentRepository, assetRiskHistoryRepository shared.ArtifactRiskHistoryRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetVersionRepository shared.AssetVersionRepository, projectRepository shared.ProjectRepository, releaseRepository shared.ReleaseRepository) *statisticsService {
+func NewStatisticsService(statisticsRepository shared.StatisticsRepository, assetRiskHistoryRepository shared.ArtifactRiskHistoryRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetVersionRepository shared.AssetVersionRepository) *statisticsService {
 	return &statisticsService{
 		statisticsRepository:          statisticsRepository,
-		componentRepository:           componentRepository,
 		artifactRiskHistoryRepository: assetRiskHistoryRepository,
 		dependencyVulnRepository:      dependencyVulnRepository,
 		assetVersionRepository:        assetVersionRepository,
-		projectRepository:             projectRepository,
-		releaseRepository:             releaseRepository,
 	}
 }
 

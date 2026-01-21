@@ -23,13 +23,12 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
-	daemonRunner             shared.DaemonRunner
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, daemonRunner shared.DaemonRunner) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -40,7 +39,6 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		assetVersionService:       assetVersionService,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
-		daemonRunner:              daemonRunner,
 	}
 }
 

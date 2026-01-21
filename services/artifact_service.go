@@ -24,32 +24,28 @@ import (
 )
 
 type ArtifactService struct {
-	csafService              shared.CSAFService
-	artifactRepository       shared.ArtifactRepository
-	cveRepository            shared.CveRepository
-	componentRepository      shared.ComponentRepository
-	dependencyVulnRepository shared.DependencyVulnRepository
-	assetRepository          shared.AssetRepository
-	assetVersionRepository   shared.AssetVersionRepository
-	assetVersionService      shared.AssetVersionService
-	dependencyVulnService    shared.DependencyVulnService
-	scanService              shared.ScanService
+	csafService            shared.CSAFService
+	artifactRepository     shared.ArtifactRepository
+	cveRepository          shared.CveRepository
+	componentRepository    shared.ComponentRepository
+	assetVersionRepository shared.AssetVersionRepository
+	assetVersionService    shared.AssetVersionService
+	dependencyVulnService  shared.DependencyVulnService
+	scanService            shared.ScanService
 }
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
 	return &ArtifactService{
-		csafService:              csafService,
-		artifactRepository:       artifactRepository,
-		cveRepository:            cveRepository,
-		componentRepository:      componentRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		assetRepository:          assetRepository,
-		assetVersionRepository:   assetVersionRepository,
-		assetVersionService:      assetVersionService,
-		dependencyVulnService:    dependencyVulnService,
-		scanService:              scanService,
+		csafService:            csafService,
+		artifactRepository:     artifactRepository,
+		cveRepository:          cveRepository,
+		componentRepository:    componentRepository,
+		assetVersionRepository: assetVersionRepository,
+		assetVersionService:    assetVersionService,
+		dependencyVulnService:  dependencyVulnService,
+		scanService:            scanService,
 	}
 }
 

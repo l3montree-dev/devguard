@@ -37,9 +37,7 @@ import (
 
 type scanService struct {
 	sbomScanner              shared.SBOMScanner
-	assetVersionService      shared.AssetVersionService
 	dependencyVulnService    shared.DependencyVulnService
-	statisticsService        shared.StatisticsService
 	firstPartyVulnRepository shared.FirstPartyVulnRepository
 	dependencyVulnRepository shared.DependencyVulnRepository
 	thirdPartyIntegration    shared.IntegrationAggregate
@@ -48,16 +46,14 @@ type scanService struct {
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanService(db shared.DB, cveRepository shared.CveRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, synchronizer utils.FireAndForgetSynchronizer, firstPartyVulnService shared.FirstPartyVulnService,
+func NewScanService(db shared.DB, cveRepository shared.CveRepository, dependencyVulnService shared.DependencyVulnService, synchronizer utils.FireAndForgetSynchronizer, firstPartyVulnService shared.FirstPartyVulnService,
 	firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnRepository shared.DependencyVulnRepository, thirdPartyIntegration shared.IntegrationAggregate,
 ) *scanService {
 	purlComparer := scan.NewPurlComparer(db)
 	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
 		sbomScanner:               scanner,
-		assetVersionService:       assetVersionService,
 		dependencyVulnService:     dependencyVulnService,
-		statisticsService:         statisticsService,
 		firstPartyVulnRepository:  firstPartyVulnRepository,
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: synchronizer,

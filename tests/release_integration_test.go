@@ -37,8 +37,6 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 		// repositories and services from FX
 		avRepo := f.App.AssetVersionRepository
-		compRepo := f.App.ComponentRepository
-		licenseRiskRepo := f.App.LicenseRiskRepository
 		dependencyVulnRepo := f.App.DependencyVulnRepository
 		assetRepository := f.App.AssetRepository
 		relService := f.App.ReleaseService
@@ -116,7 +114,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 		t.Run("sbom returns merged components", func(t *testing.T) {
 			// build controller using repo/service patterns
-			releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
+			releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository)
 
 			// prepare context with echo request/recorder
 			req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)

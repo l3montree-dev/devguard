@@ -32,32 +32,26 @@ import (
 )
 
 type ScanController struct {
-	componentRepository      shared.ComponentRepository
-	assetRepository          shared.AssetRepository
-	assetVersionRepository   shared.AssetVersionRepository
-	assetVersionService      shared.AssetVersionService
-	statisticsService        shared.StatisticsService
-	dependencyVulnRepository shared.DependencyVulnRepository
-	artifactService          shared.ArtifactService
-	dependencyVulnService    shared.DependencyVulnService
-	firstPartyVulnService    shared.FirstPartyVulnService
+	assetVersionRepository shared.AssetVersionRepository
+	assetVersionService    shared.AssetVersionService
+	statisticsService      shared.StatisticsService
+	artifactService        shared.ArtifactService
+	dependencyVulnService  shared.DependencyVulnService
+	firstPartyVulnService  shared.FirstPartyVulnService
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, componentRepository shared.ComponentRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *ScanController {
 	return &ScanController{
-		componentRepository:       componentRepository,
 		assetVersionService:       assetVersionService,
-		assetRepository:           assetRepository,
 		assetVersionRepository:    assetVersionRepository,
 		statisticsService:         statisticsService,
 		dependencyVulnService:     dependencyVulnService,
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: synchronizer,
 		artifactService:           artifactService,
-		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 	}
 }

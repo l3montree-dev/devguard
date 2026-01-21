@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"log/slog"
 	"math"
-	"net/http"
 	"os"
 	"slices"
 	"strconv"
@@ -30,40 +29,22 @@ import (
 )
 
 type assetVersionService struct {
-	dependencyVulnRepository shared.DependencyVulnRepository
-	firstPartyVulnRepository shared.FirstPartyVulnRepository
-	componentRepository      shared.ComponentRepository
-	dependencyVulnService    shared.DependencyVulnService
-	firstPartyVulnService    shared.FirstPartyVulnService
-	assetVersionRepository   shared.AssetVersionRepository
-	assetRepository          shared.AssetRepository
-	projectRepository        shared.ProjectRepository
-	orgRepository            shared.OrganizationRepository
-	vulnEventRepository      shared.VulnEventRepository
-	componentService         shared.ComponentService
-	httpClient               *http.Client
-	thirdPartyIntegration    shared.IntegrationAggregate
-	licenseRiskRepository    shared.LicenseRiskRepository
+	componentRepository    shared.ComponentRepository
+	assetVersionRepository shared.AssetVersionRepository
+	componentService       shared.ComponentService
+	thirdPartyIntegration  shared.IntegrationAggregate
+	licenseRiskRepository  shared.LicenseRiskRepository
 	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.AssetVersionService = &assetVersionService{}
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, dependencyVulnRepository shared.DependencyVulnRepository, firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, orgRepository shared.OrganizationRepository, vulnEventRepository shared.VulnEventRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, cveRelationshipRepository shared.CVERelationshipRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
-		dependencyVulnRepository:  dependencyVulnRepository,
-		firstPartyVulnRepository:  firstPartyVulnRepository,
-		dependencyVulnService:     dependencyVulnService,
-		firstPartyVulnService:     firstPartyVulnService,
-		vulnEventRepository:       vulnEventRepository,
 		componentService:          componentService,
-		assetRepository:           assetRepository,
-		httpClient:                &http.Client{},
 		thirdPartyIntegration:     thirdPartyIntegration,
-		projectRepository:         projectRepository,
-		orgRepository:             orgRepository,
 		licenseRiskRepository:     licenseRiskRepository,
 		FireAndForgetSynchronizer: synchronizer,
 	}

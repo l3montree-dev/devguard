@@ -17,7 +17,6 @@ package services
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -32,7 +31,6 @@ type assetService struct {
 	assetRepository          shared.AssetRepository
 	dependencyVulnRepository shared.DependencyVulnRepository
 	dependencyVulnService    shared.DependencyVulnService
-	httpClient               *http.Client
 }
 
 func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService) *assetService {
@@ -40,7 +38,6 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 		assetRepository:          assetRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
-		httpClient:               &http.Client{},
 	}
 }
 

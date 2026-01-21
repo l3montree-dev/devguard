@@ -17,16 +17,14 @@ import (
 type firstPartyVulnService struct {
 	firstPartyVulnRepository shared.FirstPartyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
-	assetRepository          shared.AssetRepository
 
 	thirdPartyIntegration shared.IntegrationAggregate
 }
 
-func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetRepository shared.AssetRepository, thirdPartyIntegration shared.IntegrationAggregate) *firstPartyVulnService {
+func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
-		assetRepository:          assetRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
 	}
 }

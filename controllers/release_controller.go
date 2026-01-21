@@ -20,14 +20,12 @@ type ReleaseController struct {
 	service                shared.ReleaseService
 	assetVersionService    shared.AssetVersionService
 	assetVersionRepository shared.AssetVersionRepository
-	componentRepository    shared.ComponentRepository
-	licenseRiskRepository  shared.LicenseRiskRepository
 	dependencyVulnRepo     shared.DependencyVulnRepository
 	assetRepository        shared.AssetRepository
 }
 
-func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, compRepo shared.ComponentRepository, licRepo shared.LicenseRiskRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository) *ReleaseController {
-	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, componentRepository: compRepo, licenseRiskRepository: licRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
+func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository) *ReleaseController {
+	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
 }
 
 // @Summary List releases

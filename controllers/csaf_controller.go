@@ -30,19 +30,17 @@ type CSAFController struct {
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	assetRepository          shared.AssetRepository
-	projectRepository        shared.ProjectRepository
 	organizationRepository   shared.OrganizationRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, projectRepository shared.ProjectRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
 	return &CSAFController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetRepository:          assetRepository,
-		projectRepository:        projectRepository,
 		organizationRepository:   organizationRepository,
 		cveRepository:            cveRepository,
 		artifactRepository:       artifactRepository,

@@ -12,16 +12,14 @@ import (
 )
 
 type AttestationController struct {
-	attestationRepository  shared.AttestationRepository
-	assetVersionRepository shared.AssetVersionRepository
-	artifactRepository     shared.ArtifactRepository
+	attestationRepository shared.AttestationRepository
+	artifactRepository    shared.ArtifactRepository
 }
 
-func NewAttestationController(repository shared.AttestationRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository) *AttestationController {
+func NewAttestationController(repository shared.AttestationRepository, artifactRepository shared.ArtifactRepository) *AttestationController {
 	return &AttestationController{
-		attestationRepository:  repository,
-		assetVersionRepository: assetVersionRepository,
-		artifactRepository:     artifactRepository,
+		attestationRepository: repository,
+		artifactRepository:    artifactRepository,
 	}
 }
 

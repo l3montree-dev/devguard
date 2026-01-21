@@ -35,9 +35,7 @@ type AssetVersionController struct {
 	assetVersionService      shared.AssetVersionService
 	dependencyVulnRepository shared.DependencyVulnRepository
 	componentRepository      shared.ComponentRepository
-	dependencyVulnService    shared.DependencyVulnService
 	supplyChainRepository    shared.SupplyChainRepository
-	licenseRiskRepository    shared.LicenseRiskRepository
 	componentService         shared.ComponentService
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
@@ -48,9 +46,7 @@ func NewAssetVersionController(
 	assetVersionService shared.AssetVersionService,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	componentRepository shared.ComponentRepository,
-	dependencyVulnService shared.DependencyVulnService,
 	supplyChainRepository shared.SupplyChainRepository,
-	licenseRiskRepository shared.LicenseRiskRepository,
 	componentService shared.ComponentService,
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
@@ -60,9 +56,7 @@ func NewAssetVersionController(
 		assetVersionService:      assetVersionService,
 		dependencyVulnRepository: dependencyVulnRepository,
 		componentRepository:      componentRepository,
-		dependencyVulnService:    dependencyVulnService,
 		supplyChainRepository:    supplyChainRepository,
-		licenseRiskRepository:    licenseRiskRepository,
 		componentService:         componentService,
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,

@@ -39,8 +39,6 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 
 		// repositories and services from FX
 		avRepo := f.App.AssetVersionRepository
-		compRepo := f.App.ComponentRepository
-		licenseRiskRepo := f.App.LicenseRiskRepository
 		dependencyVulnRepo := f.App.DependencyVulnRepository
 		assetRepository := f.App.AssetRepository
 		relService := f.App.ReleaseService
@@ -81,7 +79,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		}
 
 		// controller
-		releaseController := controllers.NewReleaseController(relService, avService, avRepo, compRepo, licenseRiskRepo, dependencyVulnRepo, assetRepository)
+		releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository)
 
 		r := echo.New()
 		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)
