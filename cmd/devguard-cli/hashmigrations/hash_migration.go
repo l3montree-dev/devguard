@@ -613,11 +613,6 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			continue
 		}
 
-		// Build SBOM graph from components
-		graphComponents := make([]normalize.GraphComponent, len(componentDeps))
-		for i, c := range componentDeps {
-			graphComponents[i] = c
-		}
 		sbom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
 
 		// Process each vuln in this asset version
