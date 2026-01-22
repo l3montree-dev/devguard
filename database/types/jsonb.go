@@ -56,3 +56,37 @@ func MustJSONBFromStruct(m any) JSONB {
 	}
 	return jsonb
 }
+
+// StringSlice is a string slice that can be stored as JSONB in PostgreSQL.
+// This allows for easy querying of array elements using PostgreSQL's JSONB operators.
+type StringSlice []string
+
+// Value marshals the slice to JSON for database storage.
+func (s StringSlice) Value() (driver.Value, error) {
+	if s == nil {
+		return json.Marshal([]string{})
+	}
+	return json.Marshal(s)
+}
+
+// Scan unmarshals JSON from the database into the slice.
+func (s *StringSlice) Scan(value any) error {
+	if value == nil {
+		*s = []string{}
+		return nil
+	}
+	data, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(data, s)
+}
+
+// String returns the slice as a string representation for hashing purposes.
+func (s StringSlice) String() string {
+	if s == nil {
+		return "[]"
+	}
+	data, _ := json.Marshal(s)
+	return string(data)
+}

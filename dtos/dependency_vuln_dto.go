@@ -92,9 +92,10 @@ type DependencyVulnDTO struct {
 	State                 VulnState     `json:"state"`
 	CVE                   CVEDTO        `json:"cve"`
 	CVEID                 string        `json:"cveID"`
-	ComponentPurl         string        `json:"componentPurl"`
-	ComponentDepth        *int          `json:"componentDepth"`
-	ComponentFixedVersion *string       `json:"componentFixedVersion"`
+	ComponentPurl         string   `json:"componentPurl"`
+	ComponentDepth        *int     `json:"componentDepth"`
+	ComponentFixedVersion *string  `json:"componentFixedVersion"`
+	VulnerabilityPath     []string `json:"vulnerabilityPath"`
 	Effort                *int          `json:"effort"`
 	RiskAssessment        *int          `json:"riskAssessment"`
 	RawRiskAssessment     *float64      `json:"rawRiskAssessment"`

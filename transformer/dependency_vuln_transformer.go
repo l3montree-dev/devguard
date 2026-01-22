@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -66,6 +67,7 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		ComponentPurl:         f.ComponentPurl,
 		ComponentDepth:        f.ComponentDepth,
 		ComponentFixedVersion: f.ComponentFixedVersion,
+		VulnerabilityPath:     f.VulnerabilityPath,
 		Effort:                f.Effort,
 		RiskAssessment:        f.RiskAssessment,
 		RawRiskAssessment:     f.RawRiskAssessment,
@@ -93,6 +95,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			ComponentPurl:         dependencyVuln.ComponentPurl,
 			ComponentDepth:        dependencyVuln.ComponentDepth,
 			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
+			VulnerabilityPath:     dependencyVuln.VulnerabilityPath,
 			Effort:                dependencyVuln.Effort,
 			RiskAssessment:        dependencyVuln.RiskAssessment,
 			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
@@ -129,44 +132,76 @@ func GetAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string 
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
 }
 
-func VulnInPackageToDependencyVuln(vuln models.VulnInPackage, depthMap map[string]int, assetID uuid.UUID, assetVersionName string, artifactName string) models.DependencyVuln {
-	v := VulnInPackageToDependencyVulnWithoutArtifact(vuln, depthMap, assetID, assetVersionName)
+// VulnInPackageToDependencyVulns converts a vulnerability to multiple DependencyVuln objects,
+// one for each unique path through the dependency graph. This ensures that the same CVE
+// appearing through different dependency paths (e.g., A -> trivy -> stdlib vs A -> cosign -> stdlib)
+// creates separate vulnerability records.
+func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, sbom *normalize.SBOMGraph, assetID uuid.UUID, assetVersionName string, artifactName string) []models.DependencyVuln {
+	vulns := VulnInPackageToDependencyVulnsWithoutArtifact(vuln, sbom, assetID, assetVersionName)
 
-	// set the artifact
-	v.Artifacts = []models.Artifact{
-		{
-			ArtifactName:     artifactName,
-			AssetVersionName: assetVersionName,
-			AssetID:          assetID,
-		},
+	// set the artifact for each vuln
+	for i := range vulns {
+		vulns[i].Artifacts = []models.Artifact{
+			{
+				ArtifactName:     artifactName,
+				AssetVersionName: assetVersionName,
+				AssetID:          assetID,
+			},
+		}
 	}
 
-	return v
+	return vulns
 }
 
-func VulnInPackageToDependencyVulnWithoutArtifact(vuln models.VulnInPackage, depthMap map[string]int, assetID uuid.UUID, assetVersionName string) models.DependencyVuln {
+// VulnInPackageToDependencyVulnsWithoutArtifact converts a vulnerability to multiple DependencyVuln objects
+// based on all paths through the dependency graph.
+func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sbom *normalize.SBOMGraph, assetID uuid.UUID, assetVersionName string) []models.DependencyVuln {
 	v := vuln
 	// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
 	stringPurl, _ := url.PathUnescape(v.Purl.ToString())
 	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
-	// check if we could calculate a depth for this component
-	if _, ok := depthMap[stringPurl]; !ok {
-		// if not, set it to 1 (direct dependency)
-		depthMap[stringPurl] = 1
+
+	// Find all paths to this vulnerable component
+	paths := sbom.FindAllPathsToPURL(stringPurl)
+
+	// If no paths found, create a single vuln with empty path (fallback)
+	if len(paths) == 0 {
+		return []models.DependencyVuln{
+			{
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: assetVersionName,
+					AssetID:          assetID,
+				},
+				CVEID:                 v.CVEID,
+				ComponentPurl:         stringPurl,
+				ComponentFixedVersion: fixedVersion,
+				ComponentDepth:        utils.Ptr(1),
+				CVE:                   v.CVE,
+				VulnerabilityPath:     databasetypes.StringSlice{},
+			},
+		}
 	}
 
-	dependencyVuln := models.DependencyVuln{
-		Vulnerability: models.Vulnerability{
-			AssetVersionName: assetVersionName,
-			AssetID:          assetID,
-		},
+	// Create one DependencyVuln per path
+	var result []models.DependencyVuln
+	for _, path := range paths {
+		// Depth is path length minus 1 (root doesn't count)
+		depth := max(len(path)-1, 1)
 
-		CVEID:                 v.CVEID,
-		ComponentPurl:         stringPurl,
-		ComponentFixedVersion: fixedVersion,
-		ComponentDepth:        utils.Ptr(depthMap[stringPurl]),
-		CVE:                   v.CVE,
+		dependencyVuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				AssetVersionName: assetVersionName,
+				AssetID:          assetID,
+			},
+			CVEID:                 v.CVEID,
+			ComponentPurl:         stringPurl,
+			ComponentFixedVersion: fixedVersion,
+			ComponentDepth:        utils.Ptr(depth),
+			CVE:                   v.CVE,
+			VulnerabilityPath:     databasetypes.StringSlice(path),
+		}
+		result = append(result, dependencyVuln)
 	}
 
-	return dependencyVuln
+	return result
 }

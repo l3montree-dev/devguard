@@ -16,9 +16,9 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
@@ -29,7 +29,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 2
+	CurrentHashVersion = 3
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -43,7 +43,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		config = models.Config{
 			Key: HashMigrationVersionKey,
-			Val: "2",
+			Val: "3",
 		}
 		// save initial version - no migration needed if empty
 		if err := db.Create(&config).Error; err != nil {
@@ -72,8 +72,18 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			"current_version", currentVersion,
 			"target_version", CurrentHashVersion)
 
-		if err := runCVEHashMigration(pool, daemonRunner); err != nil {
-			return fmt.Errorf("failed to run CVE hash migration: %w", err)
+		// Run version 2 migration (CVE hash migration) if needed
+		if currentVersion < 2 {
+			if err := runCVEHashMigration(pool, daemonRunner); err != nil {
+				return fmt.Errorf("failed to run CVE hash migration (v2): %w", err)
+			}
+		}
+
+		// Run version 3 migration (vulnerability path hash migration) if needed
+		if currentVersion < 3 {
+			if err := runVulnerabilityPathHashMigration(pool); err != nil {
+				return fmt.Errorf("failed to run vulnerability path hash migration (v3): %w", err)
+			}
 		}
 
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
@@ -464,18 +474,22 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 
 	// Use first old vuln for metadata (they all have same PURL, asset, etc.)
 	firstOld := oldVulns[0]
-	depthMap := map[string]int{
-		firstOld.ComponentPurl: utils.OrDefault(firstOld.ComponentDepth, 1),
-	}
+	depth := utils.OrDefault(firstOld.ComponentDepth, 1)
 
 	// For each new CVE, check which old CVEs have relationships to it
 	for _, foundVuln := range foundVulns {
-		newVuln := transformer.VulnInPackageToDependencyVulnWithoutArtifact(
-			foundVuln,
-			depthMap,
-			firstOld.AssetID,
-			firstOld.AssetVersionName,
-		)
+		// Create vuln directly - v3 migration will add proper paths later
+		newVuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				AssetVersionName: firstOld.AssetVersionName,
+				AssetID:          firstOld.AssetID,
+			},
+			CVEID:             foundVuln.CVEID,
+			ComponentPurl:     firstOld.ComponentPurl,
+			ComponentDepth:    &depth,
+			CVE:               foundVuln.CVE,
+			VulnerabilityPath: nil, // Will be populated by v3 migration
+		}
 
 		// Find which old CVE (if any) should donate state to this new CVE
 		// Priority: 1) exact CVE ID match, 2) relationship match
@@ -510,4 +524,215 @@ func isRelatedCVE(cveID string, relationships []models.CVERelationship) bool {
 		}
 	}
 	return false
+}
+
+// runVulnerabilityPathHashMigration handles the migration for adding vulnerability_path to the hash.
+// This migration loads the SBOM graph for each asset version and calculates the paths to each
+// vulnerable component. Vulns that have multiple paths will be split into multiple vulns.
+func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
+	db := database.NewGormDB(pool)
+	// Disable slow query logs for this migration
+	db = db.Session(&gorm.Session{
+		Logger: logger.New(
+			slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
+			logger.Config{
+				SlowThreshold:             0,
+				LogLevel:                  logger.Error,
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  false,
+			},
+		),
+	})
+
+	componentRepository := repositories.NewComponentRepository(db)
+
+	slog.Info("Starting vulnerability path hash migration (v3)...")
+
+	// Load all vulns with artifacts and events
+	var allVulns []models.DependencyVuln
+	err := db.Preload("Artifacts").Preload("Events").Find(&allVulns).Error
+	if err != nil {
+		return fmt.Errorf("failed to load dependency vulns: %w", err)
+	}
+
+	if len(allVulns) == 0 {
+		slog.Info("No dependency vulns to migrate")
+		config := models.Config{
+			Key: HashMigrationVersionKey,
+			Val: strconv.Itoa(CurrentHashVersion),
+		}
+		return db.Save(&config).Error
+	}
+
+	slog.Info("Migrating vulnerability hashes with paths", "total", len(allVulns))
+
+	// Group vulns by (assetID, assetVersionName) to load SBOM once per asset version
+	type assetVersionKey struct {
+		assetID          uuid.UUID
+		assetVersionName string
+	}
+	vulnsByAssetVersion := make(map[assetVersionKey][]models.DependencyVuln)
+	for _, v := range allVulns {
+		key := assetVersionKey{assetID: v.AssetID, assetVersionName: v.AssetVersionName}
+		vulnsByAssetVersion[key] = append(vulnsByAssetVersion[key], v)
+	}
+
+	slog.Info("Grouped vulnerabilities by asset version", "groups", len(vulnsByAssetVersion))
+
+	// Prepare new vulns to create and old vulns to delete
+	var vulnsToCreate []models.DependencyVuln
+	var eventsToCreate []models.VulnEvent
+	createdVulnIDs := make(map[string]bool)
+	copiedTicketIDs := make(map[string]bool)
+
+	// Process each asset version group
+	groupIdx := 0
+	for key, vulns := range vulnsByAssetVersion {
+		groupIdx++
+		slog.Info("Processing asset version", "group", groupIdx, "total", len(vulnsByAssetVersion),
+			"assetID", key.assetID, "assetVersionName", key.assetVersionName, "vulns", len(vulns))
+
+		// Load SBOM components for this asset version
+		componentDeps, err := componentRepository.LoadComponents(db, key.assetVersionName, key.assetID, nil)
+		if err != nil {
+			slog.Warn("Failed to load components for asset version, using empty paths",
+				"assetID", key.assetID, "assetVersionName", key.assetVersionName, "err", err)
+			// Fall back to empty paths
+			for _, oldVuln := range vulns {
+				newVuln := oldVuln
+				newVuln.VulnerabilityPath = nil // empty path
+				newVuln.ID = newVuln.CalculateHash()
+				if !createdVulnIDs[newVuln.ID] {
+					createdVulnIDs[newVuln.ID] = true
+					vulnsToCreate = append(vulnsToCreate, newVuln)
+					for _, event := range oldVuln.Events {
+						event.ID = uuid.New()
+						event.VulnID = newVuln.ID
+						eventsToCreate = append(eventsToCreate, event)
+					}
+				}
+			}
+			continue
+		}
+
+		// Build SBOM graph from components
+		graphComponents := make([]normalize.GraphComponent, len(componentDeps))
+		for i, c := range componentDeps {
+			graphComponents[i] = c
+		}
+		sbom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
+
+		// Process each vuln in this asset version
+		for _, oldVuln := range vulns {
+			// Find all paths to this vulnerable component
+			paths := sbom.FindAllPathsToPURL(oldVuln.ComponentPurl)
+
+			if len(paths) == 0 {
+				panic("What happened?")
+			} else {
+				// Create one vuln per path
+				for _, path := range paths {
+					newVuln := oldVuln
+					newVuln.VulnerabilityPath = path
+					// Update depth based on path length
+					depth := max(len(path)-1, 1)
+					newVuln.ComponentDepth = &depth
+					newVuln.ID = newVuln.CalculateHash()
+
+					if !createdVulnIDs[newVuln.ID] {
+						createdVulnIDs[newVuln.ID] = true
+						// Copy ticket only once per ticket
+						if oldVuln.TicketID != nil && copiedTicketIDs[*oldVuln.TicketID] {
+							newVuln.TicketID = nil
+							newVuln.TicketURL = nil
+						} else if oldVuln.TicketID != nil {
+							copiedTicketIDs[*oldVuln.TicketID] = true
+						}
+						vulnsToCreate = append(vulnsToCreate, newVuln)
+						for _, event := range oldVuln.Events {
+							event.ID = uuid.New()
+							event.VulnID = newVuln.ID
+							eventsToCreate = append(eventsToCreate, event)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	slog.Info("Prepared migration data", "vulnsToCreate", len(vulnsToCreate), "eventsToCreate", len(eventsToCreate))
+
+	// Process in a transaction
+	err = db.Transaction(func(tx *gorm.DB) error {
+		batchSize := 1000
+
+		// Delete all old dependency vuln related data
+		slog.Info("Deleting all dependency vuln events...")
+		if err := tx.Exec("DELETE FROM vuln_events WHERE vuln_type = 'dependencyVuln'").Error; err != nil {
+			slog.Error("failed to delete dependency vuln events", "err", err)
+			return err
+		}
+
+		slog.Info("Deleting all artifact_dependency_vulns...")
+		if err := tx.Exec("DELETE FROM artifact_dependency_vulns").Error; err != nil {
+			slog.Error("failed to delete artifact_dependency_vulns", "err", err)
+			return err
+		}
+
+		slog.Info("Deleting all dependency_vulns...")
+		if err := tx.Exec("DELETE FROM dependency_vulns").Error; err != nil {
+			slog.Error("failed to delete dependency_vulns", "err", err)
+			return err
+		}
+
+		// Create new vulns in batches
+		for i := 0; i < len(vulnsToCreate); i += batchSize {
+			end := min(i+batchSize, len(vulnsToCreate))
+			batch := vulnsToCreate[i:end]
+
+			if err := tx.Create(batch).Error; err != nil {
+				slog.Error("failed to create vulns batch", "err", err)
+				return err
+			}
+
+			// Associate artifacts for this batch
+			for j := range batch {
+				if len(batch[j].Artifacts) > 0 {
+					if err := tx.Model(&batch[j]).Association("Artifacts").Replace(batch[j].Artifacts); err != nil {
+						slog.Error("failed to associate artifacts", "vulnID", batch[j].ID, "err", err)
+						return err
+					}
+				}
+			}
+			slog.Info("Created vulns batch", "processed", end, "total", len(vulnsToCreate))
+		}
+
+		// Create new events in batches
+		for i := 0; i < len(eventsToCreate); i += batchSize {
+			end := min(i+batchSize, len(eventsToCreate))
+			if err := tx.Create(eventsToCreate[i:end]).Error; err != nil {
+				slog.Error("failed to create events batch", "err", err)
+				return err
+			}
+		}
+
+		// Update hash migration version
+		config := models.Config{
+			Key: HashMigrationVersionKey,
+			Val: strconv.Itoa(CurrentHashVersion),
+		}
+		if err := tx.Save(&config).Error; err != nil {
+			return fmt.Errorf("failed to update hash migration version: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		slog.Error("vulnerability path hash migration failed", "err", err)
+		return err
+	}
+
+	slog.Info("Vulnerability path hash migration (v3) completed successfully")
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -16,9 +17,10 @@ type DependencyVuln struct {
 	CVE   CVE    `json:"cve"`
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
-	ComponentDepth        *int    `json:"componentDepth" gorm:"default:null;"`
-	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
+	ComponentPurl         string                     `json:"componentPurl" gorm:"type:text;"`
+	ComponentDepth        *int                       `json:"componentDepth" gorm:"default:null;"`
+	ComponentFixedVersion *string                    `json:"componentFixedVersion" gorm:"default:null;"`
+	VulnerabilityPath     databasetypes.StringSlice `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]'"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
@@ -99,7 +101,7 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.ComponentPurl, vuln.AssetVersionName, vuln.AssetID))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, vuln.VulnerabilityPath.String()))
 }
 
 // hook to calculate the hash before creating the dependencyVuln

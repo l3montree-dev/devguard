@@ -303,15 +303,11 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not scope sbom to artifact")
 	}
-	// create dependencyVulns out of those vulnerabilities
+	// create dependencyVulns out of those vulnerabilities - one per unique path
 	dependencyVulns := []models.DependencyVuln{}
 
-	if err != nil {
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not build sbom for depth calculation")
-	}
-	depthMap := sbom.CalculateDepth()
 	for _, vuln := range vulns {
-		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVuln(vuln, depthMap, asset.ID, assetVersion.Name, artifactName))
+		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)
 	}
 
 	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
