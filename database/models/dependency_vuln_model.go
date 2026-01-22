@@ -17,9 +17,9 @@ type DependencyVuln struct {
 	CVE   CVE    `json:"cve"`
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         string                     `json:"componentPurl" gorm:"type:text;"`
-	ComponentDepth        *int                       `json:"componentDepth" gorm:"default:null;"`
-	ComponentFixedVersion *string                    `json:"componentFixedVersion" gorm:"default:null;"`
+	ComponentPurl         string                    `json:"componentPurl" gorm:"type:text;"`
+	ComponentDepth        *int                      `json:"componentDepth" gorm:"default:null;"`
+	ComponentFixedVersion *string                   `json:"componentFixedVersion" gorm:"default:null;"`
 	VulnerabilityPath     databasetypes.StringSlice `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]'"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
@@ -71,7 +71,7 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 }
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s", vuln.ComponentPurl, vuln.CVEID, vuln.AssetID))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s", vuln.VulnerabilityPath.String(), vuln.CVEID, vuln.AssetID))
 }
 
 func (vuln DependencyVuln) GetAssetVersionName() string {
