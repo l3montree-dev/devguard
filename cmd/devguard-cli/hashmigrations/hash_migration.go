@@ -626,7 +626,34 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			paths := sbom.FindAllPathsToPURL(oldVuln.ComponentPurl)
 
 			if len(paths) == 0 {
-				panic("What happened?")
+				// No paths found despite successfully loaded components; treat as data
+				// inconsistency and fall back to an empty path, similar to the handling
+				// when component loading fails above.
+				slog.Warn("No SBOM paths found for vulnerable component, using empty path",
+					"assetID", key.assetID,
+					"assetVersionName", key.assetVersionName,
+					"componentPurl", oldVuln.ComponentPurl)
+
+				newVuln := oldVuln
+				newVuln.VulnerabilityPath = nil // empty path
+				newVuln.ID = newVuln.CalculateHash()
+
+				if !createdVulnIDs[newVuln.ID] {
+					createdVulnIDs[newVuln.ID] = true
+					// Copy ticket only once per ticket
+					if oldVuln.TicketID != nil && copiedTicketIDs[*oldVuln.TicketID] {
+						newVuln.TicketID = nil
+						newVuln.TicketURL = nil
+					} else if oldVuln.TicketID != nil {
+						copiedTicketIDs[*oldVuln.TicketID] = true
+					}
+					vulnsToCreate = append(vulnsToCreate, newVuln)
+					for _, event := range oldVuln.Events {
+						event.ID = uuid.New()
+						event.VulnID = newVuln.ID
+						eventsToCreate = append(eventsToCreate, event)
+					}
+				}
 			} else {
 				// Create one vuln per path
 				for _, path := range paths {
