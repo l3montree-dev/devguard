@@ -65,7 +65,6 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		CVE:                   CVEToDTO(f.CVE),
 		CVEID:                 f.CVEID,
 		ComponentPurl:         f.ComponentPurl,
-		ComponentDepth:        f.ComponentDepth,
 		ComponentFixedVersion: f.ComponentFixedVersion,
 		VulnerabilityPath:     f.VulnerabilityPath,
 		Effort:                f.Effort,
@@ -93,7 +92,6 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			CVE:                   CVEToDTO(dependencyVuln.CVE),
 			CVEID:                 dependencyVuln.CVEID,
 			ComponentPurl:         dependencyVuln.ComponentPurl,
-			ComponentDepth:        dependencyVuln.ComponentDepth,
 			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
 			VulnerabilityPath:     dependencyVuln.VulnerabilityPath,
 			Effort:                dependencyVuln.Effort,
@@ -175,7 +173,6 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 				CVEID:                 v.CVEID,
 				ComponentPurl:         stringPurl,
 				ComponentFixedVersion: fixedVersion,
-				ComponentDepth:        utils.Ptr(1),
 				CVE:                   v.CVE,
 				VulnerabilityPath:     databasetypes.StringSlice{},
 			},
@@ -185,9 +182,6 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	// Create one DependencyVuln per path
 	var result []models.DependencyVuln
 	for _, path := range paths {
-		// Depth is path length minus 1 (root doesn't count)
-		depth := max(len(path)-1, 1)
-
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersionName,
@@ -196,7 +190,6 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 			CVEID:                 v.CVEID,
 			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,
-			ComponentDepth:        utils.Ptr(depth),
 			CVE:                   v.CVE,
 			VulnerabilityPath:     databasetypes.StringSlice(path),
 		}

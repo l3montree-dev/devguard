@@ -254,7 +254,7 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 
 		cvss := math.Round(float64(cve.CVSS)*100) / 100
 
-		risk := vulndb.RawRisk(cve, shared.GetEnvironmentalFromAsset(asset), utils.OrDefault(dependencyVuln.ComponentDepth, 1))
+		risk := vulndb.RawRisk(cve, shared.GetEnvironmentalFromAsset(asset), max(len(dependencyVuln.VulnerabilityPath), 1))
 
 		vuln.Ratings = &[]cdx.VulnerabilityRating{
 			{

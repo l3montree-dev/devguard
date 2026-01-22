@@ -219,8 +219,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		CVE:               cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
-		ComponentDepth:    utils.Ptr(8),
 		Artifacts:         []models.Artifact{artifact},
+		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/next@14.2.13"},
 	}
 	if err = db.Create(&vuln1).Error; err != nil {
 		panic(err)
@@ -232,8 +232,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		CVE:               cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
-		ComponentDepth:    utils.Ptr(2),
 		Artifacts:         []models.Artifact{artifact},
+		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/axios@1.7.7"},
 	}
 	if err = db.Create(&vuln2).Error; err != nil {
 		panic(err)

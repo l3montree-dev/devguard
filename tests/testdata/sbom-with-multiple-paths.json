@@ -1,0 +1,73 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:test-multiple-paths",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-05-29T05:49:19+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "group": "test",
+          "name": "test-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "root-component",
+      "type": "application",
+      "name": "test-app"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/github.com/path-a/dep@v1.0.0",
+      "type": "library",
+      "name": "github.com/path-a/dep",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/github.com/path-a/dep@v1.0.0"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/path-b/dep@v1.0.0",
+      "type": "library",
+      "name": "github.com/path-b/dep",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/github.com/path-b/dep@v1.0.0"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+      "type": "library",
+      "name": "github.com/open-policy-agent/opa",
+      "version": "v0.68.0",
+      "purl": "pkg:golang/github.com/open-policy-agent/opa@v0.68.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "root-component",
+      "dependsOn": [
+        "pkg:golang/github.com/path-a/dep@v1.0.0",
+        "pkg:golang/github.com/path-b/dep@v1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/path-a/dep@v1.0.0",
+      "dependsOn": [
+        "pkg:golang/github.com/open-policy-agent/opa@v0.68.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/path-b/dep@v1.0.0",
+      "dependsOn": [
+        "pkg:golang/github.com/open-policy-agent/opa@v0.68.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+      "dependsOn": []
+    }
+  ]
+}

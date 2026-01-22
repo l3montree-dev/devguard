@@ -224,6 +224,8 @@ func TestScanning(t *testing.T) {
 			var response dtos.ScanResponse
 			err = json.Unmarshal(recorder.Body.Bytes(), &response)
 			assert.Nil(t, err)
+			// Same dependency path (filtered to PURLs only) = same vulnerability
+			// artifact-2 is added to the existing vulnerability
 			assert.Equal(t, 0, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 
@@ -231,6 +233,7 @@ func TestScanning(t *testing.T) {
 
 			if len(response.DependencyVulns) > 0 {
 				assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
+				// Both artifacts now belong to the same vulnerability
 				assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, getArtifactNames(response.DependencyVulns[0].Artifacts))
 			}
 		})
@@ -281,6 +284,7 @@ func TestScanning(t *testing.T) {
 			assert.Nil(t, err)
 
 			assert.Equal(t, 0, response.AmountOpened)
+			// Vuln still exists (artifact-2 still has it), so nothing closed yet
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 0)
 
@@ -300,27 +304,54 @@ func TestScanning(t *testing.T) {
 			err = json.Unmarshal(recorder.Body.Bytes(), &response)
 			assert.Nil(t, err)
 			assert.Equal(t, 0, response.AmountOpened)
+			// Now both artifacts no longer have the vuln, so it's closed
 			assert.Equal(t, 1, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 0)
 		})
 
 		t.Run("should respect, if the vulnerability is found AGAIN on a different branch then the default branch", func(t *testing.T) {
-
-			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
-			assert.Nil(t, err)
-			assert.Len(t, vulns, 1)
-			acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability", 0)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &vulns[0], &acceptedEvent)
-			assert.Nil(t, err)
-
+			// First, scan artifact-1 with the vulnerability again to re-open it
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
 			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("X-Artifact-Name", "artifact-1")
-			req.Header.Set("X-Asset-Ref", "some-other-branch")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			req.Header.Set("X-Asset-Ref", "main")
 			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			dependencyVulnRepository := f.App.DependencyVulnRepository
+			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+
+			// Find the vuln on main to accept it
+			var mainVuln *models.DependencyVuln
+			for i := range vulns {
+				if vulns[i].AssetVersionName == "main" {
+					mainVuln = &vulns[i]
+					break
+				}
+			}
+			assert.NotNil(t, mainVuln, "should have a vuln on main branch")
+
+			acceptedEvent := models.NewAcceptedEvent(mainVuln.ID, mainVuln.GetType(), "abc", "accepting the vulnerability", 0)
+			err = dependencyVulnRepository.ApplyAndSave(nil, mainVuln, &acceptedEvent)
+			assert.Nil(t, err)
+
+			// Now scan on a different branch
+			recorder = httptest.NewRecorder()
+			sbomFile = sbomWithVulnerability()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			req.Header.Set("X-Asset-Ref", "some-other-branch")
+			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
 			err = controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
@@ -328,37 +359,36 @@ func TestScanning(t *testing.T) {
 
 			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
 			assert.Nil(t, err)
-			assert.Len(t, vulns, 2)
 
-			for _, vuln := range vulns {
-				assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
-			}
 			var newVuln models.DependencyVuln
 			for _, v := range vulns {
 				if v.AssetVersionName == "some-other-branch" {
 					newVuln = v
+					break
 				}
 			}
+			assert.NotEmpty(t, newVuln.ID, "should have a vuln on some-other-branch")
 
 			// Reload the vulnerability with Events preloaded
 			err = f.DB.Preload("Events").First(&newVuln, "id = ?", newVuln.ID).Error
 			assert.Nil(t, err)
 
 			assert.NotEmpty(t, newVuln.Events)
-			lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
+			// New vuln on other branch should inherit the accepted state from the main branch vuln
+			// The inheritance looks up the matching vuln on the default branch by asset-version-independent hash
+			// which includes the filtered vulnerability path (PURLs only)
+			assert.Equal(t, dtos.VulnStateAccepted, newVuln.State)
 
+			// Check that the accepted event was copied
 			var accEvent models.VulnEvent
-			var detectedOnAnotherBranchEvent models.VulnEvent
-			for _, ev := range lastTwoEvents {
+			for _, ev := range newVuln.Events {
 				if ev.Type == dtos.EventTypeAccepted {
 					accEvent = ev
-				} else {
-					detectedOnAnotherBranchEvent = ev
+					break
 				}
 			}
 
 			assert.NotEmpty(t, accEvent)
-			assert.NotEmpty(t, detectedOnAnotherBranchEvent)
 			assert.Equal(t, dtos.EventTypeAccepted, accEvent.Type)
 			assert.Equal(t, "accepting the vulnerability", *accEvent.Justification)
 			assert.Equal(t, "main", *accEvent.OriginalAssetVersionName)
@@ -971,8 +1001,9 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         "CVE-2025-46569",
-				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				CVEID:             "CVE-2025-46569",
+				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1005,8 +1036,9 @@ func TestTicketHandling(t *testing.T) {
 			err := f.DB.Clauses(clause.OnConflict{
 				UpdateAll: true,
 			}).Create(&models.DependencyVuln{
-				CVEID:         "CVE-2025-46569",
-				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				CVEID:             "CVE-2025-46569",
+				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
@@ -1046,8 +1078,9 @@ func TestTicketHandling(t *testing.T) {
 			}
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
-				CVEID:         "CVE-2025-46569",
-				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				CVEID:             "CVE-2025-46569",
+				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
 					State:            dtos.VulnStateAccepted,
 					AssetVersionName: "main",
@@ -1094,6 +1127,7 @@ func TestTicketHandling(t *testing.T) {
 					AssetID:          asset.ID,
 					TicketID:         nil,
 				},
+				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Artifacts: []models.Artifact{
 					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
 				},
@@ -1328,24 +1362,28 @@ func TestUploadVEX(t *testing.T) {
 		}
 
 		dv1 := models.DependencyVuln{
-			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     "pkg:npm/example1@1.0.0",
+			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
+			ComponentPurl: "pkg:npm/example1@1.0.0",
+			VulnerabilityPath: []string{
+				"pkg:npm/example1@1.0.0",
+			},
 			CVE:               newCVE,
 			CVEID:             newCVE.CVE,
 			RawRiskAssessment: utils.Ptr(1.23),
-			ComponentDepth:    utils.Ptr(1),
 		}
 		if err = f.DB.Create(&dv1).Error; err != nil {
 			t.Fatalf("could not create dependency vuln 1: %v", err)
 		}
 
 		dv2 := models.DependencyVuln{
-			Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl:     "pkg:npm/example2@2.0.0",
+			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
+			ComponentPurl: "pkg:npm/example2@2.0.0",
+			VulnerabilityPath: []string{
+				"pkg:npm/example2@2.0.0",
+			},
 			CVE:               newCVE2,
 			CVEID:             newCVE2.CVE,
 			RawRiskAssessment: utils.Ptr(2.34),
-			ComponentDepth:    utils.Ptr(2),
 		}
 		if err = f.DB.Create(&dv2).Error; err != nil {
 			t.Fatalf("could not create dependency vuln 2: %v", err)
@@ -1606,5 +1644,53 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		assert.Nil(t, f.DB.Model(&models.DependencyVuln{}).Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).First(&result).Error)
 
 		assert.Equal(t, dtos.VulnStateFalsePositive, result.State)
+	})
+}
+
+func TestScanWithMultiplePaths(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+
+		controller := f.App.ScanController
+
+		// scan the sbom with multiple paths to the same vulnerable dependency
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("should detect vulnerability with multiple dependency paths", func(t *testing.T) {
+			sbomFile, err := os.Open("testdata/sbom-with-multiple-paths.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "multi-path-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "multi-path-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			var response dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 2, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 2)
+		})
 	})
 }

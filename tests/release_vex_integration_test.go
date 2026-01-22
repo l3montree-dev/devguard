@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,11 +57,10 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 
 		// create a dependency vuln referencing the CVE and the artifact
 		dv := models.DependencyVuln{
-			Vulnerability:  models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
-			CVEID:          cve.CVE,
-			ComponentPurl:  "pkg:maven/org.example/component-x@1.2.3",
-			Artifacts:      []models.Artifact{a},
-			ComponentDepth: utils.Ptr(1),
+			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
+			CVEID:         cve.CVE,
+			ComponentPurl: "pkg:maven/org.example/component-x@1.2.3",
+			Artifacts:     []models.Artifact{a},
 		}
 		if err := f.DB.Create(&dv).Error; err != nil {
 			t.Fatal(err)

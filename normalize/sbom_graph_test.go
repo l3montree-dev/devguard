@@ -592,222 +592,199 @@ func TestMergeComplex(t *testing.T) {
 
 }
 
-func TestCalculateDepth(t *testing.T) {
-	t.Run("calculateDepth with valid tree", func(t *testing.T) {
-		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "pkg:GraphRootNodeID",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "pkg:golang/a@1.0.0",
-					PackageURL: "pkg:golang/a@1.0.0",
-				},
-				{
-					BOMRef:     "pkg:golang/b@1.0.0",
-					PackageURL: "pkg:golang/b@1.0.0",
-				},
-				{
-					BOMRef:     "pkg:golang/c@1.0.0",
-					PackageURL: "pkg:golang/c@1.0.0",
-				},
-				{
-					PackageURL: "pkg:golang/d@1.0.0",
-					BOMRef:     "pkg:golang/d@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "pkg:GraphRootNodeID",
-					Dependencies: &[]string{
-						"pkg:golang/a@1.0.0",
-					},
-				},
-				{
-					Ref: "pkg:golang/a@1.0.0",
-					Dependencies: &[]string{
-						"pkg:golang/b@1.0.0",
-						"pkg:golang/c@1.0.0",
-					},
-				},
-				{
-					Ref: "pkg:golang/b@1.0.0",
-					Dependencies: &[]string{
-						"pkg:golang/d@1.0.0",
-					},
-				},
-			},
-		}, "pkg:artifact", "origin")
+func TestFindAllPathsToPURL(t *testing.T) {
+	t.Run("multiple information sources pointing to same component - should return single path", func(t *testing.T) {
+		g := NewSBOMGraph()
 
-		actual := bom.CalculateDepth()
+		// Add artifact
+		artifactID := g.AddArtifact("test-artifact")
 
-		expectedDepths := map[string]int{
-			"pkg:golang/a@1.0.0": 1,
-			"pkg:golang/b@1.0.0": 2,
-			"pkg:golang/c@1.0.0": 2,
-			"pkg:golang/d@1.0.0": 3,
+		// Add two different info sources (SBOMs) under the same artifact
+		infoSource1 := g.AddInfoSource(artifactID, "package-lock.json", InfoSourceSBOM)
+		infoSource2 := g.AddInfoSource(artifactID, "yarn.lock", InfoSourceSBOM)
+
+		// Add the same component under both info sources
+		comp := cdx.Component{
+			BOMRef:     "pkg:npm/lodash@4.17.21",
+			Name:       "lodash",
+			Version:    "4.17.21",
+			PackageURL: "pkg:npm/lodash@4.17.21",
+			Type:       cdx.ComponentTypeLibrary,
 		}
+		compID := g.AddComponent(comp)
 
-		for node, expectedDepth := range expectedDepths {
-			if actual[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, actual[node])
-			}
-		}
+		// Connect both info sources to the same component
+		g.AddEdge(infoSource1, compID)
+		g.AddEdge(infoSource2, compID)
+
+		// Find all paths to the component
+		paths := g.FindAllPathsToPURL("pkg:npm/lodash@4.17.21")
+
+		// Should return only one unique path (just the component itself)
+		// because the path only includes components, not structural nodes
+		assert.Len(t, paths, 1, "Should return single path for component reachable through multiple info sources")
+		assert.Equal(t, []string{"pkg:npm/lodash@4.17.21"}, paths[0])
 	})
 
-	t.Run("calculateDepth with invalid PURL", func(t *testing.T) {
-		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					BOMRef: "root",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-					PackageURL: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-				},
-				{
-					BOMRef: "go.mod",
-				},
-				{
-					BOMRef: "tmp",
-				},
-				{
-					BOMRef:     "pkg:golang/github.com/gorilla/websocket@1.0.0",
-					PackageURL: "pkg:golang/github.com/gorilla/websocket@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "root",
-					Dependencies: &[]string{
-						"pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-					},
-				},
-				{
-					Ref: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-					Dependencies: &[]string{
-						"go.mod",
-					},
-				},
-				{
-					Ref: "go.mod",
-					Dependencies: &[]string{
-						"tmp",
-					},
-				},
-				{
-					Ref: "tmp",
-					Dependencies: &[]string{
-						"pkg:golang/github.com/gorilla/websocket@1.0.0",
-					},
-				},
-			},
-		}, "pkg:artifact", "origin")
+	t.Run("multiple artifacts pointing to same component - should return single path", func(t *testing.T) {
+		g := NewSBOMGraph()
 
-		actual := bom.CalculateDepth()
+		// Add two different artifacts
+		artifact1ID := g.AddArtifact("app-frontend")
+		artifact2ID := g.AddArtifact("app-backend")
 
-		expectedDepths := map[string]int{
-			"go.mod": 1,
-			"tmp":    1,
-			"pkg:golang/github.com/gorilla/websocket@1.0.0":  2,
-			"pkg:devguard/testorg/testgroup/testdepth@1.0.0": 1,
+		// Add info sources under each artifact
+		infoSource1 := g.AddInfoSource(artifact1ID, "frontend-sbom", InfoSourceSBOM)
+		infoSource2 := g.AddInfoSource(artifact2ID, "backend-sbom", InfoSourceSBOM)
+
+		// Add the same component under both info sources
+		comp := cdx.Component{
+			BOMRef:     "pkg:npm/express@4.18.0",
+			Name:       "express",
+			Version:    "4.18.0",
+			PackageURL: "pkg:npm/express@4.18.0",
+			Type:       cdx.ComponentTypeLibrary,
 		}
+		compID := g.AddComponent(comp)
 
-		for node, expectedDepth := range expectedDepths {
-			if actual[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, actual[node])
-			}
-		}
+		// Connect both info sources to the same component
+		g.AddEdge(infoSource1, compID)
+		g.AddEdge(infoSource2, compID)
+
+		// Find all paths to the component
+		paths := g.FindAllPathsToPURL("pkg:npm/express@4.18.0")
+
+		// Should return only one unique path (just the component itself)
+		// because both artifacts lead to the same component path
+		assert.Len(t, paths, 1, "Should return single path for component reachable through multiple artifacts")
+		assert.Equal(t, []string{"pkg:npm/express@4.18.0"}, paths[0])
 	})
 
-	t.Run("calculateDepth with empty tree", func(t *testing.T) {
-		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
-			Components:   &[]cdx.Component{},
-			Dependencies: &[]cdx.Dependency{},
-		}, "pkg:artifact", "origin")
+	t.Run("multiple dependency paths to same component - should return multiple paths", func(t *testing.T) {
+		g := NewSBOMGraph()
 
-		actual := bom.CalculateDepth()
+		// Add artifact and info source
+		artifactID := g.AddArtifact("test-app")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
 
-		if len(actual) != 0 {
-			t.Errorf("expected empty depth map, got %v", actual)
+		// Create a diamond dependency structure:
+		// infoSource -> depA -> target
+		// infoSource -> depB -> target
+		depA := cdx.Component{
+			BOMRef:     "pkg:npm/dep-a@1.0.0",
+			Name:       "dep-a",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/dep-a@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
 		}
+		depAID := g.AddComponent(depA)
+
+		depB := cdx.Component{
+			BOMRef:     "pkg:npm/dep-b@1.0.0",
+			Name:       "dep-b",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/dep-b@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		depBID := g.AddComponent(depB)
+
+		target := cdx.Component{
+			BOMRef:     "pkg:npm/target@1.0.0",
+			Name:       "target",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/target@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		targetID := g.AddComponent(target)
+
+		// Build the graph
+		g.AddEdge(infoSource, depAID)
+		g.AddEdge(infoSource, depBID)
+		g.AddEdge(depAID, targetID)
+		g.AddEdge(depBID, targetID)
+
+		// Find all paths to the target component
+		paths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0")
+
+		// Should return two different paths through different dependencies
+		assert.Len(t, paths, 2, "Should return multiple paths when there are different dependency chains")
+
+		// Verify the paths contain the expected components
+		path1 := []string{"pkg:npm/dep-a@1.0.0", "pkg:npm/target@1.0.0"}
+		path2 := []string{"pkg:npm/dep-b@1.0.0", "pkg:npm/target@1.0.0"}
+
+		assert.Contains(t, paths, path1, "Should contain path through dep-a")
+		assert.Contains(t, paths, path2, "Should contain path through dep-b")
 	})
 
-	t.Run("calculate depth with vex AND sbom path", func(t *testing.T) {
-		bom := SBOMGraphFromCycloneDX(&cdx.BOM{
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-					PackageURL: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-				},
-				{
-					BOMRef:     "pkg:golang/a@1.0.0",
-					PackageURL: "pkg:golang/a@1.0.0",
-				},
-				{
-					BOMRef:     "pkg:golang/b@1.0.0",
-					PackageURL: "pkg:golang/b@1.0.0",
-				},
-				{
-					BOMRef:     "pkg:golang/c@1.0.0",
-					PackageURL: "pkg:golang/c@1.0.0",
-				},
-			},
-			Dependencies: &[]cdx.Dependency{
-				{
-					Ref: "pkg:devguard/testorg/testgroup/testdepth@1.0.0",
-					Dependencies: &[]string{
-						"pkg:golang/a@1.0.0",
-					},
-				},
-				{
-					Ref: "pkg:golang/a@1.0.0",
-					Dependencies: &[]string{
-						"pkg:golang/b@1.0.0",
-					},
-				},
-				{
-					Ref: "pkg:golang/b@1.0.0",
-					Dependencies: &[]string{
-						"pkg:golang/c@1.0.0",
-					},
-				},
-				{
-					Ref:          "pkg:golang/c@1.0.0",
-					Dependencies: &[]string{},
-				},
-			},
-		}, "artifact", "test")
+	t.Run("component not found - should return empty paths", func(t *testing.T) {
+		g := NewSBOMGraph()
 
-		// lets merge a vex that adds a false positive to golang/c
-		vex := SBOMGraphFromCycloneDX(&cdx.BOM{
+		// Add some components
+		artifactID := g.AddArtifact("test-app")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
 
-			Vulnerabilities: &[]cdx.Vulnerability{
-				{
-					ID: "CVE-2021",
-					Affects: &[]cdx.Affects{
-						{
-							Ref: "pkg:golang/c@1.0.0",
-						},
-					},
-				},
-			},
-		}, "artifact", "vex")
-		vex.MergeGraph(bom)
-		actual := bom.CalculateDepth()
-
-		expectedDepths := map[string]int{
-			"pkg:golang/c@1.0.0": 4, // GraphRootNodeID -> artifact -> test -> pkg:devguard/testorg/testgroup/testdepth -> pkg:golang/a -> pkg:golang/b -> pkg:golang/c
+		comp := cdx.Component{
+			BOMRef:     "pkg:npm/existing@1.0.0",
+			PackageURL: "pkg:npm/existing@1.0.0",
 		}
+		compID := g.AddComponent(comp)
+		g.AddEdge(infoSource, compID)
 
-		for node, expectedDepth := range expectedDepths {
-			if actual[node] != expectedDepth {
-				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, actual[node])
-			}
+		// Search for non-existent component
+		paths := g.FindAllPathsToPURL("pkg:npm/non-existent@1.0.0")
+
+		assert.Len(t, paths, 0, "Should return empty paths for non-existent component")
+	})
+
+	t.Run("deep dependency chain - should return complete path", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Add artifact and info source
+		artifactID := g.AddArtifact("test-app")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
+
+		// Create a chain: infoSource -> A -> B -> C -> D
+		compA := cdx.Component{
+			BOMRef:     "pkg:npm/a@1.0.0",
+			PackageURL: "pkg:npm/a@1.0.0",
 		}
+		compAID := g.AddComponent(compA)
+
+		compB := cdx.Component{
+			BOMRef:     "pkg:npm/b@1.0.0",
+			PackageURL: "pkg:npm/b@1.0.0",
+		}
+		compBID := g.AddComponent(compB)
+
+		compC := cdx.Component{
+			BOMRef:     "pkg:npm/c@1.0.0",
+			PackageURL: "pkg:npm/c@1.0.0",
+		}
+		compCID := g.AddComponent(compC)
+
+		compD := cdx.Component{
+			BOMRef:     "pkg:npm/d@1.0.0",
+			PackageURL: "pkg:npm/d@1.0.0",
+		}
+		compDID := g.AddComponent(compD)
+
+		// Build the chain
+		g.AddEdge(infoSource, compAID)
+		g.AddEdge(compAID, compBID)
+		g.AddEdge(compBID, compCID)
+		g.AddEdge(compCID, compDID)
+
+		// Find path to the deepest component
+		paths := g.FindAllPathsToPURL("pkg:npm/d@1.0.0")
+
+		assert.Len(t, paths, 1)
+		expectedPath := []string{
+			"pkg:npm/a@1.0.0",
+			"pkg:npm/b@1.0.0",
+			"pkg:npm/c@1.0.0",
+			"pkg:npm/d@1.0.0",
+		}
+		assert.Equal(t, expectedPath, paths[0], "Should return complete dependency chain")
 	})
 }

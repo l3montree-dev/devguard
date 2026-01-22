@@ -19,15 +19,38 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 	assetVersionName := "main"
 	artifactName := "my-artifact"
 
-	t.Run("same CVE in different paths creates separate vulnerabilities", func(t *testing.T) {
-		// Create an SBOM graph with the same vulnerable component reachable via two paths:
-		// root -> artifact -> trivy -> stdlib
-		// root -> artifact -> cosign -> stdlib
+	t.Run("same CVE in different dependency paths creates separate vulnerabilities", func(t *testing.T) {
+		// Create an SBOM graph with the same vulnerable component reachable via two different dependency paths:
+		// root -> artifact -> sbom -> trivy -> stdlib
+		// root -> artifact -> sbom -> cosign -> stdlib
+		// The actual PURL paths are:
+		// pkg:golang/trivy@1.0.0 -> pkg:golang/stdlib@1.20.0
+		// pkg:golang/cosign@1.0.0 -> pkg:golang/stdlib@1.20.0
 		sbom := normalize.NewSBOMGraph()
 
 		artifactID := sbom.AddArtifact(artifactName)
-		trivyID := sbom.AddInfoSource(artifactID, "trivy", normalize.InfoSourceSBOM)
-		cosignID := sbom.AddInfoSource(artifactID, "cosign", normalize.InfoSourceSBOM)
+		infoSourceID := sbom.AddInfoSource(artifactID, "sbom-tool", normalize.InfoSourceSBOM)
+
+		// Add intermediate packages (trivy and cosign as actual packages)
+		trivyPurl := "pkg:golang/trivy@1.0.0"
+		trivyComp := cdx.Component{
+			PackageURL: trivyPurl,
+			Name:       "trivy",
+			Version:    "1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		trivyID := sbom.AddComponent(trivyComp)
+		sbom.AddEdge(infoSourceID, trivyID)
+
+		cosignPurl := "pkg:golang/cosign@1.0.0"
+		cosignComp := cdx.Component{
+			PackageURL: cosignPurl,
+			Name:       "cosign",
+			Version:    "1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		cosignID := sbom.AddComponent(cosignComp)
+		sbom.AddEdge(infoSourceID, cosignID)
 
 		// Add the vulnerable stdlib component
 		stdlibPurl := "pkg:golang/stdlib@1.20.0"
@@ -39,7 +62,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		}
 		stdlibID := sbom.AddComponent(stdlibComp)
 
-		// Create two paths to stdlib
+		// Create two paths to stdlib via different intermediate packages
 		sbom.AddEdge(trivyID, stdlibID)
 		sbom.AddEdge(cosignID, stdlibID)
 
@@ -65,7 +88,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		// Transform the vulnerability
 		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
 
-		// Should create 2 separate vulnerabilities, one for each path
+		// Should create 2 separate vulnerabilities, one for each dependency path
 		assert.Len(t, vulns, 2)
 
 		// Verify each vuln has a different path but same CVE
@@ -87,7 +110,8 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		// Verify we have 2 distinct paths
 		assert.Len(t, pathStrs, 2)
 
-		// Verify the hashes are different (since paths are different)
+		// Verify the hashes are different (since dependency paths are different)
+		// Hash only includes actual package PURLs, not structural nodes
 		hash1 := vulns[0].CalculateHash()
 		hash2 := vulns[1].CalculateHash()
 		assert.NotEqual(t, hash1, hash2)
@@ -131,7 +155,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		assert.Equal(t, "CVE-2021-23337", vulns[0].CVEID)
 		// Path should contain trivy info source and the component purl
 		pathStr := vulns[0].VulnerabilityPath.String()
-		assert.Contains(t, pathStr, "trivy")
+		assert.NotContains(t, pathStr, "trivy")
 		assert.Contains(t, pathStr, compPurl)
 	})
 
@@ -158,7 +182,6 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 
 		assert.Len(t, vulns, 1)
 		assert.Empty(t, vulns[0].VulnerabilityPath)
-		assert.Equal(t, 1, *vulns[0].ComponentDepth)
 	})
 
 	t.Run("transitive dependency has correct depth", func(t *testing.T) {
@@ -198,12 +221,11 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
 
 		assert.Len(t, vulns, 1)
-		// Path: root > artifact > infoSource > dep1 > dep2 > vulnerable = 6 elements, depth = 5
-		assert.Equal(t, 5, *vulns[0].ComponentDepth)
+		// Path: dep1 > dep2 > vulnerable = 3 elements, depth = 3
+		assert.Equal(t, 3, len(vulns[0].VulnerabilityPath))
 		pathStr := vulns[0].VulnerabilityPath.String()
 		assert.Contains(t, pathStr, dep1Purl)
 		assert.Contains(t, pathStr, dep2Purl)
 		assert.Contains(t, pathStr, vulnPurl)
 	})
 }
-

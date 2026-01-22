@@ -309,14 +309,12 @@ func TestBuildVeX(t *testing.T) {
 
 		cveID := "CVE-2023-12345"
 		componentPurl := "pkg:npm/test-component@1.0.0"
-		componentDepth := 1
 		justification := "This vulnerability does not affect our use case"
 
 		dependencyVulns := []models.DependencyVuln{
 			{
-				CVEID:          cveID,
-				ComponentPurl:  componentPurl,
-				ComponentDepth: &componentDepth,
+				CVEID:         cveID,
+				ComponentPurl: componentPurl,
 				CVE: models.CVE{
 					CVE:         cveID,
 					CVSS:        float32(5.0),

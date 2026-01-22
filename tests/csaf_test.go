@@ -228,7 +228,6 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		CVE:               cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
-		ComponentDepth:    utils.Ptr(8),
 		Artifacts:         []models.Artifact{artifact},
 	}
 
@@ -241,7 +240,6 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		CVE:               cve2,
 		CVEID:             cve2.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
-		ComponentDepth:    utils.Ptr(2),
 		Artifacts:         []models.Artifact{artifact},
 	}
 	if err = db.Create(&vuln2).Error; err != nil {

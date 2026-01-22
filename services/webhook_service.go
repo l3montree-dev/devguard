@@ -304,7 +304,6 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 	cve := "CVE-2021-44228"
 	purl := "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
 	fixedVersion := "2.15.0"
-	depth := 2
 	risk := 95
 	rawRisk := 9.8
 	priority := 1
@@ -327,7 +326,6 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 			CVEID:                 cve,
 			CVE:                   transformer.CVEToDTO(cveData),
 			ComponentPurl:         purl,
-			ComponentDepth:        &depth,
 			ComponentFixedVersion: &fixedVersion,
 			Effort:                &effort,
 			RiskAssessment:        &risk,

@@ -106,7 +106,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	}
 
 	for i, dependencyVuln := range dependencyVulns {
-		riskReport := vulndb.RawRisk(dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
+		riskReport := vulndb.RawRisk(dependencyVuln.CVE, e, max(len(dependencyVuln.VulnerabilityPath), 1))
 		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, "system", riskReport, artifactName, upstream)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
@@ -196,7 +196,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 
 	for i, dependencyVuln := range dependencyVulns {
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
-		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, utils.OrDefault(dependencyVuln.ComponentDepth, 1))
+		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, max(len(dependencyVuln.VulnerabilityPath), 1))
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)

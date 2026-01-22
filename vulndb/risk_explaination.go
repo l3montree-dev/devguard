@@ -312,13 +312,13 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		},
 		EPSSMessage:           epssMessage(utils.OrDefault(dependencyVuln.CVE.EPSS, 0)),
 		CVSSBEMessage:         cvssBE(asset, cvss),
-		ComponentDepthMessage: componentDepthMessages(utils.OrDefault(dependencyVuln.ComponentDepth, 0)),
+		ComponentDepthMessage: componentDepthMessages(max(len(dependencyVuln.VulnerabilityPath), 1)),
 		CVSSMessage:           describeCVSS(cvss),
 		DependencyVulnID:      dependencyVuln.ID,
 
 		Risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
 		EPSS:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),
-		Depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
+		Depth: max(len(dependencyVuln.VulnerabilityPath), 1),
 
 		RiskMetrics:    riskMetrics,
 		CVEID:          dependencyVuln.CVEID,

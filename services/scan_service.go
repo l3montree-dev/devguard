@@ -16,10 +16,8 @@
 package services
 
 import (
-	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -417,31 +415,6 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 	if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
 		slog.Error("error when trying to add fix event")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
-
-	if len(diff.Unchanged) > 0 {
-		var valueClauses []string
-		for _, dv := range diff.Unchanged {
-			hash := dv.CalculateHash()
-			depth := utils.OrDefault(dv.ComponentDepth, 1)
-			valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", hash, depth))
-		}
-		// Join the value clauses with commas
-		values := strings.Join(valueClauses, ",")
-		// Construct the SQL query - use LEAST to keep the minimum depth (shallowest = highest risk)
-		query := fmt.Sprintf(`
-				UPDATE dependency_vulns
-				SET component_depth = LEAST(dependency_vulns.component_depth, data.component_depth)
-				FROM (VALUES %s) AS data(id, component_depth)
-				WHERE dependency_vulns.asset_id = ?
-				AND dependency_vulns.asset_version_name = ?
-				AND dependency_vulns.id = data.id
-			`, values)
-		// update just the component depth for nothingChanged vulns
-		if err := s.dependencyVulnRepository.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error; err != nil {
-			slog.Error("could not update component depth for unchanged dependency vulns", "err", err)
-			return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-		}
 	}
 
 	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(tx, assetVersion.Name, assetVersion.AssetID, &artifactName)

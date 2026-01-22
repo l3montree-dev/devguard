@@ -666,58 +666,10 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 	return result
 }
 
-// CalculateDepth returns the minimum depth of each component from info source roots.
-// Depth 1 = direct child of info source, depth 2 = grandchild, etc.
-func (g *SBOMGraph) CalculateDepth() map[string]int {
-	depths := make(map[string]int)
-
-	type item struct {
-		id    string
-		depth int
-	}
-	queue := []item{}
-
-	// Start BFS from all info source children (the root components)
-	for infoSource := range g.InfoSources() {
-		if infoSource.InfoType != InfoSourceSBOM {
-			continue
-		}
-		for childID := range g.edges[infoSource.ID] {
-			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
-				queue = append(queue, item{id: childID, depth: 1})
-			}
-		}
-	}
-
-	for len(queue) > 0 {
-		curr := queue[0]
-		queue = queue[1:]
-
-		if existing, ok := depths[curr.id]; ok && existing <= curr.depth {
-			continue
-		}
-		depths[curr.id] = curr.depth
-
-		for childID := range g.edges[curr.id] {
-			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
-				// only increment the depth if this component had a valid purl
-				_, err := packageurl.FromString(node.Component.PackageURL)
-				depth := curr.depth
-
-				if err == nil {
-					depth++
-				}
-
-				queue = append(queue, item{id: childID, depth: depth})
-			}
-		}
-	}
-
-	return depths
-}
-
-// FindAllPathsTo finds all paths from info source roots to a target component.
-func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
+// findAllPathsToPURLInternal is a helper function that finds all paths to a target component.
+// If includeAllNodes is true, all nodes are included in paths.
+// If includeAllNodes is false, only component nodes are included and paths are deduplicated.
+func (g *SBOMGraph) findAllPathsToPURLInternal(purl string, includeAllNodes bool) [][]string {
 	// first we need to find the target node ID
 	var targetID string
 	for node := range g.Components() {
@@ -728,6 +680,10 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 	}
 
 	var paths [][]string
+	var pathSet map[string]bool
+	if !includeAllNodes {
+		pathSet = make(map[string]bool) // Track unique paths for deduplication
+	}
 
 	var visit func(id string, path []string, visited map[string]bool)
 	visit = func(id string, path []string, visited map[string]bool) {
@@ -735,13 +691,33 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 			return
 		}
 
-		newPath := append(append([]string{}, path...), id)
+		// Build new path based on mode
+		newPath := append([]string{}, path...)
+		if includeAllNodes {
+			// Add all nodes to the path
+			newPath = append(newPath, id)
+		} else {
+			// Only add component nodes to the path
+			if node := g.nodes[id]; node != nil && node.Type == GraphNodeTypeComponent {
+				newPath = append(newPath, id)
+			}
+		}
+
 		newVisited := make(map[string]bool)
 		maps.Copy(newVisited, visited)
 		newVisited[id] = true
 
 		if id == targetID {
-			paths = append(paths, newPath)
+			if includeAllNodes {
+				paths = append(paths, newPath)
+			} else {
+				// Deduplicate paths for component-only mode
+				pathKey := strings.Join(newPath, "|")
+				if !pathSet[pathKey] {
+					pathSet[pathKey] = true
+					paths = append(paths, newPath)
+				}
+			}
 			return
 		}
 
@@ -750,12 +726,26 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 		}
 	}
 
-	// Start from artifacts and prepend "root" to paths
-	for artifact := range g.Artifacts() {
-		visit(artifact.ID, []string{"root"}, make(map[string]bool))
-	}
+	// Start from root with empty path
+	visit(g.rootID, []string{}, make(map[string]bool))
 
 	return paths
+}
+
+// FindAllPathsToPURL finds all unique component paths from root to a target component.
+// Returns paths in the format: ["pkg:...", "pkg:...", target_purl]
+// Structural nodes (artifacts, info sources, root) are traversed but not included in the returned paths.
+// Duplicate paths (e.g., same component chain through different artifacts) are automatically deduplicated.
+func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
+	return g.findAllPathsToPURLInternal(purl, false)
+}
+
+// FindAllPathsToPURLIncludingFakeNodes finds all paths from root to a target component, including all nodes.
+// Returns paths in the format: ["root", "artifact:...", "sbom:...", "pkg:...", "pkg:...", target_purl]
+// Unlike FindAllPathsToPURL, this includes structural nodes (root, artifacts, info sources) in the paths.
+// This is useful for debugging or when you need to see the complete traversal path.
+func (g *SBOMGraph) FindAllPathsToPURLIncludingFakeNodes(purl string) [][]string {
+	return g.findAllPathsToPURLInternal(purl, true)
 }
 
 // =============================================================================

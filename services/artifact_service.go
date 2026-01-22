@@ -93,36 +93,6 @@ func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName str
 			return err
 		}
 
-		// Recalculate depths after deletion
-		depthMap := wholeAssetGraph.CalculateDepth()
-
-		// If there are no components (all artifacts deleted), skip depth update
-		if len(depthMap) > 0 {
-			// Batch update all vulnerabilities with new depths using single SQL query
-			var valueClauses []string
-			for purl, depth := range depthMap {
-				valueClauses = append(valueClauses, fmt.Sprintf("('%s', %d)", purl, depth))
-			}
-
-			values := strings.Join(valueClauses, ",")
-			query := fmt.Sprintf(`
-				UPDATE dependency_vulns
-				SET component_depth = data.component_depth
-				FROM (VALUES %s) AS data(component_purl, component_depth)
-				WHERE dependency_vulns.asset_id = ?
-				AND dependency_vulns.asset_version_name = ?
-				AND dependency_vulns.component_purl = data.component_purl
-			`, values)
-
-			err = tx.Exec(query, assetID, assetVersionName).Error
-			if err != nil {
-				slog.Error("failed to batch update vulnerability depths", "error", err)
-				return err
-			}
-
-			slog.Info("recalculated depths after artifact deletion", "assetID", assetID, "updatedComponents", len(depthMap))
-		}
-
 		slog.Info("artifact deleted successfully", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName)
 		return nil
 	})

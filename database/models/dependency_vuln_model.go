@@ -18,7 +18,6 @@ type DependencyVuln struct {
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
 	ComponentPurl         string                    `json:"componentPurl" gorm:"type:text;"`
-	ComponentDepth        *int                      `json:"componentDepth" gorm:"default:null;"`
 	ComponentFixedVersion *string                   `json:"componentFixedVersion" gorm:"default:null;"`
 	VulnerabilityPath     databasetypes.StringSlice `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]'"`
 
@@ -71,7 +70,9 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 }
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s", vuln.VulnerabilityPath.String(), vuln.CVEID, vuln.AssetID))
+	// Filter the path to only include actual package PURLs for hash calculation
+	p := databasetypes.StringSlice(vuln.VulnerabilityPath)
+	return utils.HashString(fmt.Sprintf("%s/%s/%s", p.String(), vuln.CVEID, vuln.AssetID))
 }
 
 func (vuln DependencyVuln) GetAssetVersionName() string {
@@ -101,7 +102,10 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, vuln.VulnerabilityPath.String()))
+	// Filter the path to only include actual package PURLs for hash calculation
+	// This excludes structural nodes like "root", "artifact:...", and info sources
+	p := databasetypes.StringSlice(vuln.VulnerabilityPath)
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, p.String()))
 }
 
 // hook to calculate the hash before creating the dependencyVuln

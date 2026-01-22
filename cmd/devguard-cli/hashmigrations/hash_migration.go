@@ -474,7 +474,6 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 
 	// Use first old vuln for metadata (they all have same PURL, asset, etc.)
 	firstOld := oldVulns[0]
-	depth := utils.OrDefault(firstOld.ComponentDepth, 1)
 
 	// For each new CVE, check which old CVEs have relationships to it
 	for _, foundVuln := range foundVulns {
@@ -486,7 +485,6 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 			},
 			CVEID:             foundVuln.CVEID,
 			ComponentPurl:     firstOld.ComponentPurl,
-			ComponentDepth:    &depth,
 			CVE:               foundVuln.CVE,
 			VulnerabilityPath: nil, // Will be populated by v3 migration
 		}
@@ -635,8 +633,6 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 					newVuln := oldVuln
 					newVuln.VulnerabilityPath = path
 					// Update depth based on path length
-					depth := max(len(path)-1, 1)
-					newVuln.ComponentDepth = &depth
 					newVuln.ID = newVuln.CalculateHash()
 
 					if !createdVulnIDs[newVuln.ID] {
