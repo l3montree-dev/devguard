@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"net/url"
 	"slices"
 	"strings"
 
@@ -102,6 +103,10 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 	search := ctx.QueryParam("search")
 	sort := shared.GetSortQuery(ctx)
 
+	artifactName := ctx.QueryParam("artifactName")
+	// unescape artifact name
+	artifactName, _ = url.PathUnescape(artifactName)
+
 	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
@@ -113,6 +118,39 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 		FieldValue: "pkg:%",
 		Operator:   "like",
 	})
+
+	// If artifact is specified, we need to filter using the SBOM graph
+	if artifactName != "" {
+		// Load the full SBOM to determine which components belong to this artifact
+		sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(assetVersion)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
+		}
+
+		err = sbom.ScopeToArtifact(artifactName)
+		if err != nil {
+			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
+		}
+
+		// Get all component IDs in this artifact
+		componentIDs := make([]string, 0)
+		for node := range sbom.Components() {
+			if node.Component != nil && node.Component.PackageURL != "" {
+				componentIDs = append(componentIDs, node.Component.PackageURL)
+			}
+		}
+
+		if len(componentIDs) == 0 {
+			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
+		}
+
+		// Add filter for these component IDs
+		filter = append(filter, shared.FilterQuery{
+			Field:      "component_dependencies.dependency_id",
+			FieldValue: componentIDs,
+			Operator:   "in",
+		})
+	}
 
 	components, err := componentController.componentRepository.LoadComponentsWithProject(nil,
 		overwrittenLicense,

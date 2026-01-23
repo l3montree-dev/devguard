@@ -258,7 +258,7 @@ func (runner *DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan ch
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "FetchAssetDetails", "assetID", asset.ID)
+
 			out <- assetWithProjectAndOrg{
 				asset:         asset,
 				assetVersions: assetVersions,
@@ -311,7 +311,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "SyncTickets", "assetID", assetWithDetails.asset.ID)
+
 			out <- assetWithDetails
 		}
 	}()
@@ -382,7 +382,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "ResolveDifferencesInTicketState", "assetID", assetWithDetails.asset.ID)
+
 			out <- assetWithDetails
 		}
 	}()
@@ -441,7 +441,6 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "ScanAsset", "assetID", asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -500,7 +499,6 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "SyncUpstream", "assetID", asset.ID)
 			out <- assetWithDetails
 		}
 	}()
@@ -537,7 +535,7 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "CollectStats", "assetID", assetWithDetails.asset.ID)
+
 			out <- assetWithDetails
 		}
 	}()
@@ -586,7 +584,7 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "RecalculateRiskForVulnerabilities", "assetID", assetWithDetails.asset.ID)
+
 			out <- assetWithDetails
 		}
 	}()
@@ -605,7 +603,6 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 		for assetWithDetails := range input {
 			asset := assetWithDetails.asset
 			if asset.VulnAutoReopenAfterDays == nil || *asset.VulnAutoReopenAfterDays <= 0 {
-				slog.Debug("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
 				out <- assetWithDetails
 				continue
 			}
@@ -643,7 +640,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 				}
 				continue
 			}
-			slog.Debug("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
+
 			out <- assetWithDetails
 		}
 	}()
@@ -660,7 +657,6 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 		}()
 
 		for assetWithDetails := range input {
-			slog.Debug("finished pipeline stage", "stage", "AutoReopenTickets", "assetID", assetWithDetails.asset.ID)
 			_, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(assetWithDetails.asset.ID, 7)
 			if err != nil {
 				slog.Error("Failed to delete old asset versions", "err", err)
@@ -671,7 +667,6 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 				continue
 			}
 
-			slog.Debug("finished pipeline stage", "stage", "DeleteOldAssetVersions", "assetID", assetWithDetails.asset.ID)
 			out <- assetWithDetails
 		}
 	}()

@@ -319,7 +319,7 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 }
 
 func escapeNodeID(s string) string {
-	if s == "" {
+	if s == "" || s == normalize.GraphRootNodeID {
 		return "root"
 	}
 	// Creates a safe Mermaid node ID by removing special characters
@@ -328,7 +328,7 @@ func escapeNodeID(s string) string {
 
 // beautifyNodeLabel creates a more readable label for graph nodes
 func beautifyNodeLabel(nodeID string) string {
-	if nodeID == "" || nodeID == "root" {
+	if nodeID == "" || nodeID == "root" || nodeID == "ROOT" || nodeID == normalize.GraphRootNodeID {
 		return "Root"
 	}
 
@@ -411,8 +411,12 @@ func RenderPathToComponent(componentRepository shared.ComponentRepository, asset
 	bom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
 
 	paths := bom.FindAllPathsToPURL(pURL)
-
-	return pathsToMermaid(paths), nil
+	// we want to show fake nodes in the mermaid graph (root, artifact, info sources)
+	pathWithFakeNodes := make([][]string, 0, len(paths))
+	for _, path := range paths {
+		pathWithFakeNodes = append(pathWithFakeNodes, path.ToStringSlice())
+	}
+	return pathsToMermaid(pathWithFakeNodes), nil
 }
 
 func stateToLabel(state dtos.VulnState) string {

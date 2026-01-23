@@ -153,7 +153,6 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVEID:                 "CVE-2021-1234",
 			RawRiskAssessment:     utils.Ptr(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
-			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
@@ -224,7 +223,6 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVEID:                 "CVE-2021-1234",
 			RawRiskAssessment:     utils.Ptr(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
-			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
 

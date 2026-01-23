@@ -36,6 +36,43 @@ func SanitizeExternalReferencesURL(url string) string {
 	return sanitizedURL
 }
 
+// Path represents a vulnerability path through the dependency graph.
+// It can contain both structural nodes (root, artifact, info sources) and component nodes (PURLs).
+type Path []string
+
+// ToStringSlice returns all nodes in the path, including fake/structural nodes.
+func (p Path) ToStringSlice() []string {
+	return []string(p)
+}
+
+// String returns a comma-separated string of all nodes in the path.
+func (p Path) String() string {
+	return strings.Join(p, ",")
+}
+
+// ToStringSliceComponentOnly returns only the component nodes (PURLs),
+// filtering out structural nodes like "root", "artifact:...", and info sources.
+func (p Path) ToStringSliceComponentOnly() []string {
+	filtered := make([]string, 0, len(p))
+	for _, node := range p {
+		// Skip structural/fake nodes
+		if node == "ROOT" || node == "root" {
+			continue
+		}
+		// Skip artifact nodes (artifact:...)
+		if len(node) > 9 && node[:9] == "artifact:" {
+			continue
+		}
+		// Skip info source nodes (sbom:..., vex:..., csaf:...)
+		if len(node) > 5 && (node[:5] == "sbom:" || node[:4] == "vex:" || node[:5] == "csaf:") {
+			continue
+		}
+		// Include only component PURLs
+		filtered = append(filtered, node)
+	}
+	return filtered
+}
+
 // =============================================================================
 // NODE TYPES
 // =============================================================================
@@ -666,58 +703,11 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 	return result
 }
 
-// CalculateDepth returns the minimum depth of each component from info source roots.
-// Depth 1 = direct child of info source, depth 2 = grandchild, etc.
-func (g *SBOMGraph) CalculateDepth() map[string]int {
-	depths := make(map[string]int)
-
-	type item struct {
-		id    string
-		depth int
-	}
-	queue := []item{}
-
-	// Start BFS from all info source children (the root components)
-	for infoSource := range g.InfoSources() {
-		if infoSource.InfoType != InfoSourceSBOM {
-			continue
-		}
-		for childID := range g.edges[infoSource.ID] {
-			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
-				queue = append(queue, item{id: childID, depth: 1})
-			}
-		}
-	}
-
-	for len(queue) > 0 {
-		curr := queue[0]
-		queue = queue[1:]
-
-		if existing, ok := depths[curr.id]; ok && existing <= curr.depth {
-			continue
-		}
-		depths[curr.id] = curr.depth
-
-		for childID := range g.edges[curr.id] {
-			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
-				// only increment the depth if this component had a valid purl
-				_, err := packageurl.FromString(node.Component.PackageURL)
-				depth := curr.depth
-
-				if err == nil {
-					depth++
-				}
-
-				queue = append(queue, item{id: childID, depth: depth})
-			}
-		}
-	}
-
-	return depths
-}
-
-// FindAllPathsTo finds all paths from info source roots to a target component.
-func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
+// FindAllPathsToPURL finds all paths from root to a target component.
+// Returns full paths including structural nodes (ROOT, artifacts, info sources).
+// Each unique full path is returned separately, even if multiple paths lead to the same
+// component through different artifacts or info sources.
+func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
 	// first we need to find the target node ID
 	var targetID string
 	for node := range g.Components() {
@@ -727,7 +717,8 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 		}
 	}
 
-	var paths [][]string
+	var paths []Path
+	pathSet := make(map[string]bool) // Track unique paths for deduplication
 
 	var visit func(id string, path []string, visited map[string]bool)
 	visit = func(id string, path []string, visited map[string]bool) {
@@ -735,13 +726,21 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 			return
 		}
 
-		newPath := append(append([]string{}, path...), id)
+		// Add all nodes to the path
+		newPath := append([]string{}, path...)
+		newPath = append(newPath, id)
+
 		newVisited := make(map[string]bool)
 		maps.Copy(newVisited, visited)
 		newVisited[id] = true
 
 		if id == targetID {
-			paths = append(paths, newPath)
+			// Deduplicate paths
+			pathKey := strings.Join(newPath, "|")
+			if !pathSet[pathKey] {
+				pathSet[pathKey] = true
+				paths = append(paths, Path(newPath))
+			}
 			return
 		}
 
@@ -750,10 +749,8 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
 		}
 	}
 
-	// Start from artifacts and prepend "root" to paths
-	for artifact := range g.Artifacts() {
-		visit(artifact.ID, []string{"root"}, make(map[string]bool))
-	}
+	// Start from root with empty path
+	visit(g.rootID, []string{}, make(map[string]bool))
 
 	return paths
 }
@@ -816,13 +813,13 @@ type minimalTreeNode struct {
 }
 
 func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
-	root := &minimalTreeNode{
-		Name:     "ROOT",
-		Children: []*minimalTreeNode{},
-	}
+	var buildTree func(nodeID string, pathVisited map[string]bool) *minimalTreeNode
+	buildTree = func(nodeID string, pathVisited map[string]bool) *minimalTreeNode {
+		// Prevent infinite recursion on cycles by checking if we've visited this node in the current path
+		if pathVisited[nodeID] {
+			return nil
+		}
 
-	var buildTree func(nodeID string) *minimalTreeNode
-	buildTree = func(nodeID string) *minimalTreeNode {
 		node := g.nodes[nodeID]
 		if node == nil {
 			return nil
@@ -831,8 +828,14 @@ func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
 			Name:     node.ID,
 			Children: []*minimalTreeNode{},
 		}
+
+		// Create a new visited map for this path
+		newPathVisited := make(map[string]bool)
+		maps.Copy(newPathVisited, pathVisited)
+		newPathVisited[nodeID] = true
+
 		for childID := range g.edges[nodeID] {
-			childTreeNode := buildTree(childID)
+			childTreeNode := buildTree(childID, newPathVisited)
 			if childTreeNode != nil {
 				treeNode.Children = append(treeNode.Children, childTreeNode)
 			}
@@ -840,13 +843,7 @@ func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
 		return treeNode
 	}
 
-	for childID := range g.edges[g.scopeID] {
-		childTreeNode := buildTree(childID)
-		if childTreeNode != nil {
-			root.Children = append(root.Children, childTreeNode)
-		}
-	}
-	return root
+	return buildTree(g.scopeID, make(map[string]bool))
 }
 
 // ToCycloneDX exports the scoped view as a CycloneDX BOM.

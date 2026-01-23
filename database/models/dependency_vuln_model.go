@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -16,9 +17,9 @@ type DependencyVuln struct {
 	CVE   CVE    `json:"cve"`
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
-	ComponentDepth        *int    `json:"componentDepth" gorm:"default:null;"`
-	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
+	ComponentPurl         string   `json:"componentPurl" gorm:"type:text;"`
+	ComponentFixedVersion *string  `json:"componentFixedVersion" gorm:"default:null;"`
+	VulnerabilityPath     []string `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]';serializer:json"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
@@ -44,6 +45,7 @@ func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
 	}
 	return artifactNames
 }
+
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
 	vuln.RawRiskAssessment = &risk
 }
@@ -69,7 +71,8 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 }
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s", vuln.ComponentPurl, vuln.CVEID, vuln.AssetID))
+	// Filter the path to only include actual package PURLs for hash calculation
+	return utils.HashString(fmt.Sprintf("%s/%s/%s", strings.Join(vuln.VulnerabilityPath, ","), vuln.CVEID, vuln.AssetID))
 }
 
 func (vuln DependencyVuln) GetAssetVersionName() string {
@@ -99,7 +102,7 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.ComponentPurl, vuln.AssetVersionName, vuln.AssetID))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
 }
 
 // hook to calculate the hash before creating the dependencyVuln

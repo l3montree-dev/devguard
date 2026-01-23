@@ -22,7 +22,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
@@ -100,10 +99,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          cve.CVE,
-				ComponentPurl:  "pkg:npm/vulnerable-package@1.0.0",
-				ComponentDepth: utils.Ptr(0),
-				Artifacts:      []models.Artifact{artifact1, artifact2},
+				CVEID:         cve.CVE,
+				ComponentPurl: "pkg:npm/vulnerable-package@1.0.0",
+				Artifacts:     []models.Artifact{artifact1, artifact2},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
@@ -172,10 +170,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion2.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          cve1.CVE,
-				ComponentPurl:  "pkg:npm/package-a@1.0.0",
-				ComponentDepth: utils.Ptr(0),
-				Artifacts:      []models.Artifact{artifact3},
+				CVEID:         cve1.CVE,
+				ComponentPurl: "pkg:npm/package-a@1.0.0",
+				Artifacts:     []models.Artifact{artifact3},
 			}
 			depVuln2 := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
@@ -183,10 +180,9 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 					AssetVersionName: assetVersion2.Name,
 					AssetID:          asset.ID,
 				},
-				CVEID:          cve2.CVE,
-				ComponentPurl:  "pkg:npm/package-b@2.0.0",
-				ComponentDepth: utils.Ptr(0),
-				Artifacts:      []models.Artifact{artifact3},
+				CVEID:         cve2.CVE,
+				ComponentPurl: "pkg:npm/package-b@2.0.0",
+				Artifacts:     []models.Artifact{artifact3},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln1).Error)
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
@@ -277,10 +273,9 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 					AssetID:          asset.ID,
 					TicketID:         &existingTicketID,
 				},
-				CVEID:          cve.CVE,
-				ComponentPurl:  "pkg:npm/existing-ticket-package@1.0.0",
-				ComponentDepth: utils.Ptr(0),
-				Artifacts:      []models.Artifact{artifact},
+				CVEID:         cve.CVE,
+				ComponentPurl: "pkg:npm/existing-ticket-package@1.0.0",
+				Artifacts:     []models.Artifact{artifact},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 

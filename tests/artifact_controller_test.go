@@ -84,8 +84,9 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					State:            dtos.VulnStateOpen,
 					TicketID:         utils.Ptr("gitlab:123/456"),
 				},
-				CVEID:         cve.CVE,
-				ComponentPurl: "pkg:npm/vulnerable-package@1.0.0",
+				CVEID:             cve.CVE,
+				ComponentPurl:     "pkg:npm/vulnerable-package@1.0.0",
+				VulnerabilityPath: []string{"root", "artifact:artifact-1", "pkg:npm/vulnerable-package@1.0.0"},
 				Artifacts: []models.Artifact{
 					artifact1,
 				},
@@ -145,8 +146,9 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					State:            dtos.VulnStateOpen,
 					TicketID:         utils.Ptr("gitlab:123/789"),
 				},
-				CVEID:         cve.CVE,
-				ComponentPurl: "pkg:npm/multi-artifact-package@1.0.0",
+				CVEID:             cve.CVE,
+				ComponentPurl:     "pkg:npm/multi-artifact-package@1.0.0",
+				VulnerabilityPath: []string{"root", "artifact:artifact-1", "pkg:npm/multi-artifact-package@1.0.0"},
 				Artifacts: []models.Artifact{
 					artifact1,
 					artifact2,
