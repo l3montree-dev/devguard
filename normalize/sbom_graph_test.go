@@ -826,7 +826,7 @@ func TestToMinimalTree(t *testing.T) {
 		comp1ID := g.AddComponent(comp1)
 		g.AddEdge(infoSourceID, comp1ID)
 
-		g.ScopeToArtifact("my-app")
+		assert.Nil(t, g.ScopeToArtifact("my-app"))
 		tree := g.ToMinimalTree()
 
 		// Should start from artifact, not ROOT
@@ -859,9 +859,10 @@ func TestToMinimalTree(t *testing.T) {
 		// Both artifacts should have the shared component
 		var artifact1Tree, artifact2Tree *minimalTreeNode
 		for _, child := range tree.Children {
-			if child.Name == "artifact:app1" {
+			switch child.Name {
+			case "artifact:app1":
 				artifact1Tree = child
-			} else if child.Name == "artifact:app2" {
+			case "artifact:app2":
 				artifact2Tree = child
 			}
 		}
