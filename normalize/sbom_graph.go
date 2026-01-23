@@ -36,6 +36,43 @@ func SanitizeExternalReferencesURL(url string) string {
 	return sanitizedURL
 }
 
+// Path represents a vulnerability path through the dependency graph.
+// It can contain both structural nodes (root, artifact, info sources) and component nodes (PURLs).
+type Path []string
+
+// ToStringSlice returns all nodes in the path, including fake/structural nodes.
+func (p Path) ToStringSlice() []string {
+	return []string(p)
+}
+
+// String returns a comma-separated string of all nodes in the path.
+func (p Path) String() string {
+	return strings.Join(p, ",")
+}
+
+// ToStringSliceComponentOnly returns only the component nodes (PURLs),
+// filtering out structural nodes like "root", "artifact:...", and info sources.
+func (p Path) ToStringSliceComponentOnly() []string {
+	filtered := make([]string, 0, len(p))
+	for _, node := range p {
+		// Skip structural/fake nodes
+		if node == "ROOT" || node == "root" {
+			continue
+		}
+		// Skip artifact nodes (artifact:...)
+		if len(node) > 9 && node[:9] == "artifact:" {
+			continue
+		}
+		// Skip info source nodes (sbom:..., vex:..., csaf:...)
+		if len(node) > 5 && (node[:5] == "sbom:" || node[:4] == "vex:" || node[:5] == "csaf:") {
+			continue
+		}
+		// Include only component PURLs
+		filtered = append(filtered, node)
+	}
+	return filtered
+}
+
 // =============================================================================
 // NODE TYPES
 // =============================================================================
@@ -666,10 +703,11 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 	return result
 }
 
-// findAllPathsToPURLInternal is a helper function that finds all paths to a target component.
-// If includeAllNodes is true, all nodes are included in paths.
-// If includeAllNodes is false, only component nodes are included and paths are deduplicated.
-func (g *SBOMGraph) findAllPathsToPURLInternal(purl string, includeAllNodes bool) [][]string {
+// FindAllPathsToPURL finds all paths from root to a target component.
+// Returns full paths including structural nodes (ROOT, artifacts, info sources).
+// Each unique full path is returned separately, even if multiple paths lead to the same
+// component through different artifacts or info sources.
+func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
 	// first we need to find the target node ID
 	var targetID string
 	for node := range g.Components() {
@@ -679,11 +717,8 @@ func (g *SBOMGraph) findAllPathsToPURLInternal(purl string, includeAllNodes bool
 		}
 	}
 
-	var paths [][]string
-	var pathSet map[string]bool
-	if !includeAllNodes {
-		pathSet = make(map[string]bool) // Track unique paths for deduplication
-	}
+	var paths []Path
+	pathSet := make(map[string]bool) // Track unique paths for deduplication
 
 	var visit func(id string, path []string, visited map[string]bool)
 	visit = func(id string, path []string, visited map[string]bool) {
@@ -691,32 +726,20 @@ func (g *SBOMGraph) findAllPathsToPURLInternal(purl string, includeAllNodes bool
 			return
 		}
 
-		// Build new path based on mode
+		// Add all nodes to the path
 		newPath := append([]string{}, path...)
-		if includeAllNodes {
-			// Add all nodes to the path
-			newPath = append(newPath, id)
-		} else {
-			// Only add component nodes to the path
-			if node := g.nodes[id]; node != nil && node.Type == GraphNodeTypeComponent {
-				newPath = append(newPath, id)
-			}
-		}
+		newPath = append(newPath, id)
 
 		newVisited := make(map[string]bool)
 		maps.Copy(newVisited, visited)
 		newVisited[id] = true
 
 		if id == targetID {
-			if includeAllNodes {
-				paths = append(paths, newPath)
-			} else {
-				// Deduplicate paths for component-only mode
-				pathKey := strings.Join(newPath, "|")
-				if !pathSet[pathKey] {
-					pathSet[pathKey] = true
-					paths = append(paths, newPath)
-				}
+			// Deduplicate paths
+			pathKey := strings.Join(newPath, "|")
+			if !pathSet[pathKey] {
+				pathSet[pathKey] = true
+				paths = append(paths, Path(newPath))
 			}
 			return
 		}
@@ -730,22 +753,6 @@ func (g *SBOMGraph) findAllPathsToPURLInternal(purl string, includeAllNodes bool
 	visit(g.rootID, []string{}, make(map[string]bool))
 
 	return paths
-}
-
-// FindAllPathsToPURL finds all unique component paths from root to a target component.
-// Returns paths in the format: ["pkg:...", "pkg:...", target_purl]
-// Structural nodes (artifacts, info sources, root) are traversed but not included in the returned paths.
-// Duplicate paths (e.g., same component chain through different artifacts) are automatically deduplicated.
-func (g *SBOMGraph) FindAllPathsToPURL(purl string) [][]string {
-	return g.findAllPathsToPURLInternal(purl, false)
-}
-
-// FindAllPathsToPURLIncludingFakeNodes finds all paths from root to a target component, including all nodes.
-// Returns paths in the format: ["root", "artifact:...", "sbom:...", "pkg:...", "pkg:...", target_purl]
-// Unlike FindAllPathsToPURL, this includes structural nodes (root, artifacts, info sources) in the paths.
-// This is useful for debugging or when you need to see the complete traversal path.
-func (g *SBOMGraph) FindAllPathsToPURLIncludingFakeNodes(purl string) [][]string {
-	return g.findAllPathsToPURLInternal(purl, true)
 }
 
 // =============================================================================
@@ -806,13 +813,13 @@ type minimalTreeNode struct {
 }
 
 func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
-	root := &minimalTreeNode{
-		Name:     "ROOT",
-		Children: []*minimalTreeNode{},
-	}
+	var buildTree func(nodeID string, pathVisited map[string]bool) *minimalTreeNode
+	buildTree = func(nodeID string, pathVisited map[string]bool) *minimalTreeNode {
+		// Prevent infinite recursion on cycles by checking if we've visited this node in the current path
+		if pathVisited[nodeID] {
+			return nil
+		}
 
-	var buildTree func(nodeID string) *minimalTreeNode
-	buildTree = func(nodeID string) *minimalTreeNode {
 		node := g.nodes[nodeID]
 		if node == nil {
 			return nil
@@ -821,8 +828,14 @@ func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
 			Name:     node.ID,
 			Children: []*minimalTreeNode{},
 		}
+
+		// Create a new visited map for this path
+		newPathVisited := make(map[string]bool)
+		maps.Copy(newPathVisited, pathVisited)
+		newPathVisited[nodeID] = true
+
 		for childID := range g.edges[nodeID] {
-			childTreeNode := buildTree(childID)
+			childTreeNode := buildTree(childID, newPathVisited)
 			if childTreeNode != nil {
 				treeNode.Children = append(treeNode.Children, childTreeNode)
 			}
@@ -830,13 +843,7 @@ func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
 		return treeNode
 	}
 
-	for childID := range g.edges[g.scopeID] {
-		childTreeNode := buildTree(childID)
-		if childTreeNode != nil {
-			root.Children = append(root.Children, childTreeNode)
-		}
-	}
-	return root
+	return buildTree(g.scopeID, make(map[string]bool))
 }
 
 // ToCycloneDX exports the scoped view as a CycloneDX BOM.

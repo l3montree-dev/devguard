@@ -390,7 +390,7 @@ func GetPageInfo(ctx Context) PageInfo {
 
 type FilterQuery struct {
 	Field      string
-	FieldValue string
+	FieldValue any
 	Operator   string
 }
 
@@ -495,6 +495,8 @@ func (f FilterQuery) SQL() string {
 	field := sanitizeField(f.Field)
 
 	switch f.Operator {
+	case "in":
+		return field + " IN (?)"
 	case "is":
 		return field + " = ?"
 	case "is not":

@@ -2,11 +2,11 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
 
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -17,9 +17,9 @@ type DependencyVuln struct {
 	CVE   CVE    `json:"cve"`
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         string                    `json:"componentPurl" gorm:"type:text;"`
-	ComponentFixedVersion *string                   `json:"componentFixedVersion" gorm:"default:null;"`
-	VulnerabilityPath     databasetypes.StringSlice `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]'"`
+	ComponentPurl         string   `json:"componentPurl" gorm:"type:text;"`
+	ComponentFixedVersion *string  `json:"componentFixedVersion" gorm:"default:null;"`
+	VulnerabilityPath     []string `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]';serializer:json"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
@@ -45,6 +45,7 @@ func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
 	}
 	return artifactNames
 }
+
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
 	vuln.RawRiskAssessment = &risk
 }
@@ -71,8 +72,7 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
 	// Filter the path to only include actual package PURLs for hash calculation
-	p := databasetypes.StringSlice(vuln.VulnerabilityPath)
-	return utils.HashString(fmt.Sprintf("%s/%s/%s", p.String(), vuln.CVEID, vuln.AssetID))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s", strings.Join(vuln.VulnerabilityPath, ","), vuln.CVEID, vuln.AssetID))
 }
 
 func (vuln DependencyVuln) GetAssetVersionName() string {
@@ -102,10 +102,7 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	// Filter the path to only include actual package PURLs for hash calculation
-	// This excludes structural nodes like "root", "artifact:...", and info sources
-	p := databasetypes.StringSlice(vuln.VulnerabilityPath)
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, p.String()))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
 }
 
 // hook to calculate the hash before creating the dependencyVuln

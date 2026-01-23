@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -174,7 +173,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 				ComponentPurl:         stringPurl,
 				ComponentFixedVersion: fixedVersion,
 				CVE:                   v.CVE,
-				VulnerabilityPath:     databasetypes.StringSlice{},
+				VulnerabilityPath:     []string{},
 			},
 		}
 	}
@@ -191,7 +190,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,
 			CVE:                   v.CVE,
-			VulnerabilityPath:     databasetypes.StringSlice(path),
+			VulnerabilityPath:     path.ToStringSliceComponentOnly(),
 		}
 		result = append(result, dependencyVuln)
 	}

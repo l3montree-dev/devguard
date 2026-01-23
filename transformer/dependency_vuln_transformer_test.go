@@ -1,6 +1,7 @@
 package transformer_test
 
 import (
+	"strings"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -99,8 +100,9 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			assert.Equal(t, assetID, v.AssetID)
 			assert.Equal(t, assetVersionName, v.AssetVersionName)
 			assert.NotEmpty(t, v.VulnerabilityPath)
+
 			// Convert path slice to string for uniqueness check
-			pathStrs[v.VulnerabilityPath.String()] = true
+			pathStrs[strings.Join(v.VulnerabilityPath, ",")] = true
 
 			// Verify artifact is set
 			require.Len(t, v.Artifacts, 1)
@@ -154,7 +156,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-23337", vulns[0].CVEID)
 		// Path should contain trivy info source and the component purl
-		pathStr := vulns[0].VulnerabilityPath.String()
+		pathStr := strings.Join(vulns[0].VulnerabilityPath, ",")
 		assert.NotContains(t, pathStr, "trivy")
 		assert.Contains(t, pathStr, compPurl)
 	})
@@ -223,7 +225,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		// Path: dep1 > dep2 > vulnerable = 3 elements, depth = 3
 		assert.Equal(t, 3, len(vulns[0].VulnerabilityPath))
-		pathStr := vulns[0].VulnerabilityPath.String()
+		pathStr := strings.Join(vulns[0].VulnerabilityPath, ",")
 		assert.Contains(t, pathStr, dep1Purl)
 		assert.Contains(t, pathStr, dep2Purl)
 		assert.Contains(t, pathStr, vulnPurl)

@@ -9,6 +9,7 @@ import (
 	"maps"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -186,6 +187,15 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	sbom, err := a.assetVersionService.LoadFullSBOMGraph(app)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
+	}
+
+	artifactName := ctx.QueryParam("artifactName")
+	if artifactName != "" {
+		artifactName, _ := url.PathUnescape(artifactName)
+		err = sbom.ScopeToArtifact(artifactName)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+		}
 	}
 
 	minimalTree := sbom.ToMinimalTree()
