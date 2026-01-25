@@ -525,3 +525,53 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(t
 	}).Preload("Artifacts").Preload("CVE").Where("cve_id = ? AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err
 }
+
+// FindByPathSuffix finds all dependency vulnerabilities in an asset whose vulnerability_path
+// ends with the given path pattern (exact suffix match) and has the specified CVE.
+// This is used for applying false positive rules to vulnerabilities with matching paths.
+// Path pattern rules only make sense for the same CVE.
+func (repository *dependencyVulnRepository) FindByPathSuffixAndCVE(tx *gorm.DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error) {
+	if len(pathPattern) == 0 || cveID == "" {
+		return nil, nil
+	}
+
+	// Build SQL conditions for suffix matching
+	// We check that the last N elements of vulnerability_path match the pattern exactly
+	patternLen := len(pathPattern)
+
+	// Start with base conditions - include CVE filter
+	conditions := []string{
+		"asset_id = ?",
+		"cve_id = ?",
+		"jsonb_array_length(vulnerability_path) >= ?",
+	}
+	args := []any{assetID, cveID, patternLen}
+
+	// Add conditions for each element in the pattern (from the end)
+	// pathPattern[0] should match the (len-patternLen)th element
+	// pathPattern[len-1] should match the last element
+	for i, elem := range pathPattern {
+		// Index from the end: if pattern is ["A", "B", "C"], then:
+		// C should be at position (length - 1)
+		// B should be at position (length - 2)
+		// A should be at position (length - 3)
+		posFromEnd := patternLen - 1 - i
+		conditions = append(conditions, fmt.Sprintf("vulnerability_path->>(jsonb_array_length(vulnerability_path) - %d - 1) = ?", posFromEnd))
+		args = append(args, elem)
+	}
+
+	var vulns []models.DependencyVuln
+	query := repository.Repository.GetDB(tx).
+		Preload("Events", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at ASC")
+		}).
+		Preload("Artifacts").
+		Preload("CVE")
+
+	for i, cond := range conditions {
+		query = query.Where(cond, args[i])
+	}
+
+	err := query.Find(&vulns).Error
+	return vulns, err
+}

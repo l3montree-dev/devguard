@@ -43,6 +43,10 @@ type DependencyVulnStatus struct {
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
+	// PathPattern is a path suffix pattern for false positive rules.
+	// When specified for a falsePositive event, the rule will be applied to all
+	// vulnerabilities in this asset whose path ends with this pattern.
+	PathPattern []string `json:"pathPattern,omitempty"`
 }
 
 func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
@@ -408,8 +412,9 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
+	pathPattern := status.PathPattern
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal, pathPattern)
 	if err != nil {
 		return err
 	}

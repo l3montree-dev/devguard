@@ -20,6 +20,10 @@ type VulnEvent struct {
 	arbitraryJSONData        map[string]any
 	OriginalAssetVersionName *string            `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 	Upstream                 dtos.UpstreamState `json:"upstream" gorm:"default:0;not null;"`
+	// PathPattern stores the path suffix pattern for false positive rules.
+	// When set, this rule applies to all vulns whose path ends with this pattern.
+	// Used for bulk false positive marking across asset versions.
+	PathPattern []string `json:"pathPattern,omitempty" gorm:"type:jsonb;default:null;serializer:json"`
 }
 
 type VulnEventDetail struct {
@@ -115,7 +119,7 @@ func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justificatio
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, upstream dtos.UpstreamState) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, upstream dtos.UpstreamState, pathPattern []string) VulnEvent {
 	ev := VulnEvent{
 		Type:                    dtos.EventTypeFalsePositive,
 		VulnID:                  vulnID,
@@ -124,6 +128,7 @@ func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justif
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
 		Upstream:                upstream,
+		PathPattern:             pathPattern,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev

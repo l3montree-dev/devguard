@@ -199,7 +199,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		if vuln.GetState() == dtos.VulnStateFalsePositive {
 			return nil
 		}
-		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal)
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), dtos.UpstreamStateInternal, nil)
 
 		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 		if err != nil {

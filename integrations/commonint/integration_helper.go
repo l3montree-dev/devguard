@@ -143,7 +143,7 @@ func CreateNewVulnEventBasedOnComment(vulnID string, vulnType dtos.VulnType, use
 	case dtos.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, dtos.UpstreamStateInternal)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, dtos.UpstreamStateInternal, nil)
 	case dtos.EventTypeReopened:
 		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeComment:

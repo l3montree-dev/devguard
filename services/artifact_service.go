@@ -343,7 +343,7 @@ func (s *ArtifactService) SyncUpstreamBoms(boms []*normalize.SBOMGraph, org mode
 					expected.eventType = dtos.EventTypeReopened
 				}
 
-				_, err = s.dependencyVulnService.CreateVulnEventAndApply(tx, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream)
+				_, err = s.dependencyVulnService.CreateVulnEventAndApply(tx, asset.ID, userID, &newState[i], expected.eventType, expected.justification, dtos.MechanicalJustificationType(""), assetVersion.Name, upstream, nil)
 				if err != nil {
 					slog.Error("could not update dependency vuln state", "err", err, "cve", newState[i].CVEID)
 					continue

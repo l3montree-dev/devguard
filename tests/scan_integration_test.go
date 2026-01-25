@@ -771,7 +771,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Len(t, vulns, 1)
 			branchDVuln := vulns[0]
 
-			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", 0)
+			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", 0, nil)
 			err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
 			assert.Nil(t, err)
 
@@ -1691,6 +1691,216 @@ func TestScanWithMultiplePaths(t *testing.T) {
 			assert.Equal(t, 2, response.AmountOpened)
 			assert.Equal(t, 0, response.AmountClosed)
 			assert.Len(t, response.DependencyVulns, 2)
+		})
+	})
+}
+
+func TestPathPatternFalsePositiveRules(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+
+		controller := f.App.ScanController
+		dependencyVulnController := f.App.DependencyVulnController
+		dependencyVulnRepository := f.App.DependencyVulnRepository
+
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+			shared.SetAssetVersion(ctx, assetVersion)
+		}
+
+		t.Run("should apply false positive rule to all vulns with matching path suffix", func(t *testing.T) {
+			// First, scan the SBOM with multiple paths to create vulnerabilities
+			sbomFile, err := os.Open("testdata/sbom-with-multiple-paths.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "path-pattern-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "path-pattern-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var response dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+			assert.Equal(t, 2, response.AmountOpened, "should have created 2 vulnerabilities with different paths")
+
+			// Get the vulnerabilities from DB
+			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+			assert.Len(t, vulns, 2)
+
+			// Both should be in open state
+			for _, v := range vulns {
+				assert.Equal(t, dtos.VulnStateOpen, v.State)
+			}
+
+			// Mark the first one as false positive with a path pattern that matches the OPA component
+			firstVuln := vulns[0]
+			// this path pattern actually does not make so much sense. Basically we are saying any path that ends with OPA component - even though that is
+			// the affected component itself. But for testing purposes this is sufficient
+			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
+
+			// Create a false positive event with path pattern via the controller
+			statusBody := fmt.Sprintf(`{"status":"falsePositive","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("POST", fmt.Sprintf("/dependency-vulns/%s", firstVuln.ID), strings.NewReader(statusBody))
+			req.Header.Set("Content-Type", "application/json")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+			ctx.SetParamNames("dependencyVulnID")
+			ctx.SetParamValues(firstVuln.ID)
+			aggregate := &mocks.IntegrationAggregate{}
+			aggregate.On("HandleEvent", mock.Anything).Return(nil)
+
+			shared.SetThirdPartyIntegration(ctx, aggregate)
+
+			err = dependencyVulnController.CreateEvent(ctx)
+			assert.Nil(t, err)
+
+			// Verify both vulns are now false positive
+			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+
+			falsePositiveCount := 0
+			for _, v := range vulns {
+				if v.State == dtos.VulnStateFalsePositive {
+					falsePositiveCount++
+				}
+			}
+			assert.Equal(t, 2, falsePositiveCount, "both vulnerabilities should be marked as false positive")
+		})
+	})
+}
+
+func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+
+		controller := f.App.ScanController
+		dependencyVulnRepository := f.App.DependencyVulnRepository
+		vulnEventRepository := f.App.VulnEventRepository
+
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("should apply existing false positive rule to newly detected vulns with matching path", func(t *testing.T) {
+			// First, scan to create the initial vulnerability
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "rule-test-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "rule-test-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Get the vulnerability
+			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+			assert.GreaterOrEqual(t, len(vulns), 1)
+
+			// Find the vuln we just created
+			var initialVuln *models.DependencyVuln
+			for i := range vulns {
+				if vulns[i].AssetVersionName == "main" && vulns[i].CVEID == "CVE-2025-46569" {
+					initialVuln = &vulns[i]
+					break
+				}
+			}
+			assert.NotNil(t, initialVuln)
+
+			// Create a false positive rule with path pattern directly in the database
+			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
+			fpEvent := models.NewFalsePositiveEvent(
+				initialVuln.ID,
+				dtos.VulnTypeDependencyVuln,
+				"test-user",
+				"OPA is not exploitable in our context",
+				dtos.ComponentNotPresent,
+				"rule-test-artifact",
+				dtos.UpstreamStateInternal,
+				pathPattern,
+			)
+			err = dependencyVulnRepository.ApplyAndSave(nil, initialVuln, &fpEvent)
+			assert.Nil(t, err)
+
+			// Verify the rule exists
+			rules, err := vulnEventRepository.GetFalsePositiveRulesForAsset(nil, asset.ID)
+			assert.Nil(t, err)
+			assert.GreaterOrEqual(t, len(rules), 1, "should have at least one false positive rule")
+
+			// Now scan a different SBOM that creates a new vuln with the same path suffix
+			// Using sbom-with-multiple-paths which has OPA at the end of multiple paths
+			sbomFile2, err := os.Open("testdata/sbom-with-multiple-paths.json")
+			assert.Nil(t, err)
+			defer sbomFile2.Close()
+
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile2)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "rule-test-artifact-2")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "rule-test-origin-2")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Get all vulns again
+			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			assert.Nil(t, err)
+
+			// Find the new vulns (those with path-a or path-b in their path)
+			newVulnsFalsePositiveCount := 0
+			for _, v := range vulns {
+				// Check if this vuln has the matching path suffix
+				if len(v.VulnerabilityPath) > 0 {
+					lastElement := v.VulnerabilityPath[len(v.VulnerabilityPath)-1]
+					if lastElement == "pkg:golang/github.com/open-policy-agent/opa@v0.68.0" {
+						if v.State == dtos.VulnStateFalsePositive {
+							newVulnsFalsePositiveCount++
+						}
+					}
+				}
+			}
+
+			// All vulns with matching path suffix should be false positive
+			assert.GreaterOrEqual(t, newVulnsFalsePositiveCount, 2, "newly detected vulns with matching path should be marked as false positive by the existing rule")
 		})
 	})
 }

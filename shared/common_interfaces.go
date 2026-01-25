@@ -227,6 +227,9 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
+	// FindByPathSuffixAndCVE finds all dependency vulns whose vulnerability_path ends with the given pattern
+	// and have the specified CVE ID. Path pattern rules only make sense for the same CVE.
+	FindByPathSuffixAndCVE(tx DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -349,7 +352,7 @@ type DependencyVulnService interface {
 	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
-	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error)
+	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }
@@ -401,6 +404,13 @@ type ConfigRepository interface {
 	GetDB(tx DB) DB
 }
 
+// FalsePositiveRule represents a false positive rule with its associated CVE ID.
+// Path pattern rules only make sense for the same CVE.
+type FalsePositiveRule struct {
+	models.VulnEvent
+	CVEID string
+}
+
 type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
 	SaveBatchBestEffort(db DB, events []models.VulnEvent) error
@@ -411,6 +421,9 @@ type VulnEventRepository interface {
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
+	// GetFalsePositiveRulesForAsset returns all false positive events with path patterns for an asset.
+	// Returns the CVE ID with each rule since path patterns only apply to the same CVE.
+	GetFalsePositiveRulesForAsset(tx DB, assetID uuid.UUID) ([]FalsePositiveRule, error)
 }
 
 type GithubAppInstallationRepository interface {

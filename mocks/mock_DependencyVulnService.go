@@ -41,8 +41,8 @@ func (_m *DependencyVulnService) EXPECT() *DependencyVulnService_Expecter {
 }
 
 // CreateVulnEventAndApply provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error) {
-	ret := _mock.Called(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream)
+func (_mock *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error) {
+	ret := _mock.Called(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream, pathPattern)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateVulnEventAndApply")
@@ -50,16 +50,16 @@ func (_mock *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetI
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState) (models.VulnEvent, error)); ok {
-		return returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState, []string) (models.VulnEvent, error)); ok {
+		return returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream, pathPattern)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState) models.VulnEvent); ok {
-		r0 = returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState, []string) models.VulnEvent); ok {
+		r0 = returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream, pathPattern)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState) error); ok {
-		r1 = returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, dtos.UpstreamState, []string) error); ok {
+		r1 = returnFunc(tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream, pathPattern)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -81,11 +81,12 @@ type DependencyVulnService_CreateVulnEventAndApply_Call struct {
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - assetVersionName string
 //   - upstream dtos.UpstreamState
-func (_e *DependencyVulnService_Expecter) CreateVulnEventAndApply(tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, status interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}, upstream interface{}) *DependencyVulnService_CreateVulnEventAndApply_Call {
-	return &DependencyVulnService_CreateVulnEventAndApply_Call{Call: _e.mock.On("CreateVulnEventAndApply", tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream)}
+//   - pathPattern []string
+func (_e *DependencyVulnService_Expecter) CreateVulnEventAndApply(tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, status interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}, upstream interface{}, pathPattern interface{}) *DependencyVulnService_CreateVulnEventAndApply_Call {
+	return &DependencyVulnService_CreateVulnEventAndApply_Call{Call: _e.mock.On("CreateVulnEventAndApply", tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, upstream, pathPattern)}
 }
 
-func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState)) *DependencyVulnService_CreateVulnEventAndApply_Call {
+func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string)) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -123,6 +124,10 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(tx sh
 		if args[8] != nil {
 			arg8 = args[8].(dtos.UpstreamState)
 		}
+		var arg9 []string
+		if args[9] != nil {
+			arg9 = args[9].([]string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -133,6 +138,7 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(tx sh
 			arg6,
 			arg7,
 			arg8,
+			arg9,
 		)
 	})
 	return _c
@@ -143,7 +149,7 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Return(vulnEvent m
 	return _c
 }
 
-func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error)) *DependencyVulnService_CreateVulnEventAndApply_Call {
+func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error)) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	_c.Call.Return(run)
 	return _c
 }

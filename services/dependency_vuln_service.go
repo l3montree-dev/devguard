@@ -119,7 +119,99 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	if err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatchBestEffort(tx, events)
+	err = s.vulnEventRepository.SaveBatchBestEffort(tx, events)
+	if err != nil {
+		return err
+	}
+
+	// Apply existing false positive rules to newly detected vulns
+	s.applyFalsePositiveRulesToNewVulns(tx, asset.ID, dependencyVulns)
+
+	return nil
+}
+
+// pathSuffixMatches checks if a vulnerability path ends with the given pattern.
+// Returns false if the path contains "ROOT" and the pattern doesn't start at root.
+func pathSuffixMatches(vulnPath []string, pattern []string) bool {
+	if len(pattern) == 0 || len(vulnPath) < len(pattern) {
+		return false
+	}
+
+	// Check if the suffix matches
+	startIdx := len(vulnPath) - len(pattern)
+	for i, elem := range pattern {
+		if vulnPath[startIdx+i] != elem {
+			return false
+		}
+	}
+
+	return true
+}
+
+// applyFalsePositiveRulesToNewVulns checks existing false positive rules and applies
+// them to newly detected vulnerabilities that match the path pattern and CVE.
+func (s *DependencyVulnService) applyFalsePositiveRulesToNewVulns(tx shared.DB, assetID uuid.UUID, vulns []models.DependencyVuln) {
+	// Get existing false positive rules for this asset
+	rules, err := s.vulnEventRepository.GetFalsePositiveRulesForAsset(tx, assetID)
+	if err != nil {
+		slog.Error("could not get false positive rules", "err", err, "assetID", assetID)
+		return
+	}
+
+	if len(rules) == 0 {
+		return
+	}
+
+	for i := range vulns {
+		vuln := &vulns[i]
+
+		// Skip if already false positive
+		if vuln.State == dtos.VulnStateFalsePositive {
+			continue
+		}
+
+		// Check each rule
+	ruleLoop:
+		for _, rule := range rules {
+			if len(rule.PathPattern) == 0 {
+				continue
+			}
+
+			// Path pattern rules only apply to the same CVE
+			if rule.CVEID != vuln.CVEID {
+				continue
+			}
+
+			// Skip rules containing ROOT if the vuln path doesn't start at the same position
+			// (rules with ROOT should only apply to vulns with the exact same root context)
+			for _, p := range rule.PathPattern {
+				if p == "ROOT" {
+					continue ruleLoop
+				}
+			}
+
+			if pathSuffixMatches(vuln.VulnerabilityPath, rule.PathPattern) {
+				// Apply the rule
+				ev := models.NewFalsePositiveEvent(
+					vuln.CalculateHash(),
+					dtos.VulnTypeDependencyVuln,
+					rule.UserID,
+					fmt.Sprintf("Auto-applied from existing rule: %s", *rule.Justification),
+					rule.MechanicalJustification,
+					vuln.GetScannerIDsOrArtifactNames(),
+					dtos.UpstreamStateInternal,
+					rule.PathPattern,
+				)
+
+				if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &ev); err != nil {
+					slog.Error("could not apply false positive rule to new vuln", "err", err, "vulnID", vuln.ID)
+				} else {
+					slog.Info("applied false positive rule to new vuln", "vulnID", vuln.ID, "rulePattern", rule.PathPattern, "cveID", rule.CVEID)
+				}
+				break // Only apply first matching rule
+			}
+		}
+	}
 }
 
 func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
@@ -241,27 +333,27 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 	return dependencyVulns, nil
 }
 
-func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error) {
+func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.dependencyVulnRepository.Transaction(func(d shared.DB) error {
-			ev, err = s.createVulnEventAndApply(tx, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
+			ev, err = s.createVulnEventAndApply(d, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream, pathPattern)
 			return err
 		})
 		return ev, err
 	}
-	return s.createVulnEventAndApply(tx, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
+	return s.createVulnEventAndApply(tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream, pathPattern)
 }
 
-func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState) (models.VulnEvent, error) {
+func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch vulnEventType {
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, upstream)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream, pathPattern)
 	case dtos.EventTypeDetected:
 		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{
 			Risk: utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
@@ -274,8 +366,49 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, userID str
 		ev = models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 	}
 
+	// Apply the event to the original vuln
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
-	return ev, err
+	if err != nil {
+		return ev, err
+	}
+
+	// If this is a false positive with a path pattern, apply to all matching vulns with the same CVE
+	if vulnEventType == dtos.EventTypeFalsePositive && len(pathPattern) > 0 {
+		matchingVulns, err := s.dependencyVulnRepository.FindByPathSuffixAndCVE(tx, assetID, dependencyVuln.CVEID, pathPattern)
+		if err != nil {
+			slog.Error("could not find matching vulns for path pattern", "err", err, "pathPattern", pathPattern, "cveID", dependencyVuln.CVEID)
+			return ev, nil // Don't fail the original operation
+		}
+
+		for i := range matchingVulns {
+			vuln := &matchingVulns[i]
+			// Skip the original vuln (already processed) and vulns already marked as false positive
+			if vuln.ID == dependencyVuln.ID || vuln.State == dtos.VulnStateFalsePositive {
+				continue
+			}
+
+			// Create a new event for each matching vuln (referencing the original rule)
+			matchingEv := models.NewFalsePositiveEvent(
+				vuln.CalculateHash(),
+				dtos.VulnTypeDependencyVuln,
+				userID,
+				fmt.Sprintf("Auto-applied from path pattern rule: %s", justification),
+				mechanicalJustification,
+				vuln.GetScannerIDsOrArtifactNames(),
+				upstream,
+				pathPattern, // Store the pattern for reference
+			)
+
+			if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &matchingEv); err != nil {
+				slog.Error("could not apply false positive to matching vuln", "err", err, "vulnID", vuln.ID)
+				// Continue with other vulns
+			} else {
+				slog.Info("applied false positive rule to matching vuln", "vulnID", vuln.ID, "pathPattern", pathPattern)
+			}
+		}
+	}
+
+	return ev, nil
 }
 
 func (s *DependencyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {

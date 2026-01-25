@@ -373,7 +373,7 @@ func (s *LicenseRiskService) updateLicenseRiskState(tx shared.DB, userID string,
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, upstream)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames(), upstream)
+		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames(), upstream, nil)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, upstream)
 	case dtos.EventTypeComment:
