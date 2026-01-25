@@ -190,6 +190,11 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 			continue
 		}
 
+		if entry.ID == "" {
+			slog.Warn("Skipping malicious package with empty ID", "summary", entry.Summary)
+			continue
+		}
+
 		if len(entry.Affected) == 0 {
 			continue
 		}

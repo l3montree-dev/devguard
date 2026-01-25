@@ -1014,7 +1014,7 @@ func downloadAndSaveZipToTemp(repo *remote.Repository, tag string, outpath strin
 	if err != nil {
 		return fs, fmt.Errorf("error when trying to build zip file: %w", err)
 	}
-	slog.Info("unzipping vulndb completed")
+	slog.Info("unzipping vulndb completed", "path", outpath+"/")
 	return fs, nil
 }
 
