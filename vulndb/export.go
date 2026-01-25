@@ -216,7 +216,11 @@ func anyToString(value any) string {
 		}
 		return "false"
 	case int:
-		strconv.Itoa(t)
+		return strconv.Itoa(t)
+	case int32:
+		return strconv.FormatInt(int64(t), 10)
+	case int64:
+		return strconv.FormatInt(t, 10)
 	default:
 		b, err := json.Marshal(t)
 		if err == nil {
@@ -224,5 +228,4 @@ func anyToString(value any) string {
 		}
 		return fmt.Sprint(t)
 	}
-	return "NULL"
 }

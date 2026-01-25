@@ -708,7 +708,7 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 // Each unique full path is returned separately, even if multiple paths lead to the same
 // component through different artifacts or info sources.
 func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
-	// first we need to find the target node ID
+	// Find the target node ID
 	var targetID string
 	for node := range g.Components() {
 		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
@@ -717,40 +717,55 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
 		}
 	}
 
-	var paths []Path
-	pathSet := make(map[string]bool) // Track unique paths for deduplication
+	if targetID == "" {
+		return nil
+	}
 
-	var visit func(id string, path []string, visited map[string]bool)
-	visit = func(id string, path []string, visited map[string]bool) {
-		if visited[id] {
-			return
-		}
-
-		// Add all nodes to the path
-		newPath := append([]string{}, path...)
-		newPath = append(newPath, id)
-
-		newVisited := make(map[string]bool)
-		maps.Copy(newVisited, visited)
-		newVisited[id] = true
-
-		if id == targetID {
-			// Deduplicate paths
-			pathKey := strings.Join(newPath, "|")
-			if !pathSet[pathKey] {
-				pathSet[pathKey] = true
-				paths = append(paths, Path(newPath))
-			}
-			return
-		}
-
-		for childID := range g.edges[id] {
-			visit(childID, newPath, newVisited)
+	// Build reverse edge map (child -> parents) for backward traversal
+	reverseEdges := make(map[string][]string)
+	for parent, children := range g.edges {
+		for child := range children {
+			reverseEdges[child] = append(reverseEdges[child], parent)
 		}
 	}
 
-	// Start from root with empty path
-	visit(g.rootID, []string{}, make(map[string]bool))
+	var paths []Path
+	seen := make(map[string]bool)       // For path deduplication
+	path := make([]string, 0, 32)       // Reusable path buffer (avoids allocations)
+	onPath := make(map[string]bool, 32) // Cycle detection
+
+	var backtrack func(id string)
+	backtrack = func(id string) {
+		if onPath[id] {
+			return // Cycle detected
+		}
+
+		onPath[id] = true
+		path = append(path, id)
+
+		if id == g.rootID {
+			// Build path in correct order (root to target)
+			result := make([]string, len(path))
+			for i, j := 0, len(path)-1; j >= 0; i, j = i+1, j-1 {
+				result[i] = path[j]
+			}
+			key := strings.Join(result, "|")
+			if !seen[key] {
+				seen[key] = true
+				paths = append(paths, Path(result))
+			}
+		} else {
+			for _, parentID := range reverseEdges[id] {
+				backtrack(parentID)
+			}
+		}
+
+		// Backtrack: restore state for next branch
+		path = path[:len(path)-1]
+		onPath[id] = false
+	}
+
+	backtrack(targetID)
 
 	return paths
 }
