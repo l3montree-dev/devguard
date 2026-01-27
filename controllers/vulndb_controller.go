@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -88,13 +90,20 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, cve)
 }
 
+// @Summary Inspect a package URL (PURL) for vulnerabilities
+// @Description Analyze a given PURL, determine its match context, and return affected components and related vulnerabilities
+// @Tags VulnDB
+// @Produce json
+// @Param purl path string true "Package URL (PURL) to inspect"
+// @Success 200 {object} object "Inspection result including PURL, match context, affected components, and vulnerabilities"
+// @Failure 400 {object} object{message=string} "Invalid PURL provided"
+// @Failure 500 {object} object{message=string} "Internal server error"
+// @Router /vulndb/purl/{purl}/ [get]
 func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 	purlString := shared.GetParam(ctx, "purl")
 
 	//delete the last slash if exists
-	if purlString[len(purlString)-1] == '/' {
-		purlString = purlString[:len(purlString)-1]
-	}
+	purlString = strings.TrimSuffix(purlString, "/")
 
 	purl, err := packageurl.FromString(purlString)
 	if err != nil {
@@ -107,12 +116,12 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	affectedComponents, err := purlComparer.GetAffectedComponents(purl)
 	if err != nil {
-		return echo.NewHTTPError(500, "error getting affected components").WithInternal(err)
+		return echo.NewHTTPError(500, "failed to retrieve affected components for PURL").WithInternal(err)
 	}
 
 	vulns, err := purlComparer.GetVulns(purl)
 	if err != nil {
-		return echo.NewHTTPError(500, "error getting vulns").WithInternal(err)
+		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}
 
 	return ctx.JSON(200, struct {
