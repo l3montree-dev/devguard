@@ -154,6 +154,65 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run f
 	return _c
 }
 
+// GetFalsePositiveRulesForAsset provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) GetFalsePositiveRulesForAsset(tx shared.DB, assetID uuid.UUID) []shared.FalsePositiveRule {
+	ret := _mock.Called(tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFalsePositiveRulesForAsset")
+	}
+
+	var r0 []shared.FalsePositiveRule
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []shared.FalsePositiveRule); ok {
+		r0 = returnFunc(tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]shared.FalsePositiveRule)
+		}
+	}
+	return r0
+}
+
+// DependencyVulnService_GetFalsePositiveRulesForAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFalsePositiveRulesForAsset'
+type DependencyVulnService_GetFalsePositiveRulesForAsset_Call struct {
+	*mock.Call
+}
+
+// GetFalsePositiveRulesForAsset is a helper method to define mock.On call
+//   - tx shared.DB
+//   - assetID uuid.UUID
+func (_e *DependencyVulnService_Expecter) GetFalsePositiveRulesForAsset(tx interface{}, assetID interface{}) *DependencyVulnService_GetFalsePositiveRulesForAsset_Call {
+	return &DependencyVulnService_GetFalsePositiveRulesForAsset_Call{Call: _e.mock.On("GetFalsePositiveRulesForAsset", tx, assetID)}
+}
+
+func (_c *DependencyVulnService_GetFalsePositiveRulesForAsset_Call) Run(run func(tx shared.DB, assetID uuid.UUID)) *DependencyVulnService_GetFalsePositiveRulesForAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_GetFalsePositiveRulesForAsset_Call) Return(falsePositiveRules []shared.FalsePositiveRule) *DependencyVulnService_GetFalsePositiveRulesForAsset_Call {
+	_c.Call.Return(falsePositiveRules)
+	return _c
+}
+
+func (_c *DependencyVulnService_GetFalsePositiveRulesForAsset_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID) []shared.FalsePositiveRule) *DependencyVulnService_GetFalsePositiveRulesForAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, userID, dependencyVulns, justification, asset)

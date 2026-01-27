@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ type AssetVersionController struct {
 	componentService         shared.ComponentService
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
+	dependencyVulnService    shared.DependencyVulnService
 }
 
 func NewAssetVersionController(
@@ -51,6 +53,7 @@ func NewAssetVersionController(
 	componentService shared.ComponentService,
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
+	dependencyVulnService shared.DependencyVulnService,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -61,6 +64,7 @@ func NewAssetVersionController(
 		componentService:         componentService,
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,
+		dependencyVulnService:    dependencyVulnService,
 	}
 }
 
@@ -218,7 +222,6 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	}
 
 	// If artifact name is specified, extract just that artifact's subtree
-
 	if artifactName != "" {
 		err = sbom.ScopeToArtifact(artifactName)
 		if err != nil {
@@ -228,6 +231,26 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 
 	// Find all paths to the component using CdxBom's tree traversal
 	return ctx.JSON(200, sbom.FindAllPathsToPURL(pURL))
+}
+
+func (a *AssetVersionController) GetFalsePositiveRulesForPURL(ctx shared.Context) error {
+	assetVersion := shared.GetAssetVersion(ctx)
+
+	rules := a.dependencyVulnService.GetFalsePositiveRulesForAsset(nil, assetVersion.AssetID)
+	// filter rules to only those which match the purl provided
+	pURL := ctx.QueryParam("purl")
+	filteredRules := make([]shared.FalsePositiveRule, 0)
+	for _, rule := range rules {
+		if pURL == "" {
+			filteredRules = append(filteredRules, rule)
+		} else if slices.Contains(rule.PathPattern, pURL) {
+			filteredRules = append(filteredRules, rule)
+			break
+		}
+
+	}
+
+	return ctx.JSON(200, filteredRules)
 }
 
 // @Summary Get SBOM in JSON format

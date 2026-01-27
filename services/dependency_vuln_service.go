@@ -148,6 +148,15 @@ func pathSuffixMatches(vulnPath []string, pattern []string) bool {
 	return true
 }
 
+func (s *DependencyVulnService) GetFalsePositiveRulesForAsset(tx shared.DB, assetID uuid.UUID) []shared.FalsePositiveRule {
+	rules, err := s.vulnEventRepository.GetFalsePositiveRulesForAsset(tx, assetID)
+	if err != nil {
+		slog.Error("could not get false positive rules", "err", err, "assetID", assetID)
+		return []shared.FalsePositiveRule{}
+	}
+	return rules
+}
+
 // applyFalsePositiveRulesToNewVulns checks existing false positive rules and applies
 // them to newly detected vulnerabilities that match the path pattern and CVE.
 func (s *DependencyVulnService) applyFalsePositiveRulesToNewVulns(tx shared.DB, assetID uuid.UUID, vulns []models.DependencyVuln) {
@@ -372,12 +381,27 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uu
 		return ev, err
 	}
 
-	// If this is a false positive with a path pattern, apply to all matching vulns with the same CVE
-	if vulnEventType == dtos.EventTypeFalsePositive && len(pathPattern) > 0 {
-		matchingVulns, err := s.dependencyVulnRepository.FindByPathSuffixAndCVE(tx, assetID, dependencyVuln.CVEID, pathPattern)
-		if err != nil {
-			slog.Error("could not find matching vulns for path pattern", "err", err, "pathPattern", pathPattern, "cveID", dependencyVuln.CVEID)
-			return ev, nil // Don't fail the original operation
+	// For false positive events, apply to related vulns based on pathPattern:
+	// - If pathPattern is nil/empty: apply to ALL vulns with same CVE + component PURL
+	// - If pathPattern is specified: apply to vulns with matching path suffix
+	if vulnEventType == dtos.EventTypeFalsePositive {
+		var matchingVulns []models.DependencyVuln
+
+		if len(pathPattern) == 0 {
+			// No path pattern specified - apply to ALL vulns with same CVE + component PURL
+			matchingVulns, err = s.dependencyVulnRepository.FindByCVEAndComponentPurl(tx, assetID, dependencyVuln.CVEID, dependencyVuln.ComponentPurl)
+			if err != nil {
+				slog.Error("could not find matching vulns by CVE and component PURL", "err", err, "cveID", dependencyVuln.CVEID, "componentPurl", dependencyVuln.ComponentPurl)
+				return ev, nil // Don't fail the original operation
+			}
+			slog.Info("applying false positive to all CVE+PURL matches", "cveID", dependencyVuln.CVEID, "componentPurl", dependencyVuln.ComponentPurl, "matchCount", len(matchingVulns))
+		} else {
+			// Path pattern specified - apply to vulns with matching path suffix
+			matchingVulns, err = s.dependencyVulnRepository.FindByPathSuffixAndCVE(tx, assetID, dependencyVuln.CVEID, pathPattern)
+			if err != nil {
+				slog.Error("could not find matching vulns for path pattern", "err", err, "pathPattern", pathPattern, "cveID", dependencyVuln.CVEID)
+				return ev, nil // Don't fail the original operation
+			}
 		}
 
 		for i := range matchingVulns {
@@ -388,15 +412,22 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uu
 			}
 
 			// Create a new event for each matching vuln (referencing the original rule)
+			var eventJustification string
+			if len(pathPattern) == 0 {
+				eventJustification = fmt.Sprintf("Auto-applied to all paths for CVE %s: %s", dependencyVuln.CVEID, justification)
+			} else {
+				eventJustification = fmt.Sprintf("Auto-applied from path pattern rule: %s", justification)
+			}
+
 			matchingEv := models.NewFalsePositiveEvent(
 				vuln.CalculateHash(),
 				dtos.VulnTypeDependencyVuln,
 				userID,
-				fmt.Sprintf("Auto-applied from path pattern rule: %s", justification),
+				eventJustification,
 				mechanicalJustification,
 				vuln.GetScannerIDsOrArtifactNames(),
 				upstream,
-				pathPattern, // Store the pattern for reference
+				pathPattern, // Store the pattern for reference (empty if applying to all)
 			)
 
 			if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &matchingEv); err != nil {

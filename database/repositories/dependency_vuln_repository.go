@@ -207,6 +207,22 @@ type riskStats struct {
 	PackageName         string  `json:"package_name"`
 }
 
+// FindByCVEAndComponentPurl finds all dependency vulnerabilities in an asset with the
+// specified CVE and component PURL (regardless of path). This is used for applying
+// status changes to all instances of a CVE+component combination.
+func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(tx *gorm.DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error) {
+	var vulns []models.DependencyVuln
+	err := repository.Repository.GetDB(tx).
+		Preload("Events", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at ASC")
+		}).
+		Preload("Artifacts").
+		Preload("CVE").
+		Where("asset_id = ? AND cve_id = ? AND component_purl = ?", assetID, cveID, componentPurl).
+		Find(&vulns).Error
+	return vulns, err
+}
+
 func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], map[string]int, error) {
 	var count int64
 	var dependencyVulns = []models.DependencyVuln{}

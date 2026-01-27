@@ -491,6 +491,86 @@ func (_c *DependencyVulnRepository_DeleteBatch_Call) RunAndReturn(run func(tx sh
 	return _c
 }
 
+// FindByCVEAndComponentPurl provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) FindByCVEAndComponentPurl(tx shared.DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetID, cveID, componentPurl)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByCVEAndComponentPurl")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, assetID, cveID, componentPurl)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, assetID, cveID, componentPurl)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(tx, assetID, cveID, componentPurl)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_FindByCVEAndComponentPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCVEAndComponentPurl'
+type DependencyVulnRepository_FindByCVEAndComponentPurl_Call struct {
+	*mock.Call
+}
+
+// FindByCVEAndComponentPurl is a helper method to define mock.On call
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - cveID string
+//   - componentPurl string
+func (_e *DependencyVulnRepository_Expecter) FindByCVEAndComponentPurl(tx interface{}, assetID interface{}, cveID interface{}, componentPurl interface{}) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
+	return &DependencyVulnRepository_FindByCVEAndComponentPurl_Call{Call: _e.mock.On("FindByCVEAndComponentPurl", tx, assetID, cveID, componentPurl)}
+}
+
+func (_c *DependencyVulnRepository_FindByCVEAndComponentPurl_Call) Run(run func(tx shared.DB, assetID uuid.UUID, cveID string, componentPurl string)) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_FindByCVEAndComponentPurl_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_FindByCVEAndComponentPurl_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByPathSuffixAndCVE provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) FindByPathSuffixAndCVE(tx shared.DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(tx, assetID, cveID, pathPattern)

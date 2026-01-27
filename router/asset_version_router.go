@@ -55,6 +55,7 @@ func NewAssetVersionRouter(
 	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
 	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
+	assetVersionRouter.GET("/false-positive-rules/", assetVersionController.GetFalsePositiveRulesForPURL)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)

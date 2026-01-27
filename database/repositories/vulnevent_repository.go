@@ -164,19 +164,13 @@ func (r *eventRepository) HasAccessToEvent(assetID uuid.UUID, eventID string) (b
 	return count > 0, nil
 }
 
-// falsePositiveRuleRow is used for GORM scanning with the cve_id column tag.
-type falsePositiveRuleRow struct {
-	models.VulnEvent
-	CVEID string `gorm:"column:cve_id"`
-}
-
 // GetFalsePositiveRulesForAsset returns all false positive events with path patterns for a given asset.
 // These are used as rules that can be automatically applied to new or existing vulnerabilities
 // whose path matches the pattern. Returns the CVE ID with each rule since path patterns only
 // apply to the same CVE.
 func (r *eventRepository) GetFalsePositiveRulesForAsset(tx *gorm.DB, assetID uuid.UUID) ([]shared.FalsePositiveRule, error) {
-	var rows []falsePositiveRuleRow
-	db := r.Repository.GetDB(tx)
+	var rows []shared.FalsePositiveRule
+	db := r.GetDB(tx)
 	if tx == nil {
 		db = r.db
 	}
@@ -185,23 +179,16 @@ func (r *eventRepository) GetFalsePositiveRulesForAsset(tx *gorm.DB, assetID uui
 	// 1. Have a non-null path_pattern
 	// 2. Are associated with dependency vulns in this asset
 	// Also select the CVE ID from the dependency vuln
+	// Order by path_pattern and created_at DESC to ensure DISTINCT ON picks the most recent event
 	err := db.Table("vuln_events AS ve").
-		Select("ve.*, dv.cve_id").
+		Select("ve.*, dv.cve_id as cve_id").
 		Joins("JOIN dependency_vulns dv ON ve.vuln_id = dv.id").
 		Where("dv.asset_id = ? AND ve.type = ? AND ve.path_pattern IS NOT NULL", assetID, dtos.EventTypeFalsePositive).
-		Find(&rows).Error
+		Scan(&rows).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert to shared type
-	rules := make([]shared.FalsePositiveRule, len(rows))
-	for i, row := range rows {
-		rules[i] = shared.FalsePositiveRule{
-			VulnEvent: row.VulnEvent,
-			CVEID:     row.CVEID,
-		}
-	}
-	return rules, nil
+	return rows, nil
 }

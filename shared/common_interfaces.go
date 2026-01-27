@@ -230,6 +230,9 @@ type DependencyVulnRepository interface {
 	// FindByPathSuffixAndCVE finds all dependency vulns whose vulnerability_path ends with the given pattern
 	// and have the specified CVE ID. Path pattern rules only make sense for the same CVE.
 	FindByPathSuffixAndCVE(tx DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error)
+	// FindByCVEAndComponentPurl finds all dependency vulns with the specified CVE and component PURL
+	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
+	FindByCVEAndComponentPurl(tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -355,6 +358,8 @@ type DependencyVulnService interface {
 	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
+
+	GetFalsePositiveRulesForAsset(tx DB, assetID uuid.UUID) []FalsePositiveRule
 }
 
 type AssetVersionService interface {
@@ -407,8 +412,11 @@ type ConfigRepository interface {
 // FalsePositiveRule represents a false positive rule with its associated CVE ID.
 // Path pattern rules only make sense for the same CVE.
 type FalsePositiveRule struct {
-	models.VulnEvent
-	CVEID string
+	Justification           *string                          `json:"justification,omitempty" gorm:"type:text;default:null;"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
+	UserID                  string                           `json:"userId" gorm:"type:uuid;"`
+	PathPattern             []string                         `json:"pathPattern,omitempty" gorm:"type:jsonb;default:null;serializer:json"`
+	CVEID                   string                           `json:"cveId" gorm:"type:text;"`
 }
 
 type VulnEventRepository interface {
