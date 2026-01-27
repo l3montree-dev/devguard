@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -102,6 +103,11 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 	purlString := shared.GetParam(ctx, "purl")
 
+	purlString, err := url.QueryUnescape(purlString)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid URL encoding in PURL").WithInternal(err)
+	}
+
 	//delete the last slash if exists
 	purlString = strings.TrimSuffix(purlString, "/")
 
@@ -126,8 +132,8 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	return ctx.JSON(200, struct {
 		PURL               packageurl.PackageURL       `json:"purl"`
-		MatchContext       *normalize.PurlMatchContext `json:"match_context"`
-		AffectedComponents []models.AffectedComponent  `json:"affected_components"`
+		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
+		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
 		Vulns              []models.VulnInPackage      `json:"vulns"`
 	}{
 		PURL:               purl,
