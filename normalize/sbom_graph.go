@@ -55,16 +55,8 @@ func (p Path) String() string {
 func (p Path) ToStringSliceComponentOnly() []string {
 	filtered := make([]string, 0, len(p))
 	for _, node := range p {
-		// Skip structural/fake nodes
-		if node == "ROOT" || node == "root" {
-			continue
-		}
-		// Skip artifact nodes (artifact:...)
-		if len(node) > 9 && node[:9] == "artifact:" {
-			continue
-		}
-		// Skip info source nodes (sbom:..., vex:..., csaf:...)
-		if len(node) > 5 && (node[:5] == "sbom:" || node[:4] == "vex:" || node[:5] == "csaf:") {
+		// only keep purls
+		if !strings.HasPrefix(node, "pkg:") {
 			continue
 		}
 		// Include only component PURLs
