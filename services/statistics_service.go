@@ -165,6 +165,10 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
 
+		// Calculate unique CVE severity counts (deduplicated by CVE+PURL)
+		uniqueLowRisk, uniqueMediumRisk, uniqueHighRisk, uniqueCriticalRisk := calculateUniqueSeverityCountsByRisk(openVulns)
+		uniqueLowCvss, uniqueMediumCvss, uniqueHighCvss, uniqueCriticalCvss := calculateUniqueSeverityCountsByCvss(openVulns)
+
 		result := models.ArtifactRiskHistory{
 			ArtifactName:     artifact.ArtifactName,
 			AssetVersionName: artifact.AssetVersionName,
@@ -193,6 +197,16 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 					MediumCVSS:   mediumCvss,
 					HighCVSS:     highCvss,
 					CriticalCVSS: criticalCvss,
+
+					UniqueLow:      uniqueLowRisk,
+					UniqueMedium:   uniqueMediumRisk,
+					UniqueHigh:     uniqueHighRisk,
+					UniqueCritical: uniqueCriticalRisk,
+
+					UniqueLowCVSS:      uniqueLowCvss,
+					UniqueMediumCVSS:   uniqueMediumCvss,
+					UniqueHighCVSS:     uniqueHighCvss,
+					UniqueCriticalCVSS: uniqueCriticalCvss,
 				},
 			},
 		}
@@ -330,6 +344,52 @@ func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low
 
 func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
 	for _, vuln := range dependencyVulns {
+		cvss := float64(vuln.CVE.CVSS)
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateUniqueSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	seen := make(map[string]bool)
+	for _, vuln := range dependencyVulns {
+		key := vuln.CVEID + "|" + vuln.ComponentPurl
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			low++
+		case risk >= 4.0 && risk < 7.0:
+			medium++
+		case risk >= 7.0 && risk < 9.0:
+			high++
+		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateUniqueSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	seen := make(map[string]bool)
+	for _, vuln := range dependencyVulns {
+		key := vuln.CVEID + "|" + vuln.ComponentPurl
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		cvss := float64(vuln.CVE.CVSS)
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:

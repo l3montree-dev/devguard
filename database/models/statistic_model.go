@@ -27,6 +27,16 @@ type Distribution struct {
 	MediumCVSS   int `json:"mediumCvss"`
 	HighCVSS     int `json:"highCvss"`
 	CriticalCVSS int `json:"criticalCvss"`
+
+	UniqueLow      int `json:"uniqueLow"`
+	UniqueMedium   int `json:"uniqueMedium"`
+	UniqueHigh     int `json:"uniqueHigh"`
+	UniqueCritical int `json:"uniqueCritical"`
+
+	UniqueLowCVSS      int `json:"uniqueLowCvss"`
+	UniqueMediumCVSS   int `json:"uniqueMediumCvss"`
+	UniqueHighCVSS     int `json:"uniqueHighCvss"`
+	UniqueCriticalCVSS int `json:"uniqueCriticalCvss"`
 }
 
 type History struct {
