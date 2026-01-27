@@ -186,6 +186,52 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		assert.Empty(t, vulns[0].VulnerabilityPath)
 	})
 
+	t.Run("non-package info source does not create extra vuln", func(t *testing.T) {
+		// Two graph paths to pkg:B via pkg:A, but one goes through package-lock.json (an info source):
+		//   artifact -> sbom:tool         -> pkg:A -> pkg:B
+		//   artifact -> sbom:package-lock.json -> pkg:A -> pkg:B
+		// Since package-lock.json is not a package, both paths produce the same
+		// component-only path [pkg:A, pkg:B], so only ONE dependency vuln should be created.
+		sbom := normalize.NewSBOMGraph()
+
+		artifactID := sbom.AddArtifact(artifactName)
+		toolID := sbom.AddInfoSource(artifactID, "tool", normalize.InfoSourceSBOM)
+		lockfileID := sbom.AddInfoSource(artifactID, "package-lock.json", normalize.InfoSourceSBOM)
+
+		pkgAPurl := "pkg:npm/a@1.0.0"
+		pkgAComp := cdx.Component{PackageURL: pkgAPurl, Name: "a", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		pkgAID := sbom.AddComponent(pkgAComp)
+
+		pkgBPurl := "pkg:npm/b@1.0.0"
+		pkgBComp := cdx.Component{PackageURL: pkgBPurl, Name: "b", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		pkgBID := sbom.AddComponent(pkgBComp)
+
+		// Both info sources lead to the same pkg:A -> pkg:B chain
+		sbom.AddEdge(toolID, pkgAID)
+		sbom.AddEdge(lockfileID, pkgAID)
+		sbom.AddEdge(pkgAID, pkgBID)
+
+		err := sbom.ScopeToArtifact(artifactName)
+		require.NoError(t, err)
+
+		purl, err := packageurl.FromString(pkgBPurl)
+		require.NoError(t, err)
+
+		vuln := models.VulnInPackage{
+			Purl:  purl,
+			CVEID: "CVE-2024-5678",
+			CVE:   models.CVE{CVE: "CVE-2024-5678"},
+		}
+
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+
+		// Only 1 vuln should be created — the two paths are identical once non-package nodes are stripped
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2024-5678", vulns[0].CVEID)
+		assert.Equal(t, pkgBPurl, vulns[0].ComponentPurl)
+		assert.Equal(t, []string{pkgAPurl, pkgBPurl}, vulns[0].VulnerabilityPath)
+	})
+
 	t.Run("transitive dependency has correct depth", func(t *testing.T) {
 		sbom := normalize.NewSBOMGraph()
 

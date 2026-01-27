@@ -17,6 +17,7 @@ package transformer
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -178,9 +179,19 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 		}
 	}
 
-	// Create one DependencyVuln per path
+	// Create one DependencyVuln per unique component-only path.
+	// Multiple full graph paths can map to the same component-only path
+	// (e.g. via different info sources like package-lock.json), so we deduplicate.
+	seen := make(map[string]bool)
 	var result []models.DependencyVuln
 	for _, path := range paths {
+		componentPath := path.ToStringSliceComponentOnly()
+		key := strings.Join(componentPath, ",")
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersionName,
@@ -190,7 +201,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,
 			CVE:                   v.CVE,
-			VulnerabilityPath:     path.ToStringSliceComponentOnly(),
+			VulnerabilityPath:     componentPath,
 		}
 		result = append(result, dependencyVuln)
 	}
