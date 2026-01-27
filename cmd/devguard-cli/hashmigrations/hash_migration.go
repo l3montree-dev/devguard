@@ -615,23 +615,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			// Load SBOM components for this asset version
 			componentDeps, err := componentRepository.LoadComponents(tx, key.AssetVersionName, key.AssetID, nil)
 			if err != nil {
-				slog.Warn("Failed to load components for asset version, using empty paths",
-					"assetID", key.AssetID, "assetVersionName", key.AssetVersionName, "err", err)
-				// Fall back to empty paths
-				for _, oldVuln := range vulns {
-					newVuln := oldVuln
-					newVuln.VulnerabilityPath = nil
-					newVuln.ID = newVuln.CalculateHash()
-					if !createdVulnIDs[newVuln.ID] {
-						createdVulnIDs[newVuln.ID] = true
-						vulnsToCreate = append(vulnsToCreate, newVuln)
-						for _, event := range oldVuln.Events {
-							event.ID = uuid.New()
-							event.VulnID = newVuln.ID
-							eventsToCreate = append(eventsToCreate, event)
-						}
-					}
-				}
+				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {
 				sbom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
 
