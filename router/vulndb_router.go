@@ -28,6 +28,7 @@ func NewVulnDBRouter(apiV1Router APIV1Router, vulndbController *controllers.Vuln
 	cveRouter := apiV1Router.Group.Group("/vulndb")
 	cveRouter.GET("/", vulndbController.ListPaged)
 	cveRouter.GET("/:cveID/", vulndbController.Read)
+	cveRouter.GET("/purl-inspect/:purl", vulndbController.PURLInspect)
 	return VulnDBRouter{
 		Group: cveRouter,
 	}

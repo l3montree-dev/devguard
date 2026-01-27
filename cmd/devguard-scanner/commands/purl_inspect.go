@@ -16,23 +16,26 @@
 package commands
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"log/slog"
+	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-// newInspectCommand creates the inspect command for PURL inspection
-func newInspectCommand() *cobra.Command {
+// NewPURLInspectCommand creates the inspect command for PURL inspection
+func NewPURLInspectCommand() *cobra.Command {
 	inspectCmd := &cobra.Command{
 		Use:   "inspect <purl>",
 		Short: "Inspect PURL for matching CVEs and vulnerabilities",
@@ -46,45 +49,67 @@ Examples:
   devguard-cli vulndb inspect "pkg:deb/debian/libc6@2.31-1"
   devguard-cli vulndb inspect "pkg:pypi/requests@2.25.0"`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			purlString := args[0]
-
-			purl, err := packageurl.FromString(purlString)
-			if err != nil {
-				slog.Error("invalid PURL", "purl", purlString, "err", err)
-				return fmt.Errorf("invalid PURL: %w", err)
-			}
-
-			if err := shared.LoadConfig(); err != nil {
-				slog.Error("failed to load config", "error", err)
-				return fmt.Errorf("failed to load config: %w", err)
-			}
-
-			pool := database.NewPgxConnPool(database.GetPoolConfigFromEnv())
-			db := database.NewGormDB(pool)
-
-			matchCtx := normalize.ParsePurlForMatching(purl)
-			comparer := scan.NewPurlComparer(db)
-
-			// Get raw affected components (before deduplication)
-			affectedComponents, err := comparer.GetAffectedComponents(purl)
-			if err != nil {
-				slog.Error("error getting affected components", "error", err, "purl", purlString)
-				return fmt.Errorf("error getting affected components: %w", err)
-			}
-
-			// Get deduplicated vulns (after alias resolution)
-			vulns, err := comparer.GetVulns(purl)
-			if err != nil {
-				slog.Error("error getting vulns", "error", err, "purl", purlString)
-				return fmt.Errorf("error getting vulns: %w", err)
-			}
-
-			return outputInspectResult(purlString, purl, matchCtx, affectedComponents, vulns)
-		},
+		RunE: purlInspectCmd,
 	}
 
+	inspectCmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
+	inspectCmd.Flags().String("apiUrl", "https://api.devguard.org", "The url of the API to send the request to")
+	inspectCmd.Flags().String("outputPath", "", "Path to save the inspection result as JSON file (optional)")
+
 	return inspectCmd
+}
+
+func purlInspectCmd(cmd *cobra.Command, args []string) error {
+	purlString := args[0]
+
+	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+	defer cancel()
+
+	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, purlString)
+	fmt.Println("Inspecting PURL via API:", url)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+	if err != nil {
+		return errors.Wrap(err, "could not create request")
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "could not perform request")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("API returned status code %d", resp.StatusCode)
+	}
+
+	var result struct {
+		PURL               packageurl.PackageURL       `json:"purl"`
+		MatchContext       *normalize.PurlMatchContext `json:"match_context"`
+		AffectedComponents []models.AffectedComponent  `json:"affected_components"`
+		Vulns              []models.VulnInPackage      `json:"vulns"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return errors.Wrap(err, "could not decode response")
+	}
+
+	r := outputInspectResult(purlString, result.PURL, result.MatchContext, result.AffectedComponents, result.Vulns)
+	if config.RuntimeBaseConfig.OutputPath != "" {
+		outputData, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return errors.Wrap(err, "could not marshal output data")
+		}
+		err = os.WriteFile(config.RuntimeBaseConfig.OutputPath, outputData, 0644)
+		if err != nil {
+			return errors.Wrap(err, "could not write output file")
+		}
+		fmt.Println("Inspection result saved to:", config.RuntimeBaseConfig.OutputPath)
+	}
+	return r
 }
 
 func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx *normalize.PurlMatchContext, affectedComponents []models.AffectedComponent, vulns []models.VulnInPackage) error {

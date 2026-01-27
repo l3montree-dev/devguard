@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type VulnDBController struct {
@@ -82,4 +86,44 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 	cve.Vector = vector
 
 	return ctx.JSON(200, cve)
+}
+
+func (c VulnDBController) PURLInspect(ctx shared.Context) error {
+	purlString := shared.GetParam(ctx, "purl")
+
+	//delete the last slash if exists
+	if purlString[len(purlString)-1] == '/' {
+		purlString = purlString[:len(purlString)-1]
+	}
+
+	purl, err := packageurl.FromString(purlString)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid PURL").WithInternal(err)
+	}
+
+	matchCtx := normalize.ParsePurlForMatching(purl)
+
+	purlComparer := scan.NewPurlComparer(c.cveRepository.GetDB(nil))
+
+	affectedComponents, err := purlComparer.GetAffectedComponents(purl)
+	if err != nil {
+		return echo.NewHTTPError(500, "error getting affected components").WithInternal(err)
+	}
+
+	vulns, err := purlComparer.GetVulns(purl)
+	if err != nil {
+		return echo.NewHTTPError(500, "error getting vulns").WithInternal(err)
+	}
+
+	return ctx.JSON(200, struct {
+		PURL               packageurl.PackageURL       `json:"purl"`
+		MatchContext       *normalize.PurlMatchContext `json:"match_context"`
+		AffectedComponents []models.AffectedComponent  `json:"affected_components"`
+		Vulns              []models.VulnInPackage      `json:"vulns"`
+	}{
+		PURL:               purl,
+		MatchContext:       matchCtx,
+		AffectedComponents: affectedComponents,
+		Vulns:              vulns,
+	})
 }

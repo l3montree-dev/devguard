@@ -153,6 +153,7 @@ func init() {
 		NewVexCommand(),
 		NewGenerateTagCommand(),
 		NewAttestationCommand(),
+		NewPURLInspectCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
