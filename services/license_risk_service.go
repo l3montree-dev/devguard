@@ -40,11 +40,6 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	if err != nil {
 		return err
 	}
-	// filter to only open ones
-	existingLicenseRisks = utils.Filter(existingLicenseRisks, func(risk models.LicenseRisk) bool {
-		return risk.State == dtos.VulnStateOpen
-	})
-
 	// get all current valid licenses to compare against
 	licenseMap := component.LicenseMap
 
@@ -59,8 +54,29 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 			slog.Warn("license is nil, avoided nil pointer dereference")
 			continue
 		}
-		_, validLicense := licenseMap[strings.ToLower(*comp.License)]
-		if !validLicense {
+
+		//check if license is expression
+		licenses := []string{}
+		if strings.Contains(*comp.License, " OR ") {
+			licenses = strings.Split(*comp.License, " OR ")
+		} else if strings.Contains(*comp.License, " AND ") {
+			licenses = strings.Split(*comp.License, " AND ")
+		} else {
+			licenses = append(licenses, *comp.License)
+		}
+
+		hasValidLicense := false
+		for _, lic := range licenses {
+			_, validLicense := licenseMap[strings.ToLower(strings.TrimSpace(lic))]
+			if validLicense {
+				hasValidLicense = true
+			} else {
+				hasValidLicense = false
+				break
+			}
+		}
+
+		if !hasValidLicense {
 			lr := models.LicenseRisk{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
@@ -98,9 +114,6 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 		slog.Error("could not get existing license risks on other branches", "err", err)
 		return err
 	}
-	existingRisksOnOtherBranch = utils.Filter(existingRisksOnOtherBranch, func(risk models.LicenseRisk) bool {
-		return risk.State != dtos.VulnStateFixed
-	})
 
 	// Apply branch diffing to new license risks
 	newDetectedRisksNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffLicenseRisksBetweenBranches(newLicenseRisks, existingRisksOnOtherBranch)
