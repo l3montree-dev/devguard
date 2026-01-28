@@ -405,8 +405,6 @@ func GetFilterQuery(ctx Context) []FilterQuery {
 
 		// get the value
 		value := query.Get(key)
-		// decode the value
-		value, _ = url.QueryUnescape(value)
 		// extract the field and operator from the key
 		// it looks like this: filterQuery[cve.cvss][is]=10
 
