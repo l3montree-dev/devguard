@@ -55,7 +55,9 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 			continue
 		}
 
-		//check if license is expression
+		// check if license is expression
+		// NOTE: This only supports very simple SPDX-like expressions:
+		// a single " OR " or a single " AND " operator
 		licenses := []string{}
 		if strings.Contains(*comp.License, " OR ") {
 			licenses = strings.Split(*comp.License, " OR ")
@@ -114,6 +116,10 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 		slog.Error("could not get existing license risks on other branches", "err", err)
 		return err
 	}
+
+	existingRisksOnOtherBranch = utils.Filter(existingRisksOnOtherBranch, func(risk models.LicenseRisk) bool {
+		return risk.State != dtos.VulnStateFixed
+	})
 
 	// Apply branch diffing to new license risks
 	newDetectedRisksNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffLicenseRisksBetweenBranches(newLicenseRisks, existingRisksOnOtherBranch)
