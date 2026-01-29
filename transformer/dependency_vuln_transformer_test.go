@@ -203,11 +203,11 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		lockfileID := sbom.AddInfoSource(artifactID, "package-lock.json", normalize.InfoSourceSBOM)
 
 		pkgAPurl := "pkg:npm/a@1.0.0"
-		pkgAComp := cdx.Component{PackageURL: pkgAPurl, Name: "a", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		pkgAComp := cdx.Component{PackageURL: pkgAPurl, BOMRef: pkgAPurl, Name: "a", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
 		pkgAID := sbom.AddComponent(pkgAComp)
 
 		pkgBPurl := "pkg:npm/b@1.0.0"
-		pkgBComp := cdx.Component{PackageURL: pkgBPurl, Name: "b", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		pkgBComp := cdx.Component{PackageURL: pkgBPurl, BOMRef: pkgBPurl, Name: "b", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
 		pkgBID := sbom.AddComponent(pkgBComp)
 
 		// Both info sources lead to the same pkg:A -> pkg:B chain
