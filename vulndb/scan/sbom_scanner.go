@@ -17,11 +17,11 @@ package scan
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -44,42 +44,64 @@ func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *
 }
 
 func (s *sbomScanner) Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
-	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
-
-	// iterate through all components
+	// Collect all PURLs first
+	var purls []packageurl.PackageURL
 	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
-		component := c
+		if c.Component.PackageURL != "" {
+			parsed, err := packageurl.FromString(c.Component.PackageURL)
+			if err != nil {
+				slog.Warn("could not parse purl", "purl", c.Component.PackageURL, "err", err)
+				continue
+			}
+			purls = append(purls, parsed)
+		}
+	}
 
-		errgroup.Go(
-			func() ([]models.VulnInPackage, error) {
+	if len(purls) == 0 {
+		return []models.VulnInPackage{}, nil
+	}
 
-				vulns := []models.VulnInPackage{}
-				// if the component has no package url we cannot find anything
-				if component.Component.PackageURL != "" {
-					var res []models.VulnInPackage
-					var err error
+	// Query vulnerabilities in parallel (10 concurrent workers)
+	results := make([][]models.VulnInPackage, len(purls))
+	sem := make(chan struct{}, 10) // Limit concurrency
+	errChan := make(chan error, 1)
+	done := make(chan struct{})
 
-					parsed, err := packageurl.FromString(component.Component.PackageURL)
-					if err != nil {
-						slog.Warn("could not parse purl", "purl", component.Component.PackageURL, "err", err)
-						return nil, err
+	go func() {
+		var wg sync.WaitGroup
+		for i, purl := range purls {
+			wg.Add(1)
+			go func(idx int, p packageurl.PackageURL) {
+				defer wg.Done()
+				sem <- struct{}{}        // Acquire
+				defer func() { <-sem }() // Release
+
+				vulns, err := s.purlComparer.GetVulns(p)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
 					}
-
-					res, err = s.purlComparer.GetVulns(parsed)
-					if err != nil {
-						slog.Warn("could not get cves", "purl", component.Component.PackageURL)
-					}
-
-					vulns = append(vulns, res...)
+					return
 				}
-				return vulns, nil
-			})
-	}
+				results[idx] = vulns
+			}(i, purl)
+		}
+		wg.Wait()
+		close(done)
+	}()
 
-	vulns, err := errgroup.WaitAndCollect()
-	if err != nil {
+	select {
+	case err := <-errChan:
 		return nil, err
+	case <-done:
 	}
 
-	return utils.Flat(vulns), nil
+	// Collect all vulnerabilities
+	allVulns := make([]models.VulnInPackage, 0, len(purls))
+	for _, vulns := range results {
+		allVulns = append(allVulns, vulns...)
+	}
+
+	return allVulns, nil
 }

@@ -77,7 +77,8 @@ func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.Vul
 		return nil, errors.Wrap(err, "could not get affected components")
 	}
 
-	vulnerabilities := []models.VulnInPackage{}
+	// Pre-allocate with estimated capacity
+	vulnerabilities := make([]models.VulnInPackage, 0, len(affectedComponents))
 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
@@ -177,7 +178,7 @@ func deduplicateByAlias(vulns []models.VulnInPackage) []models.VulnInPackage {
 }
 
 func filterMatchingComponentsByVersion(components []models.AffectedComponent, lookingForVersion string) []models.AffectedComponent {
-	matchingComponents := []models.AffectedComponent{}
+	matchingComponents := make([]models.AffectedComponent, 0, len(components))
 
 	for _, component := range components {
 		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, lookingForVersion, component.Type)

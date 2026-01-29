@@ -18,7 +18,8 @@ package utils
 import "slices"
 
 func Filter[T any](s []T, f func(T) bool) []T {
-	var r []T
+	// Pre-allocate with input length as capacity (worst case: all elements pass filter)
+	r := make([]T, 0, len(s))
 	for _, v := range s {
 		if f(v) {
 			r = append(r, v)

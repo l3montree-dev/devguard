@@ -63,12 +63,25 @@ func (c *componentRepository) CreateComponents(tx *gorm.DB, components []models.
 //	tree := normalize.BuildDependencyTree(root, models.ToNodes(deps), models.BuildDepMap(deps))
 //	subtreeIDs := tree.ExtractSubtree("artifact:" + artifactName)
 func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
-	var components []models.ComponentDependency
+	db := c.GetDB(tx)
 
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
-		Preload("Component").
-		Preload("Dependency").
+	// Pre-count to allocate slice with correct capacity (reduces slice growing allocations)
+	var count int64
+	if err := db.Model(&models.ComponentDependency{}).
 		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
+		Count(&count).Error; err != nil {
+		return nil, err
+	}
+
+	// Pre-allocate slice with known capacity
+	components := make([]models.ComponentDependency, 0, count)
+
+	// Use Joins instead of Preload for better performance (single query with JOINs
+	// instead of N+1 queries)
+	err := db.Model(&models.ComponentDependency{}).
+		Joins("Component").
+		Joins("Dependency").
+		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID).
 		Find(&components).Error
 	if err != nil {
 		return nil, err

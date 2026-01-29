@@ -492,7 +492,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal, nil)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue

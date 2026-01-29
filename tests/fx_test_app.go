@@ -119,7 +119,7 @@ type TestAppOptions struct {
 
 // NewTestApp creates a test application with all dependencies wired via FX
 // It uses the same FX modules as production for consistency
-func NewTestApp(t *testing.T, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App, error) {
+func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App, error) {
 	if opts == nil {
 		opts = &TestAppOptions{SuppressLogs: true}
 	}
@@ -183,7 +183,7 @@ func NewTestApp(t *testing.T, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 
 // NewTestAppWithT creates a test application tied to a testing.T
 // It automatically stops the app when the test completes
-func NewTestAppWithT(t *testing.T, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App) {
+func NewTestAppWithT(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOptions) (*TestApp, *fxtest.App) {
 	t.Helper()
 
 	app, fxApp, err := NewTestApp(t, db, pool, opts)

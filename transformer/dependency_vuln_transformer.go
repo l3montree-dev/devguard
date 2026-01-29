@@ -183,7 +183,8 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	// Multiple full graph paths can map to the same component-only path
 	// (e.g. via different info sources like package-lock.json), so we deduplicate.
 	seen := make(map[string]bool)
-	var result []models.DependencyVuln
+	// Create one DependencyVuln per path (pre-allocate with known capacity)
+	result := make([]models.DependencyVuln, 0, len(paths))
 	for _, path := range paths {
 		componentPath := path.ToStringSliceComponentOnly()
 		key := strings.Join(componentPath, ",")
