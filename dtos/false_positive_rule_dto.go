@@ -18,13 +18,13 @@ package dtos
 import "github.com/google/uuid"
 
 type FalsePositiveRuleDTO struct {
-	ID                      uuid.UUID                        `json:"id"`
-	AssetID                 uuid.UUID                        `json:"assetId"`
-	CVEID                   string                           `json:"cveId"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification MechanicalJustificationType      `json:"mechanicalJustification"`
-	PathPattern             []string                         `json:"pathPattern"`
-	CreatedByID             string                           `json:"createdById"`
-	CreatedAt               string                           `json:"createdAt"`
-	UpdatedAt               string                           `json:"updatedAt"`
+	ID                      uuid.UUID                   `json:"id"`
+	AssetID                 uuid.UUID                   `json:"assetId"`
+	CVEID                   string                      `json:"cveId"`
+	Justification           string                      `json:"justification"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+	PathPattern             []string                    `json:"pathPattern"`
+	CreatedByID             string                      `json:"createdById"`
+	CreatedAt               string                      `json:"createdAt"`
+	UpdatedAt               string                      `json:"updatedAt"`
 }
