@@ -229,8 +229,8 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 		}
 	}
 
-	// Find all paths to the component using CdxBom's tree traversal
-	return ctx.JSON(200, sbom.FindAllPathsToPURL(pURL, 0))
+	// Return minimal tree structure with only paths leading to the target PURL
+	return ctx.JSON(200, sbom.FindAllComponentOnlyPathsToPURL(pURL, 12))
 }
 
 func (a *AssetVersionController) GetFalsePositiveRulesForPURL(ctx shared.Context) error {

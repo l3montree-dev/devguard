@@ -960,43 +960,133 @@ type BOMMetadata struct {
 // EXPORT
 // =============================================================================
 
-type minimalTreeNode struct {
-	Name     string             `json:"name"`
-	Children []*minimalTreeNode `json:"children"`
+type minimalTree struct {
+	Nodes        []string
+	Dependencies map[string][]string
 }
 
-func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
-	var buildTree func(nodeID string, pathVisited map[string]bool) *minimalTreeNode
-	buildTree = func(nodeID string, pathVisited map[string]bool) *minimalTreeNode {
-		// Prevent infinite recursion on cycles by checking if we've visited this node in the current path
-		if pathVisited[nodeID] {
-			return nil
-		}
+func (g *SBOMGraph) ToMinimalTree() minimalTree {
+	// we need to make sure, that we translate component node ids to purls
+	nodes := make([]string, len(g.nodes))
+	dependencies := make(map[string][]string)
 
-		node := g.nodes[nodeID]
-		if node == nil {
-			return nil
+	for _, v := range g.nodes {
+		nodes = append(nodes, v.Component.PackageURL)
+	}
+	for parent, children := range g.edges {
+		parentNode := g.nodes[parent]
+		if parentNode == nil {
+			continue
 		}
-		treeNode := &minimalTreeNode{
-			Name:     node.BOMRef,
-			Children: []*minimalTreeNode{},
-		}
-
-		// Create a new visited map for this path
-		newPathVisited := make(map[string]bool)
-		maps.Copy(newPathVisited, pathVisited)
-		newPathVisited[nodeID] = true
-
-		for childID := range g.edges[nodeID] {
-			childTreeNode := buildTree(childID, newPathVisited)
-			if childTreeNode != nil {
-				treeNode.Children = append(treeNode.Children, childTreeNode)
+		deps := make([]string, 0, len(children))
+		parentPURL := parentNode.Component.PackageURL
+		for child := range children {
+			childNode := g.nodes[child]
+			if childNode == nil {
+				continue
 			}
+			childPURL := childNode.Component.PackageURL
+			deps = append(deps, childPURL)
 		}
-		return treeNode
+		dependencies[parentPURL] = deps
+	}
+	return minimalTree{
+		Nodes:        nodes,
+		Dependencies: dependencies,
+	}
+}
+
+// MinimalTreeToPURL returns a minimal tree structure containing only the subgraph
+// of nodes that lead to the specified PURL. This collects all ancestor nodes
+// without enumerating individual paths, avoiding combinatorial explosion.
+// The maxDepth parameter limits how far back we traverse (0 = unlimited).
+func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
+	// Find the target node ID
+	var targetID string
+	for node := range g.Components() {
+		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
+			targetID = node.BOMRef
+			break
+		}
 	}
 
-	return buildTree(g.scopeID, make(map[string]bool))
+	if targetID == "" {
+		return minimalTree{Nodes: []string{}, Dependencies: map[string][]string{}}
+	}
+
+	// Build reverse edge map (child -> parents)
+	reverseEdges := make(map[string][]string)
+	for parent, children := range g.edges {
+		for child := range children {
+			reverseEdges[child] = append(reverseEdges[child], parent)
+		}
+	}
+
+	// BFS backward from target to collect all ancestor nodes and edges
+	// We collect the subgraph, not individual paths - O(V+E) instead of O(paths)
+	visited := make(map[string]bool)
+	dependencies := make(map[string][]string)
+
+	type queueItem struct {
+		nodeID string
+		depth  int
+	}
+	queue := []queueItem{{nodeID: targetID, depth: 0}}
+	visited[targetID] = true
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		// Check depth limit
+		if maxDepth > 0 && current.depth >= maxDepth {
+			continue
+		}
+
+		// Process all parents of current node
+		for _, parentID := range reverseEdges[current.nodeID] {
+			// Only follow component edges for the tree structure
+			if !isComponentNodeID(parentID) {
+				continue
+			}
+
+			// Record the edge (parent -> child)
+			deps := dependencies[parentID]
+			found := false
+			for _, d := range deps {
+				if d == current.nodeID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				dependencies[parentID] = append(dependencies[parentID], current.nodeID)
+			}
+
+			// Visit parent if not already visited
+			if !visited[parentID] {
+				visited[parentID] = true
+				queue = append(queue, queueItem{nodeID: parentID, depth: current.depth + 1})
+			}
+		}
+	}
+
+	// Convert visited set to sorted slice
+	nodes := make([]string, 0, len(visited))
+	for node := range visited {
+		nodes = append(nodes, node)
+	}
+	slices.Sort(nodes)
+
+	// Sort dependencies for deterministic output
+	for k := range dependencies {
+		slices.Sort(dependencies[k])
+	}
+
+	return minimalTree{
+		Nodes:        nodes,
+		Dependencies: dependencies,
+	}
 }
 
 // ToCycloneDX exports the scoped view as a CycloneDX BOM.
