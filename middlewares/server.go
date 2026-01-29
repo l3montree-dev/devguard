@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -13,6 +14,12 @@ import (
 )
 
 func registerMiddlewares(e *echo.Echo) {
+
+	if os.Getenv("PROFILE") == "true" {
+		slog.Info("enabling pprof endpoints under /debug/pprof")
+		AddProfileEndpoints(e)
+	}
+
 	// Wrap(e)
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
