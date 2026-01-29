@@ -307,6 +307,12 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 
 	for _, vuln := range vulns {
 		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)
+		if len(dependencyVulns) > 10000 {
+			// unique those
+			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
+				return f.CalculateHash()
+			})
+		}
 	}
 
 	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {

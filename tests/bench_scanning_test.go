@@ -161,7 +161,7 @@ func BenchmarkScanLargeSBOMDevDB(b *testing.B) {
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
 	// Load the large SBOM
-	sbomData, err := loadSBOM("testdata/large-sbom.json")
+	sbomData, err := loadSBOM("testdata/large-sbom2.json")
 	if err != nil {
 		b.Fatalf("failed to load large SBOM: %v", err)
 	}

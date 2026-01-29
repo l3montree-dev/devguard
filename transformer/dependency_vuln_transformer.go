@@ -160,10 +160,11 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
 
 	// Find all paths to this vulnerable component
-	paths := sbom.FindAllPathsToPURL(stringPurl)
+	paths := sbom.FindAllComponentOnlyPathsToPURL(stringPurl, 12) // at max we use 12 paths, to avoid path explosion
 
 	// If no paths found, create a single vuln with empty path (fallback)
-	if len(paths) == 0 {
+	if len(paths) == 0 || len(paths) == 12 {
+		// either 0 paths OR we hit the max path limit
 		return []models.DependencyVuln{
 			{
 				Vulnerability: models.Vulnerability{

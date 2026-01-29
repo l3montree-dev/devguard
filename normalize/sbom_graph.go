@@ -18,6 +18,7 @@ package normalize
 import (
 	"fmt"
 	"iter"
+	"log/slog"
 	"maps"
 	"net/url"
 	"os"
@@ -55,12 +56,9 @@ func (p Path) String() string {
 func (p Path) ToStringSliceComponentOnly() []string {
 	filtered := make([]string, 0, len(p))
 	for _, node := range p {
-		// only keep purls
-		if !strings.HasPrefix(node, "pkg:") {
-			continue
+		if isComponentNodeID(node) {
+			filtered = append(filtered, node)
 		}
-		// Include only component PURLs
-		filtered = append(filtered, node)
 	}
 	return filtered
 }
@@ -95,8 +93,8 @@ const (
 // GraphNode represents any node in the SBOM graph.
 // All nodes (root, artifacts, info sources, components) share this structure.
 type GraphNode struct {
-	ID   string        // Unique identifier
-	Type GraphNodeType // What kind of node this is
+	BOMRef string        // Unique identifier
+	Type   GraphNodeType // What kind of node this is
 
 	// For components, this holds the full CycloneDX component data
 	Component *cdx.Component
@@ -147,7 +145,9 @@ func NewSBOMGraph() *SBOMGraph {
 		scopeID:         GraphRootNodeID,
 	}
 	// Always create root node
-	g.nodes[GraphRootNodeID] = &GraphNode{ID: GraphRootNodeID, Type: GraphNodeTypeRoot}
+	g.nodes[GraphRootNodeID] = &GraphNode{BOMRef: GraphRootNodeID, Type: GraphNodeTypeRoot, Component: &cdx.Component{
+		PackageURL: "", // empty string for root on purpose
+	}}
 	g.edges[GraphRootNodeID] = make(map[string]struct{})
 	return g
 }
@@ -161,12 +161,13 @@ func (g *SBOMGraph) AddArtifact(name string) string {
 	id := "artifact:" + name
 	if g.nodes[id] == nil {
 		g.nodes[id] = &GraphNode{
-			ID:   id,
-			Type: GraphNodeTypeArtifact,
+			BOMRef: id,
+			Type:   GraphNodeTypeArtifact,
 			Component: &cdx.Component{
-				BOMRef: id,
-				Name:   name,
-				Type:   cdx.ComponentTypeApplication,
+				BOMRef:     id,
+				Name:       name,
+				PackageURL: id,
+				Type:       cdx.ComponentTypeApplication,
 			},
 		}
 		g.edges[id] = make(map[string]struct{})
@@ -184,12 +185,13 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 	id := fmt.Sprintf("%s:%s@%s", sourceType, sourceID, artifactName)
 	if g.nodes[id] == nil {
 		g.nodes[id] = &GraphNode{
-			ID:       id,
+			BOMRef:   id,
 			Type:     GraphNodeTypeInfoSource,
 			InfoType: sourceType,
 			Component: &cdx.Component{
-				BOMRef: id,
-				Name:   sourceID,
+				BOMRef:     id,
+				Name:       sourceID,
+				PackageURL: id,
 			},
 		}
 		g.edges[id] = make(map[string]struct{})
@@ -200,19 +202,15 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 
 // AddComponent adds a component node.
 func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
-	id := comp.PackageURL
-	if id == "" {
-		id = comp.BOMRef
-	}
-	if g.nodes[id] == nil {
-		g.nodes[id] = &GraphNode{
-			ID:        id,
+	if g.nodes[comp.BOMRef] == nil {
+		g.nodes[comp.BOMRef] = &GraphNode{
+			BOMRef:    comp.BOMRef,
 			Type:      GraphNodeTypeComponent,
 			Component: &comp,
 		}
-		g.edges[id] = make(map[string]struct{})
+		g.edges[comp.BOMRef] = make(map[string]struct{})
 	}
-	return id
+	return comp.BOMRef
 }
 
 // AddEdge adds a directed edge from parent to child.
@@ -275,7 +273,7 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 	// Deep copy nodes
 	for id, node := range g.nodes {
 		clone.nodes[id] = &GraphNode{
-			ID:        node.ID,
+			BOMRef:    node.BOMRef,
 			Type:      node.Type,
 			InfoType:  node.InfoType,
 			Component: node.Component, // Note: Component is shared, make deep copy if needed
@@ -337,19 +335,19 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 	}
 
 	// Import all nodes
-	for id, node := range other.nodes {
-		if id == GraphRootNodeID {
+	for bomRef, node := range other.nodes {
+		if bomRef == GraphRootNodeID {
 			continue // Skip root
 		}
 		// Always overwrite if node already exists (for replacement semantics)
-		g.nodes[id] = &GraphNode{
-			ID:        node.ID,
+		g.nodes[bomRef] = &GraphNode{
+			BOMRef:    node.BOMRef,
 			Type:      node.Type,
 			InfoType:  node.InfoType,
 			Component: node.Component,
 		}
-		if g.edges[id] == nil {
-			g.edges[id] = make(map[string]struct{})
+		if g.edges[bomRef] == nil {
+			g.edges[bomRef] = make(map[string]struct{})
 		}
 	}
 
@@ -473,7 +471,7 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 func (g *SBOMGraph) GetArtifactIDs() []string {
 	var ids []string
 	for artifact := range g.Artifacts() {
-		ids = append(ids, artifact.ID)
+		ids = append(ids, artifact.BOMRef)
 	}
 	return ids
 }
@@ -678,7 +676,7 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 				visit(childID)
 			}
 		}
-		visit(infoSource.ID)
+		visit(infoSource.BOMRef)
 	}
 
 	return result
@@ -699,16 +697,12 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 	return result
 }
 
-// FindAllPathsToPURL finds all paths from root to a target component.
-// Returns full paths including structural nodes (ROOT, artifacts, info sources).
-// Each unique full path is returned separately, even if multiple paths lead to the same
-// component through different artifacts or info sources.
-func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
+func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Path {
 	// Find the target node ID
 	var targetID string
 	for node := range g.Components() {
 		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
-			targetID = node.ID
+			targetID = node.BOMRef
 			break
 		}
 	}
@@ -718,50 +712,198 @@ func (g *SBOMGraph) FindAllPathsToPURL(purl string) []Path {
 	}
 
 	// Build reverse edge map (child -> parents) for backward traversal
+	// Sort parent IDs for deterministic traversal order
 	reverseEdges := make(map[string][]string)
 	for parent, children := range g.edges {
 		for child := range children {
 			reverseEdges[child] = append(reverseEdges[child], parent)
 		}
 	}
+	// Sort each parent list for deterministic order
+	for child := range reverseEdges {
+		slices.Sort(reverseEdges[child])
+	}
 
+	// Use BFS to find paths in order of increasing length
+	// This allows us to stop early once we have enough paths
 	var paths []Path
-	seen := make(map[string]bool)       // For path deduplication
-	path := make([]string, 0, 32)       // Reusable path buffer (avoids allocations)
-	onPath := make(map[string]bool, 32) // Cycle detection
+	seen := make(map[string]bool) // For path deduplication
 
-	var backtrack func(id string)
-	backtrack = func(id string) {
-		if onPath[id] {
-			return // Cycle detected
+	// Queue holds partial paths (stored in reverse: target first, growing toward root)
+	type queueItem struct {
+		path   []string
+		onPath map[string]bool // Track nodes in current path to detect cycles
+	}
+	queue := []queueItem{{
+		path:   []string{targetID},
+		onPath: map[string]bool{targetID: true},
+	}}
+
+	for len(queue) > 0 {
+		// Check if we've reached the limit
+		if limit > 0 && len(paths) >= limit {
+			break
 		}
 
-		onPath[id] = true
-		path = append(path, id)
+		current := queue[0]
+		queue = queue[1:]
 
-		if id == g.rootID {
+		lastNode := current.path[len(current.path)-1]
+
+		// Get parents of the last node
+		parents := reverseEdges[lastNode]
+		foundTermination := false
+
+		for _, parentID := range parents {
+			// Cycle detection
+			if current.onPath[parentID] {
+				continue
+			}
+
+			// Check if parent is NOT a component (termination condition)
+			if !isComponentNodeID(parentID) {
+				foundTermination = true
+				// Build path in correct order (root to target)
+				result := make([]string, len(current.path))
+				for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
+					result[i] = current.path[j]
+				}
+				key := strings.Join(result, "|")
+				if !seen[key] {
+					seen[key] = true
+					paths = append(paths, Path(result))
+					// Check limit after adding
+					if limit > 0 && len(paths) >= limit {
+						break
+					}
+				}
+			}
+		}
+
+		// If we reached limit, stop processing
+		if limit > 0 && len(paths) >= limit {
+			break
+		}
+
+		// If no termination found, continue extending path through component parents
+		if !foundTermination || len(parents) > 0 {
+			for _, parentID := range parents {
+				if current.onPath[parentID] {
+					continue
+				}
+				if !isComponentNodeID(parentID) {
+					continue // Skip non-components for path extension
+				}
+				// Extend path
+				newPath := make([]string, len(current.path)+1)
+				copy(newPath, current.path)
+				newPath[len(current.path)] = parentID
+				newOnPath := make(map[string]bool, len(current.onPath)+1)
+				for k, v := range current.onPath {
+					newOnPath[k] = v
+				}
+				newOnPath[parentID] = true
+				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
+			}
+		}
+	}
+
+	return paths
+}
+
+// FindAllPathsToPURL finds all paths from root to a target component.
+// Returns full paths including structural nodes (ROOT, artifacts, info sources).
+// Each unique full path is returned separately, even if multiple paths lead to the same
+// component through different artifacts or info sources.
+// Uses BFS to find paths in order of increasing length (shortest first).
+// If limit > 0, stops early once `limit` paths are found.
+func (g *SBOMGraph) FindAllPathsToPURL(purl string, limit int) []Path {
+	// Find the target node ID
+	var targetID string
+	for node := range g.Components() {
+		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
+			targetID = node.BOMRef
+			break
+		}
+	}
+
+	if targetID == "" {
+		return nil
+	}
+
+	// Build reverse edge map (child -> parents) for backward traversal
+	// Sort parent IDs for deterministic traversal order
+	reverseEdges := make(map[string][]string)
+	for parent, children := range g.edges {
+		for child := range children {
+			reverseEdges[child] = append(reverseEdges[child], parent)
+		}
+	}
+	// Sort each parent list for deterministic order
+	for child := range reverseEdges {
+		slices.Sort(reverseEdges[child])
+	}
+
+	// Use BFS to find paths in order of increasing length
+	// This allows us to stop early once we have enough paths
+	var paths []Path
+	seen := make(map[string]bool) // For path deduplication
+
+	// Queue holds partial paths (stored in reverse: target first, growing toward root)
+	type queueItem struct {
+		path   []string
+		onPath map[string]bool // Track nodes in current path to detect cycles
+	}
+	queue := []queueItem{{
+		path:   []string{targetID},
+		onPath: map[string]bool{targetID: true},
+	}}
+
+	for len(queue) > 0 {
+		// Check if we've reached the limit
+		if limit > 0 && len(paths) >= limit {
+			break
+		}
+
+		current := queue[0]
+		queue = queue[1:]
+
+		lastNode := current.path[len(current.path)-1]
+
+		// Check if we've reached root (termination condition)
+		if lastNode == g.rootID {
 			// Build path in correct order (root to target)
-			result := make([]string, len(path))
-			for i, j := 0, len(path)-1; j >= 0; i, j = i+1, j-1 {
-				result[i] = path[j]
+			result := make([]string, len(current.path))
+			for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
+				result[i] = current.path[j]
 			}
 			key := strings.Join(result, "|")
 			if !seen[key] {
 				seen[key] = true
 				paths = append(paths, Path(result))
 			}
-		} else {
-			for _, parentID := range reverseEdges[id] {
-				backtrack(parentID)
-			}
+			continue
 		}
 
-		// Backtrack: restore state for next branch
-		path = path[:len(path)-1]
-		onPath[id] = false
-	}
+		// Get parents of the last node and extend paths
+		for _, parentID := range reverseEdges[lastNode] {
+			// Cycle detection
+			if current.onPath[parentID] {
+				continue
+			}
 
-	backtrack(targetID)
+			// Extend path
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = parentID
+			newOnPath := make(map[string]bool, len(current.onPath)+1)
+			for k, v := range current.onPath {
+				newOnPath[k] = v
+			}
+			newOnPath[parentID] = true
+			queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
+		}
+	}
 
 	return paths
 }
@@ -788,7 +930,7 @@ func (d GraphDiff) IsEmpty() bool {
 func (d GraphDiff) AddedNodeIDs() []string {
 	ids := make([]string, len(d.AddedNodes))
 	for i, n := range d.AddedNodes {
-		ids[i] = n.ID
+		ids[i] = n.BOMRef
 	}
 	return ids
 }
@@ -797,7 +939,7 @@ func (d GraphDiff) AddedNodeIDs() []string {
 func (d GraphDiff) RemovedNodeIDs() []string {
 	ids := make([]string, len(d.RemovedNodes))
 	for i, n := range d.RemovedNodes {
-		ids[i] = n.ID
+		ids[i] = n.BOMRef
 	}
 	return ids
 }
@@ -836,7 +978,7 @@ func (g *SBOMGraph) ToMinimalTree() *minimalTreeNode {
 			return nil
 		}
 		treeNode := &minimalTreeNode{
-			Name:     node.ID,
+			Name:     node.BOMRef,
 			Children: []*minimalTreeNode{},
 		}
 
@@ -924,7 +1066,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	// Root's direct deps are the first-level components (children of info sources)
 	for infoSource := range g.InfoSources() {
-		for childID := range g.edges[infoSource.ID] {
+		for childID := range g.edges[infoSource.BOMRef] {
 			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
 				if slices.Contains(depMap[rootName], childID) {
 					continue
@@ -936,7 +1078,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	dependencies := []cdx.Dependency{}
 	for c := range g.Components() {
-		deps := depMap[c.ID]
+		deps := depMap[c.BOMRef]
 		dependencies = append(dependencies, cdx.Dependency{
 			Ref:          c.Component.BOMRef,
 			Dependencies: &deps,
@@ -1148,32 +1290,6 @@ func getInfoSourceTypeByInspectingSBOM(bom *cdx.BOM) InfoSourceType {
 // PARSING FROM CYCLONEDX
 // =============================================================================
 
-// isRootProjectComponent detects components that represent the scanned project itself
-// rather than actual dependencies. These are typically PURLs without versions that
-// scanners like Trivy add for the project being analyzed.
-// We skip these to avoid conflicts when merging multiple SBOMs that scan the same project
-// with different dependency sets.
-//
-// Detection criteria:
-// - Has a valid PURL without a version
-// - Component type is "library" (Trivy marks the scanned module as library, not application)
-// - Has a namespace (real projects typically have org/repo structure like github.com/org/repo)
-func isRootProjectComponent(comp cdx.Component) bool {
-	if comp.PackageURL == "" {
-		return false
-	}
-	p, err := packageurl.FromString(comp.PackageURL)
-	if err != nil {
-		return false
-	}
-	// Must have no version
-	if p.Version != "" {
-		return false
-	}
-
-	return true
-}
-
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
 func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SBOMGraph {
 	g := NewSBOMGraph()
@@ -1185,28 +1301,15 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 
 	infoID := g.AddInfoSource(artifactID, infoSourceID, infoSourceType)
 
-	// Build a set of root project components to skip
-	// These represent the scanned project itself, not real dependencies
-	rootProjectComponents := make(map[string]bool)
 	if bom.Components != nil {
 		for _, comp := range *bom.Components {
-			if isRootProjectComponent(comp) {
-				id := comp.PackageURL
-				if id == "" {
-					id = comp.BOMRef
-				}
-				rootProjectComponents[id] = true
+			if comp.BOMRef == "33009a9f-a6fc-482b-9d38-945a913a39e4" {
+				slog.Info("test")
 			}
-		}
-	}
-
-	// Add all components (except root project components)
-	if bom.Components != nil {
-		for _, comp := range *bom.Components {
-			if isRootProjectComponent(comp) {
-				continue // Skip root project components
+			if isComponentNodeID(comp.PackageURL) {
+				// add only real components
+				g.AddComponent(comp)
 			}
-			g.AddComponent(comp)
 		}
 	}
 
@@ -1224,52 +1327,61 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	rootRef := ""
 	if bom.Metadata != nil && bom.Metadata.Component != nil {
 		rootRef = bom.Metadata.Component.BOMRef
+		// make sure root component exists
+		if g.nodes[rootRef] == nil {
+			// add root component as well
+			g.AddComponent(*bom.Metadata.Component)
+		}
+	} else if g.nodes[""] == nil {
+		// add the empty root component
+		g.AddComponent(cdx.Component{
+			BOMRef:     "",
+			PackageURL: "",
+			Name:       "ROOT",
+			Type:       cdx.ComponentTypeApplication,
+		})
 	}
 
 	// Add edges
-	for parent, children := range depMap {
+	for parent := range depMap {
+		parentNode := g.nodes[parent]
+		// skip if parent is not a component or info source
+		if parentNode == nil {
+			continue
+		}
+
+		if parentNode.Type != GraphNodeTypeComponent && parentNode.BOMRef != rootRef {
+			// not a valid parent
+			continue
+		}
 		// If parent is root or a root project component, add children as info source children
-		if parent == rootRef || parent == "" || parent == GraphRootNodeID || rootProjectComponents[parent] {
-			for _, child := range children {
-				// Skip edges to other root project components
-				if rootProjectComponents[child] {
-					continue
-				}
-				if g.nodes[child] != nil {
-					g.AddEdge(infoID, child)
-				}
-			}
-		} else {
-			// Component to component edge
-			for _, child := range children {
-				// Skip edges to root project components
-				if rootProjectComponents[child] {
-					continue
-				}
-				if g.nodes[parent] != nil && g.nodes[child] != nil {
-					g.AddEdge(parent, child)
-				}
-			}
+		children := getChildrenOfParent(depMap, g.nodes, parent)
+		edgeSource := parent
+		if parent == rootRef {
+			edgeSource = infoID
+		}
+		for _, child := range children {
+			g.AddEdge(edgeSource, child)
 		}
 	}
 
 	// If no explicit root dependencies, all components are roots
-	if len(depMap[rootRef]) == 0 && len(depMap[""]) == 0 {
+	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if isRootProjectComponent(comp) {
+				if !isComponentNodeID(comp.PackageURL) {
 					continue // Skip root project components
 				}
 				// Check if this component is a child of any other
 				isChild := false
 				for _, children := range depMap {
-					if slices.Contains(children, GetComponentID(comp)) {
+					if slices.Contains(children, comp.BOMRef) {
 						isChild = true
 						break
 					}
 				}
 				if !isChild {
-					g.AddEdge(infoID, GetComponentID(comp))
+					g.AddEdge(infoID, comp.BOMRef) // link to info source
 				}
 			}
 		}
@@ -1283,7 +1395,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 			if vuln.Affects != nil {
 				for _, aff := range *vuln.Affects {
 					if g.nodes[aff.Ref] != nil {
-						g.AddEdge(infoID, GetComponentID(*g.nodes[aff.Ref].Component)) // link vuln to info source)
+						g.AddEdge(infoID, g.nodes[aff.Ref].Component.BOMRef) // link vuln to info source)
 					}
 				}
 			}
@@ -1293,12 +1405,43 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	return g
 }
 
+func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {
+	// imagine a tree which contains the following edges:
+	// ROOT -> fake node -> pkg:a -> pkg:b
+	// this function should return only pkg:a when parent is ROOT
+	children, exists := depMap[parent]
+	if !exists {
+		return []string{}
+	}
+	// check if any of the children are fake nodes (not starting with pkg:)
+	realChildren := make([]string, 0, len(children))
+	for _, child := range children {
+		childNode := nodes[child]
+		if childNode == nil {
+			// Node not in graph - could be a fake node, recurse to find its real children
+			realChildren = append(realChildren, getChildrenOfParent(depMap, nodes, child)...)
+			continue
+		}
+		if childNode.Type == GraphNodeTypeComponent {
+			realChildren = append(realChildren, child)
+		} else {
+			// we need to get the children of this fake node instead
+			realChildren = append(realChildren, getChildrenOfParent(depMap, nodes, child)...)
+		}
+	}
+	return realChildren
+}
+
 func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 	g := NewSBOMGraph()
 	for _, vuln := range vulns {
 		g.AddVulnerability(vuln)
 	}
 	return g
+}
+
+func isComponentNodeID(id string) bool {
+	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
 }
 
 // =============================================================================
@@ -1361,8 +1504,8 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		switch prefix {
 		case "artifact":
 			g.nodes[id] = &GraphNode{
-				ID:   id,
-				Type: GraphNodeTypeArtifact,
+				BOMRef: id,
+				Type:   GraphNodeTypeArtifact,
 				Component: &cdx.Component{
 					BOMRef: id,
 					Name:   name,
@@ -1372,7 +1515,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 			g.edges[id] = make(map[string]struct{})
 		case string(InfoSourceSBOM), string(InfoSourceVEX), string(InfoSourceCSAF):
 			g.nodes[id] = &GraphNode{
-				ID:        id,
+				BOMRef:    id,
 				Type:      GraphNodeTypeInfoSource,
 				InfoType:  InfoSourceType(prefix),
 				Component: &cdxComp,
@@ -1381,7 +1524,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		default:
 			// Regular component
 			g.nodes[id] = &GraphNode{
-				ID:        id,
+				BOMRef:    id,
 				Type:      GraphNodeTypeComponent,
 				Component: &cdxComp,
 			}

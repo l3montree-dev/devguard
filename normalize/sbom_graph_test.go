@@ -435,7 +435,8 @@ func TestMergeComplex(t *testing.T) {
 					BOMRef: GraphRootNodeID,
 				},
 				{
-					BOMRef: "pkg:container",
+					BOMRef:     "pkg:container",
+					PackageURL: "pkg:container@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -454,7 +455,8 @@ func TestMergeComplex(t *testing.T) {
 					BOMRef: GraphRootNodeID,
 				},
 				{
-					BOMRef: "pkg:source",
+					BOMRef:     "pkg:source",
+					PackageURL: "pkg:source@2.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -520,14 +522,15 @@ func TestMergeComplex(t *testing.T) {
 					BOMRef: GraphRootNodeID,
 				},
 				{
-					BOMRef: "pkg:container@1.0.0",
+					BOMRef:     "pkg:container@2.0.0",
+					PackageURL: "pkg:container@2.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
 					Ref: GraphRootNodeID,
 					Dependencies: &[]string{
-						"pkg:container@1.0.0",
+						"pkg:container@2.0.0",
 					},
 				},
 			},
@@ -539,7 +542,8 @@ func TestMergeComplex(t *testing.T) {
 					BOMRef: GraphRootNodeID,
 				},
 				{
-					BOMRef: "pkg:container@2.0.0",
+					BOMRef:     "pkg:container@2.0.0",
+					PackageURL: "pkg:container@2.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -618,7 +622,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/lodash@4.17.21")
+		paths := g.FindAllPathsToPURL("pkg:npm/lodash@4.17.21", 0)
 
 		// Should return two paths (one through each info source)
 		assert.Len(t, paths, 2, "Should return separate paths for each info source")
@@ -654,7 +658,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/express@4.18.0")
+		paths := g.FindAllPathsToPURL("pkg:npm/express@4.18.0", 0)
 
 		// Should return two paths (one through each artifact)
 		assert.Len(t, paths, 2, "Should return separate paths through different artifacts")
@@ -708,7 +712,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(depBID, targetID)
 
 		// Find all paths to the target component
-		paths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0")
+		paths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
 
 		// Should return two different paths through different dependencies
 		assert.Len(t, paths, 2, "Should return multiple paths when there are different dependency chains")
@@ -736,7 +740,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource, compID)
 
 		// Search for non-existent component
-		paths := g.FindAllPathsToPURL("pkg:npm/non-existent@1.0.0")
+		paths := g.FindAllPathsToPURL("pkg:npm/non-existent@1.0.0", 0)
 
 		assert.Len(t, paths, 0, "Should return empty paths for non-existent component")
 	})
@@ -780,7 +784,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(compCID, compDID)
 
 		// Find path to the deepest component
-		paths := g.FindAllPathsToPURL("pkg:npm/d@1.0.0")
+		paths := g.FindAllPathsToPURL("pkg:npm/d@1.0.0", 0)
 
 		assert.Len(t, paths, 1)
 		expectedPath := []string{
@@ -790,6 +794,98 @@ func TestFindAllPathsToPURL(t *testing.T) {
 			"pkg:npm/d@1.0.0",
 		}
 		assert.Equal(t, expectedPath, paths[0].ToStringSliceComponentOnly(), "Should return complete dependency chain")
+	})
+
+	t.Run("limit should stop early and return shortest paths first", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Add artifact and info source
+		artifactID := g.AddArtifact("test-app")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
+
+		// Create multiple paths of different lengths to target:
+		// Short path: infoSource -> target (length 1)
+		// Medium path: infoSource -> dep1 -> target (length 2)
+		// Long path: infoSource -> dep2 -> dep3 -> target (length 3)
+		target := cdx.Component{
+			BOMRef:     "pkg:npm/target@1.0.0",
+			PackageURL: "pkg:npm/target@1.0.0",
+		}
+		targetID := g.AddComponent(target)
+
+		dep1 := cdx.Component{
+			BOMRef:     "pkg:npm/dep1@1.0.0",
+			PackageURL: "pkg:npm/dep1@1.0.0",
+		}
+		dep1ID := g.AddComponent(dep1)
+
+		dep2 := cdx.Component{
+			BOMRef:     "pkg:npm/dep2@1.0.0",
+			PackageURL: "pkg:npm/dep2@1.0.0",
+		}
+		dep2ID := g.AddComponent(dep2)
+
+		dep3 := cdx.Component{
+			BOMRef:     "pkg:npm/dep3@1.0.0",
+			PackageURL: "pkg:npm/dep3@1.0.0",
+		}
+		dep3ID := g.AddComponent(dep3)
+
+		// Build the graph with multiple paths
+		g.AddEdge(infoSource, targetID)  // Direct path (shortest)
+		g.AddEdge(infoSource, dep1ID)    // Path through dep1
+		g.AddEdge(dep1ID, targetID)
+		g.AddEdge(infoSource, dep2ID)    // Path through dep2 -> dep3
+		g.AddEdge(dep2ID, dep3ID)
+		g.AddEdge(dep3ID, targetID)
+
+		// Without limit, should return all 3 paths
+		allPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
+		assert.Len(t, allPaths, 3, "Should return all 3 paths without limit")
+
+		// With limit=1, should return only the shortest path
+		limitedPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 1)
+		assert.Len(t, limitedPaths, 1, "Should return only 1 path with limit=1")
+		// The shortest path is the direct one
+		assert.Equal(t, []string{"pkg:npm/target@1.0.0"}, limitedPaths[0].ToStringSliceComponentOnly())
+
+		// With limit=2, should return 2 shortest paths
+		limitedPaths2 := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 2)
+		assert.Len(t, limitedPaths2, 2, "Should return only 2 paths with limit=2")
+	})
+
+	t.Run("limit should work with FindAllComponentOnlyPathsToPURL", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		artifactID := g.AddArtifact("test-app")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
+
+		// Create diamond pattern with multiple paths
+		target := cdx.Component{BOMRef: "pkg:npm/target@1.0.0", PackageURL: "pkg:npm/target@1.0.0"}
+		dep1 := cdx.Component{BOMRef: "pkg:npm/dep1@1.0.0", PackageURL: "pkg:npm/dep1@1.0.0"}
+		dep2 := cdx.Component{BOMRef: "pkg:npm/dep2@1.0.0", PackageURL: "pkg:npm/dep2@1.0.0"}
+		dep3 := cdx.Component{BOMRef: "pkg:npm/dep3@1.0.0", PackageURL: "pkg:npm/dep3@1.0.0"}
+
+		targetID := g.AddComponent(target)
+		dep1ID := g.AddComponent(dep1)
+		dep2ID := g.AddComponent(dep2)
+		dep3ID := g.AddComponent(dep3)
+
+		// Multiple paths to target
+		g.AddEdge(infoSource, dep1ID)
+		g.AddEdge(infoSource, dep2ID)
+		g.AddEdge(infoSource, dep3ID)
+		g.AddEdge(dep1ID, targetID)
+		g.AddEdge(dep2ID, targetID)
+		g.AddEdge(dep3ID, targetID)
+
+		// Without limit
+		allPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 0)
+		assert.Len(t, allPaths, 3, "Should return all 3 paths without limit")
+
+		// With limit=2
+		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
+		assert.Len(t, limitedPaths, 2, "Should return only 2 paths with limit=2")
 	})
 }
 
