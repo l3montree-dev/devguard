@@ -1753,7 +1753,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 
 			// Create a FalsePositiveRule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-			ruleBody := fmt.Sprintf(`{"justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			recorder = httptest.NewRecorder()
 			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")
@@ -1833,7 +1833,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 
 			// Create a FalsePositiveRule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-			ruleBody := fmt.Sprintf(`{"justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			recorder = httptest.NewRecorder()
 			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")

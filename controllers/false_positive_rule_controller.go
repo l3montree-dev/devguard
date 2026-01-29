@@ -123,8 +123,12 @@ func (c *FalsePositiveRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	if err := ctx.Validate(&req); err != nil {
-		return echo.NewHTTPError(400, "validation failed").WithInternal(err)
+	// perform explicit validation to provide clear errors and avoid relying solely on the validator
+	if req.CVEID == "" {
+		return echo.NewHTTPError(400, "cveId is required")
+	}
+	if len(req.PathPattern) == 0 {
+		return echo.NewHTTPError(400, "pathPattern must contain at least one element")
 	}
 
 	rule := &models.FalsePositiveRule{
