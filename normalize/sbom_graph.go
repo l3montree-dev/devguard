@@ -511,8 +511,12 @@ func (g *SBOMGraph) LicenseDistribution() map[string]int {
 			licenses := component.Component.Licenses
 			if licenses != nil && len(*licenses) > 0 {
 				for _, lic := range *licenses {
-					if lic.License != nil && lic.License.Name != "" {
+					if lic.License != nil && lic.License.ID != "" {
+						licenseCount[lic.License.ID]++
+					} else if lic.License != nil && lic.License.Name != "" {
 						licenseCount[lic.License.Name]++
+					} else if lic.Expression != "" {
+						licenseCount[lic.Expression]++
 					}
 				}
 			}
