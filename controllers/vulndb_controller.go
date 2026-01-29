@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -14,12 +16,14 @@ import (
 )
 
 type VulnDBController struct {
-	cveRepository shared.CveRepository
+	cveRepository           shared.CveRepository
+	maliciousPackageChecker shared.MaliciousPackageChecker
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker) *VulnDBController {
 	return &VulnDBController{
-		cveRepository: cveRepository,
+		cveRepository:           cveRepository,
+		maliciousPackageChecker: maliciousPackageChecker,
 	}
 }
 
@@ -130,15 +134,19 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}
 
+	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
+
 	return ctx.JSON(200, struct {
 		PURL               packageurl.PackageURL       `json:"purl"`
 		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
 		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
 		Vulns              []models.VulnInPackage      `json:"vulns"`
+		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 	}{
 		PURL:               purl,
 		MatchContext:       matchCtx,
 		AffectedComponents: affectedComponents,
 		Vulns:              vulns,
+		MaliciousPackage:   maliciousPackage,
 	})
 }
