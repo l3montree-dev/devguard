@@ -71,7 +71,9 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.U
 		       arh.sum_closed_risk, arh.avg_closed_risk, arh.max_closed_risk, arh.min_closed_risk,
 		       arh.open_dependency_vulns, arh.fixed_dependency_vulns,
 		       arh.low, arh.medium, arh.high, arh.critical,
-		       arh.low_cvss, arh.medium_cvss, arh.high_cvss, arh.critical_cvss
+			   arh.cve_purl_low, arh.cve_purl_medium, arh.cve_purl_high, arh.cve_purl_critical,
+		       arh.low_cvss, arh.medium_cvss, arh.high_cvss, arh.critical_cvss,
+			   arh.cve_purl_low_cvss, arh.cve_purl_medium_cvss, arh.cve_purl_high_cvss, arh.cve_purl_critical_cvss
 		FROM artifact_risk_history arh
 		JOIN unique_release_items uri
 		ON arh.asset_id = uri.asset_id

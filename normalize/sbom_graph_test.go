@@ -832,10 +832,10 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		dep3ID := g.AddComponent(dep3)
 
 		// Build the graph with multiple paths
-		g.AddEdge(infoSource, targetID)  // Direct path (shortest)
-		g.AddEdge(infoSource, dep1ID)    // Path through dep1
+		g.AddEdge(infoSource, targetID) // Direct path (shortest)
+		g.AddEdge(infoSource, dep1ID)   // Path through dep1
 		g.AddEdge(dep1ID, targetID)
-		g.AddEdge(infoSource, dep2ID)    // Path through dep2 -> dep3
+		g.AddEdge(infoSource, dep2ID) // Path through dep2 -> dep3
 		g.AddEdge(dep2ID, dep3ID)
 		g.AddEdge(dep3ID, targetID)
 
@@ -886,6 +886,257 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		// With limit=2
 		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
 		assert.Len(t, limitedPaths, 2, "Should return only 2 paths with limit=2")
+	})
+}
+
+func TestVulnerabilities(t *testing.T) {
+	t.Run("empty graph returns no vulnerabilities", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Empty(t, vulns)
+	})
+
+	t.Run("single vulnerability without analysis", func(t *testing.T) {
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:          "CVE-2021-1234",
+			Description: "Test vulnerability",
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
+	})
+
+	t.Run("single vulnerability with analysis", func(t *testing.T) {
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
+		assert.Equal(t, cdx.IASExploitable, vulns[0].Analysis.State)
+	})
+
+	t.Run("multiple unique vulnerabilities", func(t *testing.T) {
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-1111"})
+		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-2222"})
+		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-3333"})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 3)
+
+		ids := make(map[string]bool)
+		for _, v := range vulns {
+			ids[v.ID] = true
+		}
+		assert.True(t, ids["CVE-2021-1111"])
+		assert.True(t, ids["CVE-2021-2222"])
+		assert.True(t, ids["CVE-2021-3333"])
+	})
+
+	t.Run("same ID different affects - NOT deduplicated (affects is part of key)", func(t *testing.T) {
+		g := NewSBOMGraph()
+		// Add same vulnerability ID with different affects
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:      "CVE-2021-1234",
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:      "CVE-2021-1234",
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.21"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		// Both kept because they have different affects
+		assert.Len(t, vulns, 2)
+	})
+
+	t.Run("duplicate vulnerability - existing has InTriage state should keep existing", func(t *testing.T) {
+		g := NewSBOMGraph()
+		// First add the InTriage one
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASInTriage,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		// Then add one with different state
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
+		assert.NotNil(t, vulns[0].Analysis)
+		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
+	})
+
+	t.Run("same ID same affects - new has InTriage state should replace", func(t *testing.T) {
+		g := NewSBOMGraph()
+		// First add one with Exploitable state
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		// Then add one with InTriage state and SAME affects
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASInTriage,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
+		assert.NotNil(t, vulns[0].Analysis)
+		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
+	})
+
+	t.Run("same ID same affects - neither has InTriage keeps first", func(t *testing.T) {
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASNotAffected,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
+	})
+
+	t.Run("same ID same affects - one with analysis one without are NOT deduplicated", func(t *testing.T) {
+		// When one vuln has analysis and one doesn't, they have different storage keys
+		// The deduplication only works when both have analysis states
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:      "CVE-2021-1234",
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		// Both kept because storage keys differ (one has state, one doesn't)
+		assert.Len(t, vulns, 2)
+	})
+
+	t.Run("same ID same affects - one with in triage, one with false positive", func(t *testing.T) {
+
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASFalsePositive,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-1234",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASInTriage,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+
+		assert.Len(t, vulns, 1)
+		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
+	})
+
+	t.Run("same vulnerability ID with different affects should NOT deduplicate", func(t *testing.T) {
+		// The deduplication key includes affects, so different affects = different vulns
+		g := NewSBOMGraph()
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:      "CVE-2021-1234",
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/package-a@1.0.0"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID:      "CVE-2021-1234",
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/package-b@2.0.0"}},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		// Both are kept because they have different affects
+		assert.Len(t, vulns, 2)
+	})
+
+	t.Run("mixed vulnerabilities with various states", func(t *testing.T) {
+		g := NewSBOMGraph()
+		// Unique vuln 1
+		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-1111"})
+		// Duplicate vuln 2 - same affects, should keep InTriage
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-2222",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASExploitable,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/a@1.0.0"}},
+		})
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-2222",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASInTriage,
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/a@1.0.0"}}, // SAME affects
+		})
+		// Unique vuln 3
+		g.AddVulnerability(cdx.Vulnerability{
+			ID: "CVE-2021-3333",
+			Analysis: &cdx.VulnerabilityAnalysis{
+				State: cdx.IASFalsePositive,
+			},
+		})
+
+		vulns := slices.Collect(g.Vulnerabilities())
+		assert.Len(t, vulns, 3)
+
+		vulnMap := make(map[string]*cdx.Vulnerability)
+		for _, v := range vulns {
+			vulnMap[v.ID] = v
+		}
+
+		assert.Contains(t, vulnMap, "CVE-2021-1111")
+		assert.Contains(t, vulnMap, "CVE-2021-2222")
+		assert.Contains(t, vulnMap, "CVE-2021-3333")
+
+		// CVE-2021-2222 should have InTriage state
+		assert.NotNil(t, vulnMap["CVE-2021-2222"].Analysis)
+		assert.Equal(t, cdx.IASInTriage, vulnMap["CVE-2021-2222"].Analysis.State)
 	})
 }
 
