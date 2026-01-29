@@ -35,17 +35,19 @@ import (
 )
 
 type DependencyVulnService struct {
-	dependencyVulnRepository shared.DependencyVulnRepository
-	vulnEventRepository      shared.VulnEventRepository
+	dependencyVulnRepository    shared.DependencyVulnRepository
+	vulnEventRepository         shared.VulnEventRepository
+	falsePositiveRuleRepository shared.FalsePositiveRuleRepository
 
 	thirdPartyIntegration shared.IntegrationAggregate
 }
 
-func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
+func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, falsePositiveRuleRepository shared.FalsePositiveRuleRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
 	return &DependencyVulnService{
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
-		thirdPartyIntegration:    thirdPartyIntegration,
+		dependencyVulnRepository:    dependencyVulnRepository,
+		vulnEventRepository:         vulnEventRepository,
+		falsePositiveRuleRepository: falsePositiveRuleRepository,
+		thirdPartyIntegration:       thirdPartyIntegration,
 	}
 }
 
@@ -130,38 +132,11 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	return nil
 }
 
-// pathSuffixMatches checks if a vulnerability path ends with the given pattern.
-// Returns false if the path contains "ROOT" and the pattern doesn't start at root.
-func pathSuffixMatches(vulnPath []string, pattern []string) bool {
-	if len(pattern) == 0 || len(vulnPath) < len(pattern) {
-		return false
-	}
-
-	// Check if the suffix matches
-	startIdx := len(vulnPath) - len(pattern)
-	for i, elem := range pattern {
-		if vulnPath[startIdx+i] != elem {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (s *DependencyVulnService) GetFalsePositiveRulesForAsset(tx shared.DB, assetID uuid.UUID) []shared.FalsePositiveRule {
-	rules, err := s.vulnEventRepository.GetFalsePositiveRulesForAsset(tx, assetID)
-	if err != nil {
-		slog.Error("could not get false positive rules", "err", err, "assetID", assetID)
-		return []shared.FalsePositiveRule{}
-	}
-	return rules
-}
-
 // applyFalsePositiveRulesToNewVulns checks existing false positive rules and applies
-// them to newly detected vulnerabilities that match the path pattern and CVE.
+// them to newly detected vulnerabilities that match the path pattern.
 func (s *DependencyVulnService) applyFalsePositiveRulesToNewVulns(tx shared.DB, assetID uuid.UUID, vulns []models.DependencyVuln) {
 	// Get existing false positive rules for this asset
-	rules, err := s.vulnEventRepository.GetFalsePositiveRulesForAsset(tx, assetID)
+	rules, err := s.falsePositiveRuleRepository.FindByAssetID(tx, assetID)
 	if err != nil {
 		slog.Error("could not get false positive rules", "err", err, "assetID", assetID)
 		return
@@ -180,47 +155,54 @@ func (s *DependencyVulnService) applyFalsePositiveRulesToNewVulns(tx shared.DB, 
 		}
 
 		// Check each rule
-	ruleLoop:
 		for _, rule := range rules {
 			if len(rule.PathPattern) == 0 {
 				continue
 			}
 
-			// Path pattern rules only apply to the same CVE
-			if rule.CVEID != vuln.CVEID {
+			// Skip if CVE doesn't match
+			if vuln.CVEID != rule.CVEID {
 				continue
 			}
 
-			// Skip rules containing ROOT if the vuln path doesn't start at the same position
-			// (rules with ROOT should only apply to vulns with the exact same root context)
-			for _, p := range rule.PathPattern {
-				if p == "ROOT" {
-					continue ruleLoop
-				}
-			}
-
-			if pathSuffixMatches(vuln.VulnerabilityPath, rule.PathPattern) {
+			if pathPatternMatches(vuln.VulnerabilityPath, rule.PathPattern) {
 				// Apply the rule
 				ev := models.NewFalsePositiveEvent(
 					vuln.CalculateHash(),
 					dtos.VulnTypeDependencyVuln,
-					rule.UserID,
-					fmt.Sprintf("Auto-applied from existing rule: %s", *rule.Justification),
+					rule.CreatedByID,
+					rule.Justification,
 					rule.MechanicalJustification,
 					vuln.GetScannerIDsOrArtifactNames(),
 					dtos.UpstreamStateInternal,
-					rule.PathPattern,
 				)
 
 				if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &ev); err != nil {
 					slog.Error("could not apply false positive rule to new vuln", "err", err, "vulnID", vuln.ID)
 				} else {
-					slog.Info("applied false positive rule to new vuln", "vulnID", vuln.ID, "rulePattern", rule.PathPattern, "cveID", rule.CVEID)
+					slog.Info("applied false positive rule to new vuln", "vulnID", vuln.ID, "rulePattern", rule.PathPattern)
 				}
 				break // Only apply first matching rule
 			}
 		}
 	}
+}
+
+// pathPatternMatches checks if a vulnerability path matches the given pattern.
+func pathPatternMatches(vulnPath []string, pattern []string) bool {
+	if len(pattern) == 0 || len(vulnPath) < len(pattern) {
+		return false
+	}
+
+	// Check if the suffix matches
+	startIdx := len(vulnPath) - len(pattern)
+	for i, elem := range pattern {
+		if vulnPath[startIdx+i] != elem {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
@@ -342,27 +324,27 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 	return dependencyVulns, nil
 }
 
-func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error) {
+func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.dependencyVulnRepository.Transaction(func(d shared.DB) error {
-			ev, err = s.createVulnEventAndApply(d, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream, pathPattern)
+			ev, err = s.createVulnEventAndApply(d, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
 			return err
 		})
 		return ev, err
 	}
-	return s.createVulnEventAndApply(tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream, pathPattern)
+	return s.createVulnEventAndApply(tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, upstream)
 }
 
-func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error) {
+func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, upstream dtos.UpstreamState) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch vulnEventType {
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, upstream)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream, pathPattern)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), upstream)
 	case dtos.EventTypeDetected:
 		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{
 			Risk: utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
@@ -379,64 +361,6 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uu
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
 	if err != nil {
 		return ev, err
-	}
-
-	// For false positive events, apply to related vulns based on pathPattern:
-	// - If pathPattern is nil/empty: apply to ALL vulns with same CVE + component PURL
-	// - If pathPattern is specified: apply to vulns with matching path suffix
-	if vulnEventType == dtos.EventTypeFalsePositive {
-		var matchingVulns []models.DependencyVuln
-
-		if len(pathPattern) == 0 {
-			// No path pattern specified - apply to ALL vulns with same CVE + component PURL
-			matchingVulns, err = s.dependencyVulnRepository.FindByCVEAndComponentPurl(tx, assetID, dependencyVuln.CVEID, dependencyVuln.ComponentPurl)
-			if err != nil {
-				slog.Error("could not find matching vulns by CVE and component PURL", "err", err, "cveID", dependencyVuln.CVEID, "componentPurl", dependencyVuln.ComponentPurl)
-				return ev, nil // Don't fail the original operation
-			}
-			slog.Info("applying false positive to all CVE+PURL matches", "cveID", dependencyVuln.CVEID, "componentPurl", dependencyVuln.ComponentPurl, "matchCount", len(matchingVulns))
-		} else {
-			// Path pattern specified - apply to vulns with matching path suffix
-			matchingVulns, err = s.dependencyVulnRepository.FindByPathSuffixAndCVE(tx, assetID, dependencyVuln.CVEID, pathPattern)
-			if err != nil {
-				slog.Error("could not find matching vulns for path pattern", "err", err, "pathPattern", pathPattern, "cveID", dependencyVuln.CVEID)
-				return ev, nil // Don't fail the original operation
-			}
-		}
-
-		for i := range matchingVulns {
-			vuln := &matchingVulns[i]
-			// Skip the original vuln (already processed) and vulns already marked as false positive
-			if vuln.ID == dependencyVuln.ID || vuln.State == dtos.VulnStateFalsePositive {
-				continue
-			}
-
-			// Create a new event for each matching vuln (referencing the original rule)
-			var eventJustification string
-			if len(pathPattern) == 0 {
-				eventJustification = fmt.Sprintf("Auto-applied to all paths for CVE %s: %s", dependencyVuln.CVEID, justification)
-			} else {
-				eventJustification = fmt.Sprintf("Auto-applied from path pattern rule: %s", justification)
-			}
-
-			matchingEv := models.NewFalsePositiveEvent(
-				vuln.CalculateHash(),
-				dtos.VulnTypeDependencyVuln,
-				userID,
-				eventJustification,
-				mechanicalJustification,
-				vuln.GetScannerIDsOrArtifactNames(),
-				upstream,
-				pathPattern, // Store the pattern for reference (empty if applying to all)
-			)
-
-			if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &matchingEv); err != nil {
-				slog.Error("could not apply false positive to matching vuln", "err", err, "vulnID", vuln.ID)
-				// Continue with other vulns
-			} else {
-				slog.Info("applied false positive rule to matching vuln", "vulnID", vuln.ID, "pathPattern", pathPattern)
-			}
-		}
 	}
 
 	return ev, nil

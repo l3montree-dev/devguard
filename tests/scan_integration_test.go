@@ -771,7 +771,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Len(t, vulns, 1)
 			branchDVuln := vulns[0]
 
-			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", 0, nil)
+			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", dtos.UpstreamStateInternal)
 			err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
 			assert.Nil(t, err)
 
@@ -1699,7 +1699,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
-		dependencyVulnController := f.App.DependencyVulnController
+		falsePositiveRuleController := f.App.FalsePositiveRuleController
 		dependencyVulnRepository := f.App.DependencyVulnRepository
 
 		app := echo.New()
@@ -1751,28 +1751,18 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 				assert.Equal(t, dtos.VulnStateOpen, v.State)
 			}
 
-			// Mark the first one as false positive with a path pattern that matches the OPA component
-			firstVuln := vulns[0]
-			// this path pattern actually does not make so much sense. Basically we are saying any path that ends with OPA component - even though that is
-			// the affected component itself. But for testing purposes this is sufficient
+			// Create a FalsePositiveRule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-
-			// Create a false positive event with path pattern via the controller
-			statusBody := fmt.Sprintf(`{"status":"falsePositive","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			ruleBody := fmt.Sprintf(`{"justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("POST", fmt.Sprintf("/dependency-vulns/%s", firstVuln.ID), strings.NewReader(statusBody))
+			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
-			ctx.SetParamNames("dependencyVulnID")
-			ctx.SetParamValues(firstVuln.ID)
-			aggregate := &mocks.IntegrationAggregate{}
-			aggregate.On("HandleEvent", mock.Anything).Return(nil)
 
-			shared.SetThirdPartyIntegration(ctx, aggregate)
-
-			err = dependencyVulnController.CreateEvent(ctx)
+			err = falsePositiveRuleController.Create(ctx)
 			assert.Nil(t, err)
+			assert.Equal(t, 201, recorder.Code)
 
 			// Verify both vulns are now false positive
 			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
@@ -1794,7 +1784,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 
 		controller := f.App.ScanController
 		dependencyVulnRepository := f.App.DependencyVulnRepository
-		vulnEventRepository := f.App.VulnEventRepository
+		falsePositiveRuleController := f.App.FalsePositiveRuleController
 
 		app := echo.New()
 		createCVE2025_46569(f.DB)
@@ -1841,25 +1831,18 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			}
 			assert.NotNil(t, initialVuln)
 
-			// Create a false positive rule with path pattern directly in the database
+			// Create a FalsePositiveRule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-			fpEvent := models.NewFalsePositiveEvent(
-				initialVuln.ID,
-				dtos.VulnTypeDependencyVuln,
-				"test-user",
-				"OPA is not exploitable in our context",
-				dtos.ComponentNotPresent,
-				"rule-test-artifact",
-				dtos.UpstreamStateInternal,
-				pathPattern,
-			)
-			err = dependencyVulnRepository.ApplyAndSave(nil, initialVuln, &fpEvent)
-			assert.Nil(t, err)
+			ruleBody := fmt.Sprintf(`{"justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
+			req.Header.Set("Content-Type", "application/json")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
 
-			// Verify the rule exists
-			rules, err := vulnEventRepository.GetFalsePositiveRulesForAsset(nil, asset.ID)
+			err = falsePositiveRuleController.Create(ctx)
 			assert.Nil(t, err)
-			assert.GreaterOrEqual(t, len(rules), 1, "should have at least one false positive rule")
+			assert.Equal(t, 201, recorder.Code)
 
 			// Now scan a different SBOM that creates a new vuln with the same path suffix
 			// Using sbom-with-multiple-paths which has OPA at the end of multiple paths

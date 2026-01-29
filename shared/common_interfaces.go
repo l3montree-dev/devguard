@@ -288,6 +288,14 @@ type SupplyChainRepository interface {
 	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
+type FalsePositiveRuleRepository interface {
+	utils.Repository[uuid.UUID, models.FalsePositiveRule, DB]
+	FindByAssetID(db DB, assetID uuid.UUID) ([]models.FalsePositiveRule, error)
+	Create(db DB, rule *models.FalsePositiveRule) error
+	Update(db DB, rule *models.FalsePositiveRule) error
+	Delete(db DB, id uuid.UUID) error
+}
+
 type OrganizationRepository interface {
 	utils.Repository[uuid.UUID, models.Org, DB]
 	ReadBySlug(slug string) (models.Org, error)
@@ -355,7 +363,7 @@ type DependencyVulnService interface {
 	UserDetectedExistingVulnOnDifferentBranch(tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
-	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState, pathPattern []string) (models.VulnEvent, error)
+	CreateVulnEventAndApply(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, upstream dtos.UpstreamState) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 

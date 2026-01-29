@@ -54,4 +54,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewGithubAppInstallationRepository, fx.As(new(shared.GithubAppInstallationRepository)))),
 	fx.Provide(fx.Annotate(NewJiraIntegrationRepository, fx.As(new(shared.JiraIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewCveRelationshipRepository, fx.As(new(shared.CVERelationshipRepository)))),
+	fx.Provide(fx.Annotate(NewFalsePositiveRuleRepository, fx.As(new(shared.FalsePositiveRuleRepository)))),
 )

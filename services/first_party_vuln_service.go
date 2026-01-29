@@ -114,7 +114,7 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID s
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, dtos.UpstreamStateInternal, nil)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, dtos.UpstreamStateInternal)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, dtos.UpstreamStateInternal)
 	case dtos.EventTypeComment:
