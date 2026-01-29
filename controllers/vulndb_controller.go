@@ -1,18 +1,29 @@
 package controllers
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type VulnDBController struct {
-	cveRepository shared.CveRepository
+	cveRepository           shared.CveRepository
+	maliciousPackageChecker shared.MaliciousPackageChecker
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker) *VulnDBController {
 	return &VulnDBController{
-		cveRepository: cveRepository,
+		cveRepository:           cveRepository,
+		maliciousPackageChecker: maliciousPackageChecker,
 	}
 }
 
@@ -82,4 +93,60 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 	cve.Vector = vector
 
 	return ctx.JSON(200, cve)
+}
+
+// @Summary Inspect a package URL (PURL) for vulnerabilities
+// @Description Analyze a given PURL, determine its match context, and return affected components and related vulnerabilities
+// @Tags VulnDB
+// @Produce json
+// @Param purl path string true "Package URL (PURL) to inspect"
+// @Success 200 {object} object "Inspection result including PURL, match context, affected components, and vulnerabilities"
+// @Failure 400 {object} object{message=string} "Invalid PURL provided"
+// @Failure 500 {object} object{message=string} "Internal server error"
+// @Router /vulndb/purl/{purl}/ [get]
+func (c VulnDBController) PURLInspect(ctx shared.Context) error {
+	purlString := shared.GetParam(ctx, "purl")
+
+	purlString, err := url.QueryUnescape(purlString)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid URL encoding in PURL").WithInternal(err)
+	}
+
+	//delete the last slash if exists
+	purlString = strings.TrimSuffix(purlString, "/")
+
+	purl, err := packageurl.FromString(purlString)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid PURL").WithInternal(err)
+	}
+
+	matchCtx := normalize.ParsePurlForMatching(purl)
+
+	purlComparer := scan.NewPurlComparer(c.cveRepository.GetDB(nil))
+
+	affectedComponents, err := purlComparer.GetAffectedComponents(purl)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to retrieve affected components for PURL").WithInternal(err)
+	}
+
+	vulns, err := purlComparer.GetVulns(purl)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
+	}
+
+	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
+
+	return ctx.JSON(200, struct {
+		PURL               packageurl.PackageURL       `json:"purl"`
+		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
+		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
+		Vulns              []models.VulnInPackage      `json:"vulns"`
+		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
+	}{
+		PURL:               purl,
+		MatchContext:       matchCtx,
+		AffectedComponents: affectedComponents,
+		Vulns:              vulns,
+		MaliciousPackage:   maliciousPackage,
+	})
 }
