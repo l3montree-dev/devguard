@@ -208,8 +208,6 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 			return purlStr, "unknown"
 		}
 
-		pkgType = purl.Type
-
 		// Build a concise label
 		var labelParts []string
 

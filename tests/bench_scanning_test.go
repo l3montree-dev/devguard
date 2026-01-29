@@ -43,7 +43,9 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 func initDevDatabase() (shared.DB, func()) {
-	shared.LoadConfig()
+	if err := shared.LoadConfig(); err != nil {
+		panic(err)
+	}
 	cfg := database.PoolConfig{
 		Host:            getEnvOrDefault("POSTGRES_HOST", "localhost"),
 		Port:            getEnvOrDefault("POSTGRES_PORT", "5432"),

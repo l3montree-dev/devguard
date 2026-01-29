@@ -2,7 +2,6 @@ package normalize
 
 import (
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -93,25 +92,6 @@ func ToPurlWithoutVersion(purl packageurl.PackageURL) string {
 	purl.Version = ""
 	purl.Qualifiers = nil
 	return purl.ToString()
-}
-
-// returns the normalized purl AND the component type
-func normalizePurl(purl string) string {
-	parsedPurl, err := packageurl.FromString(purl)
-	if err != nil {
-		purl, err := url.PathUnescape(purl)
-		if err != nil {
-			return purl
-		}
-		return purl
-	}
-
-	// unescape the purl
-	purl, err = url.PathUnescape(parsedPurl.ToString())
-	if err != nil {
-		return purl
-	}
-	return purl
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py
