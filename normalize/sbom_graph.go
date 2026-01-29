@@ -230,7 +230,7 @@ func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 		}
 	}
 
-	g.vulnerabilities[vuln.ID+"@"+affectsStr] = &vuln
+	g.vulnerabilities[vuln.ID+"@"+affectsStr+"@"+string(vuln.Analysis.State)] = &vuln
 }
 
 func (g *SBOMGraph) ClearScope() {
@@ -635,10 +635,28 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 	}
 }
 
-// Vulnerabilities returns all vulnerabilities.
+// Vulnerabilities returns all vulnerabilities, deduplicated by ID and affects.
+// When duplicates exist, vulnerabilities with "Affected" state are prioritized.
 func (g *SBOMGraph) Vulnerabilities() iter.Seq[*cdx.Vulnerability] {
 	return func(yield func(*cdx.Vulnerability) bool) {
-		for _, v := range g.vulnerabilities {
+		// Deduplicate vulnerabilities
+		deduplicated := make(map[string]*cdx.Vulnerability)
+		for i, v := range g.vulnerabilities {
+			key := strings.TrimSuffix(i, "@"+string(v.Analysis.State))
+			existing, ok := deduplicated[key]
+			if !ok {
+				deduplicated[key] = v
+			} else {
+				// Prioritize "Affected" state
+				if existing.Analysis.State == cdx.IASInTriage {
+					continue
+				} else if v.Analysis.State == cdx.IASInTriage {
+					deduplicated[key] = v
+				}
+			}
+		}
+
+		for _, v := range deduplicated {
 			if !yield(v) {
 				return
 			}
