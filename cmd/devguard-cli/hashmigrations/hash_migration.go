@@ -620,7 +620,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 				sbom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
 
 				for _, oldVuln := range vulns {
-					paths := sbom.FindAllPathsToPURL(oldVuln.ComponentPurl)
+					paths := sbom.FindAllPathsToPURL(oldVuln.ComponentPurl, 0)
 
 					if len(paths) == 0 {
 						slog.Warn("No SBOM paths found for vulnerable component, using empty path",

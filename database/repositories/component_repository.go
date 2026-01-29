@@ -168,7 +168,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	if len(diff.AddedNodes) > 0 {
 		if err := c.CreateBatch(nil, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
 			return models.Component{
-				ID: normalize.GetComponentID(*node.Component),
+				ID: node.Component.PackageURL,
 			}
 		})); err != nil {
 			return err
@@ -179,8 +179,9 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	removedNodeIDs := diff.RemovedNodeIDs()
 	if len(removedNodeIDs) > 0 {
 		if err := c.DeleteBatch(nil, utils.Map(removedNodeIDs, func(componentID string) models.Component {
+			node := wholeAssetGraph.Node(componentID)
 			return models.Component{
-				ID: componentID,
+				ID: node.Component.PackageURL,
 			}
 		})); err != nil {
 			return err
@@ -194,11 +195,12 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	if len(diff.RemovedEdges) > 0 {
 		var valueClauses []string
 		for _, edge := range diff.RemovedEdges {
-			componentID := edge[0]
-			if componentID == normalize.GraphRootNodeID {
+			node := wholeAssetGraph.Node(edge[0])
+			var componentID string
+			if node.Type == normalize.GraphNodeTypeRoot {
 				componentID = "NULL"
 			} else {
-				componentID = fmt.Sprintf("'%s'", componentID)
+				componentID = node.Component.PackageURL
 			}
 
 			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, edge[1]))
@@ -225,18 +227,19 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	for _, edge := range diff.AddedEdges {
 		c1 := wholeAssetGraph.Node(edge[0])
 		c2 := wholeAssetGraph.Node(edge[1])
-		var componentID *string = nil
-		if c1.Component != nil {
-			// only happens for root node
-			id := normalize.GetComponentID(*c1.Component)
-			componentID = &id
+		var componentID *string
+		if c1.Type == normalize.GraphNodeTypeRoot {
+			// set to nil for root nodes
+			componentID = nil
+		} else {
+			componentID = utils.Ptr(c1.Component.PackageURL)
 		}
 
 		componentDependency := models.ComponentDependency{
 			AssetID:          assetVersion.AssetID,
 			AssetVersionName: assetVersion.Name,
 			ComponentID:      componentID,
-			DependencyID:     normalize.GetComponentID(*c2.Component),
+			DependencyID:     c2.Component.PackageURL,
 		}
 
 		deps = append(deps, componentDependency)

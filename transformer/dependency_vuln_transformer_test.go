@@ -35,6 +35,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		// Add intermediate packages (trivy and cosign as actual packages)
 		trivyPurl := "pkg:golang/trivy@1.0.0"
 		trivyComp := cdx.Component{
+			BOMRef:     trivyPurl,
 			PackageURL: trivyPurl,
 			Name:       "trivy",
 			Version:    "1.0.0",
@@ -45,6 +46,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 
 		cosignPurl := "pkg:golang/cosign@1.0.0"
 		cosignComp := cdx.Component{
+			BOMRef:     cosignPurl,
 			PackageURL: cosignPurl,
 			Name:       "cosign",
 			Version:    "1.0.0",
@@ -56,6 +58,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		// Add the vulnerable stdlib component
 		stdlibPurl := "pkg:golang/stdlib@1.20.0"
 		stdlibComp := cdx.Component{
+			BOMRef:     stdlibPurl,
 			PackageURL: stdlibPurl,
 			Name:       "stdlib",
 			Version:    "1.20.0",
@@ -128,6 +131,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		// Add component with single path
 		compPurl := "pkg:npm/lodash@4.17.20"
 		comp := cdx.Component{
+			BOMRef:     compPurl,
 			PackageURL: compPurl,
 			Name:       "lodash",
 			Version:    "4.17.20",
@@ -194,17 +198,17 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 
 		// Create a chain: infoSource -> dep1 -> dep2 -> vulnerable
 		dep1Purl := "pkg:npm/dep1@1.0.0"
-		dep1 := cdx.Component{PackageURL: dep1Purl, Name: "dep1", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		dep1 := cdx.Component{BOMRef: dep1Purl, PackageURL: dep1Purl, Name: "dep1", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
 		dep1ID := sbom.AddComponent(dep1)
 		sbom.AddEdge(infoSourceID, dep1ID)
 
 		dep2Purl := "pkg:npm/dep2@1.0.0"
-		dep2 := cdx.Component{PackageURL: dep2Purl, Name: "dep2", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		dep2 := cdx.Component{BOMRef: dep2Purl, PackageURL: dep2Purl, Name: "dep2", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
 		dep2ID := sbom.AddComponent(dep2)
 		sbom.AddEdge(dep1ID, dep2ID)
 
 		vulnPurl := "pkg:npm/vulnerable@1.0.0"
-		vulnComp := cdx.Component{PackageURL: vulnPurl, Name: "vulnerable", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
+		vulnComp := cdx.Component{BOMRef: vulnPurl, PackageURL: vulnPurl, Name: "vulnerable", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
 		vulnID := sbom.AddComponent(vulnComp)
 		sbom.AddEdge(dep2ID, vulnID)
 

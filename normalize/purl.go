@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -113,19 +112,6 @@ func normalizePurl(purl string) string {
 		return purl
 	}
 	return purl
-}
-
-func GetComponentID(component cdx.Component) string {
-	if component.BOMRef == GraphRootNodeID {
-		return "" // replace with nil before storing.
-	} else if component.BOMRef != "" {
-		// For artifact and info-source nodes, use BOMRef (e.g., "artifact:source", "sbom:DEFAULT@scanner")
-		return component.BOMRef
-	} else if component.PackageURL != "" {
-		return normalizePurl(component.PackageURL)
-	} else {
-		return component.Name // fallback to name
-	}
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py
