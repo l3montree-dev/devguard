@@ -159,7 +159,8 @@ func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion
 		return nil, errors.Wrap(err, "could not load components")
 	}
 
-	return normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), componentLicenseOverwrites), nil
+	// Uses generics to avoid slice type conversion (reduces allocations)
+	return normalize.SBOMGraphFromComponents(components, componentLicenseOverwrites), nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {

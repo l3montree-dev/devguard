@@ -302,7 +302,8 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not scope sbom to artifact")
 	}
 	// create dependencyVulns out of those vulnerabilities - one per unique path
-	dependencyVulns := []models.DependencyVuln{}
+	// Pre-allocate with estimated capacity (assume ~2 paths per vuln on average)
+	dependencyVulns := make([]models.DependencyVuln, 0, len(vulns)*2)
 
 	for _, vuln := range vulns {
 		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)

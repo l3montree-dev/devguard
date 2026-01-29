@@ -1337,11 +1337,12 @@ type GraphComponent interface {
 // SBOMGraphFromComponents builds an SBOMGraph from database components.
 // The components include artifact nodes, information source nodes, and regular components.
 // This function reconstructs the full graph structure from the flat component list.
-func SBOMGraphFromComponents(components []GraphComponent, licenseOverwrites map[string]string) *SBOMGraph {
+// Uses generics to avoid slice type conversion and reduce memory allocations.
+func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites map[string]string) *SBOMGraph {
 	g := NewSBOMGraph()
 
 	// Build dependency map: parent -> children
-	dependencyMap := make(map[string][]string)
+	dependencyMap := make(map[string][]string, len(components))
 	for _, c := range components {
 		var parentID string
 		if c.GetDependentID() != nil {

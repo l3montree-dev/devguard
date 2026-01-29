@@ -178,8 +178,8 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 		}
 	}
 
-	// Create one DependencyVuln per path
-	var result []models.DependencyVuln
+	// Create one DependencyVuln per path (pre-allocate with known capacity)
+	result := make([]models.DependencyVuln, 0, len(paths))
 	for _, path := range paths {
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
