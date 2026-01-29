@@ -165,6 +165,9 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
 
+		lowUniqueRisk, mediumUniqueRisk, highUniqueRisk, criticalUniqueRisk := calculateUniqueCVEPurlCountsByRisk(openVulns)
+		lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss := calculateUniqueCVEPurlCountsByCvss(openVulns)
+
 		result := models.ArtifactRiskHistory{
 			ArtifactName:     artifact.ArtifactName,
 			AssetVersionName: artifact.AssetVersionName,
@@ -193,6 +196,16 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 					MediumCVSS:   mediumCvss,
 					HighCVSS:     highCvss,
 					CriticalCVSS: criticalCvss,
+
+					CVEPurlLow:      lowUniqueRisk,
+					CVEPurlMedium:   mediumUniqueRisk,
+					CVEPurlHigh:     highUniqueRisk,
+					CVEPurlCritical: criticalUniqueRisk,
+
+					CVEPurlLowCVSS:      lowUniqueCvss,
+					CVEPurlMediumCVSS:   mediumUniqueCvss,
+					CVEPurlHighCVSS:     highUniqueCvss,
+					CVEPurlCriticalCVSS: criticalUniqueCvss,
 				},
 			},
 		}
@@ -324,6 +337,60 @@ func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low
 		case risk >= 9.0 && risk <= 10.0:
 			critical++
 		}
+	}
+	return
+}
+
+func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	uniqueCombinations := make(map[string]struct{})
+
+	for _, vuln := range dependencyVulns {
+		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
+
+		if _, exists := uniqueCombinations[combinationKey]; exists {
+			continue // already counted this CVE+PURL combination
+		}
+
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			low++
+		case risk >= 4.0 && risk < 7.0:
+			medium++
+		case risk >= 7.0 && risk < 9.0:
+			high++
+		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
+
+		uniqueCombinations[combinationKey] = struct{}{}
+	}
+	return
+}
+
+func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	uniqueCombinations := make(map[string]struct{})
+
+	for _, vuln := range dependencyVulns {
+		cvss := float64(vuln.CVE.CVSS)
+		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
+
+		if _, exists := uniqueCombinations[combinationKey]; exists {
+			continue // already counted this CVE+PURL combination
+		}
+
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
+			critical++
+		}
+
+		uniqueCombinations[combinationKey] = struct{}{}
 	}
 	return
 }

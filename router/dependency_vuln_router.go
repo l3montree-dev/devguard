@@ -38,6 +38,7 @@ func NewDependencyVulnRouter(
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
 	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, middlewares.NeededScope([]string{"manage"}))
+	dependencyVulnRouter.POST("/batch/", dependencyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}))
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}))
 

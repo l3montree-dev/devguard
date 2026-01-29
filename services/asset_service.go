@@ -132,10 +132,10 @@ func (s *assetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) str
 	var CVSS models.Distribution
 
 	for _, result := range results {
-		CVSS.Critical += result.CriticalCVSS
-		CVSS.High += result.HighCVSS
-		CVSS.Medium += result.MediumCVSS
-		CVSS.Low += result.LowCVSS
+		CVSS.Critical += result.CVEPurlCriticalCVSS
+		CVSS.High += result.CVEPurlHighCVSS
+		CVSS.Medium += result.CVEPurlMediumCVSS
+		CVSS.Low += result.CVEPurlLowCVSS
 	}
 
 	if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {

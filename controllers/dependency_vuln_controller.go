@@ -18,11 +18,10 @@ import (
 )
 
 type dependencyVulnsByPackage struct {
-	PackageName string  `json:"packageName"`
-	AvgRisk     float64 `json:"avgRisk"`
-	MaxRisk     float64 `json:"maxRisk"`
-	MaxCVSS     float64 `json:"maxCvss"`
-	//TODO: change the name to DependencyVulnCount
+	PackageName         string  `json:"packageName"`
+	AvgRisk             float64 `json:"avgRisk"`
+	MaxRisk             float64 `json:"maxRisk"`
+	MaxCVSS             float64 `json:"maxCvss"`
 	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
@@ -40,6 +39,13 @@ type DependencyVulnController struct {
 }
 
 type DependencyVulnStatus struct {
+	StatusType              string                           `json:"status"`
+	Justification           string                           `json:"justification"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
+}
+
+type BatchDependencyVulnStatus struct {
+	VulnIDs                 []string                         `json:"vulnIds"`
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
@@ -204,7 +210,15 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 		v.MaxCVSS = maxCvss
 
 		v.TotalRisk = totalRisk
-		v.DependencyVulnCount = len(v.DependencyVulns)
+		// we need to unique those counts by component_purl + cve_id
+		// we don't want to count the same vulnerability multiple times for the same package if it only differs in paths
+
+		uniqueVulnMap := make(map[string]struct{})
+		for _, dv := range v.DependencyVulns {
+			uniqueVulnMap[dv.CVEID] = struct{}{}
+		}
+
+		v.DependencyVulnCount = len(uniqueVulnMap)
 		values = append(values, v)
 	}
 
@@ -440,4 +454,62 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	} */
 
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
+}
+
+func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
+
+	var status BatchDependencyVulnStatus
+	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if len(status.VulnIDs) == 0 {
+		return echo.NewHTTPError(400, "vulnIds must not be empty")
+	}
+
+	err = models.CheckStatusType(status.StatusType)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid status type")
+	}
+
+	eventType := dtos.VulnEventType(status.StatusType)
+	updatedVulns := make([]dtos.DetailedDependencyVulnDTO, 0, len(status.VulnIDs))
+
+	for _, vulnID := range status.VulnIDs {
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(vulnID)
+		if err != nil {
+			slog.Error("could not find dependencyVuln", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+		if err != nil {
+			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		for _, artifact := range dependencyVuln.Artifacts {
+			if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
+				if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+					slog.Error("could not recalculate risk history", "err", err)
+				}
+			}
+		}
+
+		if err := thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+			Ctx:   ctx,
+			Event: ev,
+		}); err != nil {
+			slog.Error("could not handle event", "err", err)
+		}
+
+		updatedVulns = append(updatedVulns, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
+	}
+
+	return ctx.JSON(200, updatedVulns)
 }
