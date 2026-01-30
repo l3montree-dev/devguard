@@ -229,7 +229,7 @@ type VulnInPackage struct {
 
 type ComponentOccurrence struct {
 	ComponentDependencyID uuid.UUID `json:"componentDependencyId" gorm:"column:component_dependency_id"`
-	DependencyPurl        *string   `json:"dependencyPurl" gorm:"column:dependency_purl"`
+	DependencyPurl        *string   `json:"dependencyPurl" gorm:"column:dependency_id"`
 	ProjectID             uuid.UUID `json:"projectId" gorm:"column:project_id"`
 	ProjectName           string    `json:"projectName" gorm:"column:project_name"`
 	ProjectSlug           string    `json:"projectSlug" gorm:"column:project_slug"`

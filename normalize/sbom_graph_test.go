@@ -1141,7 +1141,7 @@ func TestVulnerabilities(t *testing.T) {
 }
 
 func TestToMinimalTree(t *testing.T) {
-	t.Run("simple tree from root scope", func(t *testing.T) {
+	t.Run("simple tree with components", func(t *testing.T) {
 		g := NewSBOMGraph()
 		artifactID := g.AddArtifact("my-app")
 		infoSourceID := g.AddInfoSource(artifactID, "package.json", InfoSourceSBOM)
@@ -1156,75 +1156,45 @@ func TestToMinimalTree(t *testing.T) {
 
 		tree := g.ToMinimalTree()
 
-		assert.Equal(t, "ROOT", tree.Name)
-		assert.Len(t, tree.Children, 1)
-		assert.Equal(t, "artifact:my-app", tree.Children[0].Name)
-		assert.Len(t, tree.Children[0].Children, 1)
-		assert.Equal(t, "sbom:package.json@my-app", tree.Children[0].Children[0].Name)
-		assert.Len(t, tree.Children[0].Children[0].Children, 2)
+		// Should contain all nodes (including structural nodes)
+		assert.Contains(t, tree.Nodes, "pkg:npm/lodash@4.17.21")
+		assert.Contains(t, tree.Nodes, "pkg:npm/express@4.18.2")
+
+		// Info source should have both components as dependencies
+		infoSourcePURL := "sbom:package.json@my-app"
+		assert.Contains(t, tree.Dependencies[infoSourcePURL], "pkg:npm/lodash@4.17.21")
+		assert.Contains(t, tree.Dependencies[infoSourcePURL], "pkg:npm/express@4.18.2")
 	})
 
-	t.Run("tree scoped to artifact", func(t *testing.T) {
+	t.Run("tree with component dependencies", func(t *testing.T) {
 		g := NewSBOMGraph()
 		artifactID := g.AddArtifact("my-app")
 		infoSourceID := g.AddInfoSource(artifactID, "package.json", InfoSourceSBOM)
 
-		comp1 := cdx.Component{PackageURL: "pkg:npm/lodash@4.17.21", BOMRef: "pkg:npm/lodash@4.17.21"}
-		comp1ID := g.AddComponent(comp1)
-		g.AddEdge(infoSourceID, comp1ID)
+		// Create a dependency chain: infoSource -> a -> b -> c
+		compA := cdx.Component{PackageURL: "pkg:npm/a@1.0.0", BOMRef: "pkg:npm/a@1.0.0"}
+		compB := cdx.Component{PackageURL: "pkg:npm/b@1.0.0", BOMRef: "pkg:npm/b@1.0.0"}
+		compC := cdx.Component{PackageURL: "pkg:npm/c@1.0.0", BOMRef: "pkg:npm/c@1.0.0"}
 
-		assert.Nil(t, g.ScopeToArtifact("my-app"))
-		tree := g.ToMinimalTree()
+		compAID := g.AddComponent(compA)
+		compBID := g.AddComponent(compB)
+		compCID := g.AddComponent(compC)
 
-		// Should start from artifact, not ROOT
-		assert.Equal(t, "artifact:my-app", tree.Name)
-		assert.Len(t, tree.Children, 1)
-		assert.Equal(t, "sbom:package.json@my-app", tree.Children[0].Name)
-	})
-
-	t.Run("component appears under multiple artifacts", func(t *testing.T) {
-		g := NewSBOMGraph()
-
-		// Create two artifacts with same component
-		artifact1ID := g.AddArtifact("app1")
-		infoSource1ID := g.AddInfoSource(artifact1ID, "package.json", InfoSourceSBOM)
-
-		artifact2ID := g.AddArtifact("app2")
-		infoSource2ID := g.AddInfoSource(artifact2ID, "package.json", InfoSourceSBOM)
-
-		sharedComp := cdx.Component{PackageURL: "pkg:npm/lodash@4.17.21", BOMRef: "pkg:npm/lodash@4.17.21"}
-		sharedCompID := g.AddComponent(sharedComp)
-
-		g.AddEdge(infoSource1ID, sharedCompID)
-		g.AddEdge(infoSource2ID, sharedCompID)
+		g.AddEdge(infoSourceID, compAID)
+		g.AddEdge(compAID, compBID)
+		g.AddEdge(compBID, compCID)
 
 		tree := g.ToMinimalTree()
 
-		assert.Equal(t, "ROOT", tree.Name)
-		assert.Len(t, tree.Children, 2)
+		// Verify nodes exist
+		assert.Contains(t, tree.Nodes, "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/b@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/c@1.0.0")
 
-		// Both artifacts should have the shared component
-		var artifact1Tree, artifact2Tree *minimalTreeNode
-		for _, child := range tree.Children {
-			switch child.Name {
-			case "artifact:app1":
-				artifact1Tree = child
-			case "artifact:app2":
-				artifact2Tree = child
-			}
-		}
-
-		assert.NotNil(t, artifact1Tree)
-		assert.NotNil(t, artifact2Tree)
-
-		// Both should have lodash as a descendant
-		assert.Len(t, artifact1Tree.Children, 1)
-		assert.Len(t, artifact1Tree.Children[0].Children, 1)
-		assert.Equal(t, "pkg:npm/lodash@4.17.21", artifact1Tree.Children[0].Children[0].Name)
-
-		assert.Len(t, artifact2Tree.Children, 1)
-		assert.Len(t, artifact2Tree.Children[0].Children, 1)
-		assert.Equal(t, "pkg:npm/lodash@4.17.21", artifact2Tree.Children[0].Children[0].Name)
+		// Verify dependency chain
+		assert.Contains(t, tree.Dependencies["pkg:npm/a@1.0.0"], "pkg:npm/b@1.0.0")
+		assert.Contains(t, tree.Dependencies["pkg:npm/b@1.0.0"], "pkg:npm/c@1.0.0")
+		assert.Empty(t, tree.Dependencies["pkg:npm/c@1.0.0"])
 	})
 
 	t.Run("handles cycles correctly", func(t *testing.T) {
@@ -1248,58 +1218,23 @@ func TestToMinimalTree(t *testing.T) {
 
 		tree := g.ToMinimalTree()
 
-		// Should not cause infinite recursion
-		assert.NotNil(t, tree)
-		assert.Equal(t, "ROOT", tree.Name)
+		// Should not panic and should contain all nodes
+		assert.Contains(t, tree.Nodes, "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/b@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/c@1.0.0")
 
-		// Verify structure exists
-		assert.Len(t, tree.Children, 1)
-		artifact := tree.Children[0]
-		assert.Equal(t, "artifact:my-app", artifact.Name)
-	})
-
-	t.Run("tree with component dependencies", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "package.json", InfoSourceSBOM)
-
-		// Create a dependency chain: root -> a -> b -> c
-		compA := cdx.Component{PackageURL: "pkg:npm/a@1.0.0", BOMRef: "pkg:npm/a@1.0.0"}
-		compB := cdx.Component{PackageURL: "pkg:npm/b@1.0.0", BOMRef: "pkg:npm/b@1.0.0"}
-		compC := cdx.Component{PackageURL: "pkg:npm/c@1.0.0", BOMRef: "pkg:npm/c@1.0.0"}
-
-		compAID := g.AddComponent(compA)
-		compBID := g.AddComponent(compB)
-		compCID := g.AddComponent(compC)
-
-		g.AddEdge(infoSourceID, compAID)
-		g.AddEdge(compAID, compBID)
-		g.AddEdge(compBID, compCID)
-
-		tree := g.ToMinimalTree()
-
-		// Navigate through the tree
-		assert.Equal(t, "ROOT", tree.Name)
-		artifact := tree.Children[0]
-		infoSource := artifact.Children[0]
-		componentA := infoSource.Children[0]
-		assert.Equal(t, "pkg:npm/a@1.0.0", componentA.Name)
-		assert.Len(t, componentA.Children, 1)
-
-		componentB := componentA.Children[0]
-		assert.Equal(t, "pkg:npm/b@1.0.0", componentB.Name)
-		assert.Len(t, componentB.Children, 1)
-
-		componentC := componentB.Children[0]
-		assert.Equal(t, "pkg:npm/c@1.0.0", componentC.Name)
-		assert.Len(t, componentC.Children, 0)
+		// Cycle should be represented in dependencies
+		assert.Contains(t, tree.Dependencies["pkg:npm/a@1.0.0"], "pkg:npm/b@1.0.0")
+		assert.Contains(t, tree.Dependencies["pkg:npm/b@1.0.0"], "pkg:npm/c@1.0.0")
+		assert.Contains(t, tree.Dependencies["pkg:npm/c@1.0.0"], "pkg:npm/a@1.0.0")
 	})
 
 	t.Run("empty graph", func(t *testing.T) {
 		g := NewSBOMGraph()
 		tree := g.ToMinimalTree()
 
-		assert.Equal(t, "ROOT", tree.Name)
-		assert.Len(t, tree.Children, 0)
+		// Empty graph should have ROOT node but no component nodes
+		assert.Contains(t, tree.Nodes, "") // ROOT has empty PackageURL
+		assert.Empty(t, tree.Dependencies[""])
 	})
 }

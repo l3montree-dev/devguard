@@ -42,10 +42,6 @@ type DependencyVulnStatus struct {
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-	// PathPattern is a path suffix pattern for false positive rules.
-	// When specified for a falsePositive event, the rule will be applied to all
-	// vulnerabilities in this asset whose path ends with this pattern.
-	PathPattern []string `json:"pathPattern,omitempty"`
 }
 
 type BatchDependencyVulnStatus struct {
@@ -426,9 +422,8 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
-	pathPattern := status.PathPattern
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal, pathPattern)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
 	if err != nil {
 		return err
 	}
@@ -492,7 +487,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal, nil)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
