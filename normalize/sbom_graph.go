@@ -129,6 +129,16 @@ type SBOMGraph struct {
 	scopeID string // The id of the current scope node
 }
 
+func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
+	depMap := make(map[string][]string)
+	for parent, children := range edges {
+		for child := range children {
+			depMap[parent] = append(depMap[parent], child)
+		}
+	}
+	return depMap
+}
+
 const GraphRootNodeID = "ROOT"
 
 // =============================================================================
@@ -988,26 +998,30 @@ type BOMMetadata struct {
 // =============================================================================
 
 type minimalTree struct {
-	Nodes        []string
-	Dependencies map[string][]string
+	Nodes        []string            `json:"nodes"`
+	Dependencies map[string][]string `json:"dependencies"`
 }
 
 func (g *SBOMGraph) ToMinimalTree() minimalTree {
 	// we need to make sure, that we translate component node ids to purls
-	nodes := make([]string, len(g.nodes))
+	nodes := make([]string, 0, len(g.nodes))
 	dependencies := make(map[string][]string)
+	depMap := edgesToDepMap(g.edges)
 
 	for _, v := range g.nodes {
 		nodes = append(nodes, v.Component.PackageURL)
 	}
-	for parent, children := range g.edges {
+	for parent := range g.edges {
 		parentNode := g.nodes[parent]
 		if parentNode == nil {
 			continue
 		}
-		deps := make([]string, 0, len(children))
+
 		parentPURL := parentNode.Component.PackageURL
-		for child := range children {
+
+		children := getChildrenOfParent(depMap, g.nodes, parent)
+		deps := make([]string, 0, len(children))
+		for _, child := range children {
 			childNode := g.nodes[child]
 			if childNode == nil {
 				continue
