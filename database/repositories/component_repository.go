@@ -195,12 +195,11 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	if len(diff.RemovedEdges) > 0 {
 		var valueClauses []string
 		for _, edge := range diff.RemovedEdges {
-			node := wholeAssetGraph.Node(edge[0])
 			var componentID string
-			if node.Type == normalize.GraphNodeTypeRoot {
+			if edge[0] == normalize.GraphRootNodeID {
 				componentID = "NULL"
 			} else {
-				componentID = node.Component.PackageURL
+				componentID = fmt.Sprintf("'%s'", edge[0])
 			}
 
 			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, edge[1]))
