@@ -198,24 +198,26 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	}
 
 	riskThreshold := ""
-	if failOnRisk == "low" {
+	switch failOnRisk {
+	case "low":
 		riskThreshold = "> 0.1"
-	} else if failOnRisk == "medium" {
+	case "medium":
 		riskThreshold = ">= 4"
-	} else if failOnRisk == "high" {
+	case "high":
 		riskThreshold = ">= 7"
-	} else if failOnRisk == "critical" {
+	case "critical":
 		riskThreshold = ">= 9"
 	}
 
 	cvssThreshold := ""
-	if failOnCVSS == "low" {
+	switch failOnCVSS {
+	case "low":
 		cvssThreshold = "> 0.1"
-	} else if failOnCVSS == "medium" {
+	case "medium":
 		cvssThreshold = ">= 4"
-	} else if failOnCVSS == "high" {
+	case "high":
 		cvssThreshold = ">= 7"
-	} else if failOnCVSS == "critical" {
+	case "critical":
 		cvssThreshold = ">= 9"
 	}
 
