@@ -40,6 +40,174 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 	return &ScanService_Expecter{mock: &_m.Mock}
 }
 
+// FetchSbomsFromUpstream provides a mock function for the type ScanService
+func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
+	ret := _mock.Called(artifactName, ref, upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchSbomsFromUpstream")
+	}
+
+	var r0 []*normalize.SBOMGraph
+	var r1 []string
+	var r2 []string
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.SBOMGraph, []string, []string)); ok {
+		return returnFunc(artifactName, ref, upstreamURLs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.SBOMGraph); ok {
+		r0 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*normalize.SBOMGraph)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
+		r1 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
+		r2 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]string)
+		}
+	}
+	return r0, r1, r2
+}
+
+// ScanService_FetchSbomsFromUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchSbomsFromUpstream'
+type ScanService_FetchSbomsFromUpstream_Call struct {
+	*mock.Call
+}
+
+// FetchSbomsFromUpstream is a helper method to define mock.On call
+//   - artifactName string
+//   - ref string
+//   - upstreamURLs []string
+func (_e *ScanService_Expecter) FetchSbomsFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
+	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", artifactName, ref, upstreamURLs)}
+}
+
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, strings1 []string) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Return(sBOMGraphs, strings, strings1)
+	return _c
+}
+
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FetchVexFromUpstream provides a mock function for the type ScanService
+func (_mock *ScanService) FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string) {
+	ret := _mock.Called(artifactName, ref, upstreamURLs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchVexFromUpstream")
+	}
+
+	var r0 []*normalize.VexReport
+	var r1 []string
+	var r2 []string
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.VexReport, []string, []string)); ok {
+		return returnFunc(artifactName, ref, upstreamURLs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.VexReport); ok {
+		r0 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*normalize.VexReport)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
+		r1 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
+		r2 = returnFunc(artifactName, ref, upstreamURLs)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]string)
+		}
+	}
+	return r0, r1, r2
+}
+
+// ScanService_FetchVexFromUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchVexFromUpstream'
+type ScanService_FetchVexFromUpstream_Call struct {
+	*mock.Call
+}
+
+// FetchVexFromUpstream is a helper method to define mock.On call
+//   - artifactName string
+//   - ref string
+//   - upstreamURLs []string
+func (_e *ScanService_Expecter) FetchVexFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
+	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", artifactName, ref, upstreamURLs)}
+}
+
+func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchVexFromUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_FetchVexFromUpstream_Call) Return(vexReports []*normalize.VexReport, strings []string, strings1 []string) *ScanService_FetchVexFromUpstream_Call {
+	_c.Call.Return(vexReports, strings, strings1)
+	return _c
+}
+
+func (_c *ScanService_FetchVexFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string)) *ScanService_FetchVexFromUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HandleFirstPartyVulnResult provides a mock function for the type ScanService
 func (_mock *ScanService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	ret := _mock.Called(org, project, asset, assetVersion, sarifScan, scannerID, userID)
@@ -282,6 +450,120 @@ func (_c *ScanService_HandleScanResult_Call) Return(opened []models.DependencyVu
 }
 
 func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RunArtifactSecurityLifecycle provides a mock function for the type ScanService
+func (_mock *ScanService) RunArtifactSecurityLifecycle(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error) {
+	ret := _mock.Called(tx, org, project, asset, assetVersion, artifact, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RunArtifactSecurityLifecycle")
+	}
+
+	var r0 *normalize.SBOMGraph
+	var r1 []*normalize.VexReport
+	var r2 []models.DependencyVuln
+	var r3 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)); ok {
+		return returnFunc(tx, org, project, asset, assetVersion, artifact, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) *normalize.SBOMGraph); ok {
+		r0 = returnFunc(tx, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*normalize.SBOMGraph)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) []*normalize.VexReport); ok {
+		r1 = returnFunc(tx, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*normalize.VexReport)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) []models.DependencyVuln); ok {
+		r2 = returnFunc(tx, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(3).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string) error); ok {
+		r3 = returnFunc(tx, org, project, asset, assetVersion, artifact, userID)
+	} else {
+		r3 = ret.Error(3)
+	}
+	return r0, r1, r2, r3
+}
+
+// ScanService_RunArtifactSecurityLifecycle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunArtifactSecurityLifecycle'
+type ScanService_RunArtifactSecurityLifecycle_Call struct {
+	*mock.Call
+}
+
+// RunArtifactSecurityLifecycle is a helper method to define mock.On call
+//   - tx shared.DB
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - artifact models.Artifact
+//   - userID string
+func (_e *ScanService_Expecter) RunArtifactSecurityLifecycle(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}) *ScanService_RunArtifactSecurityLifecycle_Call {
+	return &ScanService_RunArtifactSecurityLifecycle_Call{Call: _e.mock.On("RunArtifactSecurityLifecycle", tx, org, project, asset, assetVersion, artifact, userID)}
+}
+
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string)) *ScanService_RunArtifactSecurityLifecycle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 models.Org
+		if args[1] != nil {
+			arg1 = args[1].(models.Org)
+		}
+		var arg2 models.Project
+		if args[2] != nil {
+			arg2 = args[2].(models.Project)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 models.Artifact
+		if args[5] != nil {
+			arg5 = args[5].(models.Artifact)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Return(sBOMGraph *normalize.SBOMGraph, vexReports []*normalize.VexReport, dependencyVulns []models.DependencyVuln, err error) *ScanService_RunArtifactSecurityLifecycle_Call {
+	_c.Call.Return(sBOMGraph, vexReports, dependencyVulns, err)
+	return _c
+}
+
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)) *ScanService_RunArtifactSecurityLifecycle_Call {
 	_c.Call.Return(run)
 	return _c
 }

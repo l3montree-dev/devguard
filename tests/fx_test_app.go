@@ -24,13 +24,16 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
@@ -62,17 +65,17 @@ type TestApp struct {
 	MaliciousPackageChecker  shared.MaliciousPackageChecker
 
 	// Controllers
-	AssetController             *controllers.AssetController
-	AssetVersionController      *controllers.AssetVersionController
-	ScanController              *controllers.ScanController
-	ProjectController           *controllers.ProjectController
-	OrgController               *controllers.OrgController
-	DependencyVulnController    *controllers.DependencyVulnController
-	FirstPartyVulnController    *controllers.FirstPartyVulnController
-	ComponentController         *controllers.ComponentController
-	ArtifactController          *controllers.ArtifactController
-	CSAFController              *controllers.CSAFController
-	FalsePositiveRuleController *controllers.FalsePositiveRuleController
+	AssetController          *controllers.AssetController
+	AssetVersionController   *controllers.AssetVersionController
+	ScanController           *controllers.ScanController
+	ProjectController        *controllers.ProjectController
+	OrgController            *controllers.OrgController
+	DependencyVulnController *controllers.DependencyVulnController
+	FirstPartyVulnController *controllers.FirstPartyVulnController
+	ComponentController      *controllers.ComponentController
+	ArtifactController       *controllers.ArtifactController
+	CSAFController           *controllers.CSAFController
+	VEXRuleController        *controllers.VEXRuleController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
@@ -95,6 +98,9 @@ type TestApp struct {
 	GitlabIntegrationRepository shared.GitlabIntegrationRepository
 	ExternalUserRepository      shared.ExternalUserRepository
 	AggregatedVulnRepository    shared.VulnRepository
+	VexRuleRepository           shared.VEXRuleRepository
+	ExternalReferenceRepository shared.ExternalReferenceRepository
+	VexRuleService              shared.VEXRuleService
 
 	// Access Control
 	RBACProvider shared.RBACProvider
@@ -158,13 +164,21 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Decorate(func() shared.LeaderElector {
 			return &testLeaderElector{}
 		}),
-		fx.Populate(&app),
 	}
 
-	// Add extra options if provided
+	// Add extra options if provided (this allows tests to provide custom services)
 	if len(opts.ExtraOptions) > 0 {
 		fxOptions = append(fxOptions, opts.ExtraOptions...)
+	} else {
+		// Only mock ComponentService if no extra options are provided
+		// (tests that provide extra options can provide their own service implementations)
+		fxOptions = append(fxOptions, fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+			mockCS := createMockedComponentService(t, cs)
+			return mockCS
+		}))
 	}
+
+	fxOptions = append(fxOptions, fx.Populate(&app))
 
 	// Suppress logs if requested
 	if opts.SuppressLogs {
@@ -213,4 +227,39 @@ type testLeaderElector struct{}
 
 func (t *testLeaderElector) IsLeader() bool {
 	return true
+}
+
+// createMockedComponentService wraps the real ComponentService with mocking for external calls
+// This ensures tests don't make actual HTTP requests
+func createMockedComponentService(t testing.TB, realCS shared.ComponentService) shared.ComponentService {
+	mockCS := &mocks.ComponentService{}
+
+	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return([]models.Component{}, nil)
+
+	// Mock other methods to delegate to real implementation
+	mockCS.On("GetLicense", mock.Anything).
+		Return(func(component models.Component) models.Component {
+			result, _ := realCS.GetLicense(component)
+			return result
+		}, nil)
+
+	mockCS.On("FetchInformationSources", mock.Anything).
+		Return(func(artifact *models.Artifact) []models.ComponentDependency {
+			result, _ := realCS.FetchInformationSources(artifact)
+			return result
+		}, nil)
+
+	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+		Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+			return realCS.RemoveInformationSources(artifact, rootNodePurls)
+		})
+
+	mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+		Return(func(project models.ComponentProject) {
+			realCS.RefreshComponentProjectInformation(project)
+		})
+
+	return mockCS
 }

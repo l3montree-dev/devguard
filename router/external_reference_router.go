@@ -21,25 +21,23 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type FalsePositiveRuleRouter struct {
+type ExternalReferenceRouter struct {
 	*echo.Group
 }
 
-func NewFalsePositiveRuleRouter(
-	assetRouter AssetRouter,
-	falsePositiveRuleController *controllers.FalsePositiveRuleController,
-) FalsePositiveRuleRouter {
-	// False positive rules are scoped to assets
-	// Read access - anyone who can read the asset can list rules
-	ruleGroup := assetRouter.Group.Group("/false-positive-rules")
-	ruleGroup.GET("/", falsePositiveRuleController.List)
-	ruleGroup.GET("/:ruleId/", falsePositiveRuleController.Get)
+func NewExternalReferenceRouter(
+	assetVersionRouter AssetVersionRouter,
+	externalReferenceController *controllers.ExternalReferenceController,
+) ExternalReferenceRouter {
+	// External references are scoped to asset versions
+	// Read access - anyone who can read the asset version can list references
+	refGroup := assetVersionRouter.Group.Group("/external-references")
+	refGroup.GET("", externalReferenceController.List) // List all references for asset version
 
 	// Write access - requires asset update permission
-	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("/", falsePositiveRuleController.Create)
-	ruleWriteGroup.PUT("/:ruleId/", falsePositiveRuleController.Update)
-	ruleWriteGroup.DELETE("/:ruleId/", falsePositiveRuleController.Delete)
+	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
+	refWriteGroup.POST("/", externalReferenceController.Create)                  // Create reference
+	refWriteGroup.DELETE("/", externalReferenceController.DeleteForAssetVersion) // Delete all references for asset version
 
-	return FalsePositiveRuleRouter{Group: ruleGroup}
+	return ExternalReferenceRouter{Group: refGroup}
 }

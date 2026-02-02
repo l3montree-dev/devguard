@@ -32,27 +32,31 @@ import (
 )
 
 type ScanController struct {
-	assetVersionRepository shared.AssetVersionRepository
-	assetVersionService    shared.AssetVersionService
-	statisticsService      shared.StatisticsService
-	artifactService        shared.ArtifactService
-	dependencyVulnService  shared.DependencyVulnService
-	firstPartyVulnService  shared.FirstPartyVulnService
+	assetVersionRepository      shared.AssetVersionRepository
+	assetVersionService         shared.AssetVersionService
+	statisticsService           shared.StatisticsService
+	artifactService             shared.ArtifactService
+	dependencyVulnService       shared.DependencyVulnService
+	firstPartyVulnService       shared.FirstPartyVulnService
+	vexRuleService              shared.VEXRuleService
+	externalReferenceRepository shared.ExternalReferenceRepository
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository) *ScanController {
 	return &ScanController{
-		assetVersionService:       assetVersionService,
-		assetVersionRepository:    assetVersionRepository,
-		statisticsService:         statisticsService,
-		dependencyVulnService:     dependencyVulnService,
-		firstPartyVulnService:     firstPartyVulnService,
-		FireAndForgetSynchronizer: synchronizer,
-		artifactService:           artifactService,
-		ScanService:               scanService,
+		assetVersionService:         assetVersionService,
+		assetVersionRepository:      assetVersionRepository,
+		statisticsService:           statisticsService,
+		dependencyVulnService:       dependencyVulnService,
+		firstPartyVulnService:       firstPartyVulnService,
+		FireAndForgetSynchronizer:   synchronizer,
+		artifactService:             artifactService,
+		ScanService:                 scanService,
+		vexRuleService:              vexRuleService,
+		externalReferenceRepository: externalReferenceRepository,
 	}
 }
 
@@ -79,7 +83,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	ctx.Request().Body.Close()
 
 	asset := shared.GetAsset(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	org := shared.GetOrg(ctx)
@@ -128,35 +131,51 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			}
 		}
 	}
-	upstreamBOMS := []*normalize.SBOMGraph{}
-	// check if there are components or vulnerabilities in the bom
-	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
-		upstreamBOMS = append(upstreamBOMS, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
+
+	tx := s.assetVersionRepository.GetDB(nil).Begin()
+
+	// store the external references from VEX upload
+	for _, url := range externalURLs {
+		ref := models.ExternalReference{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersionName,
+			URL:              url,
+			Type:             "vex",
+		}
+		if err := s.externalReferenceRepository.Create(tx, &ref); err != nil {
+			slog.Error("could not store vex external reference", "err", err, "url", url)
+		}
 	}
+
+	vexReports := []*normalize.VexReport{}
+	// check if there are components or vulnerabilities in the bom
+	vexReports = append(vexReports, &normalize.VexReport{
+		Source: origin,
+		Report: &bom,
+	})
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
-		boms, _, invalid := s.artifactService.FetchBomsFromUpstream(artifactName, assetVersionName, externalURLs)
+		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(artifactName, assetVersionName, externalURLs)
 		if len(invalid) > 0 {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
-		if len(boms) > 0 {
-			upstreamBOMS = append(upstreamBOMS, boms...)
+
+		if len(fetchedVexReports) > 0 {
+			vexReports = append(vexReports, fetchedVexReports...)
 		}
 	}
 
-	vulns, err := s.artifactService.SyncUpstreamBoms(upstreamBOMS, org, project, asset, assetVersion, artifact, userID)
-	if err != nil {
-		slog.Error("could not scan vex", "err", err)
-		return err
+	if len(vexReports) > 0 {
+		// process the vex
+		if err := s.vexRuleService.IngestVexes(tx, asset, assetVersion, vexReports); err != nil {
+			tx.Rollback()
+			slog.Error("could not ingest vex reports", "err", err)
+			return err
+		}
 	}
 
-	s.FireAndForget(func() {
-		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
+	tx.Commit()
 
 	s.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
@@ -219,16 +238,16 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
-	defer tx.Rollback()
-	// do NOT update the sbom in parallel, because we load the components during the scan from the database
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
+		tx.Rollback()
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
 
 	opened, closed, newState, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID)
 	if err != nil {
+		tx.Rollback()
 		slog.Error("could not scan normalized sbom", "err", err)
 		return scanResults, err
 	}

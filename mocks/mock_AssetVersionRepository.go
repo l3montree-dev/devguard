@@ -93,6 +93,52 @@ func (_c *AssetVersionRepository_All_Call) RunAndReturn(run func() ([]models.Ass
 	return _c
 }
 
+// Begin provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) Begin() shared.DB {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// AssetVersionRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type AssetVersionRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *AssetVersionRepository_Expecter) Begin() *AssetVersionRepository_Begin_Call {
+	return &AssetVersionRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *AssetVersionRepository_Begin_Call) Run(run func()) *AssetVersionRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_Begin_Call) Return(v shared.DB) *AssetVersionRepository_Begin_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *AssetVersionRepository_Begin_Call) RunAndReturn(run func() shared.DB) *AssetVersionRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type AssetVersionRepository
 func (_mock *AssetVersionRepository) Delete(tx shared.DB, assetVersion *models.AssetVersion) error {
 	ret := _mock.Called(tx, assetVersion)

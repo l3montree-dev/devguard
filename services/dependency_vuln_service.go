@@ -35,19 +35,16 @@ import (
 )
 
 type DependencyVulnService struct {
-	dependencyVulnRepository    shared.DependencyVulnRepository
-	vulnEventRepository         shared.VulnEventRepository
-	falsePositiveRuleRepository shared.FalsePositiveRuleRepository
-
-	thirdPartyIntegration shared.IntegrationAggregate
+	dependencyVulnRepository shared.DependencyVulnRepository
+	vulnEventRepository      shared.VulnEventRepository
+	thirdPartyIntegration    shared.IntegrationAggregate
 }
 
-func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, falsePositiveRuleRepository shared.FalsePositiveRuleRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
+func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
 	return &DependencyVulnService{
-		dependencyVulnRepository:    dependencyVulnRepository,
-		vulnEventRepository:         vulnEventRepository,
-		falsePositiveRuleRepository: falsePositiveRuleRepository,
-		thirdPartyIntegration:       thirdPartyIntegration,
+		dependencyVulnRepository: dependencyVulnRepository,
+		vulnEventRepository:      vulnEventRepository,
+		thirdPartyIntegration:    thirdPartyIntegration,
 	}
 }
 
@@ -126,83 +123,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 		return err
 	}
 
-	// Apply existing false positive rules to newly detected vulns
-	s.applyFalsePositiveRulesToNewVulns(tx, asset.ID, dependencyVulns)
-
 	return nil
-}
-
-// applyFalsePositiveRulesToNewVulns checks existing false positive rules and applies
-// them to newly detected vulnerabilities that match the path pattern.
-func (s *DependencyVulnService) applyFalsePositiveRulesToNewVulns(tx shared.DB, assetID uuid.UUID, vulns []models.DependencyVuln) {
-	// Get existing false positive rules for this asset
-	rules, err := s.falsePositiveRuleRepository.FindByAssetID(tx, assetID)
-	if err != nil {
-		slog.Error("could not get false positive rules", "err", err, "assetID", assetID)
-		return
-	}
-
-	if len(rules) == 0 {
-		return
-	}
-
-	for i := range vulns {
-		vuln := &vulns[i]
-
-		// Skip if already false positive
-		if vuln.State == dtos.VulnStateFalsePositive {
-			continue
-		}
-
-		// Check each rule
-		for _, rule := range rules {
-			if len(rule.PathPattern) == 0 {
-				continue
-			}
-
-			// Skip if CVE doesn't match
-			if vuln.CVEID != rule.CVEID {
-				continue
-			}
-
-			if pathPatternMatches(vuln.VulnerabilityPath, rule.PathPattern) {
-				// Apply the rule
-				ev := models.NewFalsePositiveEvent(
-					vuln.CalculateHash(),
-					dtos.VulnTypeDependencyVuln,
-					rule.CreatedByID,
-					rule.Justification,
-					rule.MechanicalJustification,
-					vuln.GetScannerIDsOrArtifactNames(),
-					dtos.UpstreamStateInternal,
-				)
-
-				if err := s.dependencyVulnRepository.ApplyAndSave(tx, vuln, &ev); err != nil {
-					slog.Error("could not apply false positive rule to new vuln", "err", err, "vulnID", vuln.ID)
-				} else {
-					slog.Info("applied false positive rule to new vuln", "vulnID", vuln.ID, "rulePattern", rule.PathPattern)
-				}
-				break // Only apply first matching rule
-			}
-		}
-	}
-}
-
-// pathPatternMatches checks if a vulnerability path matches the given pattern.
-func pathPatternMatches(vulnPath []string, pattern []string) bool {
-	if len(pattern) == 0 || len(vulnPath) < len(pattern) {
-		return false
-	}
-
-	// Check if the suffix matches
-	startIdx := len(vulnPath) - len(pattern)
-	for i, elem := range pattern {
-		if vulnPath[startIdx+i] != elem {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {

@@ -285,7 +285,22 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		}
 		vuln.SetState(dtos.VulnStateOpen)
 	case dtos.EventTypeDetected:
-		// event type detected will always be applied!
+		// Do not let internal detected events reopen vulnerabilities that were marked
+		// fixed/falsePositive/accepted by VEX or manual action.
+		// Internal scans should not override user/VEX decisions.
+		if event.Upstream == dtos.UpstreamStateInternal {
+			currentState := vuln.GetState()
+			if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
+				// Still update risk assessment, but don't change state
+				f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
+				if ok {
+					vuln.SetRawRiskAssessment(f)
+					vuln.SetRiskRecalculatedAt(time.Now())
+				}
+				return
+			}
+		}
+		// Apply detected event for all other cases
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
 			f = vuln.GetRawRiskAssessment()

@@ -41,7 +41,6 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 		},
 	}, func(f *TestFixture) {
 		// Use FX-injected services
-		artifactService := f.App.ArtifactService
 		csafController := f.App.CSAFController
 
 		// Create test organization, project, asset, and asset version
@@ -79,7 +78,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, []string{csafURL})
+			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, []string{csafURL})
 			assert.Equal(t, 1, len(invalidURLs))
 		})
 
@@ -166,20 +165,24 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
 			csafURL := purl + ":" + testserver.URL + "/provider-metadata.json"
 
-			// we create a fake bom for the same artifact which has the same purl
-			boms, _, invalidURLs := artifactService.FetchBomsFromUpstream(artifact.ArtifactName, assetVersion.Name, []string{csafURL})
+			// we create a fake VEX report for the same artifact which has the same purl
+			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(artifact.ArtifactName, assetVersion.Name, []string{csafURL})
 			assert.Equal(t, 0, len(invalidURLs))
-			assert.Equal(t, 1, len(boms))
+			assert.Equal(t, 1, len(validURLs))
+			assert.Equal(t, 1, len(vexReports), "should return vex reports from CSAF provider")
 
-			// iterate over the vulns.
+			// iterate over the vulns in the VEX report
 			// expect CVE-2024-0001 and CVE-2024-0002 to be present,
 			// CVE-2024-0001 should be open, CVE-2024-0002 should be marked as false positive
-			for vuln := range boms[0].Vulnerabilities() {
-				switch vuln.ID {
-				case "CVE-2024-0001":
-					assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)
-				case "CVE-2024-0002":
-					assert.Equal(t, cyclonedx.IASNotAffected, vuln.Analysis.State)
+			vexBom := vexReports[0].Report
+			if vexBom.Vulnerabilities != nil {
+				for _, vuln := range *vexBom.Vulnerabilities {
+					switch vuln.ID {
+					case "CVE-2024-0001":
+						assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)
+					case "CVE-2024-0002":
+						assert.Equal(t, cyclonedx.IASNotAffected, vuln.Analysis.State)
+					}
 				}
 			}
 		})

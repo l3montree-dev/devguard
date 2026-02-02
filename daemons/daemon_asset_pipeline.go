@@ -466,30 +466,17 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
-					rootNodes, err := runner.componentService.FetchInformationSources(&artifact)
-					if err != nil {
-						slog.Error("failed to fetch root nodes for artifact", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+					tx := runner.db.Begin()
+					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersions[i], artifact, "system"); err != nil {
+						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
+						tx.Rollback()
 						continue
 					}
 
-					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
-						return origin
-					}), func(el string) bool {
-						return strings.HasPrefix(el, "http")
-					}), func(el string) string {
-						return el
-					})
+					slog.Info("synced upstream for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 
-					vexReports, _, _ := runner.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
-
-					_, err = runner.artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
-					if err != nil {
-						slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
-						errs = append(errs, err)
-						continue
-					}
+					tx.Commit()
 				}
 			}
 			if len(errs) > 0 {

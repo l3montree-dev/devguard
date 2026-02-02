@@ -20,16 +20,30 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func FalsePositiveRuleToDTO(rule models.FalsePositiveRule) dtos.FalsePositiveRuleDTO {
-	return dtos.FalsePositiveRuleDTO{
-		ID:                      rule.ID,
-		AssetID:                 rule.AssetID,
-		CVEID:                   rule.CVEID,
+func VEXRuleToDTO(rule models.VEXRule) dtos.VEXRuleDTO {
+	return VEXRuleToDTOWithCount(rule, 0)
+}
+
+func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRuleDTO {
+	return dtos.VEXRuleDTO{
+		// Primary key
+		ID: rule.ID,
+
+		// Composite key components
+		AssetID:   rule.AssetID,
+		CVEID:     rule.CVEID,
+		VexSource: rule.VexSource,
+
+		// Rule data
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
-		PathPattern:             rule.PathPattern,
+		EventType:               rule.EventType,
+		PathPattern:             dtos.PathPattern(rule.PathPattern),
 		CreatedByID:             rule.CreatedByID,
 		CreatedAt:               rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:               rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+
+		// Metrics
+		AppliesToAmountOfDependencyVulns: appliesToCount,
 	}
 }

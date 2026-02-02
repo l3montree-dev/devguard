@@ -78,3 +78,10 @@ func (m *Asset) GetSlug() string {
 func (m *Asset) SetSlug(slug string) {
 	m.Slug = slug
 }
+
+func (m *Asset) DesiredUpstreamStateForEvents() dtos.UpstreamState {
+	if m.ParanoidMode {
+		return dtos.UpstreamStateExternal
+	}
+	return dtos.UpstreamStateExternalAccepted
+}

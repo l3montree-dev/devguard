@@ -20,8 +20,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -69,7 +71,7 @@ type PersonalAccessTokenService interface {
 }
 
 type CSAFService interface {
-	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.SBOMGraph, error)
+	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*cyclonedx.BOM, error)
 }
 
 type SBOMScanner interface {
@@ -227,10 +229,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	// FindByPathSuffixAndCVE finds all dependency vulns whose vulnerability_path ends with the given pattern
-	// and have the specified CVE ID. Path pattern rules only make sense for the same CVE.
-	FindByPathSuffixAndCVE(tx DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error)
-	// FindByCVEAndComponentPurl finds all dependency vulns with the specified CVE and component PURL
+
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 }
@@ -288,12 +287,19 @@ type SupplyChainRepository interface {
 	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
-type FalsePositiveRuleRepository interface {
-	utils.Repository[uuid.UUID, models.FalsePositiveRule, DB]
-	FindByAssetID(db DB, assetID uuid.UUID) ([]models.FalsePositiveRule, error)
-	Create(db DB, rule *models.FalsePositiveRule) error
-	Update(db DB, rule *models.FalsePositiveRule) error
-	Delete(db DB, id uuid.UUID) error
+type VEXRuleRepository interface {
+	GetDB(db DB) DB
+	FindByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
+	FindByID(db DB, id string) (models.VEXRule, error)
+	FindByAssetAndVexSource(db DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
+	Create(db DB, rule *models.VEXRule) error
+	Upsert(db DB, rule *models.VEXRule) error
+	UpsertBatch(db DB, rules []models.VEXRule) error
+	Update(db DB, rule *models.VEXRule) error
+	Delete(db DB, rule models.VEXRule) error
+	DeleteBatch(db DB, rules []models.VEXRule) error
+	DeleteByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) error
+	Begin() DB
 }
 
 type OrganizationRepository interface {
@@ -314,6 +320,15 @@ type InvitationRepository interface {
 	Save(tx DB, invitation *models.Invitation) error
 	FindByCode(code string) (models.Invitation, error)
 	Delete(tx DB, id uuid.UUID) error
+}
+
+type ExternalReferenceRepository interface {
+	GetDB(db *gorm.DB) *gorm.DB
+	Create(db *gorm.DB, ref *models.ExternalReference) error
+	CreateBatch(db *gorm.DB, refs []models.ExternalReference) error
+	FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error)
+	FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
+	DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error
 }
 
 type ExternalEntityProviderService interface {
@@ -352,8 +367,6 @@ type ArtifactService interface {
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
-	SyncUpstreamBoms(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -380,6 +393,7 @@ type AssetVersionRepository interface {
 	All() ([]models.AssetVersion, error)
 	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 	GetDB(DB) DB
+	Begin() DB
 	Delete(tx DB, assetVersion *models.AssetVersion) error
 	Save(tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
@@ -408,6 +422,9 @@ type ScanService interface {
 	ScanNormalizedSBOM(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
+	FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
+	FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string)
+	RunArtifactSecurityLifecycle(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
 }
 
 type ConfigRepository interface {
@@ -415,14 +432,20 @@ type ConfigRepository interface {
 	GetDB(tx DB) DB
 }
 
-// FalsePositiveRule represents a false positive rule with its associated CVE ID.
-// Path pattern rules only make sense for the same CVE.
-type FalsePositiveRule struct {
-	Justification           *string                          `json:"justification,omitempty" gorm:"type:text;default:null;"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	UserID                  string                           `json:"userId" gorm:"type:uuid;"`
-	PathPattern             []string                         `json:"pathPattern,omitempty" gorm:"type:jsonb;default:null;serializer:json"`
-	CVEID                   string                           `json:"cveId" gorm:"type:text;"`
+type VEXRuleService interface {
+	Begin() DB
+	Create(tx DB, rule *models.VEXRule) error
+	Update(tx DB, rule *models.VEXRule) error
+	Delete(tx DB, rule models.VEXRule) error
+	DeleteByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) error
+	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
+	ApplyRulesToExistingVulns(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error)
+	ApplyRulesToExisting(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
+	IngestVEX(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error
+	IngestVexes(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error
+	CountMatchingVulns(tx DB, rule models.VEXRule) (int, error)
+	CountMatchingVulnsForRules(tx DB, rules []models.VEXRule) (map[string]int, error)
+	FindByID(tx DB, id string) (models.VEXRule, error)
 }
 
 type VulnEventRepository interface {
@@ -435,9 +458,6 @@ type VulnEventRepository interface {
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
-	// GetFalsePositiveRulesForAsset returns all false positive events with path patterns for an asset.
-	// Returns the CVE ID with each rule since path patterns only apply to the same CVE.
-	GetFalsePositiveRulesForAsset(tx DB, assetID uuid.UUID) ([]FalsePositiveRule, error)
 }
 
 type GithubAppInstallationRepository interface {

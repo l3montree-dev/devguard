@@ -16,10 +16,17 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -30,33 +37,58 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 )
 
 type scanService struct {
-	sbomScanner              shared.SBOMScanner
-	dependencyVulnService    shared.DependencyVulnService
-	firstPartyVulnRepository shared.FirstPartyVulnRepository
-	dependencyVulnRepository shared.DependencyVulnRepository
-	thirdPartyIntegration    shared.IntegrationAggregate
-	firstPartyVulnService    shared.FirstPartyVulnService
+	sbomScanner                 shared.SBOMScanner
+	dependencyVulnService       shared.DependencyVulnService
+	firstPartyVulnRepository    shared.FirstPartyVulnRepository
+	dependencyVulnRepository    shared.DependencyVulnRepository
+	thirdPartyIntegration       shared.IntegrationAggregate
+	firstPartyVulnService       shared.FirstPartyVulnService
+	cveRepository               shared.CveRepository
+	csafService                 shared.CSAFService
+	assetVersionService         shared.AssetVersionService
+	vexRuleService              shared.VEXRuleService
+	externalReferenceRepository shared.ExternalReferenceRepository
+	componentService            shared.ComponentService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanService(db shared.DB, cveRepository shared.CveRepository, dependencyVulnService shared.DependencyVulnService, synchronizer utils.FireAndForgetSynchronizer, firstPartyVulnService shared.FirstPartyVulnService,
-	firstPartyVulnRepository shared.FirstPartyVulnRepository, dependencyVulnRepository shared.DependencyVulnRepository, thirdPartyIntegration shared.IntegrationAggregate,
+func NewScanService(
+	db shared.DB,
+	cveRepository shared.CveRepository,
+	dependencyVulnService shared.DependencyVulnService,
+	synchronizer utils.FireAndForgetSynchronizer,
+	firstPartyVulnService shared.FirstPartyVulnService,
+	firstPartyVulnRepository shared.FirstPartyVulnRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	thirdPartyIntegration shared.IntegrationAggregate,
+	csafService shared.CSAFService,
+	assetVersionService shared.AssetVersionService,
+	vexRuleService shared.VEXRuleService,
+	externalReferenceRepository shared.ExternalReferenceRepository,
+	componentService shared.ComponentService,
 ) *scanService {
 	purlComparer := scan.NewPurlComparer(db)
 	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
-		sbomScanner:               scanner,
-		dependencyVulnService:     dependencyVulnService,
-		firstPartyVulnRepository:  firstPartyVulnRepository,
-		firstPartyVulnService:     firstPartyVulnService,
-		FireAndForgetSynchronizer: synchronizer,
-		dependencyVulnRepository:  dependencyVulnRepository,
-		thirdPartyIntegration:     thirdPartyIntegration,
+		sbomScanner:                 scanner,
+		dependencyVulnService:       dependencyVulnService,
+		firstPartyVulnRepository:    firstPartyVulnRepository,
+		firstPartyVulnService:       firstPartyVulnService,
+		FireAndForgetSynchronizer:   synchronizer,
+		dependencyVulnRepository:    dependencyVulnRepository,
+		thirdPartyIntegration:       thirdPartyIntegration,
+		cveRepository:               cveRepository,
+		csafService:                 csafService,
+		assetVersionService:         assetVersionService,
+		vexRuleService:              vexRuleService,
+		externalReferenceRepository: externalReferenceRepository,
+		componentService:            componentService,
 	}
 }
 
@@ -81,6 +113,19 @@ func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project m
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return nil, nil, nil, err
+	}
+
+	rules, err := s.vexRuleService.FindByAssetVersion(tx, asset.ID, assetVersion.Name)
+	if err != nil {
+		slog.Error("failed to fetch VEX rules for asset version", "error", err)
+		return nil, nil, nil, fmt.Errorf("failed to fetch VEX rules for asset version: %w", err)
+	}
+
+	// apply the vex rules to the new state
+	newState, err = s.vexRuleService.ApplyRulesToExisting(tx, asset.DesiredUpstreamStateForEvents(), rules, newState)
+	if err != nil {
+		slog.Error("failed to apply VEX rules to new state", "error", err)
+		return nil, nil, nil, fmt.Errorf("failed to apply VEX rules to new state: %w", err)
 	}
 
 	return opened, closed, newState, nil
@@ -357,12 +402,6 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 	return opened, closed, newState, nil
 }
 
-type Diffable interface {
-	AssetVersionIndependentHash() string
-	GetAssetVersionName() string
-	GetEvents() []models.VulnEvent
-}
-
 func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -377,10 +416,27 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// remove all fixed dependencyVulns from the existing dependencyVulns
-	var filterFixed = func(dependencyVuln models.DependencyVuln) bool { return dependencyVuln.State != dtos.VulnStateFixed }
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
-	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
+	// Filter out internally-fixed vulnerabilities (e.g., by component upgrade) from the existing vulns.
+	// BUT keep VEX-managed states (fixed/accepted/falsePositive set by external sources)
+	// so they appear in "Unchanged" rather than "NewlyDiscovered" - preventing spurious detected events.
+	var filterInternallyFixed = func(dv models.DependencyVuln) bool {
+		// Keep vulns that are open or in other non-fixed states
+		if dv.State != dtos.VulnStateFixed {
+			return true
+		}
+		// For fixed vulns, check if they were fixed externally (VEX)
+		// If so, keep them to prevent re-detection
+		for i := len(dv.Events) - 1; i >= 0; i-- {
+			if dv.Events[i].Type == dtos.EventTypeFixed {
+				// Keep vulns fixed by external/VEX sources
+				return dv.Events[i].Upstream != dtos.UpstreamStateInternal
+			}
+		}
+		// No fixed event found, filter it out
+		return false
+	}
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterInternallyFixed)
+	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterInternallyFixed)
 
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
@@ -431,4 +487,244 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 	}
 
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
+}
+
+func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []string) {
+	client := &http.Client{}
+	//check if the upstream urls are valid urls
+	for _, url := range upstreamURLs {
+		url = normalize.SanitizeExternalReferencesURL(url)
+		// skip CSAF URLs - they're handled separately
+		if strings.HasSuffix(url, "/provider-metadata.json") {
+			continue
+		}
+		//check if the file is a valid url
+		if url == "" || !strings.HasPrefix(url, "http") {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		var bom cyclonedx.BOM
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
+		// fetch the file from the url
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode != 200 {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// download the url and check if it is a valid sbom
+		file, err := io.ReadAll(resp.Body)
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		err = json.Unmarshal(file, &bom)
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		// Only process SBOMs (not VEX)
+		if normalize.BomIsSBOM(&bom) {
+			validURLs = append(validURLs, url)
+			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, ref))
+		}
+	}
+
+	return boms, validURLs, invalidURLs
+}
+
+func (s *scanService) FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) (vexReports []*normalize.VexReport, validURLs []string, invalidURLs []string) {
+	client := &http.Client{}
+	//check if the upstream urls are valid urls
+	for _, url := range upstreamURLs {
+		url = normalize.SanitizeExternalReferencesURL(url)
+		// check if csaf provider-metadata.json is appended
+		if strings.HasSuffix(url, "/provider-metadata.json") {
+			// we need to use the csaf ingestion here.
+			// extract the purl from the url
+			// split at http or https
+			protocol := "http://"
+			purlSlice := strings.SplitN(url, "http://", 2)
+			if len(purlSlice) == 1 {
+				purlSlice = strings.SplitN(url, "https://", 2)
+				protocol = "https://"
+			}
+			if len(purlSlice) != 2 {
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			purlStr := strings.TrimSuffix(purlSlice[0], ":")
+			sanitizedURL := fmt.Sprintf("%s%s", protocol, purlSlice[1])
+
+			purl, err := packageurl.FromString(purlStr)
+			if err != nil {
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			bom, err := s.csafService.GetVexFromCsafProvider(purl, ref, url, sanitizedURL)
+			if err != nil {
+				slog.Warn("could not download csaf from csaf provider", "err", err)
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+			validURLs = append(validURLs, url)
+			vexReports = append(vexReports, &normalize.VexReport{
+				Report: bom,
+				Source: sanitizedURL,
+			})
+			continue
+		}
+		//check if the file is a valid url
+		if url == "" || !strings.HasPrefix(url, "http") {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		var bom cyclonedx.BOM
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
+		// fetch the file from the url
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode != 200 {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// download the url and check if it is a valid vex file
+		file, err := io.ReadAll(resp.Body)
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		err = json.Unmarshal(file, &bom)
+		if err != nil {
+			invalidURLs = append(invalidURLs, url)
+			continue
+		}
+
+		// Only process VEX (not SBOMs)
+		if !normalize.BomIsSBOM(&bom) {
+			validURLs = append(validURLs, url)
+			vexReports = append(vexReports, &normalize.VexReport{
+				Report: &bom,
+				Source: url,
+			})
+		}
+	}
+
+	return vexReports, validURLs, invalidURLs
+}
+
+// RunArtifactSecurityLifecycle orchestrates the complete security lifecycle for an artifact:
+// 1. Fetches information sources (SBOM URLs) from the artifact
+// 2. Fetches VEX URLs from external references
+// 3. Fetches SBOMs and VEX reports from upstream
+// 4. Updates the SBOM in the database
+// 5. Scans the normalized SBOM for vulnerabilities
+// 6. Ingests VEX rules
+// It returns the normalized BOM and VEX reports for further processing if needed
+func (s *scanService) RunArtifactSecurityLifecycle(
+	tx shared.DB,
+	org models.Org,
+	project models.Project,
+	asset models.Asset,
+	assetVersion models.AssetVersion,
+	artifact models.Artifact,
+	userID string,
+) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error) {
+	// Fetch information sources (SBOM URLs) from the artifact
+	rootNodes, err := s.componentService.FetchInformationSources(&artifact)
+	if err != nil {
+		slog.Error("failed to fetch information sources", "error", err, "artifactName", artifact.ArtifactName)
+		return nil, nil, nil, fmt.Errorf("failed to fetch information sources: %w", err)
+	}
+
+	// Extract unique HTTP URLs from information sources
+	sbomUpstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
+		_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
+		return origin
+	}), func(el string) bool {
+		return strings.HasPrefix(el, "http")
+	}), func(el string) string {
+		return el
+	})
+
+	// Fetch VEX URLs from external references
+	vexRefs, err := s.externalReferenceRepository.FindByAssetVersion(tx, asset.ID, assetVersion.Name)
+	if err != nil {
+		slog.Error("failed to fetch vex external references", "error", err, "artifactName", artifact.ArtifactName)
+		// Don't fail the entire operation if fetching external refs fails
+	}
+
+	// Collect VEX URLs from external references
+	vexURLs := make([]string, 0, len(vexRefs))
+	for _, ref := range vexRefs {
+		if ref.Type == "vex" {
+			vexURLs = append(vexURLs, ref.URL)
+		}
+	}
+
+	// Combine SBOM and VEX URLs
+	allURLs := append(sbomUpstreamURLs, vexURLs...)
+
+	// Fetch SBOMs and VEX reports from upstream
+	boms, _, _ := s.FetchSbomsFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs)
+	vexReports, _, _ := s.FetchVexFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs)
+	// Merge all BOMs into a single graph
+	newGraph := normalize.NewSBOMGraph()
+	for _, bom := range boms {
+		newGraph.MergeGraph(bom)
+	}
+
+	// Update SBOM in database
+	normalizedBom, err := s.assetVersionService.UpdateSBOM(
+		tx,
+		org,
+		project,
+		asset,
+		assetVersion,
+		artifact.ArtifactName,
+		newGraph,
+		asset.DesiredUpstreamStateForEvents(),
+	)
+	if err != nil {
+		slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
+		return nil, nil, nil, fmt.Errorf("failed to update sbom: %w", err)
+	}
+
+	// Scan the normalized SBOM for vulnerabilities
+	_, _, dependencyVulns, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	if err != nil {
+		slog.Error("failed to scan normalized sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
+		return nil, nil, nil, fmt.Errorf("failed to scan normalized sbom: %w", err)
+	}
+
+	// Ingest VEX rules
+	if err := s.vexRuleService.IngestVexes(tx, asset, assetVersion, vexReports); err != nil {
+		slog.Error("failed to ingest vex reports in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
+		return nil, nil, nil, fmt.Errorf("failed to ingest vex reports: %w", err)
+	}
+
+	return normalizedBom, vexReports, dependencyVulns, nil
 }
