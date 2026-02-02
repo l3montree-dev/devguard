@@ -112,16 +112,21 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	if len(scanResponse.DependencyVulns) == 0 {
 		return nil
 	}
-	//group the dependencyVulns by their purl
+	// group the dependencyVulns by their purl
 	dependencyVulnsByPurl := map[string][]dtos.DependencyVulnDTO{}
 	for _, v := range scanResponse.DependencyVulns {
-		if _, ok := dependencyVulnsByPurl[v.ComponentPurl]; !ok {
-			dependencyVulnsByPurl[v.ComponentPurl] = []dtos.DependencyVulnDTO{}
+		purlKey := strings.TrimSpace(v.ComponentPurl)
+		if purlKey == "" {
+			slog.Warn("Dependency vulnerability has empty ComponentPurl; skipping grouping", "cveID", v.CVEID, "state", v.State)
+			continue
 		}
-		dependencyVulnsByPurl[v.ComponentPurl] = append(dependencyVulnsByPurl[v.ComponentPurl], v)
+		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
+			dependencyVulnsByPurl[purlKey] = []dtos.DependencyVulnDTO{}
+		}
+		dependencyVulnsByPurl[purlKey] = append(dependencyVulnsByPurl[purlKey], v)
 	}
 
-	//delete the duplicates in each group
+	// delete the duplicates in each group
 	for purl, vulns := range dependencyVulnsByPurl {
 		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
 		for _, v := range vulns {
@@ -173,7 +178,8 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(vuln.ComponentPurl)
 			if err != nil {
-				slog.Error("could not parse purl", "err", err)
+				slog.Error("could not parse purl", "err", err, "purl", vuln.ComponentPurl)
+				continue
 			}
 
 			// Show purl only for the first vulnerability in the group
@@ -187,7 +193,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 	if len(scanResponse.DependencyVulns) > 0 {
 		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
-		fmt.Printf("This is a List of detected dependency vulnerabilities with Unique PURLs and deduplicated CVEs\nSee all dependency risks at:\n%s\n", clickableLink)
+		fmt.Printf("Showing deduplicated vulnerabilities grouped by package.\nSee all dependency risks at:\n%s\n", clickableLink)
 	}
 
 	riskThreshold := ""
