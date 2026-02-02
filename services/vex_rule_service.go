@@ -184,7 +184,7 @@ func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState
 	}
 
 	if len(vulnMap) == 0 {
-		return nil, nil
+		return vulns, nil
 	}
 
 	// Apply all events to vulns and collect updated vulns and events

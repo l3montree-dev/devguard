@@ -12,3 +12,9 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+-- Drop external_references table
+DROP TABLE IF EXISTS public.external_references;
+
+-- Drop vex_rules table
+DROP TABLE IF EXISTS public.vex_rules;

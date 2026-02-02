@@ -24,13 +24,16 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
@@ -161,6 +164,11 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Decorate(func() shared.LeaderElector {
 			return &testLeaderElector{}
 		}),
+		// Mock ComponentService to prevent external HTTP calls in tests
+		fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+			mockCS := createMockedComponentService(t, cs)
+			return mockCS
+		}),
 		fx.Populate(&app),
 	}
 
@@ -216,4 +224,39 @@ type testLeaderElector struct{}
 
 func (t *testLeaderElector) IsLeader() bool {
 	return true
+}
+
+// createMockedComponentService wraps the real ComponentService with mocking for external calls
+// This ensures tests don't make actual HTTP requests
+func createMockedComponentService(t testing.TB, realCS shared.ComponentService) shared.ComponentService {
+	mockCS := &mocks.ComponentService{}
+	
+	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return([]models.Component{}, nil)
+	
+	// Mock other methods to delegate to real implementation
+	mockCS.On("GetLicense", mock.Anything).
+		Return(func(component models.Component) models.Component {
+			result, _ := realCS.GetLicense(component)
+			return result
+		}, nil)
+	
+	mockCS.On("FetchInformationSources", mock.Anything).
+		Return(func(artifact *models.Artifact) []models.ComponentDependency {
+			result, _ := realCS.FetchInformationSources(artifact)
+			return result
+		}, nil)
+	
+	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+		Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+			return realCS.RemoveInformationSources(artifact, rootNodePurls)
+		})
+	
+	mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+		Return(func(project models.ComponentProject) {
+			realCS.RefreshComponentProjectInformation(project)
+		})
+	
+	return mockCS
 }

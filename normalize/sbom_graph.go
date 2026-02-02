@@ -124,8 +124,6 @@ type SBOMGraph struct {
 	rootID string // ID of the root node (constant: "ROOT")
 
 	scopeID string // The id of the current scope node
-
-	originalRootPurl packageurl.PackageURL // The original root PURL from the BOM metadata component
 }
 
 type VexReport struct {
@@ -141,6 +139,14 @@ func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
 		}
 	}
 	return depMap
+}
+
+func (v *VexReport) GetRootPurl() (packageurl.PackageURL, error) {
+	root := v.Report.Metadata.Component
+	if root == nil || root.PackageURL == "" {
+		return packageurl.PackageURL{}, fmt.Errorf("no root component with PURL found in VEX report")
+	}
+	return packageurl.FromString(root.PackageURL)
 }
 
 const GraphRootNodeID = "ROOT"
@@ -1417,13 +1423,6 @@ func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string)
 // PARSING FROM CYCLONEDX
 // =============================================================================
 
-func (g *SBOMGraph) GetOriginalRootPurl() (packageurl.PackageURL, error) {
-	if g.originalRootPurl.String() == "" {
-		return packageurl.PackageURL{}, fmt.Errorf("original root purl is not set")
-	}
-	return g.originalRootPurl, nil
-}
-
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
 func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SBOMGraph {
 	g := NewSBOMGraph()
@@ -1460,13 +1459,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 			// add root component as well
 			g.AddComponent(*bom.Metadata.Component)
 		}
-		node := g.nodes[rootRef]
-		if node.Component.PackageURL != "" {
-			purl, err := packageurl.FromString(node.Component.PackageURL)
-			if err == nil {
-				g.originalRootPurl = purl
-			}
-		}
+		// originalRootPurl is now stored in VexReport
 	} else if g.nodes[""] == nil {
 		// add the empty root component
 		g.AddComponent(cdx.Component{

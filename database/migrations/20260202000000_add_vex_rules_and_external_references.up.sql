@@ -17,6 +17,7 @@
 CREATE TABLE IF NOT EXISTS public.vex_rules (
     id TEXT PRIMARY KEY,
     asset_id UUID NOT NULL,
+    asset_version_name TEXT NOT NULL,
     cve_id TEXT NOT NULL,
     justification TEXT NOT NULL,
     mechanical_justification TEXT,
@@ -33,13 +34,18 @@ CREATE TABLE IF NOT EXISTS public.vex_rules (
     CONSTRAINT fk_vex_rules_cve
         FOREIGN KEY (cve_id)
         REFERENCES public.cves(cve)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_vex_rules_asset_version
+        FOREIGN KEY (asset_version_name, asset_id)
+        REFERENCES public.asset_versions(name, asset_id)
         ON DELETE CASCADE
 );
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_vex_rule_asset ON public.vex_rules(asset_id);
+CREATE INDEX IF NOT EXISTS idx_vex_rule_asset_version ON public.vex_rules(asset_id, asset_version_name);
 CREATE INDEX IF NOT EXISTS idx_vex_rule_cve ON public.vex_rules(cve_id);
-CREATE INDEX IF NOT EXISTS idx_vex_rules_composite ON public.vex_rules (asset_id, cve_id, vex_source);
+CREATE INDEX IF NOT EXISTS idx_vex_rules_composite ON public.vex_rules (asset_id, asset_version_name, cve_id, vex_source);
 
 -- Drop path_pattern column from vuln_events table if it exists
 ALTER TABLE public.vuln_events DROP COLUMN IF EXISTS path_pattern;
