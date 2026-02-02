@@ -75,25 +75,6 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	return ctx.JSON(200, result)
 }
 
-func (c *VEXRuleController) Get(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-
-	cveID := ctx.QueryParam("cveId")
-	pathPatternHash := ctx.QueryParam("pathPatternHash")
-	vexSource := ctx.QueryParam("vexSource")
-
-	if cveID == "" || pathPatternHash == "" || vexSource == "" {
-		return echo.NewHTTPError(400, "cveId, pathPatternHash, and vexSource query parameters are required")
-	}
-
-	rule, err := c.vexRuleService.FindByCompositeKey(nil, asset.ID, cveID, pathPatternHash, vexSource)
-	if err != nil {
-		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
-	}
-
-	return ctx.JSON(200, transformer.VEXRuleToDTO(rule))
-}
-
 // @Summary Create a VEX rule
 // @Tags VEXRules
 // @Security CookieAuth
