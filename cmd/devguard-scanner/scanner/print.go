@@ -118,7 +118,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 		purlKey := strings.TrimSpace(v.ComponentPurl)
 		if purlKey == "" {
 			slog.Warn("Dependency vulnerability has empty ComponentPurl; skipping grouping", "cveID", v.CVEID, "state", v.State)
-			continue
+
 		}
 		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
 			dependencyVulnsByPurl[purlKey] = []dtos.DependencyVulnDTO{}
@@ -130,11 +130,9 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	for purl, vulns := range dependencyVulnsByPurl {
 		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
 		for _, v := range vulns {
-			uniqueVulns[fmt.Sprintf("%s:%.1f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
+			uniqueVulns[fmt.Sprintf("%s:%.2f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
 		}
-		dependencyVulnsByPurl[purl] = utils.Map(utils.Values(uniqueVulns), func(v dtos.DependencyVulnDTO) dtos.DependencyVulnDTO {
-			return v
-		})
+		dependencyVulnsByPurl[purl] = utils.Values(uniqueVulns)
 	}
 
 	isScanThresholdExceeded := false
@@ -178,8 +176,11 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(vuln.ComponentPurl)
 			if err != nil {
-				slog.Error("could not parse purl", "err", err, "purl", vuln.ComponentPurl)
-				continue
+				slog.Warn("could not parse purl, using fallback representation", "err", err, "purl", vuln.ComponentPurl)
+				// Fall back to a minimal PackageURL so the vulnerability is still shown
+				pURL = packageurl.PackageURL{
+					Name: vuln.ComponentPurl,
+				}
 			}
 
 			// Show purl only for the first vulnerability in the group
