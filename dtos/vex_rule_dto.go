@@ -93,7 +93,7 @@ func matchPatternExact(pattern, path []string) bool {
 
 			// Try to find the next pattern element in the path
 			nextPattern := pattern[pIdx+1]
-			found := false
+
 			for i := pathIdx; i < len(path); i++ {
 				if nextPattern == path[i] {
 					// Found next pattern element, recursively match the rest
