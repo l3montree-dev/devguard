@@ -112,112 +112,151 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	if len(scanResponse.DependencyVulns) == 0 {
 		return nil
 	}
+	// group the dependencyVulns by their purl
+	dependencyVulnsByPurl := map[string][]dtos.DependencyVulnDTO{}
+	for _, v := range scanResponse.DependencyVulns {
+		purlKey := strings.TrimSpace(v.ComponentPurl)
+		if purlKey == "" {
+			slog.Warn("Dependency vulnerability has empty ComponentPurl; skipping grouping", "cveID", v.CVEID, "state", v.State)
 
-	// order the vulns by their risk
-	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dtos.DependencyVulnDTO) int {
-		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
-	})
-
-	// get the max risk of open!!! dependencyVulns
-	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dtos.DependencyVulnDTO) bool {
-		return f.State == "open"
-	}), func(f dtos.DependencyVulnDTO) float64 {
-		return utils.OrDefault(f.RawRiskAssessment, 0)
-	})
-
-	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dtos.DependencyVulnDTO) bool {
-		return f.State == "open"
-	}), func(f dtos.DependencyVulnDTO) float32 {
-		return f.CVE.CVSS
-	})
-
-	maxRisk := 0.
-	for _, risk := range openRisks {
-		if risk > maxRisk {
-			maxRisk = risk
 		}
+		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
+			dependencyVulnsByPurl[purlKey] = []dtos.DependencyVulnDTO{}
+		}
+		dependencyVulnsByPurl[purlKey] = append(dependencyVulnsByPurl[purlKey], v)
 	}
 
-	var maxCVSS float32
-	for _, v := range openCVSS {
-		if v > maxCVSS {
-			maxCVSS = v
+	// delete the duplicates in each group
+	for purl, vulns := range dependencyVulnsByPurl {
+		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
+		for _, v := range vulns {
+			uniqueVulns[fmt.Sprintf("%s:%.2f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
 		}
+		dependencyVulnsByPurl[purl] = utils.Values(uniqueVulns)
 	}
+
+	isScanThresholdExceeded := false
 
 	tw := table.NewWriter()
 	//tw.SetAllowedRowLength(155)
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
-	tw.AppendRows(utils.Map(
-		scanResponse.DependencyVulns,
-		func(v dtos.DependencyVulnDTO) table.Row {
+	for _, v := range dependencyVulnsByPurl {
+		//order the vulnerabilities in each group by their risk
+		slices.SortFunc(v, func(a, b dtos.DependencyVulnDTO) int {
+			return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
+		})
+
+		//First check which vulnerability in this group has failed
+		groupHasFailed := false
+		vulnFailed := map[string]bool{}
+
+		for _, vuln := range v {
+			if vuln.State != dtos.VulnStateOpen {
+				continue
+			}
+			risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+			cvss := vuln.CVE.CVSS
+			if (failOnRisk != "" && ((failOnRisk == "low" && risk > 0.1) ||
+				(failOnRisk == "medium" && risk >= 4) ||
+				(failOnRisk == "high" && risk >= 7) ||
+				(failOnRisk == "critical" && risk >= 9))) ||
+				(failOnCVSS != "" && ((failOnCVSS == "low" && cvss > 0.1) ||
+					(failOnCVSS == "medium" && cvss >= 4) ||
+					(failOnCVSS == "high" && cvss >= 7) ||
+					(failOnCVSS == "critical" && cvss >= 9))) {
+				groupHasFailed = true
+				vulnFailed[vuln.CVEID] = true
+
+				isScanThresholdExceeded = true
+			}
+		}
+
+		for i, vuln := range v {
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(v.ComponentPurl)
+			pURL, err := packageurl.FromString(vuln.ComponentPurl)
 			if err != nil {
-				slog.Error("could not parse purl", "err", err)
+				slog.Warn("could not parse purl, using fallback representation", "err", err, "purl", vuln.ComponentPurl)
+				// Fall back to a minimal PackageURL so the vulnerability is still shown
+				pURL = packageurl.PackageURL{
+					Name: vuln.ComponentPurl,
+				}
 			}
 
-			return dependencyVulnToTableRow(pURL, v)
-		},
-	))
-
+			// Show purl only for the first vulnerability in the group
+			// Color purl red if any vulnerability in the group has failed
+			showPurl := i == 0
+			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, showPurl, vulnFailed[vuln.CVEID], groupHasFailed))
+		}
+		tw.AppendSeparator()
+	}
 	fmt.Println(tw.Render())
+
 	if len(scanResponse.DependencyVulns) > 0 {
 		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
-		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
+		fmt.Printf("Showing deduplicated vulnerabilities grouped by package.\nSee all dependency risks at:\n%s\n", clickableLink)
 	}
 
+	riskThreshold := ""
 	switch failOnRisk {
 	case "low":
-		if maxRisk > 0.1 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
+		riskThreshold = "> 0.1"
 	case "medium":
-		if maxRisk >= 4 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
+		riskThreshold = ">= 4"
 	case "high":
-		if maxRisk >= 7 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
-
+		riskThreshold = ">= 7"
 	case "critical":
-		if maxRisk >= 9 {
-			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
-		}
+		riskThreshold = ">= 9"
 	}
 
+	cvssThreshold := ""
 	switch failOnCVSS {
 	case "low":
-		if maxCVSS > 0.1 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
+		cvssThreshold = "> 0.1"
 	case "medium":
-		if maxCVSS >= 4 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
+		cvssThreshold = ">= 4"
 	case "high":
-		if maxCVSS >= 7 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
+		cvssThreshold = ">= 7"
 	case "critical":
-		if maxCVSS >= 9 {
-			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
-		}
+		cvssThreshold = ">= 9"
+	}
+
+	if isScanThresholdExceeded {
+		return fmt.Errorf("one or more dependency vulnerabilities exceeded the defined threshold (risk: %s, cvss: %s)", riskThreshold, cvssThreshold)
 	}
 
 	return nil
 }
 
-// Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO, showPurl bool, failed bool, groupHasFailed bool) table.Row {
 	cvss := v.CVE.CVSS
 
-	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+	var libraryName string
+	if showPurl {
+		if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
+			libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
+		} else {
+			libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
+		}
+		// Color purl red if any vulnerability in the group has failed
+		if groupHasFailed {
+			libraryName = text.FgRed.Sprint(libraryName)
+		}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+		libraryName = ""
 	}
+
+	if failed {
+		return table.Row{
+			libraryName,
+			text.FgRed.Sprint(v.CVEID),
+			text.FgRed.Sprintf("%.2f", utils.OrDefault(v.RawRiskAssessment, 0)),
+			text.FgRed.Sprintf("%.1f", cvss),
+			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
+			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
+			text.FgRed.Sprint(v.State),
+		}
+	}
+
+	return table.Row{libraryName, v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 }

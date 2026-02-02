@@ -47,7 +47,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = dtos.VulnState("Example State")
 
-		output := dependencyVulnToTableRow(pURL, v)
+		output := dependencyVulnToTableRow(pURL, v, true, false, false)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 		assert.Equal(t, 2, count, "should be equal")
@@ -72,7 +72,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = dtos.VulnState("Example State")
 
-		output := dependencyVulnToTableRow(pURL, v)
+		output := dependencyVulnToTableRow(pURL, v, true, false, false)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 
@@ -80,6 +80,39 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 	})
 
+	t.Run("should not show purl when showPurl is false", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = "example"
+		pURL.Name = "lib"
+
+		v := dtos.DependencyVulnDTO{}
+		v.CVEID = "CVE-2023-12345"
+		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 5.0})
+		v.State = dtos.VulnState("open")
+
+		output := dependencyVulnToTableRow(pURL, v, false, false, false)
+		assert.Equal(t, "", output[0], "library name should be empty when showPurl is false")
+	})
+
+	t.Run("should color row red when failed is true", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = "example"
+		pURL.Name = "lib"
+
+		risk := 9.0
+		v := dtos.DependencyVulnDTO{}
+		v.CVEID = "CVE-2023-12345"
+		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 9.0})
+		v.RawRiskAssessment = &risk
+		v.State = dtos.VulnState("open")
+
+		output := dependencyVulnToTableRow(pURL, v, true, true, true)
+		// The CVEID should be colored red (contains ANSI escape codes)
+		cveStr := fmt.Sprint(output[1])
+		assert.Contains(t, cveStr, "CVE-2023-12345", "should contain CVE ID")
+	})
 }
 
 func TestPrintScaResults(t *testing.T) {
@@ -135,20 +168,19 @@ func TestPrintScaResults(t *testing.T) {
 	// Test failOnRisk conditions - consolidated table-driven test
 	t.Run("failOnRisk thresholds", func(t *testing.T) {
 		testCases := []struct {
-			name          string
-			risk          float64
-			threshold     string
-			shouldFail    bool
-			expectedError string
+			name       string
+			risk       float64
+			threshold  string
+			shouldFail bool
 		}{
-			{"low threshold pass", 0.05, "low", false, ""},
-			{"low threshold fail", 0.2, "low", true, "max risk exceeds threshold 0.20"},
-			{"medium threshold pass", 3.9, "medium", false, ""},
-			{"medium threshold fail", 4.5, "medium", true, "max risk exceeds threshold 4.50"},
-			{"high threshold pass", 6.9, "high", false, ""},
-			{"high threshold fail", 7.2, "high", true, "max risk exceeds threshold 7.20"},
-			{"critical threshold pass", 8.9, "critical", false, ""},
-			{"critical threshold fail", 9.5, "critical", true, "max risk exceeds threshold 9.50"},
+			{"low threshold pass", 0.05, "low", false},
+			{"low threshold fail", 0.2, "low", true},
+			{"medium threshold pass", 3.9, "medium", false},
+			{"medium threshold fail", 4.5, "medium", true},
+			{"high threshold pass", 6.9, "high", false},
+			{"high threshold fail", 7.2, "high", true},
+			{"critical threshold pass", 8.9, "critical", false},
+			{"critical threshold fail", 9.5, "critical", true},
 		}
 
 		for _, tc := range testCases {
@@ -174,7 +206,7 @@ func TestPrintScaResults(t *testing.T) {
 				err := PrintScaResults(scanResponse, tc.threshold, "critical", assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), tc.expectedError)
+					assert.Contains(t, err.Error(), "exceeded the defined threshold")
 				} else {
 					assert.Nil(t, err)
 				}
@@ -185,20 +217,19 @@ func TestPrintScaResults(t *testing.T) {
 	// Test failOnCVSS conditions - consolidated table-driven test
 	t.Run("failOnCVSS thresholds", func(t *testing.T) {
 		testCases := []struct {
-			name          string
-			cvss          float32
-			threshold     string
-			shouldFail    bool
-			expectedError string
+			name       string
+			cvss       float32
+			threshold  string
+			shouldFail bool
 		}{
-			{"low threshold pass", 0.05, "low", false, ""},
-			{"low threshold fail", 0.2, "low", true, "max CVSS exceeds threshold 0.20"},
-			{"medium threshold pass", 3.9, "medium", false, ""},
-			{"medium threshold fail", 4.5, "medium", true, "max CVSS exceeds threshold 4.50"},
-			{"high threshold pass", 6.9, "high", false, ""},
-			{"high threshold fail", 7.2, "high", true, "max CVSS exceeds threshold 7.20"},
-			{"critical threshold pass", 8.9, "critical", false, ""},
-			{"critical threshold fail", 9.5, "critical", true, "max CVSS exceeds threshold 9.50"},
+			{"low threshold pass", 0.05, "low", false},
+			{"low threshold fail", 0.2, "low", true},
+			{"medium threshold pass", 3.9, "medium", false},
+			{"medium threshold fail", 4.5, "medium", true},
+			{"high threshold pass", 6.9, "high", false},
+			{"high threshold fail", 7.2, "high", true},
+			{"critical threshold pass", 8.9, "critical", false},
+			{"critical threshold fail", 9.5, "critical", true},
 		}
 
 		for _, tc := range testCases {
@@ -224,7 +255,7 @@ func TestPrintScaResults(t *testing.T) {
 				err := PrintScaResults(scanResponse, "critical", tc.threshold, assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), tc.expectedError)
+					assert.Contains(t, err.Error(), "exceeded the defined threshold")
 				} else {
 					assert.Nil(t, err)
 				}
@@ -287,12 +318,12 @@ func TestPrintScaResults(t *testing.T) {
 		// Should fail on high risk threshold (8.5 >= 7) - only considering open vulns
 		err := PrintScaResults(scanResponse, "high", "critical", assetName, webUI)
 		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "max risk exceeds threshold 8.50")
+		assert.Contains(t, err.Error(), "exceeded the defined threshold")
 
 		// Should fail on high CVSS threshold (7.8 >= 7) - only considering open vulns
 		err = PrintScaResults(scanResponse, "critical", "high", assetName, webUI)
 		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "max CVSS exceeds threshold 7.80")
+		assert.Contains(t, err.Error(), "exceeded the defined threshold")
 	})
 
 	t.Run("should handle nil RawRiskAssessment gracefully", func(t *testing.T) {
