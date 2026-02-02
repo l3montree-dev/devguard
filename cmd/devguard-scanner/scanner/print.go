@@ -130,7 +130,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	for purl, vulns := range dependencyVulnsByPurl {
 		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
 		for _, v := range vulns {
-			uniqueVulns[v.CVEID] = v
+			uniqueVulns[fmt.Sprintf("%s:%.1f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
 		}
 		dependencyVulnsByPurl[purl] = utils.Map(utils.Values(uniqueVulns), func(v dtos.DependencyVulnDTO) dtos.DependencyVulnDTO {
 			return v
@@ -148,7 +148,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 			return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 		})
 
-		// First check if which vulnerability in this group has failed
+		//First check which vulnerability in this group has failed
 		groupHasFailed := false
 		vulnFailed := map[string]bool{}
 
