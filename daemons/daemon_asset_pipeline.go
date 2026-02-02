@@ -482,10 +482,10 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 						return el
 					})
 
-					vexReports, _, _ := runner.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
+					boms, vexReports, _, _ := runner.scanService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
 
 					graph := normalize.NewSBOMGraph()
-					for _, report := range vexReports {
+					for _, report := range boms {
 						graph.MergeGraph(report)
 					}
 					tx := runner.db.Begin()
@@ -499,15 +499,23 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 						continue
 					}
 
-					// scan the newBom
 					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, newBom, "system")
-
 					if err != nil {
 						tx.Rollback()
 						slog.Error("failed to scan normalized sbom after upstream sync", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						continue
 					}
+
+					if err = runner.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+						slog.Error("failed to ingest VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+						errs = append(errs, err)
+						tx.Rollback()
+						continue
+					}
+
+					slog.Info("synced upstream for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+
 					tx.Commit()
 				}
 			}

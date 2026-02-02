@@ -32,14 +32,14 @@ func NewVEXRuleRouter(
 	// VEX rules are scoped to assets
 	// Read access - anyone who can read the asset can list and get rules
 	ruleGroup := assetRouter.Group.Group("/vex-rules")
-	ruleGroup.GET("/", vexRuleController.List) // Without query params, lists all rules
-	// ruleGroup.GET("/:ruleId", vexRuleController.Get) // With composite key query params below in controller logic
+	ruleGroup.GET("", vexRuleController.List)        // List all rules for asset
+	ruleGroup.GET("/:ruleId", vexRuleController.Get) // Get single rule by ID
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("/", vexRuleController.Create)
-	ruleWriteGroup.PUT("/", vexRuleController.Update)    // Query params: cveId, pathPatternHash, vexSource
-	ruleWriteGroup.DELETE("/", vexRuleController.Delete) // Query params: cveId, pathPatternHash, vexSource
+	ruleWriteGroup.POST("", vexRuleController.Create)           // Create rule
+	ruleWriteGroup.PUT("/:ruleId", vexRuleController.Update)    // Update rule by ID
+	ruleWriteGroup.DELETE("/:ruleId", vexRuleController.Delete) // Delete rule by ID
 
 	return VEXRuleRouter{Group: ruleGroup}
 }

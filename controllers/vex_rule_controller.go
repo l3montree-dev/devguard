@@ -27,7 +27,7 @@ import (
 )
 
 type VEXRuleController struct {
-	vexRuleService *services.VEXRuleService
+	vexRuleService shared.VEXRuleService
 }
 
 func NewVEXRuleController(vexRuleService *services.VEXRuleService) *VEXRuleController {
@@ -67,12 +67,57 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
 
+	// Count matching vulnerabilities for all rules in batch
+	counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, rules)
+	if err != nil {
+		ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
+		counts = make(map[string]int)
+	}
+
 	result := make([]dtos.VEXRuleDTO, len(rules))
 	for i, rule := range rules {
-		result[i] = transformer.VEXRuleToDTO(rule)
+		result[i] = transformer.VEXRuleToDTOWithCount(rule, counts[rule.ID])
 	}
 
 	return ctx.JSON(200, result)
+}
+
+// @Summary Get a VEX rule
+// @Tags VEXRules
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param ruleId path string true "Rule ID"
+// @Success 200 {object} dtos.VEXRuleDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [get]
+func (c *VEXRuleController) Get(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+
+	ruleID := ctx.Param("ruleId")
+	if ruleID == "" {
+		return echo.NewHTTPError(400, "ruleId path parameter is required")
+	}
+
+	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	if err != nil {
+		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
+	}
+
+	// Verify the rule belongs to this asset
+	if rule.AssetID != asset.ID {
+		return echo.NewHTTPError(403, "rule does not belong to this asset")
+	}
+
+	// Count matching vulnerabilities
+	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	if err != nil {
+		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
+		count = 0
+	}
+
+	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
 }
 
 // @Summary Create a VEX rule
@@ -124,7 +169,14 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
 	}
 
-	return ctx.JSON(201, transformer.VEXRuleToDTO(*rule))
+	// Count matching vulnerabilities for the response
+	count, err := c.vexRuleService.CountMatchingVulns(nil, *rule)
+	if err != nil {
+		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
+		count = 0
+	}
+
+	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
 }
 
 // @Summary Update a VEX rule
@@ -134,29 +186,24 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param cveId query string true "CVE ID"
-// @Param pathPatternHash query string true "Path Pattern Hash"
-// @Param vexSource query string true "VEX Source"
+// @Param ruleId path string true "Rule ID"
 // @Param body body UpdateVEXRuleRequest true "Updated rule data"
 // @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [put]
 func (c *VEXRuleController) Update(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+
+	ruleID := ctx.Param("ruleId")
+	if ruleID == "" {
+		return echo.NewHTTPError(400, "ruleId path parameter is required")
+	}
 
 	var req UpdateVEXRuleRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	cveID := ctx.QueryParam("cveId")
-	pathPatternHash := ctx.QueryParam("pathPatternHash")
-	vexSource := ctx.QueryParam("vexSource")
-
-	if cveID == "" || pathPatternHash == "" || vexSource == "" {
-		return echo.NewHTTPError(400, "cveId, pathPatternHash, and vexSource query parameters are required")
-	}
-
-	rule, err := c.vexRuleService.FindByCompositeKey(nil, asset.ID, cveID, pathPatternHash, vexSource)
+	rule, err := c.vexRuleService.FindByID(nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -190,7 +237,14 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 		ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
 	}
 
-	return ctx.JSON(200, transformer.VEXRuleToDTO(rule))
+	// Count matching vulnerabilities for the response
+	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	if err != nil {
+		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
+		count = 0
+	}
+
+	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
 }
 
 // @Summary Delete a VEX rule
@@ -200,23 +254,18 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param cveId query string true "CVE ID"
-// @Param pathPatternHash query string true "Path Pattern Hash"
-// @Param vexSource query string true "VEX Source"
+// @Param ruleId path string true "Rule ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [delete]
 func (c *VEXRuleController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	cveID := ctx.QueryParam("cveId")
-	pathPatternHash := ctx.QueryParam("pathPatternHash")
-	vexSource := ctx.QueryParam("vexSource")
-
-	if cveID == "" || pathPatternHash == "" || vexSource == "" {
-		return echo.NewHTTPError(400, "cveId, pathPatternHash, and vexSource query parameters are required")
+	ruleID := ctx.Param("ruleId")
+	if ruleID == "" {
+		return echo.NewHTTPError(400, "ruleId path parameter is required")
 	}
 
-	rule, err := c.vexRuleService.FindByCompositeKey(nil, asset.ID, cveID, pathPatternHash, vexSource)
+	rule, err := c.vexRuleService.FindByID(nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}

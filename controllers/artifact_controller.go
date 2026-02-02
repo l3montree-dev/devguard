@@ -23,6 +23,7 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
+	vexRuleService           shared.VEXRuleService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
@@ -103,7 +104,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, vexReports, _, _ := c.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	tx := c.artifactRepository.GetDB(nil).Begin()
 
 	// merge all boms
@@ -121,12 +122,18 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 	currentUserID := shared.GetSession(ctx).GetUserID()
 
-	_, _, newState, err := c.ScanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
+	_, _, newState, err := c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
 
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after creating artifact", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after creating artifact").WithInternal(err)
+	}
+
+	if err := c.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+		tx.Rollback()
+		slog.Error("could not ingest vex reports", "err", err)
+		return err
 	}
 
 	c.FireAndForget(func() {
@@ -226,7 +233,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
 
-	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
+	boms, vexReports, _, _ := c.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.UniqBy(utils.Map(sources, func(el models.ComponentDependency) string {
 		_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
 		return origin
 	}), func(el string) string {
@@ -249,6 +256,18 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	}
 
 	_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not scan sbom after syncing external sources", "err", err)
+		return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
+	}
+
+	if err := c.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+		tx.Rollback()
+		slog.Error("could not ingest vex reports", "err", err)
+		return err
+	}
 
 	tx.Commit()
 
@@ -326,7 +345,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
+	boms, vexReports, _, invalidURLs := c.FetchBomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()
@@ -350,6 +369,14 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
 	}
+
+	if err := c.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+		tx.Rollback()
+		slog.Error("could not ingest vex reports", "err", err)
+		return err
+	}
+
+	tx.Commit()
 
 	c.FireAndForget(func() {
 		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)

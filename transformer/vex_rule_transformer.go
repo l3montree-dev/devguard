@@ -21,12 +21,18 @@ import (
 )
 
 func VEXRuleToDTO(rule models.VEXRule) dtos.VEXRuleDTO {
+	return VEXRuleToDTOWithCount(rule, 0)
+}
+
+func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRuleDTO {
 	return dtos.VEXRuleDTO{
-		// Composite key fields
-		AssetID:         rule.AssetID,
-		CVEID:           rule.CVEID,
-		PathPatternHash: rule.PathPatternHash,
-		VexSource:       rule.VexSource,
+		// Primary key
+		ID: rule.ID,
+
+		// Composite key components
+		AssetID:   rule.AssetID,
+		CVEID:     rule.CVEID,
+		VexSource: rule.VexSource,
 
 		// Rule data
 		Justification:           rule.Justification,
@@ -36,5 +42,8 @@ func VEXRuleToDTO(rule models.VEXRule) dtos.VEXRuleDTO {
 		CreatedByID:             rule.CreatedByID,
 		CreatedAt:               rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:               rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+
+		// Metrics
+		AppliesToAmountOfDependencyVulns: appliesToCount,
 	}
 }

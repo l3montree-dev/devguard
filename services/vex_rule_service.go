@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -51,9 +52,8 @@ func NewVEXRuleService(
 }
 
 func (s *VEXRuleService) Create(tx shared.DB, rule *models.VEXRule) error {
-	// Ensure the hash is computed
-	rule.SetPathPattern(rule.PathPattern)
-
+	// Ensure the ID is calculated from composite key components
+	rule.EnsureID()
 	if err := s.vexRuleRepository.Create(tx, rule); err != nil {
 		return fmt.Errorf("failed to create VEX rule: %w", err)
 	}
@@ -82,8 +82,43 @@ func (s *VEXRuleService) FindByAssetID(tx shared.DB, assetID uuid.UUID) ([]model
 	return s.vexRuleRepository.FindByAssetID(tx, assetID)
 }
 
-func (s *VEXRuleService) FindByCompositeKey(tx shared.DB, assetID uuid.UUID, cveID, pathPatternHash, vexSource string) (models.VEXRule, error) {
-	return s.vexRuleRepository.FindByCompositeKey(tx, assetID, cveID, pathPatternHash, vexSource)
+func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, error) {
+	return s.vexRuleRepository.FindByID(tx, id)
+}
+
+// CountMatchingVulns returns the number of dependency vulnerabilities that match a VEX rule
+func (s *VEXRuleService) CountMatchingVulns(tx shared.DB, rule models.VEXRule) (int, error) {
+	vulns, err := s.dependencyVulnRepository.FindByVEXRule(tx, rule)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
+	}
+	return len(vulns), nil
+}
+
+// CountMatchingVulnsForRules returns the number of matching vulnerabilities for each rule in a single batch query
+// Returns a map of rule ID to count
+func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models.VEXRule) (map[string]int, error) {
+	if len(rules) == 0 {
+		return make(map[string]int), nil
+	}
+
+	result := make(map[string]int)
+
+	vulnsByRule, err := s.dependencyVulnRepository.FindByVEXRules(tx, rules)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
+	}
+
+	for _, rule := range rules {
+		rulePtr := &rule
+		if vulns, ok := vulnsByRule[rulePtr]; ok {
+			result[rule.ID] = len(vulns)
+		} else {
+			result[rule.ID] = 0
+		}
+	}
+
+	return result, nil
 }
 
 // CreateVulnEventFromVEXRule creates a VulnEvent based on a VEX rule and vulnerability.
@@ -194,12 +229,37 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	return false
 }
 
-func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexSource string, bom *cdx.BOM) error {
-	rules, err := s.parseVEXRulesInBOM(asset.ID, vexSource, bom)
+func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, vexReports []*normalize.VexReport) error {
+	// Collect all rules from all VEX reports to batch process them
+	allAddedRules := make([]models.VEXRule, 0)
+
+	for _, vexReport := range vexReports {
+		rules, err := s.parseVEXRulesInBOM(asset.ID, vexReport)
+		if err != nil {
+			return fmt.Errorf("failed to parse VEX rules from SBOM (source %s): %w", vexReport.Source, err)
+		}
+		addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
+		if err != nil {
+			return fmt.Errorf("failed to sync VEX rules from source %s: %w", vexReport.Source, err)
+		}
+		allAddedRules = append(allAddedRules, addedRules...)
+	}
+
+	// Apply all rules to existing vulns in a single batch
+	desiredUpstreamState := dtos.UpstreamStateExternalAccepted
+	if asset.ParanoidMode {
+		desiredUpstreamState = dtos.UpstreamStateExternal
+	}
+
+	return s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, allAddedRules)
+}
+
+func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexReport *normalize.VexReport) error {
+	rules, err := s.parseVEXRulesInBOM(asset.ID, vexReport)
 	if err != nil {
 		return fmt.Errorf("failed to parse VEX rules from SBOM: %w", err)
 	}
-	addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexSource, rules)
+	addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
 	if err != nil {
 		return fmt.Errorf("failed to sync VEX rules from source: %w", err)
 	}
@@ -212,9 +272,9 @@ func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexSource s
 	return s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, addedRules)
 }
 
-func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, vexSource string, bom *cdx.BOM) ([]models.VEXRule, error) {
+func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, report *normalize.VexReport) ([]models.VEXRule, error) {
 	// we are only interested in the vulnerabilities
-	vulns := bom.Vulnerabilities
+	bom := report.Report
 	// for creating vex rules we need to find the starting path to the components
 	// we ONLY USE METADATA COMPONENT FOR THAT
 	if bom.Metadata == nil || bom.Metadata.Component == nil {
@@ -247,12 +307,12 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, vexSource string,
 		refToPurl[comp.BOMRef] = purl
 	}
 
-	if vulns == nil {
+	if bom.Vulnerabilities == nil {
 		return nil, fmt.Errorf("no vulns inside sbom")
 	}
 
-	rules := make([]models.VEXRule, 0, len(*vulns))
-	for _, vuln := range *vulns {
+	rules := make([]models.VEXRule, 0, len(*bom.Vulnerabilities))
+	for _, vuln := range *bom.Vulnerabilities {
 		cveID := extractCVE(vuln.ID)
 		if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
 			cveID = extractCVE(vuln.Source.URL)
@@ -287,7 +347,7 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, vexSource string,
 		rule := models.VEXRule{
 			AssetID:       assetID,
 			CVEID:         cveID,
-			VexSource:     vexSource,
+			VexSource:     report.Source,
 			Justification: justification,
 			EventType:     eventType,
 			PathPattern:   dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcardMulti, purl.ToString()},
@@ -311,8 +371,9 @@ func (s *VEXRuleService) syncVEXRulesFromSource(tx shared.DB, assetID uuid.UUID,
 	}
 
 	result := utils.CompareSlices(newRules, existingRules, func(a models.VEXRule) string {
-		return ruleKey(a)
+		return a.ID
 	})
+
 	rulesToAdd := result.OnlyInA
 	rulesToRemove := result.OnlyInB
 
@@ -339,11 +400,6 @@ func (s *VEXRuleService) syncVEXRulesFromSource(tx shared.DB, assetID uuid.UUID,
 	}
 
 	return rulesToAdd, rulesToRemove, nil
-}
-
-// ruleKey generates a unique key for a VEX rule based on its composite primary key
-func ruleKey(rule models.VEXRule) string {
-	return fmt.Sprintf("%s:%s:%s:%s", rule.AssetID, rule.CVEID, rule.PathPatternHash, rule.VexSource)
 }
 
 // map CycloneDX Analysis State / Response to internal status strings used by CreateVulnEventAndApply

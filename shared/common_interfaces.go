@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
@@ -69,7 +70,7 @@ type PersonalAccessTokenService interface {
 }
 
 type CSAFService interface {
-	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*normalize.SBOMGraph, error)
+	GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*cyclonedx.BOM, error)
 }
 
 type SBOMScanner interface {
@@ -292,8 +293,8 @@ type SupplyChainRepository interface {
 type VEXRuleRepository interface {
 	GetDB(db DB) DB
 	FindByAssetID(db DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByID(db DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(db DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
-	FindByCompositeKey(db DB, assetID uuid.UUID, cveID, pathPatternHash, vexSource string) (models.VEXRule, error)
 	Create(db DB, rule *models.VEXRule) error
 	Upsert(db DB, rule *models.VEXRule) error
 	UpsertBatch(db DB, rules []models.VEXRule) error
@@ -360,7 +361,6 @@ type ArtifactService interface {
 	SaveArtifact(artifact *models.Artifact) error
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
 }
 
 type DependencyVulnService interface {
@@ -416,6 +416,7 @@ type ScanService interface {
 	ScanNormalizedSBOM(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
+	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []*normalize.VexReport, []string, []string)
 }
 
 type ConfigRepository interface {
@@ -423,15 +424,19 @@ type ConfigRepository interface {
 	GetDB(tx DB) DB
 }
 
-// VEXRule represents a VEX rule with its associated CVE ID.
-// Path pattern rules only make sense for the same CVE.
-// Path patterns support wildcards: "*" matches any single path element, "**" matches any number of elements.
-type VEXRule struct {
-	Justification           *string                          `json:"justification,omitempty" gorm:"type:text;default:null;"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	UserID                  string                           `json:"userId" gorm:"type:uuid;"`
-	PathPattern             []string                         `json:"pathPattern,omitempty" gorm:"type:jsonb;default:null;serializer:json"`
-	CVEID                   string                           `json:"cveId" gorm:"type:text;"`
+type VEXRuleService interface {
+	Begin() DB
+	Create(tx DB, rule *models.VEXRule) error
+	Update(tx DB, rule *models.VEXRule) error
+	Delete(tx DB, rule models.VEXRule) error
+	DeleteByAssetID(tx DB, assetID uuid.UUID) error
+	FindByAssetID(tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	ApplyRulesToExistingVulns(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) error
+	IngestVEX(tx DB, asset models.Asset, vexReport *normalize.VexReport) error
+	IngestVexes(tx DB, asset models.Asset, vexReports []*normalize.VexReport) error
+	CountMatchingVulns(tx DB, rule models.VEXRule) (int, error)
+	CountMatchingVulnsForRules(tx DB, rules []models.VEXRule) (map[string]int, error)
+	FindByID(tx DB, id string) (models.VEXRule, error)
 }
 
 type VulnEventRepository interface {
@@ -444,9 +449,6 @@ type VulnEventRepository interface {
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
-	// GetVEXRulesForAsset returns all VEX rules with path patterns for an asset.
-	// Returns the CVE ID with each rule since path patterns only apply to the same CVE.
-	GetVEXRulesForAsset(tx DB, assetID uuid.UUID) ([]VEXRule, error)
 }
 
 type GithubAppInstallationRepository interface {

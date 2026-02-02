@@ -56,6 +56,7 @@ type DaemonRunner struct {
 	leaderElector                shared.LeaderElector
 	maliciousPackageChecker      shared.MaliciousPackageChecker
 	vulnDBImportService          shared.VulnDBImportService
+	vexRuleService               shared.VEXRuleService
 
 	debugOptions DebugOptions
 }

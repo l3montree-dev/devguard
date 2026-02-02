@@ -18,7 +18,6 @@ package normalize
 import (
 	"fmt"
 	"iter"
-	"log/slog"
 	"maps"
 	"net/url"
 	"os"
@@ -82,8 +81,6 @@ type InfoSourceType string
 
 const (
 	InfoSourceSBOM InfoSourceType = "sbom"
-	InfoSourceVEX  InfoSourceType = "vex"
-	InfoSourceCSAF InfoSourceType = "csaf"
 )
 
 // =============================================================================
@@ -127,6 +124,13 @@ type SBOMGraph struct {
 	rootID string // ID of the root node (constant: "ROOT")
 
 	scopeID string // The id of the current scope node
+
+	originalRootPurl packageurl.PackageURL // The original root PURL from the BOM metadata component
+}
+
+type VexReport struct {
+	Report *cdx.BOM
+	Source string
 }
 
 func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
@@ -599,6 +603,13 @@ func (g *SBOMGraph) NodesOfType(nodeType GraphNodeType) iter.Seq[*GraphNode] {
 	}
 }
 
+func BomIsSBOM(bom *cdx.BOM) bool {
+	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
+		return false
+	}
+	return true
+}
+
 // Components returns all component nodes reachable from scope.
 func (g *SBOMGraph) Components() iter.Seq[*GraphNode] {
 	return g.NodesOfType(GraphNodeTypeComponent)
@@ -726,7 +737,7 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 	var result []string
 
 	for id, typeCounts := range counts {
-		if typeCounts[InfoSourceSBOM] > 1 || typeCounts[InfoSourceVEX] > 0 || typeCounts[InfoSourceCSAF] > 0 {
+		if typeCounts[InfoSourceSBOM] > 1 {
 			result = append(result, id)
 		}
 	}
@@ -1248,11 +1259,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 }
 
 func RemoveInformationSourcePrefixIfExists(origin string) (InfoSourceType, string) {
-	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceVEX)); ok {
-		return InfoSourceVEX, after
-	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceSBOM)); ok {
-		return InfoSourceSBOM, after
-	} else if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceCSAF)); ok {
+	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceSBOM)); ok {
 		return InfoSourceSBOM, after
 	}
 
@@ -1406,20 +1413,16 @@ func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string)
 	return docURL, dashboardURL
 }
 
-func getInfoSourceTypeByInspectingSBOM(bom *cdx.BOM) InfoSourceType {
-	// Default to SBOM
-	infoSourceType := InfoSourceSBOM
-
-	// Inspect vulnerabilities for VEX indicators
-	if bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) > 0 {
-		return InfoSourceVEX
-	}
-	return infoSourceType
-}
-
 // =============================================================================
 // PARSING FROM CYCLONEDX
 // =============================================================================
+
+func (g *SBOMGraph) GetOriginalRootPurl() (packageurl.PackageURL, error) {
+	if g.originalRootPurl.String() == "" {
+		return packageurl.PackageURL{}, fmt.Errorf("original root purl is not set")
+	}
+	return g.originalRootPurl, nil
+}
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
 func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SBOMGraph {
@@ -1427,16 +1430,10 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 
 	artifactID := g.AddArtifact(artifactName)
 
-	// extract the info source type from the infoSourceID
-	infoSourceType := getInfoSourceTypeByInspectingSBOM(bom)
-
-	infoID := g.AddInfoSource(artifactID, infoSourceID, infoSourceType)
+	infoID := g.AddInfoSource(artifactID, infoSourceID, InfoSourceSBOM)
 
 	if bom.Components != nil {
 		for _, comp := range *bom.Components {
-			if comp.BOMRef == "33009a9f-a6fc-482b-9d38-945a913a39e4" {
-				slog.Info("test")
-			}
 			if isComponentNodeID(comp.PackageURL) {
 				// add only real components
 				g.AddComponent(comp)
@@ -1462,6 +1459,13 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 		if g.nodes[rootRef] == nil {
 			// add root component as well
 			g.AddComponent(*bom.Metadata.Component)
+		}
+		node := g.nodes[rootRef]
+		if node.Component.PackageURL != "" {
+			purl, err := packageurl.FromString(node.Component.PackageURL)
+			if err == nil {
+				g.originalRootPurl = purl
+			}
 		}
 	} else if g.nodes[""] == nil {
 		// add the empty root component
@@ -1522,14 +1526,6 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 	if bom.Vulnerabilities != nil {
 		for _, vuln := range *bom.Vulnerabilities {
 			g.AddVulnerability(vuln)
-			// build edges to affected components
-			if vuln.Affects != nil {
-				for _, aff := range *vuln.Affects {
-					if g.nodes[aff.Ref] != nil {
-						g.AddEdge(infoID, g.nodes[aff.Ref].Component.BOMRef) // link vuln to info source)
-					}
-				}
-			}
 		}
 	}
 
@@ -1644,7 +1640,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 				},
 			}
 			g.edges[id] = make(map[string]struct{})
-		case string(InfoSourceSBOM), string(InfoSourceVEX), string(InfoSourceCSAF):
+		case string(InfoSourceSBOM):
 			g.nodes[id] = &GraphNode{
 				BOMRef:    id,
 				Type:      GraphNodeTypeInfoSource,

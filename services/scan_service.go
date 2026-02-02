@@ -456,14 +456,8 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
-	var boms []*normalize.SBOMGraph
-
-	var validURLs []string
-	var invalidURLs []string
-
+func (s *scanService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, vexReports []*normalize.VexReport, validURLs []string, invalidURLs []string) {
 	client := &http.Client{}
-
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
 		url = normalize.SanitizeExternalReferencesURL(url)
@@ -497,7 +491,10 @@ func (s *scanService) FetchBomsFromUpstream(artifactName string, ref string, ups
 				continue
 			}
 			validURLs = append(validURLs, url)
-			boms = append(boms, bom)
+			vexReports = append(vexReports, &normalize.VexReport{
+				Report: bom,
+				Source: sanitizedURL,
+			})
 			continue
 		}
 		//check if the file is a valid url
@@ -537,8 +534,17 @@ func (s *scanService) FetchBomsFromUpstream(artifactName string, ref string, ups
 			continue
 		}
 		validURLs = append(validURLs, url)
-		boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, ref))
+
+		if normalize.BomIsSBOM(&bom) {
+			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, ref))
+		} else {
+			vexReports = append(vexReports, &normalize.VexReport{
+				Report: &bom,
+				Source: url,
+			})
+		}
+
 	}
 
-	return boms, validURLs, invalidURLs
+	return boms, vexReports, validURLs, invalidURLs
 }

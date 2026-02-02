@@ -454,86 +454,68 @@ func (_c *VEXRuleRepository_FindByAssetID_Call) RunAndReturn(run func(db shared.
 	return _c
 }
 
-// FindByCompositeKey provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) FindByCompositeKey(db shared.DB, assetID uuid.UUID, cveID string, pathPatternHash string, vexSource string) (models.VEXRule, error) {
-	ret := _mock.Called(db, assetID, cveID, pathPatternHash, vexSource)
+// FindByID provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) FindByID(db shared.DB, id string) (models.VEXRule, error) {
+	ret := _mock.Called(db, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByCompositeKey")
+		panic("no return value specified for FindByID")
 	}
 
 	var r0 models.VEXRule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string, string) (models.VEXRule, error)); ok {
-		return returnFunc(db, assetID, cveID, pathPatternHash, vexSource)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) (models.VEXRule, error)); ok {
+		return returnFunc(db, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string, string) models.VEXRule); ok {
-		r0 = returnFunc(db, assetID, cveID, pathPatternHash, vexSource)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) models.VEXRule); ok {
+		r0 = returnFunc(db, id)
 	} else {
 		r0 = ret.Get(0).(models.VEXRule)
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, string, string) error); ok {
-		r1 = returnFunc(db, assetID, cveID, pathPatternHash, vexSource)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string) error); ok {
+		r1 = returnFunc(db, id)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VEXRuleRepository_FindByCompositeKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCompositeKey'
-type VEXRuleRepository_FindByCompositeKey_Call struct {
+// VEXRuleRepository_FindByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByID'
+type VEXRuleRepository_FindByID_Call struct {
 	*mock.Call
 }
 
-// FindByCompositeKey is a helper method to define mock.On call
+// FindByID is a helper method to define mock.On call
 //   - db shared.DB
-//   - assetID uuid.UUID
-//   - cveID string
-//   - pathPatternHash string
-//   - vexSource string
-func (_e *VEXRuleRepository_Expecter) FindByCompositeKey(db interface{}, assetID interface{}, cveID interface{}, pathPatternHash interface{}, vexSource interface{}) *VEXRuleRepository_FindByCompositeKey_Call {
-	return &VEXRuleRepository_FindByCompositeKey_Call{Call: _e.mock.On("FindByCompositeKey", db, assetID, cveID, pathPatternHash, vexSource)}
+//   - id string
+func (_e *VEXRuleRepository_Expecter) FindByID(db interface{}, id interface{}) *VEXRuleRepository_FindByID_Call {
+	return &VEXRuleRepository_FindByID_Call{Call: _e.mock.On("FindByID", db, id)}
 }
 
-func (_c *VEXRuleRepository_FindByCompositeKey_Call) Run(run func(db shared.DB, assetID uuid.UUID, cveID string, pathPatternHash string, vexSource string)) *VEXRuleRepository_FindByCompositeKey_Call {
+func (_c *VEXRuleRepository_FindByID_Call) Run(run func(db shared.DB, id string)) *VEXRuleRepository_FindByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
 			arg0 = args[0].(shared.DB)
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
-			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByCompositeKey_Call) Return(vEXRule models.VEXRule, err error) *VEXRuleRepository_FindByCompositeKey_Call {
+func (_c *VEXRuleRepository_FindByID_Call) Return(vEXRule models.VEXRule, err error) *VEXRuleRepository_FindByID_Call {
 	_c.Call.Return(vEXRule, err)
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByCompositeKey_Call) RunAndReturn(run func(db shared.DB, assetID uuid.UUID, cveID string, pathPatternHash string, vexSource string) (models.VEXRule, error)) *VEXRuleRepository_FindByCompositeKey_Call {
+func (_c *VEXRuleRepository_FindByID_Call) RunAndReturn(run func(db shared.DB, id string) (models.VEXRule, error)) *VEXRuleRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }

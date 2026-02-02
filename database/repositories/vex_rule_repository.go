@@ -45,59 +45,34 @@ func (r *vexRuleRepository) FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]mod
 	return rules, err
 }
 
-func (r *vexRuleRepository) FindByCompositeKey(db *gorm.DB, assetID uuid.UUID, cveID, pathPatternHash, vexSource string) (models.VEXRule, error) {
+func (r *vexRuleRepository) FindByID(db *gorm.DB, id string) (models.VEXRule, error) {
 	var rule models.VEXRule
-	err := r.GetDB(db).
-		Where("asset_id = ? AND cve_id = ? AND path_pattern_hash = ? AND vex_source = ?",
-			assetID, cveID, pathPatternHash, vexSource).
-		First(&rule).Error
+	err := r.GetDB(db).Where("id = ?", id).First(&rule).Error
 	return rule, err
 }
 
 func (r *vexRuleRepository) Create(db *gorm.DB, rule *models.VEXRule) error {
-	// Ensure the hash is computed
-	if rule.PathPatternHash == "" {
-		rule.SetPathPattern(rule.PathPattern)
-	}
+	// Ensure the ID is calculated
+	rule.EnsureID()
 	return r.GetDB(db).Create(rule).Error
 }
 
 func (r *vexRuleRepository) Upsert(db *gorm.DB, rule *models.VEXRule) error {
-	// Ensure the hash is computed
-	if rule.PathPatternHash == "" {
-		rule.SetPathPattern(rule.PathPattern)
-	}
+	// Ensure the ID is calculated
+	rule.EnsureID()
 	return r.GetDB(db).Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "asset_id"},
-			{Name: "cve_id"},
-			{Name: "path_pattern_hash"},
-			{Name: "vex_source"},
-		},
-		DoUpdates: clause.AssignmentColumns([]string{
-			"justification",
-			"mechanical_justification",
-			"event_type",
-			"path_pattern",
-			"created_by_id",
-			"updated_at",
-		}),
+		UpdateAll: true,
 	}).Create(rule).Error
 }
 
 func (r *vexRuleRepository) Update(db *gorm.DB, rule *models.VEXRule) error {
-	// Ensure the hash is computed
-	if rule.PathPatternHash == "" {
-		rule.SetPathPattern(rule.PathPattern)
-	}
+	// Recalculate ID if path pattern changed
+	rule.EnsureID()
 	return r.GetDB(db).Save(rule).Error
 }
 
 func (r *vexRuleRepository) Delete(db *gorm.DB, rule models.VEXRule) error {
-	return r.GetDB(db).
-		Where("asset_id = ? AND cve_id = ? AND path_pattern_hash = ? AND vex_source = ?",
-			rule.AssetID, rule.CVEID, rule.PathPatternHash, rule.VexSource).
-		Delete(&models.VEXRule{}).Error
+	return r.GetDB(db).Delete(&rule).Error
 }
 
 func (r *vexRuleRepository) DeleteByAssetID(db *gorm.DB, assetID uuid.UUID) error {
@@ -114,27 +89,12 @@ func (r *vexRuleRepository) UpsertBatch(db *gorm.DB, rules []models.VEXRule) err
 	if len(rules) == 0 {
 		return nil
 	}
-	// Ensure hashes are computed
+	// Ensure IDs are calculated
 	for i := range rules {
-		if rules[i].PathPatternHash == "" {
-			rules[i].SetPathPattern(rules[i].PathPattern)
-		}
+		rules[i].EnsureID()
 	}
 	return r.GetDB(db).Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "asset_id"},
-			{Name: "cve_id"},
-			{Name: "path_pattern_hash"},
-			{Name: "vex_source"},
-		},
-		DoUpdates: clause.AssignmentColumns([]string{
-			"justification",
-			"mechanical_justification",
-			"event_type",
-			"path_pattern",
-			"created_by_id",
-			"updated_at",
-		}),
+		UpdateAll: true,
 	}).Create(&rules).Error
 }
 
@@ -142,12 +102,10 @@ func (r *vexRuleRepository) DeleteBatch(db *gorm.DB, rules []models.VEXRule) err
 	if len(rules) == 0 {
 		return nil
 	}
-	// Delete by composite key for each rule
+	// Delete by ID
 	tx := r.GetDB(db)
 	for _, rule := range rules {
-		if err := tx.Where("asset_id = ? AND cve_id = ? AND path_pattern_hash = ? AND vex_source = ?",
-			rule.AssetID, rule.CVEID, rule.PathPatternHash, rule.VexSource).
-			Delete(&models.VEXRule{}).Error; err != nil {
+		if err := tx.Delete(&rule).Error; err != nil {
 			return err
 		}
 	}

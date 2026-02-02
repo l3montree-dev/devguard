@@ -7,7 +7,6 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/normalize"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -97,90 +96,6 @@ func (_c *ArtifactService_DeleteArtifact_Call) Return(err error) *ArtifactServic
 }
 
 func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactService_DeleteArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FetchBomsFromUpstream provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
-	ret := _mock.Called(artifactName, ref, upstreamURLs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FetchBomsFromUpstream")
-	}
-
-	var r0 []*normalize.SBOMGraph
-	var r1 []string
-	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.SBOMGraph, []string, []string)); ok {
-		return returnFunc(artifactName, ref, upstreamURLs)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.SBOMGraph); ok {
-		r0 = returnFunc(artifactName, ref, upstreamURLs)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*normalize.SBOMGraph)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
-		r1 = returnFunc(artifactName, ref, upstreamURLs)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]string)
-		}
-	}
-	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
-		r2 = returnFunc(artifactName, ref, upstreamURLs)
-	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]string)
-		}
-	}
-	return r0, r1, r2
-}
-
-// ArtifactService_FetchBomsFromUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchBomsFromUpstream'
-type ArtifactService_FetchBomsFromUpstream_Call struct {
-	*mock.Call
-}
-
-// FetchBomsFromUpstream is a helper method to define mock.On call
-//   - artifactName string
-//   - ref string
-//   - upstreamURLs []string
-func (_e *ArtifactService_Expecter) FetchBomsFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ArtifactService_FetchBomsFromUpstream_Call {
-	return &ArtifactService_FetchBomsFromUpstream_Call{Call: _e.mock.On("FetchBomsFromUpstream", artifactName, ref, upstreamURLs)}
-}
-
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ArtifactService_FetchBomsFromUpstream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, strings1 []string) *ArtifactService_FetchBomsFromUpstream_Call {
-	_c.Call.Return(sBOMGraphs, strings, strings1)
-	return _c
-}
-
-func (_c *ArtifactService_FetchBomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)) *ArtifactService_FetchBomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }

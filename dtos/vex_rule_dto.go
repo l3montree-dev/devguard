@@ -147,11 +147,13 @@ func (p PathPattern) MinLength() int {
 }
 
 type VEXRuleDTO struct {
-	// Composite key fields
-	AssetID         uuid.UUID `json:"assetId"`
-	CVEID           string    `json:"cveId"`
-	PathPatternHash string    `json:"pathPatternHash"`
-	VexSource       string    `json:"vexSource"`
+	// Primary key
+	ID string `json:"id"`
+
+	// Composite key components
+	AssetID   uuid.UUID `json:"assetId"`
+	CVEID     string    `json:"cveId"`
+	VexSource string    `json:"vexSource"`
 
 	// Rule data
 	Justification           string                      `json:"justification"`
@@ -161,4 +163,7 @@ type VEXRuleDTO struct {
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
 	UpdatedAt               string                      `json:"updatedAt"`
+
+	// Metrics
+	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`
 }

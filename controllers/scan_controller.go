@@ -38,6 +38,7 @@ type ScanController struct {
 	artifactService        shared.ArtifactService
 	dependencyVulnService  shared.DependencyVulnService
 	firstPartyVulnService  shared.FirstPartyVulnService
+	vexRuleService         shared.VEXRuleService
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
@@ -129,19 +130,28 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		}
 	}
 	upstreamBOMs := []*normalize.SBOMGraph{}
+	vexReports := []*normalize.VexReport{}
 	// check if there are components or vulnerabilities in the bom
-	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
+	if normalize.BomIsSBOM(&bom) {
 		upstreamBOMs = append(upstreamBOMs, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
+	} else {
+		vexReports = append(vexReports, &normalize.VexReport{
+			Source: origin,
+			Report: &bom,
+		})
 	}
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
-		boms, _, invalid := s.artifactService.FetchBomsFromUpstream(artifactName, assetVersionName, externalURLs)
+		boms, vexReports, _, invalid := s.FetchBomsFromUpstream(artifactName, assetVersionName, externalURLs)
 		if len(invalid) > 0 {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
 		if len(boms) > 0 {
 			upstreamBOMs = append(upstreamBOMs, boms...)
+		}
+		if len(vexReports) > 0 {
+			vexReports = append(vexReports, vexReports...)
 		}
 	}
 	graph := normalize.NewSBOMGraph()
@@ -155,6 +165,14 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		slog.Error("could not scan vex", "err", err)
 		return err
 	}
+
+	// process the vex
+	if err := s.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+		tx.Rollback()
+		slog.Error("could not ingest vex reports", "err", err)
+		return err
+	}
+
 	tx.Commit()
 
 	s.FireAndForget(func() {

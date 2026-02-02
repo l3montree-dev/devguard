@@ -16,25 +16,27 @@
 package models
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 // VEXRule represents a rule for automatically marking vulnerabilities based on VEX statements.
 // Rules are scoped to an asset and apply to all matching dependency vulnerabilities.
 // Path patterns support wildcards: "*" matches any single path element, "**" matches any number of elements.
-// Composite primary key: (AssetID, CVEID, PathPatternHash, VexSource)
+// Primary key: Hash(AssetID, CVEID, PathPattern, VexSource)
 type VEXRule struct {
-	// Composite primary key fields
-	AssetID         uuid.UUID `json:"assetId" gorm:"type:uuid;not null;primaryKey"`
-	CVEID           string    `json:"cveId" gorm:"type:text;not null;primaryKey"`
-	PathPatternHash string    `json:"-" gorm:"type:text;not null;primaryKey"` // SHA256 hash of PathPattern for indexing
-	VexSource       string    `json:"vexSource" gorm:"type:text;not null;primaryKey"`
+	// Single primary key - hash of composite components
+	ID string `json:"id" gorm:"primaryKey;not null;"`
+
+	// Composite key components (for indexing and queries)
+	AssetID   uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
+	CVEID     string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	VexSource string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"createdAt"`
@@ -59,15 +61,22 @@ func (VEXRule) TableName() string {
 	return "vex_rules"
 }
 
-// CalculatePathPatternHash computes a SHA256 hash of the PathPattern for use in the composite key.
-func CalculatePathPatternHash(pattern []string) string {
-	data, _ := json.Marshal(pattern)
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+// CalculateID computes a SHA256 hash of AssetID, CVEID, PathPattern, and VexSource for use as the primary key.
+// This ensures a deterministic, unique ID for each VEX rule combination.
+func CalculateVEXRuleID(assetID uuid.UUID, cveID string, pathPattern []string, vexSource string) string {
+	data := fmt.Sprintf("%s/%s/%s/%s", assetID.String(), cveID, strings.Join(pathPattern, ","), vexSource)
+	return utils.HashString(data)
 }
 
-// SetPathPattern sets the PathPattern and automatically updates the PathPatternHash.
+// SetPathPattern sets the PathPattern and recalculates the ID.
 func (r *VEXRule) SetPathPattern(pattern []string) {
 	r.PathPattern = pattern
-	r.PathPatternHash = CalculatePathPatternHash(pattern)
+	r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, pattern, r.VexSource)
+}
+
+// EnsureID calculates the ID if it hasn't been set yet.
+func (r *VEXRule) EnsureID() {
+	if r.ID == "" {
+		r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, r.PathPattern, r.VexSource)
+	}
 }
