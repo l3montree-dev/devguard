@@ -98,6 +98,7 @@ func NewDaemonRunner(
 	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBImportService,
+	vexRuleService shared.VEXRuleService,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -127,6 +128,7 @@ func NewDaemonRunner(
 		leaderElector:                leaderElector,
 		maliciousPackageChecker:      maliciousPackageChecker,
 		vulnDBImportService:          vulnDBImportService,
+		vexRuleService:               vexRuleService,
 	}
 }
 

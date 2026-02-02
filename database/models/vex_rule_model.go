@@ -34,17 +34,19 @@ type VEXRule struct {
 	ID string `json:"id" gorm:"primaryKey;not null;"`
 
 	// Composite key components (for indexing and queries)
-	AssetID   uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
-	CVEID     string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
-	VexSource string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	CVEID            string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	VexSource        string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 
 	// Relationships
-	Asset Asset `json:"asset,omitempty" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	CVE   CVE   `json:"cve,omitempty" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;"`
+	Asset        Asset        `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
+	CVE          CVE          `json:"cve" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;"`
+	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	// Rule data
 	Justification           string                           `json:"justification" gorm:"type:text;not null"`

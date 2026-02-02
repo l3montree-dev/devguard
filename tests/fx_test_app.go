@@ -62,17 +62,17 @@ type TestApp struct {
 	MaliciousPackageChecker  shared.MaliciousPackageChecker
 
 	// Controllers
-	AssetController             *controllers.AssetController
-	AssetVersionController      *controllers.AssetVersionController
-	ScanController              *controllers.ScanController
-	ProjectController           *controllers.ProjectController
-	OrgController               *controllers.OrgController
-	DependencyVulnController    *controllers.DependencyVulnController
-	FirstPartyVulnController    *controllers.FirstPartyVulnController
-	ComponentController         *controllers.ComponentController
-	ArtifactController          *controllers.ArtifactController
-	CSAFController              *controllers.CSAFController
-	FalsePositiveRuleController *controllers.FalsePositiveRuleController
+	AssetController          *controllers.AssetController
+	AssetVersionController   *controllers.AssetVersionController
+	ScanController           *controllers.ScanController
+	ProjectController        *controllers.ProjectController
+	OrgController            *controllers.OrgController
+	DependencyVulnController *controllers.DependencyVulnController
+	FirstPartyVulnController *controllers.FirstPartyVulnController
+	ComponentController      *controllers.ComponentController
+	ArtifactController       *controllers.ArtifactController
+	CSAFController           *controllers.CSAFController
+	VEXRuleController        *controllers.VEXRuleController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
@@ -95,6 +95,9 @@ type TestApp struct {
 	GitlabIntegrationRepository shared.GitlabIntegrationRepository
 	ExternalUserRepository      shared.ExternalUserRepository
 	AggregatedVulnRepository    shared.VulnRepository
+	VexRuleRepository           shared.VEXRuleRepository
+	ExternalReferenceRepository shared.ExternalReferenceRepository
+	VexRuleService              shared.VEXRuleService
 
 	// Access Control
 	RBACProvider shared.RBACProvider

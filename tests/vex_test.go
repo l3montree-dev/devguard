@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -67,6 +68,26 @@ func createCVEGHSA_j5w8_q4qc_rx2x(db shared.DB) {
 	}
 }
 
+// createVexPriorityCVEs creates all CVEs referenced in the vex-priority.json file
+// VEX rules are created for all vulnerabilities in the file, so all CVE IDs must exist
+func createVexPriorityCVEs(db shared.DB) {
+	cves := []models.CVE{
+		{CVE: "GO-2025-4134", Description: "golang.org/x/crypto vulnerability"},
+		{CVE: "GO-2025-4135", Description: "golang.org/x/crypto vulnerability"},
+		{CVE: "GHSA-w73w-5m7g-f7qc", Description: "jwt-go vulnerability"},
+		{CVE: "GO-2020-0017", Description: "jwt-go vulnerability"},
+		{CVE: "GHSA-3xh2-74w9-5vxm", Description: "gorilla/websocket vulnerability"},
+		{CVE: "GO-2020-0019", Description: "gorilla/websocket vulnerability"},
+		{CVE: "GHSA-f6x5-jh6r-wrfv", Description: "golang.org/x/crypto vulnerability"},
+	}
+
+	for _, cve := range cves {
+		if err := db.Create(&cve).Error; err != nil {
+			panic(err)
+		}
+	}
+}
+
 func getVexPrioritySBOMContent() []byte {
 	file, err := os.Open("./testdata/vex-priority-sbom.json")
 	if err != nil {
@@ -109,8 +130,9 @@ func TestVexPriorityMultiplePaths(t *testing.T) {
 			t.Fatalf("could not save asset: %v", err)
 		}
 
-		// Create the CVE that the VEX file references
+		// Create the CVEs that the VEX file references
 		createCVEGHSA_j5w8_q4qc_rx2x(f.DB)
+		createVexPriorityCVEs(f.DB)
 
 		setupContext := func(ctx *shared.Context) {
 			shared.SetAsset(*ctx, asset)
@@ -487,8 +509,9 @@ func TestVexPriorityAlternatingState(t *testing.T) {
 			t.Fatalf("could not save asset: %v", err)
 		}
 
-		// Create the CVE that the VEX file references
+		// Create the CVEs that the VEX file references
 		createCVEGHSA_j5w8_q4qc_rx2x(f.DB)
+		createVexPriorityCVEs(f.DB)
 
 		setupContext := func(ctx *shared.Context) {
 			shared.SetAsset(*ctx, asset)
@@ -659,118 +682,369 @@ func TestVexPriorityAlternatingState(t *testing.T) {
 	})
 }
 
-// TestVexTrustsNonExistingVulnerabilities verifies that when a VEX declares a vulnerability
-// that doesn't exist yet in the system, we "trust" the VEX and do NOT create a new vulnerability.
-// The VEX statement should be silently skipped without creating any new DependencyVuln records.
-func TestVexTrustsNonExistingVulnerabilities(t *testing.T) {
+// TestMultiSourceVulnerabilityNotClosedWhenOneSourceRemoves verifies that a vulnerability
+// detected from both SBOM and VEX cannot be closed by one source removing it.
+// Only vulnerabilities with a single source can be closed.
+func TestMultiSourceVulnerabilityNotClosedWhenOneSourceRemoves(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
-
 		scanController := f.App.ScanController
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
-		asset.ParanoidMode = false
-		if err := f.DB.Save(&asset).Error; err != nil {
-			t.Fatalf("could not save asset: %v", err)
-		}
-
-		// Create a CVE that the VEX references - but we WON'T upload an SBOM that contains it
-		cve := models.CVE{
-			CVE:         "CVE-2099-9999",
-			Description: "A vulnerability that exists in CVE DB but not in our SBOM",
-			CVSS:        8.0,
-			Vector:      "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
-		}
-		if err := f.DB.Create(&cve).Error; err != nil {
-			t.Fatalf("could not create CVE: %v", err)
-		}
-
-		affectedComponent := models.AffectedComponent{
-			PurlWithoutVersion: "pkg:golang/github.com/example/not-in-our-sbom",
-			Scheme:             "pkg",
-			Type:               "golang",
-			Name:               "github.com/example/not-in-our-sbom",
-			SemverFixed:        utils.Ptr("2.0.0"),
-		}
-		if err := f.DB.Create(&affectedComponent).Error; err != nil {
-			t.Fatalf("could not create affected component: %v", err)
-		}
-		if err := f.DB.Model(&cve).Association("AffectedComponents").Append(&affectedComponent); err != nil {
-			t.Fatalf("could not link CVE to affected component: %v", err)
-		}
 
 		setupContext := func(ctx *shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("tester")
 			shared.SetAsset(*ctx, asset)
 			shared.SetProject(*ctx, project)
 			shared.SetOrg(*ctx, org)
 			shared.SetAssetVersion(*ctx, assetVersion)
-
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
 			shared.SetSession(*ctx, authSession)
 		}
 
-		// VEX that references a vulnerability that doesn't exist in any SBOM
-		vexForNonExisting := `{
-			"bomFormat": "CycloneDX",
-			"specVersion": "1.6",
-			"version": 1,
-			"metadata": {
-				"component": {
-					"bom-ref": "pkg:golang/github.com/example/my-app@1.0.0",
-					"type": "application",
-					"name": "my-app"
-				}
-			},
-			"vulnerabilities": [
+		// Create CVE and affected component
+		cve := models.CVE{CVE: "CVE-2025-MULTI-SOURCE", CVSS: 5.0}
+		if err := f.DB.Create(&cve).Error; err != nil {
+			t.Fatalf("could not create cve: %v", err)
+		}
+
+		affected := models.AffectedComponent{
+			PurlWithoutVersion: "pkg:npm/multi-source-pkg",
+			Scheme:             "pkg",
+			Type:               "npm",
+			Name:               "multi-source-pkg",
+			SemverIntroduced:   utils.Ptr("1.0.0"),
+		}
+		if err := f.DB.Create(&affected).Error; err != nil {
+			t.Fatalf("could not create affected component: %v", err)
+		}
+		if err := f.DB.Model(&cve).Association("AffectedComponents").Append(&affected); err != nil {
+			t.Fatalf("could not link affected component: %v", err)
+		}
+
+		// Step 1: Upload SBOM that detects the vulnerability
+		sbom := cyclonedx.BOM{
+			SpecVersion: cyclonedx.SpecVersion1_6,
+			BOMFormat:   cyclonedx.BOMFormat,
+			Vulnerabilities: &[]cyclonedx.Vulnerability{
 				{
-					"id": "CVE-2099-9999",
-					"source": {
-						"name": "NVD",
-						"url": "https://nvd.nist.gov/vuln/detail/CVE-2099-9999"
+					ID:      cve.CVE,
+					Affects: &[]cyclonedx.Affects{{Ref: "pkg:npm/multi-source-pkg@1.5.0"}},
+				},
+			},
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/multi-source-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-source-pkg@1.5.0", Name: "pkg:npm/multi-source-pkg@1.5.0"},
+			},
+		}
+
+		var sb bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&sb, cyclonedx.BOMFileFormatJSON).Encode(&sbom); err != nil {
+			t.Fatalf("encode sbom: %v", err)
+		}
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", &sb)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "sbom-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx := app.NewContext(req, rec)
+		setupContext(&ctx)
+
+		if err := scanController.ScanDependencyVulnFromProject(ctx); err != nil {
+			t.Fatalf("sbom scan failed: %v", err)
+		}
+
+		// Verify vulnerability opened from SBOM
+		var vulnsSBOM []models.DependencyVuln
+		if err := f.DB.Where("cve_id = ?", cve.CVE).Find(&vulnsSBOM).Error; err != nil {
+			t.Fatalf("could not query vulns after sbom: %v", err)
+		}
+		assert.GreaterOrEqual(t, len(vulnsSBOM), 1, "SBOM should detect the vulnerability")
+		assert.Equal(t, dtos.VulnStateOpen, vulnsSBOM[0].State)
+
+		// Step 2: Upload VEX that also references the same vulnerability (multi-source now)
+		vex := cyclonedx.BOM{
+			SpecVersion: cyclonedx.SpecVersion1_6,
+			BOMFormat:   cyclonedx.BOMFormat,
+			Vulnerabilities: &[]cyclonedx.Vulnerability{
+				{
+					ID: cve.CVE,
+					Analysis: &cyclonedx.VulnerabilityAnalysis{
+						State: cyclonedx.IASExploitable,
 					},
-					"analysis": {
-						"state": "false_positive",
-						"detail": "This component is not used in our application"
+					Affects: &[]cyclonedx.Affects{{Ref: "pkg:npm/multi-source-pkg@1.5.0"}},
+				},
+			},
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/multi-source-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-source-pkg@1.5.0", Name: "pkg:npm/multi-source-pkg@1.5.0"},
+			},
+		}
+
+		var vb bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&vb, cyclonedx.BOMFileFormatJSON).Encode(&vex); err != nil {
+			t.Fatalf("encode vex: %v", err)
+		}
+
+		rec = httptest.NewRecorder()
+		req = httptest.NewRequest("POST", "/vex/", &vb)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "vex-artifact")
+		req.Header.Set("X-Asset-Ref", assetVersion.Name)
+		req.Header.Set("X-Origin", "vex:test")
+		ctx = app.NewContext(req, rec)
+		setupContext(&ctx)
+
+		if err := scanController.UploadVEX(ctx); err != nil {
+			t.Fatalf("vex upload failed: %v", err)
+		}
+
+		// Vulnerability should still be open (multi-source)
+		var vulnsAfterVex []models.DependencyVuln
+		if err := f.DB.Where("cve_id = ?", cve.CVE).Find(&vulnsAfterVex).Error; err != nil {
+			t.Fatalf("could not query vulns after vex: %v", err)
+		}
+
+		// Verify vulnerability remains open because it has multiple sources
+		assert.GreaterOrEqual(t, len(vulnsAfterVex), 1)
+		assert.Equal(t, dtos.VulnStateOpen, vulnsAfterVex[0].State,
+			"Multi-source vulnerability should remain open even when both sources agree it's exploitable")
+
+		// Step 3: Remove SBOM scan (upload new SBOM without the vulnerability)
+		sbomWithoutVuln := cyclonedx.BOM{
+			SpecVersion: cyclonedx.SpecVersion1_6,
+			BOMFormat:   cyclonedx.BOMFormat,
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/multi-source-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-source-pkg@1.5.0", Name: "pkg:npm/multi-source-pkg@1.5.0"},
+			},
+		}
+
+		var sb2 bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&sb2, cyclonedx.BOMFileFormatJSON).Encode(&sbomWithoutVuln); err != nil {
+			t.Fatalf("encode sbom2: %v", err)
+		}
+
+		rec = httptest.NewRecorder()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", &sb2)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "sbom-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx = app.NewContext(req, rec)
+		setupContext(&ctx)
+
+		if err := scanController.ScanDependencyVulnFromProject(ctx); err != nil {
+			t.Fatalf("sbom scan 2 failed: %v", err)
+		}
+
+		// Vulnerability should still be open because VEX still references it (multi-source)
+		var vulnsAfterSbom2 []models.DependencyVuln
+		if err := f.DB.Where("cve_id = ?", cve.CVE).Find(&vulnsAfterSbom2).Error; err != nil {
+			t.Fatalf("could not query vulns after sbom2: %v", err)
+		}
+
+		assert.GreaterOrEqual(t, len(vulnsAfterSbom2), 1,
+			"Vulnerability should not be removed when one source (SBOM) stops detecting it if another source (VEX) still references it")
+		assert.Equal(t, dtos.VulnStateOpen, vulnsAfterSbom2[0].State,
+			"Multi-source vulnerability should remain open even when SBOM source is removed")
+	})
+}
+
+// TestOnlySingleSourceVulnerabilityCanBeFixedByScans verifies that only vulnerabilities
+// with a single source (either SBOM or VEX, but not both) can be automatically closed/fixed by scan updates.
+// Multi-source vulnerabilities require explicit user action to be closed.
+func TestOnlySingleSourceVulnerabilityCanBeFixedByScans(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		app := echo.New()
+		scanController := f.App.ScanController
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx *shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("tester")
+			shared.SetAsset(*ctx, asset)
+			shared.SetProject(*ctx, project)
+			shared.SetOrg(*ctx, org)
+			shared.SetAssetVersion(*ctx, assetVersion)
+			shared.SetSession(*ctx, authSession)
+		}
+
+		// Create TWO CVEs: one for single-source, one for multi-source
+		cve1 := models.CVE{CVE: "CVE-2025-SINGLE-SOURCE", CVSS: 5.0}
+		if err := f.DB.Create(&cve1).Error; err != nil {
+			t.Fatalf("could not create cve1: %v", err)
+		}
+
+		cve2 := models.CVE{CVE: "CVE-2025-MULTI-FIXED", CVSS: 5.0}
+		if err := f.DB.Create(&cve2).Error; err != nil {
+			t.Fatalf("could not create cve2: %v", err)
+		}
+
+		// Create affected components
+		for _, cveName := range []string{"single-src-pkg", "multi-src-pkg"} {
+			affected := models.AffectedComponent{
+				PurlWithoutVersion: "pkg:npm/" + cveName,
+				Scheme:             "pkg",
+				Type:               "npm",
+				Name:               cveName,
+				SemverFixed:        utils.Ptr("2.0.0"),
+			}
+			if err := f.DB.Create(&affected).Error; err != nil {
+				t.Fatalf("could not create affected component for %s: %v", cveName, err)
+			}
+
+			cveToLink := cve1
+			if cveName == "multi-src-pkg" {
+				cveToLink = cve2
+			}
+			if err := f.DB.Model(&cveToLink).Association("AffectedComponents").Append(&affected); err != nil {
+				t.Fatalf("could not link affected component: %v", err)
+			}
+		}
+
+		// SINGLE SOURCE scenario: Only SBOM detects the vulnerability
+		sbom := cyclonedx.BOM{
+			SpecVersion: cyclonedx.SpecVersion1_6,
+			BOMFormat:   cyclonedx.BOMFormat,
+			Vulnerabilities: &[]cyclonedx.Vulnerability{
+				{
+					ID:      cve1.CVE,
+					Affects: &[]cyclonedx.Affects{{Ref: "pkg:npm/single-src-pkg@1.5.0"}},
+				},
+				{
+					ID:      cve2.CVE,
+					Affects: &[]cyclonedx.Affects{{Ref: "pkg:npm/multi-src-pkg@1.5.0"}},
+				},
+			},
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/single-src-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/single-src-pkg@1.5.0", Name: "single-src-pkg@1.5.0"},
+				{BOMRef: "pkg:npm/multi-src-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-src-pkg@1.5.0", Name: "multi-src-pkg@1.5.0"},
+			},
+		}
+
+		var sb bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&sb, cyclonedx.BOMFileFormatJSON).Encode(&sbom); err != nil {
+			t.Fatalf("encode sbom: %v", err)
+		}
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", &sb)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "sbom-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx := app.NewContext(req, rec)
+		setupContext(&ctx)
+
+		if err := scanController.ScanDependencyVulnFromProject(ctx); err != nil {
+			t.Fatalf("sbom scan failed: %v", err)
+		}
+
+		// Add VEX source to CVE2 (making it multi-source)
+		vex := cyclonedx.BOM{
+			SpecVersion: cyclonedx.SpecVersion1_6,
+			BOMFormat:   cyclonedx.BOMFormat,
+			Vulnerabilities: &[]cyclonedx.Vulnerability{
+				{
+					ID: cve2.CVE,
+					Analysis: &cyclonedx.VulnerabilityAnalysis{
+						State: cyclonedx.IASExploitable,
 					},
-					"affects": [
-						{
-							"ref": "pkg:golang/github.com/example/not-in-our-sbom@1.0.0"
-						}
-					]
-				}
-			]
-		}`
+					Affects: &[]cyclonedx.Affects{{Ref: "pkg:npm/multi-src-pkg@1.5.0"}},
+				},
+			},
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/multi-src-pkg@1.5.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-src-pkg@1.5.0", Name: "multi-src-pkg@1.5.0"},
+			},
+		}
 
-		t.Run("VEX should NOT create vulnerabilities for non-existing components", func(t *testing.T) {
-			artifactName := "trust-vex-test"
+		var vb bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&vb, cyclonedx.BOMFileFormatJSON).Encode(&vex); err != nil {
+			t.Fatalf("encode vex: %v", err)
+		}
 
-			// Verify no vulnerabilities exist for this CVE before VEX upload
-			var beforeVulns []models.DependencyVuln
-			err := f.DB.Where("cve_id = ? AND asset_id = ?", "CVE-2099-9999", asset.ID).Find(&beforeVulns).Error
-			assert.Nil(t, err)
-			assert.Equal(t, 0, len(beforeVulns), "No vulnerabilities should exist before VEX upload")
+		rec = httptest.NewRecorder()
+		req = httptest.NewRequest("POST", "/vex/", &vb)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "vex-artifact")
+		req.Header.Set("X-Asset-Ref", assetVersion.Name)
+		req.Header.Set("X-Origin", "vex:test")
+		ctx = app.NewContext(req, rec)
+		setupContext(&ctx)
 
-			// Upload VEX that references a non-existing vulnerability
-			recorder := httptest.NewRecorder()
-			req := httptest.NewRequest("POST", "/vex/", bytes.NewReader([]byte(vexForNonExisting)))
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", artifactName)
-			req.Header.Set("X-Asset-Ref", assetVersion.Name)
-			ctx := app.NewContext(req, recorder)
-			setupContext(&ctx)
+		if err := scanController.UploadVEX(ctx); err != nil {
+			t.Fatalf("vex upload failed: %v", err)
+		}
 
-			err = scanController.UploadVEX(ctx)
-			assert.Nil(t, err, "VEX upload should succeed even when referencing non-existing vulnerabilities")
-			assert.Equal(t, 200, recorder.Code)
+		// Now upload a patched SBOM (version 2.0.0) that fixes both vulnerabilities
+		sbomPatched := cyclonedx.BOM{
+			SpecVersion:     cyclonedx.SpecVersion1_6,
+			BOMFormat:       cyclonedx.BOMFormat,
+			Vulnerabilities: &[]cyclonedx.Vulnerability{},
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+			},
+			Components: &[]cyclonedx.Component{
+				{BOMRef: "root", Type: cyclonedx.ComponentTypeApplication, Name: "root"},
+				{BOMRef: "pkg:npm/single-src-pkg@2.0.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/single-src-pkg@2.0.0", Name: "single-src-pkg@2.0.0"},
+				{BOMRef: "pkg:npm/multi-src-pkg@2.0.0", Type: cyclonedx.ComponentTypeLibrary, PackageURL: "pkg:npm/multi-src-pkg@2.0.0", Name: "multi-src-pkg@2.0.0"},
+			},
+		}
 
-			// Verify NO vulnerabilities were created - we trust the VEX and skip non-existing ones
-			var afterVulns []models.DependencyVuln
-			err = f.DB.Where("cve_id = ? AND asset_id = ?", "CVE-2099-9999", asset.ID).Find(&afterVulns).Error
-			assert.Nil(t, err)
-			assert.Equal(t, 0, len(afterVulns),
-				"VEX should NOT create vulnerabilities for components that don't exist in any SBOM - we trust the VEX")
+		var sbp bytes.Buffer
+		if err := cyclonedx.NewBOMEncoder(&sbp, cyclonedx.BOMFileFormatJSON).Encode(&sbomPatched); err != nil {
+			t.Fatalf("encode patched sbom: %v", err)
+		}
 
-			t.Logf("VEX upload succeeded without creating vulnerabilities for non-existing components")
-		})
+		rec = httptest.NewRecorder()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", &sbp)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "sbom-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		ctx = app.NewContext(req, rec)
+		setupContext(&ctx)
+
+		if err := scanController.ScanDependencyVulnFromProject(ctx); err != nil {
+			t.Fatalf("patched sbom scan failed: %v", err)
+		}
+
+		// Check results
+		var singleSrcVulns []models.DependencyVuln
+		if err := f.DB.Where("cve_id = ?", cve1.CVE).Find(&singleSrcVulns).Error; err != nil {
+			t.Fatalf("could not query single-src vulns: %v", err)
+		}
+
+		var multiSrcVulns []models.DependencyVuln
+		if err := f.DB.Where("cve_id = ?", cve2.CVE).Find(&multiSrcVulns).Error; err != nil {
+			t.Fatalf("could not query multi-src vulns: %v", err)
+		}
+
+		// Single-source vulnerability SHOULD be fixed (only SBOM detected it, and patched version removes it)
+		if len(singleSrcVulns) > 0 {
+			assert.Equal(t, dtos.VulnStateFixed, singleSrcVulns[0].State,
+				"Single-source vulnerability should be fixed when SBOM version is updated to patched version")
+		}
+
+		// Multi-source vulnerability should NOT be fixed (even though SBOM source is fixed, VEX still references it as exploitable)
+		assert.GreaterOrEqual(t, len(multiSrcVulns), 1,
+			"Multi-source vulnerability record should still exist")
+		assert.NotEqual(t, dtos.VulnStateFixed, multiSrcVulns[0].State,
+			"Multi-source vulnerability should NOT be fixed by SBOM scan when VEX still declares it exploitable")
 	})
 }

@@ -565,8 +565,12 @@ func (repository *dependencyVulnRepository) FindByVEXRules(tx *gorm.DB, rules []
 	}
 
 	cveIDs := make(map[string]bool)
+	for _, rule := range rules {
+		cveIDs[rule.CVEID] = true
+	}
 
-	var assetID uuid.UUID = rules[0].AssetID
+	assetID := rules[0].AssetID
+	assetVersionName := rules[0].AssetVersionName
 
 	// Convert CVE IDs to slice
 	cveIDSlice := make([]string, 0, len(cveIDs))
@@ -578,6 +582,7 @@ func (repository *dependencyVulnRepository) FindByVEXRules(tx *gorm.DB, rules []
 	var vulns []models.DependencyVuln
 	err := repository.Repository.GetDB(tx).
 		Where("asset_id = ?", assetID).
+		Where("asset_version_name = ?", assetVersionName).
 		Where("cve_id IN ?", cveIDSlice).
 		Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
@@ -588,18 +593,6 @@ func (repository *dependencyVulnRepository) FindByVEXRules(tx *gorm.DB, rules []
 
 	if err != nil {
 		return nil, err
-	}
-
-	// Filter by each rule's cve and path pattern
-	for _, rule := range rules {
-		pattern := dtos.PathPattern(rule.PathPattern)
-		var matched []models.DependencyVuln
-		for _, vuln := range vulns {
-			if vuln.CVEID == rule.CVEID && pattern.MatchesSuffix(vuln.VulnerabilityPath) {
-				matched = append(matched, vuln)
-			}
-		}
-		result[&rule] = matched
 	}
 
 	return result, nil

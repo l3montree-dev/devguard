@@ -32,28 +32,31 @@ import (
 )
 
 type ScanController struct {
-	assetVersionRepository shared.AssetVersionRepository
-	assetVersionService    shared.AssetVersionService
-	statisticsService      shared.StatisticsService
-	artifactService        shared.ArtifactService
-	dependencyVulnService  shared.DependencyVulnService
-	firstPartyVulnService  shared.FirstPartyVulnService
-	vexRuleService         shared.VEXRuleService
+	assetVersionRepository      shared.AssetVersionRepository
+	assetVersionService         shared.AssetVersionService
+	statisticsService           shared.StatisticsService
+	artifactService             shared.ArtifactService
+	dependencyVulnService       shared.DependencyVulnService
+	firstPartyVulnService       shared.FirstPartyVulnService
+	vexRuleService              shared.VEXRuleService
+	externalReferenceRepository shared.ExternalReferenceRepository
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository) *ScanController {
 	return &ScanController{
-		assetVersionService:       assetVersionService,
-		assetVersionRepository:    assetVersionRepository,
-		statisticsService:         statisticsService,
-		dependencyVulnService:     dependencyVulnService,
-		firstPartyVulnService:     firstPartyVulnService,
-		FireAndForgetSynchronizer: synchronizer,
-		artifactService:           artifactService,
-		ScanService:               scanService,
+		assetVersionService:         assetVersionService,
+		assetVersionRepository:      assetVersionRepository,
+		statisticsService:           statisticsService,
+		dependencyVulnService:       dependencyVulnService,
+		firstPartyVulnService:       firstPartyVulnService,
+		FireAndForgetSynchronizer:   synchronizer,
+		artifactService:             artifactService,
+		ScanService:                 scanService,
+		vexRuleService:              vexRuleService,
+		externalReferenceRepository: externalReferenceRepository,
 	}
 }
 
@@ -80,7 +83,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	ctx.Request().Body.Close()
 
 	asset := shared.GetAsset(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	org := shared.GetOrg(ctx)
@@ -129,58 +131,51 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			}
 		}
 	}
-	upstreamBOMs := []*normalize.SBOMGraph{}
+
+	tx := s.assetVersionRepository.GetDB(nil).Begin()
+
+	// store the external references from VEX upload
+	for _, url := range externalURLs {
+		ref := models.ExternalReference{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersionName,
+			URL:              url,
+			Type:             "vex",
+		}
+		if err := s.externalReferenceRepository.Create(tx, &ref); err != nil {
+			slog.Error("could not store vex external reference", "err", err, "url", url)
+		}
+	}
+
 	vexReports := []*normalize.VexReport{}
 	// check if there are components or vulnerabilities in the bom
-	if normalize.BomIsSBOM(&bom) {
-		upstreamBOMs = append(upstreamBOMs, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
-	} else {
-		vexReports = append(vexReports, &normalize.VexReport{
-			Source: origin,
-			Report: &bom,
-		})
-	}
+	vexReports = append(vexReports, &normalize.VexReport{
+		Source: origin,
+		Report: &bom,
+	})
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
-		boms, vexReports, _, invalid := s.FetchBomsFromUpstream(artifactName, assetVersionName, externalURLs)
+		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(artifactName, assetVersionName, externalURLs)
 		if len(invalid) > 0 {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
-		if len(boms) > 0 {
-			upstreamBOMs = append(upstreamBOMs, boms...)
+
+		if len(fetchedVexReports) > 0 {
+			vexReports = append(vexReports, fetchedVexReports...)
 		}
-		if len(vexReports) > 0 {
-			vexReports = append(vexReports, vexReports...)
-		}
-	}
-	graph := normalize.NewSBOMGraph()
-	for _, bom := range upstreamBOMs {
-		graph.MergeGraph(bom)
-	}
-	tx := s.assetVersionRepository.Begin()
-	_, _, vulns, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, graph, userID)
-	if err != nil {
-		tx.Rollback()
-		slog.Error("could not scan vex", "err", err)
-		return err
 	}
 
-	// process the vex
-	if err := s.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
-		tx.Rollback()
-		slog.Error("could not ingest vex reports", "err", err)
-		return err
+	if len(vexReports) > 0 {
+		// process the vex
+		if err := s.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+			tx.Rollback()
+			slog.Error("could not ingest vex reports", "err", err)
+			return err
+		}
 	}
 
 	tx.Commit()
-
-	s.FireAndForget(func() {
-		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
 
 	s.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)

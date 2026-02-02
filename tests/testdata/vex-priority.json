@@ -16,6 +16,27 @@
       "type": "application",
       "name": "pkg:devguard/org/grp/ddd",
       "purl": "pkg:devguard/org/grp/ddd"
+    },
+    {
+      "bom-ref": "pkg:golang/golang.org/x/crypto@v0.43.0",
+      "type": "library",
+      "name": "golang.org/x/crypto",
+      "version": "v0.43.0",
+      "purl": "pkg:golang/golang.org/x/crypto@v0.43.0"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0+incompatible",
+      "type": "library",
+      "name": "github.com/dgrijalva/jwt-go",
+      "version": "v3.2.0+incompatible",
+      "purl": "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0+incompatible"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/gorilla/websocket@v1.4.0",
+      "type": "library",
+      "name": "github.com/gorilla/websocket",
+      "version": "v1.4.0",
+      "purl": "pkg:golang/github.com/gorilla/websocket@v1.4.0"
     }
   ],
   "dependencies": [
@@ -283,7 +304,11 @@
         }
       ],
       "analysis": {
-        "state": "in_triage",
+        "state": "exploitable",
+        "response": [
+          "will_not_fix"
+        ],
+        "detail": "Accepted risk for this CVE",
         "firstIssued": "2026-01-30T12:30:23Z",
         "lastUpdated": "2026-01-30T12:30:23Z"
       },

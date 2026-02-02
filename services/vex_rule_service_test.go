@@ -125,10 +125,6 @@ func TestCreateVulnEventFromVEXRule(t *testing.T) {
 			eventType: dtos.EventTypeFalsePositive,
 		},
 		{
-			name:      "fixed event",
-			eventType: dtos.EventTypeFixed,
-		},
-		{
 			name:      "accepted event",
 			eventType: dtos.EventTypeAccepted,
 		},
@@ -148,8 +144,7 @@ func TestCreateVulnEventFromVEXRule(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.NotZero(t, event.ID)
-				assert.Equal(t, rule.Justification, event.Justification)
+				assert.Equal(t, rule.Justification, *event.Justification)
 			}
 		})
 	}

@@ -173,6 +173,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		&testLeaderElector{}, // Use simple test leader elector
 		f.App.MaliciousPackageChecker,
 		f.App.VulnDBImportService,
+		f.App.VexRuleService,
 	)
 }
 

@@ -255,6 +255,12 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
+		// Create affected component (links CVE to the component PURL)
+		affectedComponent, err := createTestAffectedComponent("pkg:npm/test-package@1.0.0", []models.CVE{cve})
+		assert.NoError(t, err)
+		err = f.DB.Create(&affectedComponent).Error
+		assert.NoError(t, err)
+
 		// Create artifact
 		artifact := models.Artifact{
 			ArtifactName:     "test-artifact",
@@ -287,9 +293,10 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour),
 			},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:npm/test-package@1.0.0",
-			Artifacts:     []models.Artifact{artifact},
+			CVEID:             cve.CVE,
+			ComponentPurl:     "pkg:npm/test-package@1.0.0",
+			VulnerabilityPath: []string{"pkg:npm/test-package@1.0.0"},
+			Artifacts:         []models.Artifact{artifact},
 		}
 		err = f.DB.Create(&vulnerability).Error
 		assert.NoError(t, err)
@@ -353,6 +360,12 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		err = f.DB.Create(&cve).Error
 		assert.NoError(t, err)
 
+		// Create affected component (links CVE to the component PURL)
+		affectedComponent, err := createTestAffectedComponent("pkg:npm/test-package@1.0.0", []models.CVE{cve})
+		assert.NoError(t, err)
+		err = f.DB.Create(&affectedComponent).Error
+		assert.NoError(t, err)
+
 		// Create artifact
 		artifact := models.Artifact{
 			ArtifactName:     "test-artifact",
@@ -385,9 +398,10 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 				State:            dtos.VulnStateAccepted,
 				LastDetected:     time.Now().Add(-48 * time.Hour),
 			},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:npm/test-package@1.0.0",
-			Artifacts:     []models.Artifact{artifact},
+			CVEID:             cve.CVE,
+			ComponentPurl:     "pkg:npm/test-package@1.0.0",
+			VulnerabilityPath: []string{"pkg:npm/test-package@1.0.0"},
+			Artifacts:         []models.Artifact{artifact},
 		}
 		err = f.DB.Create(&vulnerability).Error
 		assert.NoError(t, err)

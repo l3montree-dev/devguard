@@ -466,49 +466,9 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
-					rootNodes, err := runner.componentService.FetchInformationSources(&artifact)
-					if err != nil {
-						slog.Error("failed to fetch root nodes for artifact", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
-						errs = append(errs, err)
-						continue
-					}
-
-					upstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-						_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
-						return origin
-					}), func(el string) bool {
-						return strings.HasPrefix(el, "http")
-					}), func(el string) string {
-						return el
-					})
-
-					boms, vexReports, _, _ := runner.scanService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
-
-					graph := normalize.NewSBOMGraph()
-					for _, report := range boms {
-						graph.MergeGraph(report)
-					}
 					tx := runner.db.Begin()
-
-					newBom, err := runner.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersions[i], artifact.ArtifactName, graph, asset.DesiredUpstreamStateForEvents())
-
-					if err != nil {
-						slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
-						errs = append(errs, err)
-						tx.Rollback()
-						continue
-					}
-
-					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, newBom, "system")
-					if err != nil {
-						tx.Rollback()
-						slog.Error("failed to scan normalized sbom after upstream sync", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-						errs = append(errs, err)
-						continue
-					}
-
-					if err = runner.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
-						slog.Error("failed to ingest VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
+					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersions[i], artifact, "system"); err != nil {
+						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()
 						continue

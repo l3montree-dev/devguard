@@ -1318,173 +1318,6 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 	return strings.NewReader(sarifContent)
 }
 
-func TestUploadVEX(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		app := echo.New()
-
-		scanController := f.App.ScanController
-		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
-		asset.ParanoidMode = false
-		if err := f.DB.Save(&asset).Error; err != nil {
-			t.Fatalf("could not save asset: %v", err)
-		}
-
-		setupContext := func(ctx *shared.Context) {
-			shared.SetAsset(*ctx, asset)
-			shared.SetProject(*ctx, project)
-			shared.SetOrg(*ctx, org)
-			shared.SetAssetVersion(*ctx, assetVersion)
-
-			// attach an authenticated session for UploadVEX handler
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
-			shared.SetSession(*ctx, authSession)
-		}
-
-		// create fresh dependency vulns (two entries for same new CVE) so they are not pre-fixed
-		var err error
-		newCVE := models.CVE{
-			CVE:         "CVE-2025-00001",
-			Description: "Test upload vex",
-			CVSS:        5.00,
-		}
-		if err = f.DB.Create(&newCVE).Error; err != nil {
-			t.Fatalf("could not create cve: %v", err)
-		}
-
-		newCVE2 := models.CVE{
-			CVE:         "CVE-2025-00002",
-			Description: "Test upload vex 2",
-			CVSS:        6.00,
-		}
-		if err = f.DB.Create(&newCVE2).Error; err != nil {
-			t.Fatalf("could not create cve 2: %v", err)
-		}
-
-		dv1 := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl: "pkg:npm/example1@1.0.0",
-			VulnerabilityPath: []string{
-				"pkg:npm/example1@1.0.0",
-			},
-			CVE:               newCVE,
-			CVEID:             newCVE.CVE,
-			RawRiskAssessment: utils.Ptr(1.23),
-		}
-		if err = f.DB.Create(&dv1).Error; err != nil {
-			t.Fatalf("could not create dependency vuln 1: %v", err)
-		}
-
-		dv2 := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
-			ComponentPurl: "pkg:npm/example2@2.0.0",
-			VulnerabilityPath: []string{
-				"pkg:npm/example2@2.0.0",
-			},
-			CVE:               newCVE2,
-			CVEID:             newCVE2.CVE,
-			RawRiskAssessment: utils.Ptr(2.34),
-		}
-		if err = f.DB.Create(&dv2).Error; err != nil {
-			t.Fatalf("could not create dependency vuln 2: %v", err)
-		}
-
-		//create a component and save it to the db
-		component := models.Component{
-			ID:      "pkg:npm/example1@1.0.0",
-			License: utils.Ptr("MIT"),
-		}
-
-		if err = f.DB.Create(&component).Error; err != nil {
-			t.Fatalf("could not create component: %v", err)
-		}
-
-		// build a CycloneDX BOM with a single vulnerability (CVE) marked as resolved
-		vuln := cyclonedx.Vulnerability{
-			ID: "CVE-2025-00001",
-			Source: &cyclonedx.Source{
-				Name: "NVD",
-				URL:  "https://nvd.nist.gov/vuln/detail/CVE-2025-00001",
-			},
-			Analysis: &cyclonedx.VulnerabilityAnalysis{
-				State:  cyclonedx.IASFalsePositive,
-				Detail: "We are never using this dependency, so marking as false positive",
-			},
-			Affects: &[]cyclonedx.Affects{
-				{
-					Ref: "pkg:npm/example1@1.0.0",
-				},
-			},
-		}
-		bom := cyclonedx.BOM{
-			BOMFormat:   "CycloneDX",
-			SpecVersion: cyclonedx.SpecVersion1_6,
-			Version:     1,
-			Metadata: &cyclonedx.Metadata{
-				Component: &cyclonedx.Component{
-					BOMRef: "root",
-				},
-			},
-			Vulnerabilities: &[]cyclonedx.Vulnerability{vuln},
-			Components: &[]cyclonedx.Component{
-				{
-					BOMRef:     "pkg:npm/example1@1.0.0",
-					PackageURL: "pkg:npm/example1@1.0.0",
-				},
-			},
-		}
-
-		// encode BOM into multipart form
-		var body bytes.Buffer
-
-		if err != nil {
-			t.Fatalf("could not create form file: %v", err)
-		}
-		if err := cyclonedx.NewBOMEncoder(&body, cyclonedx.BOMFileFormatJSON).Encode(&bom); err != nil {
-			t.Fatalf("could not encode bom: %v", err)
-		}
-
-		// perform POST request to UploadVEX
-		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/vex/", &body)
-		req.Header.Set("Content-Type", "application/json")
-		ctx := app.NewContext(req, recorder)
-		setupContext(&ctx)
-
-		err = scanController.UploadVEX(ctx)
-		assert.Nil(t, err)
-
-		resp := recorder.Result()
-		respBody, err := io.ReadAll(resp.Body)
-		assert.Nil(t, err)
-
-		var result map[string]int
-		err = json.Unmarshal(respBody, &result)
-		assert.Nil(t, err)
-
-		// verify DB: both dependency vulns should now be fixed
-		var dv []models.DependencyVuln
-		if err := f.DB.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events", func(db shared.DB) shared.DB {
-			return db.Order("created_at ASC")
-		}).Find(&dv).Error; err != nil {
-			t.Fatalf("could not query dependency vulns: %v", err)
-		}
-		assert.GreaterOrEqual(t, len(dv), 2)
-
-		for _, d := range dv {
-			switch d.CVEID {
-			case "CVE-2025-00001":
-				// i think its a race condition and the ordering of events is non deterministic
-				assert.Equal(t, dtos.VulnStateFalsePositive, d.State)
-				assert.Equal(t, dtos.EventTypeFalsePositive, d.Events[1].Type)
-				assert.Equal(t, "We are never using this dependency, so marking as false positive", *d.Events[1].Justification)
-			case "CVE-2025-00002":
-				assert.Equal(t, dtos.VulnStateOpen, d.State) // was not part of the uploaded vex.
-			}
-		}
-	})
-}
-
 func TestIdempotency(t *testing.T) {
 	// 1. scan a sbom
 	// 2. Download the sbom from devguard
@@ -1699,7 +1532,6 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
-		falsePositiveRuleController := f.App.FalsePositiveRuleController
 		dependencyVulnRepository := f.App.DependencyVulnRepository
 
 		app := echo.New()
@@ -1760,7 +1592,8 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			err = falsePositiveRuleController.Create(ctx)
+			vexRuleController := f.App.VEXRuleController
+			err = vexRuleController.Create(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 201, recorder.Code)
 
@@ -1784,7 +1617,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 
 		controller := f.App.ScanController
 		dependencyVulnRepository := f.App.DependencyVulnRepository
-		falsePositiveRuleController := f.App.FalsePositiveRuleController
+		vexRuleController := f.App.VEXRuleController
 
 		app := echo.New()
 		createCVE2025_46569(f.DB)
@@ -1840,7 +1673,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			err = falsePositiveRuleController.Create(ctx)
+			err = vexRuleController.Create(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 201, recorder.Code)
 

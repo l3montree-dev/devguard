@@ -39,6 +39,8 @@ type VEXRuleService struct {
 	vulnEventRepository      shared.VulnEventRepository
 }
 
+var _ shared.VEXRuleService = (*VEXRuleService)(nil)
+
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
@@ -74,12 +76,12 @@ func (s *VEXRuleService) Delete(tx shared.DB, rule models.VEXRule) error {
 	return s.vexRuleRepository.Delete(tx, rule)
 }
 
-func (s *VEXRuleService) DeleteByAssetID(tx shared.DB, assetID uuid.UUID) error {
-	return s.vexRuleRepository.DeleteByAssetID(tx, assetID)
+func (s *VEXRuleService) DeleteByAssetVersion(tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
+	return s.vexRuleRepository.DeleteByAssetVersion(tx, assetID, assetVersionName)
 }
 
-func (s *VEXRuleService) FindByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetID(tx, assetID)
+func (s *VEXRuleService) FindByAssetVersion(tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
+	return s.vexRuleRepository.FindByAssetVersion(tx, assetID, assetVersionName)
 }
 
 func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, error) {
@@ -88,11 +90,13 @@ func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, erro
 
 // CountMatchingVulns returns the number of dependency vulnerabilities that match a VEX rule
 func (s *VEXRuleService) CountMatchingVulns(tx shared.DB, rule models.VEXRule) (int, error) {
-	vulns, err := s.dependencyVulnRepository.FindByVEXRule(tx, rule)
+	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(tx, rule.AssetVersionName, rule.AssetID, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	return len(vulns), nil
+	matching := matchRulesToVulns([]models.VEXRule{rule}, vulns)
+
+	return len(matching[&rule]), nil
 }
 
 // CountMatchingVulnsForRules returns the number of matching vulnerabilities for each rule in a single batch query
@@ -103,8 +107,12 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models
 	}
 
 	result := make(map[string]int)
+	assetID := rules[0].AssetID
+	assetVersionName := rules[0].AssetVersionName
 
-	vulnsByRule, err := s.dependencyVulnRepository.FindByVEXRules(tx, rules)
+	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(tx, assetVersionName, assetID, nil)
+
+	vulnsByRule := matchRulesToVulns(rules, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
@@ -150,19 +158,8 @@ func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln mo
 	}
 }
 
-// ApplyRulesToExistingVulns applies multiple VEX rules to all existing vulnerabilities
-// that match each rule's path pattern and CVE. This is more efficient than applying
-// rules one by one as it batches database queries and saves.
-func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) error {
-	if len(rules) == 0 {
-		return nil
-	}
-
-	// Find all vulns matching all rules at once
-	vulnsByRule, err := s.dependencyVulnRepository.FindByVEXRules(tx, rules)
-	if err != nil {
-		return fmt.Errorf("failed to find matching vulns: %w", err)
-	}
+func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	vulnsByRule := matchRulesToVulns(rules, vulns)
 
 	// Collect all vulns to update (deduplicated by ID)
 	vulnMap := make(map[string]models.DependencyVuln)
@@ -187,7 +184,7 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstream
 	}
 
 	if len(vulnMap) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// Apply all events to vulns and collect updated vulns and events
@@ -205,19 +202,34 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstream
 
 	// Save all updated vulns and events in one batch
 	if err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, updatedVulns); err != nil {
-		return fmt.Errorf("failed to save updated vulns: %w", err)
+		return nil, fmt.Errorf("failed to save updated vulns: %w", err)
 	}
 
 	if err := s.vulnEventRepository.SaveBatchBestEffort(tx, allEvents); err != nil {
-		return fmt.Errorf("failed to save events: %w", err)
+		return nil, fmt.Errorf("failed to save events: %w", err)
 	}
 
 	slog.Info("applied VEX rules to existing vulnerabilities",
 		"rulesApplied", len(rules),
 		"vulnsUpdated", len(updatedVulns),
 		"eventsCreated", len(allEvents))
+	return updatedVulns, nil
+}
 
-	return nil
+// ApplyRulesToExistingVulns applies multiple VEX rules to all existing vulnerabilities
+// that match each rule's path pattern and CVE. This is more efficient than applying
+// rules one by one as it batches database queries and saves.
+func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+	if len(rules) == 0 {
+		return nil, nil
+	}
+	// Find all vulns matching all rules at once
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
+	}
+	return s.ApplyRulesToExisting(tx, desiredUpstreamState, rules, vulns)
 }
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
@@ -251,7 +263,8 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, vexReport
 		desiredUpstreamState = dtos.UpstreamStateExternal
 	}
 
-	return s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, allAddedRules)
+	_, err := s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, allAddedRules)
+	return err
 }
 
 func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexReport *normalize.VexReport) error {
@@ -269,7 +282,8 @@ func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexReport *
 		desiredUpstreamState = dtos.UpstreamStateExternal
 	}
 
-	return s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, addedRules)
+	_, err = s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, addedRules)
+	return err
 }
 
 func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, report *normalize.VexReport) ([]models.VEXRule, error) {
@@ -489,4 +503,21 @@ func extractCVE(s string) string {
 		return parts[len(parts)-1]
 	}
 	return s
+}
+
+func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[*models.VEXRule][]models.DependencyVuln {
+	result := make(map[*models.VEXRule][]models.DependencyVuln)
+	// Filter by each rule's cve and path pattern
+	for _, rule := range rules {
+		pattern := dtos.PathPattern(rule.PathPattern)
+		var matched []models.DependencyVuln
+		for _, vuln := range vulns {
+			if vuln.CVEID == rule.CVEID && pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+				matched = append(matched, vuln)
+			}
+		}
+		result[&rule] = matched
+	}
+
+	return result
 }

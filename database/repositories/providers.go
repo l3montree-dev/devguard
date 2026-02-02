@@ -55,4 +55,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewJiraIntegrationRepository, fx.As(new(shared.JiraIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewCveRelationshipRepository, fx.As(new(shared.CVERelationshipRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRepository, fx.As(new(shared.VEXRuleRepository)))),
+	fx.Provide(fx.Annotate(NewExternalReferenceRepository, fx.As(new(shared.ExternalReferenceRepository)))),
 )

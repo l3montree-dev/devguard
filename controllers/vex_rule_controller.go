@@ -20,7 +20,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
@@ -30,7 +29,7 @@ type VEXRuleController struct {
 	vexRuleService shared.VEXRuleService
 }
 
-func NewVEXRuleController(vexRuleService *services.VEXRuleService) *VEXRuleController {
+func NewVEXRuleController(vexRuleService shared.VEXRuleService) *VEXRuleController {
 	return &VEXRuleController{
 		vexRuleService: vexRuleService,
 	}
@@ -61,8 +60,9 @@ type UpdateVEXRuleRequest struct {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
 
-	rules, err := c.vexRuleService.FindByAssetID(nil, asset.ID)
+	rules, err := c.vexRuleService.FindByAssetVersion(nil, asset.ID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
@@ -164,7 +164,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	// Apply this rule to all matching existing dependency vulns
-	if err := c.vexRuleService.ApplyRulesToExistingVulns(tx, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{*rule}); err != nil {
+	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{*rule}); err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
 	}
@@ -232,7 +232,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 	}
 
 	// Apply the updated rule to existing vulnerabilities
-	if err := c.vexRuleService.ApplyRulesToExistingVulns(nil, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{rule}); err != nil {
+	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{rule}); err != nil {
 		// Log the error but don't fail the update - the rule was saved
 		ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
 	}

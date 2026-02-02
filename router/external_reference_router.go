@@ -21,25 +21,23 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type VEXRuleRouter struct {
+type ExternalReferenceRouter struct {
 	*echo.Group
 }
 
-func NewVEXRuleRouter(
+func NewExternalReferenceRouter(
 	assetVersionRouter AssetVersionRouter,
-	vexRuleController *controllers.VEXRuleController,
-) VEXRuleRouter {
-	// VEX rules are scoped to asset versions
-	// Read access - anyone who can read the asset version can list and get rules
-	ruleGroup := assetVersionRouter.Group.Group("/vex-rules")
-	ruleGroup.GET("", vexRuleController.List)        // List all rules for asset version
-	ruleGroup.GET("/:ruleId", vexRuleController.Get) // Get single rule by ID
+	externalReferenceController *controllers.ExternalReferenceController,
+) ExternalReferenceRouter {
+	// External references are scoped to asset versions
+	// Read access - anyone who can read the asset version can list references
+	refGroup := assetVersionRouter.Group.Group("/external-references")
+	refGroup.GET("", externalReferenceController.List) // List all references for asset version
 
 	// Write access - requires asset update permission
-	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("", vexRuleController.Create)           // Create rule
-	ruleWriteGroup.PUT("/:ruleId", vexRuleController.Update)    // Update rule by ID
-	ruleWriteGroup.DELETE("/:ruleId", vexRuleController.Delete) // Delete rule by ID
+	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
+	refWriteGroup.POST("/", externalReferenceController.Create)                  // Create reference
+	refWriteGroup.DELETE("/", externalReferenceController.DeleteForAssetVersion) // Delete all references for asset version
 
-	return VEXRuleRouter{Group: ruleGroup}
+	return ExternalReferenceRouter{Group: refGroup}
 }

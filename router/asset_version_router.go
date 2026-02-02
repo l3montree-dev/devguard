@@ -37,6 +37,7 @@ func NewAssetVersionRouter(
 	intotoController *controllers.InToToController,
 	vulnEventController *controllers.VulnEventController,
 	artifactController *controllers.ArtifactController,
+	externalReferenceController *controllers.ExternalReferenceController,
 	assetVersionRepository shared.AssetVersionRepository,
 	assetRepository shared.AssetRepository,
 	vulnEventRepository shared.VulnEventRepository,

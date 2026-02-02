@@ -17,4 +17,5 @@ var RouterModule = fx.Options(
 	fx.Provide(NewVulnDBRouter),
 	fx.Provide(NewDependencyProxyRouter),
 	fx.Provide(NewVEXRuleRouter),
+	fx.Provide(NewExternalReferenceRouter),
 )

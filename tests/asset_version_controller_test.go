@@ -131,9 +131,20 @@ func TestBuildVEX(t *testing.T) {
 			err = json.Unmarshal(body, &VEXResult)
 			assert.Nil(t, err)
 
+			// Find the axios vulnerability (vuln2) by PURL since order is not guaranteed
+			var axiosVuln *cyclonedx.Vulnerability
+			for i := range *VEXResult.Vulnerabilities {
+				v := &(*VEXResult.Vulnerabilities)[i]
+				if len(*v.Affects) > 0 && (*v.Affects)[0].Ref == "pkg:npm/axios@1.7.7" {
+					axiosVuln = v
+					break
+				}
+			}
+			assert.NotNil(t, axiosVuln, "Should find axios vulnerability")
+
 			//if the vulnerability never gets handled we should have no first responded field and first issued and last updated should be the same
-			assert.Nil(t, (*VEXResult.Vulnerabilities)[1].Properties)
-			assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.FirstIssued, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated)
+			assert.Nil(t, axiosVuln.Properties)
+			assert.Equal(t, axiosVuln.Analysis.FirstIssued, axiosVuln.Analysis.LastUpdated)
 		})
 
 		t.Run("should not list vulnerabilities which are already fixed", func(t *testing.T) {

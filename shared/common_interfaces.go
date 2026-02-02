@@ -23,6 +23,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -228,11 +229,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	// FindByVEXRule finds all dependency vulns matching a VEX rule's CVE and path pattern.
-	// Supports wildcards in path patterns: "*" matches any single element, "**" matches any number of elements.
-	FindByVEXRule(tx DB, rule models.VEXRule) ([]models.DependencyVuln, error)
-	FindByVEXRules(tx DB, rules []models.VEXRule) (map[*models.VEXRule][]models.DependencyVuln, error)
-	// FindByCVEAndComponentPurl finds all dependency vulns with the specified CVE and component PURL
+
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 }
@@ -292,7 +289,7 @@ type SupplyChainRepository interface {
 
 type VEXRuleRepository interface {
 	GetDB(db DB) DB
-	FindByAssetID(db DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	FindByID(db DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(db DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
 	Create(db DB, rule *models.VEXRule) error
@@ -301,7 +298,7 @@ type VEXRuleRepository interface {
 	Update(db DB, rule *models.VEXRule) error
 	Delete(db DB, rule models.VEXRule) error
 	DeleteBatch(db DB, rules []models.VEXRule) error
-	DeleteByAssetID(db DB, assetID uuid.UUID) error
+	DeleteByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) error
 	Begin() DB
 }
 
@@ -323,6 +320,15 @@ type InvitationRepository interface {
 	Save(tx DB, invitation *models.Invitation) error
 	FindByCode(code string) (models.Invitation, error)
 	Delete(tx DB, id uuid.UUID) error
+}
+
+type ExternalReferenceRepository interface {
+	GetDB(db *gorm.DB) *gorm.DB
+	Create(db *gorm.DB, ref *models.ExternalReference) error
+	CreateBatch(db *gorm.DB, refs []models.ExternalReference) error
+	FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error)
+	FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
+	DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error
 }
 
 type ExternalEntityProviderService interface {
@@ -416,7 +422,9 @@ type ScanService interface {
 	ScanNormalizedSBOM(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []*normalize.VexReport, []string, []string)
+	FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
+	FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string)
+	RunArtifactSecurityLifecycle(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
 }
 
 type ConfigRepository interface {
@@ -429,9 +437,10 @@ type VEXRuleService interface {
 	Create(tx DB, rule *models.VEXRule) error
 	Update(tx DB, rule *models.VEXRule) error
 	Delete(tx DB, rule models.VEXRule) error
-	DeleteByAssetID(tx DB, assetID uuid.UUID) error
-	FindByAssetID(tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
-	ApplyRulesToExistingVulns(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) error
+	DeleteByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) error
+	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
+	ApplyRulesToExistingVulns(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error)
+	ApplyRulesToExisting(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	IngestVEX(tx DB, asset models.Asset, vexReport *normalize.VexReport) error
 	IngestVexes(tx DB, asset models.Asset, vexReports []*normalize.VexReport) error
 	CountMatchingVulns(tx DB, rule models.VEXRule) (int, error)

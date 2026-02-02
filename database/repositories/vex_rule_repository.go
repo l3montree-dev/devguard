@@ -18,6 +18,7 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -32,6 +33,8 @@ func NewVEXRuleRepository(db *gorm.DB) *vexRuleRepository {
 	}
 }
 
+var _ shared.VEXRuleRepository = (*vexRuleRepository)(nil)
+
 func (r *vexRuleRepository) GetDB(db *gorm.DB) *gorm.DB {
 	if db != nil {
 		return db
@@ -39,9 +42,13 @@ func (r *vexRuleRepository) GetDB(db *gorm.DB) *gorm.DB {
 	return r.db
 }
 
-func (r *vexRuleRepository) FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
+func (r *vexRuleRepository) Begin() *gorm.DB {
+	return r.db.Begin()
+}
+
+func (r *vexRuleRepository) FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(db).Where("asset_id = ?", assetID).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 
@@ -75,8 +82,8 @@ func (r *vexRuleRepository) Delete(db *gorm.DB, rule models.VEXRule) error {
 	return r.GetDB(db).Delete(&rule).Error
 }
 
-func (r *vexRuleRepository) DeleteByAssetID(db *gorm.DB, assetID uuid.UUID) error {
-	return r.GetDB(db).Where("asset_id = ?", assetID).Delete(&models.VEXRule{}).Error
+func (r *vexRuleRepository) DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
+	return r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.VEXRule{}).Error
 }
 
 func (r *vexRuleRepository) FindByAssetAndVexSource(db *gorm.DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error) {
