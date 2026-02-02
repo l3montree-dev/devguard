@@ -649,14 +649,14 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 	sb.WriteString(fmt.Sprintf(`<text x="4" y="14">%s</text>`, label))
 
 	for i, val := range values {
-		x := labelWidth + i*boxWidth + boxWidth/2
+		x := float64(labelWidth) + float64(i)*float64(boxWidth) + float64(boxWidth)/2.0
 		// if there is only one value, just show the key, it's unknown or all clear
 		content := val.Key
 		if len(values) > 1 {
 			// If there are multiple values, show the value next to the key
 			content = fmt.Sprintf(`%s:%d`, val.Key, val.Value)
 		}
-		sb.WriteString(fmt.Sprintf(`<text x="%d" y="14" text-anchor="middle">%s</text>`, x, content))
+		sb.WriteString(fmt.Sprintf(`<text x="%.1f" y="14" text-anchor="middle">%s</text>`, x, content))
 	}
 
 	sb.WriteString(`</g></svg>`)
