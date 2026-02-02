@@ -98,6 +98,12 @@ func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project m
 	// remove all other artifacts from the bom
 	err := normalizedBom.ScopeToArtifact(artifact.ArtifactName)
 	if err != nil {
+		// If artifact node is not reachable, it means the artifact has no components (empty artifact)
+		// This is a valid scenario, so we return early with no vulnerabilities
+		if errors.Is(err, normalize.ErrNodeNotReachable) {
+			slog.Debug("artifact has no components, skipping scan", "artifactName", artifact.ArtifactName)
+			return nil, nil, nil, nil
+		}
 		slog.Error("could not scope bom to artifact", "err", err)
 		return nil, nil, nil, err
 	}
