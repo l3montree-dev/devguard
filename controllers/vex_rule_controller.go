@@ -56,8 +56,9 @@ type UpdateVEXRuleRequest struct {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Success 200 {array} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -89,9 +90,10 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param ruleId path string true "Rule ID"
 // @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [get]
 func (c *VEXRuleController) Get(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -127,11 +129,13 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param body body CreateVEXRuleRequest true "Rule data"
 // @Success 201 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
 	session := shared.GetSession(ctx)
 
 	var req CreateVEXRuleRequest
@@ -149,17 +153,19 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 
 	rule := &models.VEXRule{
 		AssetID:                 asset.ID,
+		AssetVersionName:        assetVersion.Name,
 		CVEID:                   req.CVEID,
 		VexSource:               "manual",
 		Justification:           req.Justification,
 		MechanicalJustification: req.MechanicalJustification,
+		EventType:               dtos.EventTypeFalsePositive,
 		PathPattern:             req.PathPattern,
 		CreatedByID:             session.GetUserID(),
 	}
 
 	tx := c.vexRuleService.Begin()
 
-	if err := c.vexRuleService.Create(nil, rule); err != nil {
+	if err := c.vexRuleService.Create(tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
@@ -167,6 +173,11 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{*rule}); err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
+		tx.Rollback()
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return echo.NewHTTPError(500, "failed to commit VEX rule creation").WithInternal(err)
 	}
 
 	// Count matching vulnerabilities for the response
@@ -186,10 +197,11 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param ruleId path string true "Rule ID"
 // @Param body body UpdateVEXRuleRequest true "Updated rule data"
 // @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [put]
 func (c *VEXRuleController) Update(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -254,9 +266,10 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param ruleId path string true "Rule ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [delete]
 func (c *VEXRuleController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 

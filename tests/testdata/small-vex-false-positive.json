@@ -5,14 +5,24 @@
     "metadata": {
         "timestamp": "2025-10-25T18:27:06Z",
         "component": {
-            "bom-ref": "pkg:devguard/neu@main",
+            "bom-ref": "pkg:golang/gorm.io/gorm@v1.31.0",
             "type": "application",
             "author": "Test Org",
             "publisher": "github.com/l3montree-dev/devguard",
-            "name": "",
-            "version": "main"
+            "name": "neu",
+            "version": "main",
+            "purl": "pkg:golang/gorm.io/gorm@v1.31.0"
         }
     },
+    "components": [
+        {
+            "bom-ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+            "type": "library",
+            "name": "inflection",
+            "version": "v1.0.0",
+            "purl": "pkg:golang/github.com/jinzhu/inflection@v1.0.0"
+        }
+    ],
     "vulnerabilities": [
         {
             "id": "CVE-2020-25649",

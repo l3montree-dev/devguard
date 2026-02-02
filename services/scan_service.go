@@ -721,7 +721,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(
 	}
 
 	// Ingest VEX rules
-	if err := s.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+	if err := s.vexRuleService.IngestVexes(tx, asset, assetVersion, vexReports); err != nil {
 		slog.Error("failed to ingest vex reports in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
 		return nil, nil, nil, fmt.Errorf("failed to ingest vex reports: %w", err)
 	}

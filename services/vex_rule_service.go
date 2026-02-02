@@ -241,12 +241,12 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	return false
 }
 
-func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, vexReports []*normalize.VexReport) error {
+func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error {
 	// Collect all rules from all VEX reports to batch process them
 	allAddedRules := make([]models.VEXRule, 0)
 
 	for _, vexReport := range vexReports {
-		rules, err := s.parseVEXRulesInBOM(asset.ID, vexReport)
+		rules, err := s.parseVEXRulesInBOM(asset.ID, assetVersion.Name, vexReport)
 		if err != nil {
 			return fmt.Errorf("failed to parse VEX rules from SBOM (source %s): %w", vexReport.Source, err)
 		}
@@ -267,8 +267,8 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, vexReport
 	return err
 }
 
-func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexReport *normalize.VexReport) error {
-	rules, err := s.parseVEXRulesInBOM(asset.ID, vexReport)
+func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error {
+	rules, err := s.parseVEXRulesInBOM(asset.ID, assetVersion.Name, vexReport)
 	if err != nil {
 		return fmt.Errorf("failed to parse VEX rules from SBOM: %w", err)
 	}
@@ -286,7 +286,7 @@ func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, vexReport *
 	return err
 }
 
-func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, report *normalize.VexReport) ([]models.VEXRule, error) {
+func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName string, report *normalize.VexReport) ([]models.VEXRule, error) {
 	// we are only interested in the vulnerabilities
 	bom := report.Report
 	// for creating vex rules we need to find the starting path to the components
@@ -296,19 +296,24 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, report *normalize
 		return nil, fmt.Errorf("no metadata component found in SBOM")
 	}
 
-	if bom.Components == nil || len(*bom.Components) == 0 {
-		slog.Info("no components found in SBOM, skipping VEX rule creation")
-		return nil, fmt.Errorf("no components found in SBOM. Needed for Ref -> PURL mapping")
+	// try to parse the root component purl if it exists
+	var componentPurl packageurl.PackageURL
+	if bom.Metadata.Component.PackageURL == "" {
+		return nil, fmt.Errorf("no package URL found in metadata component")
 	}
 
-	// try to parse it
-	componentPurl, err := packageurl.FromString(bom.Metadata.Component.PackageURL)
+	var err error
+	componentPurl, err = packageurl.FromString(bom.Metadata.Component.PackageURL)
 	if err != nil {
-		slog.Info("failed to parse metadata component PURL, skipping VEX rule creation", "purl", bom.Metadata.Component.PackageURL, "error", err)
-		return nil, fmt.Errorf("failed to parse metadata component PURL: %w", err)
+		slog.Info("failed to parse metadata component PURL, continuing anyway", "purl", bom.Metadata.Component.PackageURL, "error", err)
 	}
 
 	refToPurl := make(map[string]packageurl.PackageURL)
+
+	if bom.Components == nil || len(*bom.Components) == 0 {
+		return nil, fmt.Errorf("no components inside sbom")
+	}
+	// Build ref-to-purl mapping from components if they exist
 	for _, comp := range *bom.Components {
 		if comp.PackageURL == "" {
 			continue
@@ -350,22 +355,38 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, report *normalize
 			continue
 		}
 		ref := (*vuln.Affects)[0].Ref
-		// try to parse the purl
+
+		// try to get the purl from the mapping first
 		purl := refToPurl[ref]
+
+		// if not found in mapping, try to parse the ref directly as a PURL
 		if purl.String() == "" {
-			slog.Info("no component PURL found for vuln affect Ref, skipping VEX rule creation for this vuln", "ref", ref, "cveID", cveID)
-			continue
+			parsedPurl, err := packageurl.FromString(ref)
+			if err != nil {
+				slog.Info("no component PURL found for vuln affect Ref and unable to parse as PURL, skipping VEX rule creation for this vuln", "ref", ref, "cveID", cveID, "error", err)
+				continue
+			}
+			purl = parsedPurl
 		}
 
 		// now create the path pattern
+		var pathPattern dtos.PathPattern
+		if componentPurl.String() != "" {
+			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcardMulti, purl.ToString()}
+		} else {
+			// If no metadata component PURL, use the affected package directly
+			pathPattern = dtos.PathPattern{purl.ToString()}
+		}
+
 		rule := models.VEXRule{
-			AssetID:       assetID,
-			CVEID:         cveID,
-			VexSource:     report.Source,
-			Justification: justification,
-			EventType:     eventType,
-			PathPattern:   dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcardMulti, purl.ToString()},
-			CreatedByID:   "system", // system user
+			AssetID:          assetID,
+			AssetVersionName: assetVersionName,
+			CVEID:            cveID,
+			VexSource:        report.Source,
+			Justification:    justification,
+			EventType:        eventType,
+			PathPattern:      pathPattern,
+			CreatedByID:      "system", // system user
 		}
 		rule.SetPathPattern(rule.PathPattern) // compute the hash
 		rules = append(rules, rule)

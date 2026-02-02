@@ -441,8 +441,8 @@ type VEXRuleService interface {
 	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	ApplyRulesToExistingVulns(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(tx DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEX(tx DB, asset models.Asset, vexReport *normalize.VexReport) error
-	IngestVexes(tx DB, asset models.Asset, vexReports []*normalize.VexReport) error
+	IngestVEX(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error
+	IngestVexes(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error
 	CountMatchingVulns(tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(tx DB, id string) (models.VEXRule, error)

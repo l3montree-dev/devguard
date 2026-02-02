@@ -230,33 +230,33 @@ func (t *testLeaderElector) IsLeader() bool {
 // This ensures tests don't make actual HTTP requests
 func createMockedComponentService(t testing.TB, realCS shared.ComponentService) shared.ComponentService {
 	mockCS := &mocks.ComponentService{}
-	
+
 	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
 	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]models.Component{}, nil)
-	
+
 	// Mock other methods to delegate to real implementation
 	mockCS.On("GetLicense", mock.Anything).
 		Return(func(component models.Component) models.Component {
 			result, _ := realCS.GetLicense(component)
 			return result
 		}, nil)
-	
+
 	mockCS.On("FetchInformationSources", mock.Anything).
 		Return(func(artifact *models.Artifact) []models.ComponentDependency {
 			result, _ := realCS.FetchInformationSources(artifact)
 			return result
 		}, nil)
-	
+
 	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
 		Return(func(artifact *models.Artifact, rootNodePurls []string) error {
 			return realCS.RemoveInformationSources(artifact, rootNodePurls)
 		})
-	
+
 	mockCS.On("RefreshComponentProjectInformation", mock.Anything).
 		Return(func(project models.ComponentProject) {
 			realCS.RefreshComponentProjectInformation(project)
 		})
-	
+
 	return mockCS
 }

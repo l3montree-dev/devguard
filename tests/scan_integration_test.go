@@ -1435,6 +1435,22 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 			t.Fatalf("could not create cve 2: %v", err)
 		}
 
+		// Create AffectedComponent to link the CVE to the package
+		// This ensures the SBOM scan will find this vulnerability for the package
+		affectedComp := models.AffectedComponent{
+			ID:                 "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
+			Ecosystem:          "golang",
+			Scheme:             "pkg",
+			Type:               "golang",
+			Name:               "github.com/jinzhu/inflection",
+			Version:            utils.Ptr("1.0.0"),
+			CVE:                []models.CVE{newCVE},
+		}
+		if err = f.DB.Create(&affectedComp).Error; err != nil {
+			t.Fatalf("could not create affected component: %v", err)
+		}
+
 		controller := f.App.ScanController
 
 		app := echo.New()
@@ -1463,8 +1479,9 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 
 		assert.Nil(t, controller.UploadVEX(ctx))
 
-		// now scan the sbom - it does not contain the cve the vex is talking about
-		// nevertheless, we expect this vulnerability to stay in false positive state and wont be fixed
+		// now scan the sbom - it contains the package that the vex is talking about
+		// the SBOM scan will create the dependency vuln for CVE-2020-25649
+		// and the VEX rule will apply to it, putting it in false positive state
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", smallSbom)
 		recorder = httptest.NewRecorder()
 		ctx = app.NewContext(req, recorder)
@@ -1528,7 +1545,7 @@ func TestScanWithMultiplePaths(t *testing.T) {
 	})
 }
 
-func TestPathPatternFalsePositiveRules(t *testing.T) {
+func TestPathPatternVEXRules(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1548,7 +1565,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
-		t.Run("should apply false positive rule to all vulns with matching path suffix", func(t *testing.T) {
+		t.Run("should apply VEX rule to all vulns with matching path suffix", func(t *testing.T) {
 			// First, scan the SBOM with multiple paths to create vulnerabilities
 			sbomFile, err := os.Open("testdata/sbom-with-multiple-paths.json")
 			assert.Nil(t, err)
@@ -1583,7 +1600,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 				assert.Equal(t, dtos.VulnStateOpen, v.State)
 			}
 
-			// Create a FalsePositiveRule via the new dedicated endpoint
+			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
 			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			recorder = httptest.NewRecorder()
@@ -1597,7 +1614,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 201, recorder.Code)
 
-			// Verify both vulns are now false positive
+			// Re-fetch the vulnerabilities to check their state after VEX rule is applied
 			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
 			assert.Nil(t, err)
 
@@ -1607,7 +1624,7 @@ func TestPathPatternFalsePositiveRules(t *testing.T) {
 					falsePositiveCount++
 				}
 			}
-			assert.Equal(t, 2, falsePositiveCount, "both vulnerabilities should be marked as false positive")
+			assert.Equal(t, 2, falsePositiveCount, "both vulnerabilities should be marked as false positive by VEX rule")
 		})
 	})
 }
@@ -1621,7 +1638,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 
 		app := echo.New()
 		createCVE2025_46569(f.DB)
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
 			authSession := mocks.NewAuthSession(t)
@@ -1630,9 +1647,10 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
 			shared.SetSession(ctx, authSession)
+			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
-		t.Run("should apply existing false positive rule to newly detected vulns with matching path", func(t *testing.T) {
+		t.Run("should apply existing VEX rule to newly detected vulns with matching path", func(t *testing.T) {
 			// First, scan to create the initial vulnerability
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
@@ -1664,7 +1682,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			}
 			assert.NotNil(t, initialVuln)
 
-			// Create a FalsePositiveRule via the new dedicated endpoint
+			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
 			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			recorder = httptest.NewRecorder()

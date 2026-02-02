@@ -168,7 +168,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 
 	if len(vexReports) > 0 {
 		// process the vex
-		if err := s.vexRuleService.IngestVexes(tx, asset, vexReports); err != nil {
+		if err := s.vexRuleService.IngestVexes(tx, asset, assetVersion, vexReports); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest vex reports", "err", err)
 			return err
