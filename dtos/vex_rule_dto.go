@@ -94,27 +94,28 @@ func matchPatternExact(pattern, path []string) bool {
 			// Try to find the next pattern element in the path
 			nextPattern := pattern[pIdx+1]
 			found := false
-			for i := pathIdx; i <= len(path); i++ {
-				if i < len(path) && nextPattern == path[i] {
+			for i := pathIdx; i < len(path); i++ {
+				if nextPattern == path[i] {
 					// Found next pattern element, recursively match the rest
 					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
 						return true
 					}
-				} else if i == len(path) {
-					// Check if remaining pattern is all wildcards or empty
-					allWildcards := true
-					for j := pIdx + 1; j < len(pattern); j++ {
-						if !IsWildcard(pattern[j]) {
-							allWildcards = false
-							break
-						}
-					}
-					if allWildcards {
-						return true
-					}
 				}
 			}
-			return found || (pathIdx == len(path))
+
+			// Handle the case where we've exhausted the path (i == len(path) in the original loop)
+			// Check if remaining pattern is all wildcards or empty
+			allWildcards := true
+			for j := pIdx + 1; j < len(pattern); j++ {
+				if !IsWildcard(pattern[j]) {
+					allWildcards = false
+					break
+				}
+			}
+			if allWildcards {
+				return true
+			}
+			return pathIdx == len(path)
 		}
 
 		// Literal match
