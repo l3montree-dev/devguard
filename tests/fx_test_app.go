@@ -164,18 +164,21 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Decorate(func() shared.LeaderElector {
 			return &testLeaderElector{}
 		}),
-		// Mock ComponentService to prevent external HTTP calls in tests
-		fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
-			mockCS := createMockedComponentService(t, cs)
-			return mockCS
-		}),
-		fx.Populate(&app),
 	}
 
-	// Add extra options if provided
+	// Add extra options if provided (this allows tests to provide custom services)
 	if len(opts.ExtraOptions) > 0 {
 		fxOptions = append(fxOptions, opts.ExtraOptions...)
+	} else {
+		// Only mock ComponentService if no extra options are provided
+		// (tests that provide extra options can provide their own service implementations)
+		fxOptions = append(fxOptions, fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+			mockCS := createMockedComponentService(t, cs)
+			return mockCS
+		}))
 	}
+
+	fxOptions = append(fxOptions, fx.Populate(&app))
 
 	// Suppress logs if requested
 	if opts.SuppressLogs {
