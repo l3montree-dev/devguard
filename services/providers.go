@@ -31,5 +31,5 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewPatService, fx.As(new(shared.PersonalAccessTokenService)))),
 	fx.Provide(fx.Annotate(NewDependencyVulnService, fx.As(new(shared.DependencyVulnService)))),
 	fx.Provide(fx.Annotate(NewOpenSourceInsightService, fx.As(new(shared.OpenSourceInsightService)))),
-	fx.Provide(NewFalsePositiveRuleService),
+	fx.Provide(NewVEXRuleService),
 )

@@ -484,12 +484,31 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 
 					vexReports, _, _ := runner.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, upstreamURLs)
 
-					_, err = runner.artifactService.SyncUpstreamBoms(vexReports, org, project, asset, assetVersions[i], artifact, "system")
+					graph := normalize.NewSBOMGraph()
+					for _, report := range vexReports {
+						graph.MergeGraph(report)
+					}
+					tx := runner.db.Begin()
+
+					newBom, err := runner.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersions[i], artifact.ArtifactName, graph, asset.DesiredUpstreamStateForEvents())
+
 					if err != nil {
 						slog.Error("failed to sync VEX reports", "artifact", artifact.ArtifactName, "assetVersion", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 						errs = append(errs, err)
+						tx.Rollback()
 						continue
 					}
+
+					// scan the newBom
+					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, newBom, "system")
+
+					if err != nil {
+						tx.Rollback()
+						slog.Error("failed to scan normalized sbom after upstream sync", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						errs = append(errs, err)
+						continue
+					}
+					tx.Commit()
 				}
 			}
 			if len(errs) > 0 {

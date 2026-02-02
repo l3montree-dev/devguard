@@ -128,10 +128,10 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			}
 		}
 	}
-	upstreamBOMS := []*normalize.SBOMGraph{}
+	upstreamBOMs := []*normalize.SBOMGraph{}
 	// check if there are components or vulnerabilities in the bom
 	if (bom.Components != nil && len(*bom.Components) != 0) || (bom.Vulnerabilities != nil && len(*bom.Vulnerabilities) != 0) {
-		upstreamBOMS = append(upstreamBOMS, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
+		upstreamBOMs = append(upstreamBOMs, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, origin))
 	}
 
 	for _, url := range externalURLs {
@@ -141,15 +141,21 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
 		if len(boms) > 0 {
-			upstreamBOMS = append(upstreamBOMS, boms...)
+			upstreamBOMs = append(upstreamBOMs, boms...)
 		}
 	}
-
-	vulns, err := s.artifactService.SyncUpstreamBoms(upstreamBOMS, org, project, asset, assetVersion, artifact, userID)
+	graph := normalize.NewSBOMGraph()
+	for _, bom := range upstreamBOMs {
+		graph.MergeGraph(bom)
+	}
+	tx := s.assetVersionRepository.Begin()
+	_, _, vulns, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, graph, userID)
 	if err != nil {
+		tx.Rollback()
 		slog.Error("could not scan vex", "err", err)
 		return err
 	}
+	tx.Commit()
 
 	s.FireAndForget(func() {
 		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
@@ -219,16 +225,16 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
-	defer tx.Rollback()
-	// do NOT update the sbom in parallel, because we load the components during the scan from the database
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
 	if err != nil {
+		tx.Rollback()
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
 
 	opened, closed, newState, err := s.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID)
 	if err != nil {
+		tx.Rollback()
 		slog.Error("could not scan normalized sbom", "err", err)
 		return scanResults, err
 	}

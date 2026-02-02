@@ -542,52 +542,65 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(t
 	return vuln, err
 }
 
-// FindByPathSuffix finds all dependency vulnerabilities in an asset whose vulnerability_path
-// ends with the given path pattern (exact suffix match) and has the specified CVE.
-// This is used for applying false positive rules to vulnerabilities with matching paths.
-// Path pattern rules only make sense for the same CVE.
-func (repository *dependencyVulnRepository) FindByPathSuffixAndCVE(tx *gorm.DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error) {
-	if len(pathPattern) == 0 || cveID == "" {
-		return nil, nil
+// FindByVEXRule finds all dependency vulnerabilities matching a VEX rule's CVE and path pattern.
+// Supports wildcards in path patterns:
+//   - "*" matches any number of path elements (zero or more)
+//   - "**" matches any number of path elements (zero or more)
+//
+// The pattern is matched as a suffix against the vulnerability path.
+// Filtering is done in Go to maintain database compatibility (PostgreSQL, SQLite, etc.).
+func (repository *dependencyVulnRepository) FindByVEXRule(tx *gorm.DB, rule models.VEXRule) ([]models.DependencyVuln, error) {
+	result, err := repository.FindByVEXRules(tx, []models.VEXRule{rule})
+	if err != nil {
+		return nil, err
+	}
+	return result[&rule], nil
+}
+
+func (repository *dependencyVulnRepository) FindByVEXRules(tx *gorm.DB, rules []models.VEXRule) (map[*models.VEXRule][]models.DependencyVuln, error) {
+	result := make(map[*models.VEXRule][]models.DependencyVuln)
+
+	if len(rules) == 0 {
+		return result, nil
 	}
 
-	// Build SQL conditions for suffix matching
-	// We check that the last N elements of vulnerability_path match the pattern exactly
-	patternLen := len(pathPattern)
+	cveIDs := make(map[string]bool)
 
-	// Start with base conditions - include CVE filter
-	conditions := []string{
-		"asset_id = ?",
-		"cve_id = ?",
-		"jsonb_array_length(vulnerability_path) >= ?",
-	}
-	args := []any{assetID, cveID, patternLen}
+	var assetID uuid.UUID = rules[0].AssetID
 
-	// Add conditions for each element in the pattern (from the end)
-	// pathPattern[0] should match the (len-patternLen)th element
-	// pathPattern[len-1] should match the last element
-	for i, elem := range pathPattern {
-		// Index from the end: if pattern is ["A", "B", "C"], then:
-		// C should be at position (length - 1)
-		// B should be at position (length - 2)
-		// A should be at position (length - 3)
-		posFromEnd := patternLen - 1 - i
-		conditions = append(conditions, fmt.Sprintf("vulnerability_path->>(jsonb_array_length(vulnerability_path) - %d - 1) = ?", posFromEnd))
-		args = append(args, elem)
+	// Convert CVE IDs to slice
+	cveIDSlice := make([]string, 0, len(cveIDs))
+	for id := range cveIDs {
+		cveIDSlice = append(cveIDSlice, id)
 	}
 
+	// Single query for all vulns
 	var vulns []models.DependencyVuln
-	query := repository.Repository.GetDB(tx).
+	err := repository.Repository.GetDB(tx).
+		Where("asset_id = ?", assetID).
+		Where("cve_id IN ?", cveIDSlice).
 		Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
 		}).
 		Preload("Artifacts").
-		Preload("CVE")
+		Preload("CVE").
+		Find(&vulns).Error
 
-	for i, cond := range conditions {
-		query = query.Where(cond, args[i])
+	if err != nil {
+		return nil, err
 	}
 
-	err := query.Find(&vulns).Error
-	return vulns, err
+	// Filter by each rule's cve and path pattern
+	for _, rule := range rules {
+		pattern := dtos.PathPattern(rule.PathPattern)
+		var matched []models.DependencyVuln
+		for _, vuln := range vulns {
+			if vuln.CVEID == rule.CVEID && pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+				matched = append(matched, vuln)
+			}
+		}
+		result[&rule] = matched
+	}
+
+	return result, nil
 }

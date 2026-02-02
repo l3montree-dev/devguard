@@ -21,25 +21,25 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type FalsePositiveRuleRouter struct {
+type VEXRuleRouter struct {
 	*echo.Group
 }
 
-func NewFalsePositiveRuleRouter(
+func NewVEXRuleRouter(
 	assetRouter AssetRouter,
-	falsePositiveRuleController *controllers.FalsePositiveRuleController,
-) FalsePositiveRuleRouter {
-	// False positive rules are scoped to assets
-	// Read access - anyone who can read the asset can list rules
-	ruleGroup := assetRouter.Group.Group("/false-positive-rules")
-	ruleGroup.GET("/", falsePositiveRuleController.List)
-	ruleGroup.GET("/:ruleId/", falsePositiveRuleController.Get)
+	vexRuleController *controllers.VEXRuleController,
+) VEXRuleRouter {
+	// VEX rules are scoped to assets
+	// Read access - anyone who can read the asset can list and get rules
+	ruleGroup := assetRouter.Group.Group("/vex-rules")
+	ruleGroup.GET("/", vexRuleController.List)
+	ruleGroup.GET("", vexRuleController.Get) // Query params: cveId, pathPatternHash, vexSource
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("/", falsePositiveRuleController.Create)
-	ruleWriteGroup.PUT("/:ruleId/", falsePositiveRuleController.Update)
-	ruleWriteGroup.DELETE("/:ruleId/", falsePositiveRuleController.Delete)
+	ruleWriteGroup.POST("/", vexRuleController.Create)
+	ruleWriteGroup.PUT("", vexRuleController.Update)   // Query params: cveId, pathPatternHash, vexSource
+	ruleWriteGroup.DELETE("", vexRuleController.Delete) // Query params: cveId, pathPatternHash, vexSource
 
-	return FalsePositiveRuleRouter{Group: ruleGroup}
+	return VEXRuleRouter{Group: ruleGroup}
 }

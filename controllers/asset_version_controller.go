@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -42,7 +41,6 @@ type AssetVersionController struct {
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
-	falsePositiveRuleService *services.FalsePositiveRuleService
 }
 
 func NewAssetVersionController(
@@ -55,7 +53,7 @@ func NewAssetVersionController(
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
 	dependencyVulnService shared.DependencyVulnService,
-	falsePositiveRuleService *services.FalsePositiveRuleService,
+
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -67,7 +65,6 @@ func NewAssetVersionController(
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,
 		dependencyVulnService:    dependencyVulnService,
-		falsePositiveRuleService: falsePositiveRuleService,
 	}
 }
 
@@ -234,29 +231,6 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 
 	// Return minimal tree structure with only paths leading to the target PURL
 	return ctx.JSON(200, sbom.FindAllComponentOnlyPathsToPURL(pURL, 12))
-}
-
-func (a *AssetVersionController) GetFalsePositiveRulesForPURL(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
-
-	rules, err := a.falsePositiveRuleService.FindByAssetID(nil, assetVersion.AssetID)
-	if err != nil {
-		return echo.NewHTTPError(500, "failed to get false positive rules").WithInternal(err)
-	}
-	// filter rules to only those which match the purl provided
-	pURL := ctx.QueryParam("purl")
-	filteredRules := make([]models.FalsePositiveRule, 0)
-	for _, rule := range rules {
-		if pURL == "" {
-			filteredRules = append(filteredRules, rule)
-		} else if slices.Contains(rule.PathPattern, pURL) {
-			filteredRules = append(filteredRules, rule)
-			break
-		}
-
-	}
-
-	return ctx.JSON(200, filteredRules)
 }
 
 // @Summary Get SBOM in JSON format

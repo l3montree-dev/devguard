@@ -104,12 +104,33 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	//check if the upstream urls are valid urls
 	boms, _, _ := c.artifactService.FetchBomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
-	vulns, err := c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
-	if err != nil {
-		slog.Error("could not sync vex reports", "err", err)
+	tx := c.artifactRepository.GetDB(nil).Begin()
+
+	// merge all boms
+	newGraph := normalize.NewSBOMGraph()
+	for _, bom := range boms {
+		newGraph.MergeGraph(bom) // we dont care for the diff
 	}
+
+	bom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph, asset.DesiredUpstreamStateForEvents())
+
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not update sbom", "err", err)
+		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+	}
+	currentUserID := shared.GetSession(ctx).GetUserID()
+
+	_, _, newState, err := c.ScanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
+
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not scan sbom after creating artifact", "err", err)
+		return echo.NewHTTPError(500, "could not scan sbom after creating artifact").WithInternal(err)
+	}
+
 	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, newState)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -213,12 +234,23 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 	}))
 	var vulns []models.DependencyVuln
 
-	if len(boms) > 0 {
-		vulns, err = c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
-		if err != nil {
-			slog.Error("could not sync vex reports", "err", err)
-		}
+	tx := c.artifactRepository.Begin()
+
+	graph := normalize.NewSBOMGraph()
+	for _, bom := range boms {
+		graph.MergeGraph(bom)
 	}
+
+	sbom, err := c.assetVersionService.UpdateSBOM(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact.ArtifactName, graph, asset.DesiredUpstreamStateForEvents())
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not update sbom", "err", err)
+		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+	}
+
+	_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+
+	tx.Commit()
 
 	c.FireAndForget(func() {
 		err := c.dependencyVulnService.SyncIssues(org, shared.GetProject(ctx), asset, assetVersion, vulns)
@@ -296,28 +328,27 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	//check if the upstream urls are valid urls
 	boms, _, invalidURLs := c.artifactService.FetchBomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
 	var vulns []models.DependencyVuln
-	if len(boms) > 0 {
-		vulns, err = c.artifactService.SyncUpstreamBoms(boms, shared.GetOrg(ctx), shared.GetProject(ctx), asset, assetVersion, artifact, "system")
-		if err != nil {
-			slog.Error("could not sync vex reports", "err", err)
-		}
-	} else if len(toDelete) > 0 {
-		tx := c.artifactRepository.Begin()
-		// make sure that we at least update the sbom once if there were deletions
-		// updating with nil, will just renormalize the sbom and remove all components which are not
-		// reachable anymore from the root nodes - we might have removed some root nodes above
-		sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, nil, dtos.UpstreamStateExternal)
-		if err != nil {
-			slog.Error("could not update sbom", "err", err)
-			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
-		}
-		// scan the sbom
-		// issue sync is already handled in scan normalized sbom
-		_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
-		if err != nil {
-			slog.Error("could not scan sbom after updating it", "err", err)
-			return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
-		}
+
+	graph := normalize.NewSBOMGraph()
+	for _, bom := range boms {
+		graph.MergeGraph(bom)
+	}
+
+	tx := c.artifactRepository.Begin()
+
+	// make sure that we at least update the sbom once if there were deletions
+	// updating with nil, will just renormalize the sbom and remove all components which are not
+	// reachable anymore from the root nodes - we might have removed some root nodes above
+	sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, graph, asset.DesiredUpstreamStateForEvents())
+	if err != nil {
+		slog.Error("could not update sbom", "err", err)
+		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+	}
+
+	_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+	if err != nil {
+		slog.Error("could not scan sbom after updating it", "err", err)
+		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
 	}
 
 	c.FireAndForget(func() {

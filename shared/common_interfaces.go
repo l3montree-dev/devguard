@@ -227,9 +227,10 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	// FindByPathSuffixAndCVE finds all dependency vulns whose vulnerability_path ends with the given pattern
-	// and have the specified CVE ID. Path pattern rules only make sense for the same CVE.
-	FindByPathSuffixAndCVE(tx DB, assetID uuid.UUID, cveID string, pathPattern []string) ([]models.DependencyVuln, error)
+	// FindByVEXRule finds all dependency vulns matching a VEX rule's CVE and path pattern.
+	// Supports wildcards in path patterns: "*" matches any single element, "**" matches any number of elements.
+	FindByVEXRule(tx DB, rule models.VEXRule) ([]models.DependencyVuln, error)
+	FindByVEXRules(tx DB, rules []models.VEXRule) (map[*models.VEXRule][]models.DependencyVuln, error)
 	// FindByCVEAndComponentPurl finds all dependency vulns with the specified CVE and component PURL
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
@@ -288,12 +289,19 @@ type SupplyChainRepository interface {
 	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
-type FalsePositiveRuleRepository interface {
-	utils.Repository[uuid.UUID, models.FalsePositiveRule, DB]
-	FindByAssetID(db DB, assetID uuid.UUID) ([]models.FalsePositiveRule, error)
-	Create(db DB, rule *models.FalsePositiveRule) error
-	Update(db DB, rule *models.FalsePositiveRule) error
-	Delete(db DB, id uuid.UUID) error
+type VEXRuleRepository interface {
+	GetDB(db DB) DB
+	FindByAssetID(db DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetAndVexSource(db DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
+	FindByCompositeKey(db DB, assetID uuid.UUID, cveID, pathPatternHash, vexSource string) (models.VEXRule, error)
+	Create(db DB, rule *models.VEXRule) error
+	Upsert(db DB, rule *models.VEXRule) error
+	UpsertBatch(db DB, rules []models.VEXRule) error
+	Update(db DB, rule *models.VEXRule) error
+	Delete(db DB, rule models.VEXRule) error
+	DeleteBatch(db DB, rules []models.VEXRule) error
+	DeleteByAssetID(db DB, assetID uuid.UUID) error
+	Begin() DB
 }
 
 type OrganizationRepository interface {
@@ -353,7 +361,6 @@ type ArtifactService interface {
 	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	FetchBomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)
-	SyncUpstreamBoms(boms []*normalize.SBOMGraph, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -380,6 +387,7 @@ type AssetVersionRepository interface {
 	All() ([]models.AssetVersion, error)
 	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 	GetDB(DB) DB
+	Begin() DB
 	Delete(tx DB, assetVersion *models.AssetVersion) error
 	Save(tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
@@ -415,9 +423,10 @@ type ConfigRepository interface {
 	GetDB(tx DB) DB
 }
 
-// FalsePositiveRule represents a false positive rule with its associated CVE ID.
+// VEXRule represents a VEX rule with its associated CVE ID.
 // Path pattern rules only make sense for the same CVE.
-type FalsePositiveRule struct {
+// Path patterns support wildcards: "*" matches any single path element, "**" matches any number of elements.
+type VEXRule struct {
 	Justification           *string                          `json:"justification,omitempty" gorm:"type:text;default:null;"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 	UserID                  string                           `json:"userId" gorm:"type:uuid;"`
@@ -435,9 +444,9 @@ type VulnEventRepository interface {
 	GetLastEventBeforeTimestamp(tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(tx DB, eventID string) error
 	HasAccessToEvent(assetID uuid.UUID, eventID string) (bool, error)
-	// GetFalsePositiveRulesForAsset returns all false positive events with path patterns for an asset.
+	// GetVEXRulesForAsset returns all VEX rules with path patterns for an asset.
 	// Returns the CVE ID with each rule since path patterns only apply to the same CVE.
-	GetFalsePositiveRulesForAsset(tx DB, assetID uuid.UUID) ([]FalsePositiveRule, error)
+	GetVEXRulesForAsset(tx DB, assetID uuid.UUID) ([]VEXRule, error)
 }
 
 type GithubAppInstallationRepository interface {

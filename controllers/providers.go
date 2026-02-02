@@ -77,7 +77,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewFirstPartyVulnController),
 	fx.Provide(NewVulnEventController),
 	fx.Provide(NewLicenseRiskController),
-	fx.Provide(NewFalsePositiveRuleController),
+	fx.Provide(NewVEXRuleController),
 
 	// Organization & Project Management
 	fx.Provide(NewOrganizationController),

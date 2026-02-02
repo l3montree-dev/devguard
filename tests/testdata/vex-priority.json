@@ -1,0 +1,297 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "bom-ref": "pkg:devguard/org/grp/ddd",
+      "type": "application",
+      "name": "pkg:devguard/org/grp/ddd",
+      "purl": "pkg:devguard/org/grp/ddd"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:devguard/org/grp/ddd",
+      "type": "application",
+      "name": "pkg:devguard/org/grp/ddd",
+      "purl": "pkg:devguard/org/grp/ddd"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:devguard/org/grp/ddd",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "GO-2025-4134",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GO-2025-4134"
+      },
+      "ratings": [
+        {
+          "score": -1,
+          "severity": "low",
+          "method": "CVSSv4"
+        },
+        {
+          "score": 0,
+          "severity": "low",
+          "method": "DevGuard",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":-1,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "exploitable",
+        "response": [
+          "will_not_fix"
+        ],
+        "detail": "aaa",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:33Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/golang.org/x/crypto@v0.43.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T12:30:33Z"
+        }
+      ]
+    },
+    {
+      "id": "GO-2025-4135",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GO-2025-4135"
+      },
+      "ratings": [
+        {
+          "score": -1,
+          "severity": "low",
+          "method": "CVSSv4"
+        },
+        {
+          "score": 0,
+          "severity": "low",
+          "method": "DevGuard",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":-1,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "exploitable",
+        "response": [
+          "will_not_fix"
+        ],
+        "detail": "aaaa",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:44Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/golang.org/x/crypto@v0.43.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T12:30:44Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-w73w-5m7g-f7qc",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-w73w-5m7g-f7qc"
+      },
+      "ratings": [
+        {
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        },
+        {
+          "score": 1.72,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":1.72,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0+incompatible"
+        }
+      ]
+    },
+    {
+      "id": "GO-2020-0017",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GO-2020-0017"
+      },
+      "ratings": [
+        {
+          "score": -1,
+          "severity": "low",
+          "method": "CVSSv4"
+        },
+        {
+          "score": 0,
+          "severity": "low",
+          "method": "DevGuard",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":-1,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0+incompatible"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-3xh2-74w9-5vxm",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-3xh2-74w9-5vxm"
+      },
+      "ratings": [
+        {
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        {
+          "score": 1.72,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":7.5,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":1.72,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/github.com/gorilla/websocket@v1.4.0"
+        }
+      ]
+    },
+    {
+      "id": "GO-2020-0019",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GO-2020-0019"
+      },
+      "ratings": [
+        {
+          "score": -1,
+          "severity": "low",
+          "method": "CVSSv4"
+        },
+        {
+          "score": 0,
+          "severity": "low",
+          "method": "DevGuard",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":-1,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":0,\"underAttack\":false,\"vector\":\"\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/github.com/gorilla/websocket@v1.4.0"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-f6x5-jh6r-wrfv",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-f6x5-jh6r-wrfv"
+      },
+      "ratings": [
+        {
+          "score": 5.3,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+        },
+        {
+          "score": 2.45,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":5.300000190734863,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/golang.org/x/crypto@v0.43.0"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-j5w8-q4qc-rx2x",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-j5w8-q4qc-rx2x"
+      },
+      "ratings": [
+        {
+          "score": 5.3,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+        },
+        {
+          "score": 2.45,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M",
+          "justification": "{\"availabilityRequirement\":\"M\",\"baseScore\":5.300000190734863,\"confidentialityRequirement\":\"M\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"M\",\"risk\":2.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:M/IR:M/AR:M\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T12:30:23Z",
+        "lastUpdated": "2026-01-30T12:30:23Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:golang/golang.org/x/crypto@v0.43.0"
+        }
+      ]
+    }
+  ]
+}
