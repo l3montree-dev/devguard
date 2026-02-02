@@ -17,49 +17,43 @@ package dtos
 
 import "github.com/google/uuid"
 
-// PathPattern wildcards for VEX rules
+// PathPattern wildcard for VEX rules
 const (
-	// PathPatternWildcardSingle matches any single path element (zero or more)
-	PathPatternWildcardSingle = "*"
-	// PathPatternWildcardMulti matches any number of path elements (zero or more)
-	PathPatternWildcardMulti = "**"
+	// PathPatternWildcard matches any path element at that position
+	PathPatternWildcard = "*"
 )
 
-// PathPattern represents a path pattern that can contain wildcards.
-// Used for matching vulnerability paths in VEX rules.
+// PathPattern represents a path pattern with wildcards.
+// Patterns use suffix matching where "*" can match any number of path elements.
+// A wildcard "*" can appear at any position to match zero or more path elements.
+// Examples:
+//   - ["pkg:golang/lib@v1.0"] matches paths ending with exactly this element
+//   - ["*", "pkg:golang/lib@v1.0"] matches paths ending with any elements followed by this element
+//   - ["*"] matches any path suffix
 type PathPattern []string
 
-// IsWildcard returns true if the element is a wildcard (* or **).
+// IsWildcard returns true if the element is a wildcard (*).
 func IsWildcard(elem string) bool {
-	return elem == PathPatternWildcardSingle || elem == PathPatternWildcardMulti
+	return elem == PathPatternWildcard
 }
 
-// MatchesSuffix checks if the given path's suffix matches this pattern.
-// Supports wildcards:
-//   - "*" matches any number of path elements (zero or more)
-//   - "**" matches any number of path elements (zero or more)
+// MatchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
+// The pattern is matched against suffixes of the path.
+// A wildcard in the pattern matches zero or more path elements.
 //
-// Example patterns:
-//   - ["A", "B"] matches paths ending with [..., "A", "B"]
-//   - ["*", "B"] matches paths ending with "B" (with any elements before)
-//   - ["**", "B"] matches any path ending with "B"
-//   - ["A", "**", "B"] matches paths with "A", then any elements, then "B" at the end
+// Example:
+//   - Pattern ["pkg:golang/lib"] matches path ["pkg:golang/lib"] or ["a", "b", "pkg:golang/lib"]
+//   - Pattern ["*", "lib"] matches ["lib"] or ["a", "lib"] or ["a", "b", "lib"]
+//   - Pattern ["a", "*", "b"] matches ["a", "b"] or ["a", "x", "b"] or ["a", "x", "y", "z", "b"]
 func (p PathPattern) MatchesSuffix(path []string) bool {
 	if len(p) == 0 {
 		return true
 	}
-	return matchPatternSuffix(p, path)
-}
 
-// matchPatternSuffix implements suffix matching with wildcards using dynamic programming.
-// Returns true if the pattern matches a suffix of the path.
-func matchPatternSuffix(pattern, path []string) bool {
-	// For suffix matching, we try to match the pattern against increasingly larger suffixes
-	// of the path, starting from the smallest possible suffix.
-
-	// First, find the minimum path length needed (count non-wildcard elements)
+	// For suffix matching, we try increasingly longer suffixes
+	// Count non-wildcard elements to determine minimum suffix length
 	minLen := 0
-	for _, elem := range pattern {
+	for _, elem := range p {
 		if !IsWildcard(elem) {
 			minLen++
 		}
@@ -72,59 +66,70 @@ func matchPatternSuffix(pattern, path []string) bool {
 	// Try matching against suffixes of increasing length
 	for suffixStart := len(path) - minLen; suffixStart >= 0; suffixStart-- {
 		suffix := path[suffixStart:]
-		if matchPattern(pattern, suffix) {
+		if matchPatternExact(p, suffix) {
 			return true
 		}
 	}
 	return false
 }
 
-// matchPattern checks if the pattern exactly matches the entire path (not suffix).
-func matchPattern(pattern, path []string) bool {
-	return matchPatternDP(pattern, path)
-}
-
-// matchPatternDP uses dynamic programming for pattern matching with wildcards.
-// dp[i][j] = true if pattern[0:i] matches path[0:j]
-// Both "*" and "**" match zero or more elements.
-func matchPatternDP(pattern, path []string) bool {
-	pLen := len(pattern)
-	sLen := len(path)
-
-	// dp[i][j] represents whether pattern[0:i] matches path[0:j]
-	dp := make([][]bool, pLen+1)
-	for i := range dp {
-		dp[i] = make([]bool, sLen+1)
+// matchPatternExact checks if the pattern exactly matches the path.
+// Wildcards can match zero or more elements.
+func matchPatternExact(pattern, path []string) bool {
+	if len(pattern) == 0 {
+		return len(path) == 0
 	}
 
-	// Empty pattern matches empty path
-	dp[0][0] = true
+	pIdx := 0
+	pathIdx := 0
 
-	// Handle patterns starting with wildcards (can match empty)
-	for i := 1; i <= pLen; i++ {
-		if IsWildcard(pattern[i-1]) {
-			dp[i][0] = dp[i-1][0]
-		} else {
-			break
-		}
-	}
-
-	for i := 1; i <= pLen; i++ {
-		for j := 1; j <= sLen; j++ {
-			if IsWildcard(pattern[i-1]) {
-				// Both * and ** can match zero elements (dp[i-1][j]) or one+ elements (dp[i][j-1])
-				dp[i][j] = dp[i-1][j] || dp[i][j-1]
-			} else {
-				// Literal match
-				dp[i][j] = dp[i-1][j-1] && pattern[i-1] == path[j-1]
+	for pIdx < len(pattern) {
+		if IsWildcard(pattern[pIdx]) {
+			// Wildcard: try to match zero or more elements
+			// If this is the last element in pattern, it matches everything remaining
+			if pIdx == len(pattern)-1 {
+				return true
 			}
+
+			// Try to find the next pattern element in the path
+			nextPattern := pattern[pIdx+1]
+			found := false
+			for i := pathIdx; i <= len(path); i++ {
+				if i < len(path) && nextPattern == path[i] {
+					// Found next pattern element, recursively match the rest
+					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
+						return true
+					}
+				} else if i == len(path) {
+					// Check if remaining pattern is all wildcards or empty
+					allWildcards := true
+					for j := pIdx + 1; j < len(pattern); j++ {
+						if !IsWildcard(pattern[j]) {
+							allWildcards = false
+							break
+						}
+					}
+					if allWildcards {
+						return true
+					}
+				}
+			}
+			return found || (pathIdx == len(path))
 		}
+
+		// Literal match
+		if pathIdx >= len(path) || pattern[pIdx] != path[pathIdx] {
+			return false
+		}
+
+		pIdx++
+		pathIdx++
 	}
 
-	return dp[pLen][sLen]
+	return pathIdx == len(path)
 }
 
-// ContainsWildcard returns true if the pattern contains any wildcard (* or **).
+// ContainsWildcard returns true if the pattern contains a wildcard (*).
 func (p PathPattern) ContainsWildcard() bool {
 	for _, elem := range p {
 		if IsWildcard(elem) {
@@ -132,18 +137,6 @@ func (p PathPattern) ContainsWildcard() bool {
 		}
 	}
 	return false
-}
-
-// MinLength returns the minimum number of path elements this pattern can match.
-// Wildcards don't contribute to the minimum length since they can match zero elements.
-func (p PathPattern) MinLength() int {
-	count := 0
-	for _, elem := range p {
-		if !IsWildcard(elem) {
-			count++
-		}
-	}
-	return count
 }
 
 type VEXRuleDTO struct {

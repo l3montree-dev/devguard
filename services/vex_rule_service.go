@@ -372,7 +372,7 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 		// now create the path pattern
 		var pathPattern dtos.PathPattern
 		if componentPurl.String() != "" {
-			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcardMulti, purl.ToString()}
+			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcard, purl.ToString()}
 		} else {
 			// If no metadata component PURL, use the affected package directly
 			pathPattern = dtos.PathPattern{purl.ToString()}
