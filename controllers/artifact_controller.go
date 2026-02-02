@@ -228,7 +228,7 @@ func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
 
 	tx := c.artifactRepository.Begin()
 
-	_, _, vulns, err := c.ScanService.RunArtifactSecurityLifecycle(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact, shared.GetSession(ctx).GetUserID())
+	_, _, vulns, err := c.RunArtifactSecurityLifecycle(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact, shared.GetSession(ctx).GetUserID())
 
 	if err != nil {
 		tx.Rollback()

@@ -316,12 +316,6 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 	return bom, nil
 }
 
-func purlToStringWithoutVersion(purl packageurl.PackageURL) string {
-	purlWithoutVersion := purl
-	purlWithoutVersion.Version = ""
-	return purlWithoutVersion.ToString()
-}
-
 func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, affectedPurl packageurl.PackageURL, analysisState cyclonedx.ImpactAnalysisState, vuln *gocsaf.Vulnerability) cyclonedx.Vulnerability {
 	remediation := ""
 	for _, rem := range vuln.Remediations {
