@@ -96,7 +96,7 @@ func (s *VEXRuleService) CountMatchingVulns(tx shared.DB, rule models.VEXRule) (
 	}
 	matching := matchRulesToVulns([]models.VEXRule{rule}, vulns)
 
-	return len(matching[&rule]), nil
+	return len(matching[rule.ID]), nil
 }
 
 // CountMatchingVulnsForRules returns the number of matching vulnerabilities for each rule in a single batch query
@@ -118,8 +118,7 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models
 	}
 
 	for _, rule := range rules {
-		rulePtr := &rule
-		if vulns, ok := vulnsByRule[rulePtr]; ok {
+		if vulns, ok := vulnsByRule[rule.ID]; ok {
 			result[rule.ID] = len(vulns)
 		} else {
 			result[rule.ID] = 0
@@ -160,12 +159,17 @@ func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln mo
 
 func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
 	vulnsByRule := matchRulesToVulns(rules, vulns)
+	ruleMap := make(map[string]*models.VEXRule)
+	for i := range rules {
+		ruleMap[rules[i].ID] = &rules[i]
+	}
 
 	// Collect all vulns to update (deduplicated by ID)
 	vulnMap := make(map[string]models.DependencyVuln)
 	eventsByVuln := make(map[string][]models.VulnEvent)
 
-	for rule, matchingVulns := range vulnsByRule {
+	for ruleID, matchingVulns := range vulnsByRule {
+		rule := ruleMap[ruleID]
 		for _, vuln := range matchingVulns {
 			ev, err := createVulnEventFromVEXRule(desiredUpstreamState, vuln, rule)
 			if err != nil {
@@ -526,8 +530,8 @@ func extractCVE(s string) string {
 	return s
 }
 
-func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[*models.VEXRule][]models.DependencyVuln {
-	result := make(map[*models.VEXRule][]models.DependencyVuln)
+func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+	result := make(map[string][]models.DependencyVuln)
 	// Filter by each rule's cve and path pattern
 	for _, rule := range rules {
 		pattern := dtos.PathPattern(rule.PathPattern)
@@ -537,7 +541,7 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 				matched = append(matched, vuln)
 			}
 		}
-		result[&rule] = matched
+		result[rule.ID] = matched
 	}
 
 	return result

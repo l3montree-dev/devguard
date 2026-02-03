@@ -32,7 +32,7 @@ func NewExternalReferenceRouter(
 	// External references are scoped to asset versions
 	// Read access - anyone who can read the asset version can list references
 	refGroup := assetVersionRouter.Group.Group("/external-references")
-	refGroup.GET("", externalReferenceController.List) // List all references for asset version
+	refGroup.GET("/", externalReferenceController.List) // List all references for asset version
 
 	// Write access - requires asset update permission
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
