@@ -8,9 +8,3 @@ jobs:
     with:
       repositories: "l3montree-dev/devguard,l3montree-dev/devguard-documentation"
       ticket_repo: "l3montree-dev/devguard"
-
-
-
-
-
-
