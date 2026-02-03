@@ -22,6 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -93,9 +94,12 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 
 	for _, client := range gitlabOrgClient.clients {
 		wg.Go(func() ([]gitlabRepository, error) {
-			result, _, err := client.ListProjects(context.TODO(), options)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			result, _, err := client.ListProjects(ctx, options)
 			if err != nil {
-				slog.Warn("failed to list projects from gitlab client", "err", err, "clientID", client.GetClientID())
+				slog.Warn("failed to list gitlab projects", "error", err, "clientID", client.GetClientID())
+				return nil, nil
 			}
 			return utils.Map(result, func(el *gitlab.Project) gitlabRepository {
 				return gitlabRepository{Project: el, gitlabIntegrationID: client.GetClientID()}
