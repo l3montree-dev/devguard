@@ -117,7 +117,6 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 				AssetVersionName:        GetAssetVersionName(dependencyVuln.Vulnerability, ev),
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
-				Upstream:                ev.Upstream,
 			}
 		}),
 	}

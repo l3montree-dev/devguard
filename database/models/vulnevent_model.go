@@ -18,8 +18,8 @@ type VulnEvent struct {
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 	ArbitraryJSONData        string                           `json:"arbitraryJSONData" gorm:"type:text;"`
 	arbitraryJSONData        map[string]any
-	OriginalAssetVersionName *string            `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
-	Upstream                 dtos.UpstreamState `json:"upstream" gorm:"default:0;not null;"`
+	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	CreatedByVexRule         bool    `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
 }
 
 type VulnEventDetail struct {
@@ -81,41 +81,40 @@ func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
 
-func NewAcceptedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
-
+func NewAcceptedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, createdByRule bool) VulnEvent {
 	return VulnEvent{
-		Type:          dtos.EventTypeAccepted,
-		VulnID:        vulnID,
-		UserID:        userID,
-		VulnType:      vulnType,
-		Justification: &justification,
-		Upstream:      upstream,
+		Type:             dtos.EventTypeAccepted,
+		VulnID:           vulnID,
+		UserID:           userID,
+		VulnType:         vulnType,
+		Justification:    &justification,
+		CreatedByVexRule: createdByRule,
 	}
 }
 
-func NewReopenedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
+func NewReopenedEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, createdByRule bool) VulnEvent {
 	return VulnEvent{
-		Type:          dtos.EventTypeReopened,
-		VulnType:      vulnType,
-		VulnID:        vulnID,
-		UserID:        userID,
-		Justification: &justification,
-		Upstream:      upstream,
+		Type:             dtos.EventTypeReopened,
+		VulnType:         vulnType,
+		VulnID:           vulnID,
+		UserID:           userID,
+		Justification:    &justification,
+		CreatedByVexRule: createdByRule,
 	}
 }
 
-func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, upstream dtos.UpstreamState) VulnEvent {
+func NewCommentEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, createdByRule bool) VulnEvent {
 	return VulnEvent{
-		Type:          dtos.EventTypeComment,
-		VulnType:      vulnType,
-		VulnID:        vulnID,
-		UserID:        userID,
-		Justification: &justification,
-		Upstream:      upstream,
+		Type:             dtos.EventTypeComment,
+		VulnType:         vulnType,
+		VulnID:           vulnID,
+		UserID:           userID,
+		Justification:    &justification,
+		CreatedByVexRule: createdByRule,
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, upstream dtos.UpstreamState) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, createdByRule bool) VulnEvent {
 	ev := VulnEvent{
 		Type:                    dtos.EventTypeFalsePositive,
 		VulnID:                  vulnID,
@@ -123,19 +122,19 @@ func NewFalsePositiveEvent(vulnID string, vulnType dtos.VulnType, userID, justif
 		UserID:                  userID,
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
-		Upstream:                upstream,
+		CreatedByVexRule:        createdByRule,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewFixedEvent(vulnID string, vulnType dtos.VulnType, userID string, artifactName string, upstream dtos.UpstreamState) VulnEvent {
+func NewFixedEvent(vulnID string, vulnType dtos.VulnType, userID string, artifactName string, createdByRule bool) VulnEvent {
 	ev := VulnEvent{
-		Type:     dtos.EventTypeFixed,
-		VulnType: vulnType,
-		VulnID:   vulnID,
-		UserID:   userID,
-		Upstream: upstream,
+		Type:             dtos.EventTypeFixed,
+		VulnType:         vulnType,
+		VulnID:           vulnID,
+		UserID:           userID,
+		CreatedByVexRule: createdByRule,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
@@ -153,17 +152,13 @@ func NewLicenseDecisionEvent(vulnID string, vulnType dtos.VulnType, userID strin
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, upstream dtos.UpstreamState) VulnEvent {
-	if upstream == dtos.UpstreamStateExternal {
-		// detected events can ONLY be accepted!
-		upstream = dtos.UpstreamStateExternalAccepted
-	}
+func NewDetectedEvent(vulnID string, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, createdByRule bool) VulnEvent {
 	ev := VulnEvent{
-		Type:     dtos.EventTypeDetected,
-		VulnType: vulnType,
-		VulnID:   vulnID,
-		UserID:   userID,
-		Upstream: upstream,
+		Type:             dtos.EventTypeDetected,
+		VulnType:         vulnType,
+		VulnID:           vulnID,
+		UserID:           userID,
+		CreatedByVexRule: createdByRule,
 	}
 
 	m := riskCalculationReport.Map()

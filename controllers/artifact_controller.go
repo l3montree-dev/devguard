@@ -116,7 +116,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		newGraph.MergeGraph(bom) // we dont care for the diff
 	}
 
-	bom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph, asset.DesiredUpstreamStateForEvents())
+	bom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
 
 	if err != nil {
 		tx.Rollback()
@@ -325,7 +325,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	// make sure that we at least update the sbom once if there were deletions
 	// updating with nil, will just renormalize the sbom and remove all components which are not
 	// reachable anymore from the root nodes - we might have removed some root nodes above
-	sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, graph, asset.DesiredUpstreamStateForEvents())
+	sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)

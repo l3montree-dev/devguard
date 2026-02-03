@@ -47,6 +47,7 @@ type UpdateVEXRuleRequest struct {
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 	PathPattern             []string                         `json:"pathPattern"`
+	Enabled                 *bool                            `json:"enabled"` // Pointer to distinguish between not provided and false
 }
 
 // @Summary List VEX rules for an asset
@@ -161,6 +162,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		EventType:               dtos.EventTypeFalsePositive,
 		PathPattern:             req.PathPattern,
 		CreatedByID:             session.GetUserID(),
+		Enabled:                 true, // Manual rules are always enabled
 	}
 
 	tx := c.vexRuleService.Begin()
@@ -170,7 +172,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	// Apply this rule to all matching existing dependency vulns
-	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{*rule}); err != nil {
+	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, []models.VEXRule{*rule}); err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
 		tx.Rollback()
@@ -239,14 +241,27 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 		rule.SetPathPattern(req.PathPattern)
 	}
 
+	// Track if we're enabling the rule (to apply it to vulns)
+	wasEnabled := rule.Enabled
+	if req.Enabled != nil {
+		rule.Enabled = *req.Enabled
+	}
+
 	if err := c.vexRuleService.Update(nil, &rule); err != nil {
 		return echo.NewHTTPError(500, "failed to update VEX rule").WithInternal(err)
 	}
 
-	// Apply the updated rule to existing vulnerabilities
-	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, asset.DesiredUpstreamStateForEvents(), []models.VEXRule{rule}); err != nil {
-		// Log the error but don't fail the update - the rule was saved
-		ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
+	// Apply the rule to existing vulnerabilities if it's enabled
+	// Only apply if rule is now enabled (either was already enabled, or just got enabled)
+	if rule.Enabled {
+		if _, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, []models.VEXRule{rule}); err != nil {
+			// Log the error but don't fail the update - the rule was saved
+			ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
+		}
+		// Log if rule was just enabled
+		if !wasEnabled {
+			slog.Info("VEX rule enabled and applied to existing vulnerabilities", "ruleID", rule.ID, "cveID", rule.CVEID)
+		}
 	}
 
 	// Count matching vulnerabilities for the response

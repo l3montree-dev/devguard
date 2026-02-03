@@ -57,6 +57,11 @@ type VEXRule struct {
 	// Supports wildcards: "*" matches any single element, "**" matches any number of elements.
 	PathPattern []string `json:"pathPattern" gorm:"type:jsonb;not null;serializer:json"`
 	CreatedByID string   `json:"createdById" gorm:"type:text;not null"`
+
+	// Enabled indicates whether this rule should be applied to matching vulnerabilities.
+	// When false, the rule exists but does not create events or modify vulnerability state.
+	// Rules are disabled when uploaded in ParanoidMode, requiring manual review/enabling.
+	Enabled bool `json:"enabled" gorm:"default:true;not null;"`
 }
 
 func (VEXRule) TableName() string {

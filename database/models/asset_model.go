@@ -52,13 +52,6 @@ type Asset struct {
 	PipelineError   *string   `json:"pipelineError" gorm:"type:text;"`
 }
 
-func (m *Asset) UpstreamState() dtos.UpstreamState {
-	if m.ParanoidMode {
-		return dtos.UpstreamStateExternal
-	}
-	return dtos.UpstreamStateExternalAccepted
-}
-
 func (m Asset) TableName() string {
 	return "assets"
 }
@@ -79,9 +72,6 @@ func (m *Asset) SetSlug(slug string) {
 	m.Slug = slug
 }
 
-func (m *Asset) DesiredUpstreamStateForEvents() dtos.UpstreamState {
-	if m.ParanoidMode {
-		return dtos.UpstreamStateExternal
-	}
-	return dtos.UpstreamStateExternalAccepted
+func (m *Asset) DefaultEnableVexRules() bool {
+	return !m.ParanoidMode
 }

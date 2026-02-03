@@ -132,7 +132,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			}
 
 			// Call the function under test using FX-injected component service
-			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false, 0)
+			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultComponents)
 
@@ -249,7 +249,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Call the function under test using FX-injected component service
-			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false, 0)
+			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 
 			// Verify that no duplicate license risk was created

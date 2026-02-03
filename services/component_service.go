@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
@@ -184,7 +183,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool, upstream dtos.UpstreamState) ([]models.Component, error) {
+func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
 	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
@@ -246,13 +245,13 @@ func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.Asse
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName, upstream)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName, upstream)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}

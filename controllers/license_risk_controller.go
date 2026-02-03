@@ -139,7 +139,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 				VulnerabilityName:       licenseRisk.ComponentPurl,
 				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
-				Upstream:                ev.Upstream,
+				CreatedByVexRule:        ev.CreatedByVexRule,
 			}
 		}),
 	}
@@ -216,7 +216,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, dtos.UpstreamStateInternal)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
 	if err != nil {
 		return err
 	}

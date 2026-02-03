@@ -7,7 +7,6 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -41,8 +40,8 @@ func (_m *VEXRuleService) EXPECT() *VEXRuleService_Expecter {
 }
 
 // ApplyRulesToExisting provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(tx, desiredUpstreamState, rules, vulns)
+func (_mock *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, rules, vulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ApplyRulesToExisting")
@@ -50,18 +49,18 @@ func (_mock *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamS
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, dtos.UpstreamState, []models.VEXRule, []models.DependencyVuln) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(tx, desiredUpstreamState, rules, vulns)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VEXRule, []models.DependencyVuln) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, rules, vulns)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, dtos.UpstreamState, []models.VEXRule, []models.DependencyVuln) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, desiredUpstreamState, rules, vulns)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VEXRule, []models.DependencyVuln) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, rules, vulns)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, dtos.UpstreamState, []models.VEXRule, []models.DependencyVuln) error); ok {
-		r1 = returnFunc(tx, desiredUpstreamState, rules, vulns)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, []models.VEXRule, []models.DependencyVuln) error); ok {
+		r1 = returnFunc(tx, rules, vulns)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -75,36 +74,30 @@ type VEXRuleService_ApplyRulesToExisting_Call struct {
 
 // ApplyRulesToExisting is a helper method to define mock.On call
 //   - tx shared.DB
-//   - desiredUpstreamState dtos.UpstreamState
 //   - rules []models.VEXRule
 //   - vulns []models.DependencyVuln
-func (_e *VEXRuleService_Expecter) ApplyRulesToExisting(tx interface{}, desiredUpstreamState interface{}, rules interface{}, vulns interface{}) *VEXRuleService_ApplyRulesToExisting_Call {
-	return &VEXRuleService_ApplyRulesToExisting_Call{Call: _e.mock.On("ApplyRulesToExisting", tx, desiredUpstreamState, rules, vulns)}
+func (_e *VEXRuleService_Expecter) ApplyRulesToExisting(tx interface{}, rules interface{}, vulns interface{}) *VEXRuleService_ApplyRulesToExisting_Call {
+	return &VEXRuleService_ApplyRulesToExisting_Call{Call: _e.mock.On("ApplyRulesToExisting", tx, rules, vulns)}
 }
 
-func (_c *VEXRuleService_ApplyRulesToExisting_Call) Run(run func(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln)) *VEXRuleService_ApplyRulesToExisting_Call {
+func (_c *VEXRuleService_ApplyRulesToExisting_Call) Run(run func(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln)) *VEXRuleService_ApplyRulesToExisting_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
 			arg0 = args[0].(shared.DB)
 		}
-		var arg1 dtos.UpstreamState
+		var arg1 []models.VEXRule
 		if args[1] != nil {
-			arg1 = args[1].(dtos.UpstreamState)
+			arg1 = args[1].([]models.VEXRule)
 		}
-		var arg2 []models.VEXRule
+		var arg2 []models.DependencyVuln
 		if args[2] != nil {
-			arg2 = args[2].([]models.VEXRule)
-		}
-		var arg3 []models.DependencyVuln
-		if args[3] != nil {
-			arg3 = args[3].([]models.DependencyVuln)
+			arg2 = args[2].([]models.DependencyVuln)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -115,14 +108,14 @@ func (_c *VEXRuleService_ApplyRulesToExisting_Call) Return(dependencyVulns []mod
 	return _c
 }
 
-func (_c *VEXRuleService_ApplyRulesToExisting_Call) RunAndReturn(run func(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)) *VEXRuleService_ApplyRulesToExisting_Call {
+func (_c *VEXRuleService_ApplyRulesToExisting_Call) RunAndReturn(run func(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)) *VEXRuleService_ApplyRulesToExisting_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ApplyRulesToExistingVulns provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(tx, desiredUpstreamState, rules)
+func (_mock *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, rules)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ApplyRulesToExistingVulns")
@@ -130,18 +123,18 @@ func (_mock *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpst
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, dtos.UpstreamState, []models.VEXRule) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(tx, desiredUpstreamState, rules)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VEXRule) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, rules)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, dtos.UpstreamState, []models.VEXRule) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, desiredUpstreamState, rules)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.VEXRule) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, rules)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, dtos.UpstreamState, []models.VEXRule) error); ok {
-		r1 = returnFunc(tx, desiredUpstreamState, rules)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, []models.VEXRule) error); ok {
+		r1 = returnFunc(tx, rules)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -155,30 +148,24 @@ type VEXRuleService_ApplyRulesToExistingVulns_Call struct {
 
 // ApplyRulesToExistingVulns is a helper method to define mock.On call
 //   - tx shared.DB
-//   - desiredUpstreamState dtos.UpstreamState
 //   - rules []models.VEXRule
-func (_e *VEXRuleService_Expecter) ApplyRulesToExistingVulns(tx interface{}, desiredUpstreamState interface{}, rules interface{}) *VEXRuleService_ApplyRulesToExistingVulns_Call {
-	return &VEXRuleService_ApplyRulesToExistingVulns_Call{Call: _e.mock.On("ApplyRulesToExistingVulns", tx, desiredUpstreamState, rules)}
+func (_e *VEXRuleService_Expecter) ApplyRulesToExistingVulns(tx interface{}, rules interface{}) *VEXRuleService_ApplyRulesToExistingVulns_Call {
+	return &VEXRuleService_ApplyRulesToExistingVulns_Call{Call: _e.mock.On("ApplyRulesToExistingVulns", tx, rules)}
 }
 
-func (_c *VEXRuleService_ApplyRulesToExistingVulns_Call) Run(run func(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule)) *VEXRuleService_ApplyRulesToExistingVulns_Call {
+func (_c *VEXRuleService_ApplyRulesToExistingVulns_Call) Run(run func(tx shared.DB, rules []models.VEXRule)) *VEXRuleService_ApplyRulesToExistingVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
 			arg0 = args[0].(shared.DB)
 		}
-		var arg1 dtos.UpstreamState
+		var arg1 []models.VEXRule
 		if args[1] != nil {
-			arg1 = args[1].(dtos.UpstreamState)
-		}
-		var arg2 []models.VEXRule
-		if args[2] != nil {
-			arg2 = args[2].([]models.VEXRule)
+			arg1 = args[1].([]models.VEXRule)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -189,7 +176,7 @@ func (_c *VEXRuleService_ApplyRulesToExistingVulns_Call) Return(dependencyVulns 
 	return _c
 }
 
-func (_c *VEXRuleService_ApplyRulesToExistingVulns_Call) RunAndReturn(run func(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error)) *VEXRuleService_ApplyRulesToExistingVulns_Call {
+func (_c *VEXRuleService_ApplyRulesToExistingVulns_Call) RunAndReturn(run func(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error)) *VEXRuleService_ApplyRulesToExistingVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

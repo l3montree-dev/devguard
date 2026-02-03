@@ -45,14 +45,6 @@ const (
 	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
 )
 
-type UpstreamState int
-
-const (
-	UpstreamStateInternal         UpstreamState = 0
-	UpstreamStateExternalAccepted UpstreamState = 1
-	UpstreamStateExternal         UpstreamState = 2
-)
-
 type VulnEventDTO struct {
 	ID       uuid.UUID     `json:"id"`
 	Type     VulnEventType `json:"type"`
@@ -67,10 +59,10 @@ type VulnEventDTO struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 
-	AssetVersionName  string        `json:"assetVersionName"`
-	AssetVersionSlug  string        `json:"assetVersionSlug"`
-	VulnerabilityName string        `json:"vulnerabilityName"`
-	PackageName       string        `json:"packageName"`
-	URI               string        `json:"uri"`
-	Upstream          UpstreamState `json:"upstream"`
+	AssetVersionName  string `json:"assetVersionName"`
+	AssetVersionSlug  string `json:"assetVersionSlug"`
+	VulnerabilityName string `json:"vulnerabilityName"`
+	PackageName       string `json:"packageName"`
+	URI               string `json:"uri"`
+	CreatedByVexRule  bool   `json:"createdByVexRule"`
 }

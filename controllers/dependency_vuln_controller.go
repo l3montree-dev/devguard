@@ -349,12 +349,6 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 		}
 		vulns = append(vulns, dependencyVuln)
 		events := dependencyVuln.Events
-		for i := range events {
-			if events[i].Upstream != 2 {
-				continue
-			}
-			events[i].Upstream = 1
-		}
 
 		dependencyVuln.Events = events
 		statemachine.Apply(&dependencyVuln, events[len(events)-1])
@@ -423,7 +417,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -487,7 +481,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, dtos.UpstreamStateInternal)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue

@@ -41,9 +41,8 @@ func ConvertVulnEventsToDtos(event []models.VulnEventDetail) []dtos.VulnEventDTO
 			AssetVersionSlug:        e.Slug,
 			PackageName:             e.ComponentPurl,
 			URI:                     e.URI,
-			Upstream:                e.Upstream,
+			CreatedByVexRule:        e.CreatedByVexRule,
 		})
-
 	}
 	return result
 }

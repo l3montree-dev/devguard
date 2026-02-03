@@ -449,7 +449,7 @@ func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
-	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true, dtos.UpstreamStateInternal)
+	_, err := a.componentService.GetAndSaveLicenseInformation(assetVersion, utils.EmptyThenNil(artifactName), true)
 	if err != nil {
 		return err
 	}

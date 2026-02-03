@@ -84,7 +84,7 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 	return text.Text
 }
 
-func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error) {
+func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
@@ -105,7 +105,7 @@ func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project m
 	// update the license information in the background
 	s.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false, upstream)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

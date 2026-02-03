@@ -115,7 +115,7 @@ func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project m
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.HandleScanResult(tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, dtos.UpstreamStateInternal)
+	opened, closed, newState, err := s.HandleScanResult(tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return nil, nil, nil, err
@@ -128,7 +128,7 @@ func (s *scanService) ScanNormalizedSBOM(tx shared.DB, org models.Org, project m
 	}
 
 	// apply the vex rules to the new state
-	newState, err = s.vexRuleService.ApplyRulesToExisting(tx, asset.DesiredUpstreamStateForEvents(), rules, newState)
+	newState, err = s.vexRuleService.ApplyRulesToExisting(tx, rules, newState)
 	if err != nil {
 		slog.Error("failed to apply VEX rules to new state", "error", err)
 		return nil, nil, nil, fmt.Errorf("failed to apply VEX rules to new state: %w", err)
@@ -346,7 +346,7 @@ func (s *scanService) handleFirstPartyVulnResult(userID string, scannerID string
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	// scope the sbom to the current artifact only
 	err = sbom.ScopeToArtifact(artifactName)
 	if err != nil {
@@ -370,7 +370,7 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(tx, userID, artifactName, assetVersion, sbom, dependencyVulns, asset, upstream)
+	opened, closed, newState, err = s.handleScanResult(tx, userID, artifactName, assetVersion, sbom, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -408,7 +408,7 @@ func (s *scanService) HandleScanResult(tx shared.DB, org models.Org, project mod
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -422,27 +422,13 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// Filter out internally-fixed vulnerabilities (e.g., by component upgrade) from the existing vulns.
-	// BUT keep VEX-managed states (fixed/accepted/falsePositive set by external sources)
-	// so they appear in "Unchanged" rather than "NewlyDiscovered" - preventing spurious detected events.
-	var filterInternallyFixed = func(dv models.DependencyVuln) bool {
-		// Keep vulns that are open or in other non-fixed states
-		if dv.State != dtos.VulnStateFixed {
-			return true
-		}
-		// For fixed vulns, check if they were fixed externally (VEX)
-		// If so, keep them to prevent re-detection
-		for i := len(dv.Events) - 1; i >= 0; i-- {
-			if dv.Events[i].Type == dtos.EventTypeFixed {
-				// Keep vulns fixed by external/VEX sources
-				return dv.Events[i].Upstream != dtos.UpstreamStateInternal
-			}
-		}
-		// No fixed event found, filter it out
-		return false
+	// Filter out fixed vulnerabilities from the comparison.
+	// The state machine prevents detected events from reopening fixed/accepted/falsePositive vulns.
+	var filterFixed = func(dv models.DependencyVuln) bool {
+		return dv.State != dtos.VulnStateFixed
 	}
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterInternallyFixed)
-	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterInternallyFixed)
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
+	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
 
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
@@ -465,7 +451,7 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// We can create the newly found one without checking anything
-	if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset, upstream); err != nil {
+	if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
@@ -481,7 +467,7 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, upstream); err != nil {
+	if err := s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset); err != nil {
 		slog.Error("error when trying to add fix event")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -712,7 +698,6 @@ func (s *scanService) RunArtifactSecurityLifecycle(
 		assetVersion,
 		artifact.ArtifactName,
 		newGraph,
-		asset.DesiredUpstreamStateForEvents(),
 	)
 	if err != nil {
 		slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)

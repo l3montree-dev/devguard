@@ -56,7 +56,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) dtos.VulnEventDTO 
 		VulnerabilityName: event.CVEID,
 		PackageName:       event.ComponentPurl,
 		URI:               event.URI,
-		Upstream:          event.Upstream,
+		CreatedByVexRule:  event.CreatedByVexRule,
 	}
 }
 

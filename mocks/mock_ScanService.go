@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -323,8 +322,8 @@ func (_c *ScanService_HandleFirstPartyVulnResult_Call) RunAndReturn(run func(org
 }
 
 // HandleScanResult provides a mock function for the type ScanService
-func (_mock *ScanService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ret := _mock.Called(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+func (_mock *ScanService) HandleScanResult(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleScanResult")
@@ -334,32 +333,32 @@ func (_mock *ScanService) HandleScanResult(tx shared.DB, org models.Org, project
 	var r1 []models.DependencyVuln
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
-		return returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
+		return returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, dtos.UpstreamState) []models.DependencyVuln); ok {
-		r0 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, dtos.UpstreamState) []models.DependencyVuln); ok {
-		r1 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
+		r1 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, dtos.UpstreamState) []models.DependencyVuln); ok {
-		r2 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+	if returnFunc, ok := ret.Get(2).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
+		r2 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, dtos.UpstreamState) error); ok {
-		r3 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)
+	if returnFunc, ok := ret.Get(3).(func(shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string) error); ok {
+		r3 = returnFunc(tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -381,12 +380,11 @@ type ScanService_HandleScanResult_Call struct {
 //   - vulns []models.VulnInPackage
 //   - artifactName string
 //   - userID string
-//   - upstream dtos.UpstreamState
-func (_e *ScanService_Expecter) HandleScanResult(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, sbom interface{}, vulns interface{}, artifactName interface{}, userID interface{}, upstream interface{}) *ScanService_HandleScanResult_Call {
-	return &ScanService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, upstream)}
+func (_e *ScanService_Expecter) HandleScanResult(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, sbom interface{}, vulns interface{}, artifactName interface{}, userID interface{}) *ScanService_HandleScanResult_Call {
+	return &ScanService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID)}
 }
 
-func (_c *ScanService_HandleScanResult_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState)) *ScanService_HandleScanResult_Call {
+func (_c *ScanService_HandleScanResult_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string)) *ScanService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -424,10 +422,6 @@ func (_c *ScanService_HandleScanResult_Call) Run(run func(tx shared.DB, org mode
 		if args[8] != nil {
 			arg8 = args[8].(string)
 		}
-		var arg9 dtos.UpstreamState
-		if args[9] != nil {
-			arg9 = args[9].(dtos.UpstreamState)
-		}
 		run(
 			arg0,
 			arg1,
@@ -438,7 +432,6 @@ func (_c *ScanService_HandleScanResult_Call) Run(run func(tx shared.DB, org mode
 			arg6,
 			arg7,
 			arg8,
-			arg9,
 		)
 	})
 	return _c
@@ -449,7 +442,7 @@ func (_c *ScanService_HandleScanResult_Call) Return(opened []models.DependencyVu
 	return _c
 }
 
-func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, upstream dtos.UpstreamState) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
+func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
 	_c.Call.Return(run)
 	return _c
 }

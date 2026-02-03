@@ -7,7 +7,6 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -330,8 +329,8 @@ func (_c *AssetVersionService_LoadFullSBOMGraph_Call) RunAndReturn(run func(asse
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error) {
-	ret := _mock.Called(tx, org, project, asset, assetVersion, artifactName, sbom, upstream)
+func (_mock *AssetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
+	ret := _mock.Called(tx, org, project, asset, assetVersion, artifactName, sbom)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
@@ -339,18 +338,18 @@ func (_mock *AssetVersionService) UpdateSBOM(tx shared.DB, org models.Org, proje
 
 	var r0 *normalize.SBOMGraph
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph, dtos.UpstreamState) (*normalize.SBOMGraph, error)); ok {
-		return returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) (*normalize.SBOMGraph, error)); ok {
+		return returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph, dtos.UpstreamState) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom, upstream)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) *normalize.SBOMGraph); ok {
+		r0 = returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph, dtos.UpstreamState) error); ok {
-		r1 = returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom, upstream)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) error); ok {
+		r1 = returnFunc(tx, org, project, asset, assetVersion, artifactName, sbom)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -370,12 +369,11 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName string
 //   - sbom *normalize.SBOMGraph
-//   - upstream dtos.UpstreamState
-func (_e *AssetVersionService_Expecter) UpdateSBOM(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}, upstream interface{}) *AssetVersionService_UpdateSBOM_Call {
-	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", tx, org, project, asset, assetVersion, artifactName, sbom, upstream)}
+func (_e *AssetVersionService_Expecter) UpdateSBOM(tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
+	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", tx, org, project, asset, assetVersion, artifactName, sbom)}
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -405,10 +403,6 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(tx shared.DB, org mo
 		if args[6] != nil {
 			arg6 = args[6].(*normalize.SBOMGraph)
 		}
-		var arg7 dtos.UpstreamState
-		if args[7] != nil {
-			arg7 = args[7].(dtos.UpstreamState)
-		}
 		run(
 			arg0,
 			arg1,
@@ -417,7 +411,6 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(tx shared.DB, org mo
 			arg4,
 			arg5,
 			arg6,
-			arg7,
 		)
 	})
 	return _c
@@ -428,7 +421,7 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Return(sBOMGraph *normalize.SBOMG
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph, upstream dtos.UpstreamState) (*normalize.SBOMGraph, error)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

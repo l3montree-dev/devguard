@@ -238,7 +238,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized, dtos.UpstreamStateInternal)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not update sbom", "err", err)

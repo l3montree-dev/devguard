@@ -260,11 +260,6 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 }
 
 func Apply(vuln models.Vuln, event models.VulnEvent) {
-	if event.Upstream != dtos.UpstreamStateInternal && event.Type == dtos.EventTypeAccepted {
-		// its an external accepted event that should not modify state
-		return
-	}
-
 	switch event.Type {
 	case dtos.EventTypeLicenseDecision:
 		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
@@ -280,25 +275,20 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeFixed:
 		vuln.SetState(dtos.VulnStateFixed)
 	case dtos.EventTypeReopened:
-		if event.Upstream == dtos.UpstreamStateExternal {
-			return
-		}
 		vuln.SetState(dtos.VulnStateOpen)
 	case dtos.EventTypeDetected:
-		// Do not let internal detected events reopen vulnerabilities that were marked
+		// Do not let detected events reopen vulnerabilities that were marked
 		// fixed/falsePositive/accepted by VEX or manual action.
-		// Internal scans should not override user/VEX decisions.
-		if event.Upstream == dtos.UpstreamStateInternal {
-			currentState := vuln.GetState()
-			if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
-				// Still update risk assessment, but don't change state
-				f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-				if ok {
-					vuln.SetRawRiskAssessment(f)
-					vuln.SetRiskRecalculatedAt(time.Now())
-				}
-				return
+		// Scans should not override user/VEX decisions.
+		currentState := vuln.GetState()
+		if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
+			// Still update risk assessment, but don't change state
+			f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
+			if ok {
+				vuln.SetRawRiskAssessment(f)
+				vuln.SetRiskRecalculatedAt(time.Now())
 			}
+			return
 		}
 		// Apply detected event for all other cases
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
@@ -311,9 +301,6 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeAccepted:
 		vuln.SetState(dtos.VulnStateAccepted)
 	case dtos.EventTypeFalsePositive:
-		if event.Upstream == dtos.UpstreamStateExternal {
-			return
-		}
 		vuln.SetState(dtos.VulnStateFalsePositive)
 	case dtos.EventTypeMarkedForTransfer:
 		vuln.SetState(dtos.VulnStateMarkedForTransfer)

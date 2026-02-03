@@ -131,7 +131,7 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models
 
 // CreateVulnEventFromVEXRule creates a VulnEvent based on a VEX rule and vulnerability.
 // The event type is determined by the rule's EventType field.
-func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln models.DependencyVuln, rule *models.VEXRule) (models.VulnEvent, error) {
+func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule) (models.VulnEvent, error) {
 	switch rule.EventType {
 	case dtos.EventTypeFalsePositive:
 		return models.NewFalsePositiveEvent(
@@ -141,7 +141,7 @@ func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln mo
 			rule.Justification,
 			rule.MechanicalJustification,
 			"",
-			desiredUpstreamState,
+			true,
 		), nil
 
 	case dtos.EventTypeAccepted:
@@ -150,7 +150,7 @@ func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln mo
 			dtos.VulnTypeDependencyVuln,
 			rule.CreatedByID,
 			rule.Justification,
-			desiredUpstreamState,
+			true,
 		), nil
 
 	default:
@@ -158,7 +158,7 @@ func createVulnEventFromVEXRule(desiredUpstreamState dtos.UpstreamState, vuln mo
 	}
 }
 
-func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
 	vulnsByRule := matchRulesToVulns(rules, vulns)
 
 	// Collect all vulns to update (deduplicated by ID)
@@ -167,7 +167,7 @@ func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState
 
 	for rule, matchingVulns := range vulnsByRule {
 		for _, vuln := range matchingVulns {
-			ev, err := createVulnEventFromVEXRule(desiredUpstreamState, vuln, rule)
+			ev, err := createVulnEventFromVEXRule(vuln, rule)
 			if err != nil {
 				slog.Error("failed to create event from VEX rule", "error", err, "cveID", rule.CVEID)
 				continue
@@ -219,7 +219,7 @@ func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, desiredUpstreamState
 // ApplyRulesToExistingVulns applies multiple VEX rules to all existing vulnerabilities
 // that match each rule's path pattern and CVE. This is more efficient than applying
 // rules one by one as it batches database queries and saves.
-func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstreamState dtos.UpstreamState, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
 	if len(rules) == 0 {
 		return nil, nil
 	}
@@ -229,7 +229,7 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, desiredUpstream
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
-	return s.ApplyRulesToExisting(tx, desiredUpstreamState, rules, vulns)
+	return s.ApplyRulesToExisting(tx, rules, vulns)
 }
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
@@ -245,10 +245,17 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVers
 	// Collect all rules from all VEX reports to batch process them
 	allAddedRules := make([]models.VEXRule, 0)
 
+	// Rules are enabled if ParanoidMode is disabled
+	enabled := !asset.ParanoidMode
+
 	for _, vexReport := range vexReports {
 		rules, err := s.parseVEXRulesInBOM(asset.ID, assetVersion.Name, vexReport)
 		if err != nil {
 			return fmt.Errorf("failed to parse VEX rules from SBOM (source %s): %w", vexReport.Source, err)
+		}
+		// Set Enabled on all rules based on ParanoidMode
+		for i := range rules {
+			rules[i].Enabled = enabled
 		}
 		addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
 		if err != nil {
@@ -257,13 +264,8 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVers
 		allAddedRules = append(allAddedRules, addedRules...)
 	}
 
-	// Apply all rules to existing vulns in a single batch
-	desiredUpstreamState := dtos.UpstreamStateExternalAccepted
-	if asset.ParanoidMode {
-		desiredUpstreamState = dtos.UpstreamStateExternal
-	}
-
-	_, err := s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, allAddedRules)
+	// Apply all enabled rules to existing vulns in a single batch
+	_, err := s.ApplyRulesToExistingVulns(tx, allAddedRules)
 	return err
 }
 
@@ -272,17 +274,20 @@ func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, assetVersio
 	if err != nil {
 		return fmt.Errorf("failed to parse VEX rules from SBOM: %w", err)
 	}
+
+	// Rules are enabled if ParanoidMode is disabled
+	enabled := !asset.ParanoidMode
+	for i := range rules {
+		rules[i].Enabled = enabled
+	}
+
 	addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
 	if err != nil {
 		return fmt.Errorf("failed to sync VEX rules from source: %w", err)
 	}
 
-	desiredUpstreamState := dtos.UpstreamStateExternalAccepted
-	if asset.ParanoidMode {
-		desiredUpstreamState = dtos.UpstreamStateExternal
-	}
-
-	_, err = s.ApplyRulesToExistingVulns(tx, desiredUpstreamState, addedRules)
+	// Apply all enabled rules to existing vulns in a single batch
+	_, err = s.ApplyRulesToExistingVulns(tx, addedRules)
 	return err
 }
 
@@ -528,8 +533,11 @@ func extractCVE(s string) string {
 
 func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[*models.VEXRule][]models.DependencyVuln {
 	result := make(map[*models.VEXRule][]models.DependencyVuln)
-	// Filter by each rule's cve and path pattern
+	// Filter by each rule's cve and path pattern - only match ENABLED rules
 	for _, rule := range rules {
+		if !rule.Enabled {
+			continue
+		}
 		pattern := dtos.PathPattern(rule.PathPattern)
 		var matched []models.DependencyVuln
 		for _, vuln := range vulns {
