@@ -52,6 +52,47 @@ func (r *vexRuleRepository) FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, a
 	return rules, err
 }
 
+func (r *vexRuleRepository) FindByAssetVersionPaged(db *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+	var rules []models.VEXRule
+	var total int64
+
+	query := r.GetDB(db).Model(&models.VEXRule{}).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	// Apply search filter
+	if search != "" {
+		searchPattern := "%" + search + "%"
+		query = query.Where("cve_id ILIKE ? OR justification ILIKE ?", searchPattern, searchPattern)
+	}
+
+	// Apply filter queries
+	for _, filter := range filterQuery {
+		query = query.Where(filter.SQL(), filter.Value())
+	}
+
+	// Count total before pagination
+	if err := query.Count(&total).Error; err != nil {
+		return shared.Paged[models.VEXRule]{}, err
+	}
+
+	// Apply sorting
+	if len(sortQuery) > 0 {
+		for _, sort := range sortQuery {
+			query = query.Order(sort.SQL())
+		}
+	} else {
+		query = query.Order("created_at DESC")
+	}
+
+	// Apply pagination
+	query = pageInfo.ApplyOnDB(query)
+
+	if err := query.Find(&rules).Error; err != nil {
+		return shared.Paged[models.VEXRule]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, total, rules), nil
+}
+
 func (r *vexRuleRepository) FindByID(db *gorm.DB, id string) (models.VEXRule, error) {
 	var rule models.VEXRule
 	err := r.GetDB(db).Where("id = ?", id).First(&rule).Error

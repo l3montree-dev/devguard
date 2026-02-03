@@ -290,6 +290,7 @@ type SupplyChainRepository interface {
 type VEXRuleRepository interface {
 	GetDB(db DB) DB
 	FindByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
+	FindByAssetVersionPaged(db DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(db DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(db DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
 	Create(db DB, rule *models.VEXRule) error
@@ -439,6 +440,7 @@ type VEXRuleService interface {
 	Delete(tx DB, rule models.VEXRule) error
 	DeleteByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) error
 	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
+	FindByAssetVersionPaged(tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	ApplyRulesToExistingVulns(tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	IngestVEX(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error

@@ -58,30 +58,35 @@ type UpdateVEXRuleRequest struct {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug (ref)"
-// @Success 200 {array} dtos.VEXRuleDTO
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Page size (default: 10, max: 100)"
+// @Param search query string false "Search term for CVE ID or justification"
+// @Success 200 {object} shared.Paged[dtos.VEXRuleDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	rules, err := c.vexRuleService.FindByAssetVersion(nil, asset.ID, assetVersion.Name)
+	pageInfo := shared.GetPageInfo(ctx)
+	search := ctx.QueryParam("search")
+	filterQuery := shared.GetFilterQuery(ctx)
+	sortQuery := shared.GetSortQuery(ctx)
+
+	pagedRules, err := c.vexRuleService.FindByAssetVersionPaged(nil, asset.ID, assetVersion.Name, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
 
 	// Count matching vulnerabilities for all rules in batch
-	counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, rules)
+	counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, pagedRules.Data)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
 		counts = make(map[string]int)
 	}
 
-	result := make([]dtos.VEXRuleDTO, len(rules))
-	for i, rule := range rules {
-		result[i] = transformer.VEXRuleToDTOWithCount(rule, counts[rule.ID])
-	}
-
-	return ctx.JSON(200, result)
+	return ctx.JSON(200, pagedRules.Map(func(rule models.VEXRule) any {
+		return transformer.VEXRuleToDTOWithCount(rule, counts[rule.ID])
+	}))
 }
 
 // @Summary Get a VEX rule

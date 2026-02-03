@@ -84,6 +84,10 @@ func (s *VEXRuleService) FindByAssetVersion(tx shared.DB, assetID uuid.UUID, ass
 	return s.vexRuleRepository.FindByAssetVersion(tx, assetID, assetVersionName)
 }
 
+func (s *VEXRuleService) FindByAssetVersionPaged(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+	return s.vexRuleRepository.FindByAssetVersionPaged(tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
+}
+
 func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, error) {
 	return s.vexRuleRepository.FindByID(tx, id)
 }
