@@ -199,12 +199,15 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 				// Return a valid minimal CycloneDX SBOM
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{
+				_, err := w.Write([]byte(`{
 					"bomFormat": "CycloneDX",
 					"specVersion": "1.4",
 					"version": 1,
 					"components": []
 				}`))
+				if err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			}
 		}))
 		defer server.Close()
