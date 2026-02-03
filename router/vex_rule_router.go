@@ -32,14 +32,14 @@ func NewVEXRuleRouter(
 	// VEX rules are scoped to asset versions
 	// Read access - anyone who can read the asset version can list and get rules
 	ruleGroup := assetVersionRouter.Group.Group("/vex-rules")
-	ruleGroup.GET("", vexRuleController.List)        // List all rules for asset version
-	ruleGroup.GET("/:ruleId", vexRuleController.Get) // Get single rule by ID
+	ruleGroup.GET("/", vexRuleController.List)        // List all rules for asset version
+	ruleGroup.GET("/:ruleId/", vexRuleController.Get) // Get single rule by ID
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("", vexRuleController.Create)           // Create rule
-	ruleWriteGroup.PUT("/:ruleId", vexRuleController.Update)    // Update rule by ID
-	ruleWriteGroup.DELETE("/:ruleId", vexRuleController.Delete) // Delete rule by ID
+	ruleWriteGroup.POST("/", vexRuleController.Create)           // Create rule
+	ruleWriteGroup.PUT("/:ruleId/", vexRuleController.Update)    // Update rule by ID
+	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete) // Delete rule by ID
 
 	return VEXRuleRouter{Group: ruleGroup}
 }
