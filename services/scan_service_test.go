@@ -15,6 +15,8 @@
 package services
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -187,4 +189,88 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		assert.Equal(t, "test-fingerprint", r[0].ID)
 	})
 
+}
+
+func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
+	t.Run("should pass URL parameter to SBOMGraphFromCycloneDX instead of ref", func(t *testing.T) {
+		// Create a mock HTTP server that returns a valid SBOM
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/sbom.json" {
+				// Return a valid minimal CycloneDX SBOM
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{
+					"bomFormat": "CycloneDX",
+					"specVersion": "1.4",
+					"version": 1,
+					"components": []
+				}`))
+			}
+		}))
+		defer server.Close()
+
+		service := &scanService{
+			sbomScanner: mocks.NewSBOMScanner(t),
+		}
+
+		sbomURL := server.URL + "/sbom.json"
+		artifactName := "test-artifact"
+		ref := "main"
+
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL})
+
+		// Verify the SBOM was processed successfully with the correct URL
+		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
+		assert.Equal(t, 1, len(validURLs), "should have 1 valid URL")
+		assert.Equal(t, 0, len(invalidURLs), "should have 0 invalid URLs")
+
+		// Verify the URL was added to validURLs list (not the ref)
+		assert.Contains(t, validURLs, sbomURL)
+		// Ref should not appear anywhere since URL is passed instead
+		assert.NotContains(t, validURLs, ref)
+	})
+
+	t.Run("should reject invalid URLs", func(t *testing.T) {
+		service := &scanService{
+			sbomScanner: mocks.NewSBOMScanner(t),
+		}
+
+		invalidURLs := []string{
+			"",
+			"not-a-url",
+			"ftp://invalid-protocol.com/sbom.json",
+		}
+		artifactName := "test-artifact"
+		ref := "main"
+
+		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(artifactName, ref, invalidURLs)
+
+		assert.Equal(t, 0, len(boms))
+		assert.Equal(t, 0, len(validURLs))
+		assert.Equal(t, 3, len(invalidURLsList))
+	})
+
+	t.Run("should handle HTTP errors gracefully", func(t *testing.T) {
+		// Create a mock HTTP server that returns a 500 error
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer server.Close()
+
+		service := &scanService{
+			sbomScanner: mocks.NewSBOMScanner(t),
+		}
+
+		sbomURL := server.URL + "/sbom.json"
+		artifactName := "test-artifact"
+		ref := "main"
+
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL})
+
+		// HTTP errors should result in invalid URLs
+		assert.Equal(t, 0, len(boms))
+		assert.Equal(t, 0, len(validURLs))
+		assert.Equal(t, 1, len(invalidURLs))
+		assert.Equal(t, sbomURL, invalidURLs[0])
+	})
 }
