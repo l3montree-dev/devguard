@@ -466,9 +466,9 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 				avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
 				if err != nil {
 					slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
-					return nil, err
+				} else {
+					avatarBase64 = &avatar
 				}
-				avatarBase64 = &avatar
 			}
 
 			// get all parent groups
