@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/gosimple/slug"
@@ -94,9 +95,8 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 		wg.Go(func() ([]gitlabRepository, error) {
 			result, _, err := client.ListProjects(context.TODO(), options)
 			if err != nil {
-				return nil, err
+				slog.Warn("failed to list projects from gitlab client", "err", err, "clientID", client.GetClientID())
 			}
-
 			return utils.Map(result, func(el *gitlab.Project) gitlabRepository {
 				return gitlabRepository{Project: el, gitlabIntegrationID: client.GetClientID()}
 			}), nil
