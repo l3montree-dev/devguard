@@ -531,12 +531,17 @@ func TestMatchRulesToVulnsOnlyMatchesEnabledRules(t *testing.T) {
 		},
 	}
 
+	ruleMap := make(map[string]models.VEXRule)
+	for _, r := range rules {
+		ruleMap[r.ID] = r
+	}
 	result := matchRulesToVulns(rules, vulns)
 
 	// Only the enabled rule should have matches
 	enabledMatches := 0
 	disabledMatches := 0
-	for rule, matchedVulns := range result {
+	for ruleID, matchedVulns := range result {
+		rule := ruleMap[ruleID]
 		if rule.Enabled {
 			enabledMatches += len(matchedVulns)
 		} else {
