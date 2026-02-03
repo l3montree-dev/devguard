@@ -3,7 +3,6 @@ package tests
 import (
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -123,9 +122,6 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
 			assert.NoError(t, err)
-
-			// Wait for Fire and Forget to complete
-			time.Sleep(500 * time.Millisecond)
 
 			// Verify artifact was deleted
 			var deletedArtifact models.Artifact
@@ -271,9 +267,6 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, 200, rec.Code)
 
-			// Wait for async operations to complete
-			time.Sleep(500 * time.Millisecond)
-
 			// Verify artifact was deleted
 			var deletedArtifact models.Artifact
 			err = f.DB.First(&deletedArtifact, "artifact_name = ? AND asset_id = ?", artifactSingle.ArtifactName, asset.ID).Error
@@ -347,9 +340,6 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, 200, rec.Code)
-
-			// Wait for async operations to complete
-			time.Sleep(500 * time.Millisecond)
 
 			// Verify artifact1 was deleted
 			var deletedArtifact models.Artifact

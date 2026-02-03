@@ -87,7 +87,7 @@ func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName str
 		}
 
 		// Delete the artifact record itself
-		err = s.artifactRepository.DeleteArtifact(assetID, assetVersionName, artifactName)
+		err = s.artifactRepository.DeleteArtifact(tx, assetID, assetVersionName, artifactName)
 		if err != nil {
 			slog.Error("failed to delete artifact record", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
 			return err
