@@ -136,7 +136,7 @@ type ArtifactRepository interface {
 	utils.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error
+	DeleteArtifact(tx DB, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	GetAllArtifactAffectedByDependencyVuln(tx DB, vulnID string) ([]models.Artifact, error)
 	GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 }
