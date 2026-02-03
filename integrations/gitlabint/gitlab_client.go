@@ -96,6 +96,7 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 			result, _, err := client.ListProjects(context.TODO(), options)
 			if err != nil {
 				slog.Warn("failed to list projects from gitlab client", "err", err, "clientID", client.GetClientID())
+				return nil, nil
 			}
 			return utils.Map(result, func(el *gitlab.Project) gitlabRepository {
 				return gitlabRepository{Project: el, gitlabIntegrationID: client.GetClientID()}
