@@ -14,6 +14,8 @@ type externalReferenceRepository struct {
 	*GormRepository[uuid.UUID, models.ExternalReference]
 }
 
+var _ shared.ExternalReferenceRepository = (*externalReferenceRepository)(nil)
+
 func NewExternalReferenceRepository(db *gorm.DB) shared.ExternalReferenceRepository {
 	return &externalReferenceRepository{
 		GormRepository: newGormRepository[uuid.UUID, models.ExternalReference](db),

@@ -18,6 +18,7 @@ package controllers
 import (
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -132,14 +133,18 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references [delete]
-func (c *ExternalReferenceController) DeleteForAssetVersion(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{id} [delete]
+func (c *ExternalReferenceController) Delete(ctx shared.Context) error {
+	id := ctx.Param("id")
+	// parse to uuid
+	uuidID, err := uuid.Parse(id)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid external reference ID").WithInternal(err)
+	}
 
-	if err := c.externalReferenceRepository.DeleteByAssetVersion(nil, asset.ID, assetVersion.Name); err != nil {
-		slog.Error("failed to delete external references", "error", err)
-		return echo.NewHTTPError(500, "failed to delete external references").WithInternal(err)
+	if err := c.externalReferenceRepository.Delete(nil, uuidID); err != nil {
+		slog.Error("failed to delete external reference", "error", err)
+		return echo.NewHTTPError(500, "failed to delete external reference").WithInternal(err)
 	}
 
 	return ctx.NoContent(204)

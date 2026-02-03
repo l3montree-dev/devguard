@@ -23,7 +23,6 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -324,12 +323,8 @@ type InvitationRepository interface {
 }
 
 type ExternalReferenceRepository interface {
-	GetDB(db *gorm.DB) *gorm.DB
-	Create(db *gorm.DB, ref *models.ExternalReference) error
-	CreateBatch(db *gorm.DB, refs []models.ExternalReference) error
-	FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error)
-	FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
-	DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error
+	utils.Repository[uuid.UUID, models.ExternalReference, DB]
+	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
 }
 
 type ExternalEntityProviderService interface {
