@@ -1,0 +1,9 @@
+name: Documentation Policy Check
+on:
+  pull_request:
+jobs:
+  documentation_check:
+    uses: l3montree-dev/devguard-action/.github/workflows/docu-policy.yml@add-documentation-policy
+    with:
+      documentation_repo: "l3montree-dev/devguard-documentation"
+      production_repo: "l3montree-dev/devguard"
