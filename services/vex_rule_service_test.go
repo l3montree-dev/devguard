@@ -51,9 +51,9 @@ func TestMapCDXToEventType(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:     "resolved state",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASResolved},
-			want:     dtos.EventTypeFixed,
+			name:      "resolved state",
+			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASResolved},
+			wantError: true,
 		},
 		{
 			name:     "false positive state",
@@ -66,9 +66,9 @@ func TestMapCDXToEventType(t *testing.T) {
 			want:     dtos.EventTypeFalsePositive,
 		},
 		{
-			name:     "exploitable without response",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable},
-			want:     dtos.EventTypeDetected,
+			name:      "exploitable without response",
+			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable},
+			wantError: true,
 		},
 		{
 			name:     "exploitable with will not fix",
@@ -81,9 +81,9 @@ func TestMapCDXToEventType(t *testing.T) {
 			want:     dtos.EventTypeComment,
 		},
 		{
-			name:     "in triage",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASInTriage},
-			want:     dtos.EventTypeDetected,
+			name:      "in triage",
+			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASInTriage},
+			wantError: true,
 		},
 		{
 			name:     "will not fix response fallback",

@@ -492,8 +492,6 @@ func mapCDXToEventType(a *cdx.VulnerabilityAnalysis) (dtos.VulnEventType, error)
 		return "", fmt.Errorf("vulnerability analysis is nil")
 	}
 	switch a.State {
-	case cdx.IASResolved:
-		return dtos.EventTypeFixed, nil
 	case cdx.IASFalsePositive:
 		return dtos.EventTypeFalsePositive, nil
 	case cdx.IASExploitable:
@@ -505,9 +503,7 @@ func mapCDXToEventType(a *cdx.VulnerabilityAnalysis) (dtos.VulnEventType, error)
 				return dtos.EventTypeComment, nil
 			}
 		}
-		return dtos.EventTypeDetected, nil
-	case cdx.IASInTriage:
-		return dtos.EventTypeDetected, nil
+		return "", fmt.Errorf("vulnerability analysis state is exploitable, no event type mapping")
 	case cdx.IASNotAffected:
 		return dtos.EventTypeFalsePositive, nil
 
