@@ -111,28 +111,6 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 	}))
 }
 
-func (controller DependencyVulnController) ListByAssetIDWithoutHandledExternalEventsPaged(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
-
-	pagedResp, err := controller.dependencyVulnRepository.ListByAssetIDWithoutHandledExternalEvents(
-		asset.ID,
-		assetVersion.Name,
-		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
-		shared.GetFilterQuery(ctx),
-		shared.GetSortQuery(ctx),
-	)
-
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
-	}
-
-	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
-		return transformer.DependencyVulnToDetailedDTO(dependencyVuln)
-	}))
-}
-
 // @Summary List dependency vulnerabilities
 // @Tags Vulnerabilities
 // @Security CookieAuth

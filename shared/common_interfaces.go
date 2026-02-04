@@ -227,8 +227,6 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
-	ListByAssetIDWithoutHandledExternalEvents(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 }
