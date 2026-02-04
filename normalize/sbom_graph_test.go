@@ -1238,3 +1238,143 @@ func TestToMinimalTree(t *testing.T) {
 		assert.Empty(t, tree.Dependencies[""])
 	})
 }
+
+func TestAddComponent_URLUnescaping(t *testing.T) {
+	t.Run("should unescape URL-encoded plus sign in version", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with URL-encoded + (%2B) in version
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		// Verify the component was added with unescaped PURL
+		node := g.nodes[encodedPurl]
+		assert.NotNil(t, node)
+		assert.Equal(t, expectedPurl, node.Component.PackageURL)
+	})
+
+	t.Run("should preserve already unescaped plus sign", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with literal + in version (already unescaped)
+		purl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     purl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: purl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		// Verify the component was added with the same PURL (no change)
+		node := g.nodes[purl]
+		assert.NotNil(t, node)
+		assert.Equal(t, purl, node.Component.PackageURL)
+	})
+
+	t.Run("should unescape multiple URL-encoded characters", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with multiple URL-encoded characters
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2%2Bsecurity?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2+security?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2+security",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		node := g.nodes[encodedPurl]
+		assert.NotNil(t, node)
+		assert.Equal(t, expectedPurl, node.Component.PackageURL)
+	})
+
+	t.Run("should handle empty PackageURL", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		comp := cdx.Component{
+			BOMRef:     "some-ref",
+			Name:       "test-component",
+			Version:    "1.0.0",
+			PackageURL: "",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		node := g.nodes["some-ref"]
+		assert.NotNil(t, node)
+		assert.Equal(t, "", node.Component.PackageURL)
+	})
+
+	t.Run("dependency vuln should have correct purl with plus sign", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artifactID := g.AddArtifact("test-artifact")
+		infoSourceID := g.AddInfoSource(artifactID, "test-sbom", InfoSourceSBOM)
+
+		// Add component with URL-encoded PURL
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		compID := g.AddComponent(comp)
+		g.AddEdge(infoSourceID, compID)
+
+		// Add vulnerability affecting this component
+		vuln := cdx.Vulnerability{
+			ID: "CVE-2024-1234",
+			Affects: &[]cdx.Affects{
+				{Ref: encodedPurl},
+			},
+		}
+		g.AddVulnerability(vuln)
+
+		// Verify component has correct unescaped PURL
+		var foundComponent *GraphNode
+		for node := range g.Components() {
+			if node.BOMRef == encodedPurl {
+				foundComponent = node
+				break
+			}
+		}
+		assert.NotNil(t, foundComponent)
+		assert.Equal(t, expectedPurl, foundComponent.Component.PackageURL)
+
+		// Verify vulnerability is stored and component PURL matches what would be used for dependency vuln
+		var foundVuln *cdx.Vulnerability
+		for v := range g.Vulnerabilities() {
+			if v.ID == "CVE-2024-1234" {
+				foundVuln = v
+				break
+			}
+		}
+		assert.NotNil(t, foundVuln)
+		assert.NotNil(t, foundVuln.Affects)
+		assert.Len(t, *foundVuln.Affects, 1)
+	})
+}

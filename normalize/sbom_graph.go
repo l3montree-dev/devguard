@@ -222,6 +222,13 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 
 // AddComponent adds a component node.
 func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
+	if comp.PackageURL != "" {
+		// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
+		unescapedPurl, err := url.PathUnescape(comp.PackageURL)
+		if err == nil {
+			comp.PackageURL = unescapedPurl
+		}
+	}
 	if g.nodes[comp.BOMRef] == nil {
 		g.nodes[comp.BOMRef] = &GraphNode{
 			BOMRef:    comp.BOMRef,

@@ -244,13 +244,13 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, 
 	}
 
 	packageNameQuery := repository.GetDB(tx).Table("components").
-		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, dependency_vulns.component_purl as package_name").
-		Joins("RIGHT JOIN dependency_vulns ON components.id = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
+		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.id as package_name").
+		Joins("INNER JOIN dependency_vulns ON components.id = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
 		Joins("INNER JOIN cves \"CVE\" ON dependency_vulns.cve_id = \"CVE\".cve").
 		Where("dependency_vulns.asset_version_name = ?", assetVersionName).
 		Where("dependency_vulns.asset_id = ?", assetID).
-		Group("dependency_vulns.component_purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
+		Group("components.id").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 	// apply the same filters to the packageNameQuery
 	for _, f := range filter {
 		packageNameQuery = packageNameQuery.Where(f.SQL(), f.Value())
@@ -266,7 +266,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, 
 	}
 
 	res := []riskStats{}
-	if err := packageNameQuery.Debug().Scan(&res).Error; err != nil {
+	if err := packageNameQuery.Scan(&res).Error; err != nil {
 		return shared.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
