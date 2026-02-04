@@ -24,7 +24,7 @@ import (
 )
 
 func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetadata {
-	assetVersionSlug, _ := shared.GetAssetVersionSlug(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
 	orgSlug, _ := shared.GetOrgSlug(ctx)
 	projectSlug, _ := shared.GetProjectSlug(ctx)
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -41,7 +41,7 @@ func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetad
 	}
 
 	return normalize.BOMMetadata{
-		AssetVersionSlug:      assetVersionSlug,
+		AssetVersionSlug:      assetVersion.Slug,
 		AssetSlug:             assetSlug,
 		OrgSlug:               orgSlug,
 		ProjectSlug:           projectSlug,
@@ -49,5 +49,6 @@ func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetad
 		ArtifactName:          artifactName,
 		AssetID:               asset.ID,
 		AddExternalReferences: asset.SharesInformation,
+		AssetVersionName:      assetVersion.Name,
 	}
 }

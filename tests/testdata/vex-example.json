@@ -1,0 +1,847 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "bom-ref": "pkg:oci/devguard-web?repository_url=ghcr.io/l3montree-dev/devguard-web",
+      "type": "application",
+      "name": "pkg:oci/devguard-web?repository_url=ghcr.io/l3montree-dev/devguard-web",
+      "purl": "pkg:oci/devguard-web?repository_url=ghcr.io%2Fl3montree-dev%2Fdevguard-web"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:oci/devguard-web?repository_url=ghcr.io/l3montree-dev/devguard-web",
+      "type": "application",
+      "name": "pkg:oci/devguard-web?repository_url=ghcr.io/l3montree-dev/devguard-web",
+      "purl": "pkg:oci/devguard-web?repository_url=ghcr.io%2Fl3montree-dev%2Fdevguard-web"
+    }
+  ],
+  "externalReferences": [
+    {
+      "url": "https://api.main.devguard.org/api/v1/public/169319b7-8170-469f-9e31-f87b6054e507/vex.json?ref=main&artifactName=pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web",
+      "comment": "Up to date Vulnerability exploitability information.",
+      "type": "exploitability-statement"
+    },
+    {
+      "url": "https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main?artifact=pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web",
+      "comment": "Dynamic analysis report",
+      "type": "dynamic-analysis-report"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:oci/devguard-web?repository_url=ghcr.io/l3montree-dev/devguard-web",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "GHSA-v6h2-p8h4-qcjw",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-v6h2-p8h4-qcjw"
+      },
+      "ratings": [
+        {
+          "score": 3.1,
+          "severity": "low",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
+        },
+        {
+          "score": 1.75,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:52Z",
+        "lastUpdated": "2026-01-27T12:38:52Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/brace-expansion@2.0.1"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-8qq5-rm4j-mr97",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-8qq5-rm4j-mr97"
+      },
+      "ratings": [
+        {
+          "score": 8.2,
+          "severity": "high",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N"
+        },
+        {
+          "score": 2.75,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.199999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.75,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:54Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.4.3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-h25m-26qc-wcjf",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-h25m-26qc-wcjf"
+      },
+      "ratings": [
+        {
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        {
+          "score": 2.12,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.12,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-29T12:52:34Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/next@15.5.9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:28:30Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5f7q-jpqc-wp7h",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-5f7q-jpqc-wp7h"
+      },
+      "ratings": [
+        {
+          "score": 5.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        {
+          "score": 3.55,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.55,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-29T11:44:13Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/next@15.5.9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-34x7-hfp2-rc4v",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-34x7-hfp2-rc4v"
+      },
+      "ratings": [
+        {
+          "score": 8.2,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N"
+        },
+        {
+          "score": 4.45,
+          "severity": "medium",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.199999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.5.1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-r6q2-hw4h-h46w",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-r6q2-hw4h-h46w"
+      },
+      "ratings": [
+        {
+          "score": 8.8,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L"
+        },
+        {
+          "score": 4.45,
+          "severity": "medium",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.800000190734863,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:54Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.4.3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-xxjr-mmjv-4gpg",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-xxjr-mmjv-4gpg"
+      },
+      "ratings": [
+        {
+          "score": 6.5,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+        },
+        {
+          "score": 3.45,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":6.5,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:53Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/lodash@4.17.21"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-mh29-5h37-fv8m",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-mh29-5h37-fv8m"
+      },
+      "ratings": [
+        {
+          "score": 5.3,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+        },
+        {
+          "score": 2.8,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.300000190734863,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.8,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:21Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/js-yaml@4.1.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-9g9p-9gw9-jx7f",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-9g9p-9gw9-jx7f"
+      },
+      "ratings": [
+        {
+          "score": 5.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        {
+          "score": 1.77,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.77,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-28T12:48:24Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/next@15.5.9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:28:30Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5j98-mcp5-4vw2",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-5j98-mcp5-4vw2"
+      },
+      "ratings": [
+        {
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+        },
+        {
+          "score": 3.45,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/glob@11.0.3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-73rr-hh4g-fpgx",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-73rr-hh4g-fpgx"
+      },
+      "ratings": [
+        {
+          "score": 2.7,
+          "severity": "low",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U"
+        },
+        {
+          "score": 1.35,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":2.700000047683716,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.35,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-29T14:28:30Z",
+        "lastUpdated": "2026-01-29T14:28:30Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/diff@8.0.2"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-g9mf-h72j-4rw9",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-g9mf-h72j-4rw9"
+      },
+      "ratings": [
+        {
+          "score": 3.7,
+          "severity": "low",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+        },
+        {
+          "score": 2.04,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.700000047683716,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.04,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:52Z",
+        "lastUpdated": "2026-01-27T12:38:52Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/undici@7.3.0"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-x7hr-w5r2-h6wg",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-x7hr-w5r2-h6wg"
+      },
+      "ratings": [
+        {
+          "score": 4.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:L/A:N"
+        },
+        {
+          "score": 2.85,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":4.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.85,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:53Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/prismjs@1.27.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-r6q2-hw4h-h46w",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-r6q2-hw4h-h46w"
+      },
+      "ratings": [
+        {
+          "score": 8.8,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L"
+        },
+        {
+          "score": 4.45,
+          "severity": "medium",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.800000190734863,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.5.1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5j98-mcp5-4vw2",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-5j98-mcp5-4vw2"
+      },
+      "ratings": [
+        {
+          "score": 7.5,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+        },
+        {
+          "score": 3.45,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/glob@10.4.5"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-8qq5-rm4j-mr97",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-8qq5-rm4j-mr97"
+      },
+      "ratings": [
+        {
+          "score": 8.2,
+          "severity": "high",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N"
+        },
+        {
+          "score": 2.75,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.199999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":2.75,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.5.1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-34x7-hfp2-rc4v",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-34x7-hfp2-rc4v"
+      },
+      "ratings": [
+        {
+          "score": 8.2,
+          "severity": "high",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N"
+        },
+        {
+          "score": 4.45,
+          "severity": "medium",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.199999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.45,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-29T11:44:13Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.4.3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5f7q-jpqc-wp7h",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-5f7q-jpqc-wp7h"
+      },
+      "ratings": [
+        {
+          "score": 5.9,
+          "severity": "medium",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+        },
+        {
+          "score": 1.77,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.77,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-29T12:52:32Z",
+        "lastUpdated": "2026-01-29T12:52:32Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/next@15.5.11"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-29xp-372q-xqph",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-29xp-372q-xqph"
+      },
+      "ratings": [
+        {
+          "score": 6.1,
+          "severity": "medium",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:P/VC:H/VI:L/VA:L/SC:H/SI:H/SA:H"
+        },
+        {
+          "score": 0.95,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:P/VC:H/VI:L/VA:L/SC:H/SI:H/SA:H/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":6.099999904632568,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":0.95,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:P/VC:H/VI:L/VA:L/SC:H/SI:H/SA:H/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-30T00:56:15Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/tar@7.5.1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-30T10:23:38Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-73rr-hh4g-fpgx",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-73rr-hh4g-fpgx"
+      },
+      "ratings": [
+        {
+          "score": 2.7,
+          "severity": "low",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U"
+        },
+        {
+          "score": 1.35,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":2.700000047683716,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.35,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:54Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/diff@4.0.2"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:52:36Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-4fh9-h7wg-q85m",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-4fh9-h7wg-q85m"
+      },
+      "ratings": [
+        {
+          "score": 6.9,
+          "severity": "medium",
+          "method": "CVSSv4",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N"
+        },
+        {
+          "score": 1.35,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":6.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.35,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:56Z",
+        "lastUpdated": "2026-01-30T10:23:38Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/mdast-util-to-hast@13.2.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "firstResponded",
+          "value": "2026-01-29T14:28:30Z"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-cxrh-j4jr-qwg3",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/GHSA-cxrh-j4jr-qwg3"
+      },
+      "ratings": [
+        {
+          "score": 3.1,
+          "severity": "low",
+          "method": "CVSSv31",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
+        },
+        {
+          "score": 1.75,
+          "severity": "low",
+          "method": "DevGuard",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H",
+          "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}"
+        }
+      ],
+      "analysis": {
+        "state": "in_triage",
+        "firstIssued": "2026-01-27T12:38:52Z",
+        "lastUpdated": "2026-01-27T12:38:52Z"
+      },
+      "affects": [
+        {
+          "ref": "pkg:npm/undici@7.3.0"
+        }
+      ]
+    }
+  ]
+}

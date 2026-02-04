@@ -1,14 +1,21 @@
 package tests
 
 import (
+	"bytes"
+	"net/http/httptest"
+	"os"
 	"testing"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // TestVEXRuleServiceUpdate tests the Update method
@@ -265,4 +272,58 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 
 	assert.NoError(t, err)
 	vexRuleRepo.AssertExpectations(t)
+}
+
+// TestUploadVEXExampleIntegration verifies that a VEX document can be uploaded successfully
+func TestUploadVEXExampleIntegration(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		// Read the vex-example.json file
+		vexData, err := os.ReadFile("testdata/vex-example.json")
+		require.NoError(t, err)
+
+		// Setup echo app
+		app := echo.New()
+		req := httptest.NewRequest("POST", "/vex", bytes.NewReader(vexData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Asset-Ref", assetVersion.Name)
+		req.Header.Set("X-Artifact-Name", "test-artifact")
+		req.Header.Set("X-Origin", "test-upload")
+
+		recorder := httptest.NewRecorder()
+		ctx := app.NewContext(req, recorder)
+
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetAssetVersion(ctx, assetVersion)
+
+		// Call the UploadVEX endpoint
+		err = f.App.ScanController.UploadVEX(ctx)
+
+		// Verify the operation succeeded
+		assert.NoError(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify artifact was created in the database
+		var artifact models.Artifact
+		result := f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
+			"test-artifact", assetVersion.Name, asset.ID).First(&artifact)
+		assert.NoError(t, result.Error)
+		assert.Equal(t, "test-artifact", artifact.ArtifactName)
+
+		// Verify the BOM was decoded correctly
+		var bom cdx.BOM
+		decoder := cdx.NewBOMDecoder(bytes.NewReader(vexData), cdx.BOMFileFormatJSON)
+		err = decoder.Decode(&bom)
+		assert.NoError(t, err)
+		assert.NotNil(t, bom.Vulnerabilities)
+
+		// Verify VEX rules were created from the VEX document
+		var vexRules []models.VEXRule
+		result = f.DB.Where("asset_id = ? AND asset_version_name = ?",
+			asset.ID, assetVersion.Name).Find(&vexRules)
+		assert.NoError(t, result.Error)
+	})
 }

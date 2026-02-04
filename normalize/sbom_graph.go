@@ -1008,6 +1008,7 @@ type BOMMetadata struct {
 	AssetID               uuid.UUID
 	AddExternalReferences bool
 	RootName              string // defaults to ArtifactName if empty
+	AssetVersionName      string
 }
 
 // =============================================================================
@@ -1175,6 +1176,10 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	if rootName == "" {
 		rootName = metadata.ArtifactName
 	}
+	// add the assetVersionName to the rootName if it exists
+	if metadata.AssetVersionName != "" {
+		rootName = fmt.Sprintf("%s@%s", rootName, metadata.AssetVersionName)
+	}
 
 	// check if valid purl
 	p, err := packageurl.FromString(rootName)
@@ -1227,6 +1232,9 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	dependencies := []cdx.Dependency{}
 	for c := range g.Components() {
 		deps := depMap[c.BOMRef]
+		if deps == nil {
+			deps = []string{} // Ensure empty array, not null in JSON
+		}
 		dependencies = append(dependencies, cdx.Dependency{
 			Ref:          c.Component.BOMRef,
 			Dependencies: &deps,
@@ -1235,6 +1243,9 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	// include the depMap entries for root
 	rootDeps := depMap[rootName]
+	if rootDeps == nil {
+		rootDeps = []string{} // Ensure empty array, not null in JSON
+	}
 	dependencies = append(dependencies, cdx.Dependency{
 		Ref:          rootName,
 		Dependencies: &rootDeps,
@@ -1554,8 +1565,39 @@ func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode
 
 func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 	g := NewSBOMGraph()
+
+	// Create artifact and info source to connect components to the graph
+	artifactID := g.AddArtifact("vex")
+	infoSourceID := g.AddInfoSource(artifactID, "vex", InfoSourceSBOM)
+
 	for _, vuln := range vulns {
 		g.AddVulnerability(vuln)
+
+		// Extract affected components and add them to the graph
+		if vuln.Affects != nil {
+			for _, aff := range *vuln.Affects {
+				purlStr := aff.Ref
+				if purlStr == "" {
+					continue
+				}
+
+				// Parse the PURL to extract name and version
+				purl, err := packageurl.FromString(purlStr)
+				if err != nil {
+					continue
+				}
+
+				comp := cdx.Component{
+					BOMRef:     purlStr,
+					Name:       purl.Name,
+					Version:    purl.Version,
+					PackageURL: purlStr,
+					Type:       cdx.ComponentTypeLibrary,
+				}
+				compID := g.AddComponent(comp)
+				g.AddEdge(infoSourceID, compID)
+			}
+		}
 	}
 	return g
 }
