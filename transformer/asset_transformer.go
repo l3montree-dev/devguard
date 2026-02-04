@@ -128,6 +128,11 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 		asset.SharesInformation = *assetPatch.SharesInformation
 	}
 
+	if assetPatch.KeepOriginalSbomRootComponent != nil {
+		updated = true
+		asset.KeepOriginalSbomRootComponent = *assetPatch.KeepOriginalSbomRootComponent
+	}
+
 	if assetPatch.Description != nil {
 		updated = true
 		asset.Description = *assetPatch.Description

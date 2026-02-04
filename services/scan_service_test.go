@@ -220,7 +220,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL})
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
 
 		// Verify the SBOM was processed successfully with the correct URL
 		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
@@ -246,7 +246,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(artifactName, ref, invalidURLs)
+		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(artifactName, ref, invalidURLs, false)
 
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
@@ -268,7 +268,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL})
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
 
 		// HTTP errors should result in invalid URLs
 		assert.Equal(t, 0, len(boms))

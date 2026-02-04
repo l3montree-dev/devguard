@@ -33,11 +33,12 @@ import (
 
 func newRenderCommand() *cobra.Command {
 	var (
-		inputFile  string
-		outputFile string
-		format     string
-		maxDepth   int
-		showVulns  bool
+		inputFile                     string
+		outputFile                    string
+		format                        string
+		maxDepth                      int
+		showVulns                     bool
+		keepOriginalSbomRootComponent bool
 	)
 
 	renderCmd := &cobra.Command{
@@ -64,7 +65,7 @@ Examples:
   # Limit depth to avoid huge graphs
   devguard-cli sbom render -i sbom.json --max-depth 5 -o diagram.pdf`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return renderSBOM(inputFile, outputFile, format, maxDepth, showVulns)
+			return renderSBOM(inputFile, outputFile, format, maxDepth, showVulns, keepOriginalSbomRootComponent)
 		},
 	}
 
@@ -73,6 +74,7 @@ Examples:
 	renderCmd.Flags().StringVarP(&format, "format", "f", "", "Output format (auto-detected from file extension, or specify: dot, svg, png, pdf)")
 	renderCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
 	renderCmd.Flags().BoolVarP(&showVulns, "show-vulns", "v", false, "Show vulnerabilities in the graph")
+	renderCmd.Flags().BoolVarP(&keepOriginalSbomRootComponent, "keep-root-component", "", false, "Keep the original SBOM root component instead of replacing it with an info source node")
 
 	if err := renderCmd.MarkFlagRequired("input"); err != nil {
 		slog.Error("Failed to mark input flag as required", "err", err)
@@ -81,7 +83,7 @@ Examples:
 	return renderCmd
 }
 
-func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns bool) error {
+func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, keepOriginalSbomRootComponent bool) error {
 	// Read the SBOM file
 	data, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -95,7 +97,7 @@ func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns bo
 	}
 
 	// Convert to SBOMGraph
-	graph := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render")
+	graph := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render", keepOriginalSbomRootComponent)
 
 	// Generate DOT format
 	dotContent := generateDOT(graph, maxDepth, showVulns)

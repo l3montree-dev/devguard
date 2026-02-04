@@ -107,7 +107,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, _, _ := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
 	tx := c.artifactRepository.GetDB(nil).Begin()
 
 	// merge all boms
@@ -312,7 +312,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.FetchSbomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd, asset.KeepOriginalSbomRootComponent)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()

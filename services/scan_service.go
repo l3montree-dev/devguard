@@ -481,7 +481,7 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []string) {
+func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []string) {
 	client := &http.Client{}
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -530,7 +530,7 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
 			validURLs = append(validURLs, url)
-			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url))
+			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url, keepOriginalSbomRootComponent))
 		}
 	}
 
@@ -681,7 +681,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(
 	allURLs := append(sbomUpstreamURLs, vexURLs...)
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs)
+	boms, _, _ := s.FetchSbomsFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs, asset.KeepOriginalSbomRootComponent)
 	vexReports, _, _ := s.FetchVexFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs)
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()

@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -217,7 +218,19 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
 
-	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
+	// check if we should keep the original root component
+	keepOriginalSbomRootComponent := asset.KeepOriginalSbomRootComponent
+	if c.Request().Header.Get("X-Keep-Original-SBOM-Root-Component") == "1" {
+		keepOriginalSbomRootComponent = true
+	} else if c.Request().Header.Get("X-Keep-Original-SBOM-Root-Component") == "0" {
+		keepOriginalSbomRootComponent = false
+	}
+	// keepOriginalSbomRootComponent DOES NOT MAKE SENSE IF THE root component has no valid purl!
+	if keepOriginalSbomRootComponent && (bom.Metadata == nil || bom.Metadata.Component == nil || bom.Metadata.Component.PackageURL == "") {
+		return scanResults, fmt.Errorf("keepOriginalSbomRootComponent provided but sbom does not include valid bom.Metadata.Component.PackageURL entry")
+	}
+
+	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {

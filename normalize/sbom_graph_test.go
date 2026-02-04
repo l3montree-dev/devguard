@@ -39,7 +39,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
 		component := slices.Collect(result.Components())[0] // index 0 is the artifact name
 
 		assert.Equal(t, "test-component", component.Component.Name)
@@ -72,7 +72,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
 
 		// Verify the component is reachable from GraphRootNodeID
 		components := result.Components()
@@ -121,7 +121,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -174,7 +174,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -227,7 +227,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin)
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -239,6 +239,177 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.True(t, componentRefs["pkg:npm/tree1-GraphRootNodeID@1.0.0"], "tree1-GraphRootNodeID should be included")
 		assert.True(t, componentRefs["pkg:npm/tree1-child@1.0.0"], "tree1-child should be included")
 		assert.True(t, componentRefs["pkg:npm/tree2-GraphRootNodeID@1.0.0"], "tree2-GraphRootNodeID should be included")
+	})
+
+	t.Run("keepOriginalSbomRootComponent=false should redirect root children to info source", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{"pkg:npm/component-a@1.0.0"}},
+			},
+		}
+
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+
+		// With keepOriginalSbomRootComponent=false, component-a should be a child of the info source, not the root
+		// Verify the graph structure
+		edges := result.Edges()
+		foundEdge := false
+		for parentID, childID := range edges {
+			// The info source should have component-a as a child
+			parentNode := result.nodes[parentID]
+			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == "pkg:npm/component-a@1.0.0" {
+				foundEdge = true
+				break
+			}
+		}
+		assert.True(t, foundEdge, "component-a should be a child of the info source when keepOriginalSbomRootComponent=false")
+	})
+
+	t.Run("keepOriginalSbomRootComponent=true should preserve original root component with edge to it", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{"pkg:npm/component-a@1.0.0"}},
+			},
+		}
+
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+
+		// With keepOriginalSbomRootComponent=true, we should have:
+		// 1. An edge from info source to the original root ref
+		// 2. An edge from root ref to component-a (not redirected to info source)
+		edges := result.Edges()
+
+		foundRootEdge := false
+		foundComponentEdge := false
+
+		for parentID, childID := range edges {
+			parentNode := result.nodes[parentID]
+			// Check for info source -> root edge
+			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == GraphRootNodeID {
+				foundRootEdge = true
+			}
+			// Check for root -> component-a edge (not through info source)
+			if parentID == GraphRootNodeID && childID == "pkg:npm/component-a@1.0.0" {
+				foundComponentEdge = true
+			}
+		}
+
+		assert.True(t, foundRootEdge, "info source should have an edge to the original root component when keepOriginalSbomRootComponent=true")
+		assert.True(t, foundComponentEdge, "root component should have an edge to component-a when keepOriginalSbomRootComponent=true")
+	})
+
+	t.Run("keepOriginalSbomRootComponent=true with multiple root children", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/component-b@2.0.0",
+					Name:       "component-b",
+					PackageURL: "pkg:npm/component-b@2.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{
+					"pkg:npm/component-a@1.0.0",
+					"pkg:npm/component-b@2.0.0",
+				}},
+			},
+		}
+
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+
+		// Both components should be children of root, not info source
+		edges := result.Edges()
+		componentAChildren := 0
+		componentBChildren := 0
+
+		for parentID, childID := range edges {
+			if parentID == GraphRootNodeID {
+				if childID == "pkg:npm/component-a@1.0.0" {
+					componentAChildren++
+				}
+				if childID == "pkg:npm/component-b@2.0.0" {
+					componentBChildren++
+				}
+			}
+		}
+
+		assert.Equal(t, 1, componentAChildren, "component-a should be a direct child of root")
+		assert.Equal(t, 1, componentBChildren, "component-b should be a direct child of root")
+	})
+
+	t.Run("keepOriginalSbomRootComponent=true with no root dependencies", func(t *testing.T) {
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     "pkg:npm/orphan-component@1.0.0",
+					Name:       "orphan-component",
+					PackageURL: "pkg:npm/orphan-component@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: "pkg:npm/orphan-component@1.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+
+		// Even with keepOriginalSbomRootComponent=true, orphan components should still be connected to info source
+		edges := result.Edges()
+		foundInfoSourceEdge := false
+
+		for parentID, childID := range edges {
+			parentNode := result.nodes[parentID]
+			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == "pkg:npm/orphan-component@1.0.0" {
+				foundInfoSourceEdge = true
+				break
+			}
+		}
+
+		assert.True(t, foundInfoSourceEdge, "orphan components should be connected to info source")
 	})
 
 }
@@ -282,8 +453,8 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		result := NewSBOMGraph()
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "sbom-1"))
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "sbom-2"))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "sbom-1", false))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "sbom-2", false))
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -354,8 +525,8 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		result := NewSBOMGraph()
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "test"))
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "test"))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "test", false))
+		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "test", false))
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -393,7 +564,7 @@ func TestShouldNotCrashWithEmptyMetadataComponent(t *testing.T) {
 		}},
 	}
 
-	normalized := SBOMGraphFromCycloneDX(b1, "test", "test")
+	normalized := SBOMGraphFromCycloneDX(b1, "test", "test", false)
 	assert.NotNil(t, normalized)
 }
 
@@ -417,8 +588,8 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 	}
 
 	result := NewSBOMGraph()
-	result.MergeGraph(SBOMGraphFromCycloneDX(b1, "artifact-1", "test"))
-	result.MergeGraph(SBOMGraphFromCycloneDX(b2, "artifact-2", "test"))
+	result.MergeGraph(SBOMGraphFromCycloneDX(b1, "artifact-1", "test", false))
+	result.MergeGraph(SBOMGraphFromCycloneDX(b2, "artifact-2", "test", false))
 	result.ToCycloneDX(BOMMetadata{})
 
 	assert.Len(t, slices.Collect(result.Vulnerabilities()), 1)
@@ -469,8 +640,8 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 
-		currentGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan")
-		newGraph := SBOMGraphFromCycloneDX(newSubtree, artifactName, "source-scan")
+		currentGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
+		newGraph := SBOMGraphFromCycloneDX(newSubtree, artifactName, "source-scan", false)
 		currentGraph.MergeGraph(newGraph)
 
 		expected := &cdx.BOM{
@@ -556,9 +727,9 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 
-		resultGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan")
+		resultGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
 
-		subtree := SBOMGraphFromCycloneDX(newSubtree, artifactName, "container-scan")
+		subtree := SBOMGraphFromCycloneDX(newSubtree, artifactName, "container-scan", false)
 		resultGraph.MergeGraph(subtree)
 
 		expected := &cdx.BOM{

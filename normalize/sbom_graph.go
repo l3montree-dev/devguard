@@ -124,6 +124,9 @@ type SBOMGraph struct {
 	rootID string // ID of the root node (constant: "ROOT")
 
 	scopeID string // The id of the current scope node
+
+	keepOriginalSbomRootComponent bool   // Whether to keep the original root component from the input BOM
+	originalRootRef               string // The original root component reference from input BOM
 }
 
 type VexReport struct {
@@ -1435,7 +1438,7 @@ func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string)
 // =============================================================================
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
-func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SBOMGraph {
+func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) *SBOMGraph {
 	g := NewSBOMGraph()
 
 	artifactID := g.AddArtifact(artifactName)
@@ -1496,7 +1499,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 		// If parent is root or a root project component, add children as info source children
 		children := getChildrenOfParent(depMap, g.nodes, parent)
 		edgeSource := parent
-		if parent == rootRef {
+		if parent == rootRef && !keepOriginalSbomRootComponent {
 			edgeSource = infoID
 		}
 		for _, child := range children {
@@ -1524,6 +1527,11 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) *SB
 				}
 			}
 		}
+	}
+
+	// If keepOriginalSbomRootComponent is true, add edge from infosource to original root ref
+	if keepOriginalSbomRootComponent && rootRef != "" {
+		g.AddEdge(infoID, rootRef)
 	}
 
 	// Add vulnerabilities

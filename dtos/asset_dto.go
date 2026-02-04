@@ -129,4 +129,6 @@ type AssetPatchRequest struct {
 	ParanoidMode       *bool   `json:"paranoidMode"`
 
 	SharesInformation *bool `json:"sharesInformation"`
+
+	KeepOriginalSbomRootComponent *bool `json:"keepOriginalSbomRootComponent"`
 }

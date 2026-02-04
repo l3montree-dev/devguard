@@ -10,7 +10,8 @@
             "author": "Test Org",
             "publisher": "github.com/l3montree-dev/devguard",
             "name": "",
-            "version": "main"
+            "version": "main",
+            "purl": "pkg:devguard/neu@main"
         }
     },
     "components": [

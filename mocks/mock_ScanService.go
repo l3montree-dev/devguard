@@ -40,8 +40,8 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string) {
-	ret := _mock.Called(artifactName, ref, upstreamURLs)
+func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []string) {
+	ret := _mock.Called(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchSbomsFromUpstream")
@@ -50,25 +50,25 @@ func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string
 	var r0 []*normalize.SBOMGraph
 	var r1 []string
 	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.SBOMGraph, []string, []string)); ok {
-		return returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string, bool) ([]*normalize.SBOMGraph, []string, []string)); ok {
+		return returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.SBOMGraph); ok {
-		r0 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string, bool) []*normalize.SBOMGraph); ok {
+		r0 = returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
-		r1 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(1).(func(string, string, []string, bool) []string); ok {
+		r1 = returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
-		r2 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(2).(func(string, string, []string, bool) []string); ok {
+		r2 = returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]string)
@@ -86,11 +86,12 @@ type ScanService_FetchSbomsFromUpstream_Call struct {
 //   - artifactName string
 //   - ref string
 //   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchSbomsFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
-	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", artifactName, ref, upstreamURLs)}
+//   - keepOriginalSbomRootComponent bool
+func (_e *ScanService_Expecter) FetchSbomsFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}, keepOriginalSbomRootComponent interface{}) *ScanService_FetchSbomsFromUpstream_Call {
+	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)}
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -104,10 +105,15 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(artifactName str
 		if args[2] != nil {
 			arg2 = args[2].([]string)
 		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -118,7 +124,7 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normaliz
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []string)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []string)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }

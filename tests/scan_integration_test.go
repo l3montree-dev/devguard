@@ -1738,3 +1738,300 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 		})
 	})
 }
+
+func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		assetVersionController := f.App.AssetVersionController
+
+		app := echo.New()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		// The original root component bom-ref from small-sbom.json
+		originalRootRef := "pkg:devguard/neu@main"
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user").Maybe()
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+			shared.SetAssetVersion(ctx, assetVersion)
+		}
+
+		// Helper function to check if the original root component exists in the components array
+		hasOriginalRootInComponents := func(bom *cyclonedx.BOM) bool {
+			if bom.Components == nil {
+				return false
+			}
+			for _, comp := range *bom.Components {
+				if comp.PackageURL == originalRootRef {
+					return true
+				}
+			}
+			return false
+		}
+
+		t.Run("should override to true when header is 1", func(t *testing.T) {
+			// Set asset to NOT keep original root component
+			asset.KeepOriginalSbomRootComponent = false
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile, err := os.Open("testdata/small-sbom.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "header-1-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1") // Override to true
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Download the SBOM and verify the original root component is preserved
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("GET", "/sbom/json", nil)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = assetVersionController.SBOMJSON(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var bom cyclonedx.BOM
+			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
+			assert.Nil(t, err)
+
+			// With header=1, the original root component from the SBOM should be preserved
+			// in the components array (even though asset default is false)
+			assert.NotNil(t, bom.Metadata)
+			assert.NotNil(t, bom.Metadata.Component)
+			assert.True(t, hasOriginalRootInComponents(&bom), "original root component should be in components array when header=1")
+		})
+
+		t.Run("should use asset default true when no header provided", func(t *testing.T) {
+			// Set asset to keep original root component
+			asset.KeepOriginalSbomRootComponent = true
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile, err := os.Open("testdata/small-sbom.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "asset-default-true-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			// No X-Keep-Original-SBOM-Root-Component header - should use asset default (true)
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Download the SBOM and verify original root component is preserved
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("GET", "/sbom/json", nil)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = assetVersionController.SBOMJSON(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var bom cyclonedx.BOM
+			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
+			assert.Nil(t, err)
+
+			// With asset.KeepOriginalSbomRootComponent=true and no header,
+			// the original root component should be in the components array
+			assert.NotNil(t, bom.Metadata)
+			assert.NotNil(t, bom.Metadata.Component)
+			assert.True(t, hasOriginalRootInComponents(&bom), "original root component should be in components array when asset default is true")
+		})
+	})
+}
+
+func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		assetVersionController := f.App.AssetVersionController
+
+		app := echo.New()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		// The original root component bom-ref from small-sbom.json
+		originalRootRef := "pkg:devguard/neu@main"
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user").Maybe()
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+			shared.SetAssetVersion(ctx, assetVersion)
+		}
+
+		// Helper function to check if the original root component exists in the components array
+		hasOriginalRootInComponents := func(bom *cyclonedx.BOM) bool {
+			if bom.Components == nil {
+				return false
+			}
+			for _, comp := range *bom.Components {
+				if comp.PackageURL == originalRootRef {
+					return true
+				}
+			}
+			return false
+		}
+
+		t.Run("should use asset default when no header is provided", func(t *testing.T) {
+			// Set asset to NOT keep original root component
+			asset.KeepOriginalSbomRootComponent = false
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile, err := os.Open("testdata/small-sbom.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "no-header-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			// No X-Keep-Original-SBOM-Root-Component header
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Download the SBOM and verify root component handling
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("GET", "/sbom/json", nil)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = assetVersionController.SBOMJSON(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var bom cyclonedx.BOM
+			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
+			assert.Nil(t, err)
+
+			// With KeepOriginalSbomRootComponent=false, the original root component
+			// should NOT be present in the components array
+			assert.NotNil(t, bom.Metadata)
+			assert.NotNil(t, bom.Metadata.Component)
+			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when keepOriginalSbomRootComponent=false")
+		})
+
+		t.Run("should override to false when header is 0", func(t *testing.T) {
+			// Set asset to keep original root component
+			asset.KeepOriginalSbomRootComponent = true
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile, err := os.Open("testdata/small-sbom.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "header-0-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "0") // Override to false
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Download the SBOM and verify root component handling
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("GET", "/sbom/json", nil)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = assetVersionController.SBOMJSON(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var bom cyclonedx.BOM
+			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
+			assert.Nil(t, err)
+
+			// With header=0, the original root component should NOT be in the components array
+			// (even though asset default is true)
+			assert.NotNil(t, bom.Metadata)
+			assert.NotNil(t, bom.Metadata.Component)
+			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header=0")
+		})
+
+		t.Run("should ignore invalid header values", func(t *testing.T) {
+			// Set asset to NOT keep original root component
+			asset.KeepOriginalSbomRootComponent = false
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile, err := os.Open("testdata/small-sbom.json")
+			assert.Nil(t, err)
+			defer sbomFile.Close()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "invalid-header-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "invalid") // Invalid value
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Download the SBOM and verify default behavior (asset setting) is used
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("GET", "/sbom/json", nil)
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = assetVersionController.SBOMJSON(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var bom cyclonedx.BOM
+			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
+			assert.Nil(t, err)
+
+			// With invalid header, should fall back to asset default (false)
+			// So the original root component should NOT be in components array
+			assert.NotNil(t, bom.Metadata)
+			assert.NotNil(t, bom.Metadata.Component)
+			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header is invalid (falls back to asset default=false)")
+		})
+	})
+}
