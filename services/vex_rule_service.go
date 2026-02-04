@@ -384,11 +384,18 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 
 		// now create the path pattern
 		var pathPattern dtos.PathPattern
+
+		purlString, err := normalize.PURLToString(purl)
+		if err != nil {
+			slog.Info("failed to unescape purl for path pattern, continuing anyway", "purl", purl.String(), "error", err)
+			purlString = purl.String()
+		}
+
 		if componentPurl.String() != "" {
-			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcard, purl.ToString()}
+			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcard, purlString}
 		} else {
 			// If no metadata component PURL, use the affected package directly
-			pathPattern = dtos.PathPattern{purl.ToString()}
+			pathPattern = dtos.PathPattern{purlString}
 		}
 
 		rule := models.VEXRule{

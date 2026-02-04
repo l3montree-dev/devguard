@@ -2,6 +2,8 @@ package normalize
 
 import (
 	"fmt"
+	"log/slog"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -63,7 +65,11 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 	// Create search key (purl without version)
 	purl.Version = ""
 	purl.Qualifiers = nil
-	searchPurl := purl.ToString()
+	searchPurl, err := PURLToString(purl)
+	if err != nil {
+		slog.Warn("failed to unescape purl for matching", "purl", purl.ToString(), "err", err)
+		searchPurl = purl.ToString()
+	}
 
 	return &PurlMatchContext{
 		SearchPurl:                  searchPurl,
@@ -91,7 +97,12 @@ func BeautifyPURL(pURL string) (string, error) {
 func ToPurlWithoutVersion(purl packageurl.PackageURL) string {
 	purl.Version = ""
 	purl.Qualifiers = nil
-	return purl.ToString()
+	purlString, err := PURLToString(purl)
+	if err != nil {
+		slog.Warn("failed to unescape purl without version", "purl", purl.ToString(), "err", err)
+		return purl.ToString()
+	}
+	return purlString
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py
@@ -184,4 +195,10 @@ func QualifiersMapToString(qualifiers map[string]string) string {
 		qualifiersStr = strings.Join(qualifierPairs, "&")
 	}
 	return qualifiersStr
+}
+
+func PURLToString(purl packageurl.PackageURL) (string, error) {
+
+	return url.PathUnescape(purl.ToString())
+
 }
