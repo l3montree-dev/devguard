@@ -50,18 +50,6 @@ func (p Path) String() string {
 	return strings.Join(p, ",")
 }
 
-// ToStringSliceComponentOnly returns only the component nodes (PURLs),
-// filtering out structural nodes like "root", "artifact:...", and info sources.
-func (p Path) ToStringSliceComponentOnly() []string {
-	filtered := make([]string, 0, len(p))
-	for _, node := range p {
-		if isComponentNodeID(node) {
-			filtered = append(filtered, node)
-		}
-	}
-	return filtered
-}
-
 // =============================================================================
 // NODE TYPES
 // =============================================================================
@@ -235,7 +223,6 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 			Type:      GraphNodeTypeComponent,
 			Component: &comp,
 		}
-		g.edges[comp.BOMRef] = make(map[string]struct{})
 	}
 	return comp.BOMRef
 }
@@ -868,101 +855,13 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			}
 		}
 	}
-
-	return paths
-}
-
-// FindAllPathsToPURL finds all paths from root to a target component.
-// Returns full paths including structural nodes (ROOT, artifacts, info sources).
-// Each unique full path is returned separately, even if multiple paths lead to the same
-// component through different artifacts or info sources.
-// Uses BFS to find paths in order of increasing length (shortest first).
-// If limit > 0, stops early once `limit` paths are found.
-func (g *SBOMGraph) FindAllPathsToPURL(purl string, limit int) []Path {
-	// Find the target node ID
-	var targetID string
-	for node := range g.Components() {
-		if node.Component != nil && strings.EqualFold(node.Component.PackageURL, purl) {
-			targetID = node.BOMRef
-			break
-		}
-	}
-
-	if targetID == "" {
-		return nil
-	}
-
-	// Build reverse edge map (child -> parents) for backward traversal
-	// Sort parent IDs for deterministic traversal order
-	reverseEdges := make(map[string][]string)
-	for parent, children := range g.edges {
-		for child := range children {
-			reverseEdges[child] = append(reverseEdges[child], parent)
-		}
-	}
-	// Sort each parent list for deterministic order
-	for child := range reverseEdges {
-		slices.Sort(reverseEdges[child])
-	}
-
-	// Use BFS to find paths in order of increasing length
-	// This allows us to stop early once we have enough paths
-	var paths []Path
-	seen := make(map[string]bool) // For path deduplication
-
-	// Queue holds partial paths (stored in reverse: target first, growing toward root)
-	type queueItem struct {
-		path   []string
-		onPath map[string]bool // Track nodes in current path to detect cycles
-	}
-	queue := []queueItem{{
-		path:   []string{targetID},
-		onPath: map[string]bool{targetID: true},
-	}}
-
-	for len(queue) > 0 {
-		// Check if we've reached the limit
-		if limit > 0 && len(paths) >= limit {
-			break
-		}
-
-		current := queue[0]
-		queue = queue[1:]
-
-		lastNode := current.path[len(current.path)-1]
-
-		// Check if we've reached root (termination condition)
-		if lastNode == g.rootID {
-			// Build path in correct order (root to target)
-			result := make([]string, len(current.path))
-			for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
-				result[i] = current.path[j]
+	// translate each path and path entry to the package purl of that component
+	for i, path := range paths {
+		for j, nodeID := range path {
+			node := g.nodes[nodeID]
+			if node != nil && node.Component != nil && node.Component.PackageURL != "" {
+				paths[i][j] = node.Component.PackageURL
 			}
-			key := strings.Join(result, "|")
-			if !seen[key] {
-				seen[key] = true
-				paths = append(paths, Path(result))
-			}
-			continue
-		}
-
-		// Get parents of the last node and extend paths
-		for _, parentID := range reverseEdges[lastNode] {
-			// Cycle detection
-			if current.onPath[parentID] {
-				continue
-			}
-
-			// Extend path
-			newPath := make([]string, len(current.path)+1)
-			copy(newPath, current.path)
-			newPath[len(current.path)] = parentID
-			newOnPath := make(map[string]bool, len(current.onPath)+1)
-			for k, v := range current.onPath {
-				newOnPath[k] = v
-			}
-			newOnPath[parentID] = true
-			queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 		}
 	}
 

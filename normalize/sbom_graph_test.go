@@ -596,7 +596,7 @@ func TestMergeComplex(t *testing.T) {
 
 }
 
-func TestFindAllPathsToPURL(t *testing.T) {
+func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 	t.Run("multiple information sources pointing to same component - should return multiple paths", func(t *testing.T) {
 		g := NewSBOMGraph()
 
@@ -622,17 +622,13 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/lodash@4.17.21", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.21", 0)
 
-		// Should return two paths (one through each info source)
-		assert.Len(t, paths, 2, "Should return separate paths for each info source")
-
-		// Both paths should have the same component-only representation
-		assert.Equal(t, paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly())
-		assert.Equal(t, []string{"pkg:npm/lodash@4.17.21"}, paths[0].ToStringSliceComponentOnly())
+		// Should return a single path (reachable through different info sources)
+		assert.Len(t, paths, 1, "Should return separate paths for each info source")
 	})
 
-	t.Run("multiple artifacts pointing to same component - should return multiple paths", func(t *testing.T) {
+	t.Run("multiple artifacts pointing to same component - should return a single same path", func(t *testing.T) {
 		g := NewSBOMGraph()
 
 		// Add two different artifacts
@@ -658,14 +654,10 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/express@4.18.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/express@4.18.0", 0)
 
 		// Should return two paths (one through each artifact)
-		assert.Len(t, paths, 2, "Should return separate paths through different artifacts")
-
-		// Both paths should have the same component-only representation
-		assert.Equal(t, paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly())
-		assert.Equal(t, []string{"pkg:npm/express@4.18.0"}, paths[0].ToStringSliceComponentOnly())
+		assert.Len(t, paths, 1, "Should return separate paths through different artifacts")
 	})
 
 	t.Run("multiple dependency paths to same component - should return multiple paths", func(t *testing.T) {
@@ -712,7 +704,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(depBID, targetID)
 
 		// Find all paths to the target component
-		paths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 0)
 
 		// Should return two different paths through different dependencies
 		assert.Len(t, paths, 2, "Should return multiple paths when there are different dependency chains")
@@ -721,8 +713,8 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		path1 := []string{"pkg:npm/dep-a@1.0.0", "pkg:npm/target@1.0.0"}
 		path2 := []string{"pkg:npm/dep-b@1.0.0", "pkg:npm/target@1.0.0"}
 
-		assert.Contains(t, [][]string{paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly()}, path1, "Should contain path through dep-a")
-		assert.Contains(t, [][]string{paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly()}, path2, "Should contain path through dep-b")
+		assert.Contains(t, [][]string{paths[0], paths[1]}, path1, "Should contain path through dep-a")
+		assert.Contains(t, [][]string{paths[0], paths[1]}, path2, "Should contain path through dep-b")
 	})
 
 	t.Run("component not found - should return empty paths", func(t *testing.T) {
@@ -740,7 +732,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource, compID)
 
 		// Search for non-existent component
-		paths := g.FindAllPathsToPURL("pkg:npm/non-existent@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/non-existent@1.0.0", 0)
 
 		assert.Len(t, paths, 0, "Should return empty paths for non-existent component")
 	})
@@ -784,16 +776,11 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(compCID, compDID)
 
 		// Find path to the deepest component
-		paths := g.FindAllPathsToPURL("pkg:npm/d@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/d@1.0.0", 0)
 
 		assert.Len(t, paths, 1)
-		expectedPath := []string{
-			"pkg:npm/a@1.0.0",
-			"pkg:npm/b@1.0.0",
-			"pkg:npm/c@1.0.0",
-			"pkg:npm/d@1.0.0",
-		}
-		assert.Equal(t, expectedPath, paths[0].ToStringSliceComponentOnly(), "Should return complete dependency chain")
+		expectedPath := Path([]string{"pkg:npm/a@1.0.0", "pkg:npm/b@1.0.0", "pkg:npm/c@1.0.0", "pkg:npm/d@1.0.0"})
+		assert.Equal(t, expectedPath, paths[0], "Should return the complete dependency chain")
 	})
 
 	t.Run("limit should stop early and return shortest paths first", func(t *testing.T) {
@@ -840,17 +827,17 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(dep3ID, targetID)
 
 		// Without limit, should return all 3 paths
-		allPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
+		allPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 0)
 		assert.Len(t, allPaths, 3, "Should return all 3 paths without limit")
 
 		// With limit=1, should return only the shortest path
-		limitedPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 1)
+		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 1)
 		assert.Len(t, limitedPaths, 1, "Should return only 1 path with limit=1")
 		// The shortest path is the direct one
-		assert.Equal(t, []string{"pkg:npm/target@1.0.0"}, limitedPaths[0].ToStringSliceComponentOnly())
+		assert.Equal(t, Path([]string{"pkg:npm/target@1.0.0"}), limitedPaths[0])
 
 		// With limit=2, should return 2 shortest paths
-		limitedPaths2 := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 2)
+		limitedPaths2 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
 		assert.Len(t, limitedPaths2, 2, "Should return only 2 paths with limit=2")
 	})
 

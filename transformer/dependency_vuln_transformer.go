@@ -186,7 +186,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	// Create one DependencyVuln per path (pre-allocate with known capacity)
 	result := make([]models.DependencyVuln, 0, len(paths))
 	for _, path := range paths {
-		componentPath := path.ToStringSliceComponentOnly()
+		componentPath := path
 		key := strings.Join(componentPath, ",")
 		if seen[key] {
 			continue
