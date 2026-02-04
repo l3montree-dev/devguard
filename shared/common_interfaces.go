@@ -674,6 +674,17 @@ const (
 	ActionDelete Action = "delete"
 )
 
+type TrustedEntityRepository interface {
+	utils.Repository[uuid.UUID, models.TrustedEntity, DB]
+	UpsertOrganizationTrust(tx DB, organizationID uuid.UUID, trustScore float64) error
+	UpsertProjectTrust(tx DB, projectID uuid.UUID, trustScore float64) error
+	GetOrganizationTrust(organizationID uuid.UUID) (*models.TrustedEntity, error)
+	GetProjectTrust(projectID uuid.UUID) (*models.TrustedEntity, error)
+	DeleteOrganizationTrust(tx DB, organizationID uuid.UUID) error
+	DeleteProjectTrust(tx DB, projectID uuid.UUID) error
+	ListAllTrustedEntities() ([]models.TrustedEntity, error)
+}
+
 type Object string
 
 const (
