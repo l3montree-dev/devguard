@@ -53,7 +53,7 @@ type VersionData struct {
 	Dist         Dist                   `json:"dist"`
 	Main         string                 `json:"main"`
 	From         string                 `json:"from"`
-	Engines      []string               `json:"engines"`
+	Engines      map[string]interface{} `json:"engines"`
 	NpmUser      Person                 `json:"_npmUser"`
 	Repository   Repository             `json:"repository"`
 	NpmVersion   string                 `json:"_npmVersion"`

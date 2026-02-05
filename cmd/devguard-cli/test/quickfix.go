@@ -63,18 +63,20 @@ func generalizeAllVersions(resp []byte) [][]string {
 }
 
 func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]string, error) {
-	for i, version := range versionHistory {
-		if version[i][0] == currentVersion[0] {
-			if version[i][1] >= currentVersion[1] {
-				if version[i][2] >= currentVersion[2] {
-					fmt.Println("Recommended version: ", version[i])
+	currentParts := strings.Split(currentVersion, ".")
+	var recommended []string
+
+	for _, version := range versionHistory {
+		if version[0] == currentParts[0] {
+			if version[1] >= currentParts[1] {
+				if version[2] >= currentParts[2] {
+					fmt.Println(strings.Join(version, "."))
+					recommended = append(recommended, strings.Join(version, "."))
 				}
 			}
-		} else {
-			continue
 		}
 	}
-	return nil, nil
+	return recommended, nil
 }
 
 func main() {
