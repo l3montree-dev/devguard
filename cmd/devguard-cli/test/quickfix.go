@@ -8,8 +8,6 @@ import (
 	"net/http"
 )
 
-var DirectDependency string = "lodash"
-
 func getPackageManager(Package string) string {
 	// insert future Package Managers later
 	switch Package {
@@ -39,7 +37,9 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 }
 
 func main() {
-	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
+	DirectDependency := "lodash"
+
+	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency, Version: "1.1.0"})
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
