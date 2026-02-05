@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func getPackageManager(Package string) string {
@@ -37,7 +38,7 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	return nil, nil
 }
 
-func filterMajorVersions(resp []byte) []string {
+func filterMajorVersions(resp []byte) [][]string {
 	var npmResponseObject NPMResponse
 
 	err := json.Unmarshal(resp, &npmResponseObject)
@@ -47,10 +48,16 @@ func filterMajorVersions(resp []byte) []string {
 		return nil
 	}
 
+	var versions [][]string
 	for _, Obj := range npmResponseObject.Versions {
-		fmt.Println(Obj.Version)
+		if strings.Contains(Obj.Version, "-") {
+			continue
+		}
+		versionParts := strings.Split(Obj.Version, ".")
+		versions = append(versions, versionParts)
+		fmt.Println(versionParts)
 	}
-	return nil
+	return versions
 }
 
 func main() {
