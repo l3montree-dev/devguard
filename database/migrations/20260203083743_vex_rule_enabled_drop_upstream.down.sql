@@ -14,7 +14,7 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 -- Re-add upstream column with default 0 (Internal)
-ALTER TABLE vuln_events
+ALTER TABLE public.vuln_events
 ADD COLUMN IF NOT EXISTS upstream integer NOT NULL DEFAULT 0;
 
 -- Remove enabled column from vex_rules
