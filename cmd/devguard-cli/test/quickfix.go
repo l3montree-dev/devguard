@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -102,6 +103,7 @@ func filterMajorVersions(version string) []string {
 			return nil
 		}
 	}
+	return nil
 }
 
 func main() {
@@ -119,6 +121,9 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	json :=
-		fmt.Println(string(body))
+	var npmResponseObject VersionData
+
+	json.Unmarshal(body, &npmResponseObject)
+	fmt.Println(npmResponseObject.Maintainers)
+	// fmt.Println(string(body))
 }
