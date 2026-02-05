@@ -111,7 +111,7 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-func (s cisaKEVService) Mirror() (currentErr error) {
+func (s cisaKEVService) Mirror() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	cves, err := s.fetchJSON(ctx)
 	cancel()
@@ -121,17 +121,6 @@ func (s cisaKEVService) Mirror() (currentErr error) {
 	}
 
 	tx := s.cveRepository.Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("could not start new transaction: %w", tx.Error)
-	}
-	defer func() {
-		if currentErr != nil {
-			rollbackError := tx.Rollback().Error
-			if rollbackError != nil {
-				slog.Error("could not rollback transaction, there might be a corrupted database state")
-			}
-		}
-	}()
 
 	// build a map of CVE ID -> KEV data for quick lookup
 	kevMap := make(map[string]models.CVE, len(cves))

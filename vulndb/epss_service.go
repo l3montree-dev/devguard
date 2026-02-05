@@ -3,7 +3,6 @@ package vulndb
 import (
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -92,7 +91,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 
 const epssBatchSize int = 50_000
 
-func (s epssService) Mirror() (currentErr error) {
+func (s epssService) Mirror() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	cves, err := s.fetchCSV(ctx)
 	cancel()
@@ -103,17 +102,6 @@ func (s epssService) Mirror() (currentErr error) {
 
 	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
 	tx := s.cveRepository.Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("could not start new transaction: %w", tx.Error)
-	}
-	defer func() {
-		if currentErr != nil {
-			rollbackError := tx.Rollback().Error
-			if rollbackError != nil {
-				slog.Error("could not rollback transaction,there might be a corrupted database state")
-			}
-		}
-	}()
 
 	// build a map of CVE ID -> EPSS data for quick lookup
 	epssMap := make(map[string]models.CVE, len(cves))
