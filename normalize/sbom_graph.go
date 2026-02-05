@@ -220,6 +220,7 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 			comp.PackageURL = unescapedPurl
 		}
 	}
+
 	if g.nodes[comp.BOMRef] == nil {
 		g.nodes[comp.BOMRef] = &GraphNode{
 			BOMRef:    comp.BOMRef,

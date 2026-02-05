@@ -311,8 +311,14 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
 	}
 
+	// make sure we remove the prefix before fetching the sbom
+	toAddUrls := utils.Map(toAdd, func(e string) string {
+		_, u := normalize.RemoveInformationSourcePrefixIfExists(e)
+		return u
+	})
+
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.FetchSbomsFromUpstream(artifactName, artifact.AssetVersionName, toAdd, asset.KeepOriginalSbomRootComponent)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()

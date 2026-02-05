@@ -530,7 +530,8 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
 			validURLs = append(validURLs, url)
-			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url, keepOriginalSbomRootComponent))
+			// add the sbom prefix
+			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, "sbom:"+url, keepOriginalSbomRootComponent))
 		}
 	}
 
