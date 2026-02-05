@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func getPackageManager(Package string) string {
@@ -36,10 +37,25 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	return nil, nil
 }
 
+func filterMajorVersions(version string) []string {
+	for range version {
+		if strings.Contains(version, "-") {
+			continue
+		}
+		versionArray := strings.Split(version, ".")[0]
+		for range versionArray[0] {
+			// if versionArray[0] == "" {
+			fmt.Println(versionArray[0])
+
+			return nil
+		}
+	}
+}
+
 func main() {
 	DirectDependency := "lodash"
 
-	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency, Version: "1.1.0"})
+	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -50,5 +66,6 @@ func main() {
 		return
 	}
 	defer resp.Body.Close()
-	fmt.Println("Response:", string(body))
+
+	fmt.Println(string(body))
 }
