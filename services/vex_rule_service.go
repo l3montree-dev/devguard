@@ -242,7 +242,7 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, rules []models.
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
 	for _, ev := range vuln.GetEvents() {
-		if ev.Type == event.Type && ev.Justification == event.Justification {
+		if ev.Type == event.Type && (ev.Justification == nil && event.Justification == nil || *ev.Justification == *event.Justification) {
 			return true
 		}
 	}
