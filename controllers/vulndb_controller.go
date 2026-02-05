@@ -167,7 +167,7 @@ func (c VulnDBController) GetEcosystemDistribution(ctx shared.Context) error {
 	sql := `SELECT ecosystem, COUNT(*) FROM affected_components GROUP BY ecosystem;`
 	err := c.affectedComponentRepository.GetDB(nil).Raw(sql).Find(&results).Error
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
 
 	// since ecosystem have tags behind the : character we want to group them by their prefix
