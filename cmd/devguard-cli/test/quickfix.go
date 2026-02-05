@@ -1,36 +1,54 @@
 // Copyright 2026 larshermges @ l3montree GmbH
 
-package test
+package main
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"time"
+	"io"
 	"net/http"
-	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
 )
+
+var DirectDependency string = "lodash"
 
 func getPackageManager(Package string) string {
 	// insert future Package Managers later
 	switch Package {
+
 	case "npm", "yarn", "pnpm":
 		return "node"
+
 	case "pip", "pipenv", "poetry":
 		return "python"
+
+	case "cargo":
+		return "crates"
 	}
+	return "unknown"
 }
 
-func fetchAllPackageRegistryData(DirectDependency string, packageManager string) (string, error) {
+func getAllVersions(DirectDependency string, packageManager string, version *string) (*http.Response, error) {
+
 	switch packageManager {
 	case "node":
-		// http request
-		return ""
+		return GetNPMRegistry(DirectDependency, packageManager, nil)
+	case "crates":
+		return GetCratesRegistry(DirectDependency, packageManager, nil)
 	}
+	// add more in the future
+	return nil, nil
 }
 
-func getAllVersions(DirectDependency string, packageManager string) []string {
-	fmt.Printf(DirectDependency, packageManager)
+func main() {
+	resp, err := getVersions(DirectDependency, getPackageManager("npm"))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading body:", err)
+		return
+	}
+	defer resp.Body.Close()
+	fmt.Println("Response:", string(body))
 }
