@@ -7,8 +7,32 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
+
+type NPMResponse struct {
+	Id             string          `json:"_id"`
+	Rev            string          `json:"_rev"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	distTags       DistTags        `json:"dist-tags"`
+	Versions       []VersionData   `json:"versions"`
+	Time           string          `json:"time"`
+	Bugs           Bugs            `json:"bugs"`
+	Author         Person          `json:"author"`
+	License        string          `json:"license"`
+	Homepage       string          `json:"homepage"`
+	Keywords       []string        `json:"keywords"`
+	Repository     Repository      `json:"repository"`
+	Contributors   []Person        `json:"contributors"`
+	Maintainers    []Person        `json:"maintainers"`
+	ReadMe         string          `json:"readme"`
+	ReadMeFilename string          `json:"readmeFilename"`
+	Users          map[string]bool `json:"users"`
+}
+
+type DistTags struct {
+	Latest string `json:"latest"`
+}
 
 type VersionData struct {
 	Name         string     `json:"name"`
@@ -31,8 +55,6 @@ type VersionData struct {
 	NpmVersion   string     `json:"_npmVersion"`
 	Description  string     `json:"description"`
 	Directories  []string   `json:"directories"`
-
-	// ... weitere Felder...
 }
 
 type Person struct {
@@ -90,18 +112,16 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	return nil, nil
 }
 
-func filterMajorVersions(version string) []string {
-	for range version {
-		if strings.Contains(version, "-") {
-			continue
-		}
-		versionArray := strings.Split(version, ".")[0]
-		for range versionArray[0] {
-			// if versionArray[0] == "" {
-			fmt.Println(versionArray[0])
+func filterMajorVersions(resp []byte) []string {
+	var npmResponseObject NPMResponse
 
-			return nil
-		}
+	json.Unmarshal(resp, &npmResponseObject)
+
+	for range npmResponseObject.Versions {
+
+		fmt.Println("Version:", npmResponseObject.Versions[0].Version)
+
+		return nil
 	}
 	return nil
 }
@@ -121,9 +141,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	var npmResponseObject VersionData
+	filterMajorVersions(body)
 
-	json.Unmarshal(body, &npmResponseObject)
-	fmt.Println(npmResponseObject.Maintainers)
 	// fmt.Println(string(body))
 }
