@@ -62,11 +62,12 @@ type baseConfig struct {
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 
-	ImagePath       string `json:"imagePath" mapstructure:"imagePath"`
-	ImagePathSuffix string `json:"imageSuffix" mapstructure:"imageSuffix"`
-	UpstreamVersion string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
-	Architecture    string `json:"architecture" mapstructure:"architecture"`
-	ImageVariant    string `json:"imageVariant" mapstructure:"imageVariant"`
+	ImagePath                     string `json:"imagePath" mapstructure:"imagePath"`
+	ImagePathSuffix               string `json:"imageSuffix" mapstructure:"imageSuffix"`
+	UpstreamVersion               string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
+	Architecture                  string `json:"architecture" mapstructure:"architecture"`
+	ImageVariant                  string `json:"imageVariant" mapstructure:"imageVariant"`
+	KeepOriginalSbomRootComponent bool   `json:"keepOriginalSbomRootNodes" mapstructure:"keepOriginalSbomRootNodes"`
 }
 
 type InTotoConfig struct {
