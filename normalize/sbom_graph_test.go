@@ -767,7 +767,7 @@ func TestMergeComplex(t *testing.T) {
 
 }
 
-func TestFindAllPathsToPURL(t *testing.T) {
+func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 	t.Run("multiple information sources pointing to same component - should return multiple paths", func(t *testing.T) {
 		g := NewSBOMGraph()
 
@@ -793,17 +793,13 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/lodash@4.17.21", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.21", 0)
 
-		// Should return two paths (one through each info source)
-		assert.Len(t, paths, 2, "Should return separate paths for each info source")
-
-		// Both paths should have the same component-only representation
-		assert.Equal(t, paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly())
-		assert.Equal(t, []string{"pkg:npm/lodash@4.17.21"}, paths[0].ToStringSliceComponentOnly())
+		// Should return a single path (reachable through different info sources)
+		assert.Len(t, paths, 1, "Should return separate paths for each info source")
 	})
 
-	t.Run("multiple artifacts pointing to same component - should return multiple paths", func(t *testing.T) {
+	t.Run("multiple artifacts pointing to same component - should return a single same path", func(t *testing.T) {
 		g := NewSBOMGraph()
 
 		// Add two different artifacts
@@ -829,14 +825,10 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource2, compID)
 
 		// Find all paths to the component
-		paths := g.FindAllPathsToPURL("pkg:npm/express@4.18.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/express@4.18.0", 0)
 
 		// Should return two paths (one through each artifact)
-		assert.Len(t, paths, 2, "Should return separate paths through different artifacts")
-
-		// Both paths should have the same component-only representation
-		assert.Equal(t, paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly())
-		assert.Equal(t, []string{"pkg:npm/express@4.18.0"}, paths[0].ToStringSliceComponentOnly())
+		assert.Len(t, paths, 1, "Should return separate paths through different artifacts")
 	})
 
 	t.Run("multiple dependency paths to same component - should return multiple paths", func(t *testing.T) {
@@ -883,7 +875,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(depBID, targetID)
 
 		// Find all paths to the target component
-		paths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 0)
 
 		// Should return two different paths through different dependencies
 		assert.Len(t, paths, 2, "Should return multiple paths when there are different dependency chains")
@@ -892,8 +884,8 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		path1 := []string{"pkg:npm/dep-a@1.0.0", "pkg:npm/target@1.0.0"}
 		path2 := []string{"pkg:npm/dep-b@1.0.0", "pkg:npm/target@1.0.0"}
 
-		assert.Contains(t, [][]string{paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly()}, path1, "Should contain path through dep-a")
-		assert.Contains(t, [][]string{paths[0].ToStringSliceComponentOnly(), paths[1].ToStringSliceComponentOnly()}, path2, "Should contain path through dep-b")
+		assert.Contains(t, [][]string{paths[0], paths[1]}, path1, "Should contain path through dep-a")
+		assert.Contains(t, [][]string{paths[0], paths[1]}, path2, "Should contain path through dep-b")
 	})
 
 	t.Run("component not found - should return empty paths", func(t *testing.T) {
@@ -911,7 +903,7 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(infoSource, compID)
 
 		// Search for non-existent component
-		paths := g.FindAllPathsToPURL("pkg:npm/non-existent@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/non-existent@1.0.0", 0)
 
 		assert.Len(t, paths, 0, "Should return empty paths for non-existent component")
 	})
@@ -955,16 +947,11 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(compCID, compDID)
 
 		// Find path to the deepest component
-		paths := g.FindAllPathsToPURL("pkg:npm/d@1.0.0", 0)
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/d@1.0.0", 0)
 
 		assert.Len(t, paths, 1)
-		expectedPath := []string{
-			"pkg:npm/a@1.0.0",
-			"pkg:npm/b@1.0.0",
-			"pkg:npm/c@1.0.0",
-			"pkg:npm/d@1.0.0",
-		}
-		assert.Equal(t, expectedPath, paths[0].ToStringSliceComponentOnly(), "Should return complete dependency chain")
+		expectedPath := Path([]string{"pkg:npm/a@1.0.0", "pkg:npm/b@1.0.0", "pkg:npm/c@1.0.0", "pkg:npm/d@1.0.0"})
+		assert.Equal(t, expectedPath, paths[0], "Should return the complete dependency chain")
 	})
 
 	t.Run("limit should stop early and return shortest paths first", func(t *testing.T) {
@@ -1011,17 +998,17 @@ func TestFindAllPathsToPURL(t *testing.T) {
 		g.AddEdge(dep3ID, targetID)
 
 		// Without limit, should return all 3 paths
-		allPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 0)
+		allPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 0)
 		assert.Len(t, allPaths, 3, "Should return all 3 paths without limit")
 
 		// With limit=1, should return only the shortest path
-		limitedPaths := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 1)
+		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 1)
 		assert.Len(t, limitedPaths, 1, "Should return only 1 path with limit=1")
 		// The shortest path is the direct one
-		assert.Equal(t, []string{"pkg:npm/target@1.0.0"}, limitedPaths[0].ToStringSliceComponentOnly())
+		assert.Equal(t, Path([]string{"pkg:npm/target@1.0.0"}), limitedPaths[0])
 
 		// With limit=2, should return 2 shortest paths
-		limitedPaths2 := g.FindAllPathsToPURL("pkg:npm/target@1.0.0", 2)
+		limitedPaths2 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
 		assert.Len(t, limitedPaths2, 2, "Should return only 2 paths with limit=2")
 	})
 
@@ -1407,5 +1394,145 @@ func TestToMinimalTree(t *testing.T) {
 		// Empty graph should have ROOT node but no component nodes
 		assert.Contains(t, tree.Nodes, "") // ROOT has empty PackageURL
 		assert.Empty(t, tree.Dependencies[""])
+	})
+}
+
+func TestAddComponent_URLUnescaping(t *testing.T) {
+	t.Run("should unescape URL-encoded plus sign in version", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with URL-encoded + (%2B) in version
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		// Verify the component was added with unescaped PURL
+		node := g.nodes[encodedPurl]
+		assert.NotNil(t, node)
+		assert.Equal(t, expectedPurl, node.Component.PackageURL)
+	})
+
+	t.Run("should preserve already unescaped plus sign", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with literal + in version (already unescaped)
+		purl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     purl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: purl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		// Verify the component was added with the same PURL (no change)
+		node := g.nodes[purl]
+		assert.NotNil(t, node)
+		assert.Equal(t, purl, node.Component.PackageURL)
+	})
+
+	t.Run("should unescape multiple URL-encoded characters", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// PURL with multiple URL-encoded characters
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2%2Bsecurity?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2+security?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2+security",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		node := g.nodes[encodedPurl]
+		assert.NotNil(t, node)
+		assert.Equal(t, expectedPurl, node.Component.PackageURL)
+	})
+
+	t.Run("should handle empty PackageURL", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		comp := cdx.Component{
+			BOMRef:     "some-ref",
+			Name:       "test-component",
+			Version:    "1.0.0",
+			PackageURL: "",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		g.AddComponent(comp)
+
+		node := g.nodes["some-ref"]
+		assert.NotNil(t, node)
+		assert.Equal(t, "", node.Component.PackageURL)
+	})
+
+	t.Run("dependency vuln should have correct purl with plus sign", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artifactID := g.AddArtifact("test-artifact")
+		infoSourceID := g.AddInfoSource(artifactID, "test-sbom", InfoSourceSBOM)
+
+		// Add component with URL-encoded PURL
+		encodedPurl := "pkg:deb/debian/libpam0g@1.4.0-9%2Bdeb11u2?arch=amd64&distro=debian-11.11"
+		expectedPurl := "pkg:deb/debian/libpam0g@1.4.0-9+deb11u2?arch=amd64&distro=debian-11.11"
+
+		comp := cdx.Component{
+			BOMRef:     encodedPurl,
+			Name:       "libpam0g",
+			Version:    "1.4.0-9+deb11u2",
+			PackageURL: encodedPurl,
+			Type:       cdx.ComponentTypeLibrary,
+		}
+
+		compID := g.AddComponent(comp)
+		g.AddEdge(infoSourceID, compID)
+
+		// Add vulnerability affecting this component
+		vuln := cdx.Vulnerability{
+			ID: "CVE-2024-1234",
+			Affects: &[]cdx.Affects{
+				{Ref: encodedPurl},
+			},
+		}
+		g.AddVulnerability(vuln)
+
+		// Verify component has correct unescaped PURL
+		var foundComponent *GraphNode
+		for node := range g.Components() {
+			if node.BOMRef == encodedPurl {
+				foundComponent = node
+				break
+			}
+		}
+		assert.NotNil(t, foundComponent)
+		assert.Equal(t, expectedPurl, foundComponent.Component.PackageURL)
+
+		// Verify vulnerability is stored and component PURL matches what would be used for dependency vuln
+		var foundVuln *cdx.Vulnerability
+		for v := range g.Vulnerabilities() {
+			if v.ID == "CVE-2024-1234" {
+				foundVuln = v
+				break
+			}
+		}
+		assert.NotNil(t, foundVuln)
+		assert.NotNil(t, foundVuln.Affects)
+		assert.Len(t, *foundVuln.Affects, 1)
 	})
 }

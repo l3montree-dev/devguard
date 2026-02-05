@@ -54,10 +54,12 @@ func TestRenderPathToComponent(t *testing.T) {
 
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
+		// Create a chain of actual components (all with pkg: prefix) to have a path with edges
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}}, // root --> artifact
-			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
-			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}},
+			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                                       // root --> artifact
+			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},      // artifact -> sbom
+			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},       // sbom -> root-dep (component)
+			{ComponentID: utils.Ptr("pkg:npm/root-dep@1.0.0"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -72,15 +74,18 @@ func TestRenderPathToComponent(t *testing.T) {
 			t.Fail()
 		}
 
-		//String for the empty graph + 1 node being root with a linebreak
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"Root\"]) --- artifact_test_artifact([\"test-artifact\"])\nartifact_test_artifact([\"test-artifact\"]) --- sbom_test_test_artifact([\"SBOM (test)\"])\nsbom_test_test_artifact([\"SBOM (test)\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		// FindAllComponentOnlyPathsToPURL only returns component-only paths (nodes starting with pkg:)
+		// The path should be: root-dep -> test-package
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
+		// Create a chain of actual components to verify @ escaping in mermaid output
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}}, // root --> artifact
-			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
-			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}},
+			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                                       // root --> artifact
+			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},      // artifact -> sbom
+			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},       // sbom -> root-dep (component)
+			{ComponentID: utils.Ptr("pkg:npm/root-dep@1.0.0"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -95,7 +100,9 @@ func TestRenderPathToComponent(t *testing.T) {
 			t.Fail()
 		}
 
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"Root\"]) --- artifact_test_artifact([\"test-artifact\"])\nartifact_test_artifact([\"test-artifact\"]) --- sbom_test_test_artifact([\"SBOM (test)\"])\nsbom_test_test_artifact([\"SBOM (test)\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		// Verify @ symbols are escaped as \@ in the mermaid output
+		assert.Contains(t, result, "\\@1.0.0")
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 }

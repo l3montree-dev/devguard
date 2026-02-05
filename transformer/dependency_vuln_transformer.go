@@ -16,7 +16,7 @@
 package transformer
 
 import (
-	"net/url"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -155,7 +155,11 @@ func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, sbom *normalize.S
 func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sbom *normalize.SBOMGraph, assetID uuid.UUID, assetVersionName string) []models.DependencyVuln {
 	v := vuln
 	// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
-	stringPurl, _ := url.PathUnescape(v.Purl.ToString())
+	stringPurl, err := normalize.PURLToString(v.Purl)
+	if err != nil {
+		slog.Info("failed to unescape purl for dependency vuln transformer, continuing anyway", "purl", v.Purl.String(), "error", err)
+		stringPurl = v.Purl.String()
+	}
 	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
 
 	// Find all paths to this vulnerable component
@@ -186,7 +190,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	// Create one DependencyVuln per path (pre-allocate with known capacity)
 	result := make([]models.DependencyVuln, 0, len(paths))
 	for _, path := range paths {
-		componentPath := path.ToStringSliceComponentOnly()
+		componentPath := path
 		key := strings.Join(componentPath, ",")
 		if seen[key] {
 			continue

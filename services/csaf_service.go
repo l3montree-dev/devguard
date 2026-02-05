@@ -274,6 +274,11 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 		})
 	}))
 
+	purlString, err := normalize.PURLToString(purl)
+	if err != nil {
+		slog.Warn("failed to unescape purl for cdx bom", "purl", purl.ToString(), "err", err)
+		purlString = purl.ToString()
+	}
 	// now build a simple cyclonedx vex bom
 	bom := &cyclonedx.BOM{
 		SpecVersion:     cyclonedx.SpecVersion1_6,
@@ -291,10 +296,10 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 				BOMRef: "root",
 			},
 			{
-				BOMRef:     purl.ToString(),
+				BOMRef:     purlString,
 				Type:       cyclonedx.ComponentTypeApplication,
-				PackageURL: purl.ToString(),
-				Name:       purl.ToString(),
+				PackageURL: purlString,
+				Name:       purlString,
 				Version:    purl.Version,
 			},
 		},
@@ -302,11 +307,11 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 			{
 				Ref: "root",
 				Dependencies: &[]string{
-					purl.ToString(),
+					purlString,
 				},
 			},
 			{
-				Ref:          purl.ToString(),
+				Ref:          purlString,
 				Dependencies: &dependencyPurls,
 			},
 		},
@@ -349,12 +354,16 @@ func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, affectedPurl packageur
 			}
 		}
 	}
-
+	purlString, err := normalize.PURLToString(affectedPurl)
+	if err != nil {
+		slog.Warn("failed to unescape purl for cdx vuln", "purl", affectedPurl.ToString(), "err", err)
+		purlString = affectedPurl.ToString()
+	}
 	cdxVuln := cyclonedx.Vulnerability{
 		ID: string(*vuln.CVE),
 		Affects: utils.Ptr([]cyclonedx.Affects{
 			{
-				Ref: affectedPurl.ToString(),
+				Ref: purlString,
 			},
 		}),
 		Analysis: &cyclonedx.VulnerabilityAnalysis{
