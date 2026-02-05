@@ -48,10 +48,7 @@ func filterMajorVersions(resp []byte) []string {
 	}
 
 	for _, Obj := range npmResponseObject.Versions {
-
-		fmt.Printf("%s", Obj.Version)
-
-		return nil
+		fmt.Println(Obj.Version)
 	}
 	return nil
 }
