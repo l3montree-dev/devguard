@@ -38,7 +38,7 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	return nil, nil
 }
 
-func filterMajorVersions(resp []byte) [][]string {
+func generalizeAllVersions(resp []byte) [][]string {
 	var npmResponseObject NPMResponse
 
 	err := json.Unmarshal(resp, &npmResponseObject)
@@ -57,14 +57,28 @@ func filterMajorVersions(resp []byte) [][]string {
 		// split numbers into array to easily compare major versions later
 		versionParts := strings.Split(Obj.Version, ".")
 		versions = append(versions, versionParts)
-		fmt.Println(versionParts)
 
 	}
 	return versions
 }
 
+func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]string, error) {
+	for i, version := range versionHistory {
+		if version[i][0] == currentVersion[0] {
+			if version[i][1] >= currentVersion[1] {
+				if version[i][2] >= currentVersion[2] {
+					fmt.Println("Recommended version: ", version[i])
+				}
+			}
+		} else {
+			continue
+		}
+	}
+	return nil, nil
+}
+
 func main() {
-	DirectDependency := "lodash"
+	DirectDependency := "tar"
 
 	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
@@ -78,6 +92,6 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	filterMajorVersions(body)
+	filterMajorVersions(generalizeAllVersions(body), "7.4.3")
 
 }
