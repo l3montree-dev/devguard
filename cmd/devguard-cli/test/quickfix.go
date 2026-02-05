@@ -9,6 +9,58 @@ import (
 	"strings"
 )
 
+type VersionData struct {
+	Name         string     `json:"name"`
+	Version      string     `json:"version"`
+	Keywords     []string   `json:"keywords"`
+	Author       Person     `json:"author"`
+	License      string     `json:"license"`
+	Id           string     `json:"_id"`
+	Maintainers  []Person   `json:"maintainers"`
+	Contributors []Person   `json:"contributors"`
+	Homepage     string     `json:"homepage"`
+	Bugs         Bugs       `json:"bugs"`
+	Jam          []string   `json:"jam"`
+	Dist         Dist       `json:"dist"`
+	Main         string     `json:"main"`
+	From         string     `json:"from"`
+	Engines      []string   `json:"engines"`
+	NpmUser      Person     `json:"_npmUser"`
+	Repository   Repository `json:"repository"`
+	NpmVersion   string     `json:"_npmVersion"`
+	Description  string     `json:"description"`
+	Directories  []string   `json:"directories"`
+
+	// ... weitere Felder...
+}
+
+type Person struct {
+	URL   string `json:"url"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type Bugs struct {
+	URL string `json:"url"`
+}
+
+type Dist struct {
+	Shasum     string       `json:"shasum"`
+	Tarball    string       `json:"tarball"`
+	Integrity  string       `json:"integrity"`
+	Signatures []Signatures `json:"signatures"`
+}
+
+type Repository struct {
+	URL  string `json:"url"`
+	Type string `json:"type"`
+}
+
+type Signatures struct {
+	Sig   string `json:"sig"`
+	KeyId string `json:"keyid"`
+}
+
 func getPackageManager(Package string) string {
 	// insert future Package Managers later
 	switch Package {
@@ -67,5 +119,6 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(string(body))
+	json :=
+		fmt.Println(string(body))
 }
