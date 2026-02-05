@@ -7,15 +7,20 @@ import (
 	"net/http"
 )
 
+type RegistryRequest struct {
+	Dependency string
+	Version    string // empty string means "all versions"
+}
+
 // get all versions if no version is specified
-func GetNPMRegistry(DirectDependency string, packageManager string, version *string) (*http.Response, error) {
+func GetNPMRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var req *http.Response
 	var err error
 
-	if version != nil {
-		req, err = http.Get("https://registry.npmjs.org/" + DirectDependency + "/" + *version)
+	if pkg.Version != "" {
+		req, err = http.Get("https://registry.npmjs.org/" + pkg.Dependency + "/" + pkg.Version)
 	} else {
-		req, err = http.Get("https://registry.npmjs.org/" + DirectDependency)
+		req, err = http.Get("https://registry.npmjs.org/" + pkg.Dependency)
 	}
 
 	if err != nil {
@@ -23,19 +28,19 @@ func GetNPMRegistry(DirectDependency string, packageManager string, version *str
 	}
 
 	if req.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to fetch data for %s: %s", DirectDependency, req.Status)
+		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Dependency, req.Status)
 	}
 	return req, nil
 }
 
-func GetCratesRegistry(DirectDependency string, packageManager string, version *string) (*http.Response, error) {
+func GetCratesRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var req *http.Response
 	var err error
 
-	if version != nil {
-		req, err = http.Get("https://crates.io/api/v1/crates/" + DirectDependency + "/" + *version)
+	if pkg.Version != "" {
+		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency + "/" + pkg.Version)
 	} else {
-		req, err = http.Get("https://crates.io/api/v1/crates/" + DirectDependency)
+		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency)
 	}
 
 	if err != nil {
@@ -43,7 +48,7 @@ func GetCratesRegistry(DirectDependency string, packageManager string, version *
 	}
 
 	if req.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to fetch data for %s: %s", DirectDependency, req.Status)
+		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Dependency, req.Status)
 	}
 	return req, nil
 }

@@ -26,20 +26,20 @@ func getPackageManager(Package string) string {
 	return "unknown"
 }
 
-func getAllVersions(DirectDependency string, packageManager string, version *string) (*http.Response, error) {
+func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, error) {
 
 	switch packageManager {
 	case "node":
-		return GetNPMRegistry(DirectDependency, packageManager, nil)
+		return GetNPMRegistry(pkg)
 	case "crates":
-		return GetCratesRegistry(DirectDependency, packageManager, nil)
+		return GetCratesRegistry(pkg)
 	}
 	// add more in the future
 	return nil, nil
 }
 
 func main() {
-	resp, err := getVersions(DirectDependency, getPackageManager("npm"))
+	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
