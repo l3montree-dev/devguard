@@ -50,12 +50,15 @@ func filterMajorVersions(resp []byte) [][]string {
 
 	var versions [][]string
 	for _, Obj := range npmResponseObject.Versions {
+		// skip release candidates since recommending alpha version is not a good idea for security updates haha
 		if strings.Contains(Obj.Version, "-") {
 			continue
 		}
+		// split numbers into array to easily compare major versions later
 		versionParts := strings.Split(Obj.Version, ".")
 		versions = append(versions, versionParts)
 		fmt.Println(versionParts)
+
 	}
 	return versions
 }
