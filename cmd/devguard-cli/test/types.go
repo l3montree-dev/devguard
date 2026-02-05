@@ -85,5 +85,5 @@ type Repository struct {
 
 type Signatures struct {
 	Sig   string `json:"sig"`
-	KeyId string `json:"keyid"`
+	KeyID string `json:"keyid"`
 }
