@@ -172,7 +172,7 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	if offsetParam != "" {
 		var err error
 		offset, err = strconv.Atoi(offsetParam)
-		if err != nil {
+		if err != nil || offset < 0 {
 			return echo.NewHTTPError(400, "invalid offset value").WithInternal(err)
 		}
 	}
@@ -185,7 +185,7 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	limitParam := ctx.QueryParam("limit")
 	if limitParam != "" {
 		limit, err = strconv.Atoi(limitParam)
-		if err != nil {
+		if err != nil || limit <= 0 {
 			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
 		}
 
