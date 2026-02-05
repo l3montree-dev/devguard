@@ -63,6 +63,8 @@ type AssetDTO struct {
 	CentralDependencyVulnManagement bool      `json:"centralDependencyVulnManagement"`
 	PipelineLastRun                 time.Time `json:"pipelineLastRun"`
 	PipelineError                   *string   `json:"pipelineError,omitempty"`
+
+	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent"`
 }
 
 type AssetWithSecretsDTO struct {
