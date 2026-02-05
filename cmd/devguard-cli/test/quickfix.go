@@ -9,81 +9,6 @@ import (
 	"net/http"
 )
 
-type NPMResponse struct {
-	Id             string          `json:"_id"`
-	Rev            string          `json:"_rev"`
-	Name           string          `json:"name"`
-	Description    string          `json:"description"`
-	distTags       DistTags        `json:"dist-tags"`
-	Versions       []VersionData   `json:"versions"`
-	Time           string          `json:"time"`
-	Bugs           Bugs            `json:"bugs"`
-	Author         Person          `json:"author"`
-	License        string          `json:"license"`
-	Homepage       string          `json:"homepage"`
-	Keywords       []string        `json:"keywords"`
-	Repository     Repository      `json:"repository"`
-	Contributors   []Person        `json:"contributors"`
-	Maintainers    []Person        `json:"maintainers"`
-	ReadMe         string          `json:"readme"`
-	ReadMeFilename string          `json:"readmeFilename"`
-	Users          map[string]bool `json:"users"`
-}
-
-type DistTags struct {
-	Latest string `json:"latest"`
-}
-
-type VersionData struct {
-	Name         string     `json:"name"`
-	Version      string     `json:"version"`
-	Keywords     []string   `json:"keywords"`
-	Author       Person     `json:"author"`
-	License      string     `json:"license"`
-	Id           string     `json:"_id"`
-	Maintainers  []Person   `json:"maintainers"`
-	Contributors []Person   `json:"contributors"`
-	Homepage     string     `json:"homepage"`
-	Bugs         Bugs       `json:"bugs"`
-	Jam          []string   `json:"jam"`
-	Dist         Dist       `json:"dist"`
-	Main         string     `json:"main"`
-	From         string     `json:"from"`
-	Engines      []string   `json:"engines"`
-	NpmUser      Person     `json:"_npmUser"`
-	Repository   Repository `json:"repository"`
-	NpmVersion   string     `json:"_npmVersion"`
-	Description  string     `json:"description"`
-	Directories  []string   `json:"directories"`
-}
-
-type Person struct {
-	URL   string `json:"url"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-type Bugs struct {
-	URL string `json:"url"`
-}
-
-type Dist struct {
-	Shasum     string       `json:"shasum"`
-	Tarball    string       `json:"tarball"`
-	Integrity  string       `json:"integrity"`
-	Signatures []Signatures `json:"signatures"`
-}
-
-type Repository struct {
-	URL  string `json:"url"`
-	Type string `json:"type"`
-}
-
-type Signatures struct {
-	Sig   string `json:"sig"`
-	KeyId string `json:"keyid"`
-}
-
 func getPackageManager(Package string) string {
 	// insert future Package Managers later
 	switch Package {
@@ -115,11 +40,16 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 func filterMajorVersions(resp []byte) []string {
 	var npmResponseObject NPMResponse
 
-	json.Unmarshal(resp, &npmResponseObject)
+	err := json.Unmarshal(resp, &npmResponseObject)
 
-	for range npmResponseObject.Versions {
+	if err != nil {
+		fmt.Println("Error unmarshalling JSON:", err)
+		return nil
+	}
 
-		fmt.Println("Version:", npmResponseObject.Versions[0].Version)
+	for _, Obj := range npmResponseObject.Versions {
+
+		fmt.Printf("%s", Obj.Version)
 
 		return nil
 	}
@@ -143,5 +73,4 @@ func main() {
 
 	filterMajorVersions(body)
 
-	// fmt.Println(string(body))
 }
