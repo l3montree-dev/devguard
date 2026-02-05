@@ -112,9 +112,6 @@ type SBOMGraph struct {
 	rootID string // ID of the root node (constant: "ROOT")
 
 	scopeID string // The id of the current scope node
-
-	keepOriginalSbomRootComponent bool   // Whether to keep the original root component from the input BOM
-	originalRootRef               string // The original root component reference from input BOM
 }
 
 type VexReport struct {
@@ -239,7 +236,24 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 	g.edges[parentID][childID] = struct{}{}
 }
 
-// AddVulnerability adds a vulnerability.
+// statePriority returns a priority value for vulnerability states.
+// Higher value = higher priority. exploitable > in_triage > false_positive
+func statePriority(state cdx.ImpactAnalysisState) int {
+	switch state {
+	case cdx.IASExploitable:
+		return 3
+	case cdx.IASInTriage:
+		return 2
+	case cdx.IASFalsePositive:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// AddVulnerability adds a vulnerability with deduplication.
+// When the same CVE+Affects combination exists, state priority determines which one to keep:
+// exploitable > in_triage > false_positive
 func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 	affectsStr := ""
 	if vuln.Affects != nil {
@@ -248,11 +262,28 @@ func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 		}
 	}
 
-	state := ""
-	if vuln.Analysis != nil {
-		state = string(vuln.Analysis.State)
+	key := vuln.ID + "@" + affectsStr
+
+	existing, exists := g.vulnerabilities[key]
+	if !exists {
+		g.vulnerabilities[key] = &vuln
+		return
 	}
-	g.vulnerabilities[vuln.ID+"@"+affectsStr+"@"+state] = &vuln
+
+	// Compare state priorities - higher priority wins
+	existingState := cdx.ImpactAnalysisState("")
+	if existing.Analysis != nil {
+		existingState = existing.Analysis.State
+	}
+
+	newState := cdx.ImpactAnalysisState("")
+	if vuln.Analysis != nil {
+		newState = vuln.Analysis.State
+	}
+
+	if statePriority(newState) > statePriority(existingState) {
+		g.vulnerabilities[key] = &vuln
+	}
 }
 
 func (g *SBOMGraph) ClearScope() {
@@ -664,33 +695,11 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 	}
 }
 
-// Vulnerabilities returns all vulnerabilities, deduplicated by ID and affects.
-// When duplicates exist, vulnerabilities with "is triage" state are prioritized.
+// Vulnerabilities returns all vulnerabilities.
+// Deduplication with state priority is handled in AddVulnerability.
 func (g *SBOMGraph) Vulnerabilities() iter.Seq[*cdx.Vulnerability] {
 	return func(yield func(*cdx.Vulnerability) bool) {
-		// Deduplicate vulnerabilities
-		deduplicated := make(map[string]*cdx.Vulnerability)
-		for i, v := range g.vulnerabilities {
-			var key string
-			if v.Analysis != nil {
-				key = strings.TrimSuffix(i, "@"+string(v.Analysis.State))
-			} else {
-				key = i
-			}
-			existing, ok := deduplicated[key]
-			if !ok {
-				deduplicated[key] = v
-			} else {
-				// Prioritize "is triage" state
-				if existing.Analysis != nil && existing.Analysis.State == cdx.IASInTriage {
-					continue
-				} else if v.Analysis != nil && v.Analysis.State == cdx.IASInTriage {
-					deduplicated[key] = v
-				}
-			}
-		}
-
-		for _, v := range deduplicated {
+		for _, v := range g.vulnerabilities {
 			if !yield(v) {
 				return
 			}
