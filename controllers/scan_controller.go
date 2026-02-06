@@ -154,7 +154,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	vexReport, err := normalize.NewVexReport(&bom, origin)
 	if err != nil {
 		slog.Error("could not create vex report from bom", "err", err)
-		return echo.NewHTTPError(400, "invalid VEX BOM format", err).WithInternal(err)
+		return echo.NewHTTPError(400, fmt.Sprintf("Invalid VEX BOM format: %s", err)).WithInternal(err)
 	}
 
 	vexReports := []*normalize.VexReport{}

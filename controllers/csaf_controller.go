@@ -14,7 +14,6 @@ import (
 	"time"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/secure-systems-lab/go-securesystemslib/cjson"
 
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -483,12 +482,12 @@ func getPublicKeyFingerprint() string {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version} [get]
 func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
 	// generate the report first
-	csafReport, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
+	report, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
 	if err != nil {
 		return err
 	}
 
-	cjsonData, err := cjson.EncodeCanonical(normalize.DeepSort(csafReport))
+	cjsonData, err := normalize.EncodeCanonical(report)
 	if err != nil {
 		return err
 	}
