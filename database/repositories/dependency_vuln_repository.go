@@ -195,6 +195,10 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, 
 		packageNameQuery = packageNameQuery.Where(f.SQL(), f.Value())
 	}
 
+	if search != "" && len(search) > 2 {
+		packageNameQuery.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {

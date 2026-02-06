@@ -245,7 +245,6 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
 	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
-
 	if err != nil {
 		return err
 	}
@@ -257,6 +256,12 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
 	})
+
+	// deduplicate Slice to avoid listing the same CVEs
+	vulnsOfThatYear = utils.DeduplicateSlice(vulnsOfThatYear, func(vuln models.DependencyVuln) string {
+		return vuln.CVEID
+	})
+
 	type pageData struct {
 		Year           int
 		Filenames      []string
