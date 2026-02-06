@@ -18,6 +18,7 @@ package dtos
 import (
 	"testing"
 
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,6 +34,7 @@ func TestIsWildcard(t *testing.T) {
 		{"literal pkg:npm/foo", "pkg:npm/foo@1.0.0", false},
 		{"empty string", "", false},
 		{"triple star", "***", false},
+		{"ROOT is wildcard", normalize.GraphRootNodeID, true},
 	}
 
 	for _, tt := range tests {
@@ -78,6 +80,26 @@ func TestPathPattern_MatchesSuffix_ExactMatch(t *testing.T) {
 		{"exact match full path", PathPattern{"A", "B", "C"}, []string{"A", "B", "C"}, true},
 		{"no match wrong suffix", PathPattern{"X", "Y"}, []string{"A", "B", "C"}, false},
 		{"no match pattern longer than path", PathPattern{"A", "B", "C", "D"}, []string{"A", "B", "C"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
+		})
+	}
+}
+
+func TestRootPathPattern(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  PathPattern
+		path     []string
+		expected bool
+	}{
+		{"ROOT matches ROOT", PathPattern{normalize.GraphRootNodeID}, []string{normalize.GraphRootNodeID}, true},
+		{"ROOT matches any path with ROOT at end", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", normalize.GraphRootNodeID}, true},
+		{"ROOT DOES match path without ROOT", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", "C"}, true},
+		{"ROOT does not lead to all paths matching", PathPattern{normalize.GraphRootNodeID, "X"}, []string{"A", "B", "C"}, false},
 	}
 
 	for _, tt := range tests {
