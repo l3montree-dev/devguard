@@ -3,7 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -149,4 +151,58 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 		Vulns:              vulns,
 		MaliciousPackage:   maliciousPackage,
 	})
+}
+
+// returns a list of cve ids sorted by the creation date as well as the total amount of entries
+// query parameter offset: offset the fetched data by the provided amount
+// query parameter limit: limit the amount of entries in the data
+func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
+	type listIDsRow struct {
+		CVEID     string    `gorm:"column:cve"`
+		CreatedAt time.Time `gorm:"column:created_at"`
+	}
+	type responseDTO struct {
+		Count   int          `json:"total"`
+		CVEData []listIDsRow `json:"data"`
+	}
+
+	// use an offset to query only a part of the data
+	offset := 0
+	offsetParam := ctx.QueryParam("offset")
+	if offsetParam != "" {
+		var err error
+		offset, err = strconv.Atoi(offsetParam)
+		if err != nil || offset < 0 {
+			return echo.NewHTTPError(400, "invalid offset value").WithInternal(err)
+		}
+	}
+
+	var err error
+	results := make([]listIDsRow, 0, 1<<18)
+
+	// use optional limit parameter to limit the amount of fetched data
+	limit := 0
+	limitParam := ctx.QueryParam("limit")
+	if limitParam != "" {
+		limit, err = strconv.Atoi(limitParam)
+		if err != nil || limit <= 0 {
+			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
+		}
+
+		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ? LIMIT ?;`
+		err = c.cveRepository.GetDB(nil).Raw(sql, offset, limit).Find(&results).Error
+	} else {
+		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ?;`
+		err = c.cveRepository.GetDB(nil).Raw(sql, offset).Find(&results).Error
+	}
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get cve ids").WithInternal(err)
+	}
+
+	// build the response and return it
+	response := responseDTO{
+		Count:   len(results),
+		CVEData: results,
+	}
+	return ctx.JSON(200, response)
 }
