@@ -412,6 +412,125 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.True(t, foundInfoSourceEdge, "orphan components should be connected to info source")
 	})
 
+	t.Run("keepOriginalSbomRootComponent=true preserves root node and all its dependencies", func(t *testing.T) {
+		// Create a BOM with a deeper dependency tree:
+		// ROOT -> component-a -> component-b -> component-c
+		rootRef := "pkg:npm/my-app@1.0.0"
+		bom := &cdx.BOM{
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef:     rootRef,
+					Name:       "my-app",
+					Version:    "1.0.0",
+					PackageURL: rootRef,
+					Type:       cdx.ComponentTypeApplication,
+				},
+			},
+			Components: &[]cdx.Component{
+				{
+					BOMRef:     rootRef,
+					Name:       "my-app",
+					Version:    "1.0.0",
+					PackageURL: rootRef,
+					Type:       cdx.ComponentTypeApplication,
+				},
+				{
+					BOMRef:     "pkg:npm/component-a@1.0.0",
+					Name:       "component-a",
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/component-a@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/component-b@2.0.0",
+					Name:       "component-b",
+					Version:    "2.0.0",
+					PackageURL: "pkg:npm/component-b@2.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+				{
+					BOMRef:     "pkg:npm/component-c@3.0.0",
+					Name:       "component-c",
+					Version:    "3.0.0",
+					PackageURL: "pkg:npm/component-c@3.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: rootRef, Dependencies: &[]string{"pkg:npm/component-a@1.0.0"}},
+				{Ref: "pkg:npm/component-a@1.0.0", Dependencies: &[]string{"pkg:npm/component-b@2.0.0"}},
+				{Ref: "pkg:npm/component-b@2.0.0", Dependencies: &[]string{"pkg:npm/component-c@3.0.0"}},
+				{Ref: "pkg:npm/component-c@3.0.0", Dependencies: &[]string{}},
+			},
+		}
+
+		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+
+		// Verify the root node exists in the graph
+		rootNode := result.nodes[rootRef]
+		assert.NotNil(t, rootNode, "root component node should exist in the graph")
+		assert.Equal(t, GraphNodeTypeComponent, rootNode.Type, "root node should be a component type")
+
+		// Collect all edges
+		edges := result.Edges()
+		edgeMap := make(map[string][]string)
+		for parentID, childID := range edges {
+			edgeMap[parentID] = append(edgeMap[parentID], childID)
+		}
+
+		// Verify: info source -> root (keepOriginalSbomRootComponent adds this)
+		var infoSourceID string
+		for nodeID, node := range result.nodes {
+			if node.Type == GraphNodeTypeInfoSource {
+				infoSourceID = nodeID
+				break
+			}
+		}
+		assert.NotEmpty(t, infoSourceID, "info source should exist")
+		assert.Contains(t, edgeMap[infoSourceID], rootRef,
+			"info source should have an edge to the root component")
+
+		// Verify: ONLY the root component is a direct child of info source
+		assert.Len(t, edgeMap[infoSourceID], 1,
+			"info source should have exactly ONE direct child (the root component)")
+		assert.Equal(t, rootRef, edgeMap[infoSourceID][0],
+			"the only direct child of info source should be the root component")
+
+		// Verify: root -> component-a (NOT info source -> component-a)
+		assert.Contains(t, edgeMap[rootRef], "pkg:npm/component-a@1.0.0",
+			"root should have direct edge to component-a")
+		assert.NotContains(t, edgeMap[infoSourceID], "pkg:npm/component-a@1.0.0",
+			"info source should NOT have edge to component-a when keepOriginalSbomRootComponent=true")
+
+		// Verify: component-a -> component-b (transitive dependency preserved)
+		assert.Contains(t, edgeMap["pkg:npm/component-a@1.0.0"], "pkg:npm/component-b@2.0.0",
+			"component-a should have edge to component-b")
+
+		// Verify: component-b -> component-c (deeper transitive dependency preserved)
+		assert.Contains(t, edgeMap["pkg:npm/component-b@2.0.0"], "pkg:npm/component-c@3.0.0",
+			"component-b should have edge to component-c")
+
+		// Verify the full dependency chain is reachable from info source
+		// info source -> root -> component-a -> component-b -> component-c
+		reachable := make(map[string]bool)
+		var visit func(id string)
+		visit = func(id string) {
+			if reachable[id] {
+				return
+			}
+			reachable[id] = true
+			for _, child := range edgeMap[id] {
+				visit(child)
+			}
+		}
+		visit(infoSourceID)
+
+		assert.True(t, reachable[rootRef], "root should be reachable from info source")
+		assert.True(t, reachable["pkg:npm/component-a@1.0.0"], "component-a should be reachable")
+		assert.True(t, reachable["pkg:npm/component-b@2.0.0"], "component-b should be reachable")
+		assert.True(t, reachable["pkg:npm/component-c@3.0.0"], "component-c should be reachable")
+	})
+
 }
 
 func TestMergeCdxBoms(t *testing.T) {
