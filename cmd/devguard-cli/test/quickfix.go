@@ -70,8 +70,9 @@ func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]st
 		if version[0] == currentParts[0] {
 			if version[1] >= currentParts[1] {
 				if version[2] >= currentParts[2] {
-					fmt.Println(strings.Join(version, "."))
+					// fmt.Println(strings.Join(version, "."))
 					recommended = append(recommended, strings.Join(version, "."))
+					fmt.Println(recommended)
 				}
 			}
 		}
@@ -79,8 +80,14 @@ func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]st
 	return recommended, nil
 }
 
+// func getDependencyTree() {}
+
+// func transitiveDependencyWalker() {
+
+// }
+
 func main() {
-	DirectDependency := "tar"
+	DirectDependency := "lodash"
 
 	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
@@ -94,6 +101,6 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	filterMajorVersions(generalizeAllVersions(body), "7.4.3")
+	filterMajorVersions(generalizeAllVersions(body), "4.17.21")
 
 }
