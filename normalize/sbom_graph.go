@@ -150,14 +150,6 @@ func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
 	return depMap
 }
 
-func (v *VexReport) GetRootPurl() (packageurl.PackageURL, error) {
-	root := v.Report.Metadata.Component
-	if root == nil || root.PackageURL == "" {
-		return packageurl.PackageURL{}, fmt.Errorf("no root component with PURL found in VEX report")
-	}
-	return packageurl.FromString(root.PackageURL)
-}
-
 const GraphRootNodeID = "ROOT"
 
 // =============================================================================

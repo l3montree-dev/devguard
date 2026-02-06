@@ -103,12 +103,12 @@ func TestCreateProjectTitle(t *testing.T) {
 func TestMarkdownTableFromSBOM(t *testing.T) {
 	t.Run("test an sbom with 3 components which have 2 , 1 and 0 licenses respectively ", func(t *testing.T) {
 		bom := cdx.BOM{
-			BOMFormat: "CycloneDX",
+			BOMFormat:   "CycloneDX",
 			SpecVersion: cdx.SpecVersion1_4,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: "pkg:generic/my-artifact@1.0.0",
-					Name: "my-artifact",
+					Name:   "my-artifact",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -121,7 +121,7 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 		err := MarkdownTableFromSBOM(&markdownFile, &bom)
 		fmt.Println(markdownFile.String())
 		assert.Nil(t, err)
-		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** \n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
+		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** my-artifact\n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
 	})
 }
 
