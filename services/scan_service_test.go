@@ -281,6 +281,6 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
 		assert.Equal(t, 1, len(invalidURLs))
-		assert.Equal(t, sbomURL, invalidURLs[0])
+		assert.Equal(t, sbomURL, invalidURLs[0].URL)
 	})
 }
