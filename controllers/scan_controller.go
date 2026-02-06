@@ -238,7 +238,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 
 	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
 	if err != nil {
-		return scanResults, fmt.Errorf("invalid sbom: %w", err)
+		return scanResults, echo.NewHTTPError(400, fmt.Sprintf("Invalid SBOM: %s", err))
 	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
