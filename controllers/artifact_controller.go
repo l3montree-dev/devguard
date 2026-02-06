@@ -100,15 +100,20 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		AssetID:          asset.ID,
 	}
 
+	tx := c.artifactRepository.GetDB(nil).Begin()
 	//save the artifact
-	err := c.artifactRepository.Create(nil, &artifact)
+	err := c.artifactRepository.Create(tx, &artifact)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, _ := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
-	tx := c.artifactRepository.GetDB(nil).Begin()
+	boms, _, invalid := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
+	if len(invalid) > 0 {
+		tx.Rollback()
+		return ctx.JSON(400, invalid)
+	}
 
 	// merge all boms
 	newGraph := normalize.NewSBOMGraph()
@@ -360,8 +365,8 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	})
 
 	type responseBody struct {
-		Artifact    models.Artifact `json:"artifact"`
-		InvalidURLs []string        `json:"invalidURLs"`
+		Artifact    models.Artifact               `json:"artifact"`
+		InvalidURLs []dtos.ExternalReferenceError `json:"invalidURLs"`
 	}
 	response := responseBody{
 		Artifact:    artifact,

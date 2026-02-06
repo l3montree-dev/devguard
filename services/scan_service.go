@@ -481,7 +481,7 @@ func (s *scanService) handleScanResult(tx shared.DB, userID string, artifactName
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []string) {
+func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 	client := &http.Client{}
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -492,7 +492,10 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 		}
 		//check if the file is a valid url
 		if url == "" || !strings.HasPrefix(url, "http") {
-			invalidURLs = append(invalidURLs, url)
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: "invalid url, no http prefix found",
+			})
 			continue
 		}
 
@@ -503,13 +506,19 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 
 		if err != nil {
-			invalidURLs = append(invalidURLs, url)
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: fmt.Sprintf("could not create request for url: %v", err),
+			})
 			continue
 		}
 
 		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != 200 {
-			invalidURLs = append(invalidURLs, url)
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: fmt.Sprintf("could not fetch url or non 200 status code: %v", err),
+			})
 			continue
 		}
 		defer resp.Body.Close()
@@ -517,13 +526,19 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 		// download the url and check if it is a valid sbom
 		file, err := io.ReadAll(resp.Body)
 		if err != nil {
-			invalidURLs = append(invalidURLs, url)
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: fmt.Sprintf("could not read response body: %v", err),
+			})
 			continue
 		}
 
 		err = json.Unmarshal(file, &bom)
 		if err != nil {
-			invalidURLs = append(invalidURLs, url)
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: fmt.Sprintf("could not unmarshal response body into cyclonedx bom: %v", err),
+			})
 			continue
 		}
 
@@ -532,7 +547,10 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, "sbom:"+url, keepOriginalSbomRootComponent)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
-				invalidURLs = append(invalidURLs, url)
+				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+					URL:    url,
+					Reason: fmt.Sprintf("could not normalize sbom: %v", err),
+				})
 				continue
 			}
 
