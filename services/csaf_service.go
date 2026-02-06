@@ -795,7 +795,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	org := shared.GetOrg(ctx)
 	asset := shared.GetAsset(ctx)
 	// remove everything <asset-slug>_ from the beginning of the document id
-	cveID = strings.ToUpper(strings.Split(cveID, ".json")[0])
+	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// fetch the cve from the database
 	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
