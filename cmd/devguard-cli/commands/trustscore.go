@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
@@ -11,7 +13,14 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
+
+	"github.com/l3montree-dev/devguard/database/models"
 )
+
+type CrowdResult struct {
+	ConfidenceScore float64
+	Rule            string
+}
 
 func NewTrustScoreCommand() *cobra.Command {
 	trustscore := &cobra.Command{
@@ -145,4 +154,112 @@ func assignTrustScore(inType string, inEntityID string, inScore float64) error {
 	}
 
 	return assignErr
+}
+
+func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffected []models.VEXRule, inTrustedEntities []models.TrustedEntity) ([]CrowdResult, error) {
+	var result []CrowdResult
+	var confidenceValues = make(map[string]float64)
+	var assignErr error
+	app := fx.New(
+		fx.NopLogger,
+		fx.Supply(database.GetPoolConfigFromEnv()),
+		database.Module,
+		repositories.Module,
+		fx.Invoke(func(
+			orgRepo shared.OrganizationRepository,
+			projectRepo shared.ProjectRepository,
+			assetRepo shared.AssetRepository,
+		) error {
+
+			for _, rule := range inRules {
+				//Are the rule paths using unique Ids?
+				rulaPath := strings.Join(rule.PathPattern, "")
+
+				asset, err := assetRepo.Read(rule.AssetID)
+				if err != nil {
+					slog.Error("failed to read asset for VEX rule", "assetID", rule.AssetID, "error", err)
+					continue
+				}
+				project, err := projectRepo.Read(asset.ProjectID)
+				if err != nil {
+					slog.Error("failed to read project for asset", "projectID", asset.ProjectID, "error", err)
+					continue
+				}
+				org, err := orgRepo.Read(project.OrganizationID)
+				if err != nil {
+					slog.Error("failed to read organization for project", "organizationID", project.OrganizationID, "error", err)
+					continue
+				}
+				organizationTrustscore := 0.0
+				projectTrustscore := 0.0
+
+				for _, te := range inTrustedEntities {
+					if *te.OrganizationID == org.ID {
+						organizationTrustscore = te.Trustscore
+					} else if *te.ProjectID == project.ID {
+						projectTrustscore = te.Trustscore
+					}
+				}
+
+				ruleConfidence := 1.0 * math.Max(projectTrustscore, organizationTrustscore)
+				confidenceValues[rulaPath] += ruleConfidence
+			}
+
+			for _, rule := range inMarkedAsAffected {
+				rulaPath := strings.Join(rule.PathPattern, "")
+
+				asset, err := assetRepo.Read(rule.AssetID)
+				if err != nil {
+					slog.Error("failed to read asset for VEX rule", "assetID", rule.AssetID, "error", err)
+					continue
+				}
+				project, err := projectRepo.Read(asset.ProjectID)
+				if err != nil {
+					slog.Error("failed to read project for asset", "projectID", asset.ProjectID, "error", err)
+					continue
+				}
+				org, err := orgRepo.Read(project.OrganizationID)
+				if err != nil {
+					slog.Error("failed to read organization for project", "organizationID", project.OrganizationID, "error", err)
+					continue
+				}
+				organizationTrustscore := 0.0
+				projectTrustscore := 0.0
+
+				for _, te := range inTrustedEntities {
+					if *te.OrganizationID == org.ID {
+						organizationTrustscore = te.Trustscore
+					} else if *te.ProjectID == project.ID {
+						projectTrustscore = te.Trustscore
+					}
+				}
+
+				ruleConfidence := 1.0 * math.Max(projectTrustscore, organizationTrustscore)
+				confidenceValues[rulaPath] += ruleConfidence
+			}
+
+			//Calculate sum of all paths and percentages
+			totalConfidence := 0.0
+			for _, conf := range confidenceValues {
+				totalConfidence += conf
+			}
+			for key, value := range confidenceValues {
+				result = append(result, CrowdResult{
+					ConfidenceScore: value / totalConfidence,
+					Rule:            key,
+				})
+			}
+			return nil
+		}),
+	)
+
+	if err := app.Start(context.Background()); err != nil {
+		assignErr = err
+	}
+
+	if err := app.Stop(context.Background()); err != nil {
+		assignErr = err
+	}
+
+	return result, assignErr
 }
