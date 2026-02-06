@@ -9,7 +9,7 @@
             "type": "application",
             "author": "Test Org",
             "publisher": "github.com/l3montree-dev/devguard",
-            "name": "",
+            "name": "neu",
             "version": "main",
             "purl": "pkg:devguard/neu@main"
         }
@@ -20,7 +20,7 @@
             "type": "application",
             "author": "Test Org",
             "publisher": "github.com/l3montree-dev/devguard",
-            "name": "",
+            "name": "neu",
             "version": "main"
         },
         {

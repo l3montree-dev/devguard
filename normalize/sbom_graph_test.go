@@ -11,6 +11,7 @@ import (
 var GraphRootNodeIDMetadata = &cdx.Metadata{
 	Component: &cdx.Component{
 		BOMRef: GraphRootNodeID,
+		Name:   "test-artifact",
 	},
 }
 
@@ -20,9 +21,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 	t.Run("basic component without properties", func(t *testing.T) {
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{{
@@ -39,7 +43,9 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		assert.NoError(t, err)
+
 		component := slices.Collect(result.Components())[0] // index 0 is the artifact name
 
 		assert.Equal(t, "test-component", component.Component.Name)
@@ -52,9 +58,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		// The function should find all components not referenced by any other dependency
 		// and add them as direct children of GraphRootNodeID
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -72,7 +81,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		assert.NoError(t, err)
 
 		// Verify the component is reachable from GraphRootNodeID
 		components := result.Components()
@@ -93,9 +103,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		// Tests case where multiple components are not referenced by any other dependency
 		// All should become direct children of GraphRootNodeID
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -121,7 +134,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		assert.NoError(t, err)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -138,9 +152,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		// Tests case where there's a dependency tree but GraphRootNodeID is not connected
 		// Only top-level components (not referenced by others) should become GraphRootNodeID children
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -174,7 +191,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		assert.NoError(t, err)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -191,9 +209,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 	t.Run("GraphRootNodeID ref not in dependencies - mixed top-level and nested", func(t *testing.T) {
 		// Tests case with multiple separate subtrees - each top-level should become GraphRootNodeID child
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -227,7 +248,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		assert.NoError(t, err)
 		components := result.Components()
 		assert.NotNil(t, components)
 
@@ -243,9 +265,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 	t.Run("keepOriginalSbomRootComponent=false should redirect root children to info source", func(t *testing.T) {
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -261,7 +286,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, false)
+		assert.NoError(t, err)
 
 		// With keepOriginalSbomRootComponent=false, component-a should be a child of the info source, not the root
 		// Verify the graph structure
@@ -280,9 +306,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 	t.Run("keepOriginalSbomRootComponent=true should preserve original root component with edge to it", func(t *testing.T) {
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -298,13 +327,13 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		assert.NoError(t, err)
 
 		// With keepOriginalSbomRootComponent=true, we should have:
 		// 1. An edge from info source to the original root ref
 		// 2. An edge from root ref to component-a (not redirected to info source)
 		edges := result.Edges()
-
 		foundRootEdge := false
 		foundComponentEdge := false
 
@@ -326,9 +355,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 	t.Run("keepOriginalSbomRootComponent=true with multiple root children", func(t *testing.T) {
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -353,7 +385,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		assert.NoError(t, err)
 
 		// Both components should be children of root, not info source
 		edges := result.Edges()
@@ -377,9 +410,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 	t.Run("keepOriginalSbomRootComponent=true with no root dependencies", func(t *testing.T) {
 		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 			},
 			Components: &[]cdx.Component{
@@ -395,7 +431,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		assert.NoError(t, err)
 
 		// Even with keepOriginalSbomRootComponent=true, orphan components should still be connected to info source
 		edges := result.Edges()
@@ -417,6 +454,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		// ROOT -> component-a -> component-b -> component-c
 		rootRef := "pkg:npm/my-app@1.0.0"
 		bom := &cdx.BOM{
+			BOMFormat:   cdx.BOMFormat,
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef:     rootRef,
@@ -464,7 +503,8 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			},
 		}
 
-		result := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		result, err := SBOMGraphFromCycloneDX(bom, artifactName, origin, true)
+		assert.NoError(t, err)
 
 		// Verify the root node exists in the graph
 		rootNode := result.nodes[rootRef]
@@ -536,8 +576,10 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 func TestMergeCdxBoms(t *testing.T) {
 	t.Run("merge two BOMs with different components", func(t *testing.T) {
 		bom1 := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1", Name: "artifact1"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -554,8 +596,10 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		bom2 := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2", Name: "artifact2"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -572,8 +616,12 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		result := NewSBOMGraph()
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "sbom-1", false))
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "sbom-2", false))
+		graph1, err := SBOMGraphFromCycloneDX(bom1, "artifact-1", "sbom-1", false)
+		assert.NoError(t, err)
+		result.MergeGraph(graph1)
+		graph2, err := SBOMGraphFromCycloneDX(bom2, "artifact-2", "sbom-2", false)
+		assert.NoError(t, err)
+		result.MergeGraph(graph2)
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -608,8 +656,10 @@ func TestMergeCdxBoms(t *testing.T) {
 
 	t.Run("merge BOMs with duplicate components", func(t *testing.T) {
 		bom1 := &cdx.BOM{
+			BOMFormat:   cdx.BOMFormat,
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-1", Name: "TestArtifact"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -626,8 +676,10 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		bom2 := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2"},
+				Component: &cdx.Component{BOMRef: "GraphRootNodeID-bom-2", Name: "artifact2"},
 			},
 			Components: &[]cdx.Component{
 				{
@@ -644,8 +696,12 @@ func TestMergeCdxBoms(t *testing.T) {
 		}
 
 		result := NewSBOMGraph()
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom1, "artifact-1", "test", false))
-		result.MergeGraph(SBOMGraphFromCycloneDX(bom2, "artifact-2", "test", false))
+		graph1, err := SBOMGraphFromCycloneDX(bom1, "artifact-1", "test", false)
+		assert.NoError(t, err)
+		result.MergeGraph(graph1)
+		graph2, err := SBOMGraphFromCycloneDX(bom2, "artifact-2", "test", false)
+		assert.NoError(t, err)
+		result.MergeGraph(graph2)
 
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
@@ -674,31 +730,24 @@ func TestMergeCdxBoms(t *testing.T) {
 	})
 }
 
-func TestShouldNotCrashWithEmptyMetadataComponent(t *testing.T) {
-	b1 := &cdx.BOM{
-		Metadata: &cdx.Metadata{},
-		Components: &[]cdx.Component{{
-			Name:       "comp-a",
-			PackageURL: "pkg:maven/org.example/comp-a@1.0.0",
-		}},
-	}
-
-	normalized := SBOMGraphFromCycloneDX(b1, "test", "test", false)
-	assert.NotNil(t, normalized)
-}
-
 func TestMergeCdxBomsSimple(t *testing.T) {
 	b1 := &cdx.BOM{
-		Metadata: GraphRootNodeIDMetadata,
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cdx.SpecVersion1_6,
+		Metadata:    GraphRootNodeIDMetadata,
 		Components: &[]cdx.Component{{
 			Name:       "comp-a",
 			PackageURL: "pkg:maven/org.example/comp-a@1.0.0",
+			BOMRef:     "pkg:maven/org.example/comp-a@1.0.0",
 		}},
 	}
 	b2 := &cdx.BOM{
-		Metadata: GraphRootNodeIDMetadata,
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cdx.SpecVersion1_6,
+		Metadata:    GraphRootNodeIDMetadata,
 		Components: &[]cdx.Component{{
 			Name:       "comp-b",
+			BOMRef:     "pkg:maven/org.example/comp-b@2.0.0",
 			PackageURL: "pkg:maven/org.example/comp-b@2.0.0",
 		}},
 		Vulnerabilities: &[]cdx.Vulnerability{{
@@ -707,8 +756,12 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 	}
 
 	result := NewSBOMGraph()
-	result.MergeGraph(SBOMGraphFromCycloneDX(b1, "artifact-1", "test", false))
-	result.MergeGraph(SBOMGraphFromCycloneDX(b2, "artifact-2", "test", false))
+	graph1, err := SBOMGraphFromCycloneDX(b1, "artifact-1", "test", false)
+	assert.NoError(t, err)
+	result.MergeGraph(graph1)
+	graph2, err := SBOMGraphFromCycloneDX(b2, "artifact-2", "test", false)
+	assert.NoError(t, err)
+	result.MergeGraph(graph2)
 	result.ToCycloneDX(BOMMetadata{})
 
 	assert.Len(t, slices.Collect(result.Vulnerabilities()), 1)
@@ -719,14 +772,18 @@ func TestMergeComplex(t *testing.T) {
 
 	t.Run("should add the subtree if it does not exist", func(t *testing.T) {
 		currentSbom := &cdx.BOM{
-			Metadata: GraphRootNodeIDMetadata,
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata:    GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 				{
 					BOMRef:     "pkg:container",
-					PackageURL: "pkg:container@1.0.0",
+					Name:       "container-image",
+					PackageURL: "pkg:oci/container@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -739,14 +796,18 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 		newSubtree := &cdx.BOM{
-			Metadata: GraphRootNodeIDMetadata,
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata:    GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 				{
 					BOMRef:     "pkg:source",
-					PackageURL: "pkg:source@2.0.0",
+					Name:       "source-component",
+					PackageURL: "pkg:oci/source@2.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -759,8 +820,10 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 
-		currentGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
-		newGraph := SBOMGraphFromCycloneDX(newSubtree, artifactName, "source-scan", false)
+		currentGraph, err := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
+		assert.NoError(t, err)
+		newGraph, err := SBOMGraphFromCycloneDX(newSubtree, artifactName, "source-scan", false)
+		assert.NoError(t, err)
 		currentGraph.MergeGraph(newGraph)
 
 		expected := &cdx.BOM{
@@ -806,14 +869,18 @@ func TestMergeComplex(t *testing.T) {
 
 	t.Run("should update the subtree if it does already exist", func(t *testing.T) {
 		currentSbom := &cdx.BOM{
-			Metadata: GraphRootNodeIDMetadata,
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata:    GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 				{
 					BOMRef:     "pkg:container@2.0.0",
-					PackageURL: "pkg:container@2.0.0",
+					PackageURL: "pkg:oci/container@2.0.0",
+					Name:       "container-image",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -826,14 +893,18 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 		newSubtree := &cdx.BOM{
-			Metadata: GraphRootNodeIDMetadata,
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata:    GraphRootNodeIDMetadata,
 			Components: &[]cdx.Component{
 				{
 					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
 				},
 				{
 					BOMRef:     "pkg:container@2.0.0",
-					PackageURL: "pkg:container@2.0.0",
+					PackageURL: "pkg:oci/container@2.0.0",
+					Name:       "container-image-updated",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
@@ -846,9 +917,11 @@ func TestMergeComplex(t *testing.T) {
 			},
 		}
 
-		resultGraph := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
+		resultGraph, err := SBOMGraphFromCycloneDX(currentSbom, artifactName, "container-scan", false)
+		assert.NoError(t, err)
 
-		subtree := SBOMGraphFromCycloneDX(newSubtree, artifactName, "container-scan", false)
+		subtree, err := SBOMGraphFromCycloneDX(newSubtree, artifactName, "container-scan", false)
+		assert.NoError(t, err)
 		resultGraph.MergeGraph(subtree)
 
 		expected := &cdx.BOM{
@@ -1236,7 +1309,7 @@ func TestVulnerabilities(t *testing.T) {
 		assert.Len(t, vulns, 2)
 	})
 
-	t.Run("duplicate vulnerability - existing has InTriage state should keep existing", func(t *testing.T) {
+	t.Run("duplicate vulnerability - existing has InTriage state should switch to exploitable", func(t *testing.T) {
 		g := NewSBOMGraph()
 		// First add the InTriage one
 		g.AddVulnerability(cdx.Vulnerability{
@@ -1259,10 +1332,10 @@ func TestVulnerabilities(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 		assert.NotNil(t, vulns[0].Analysis)
-		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
+		assert.Equal(t, cdx.IASExploitable, vulns[0].Analysis.State)
 	})
 
-	t.Run("same ID same affects - new has InTriage state should replace", func(t *testing.T) {
+	t.Run("same ID same affects - new has Exploitable state should not replace", func(t *testing.T) {
 		g := NewSBOMGraph()
 		// First add one with Exploitable state
 		g.AddVulnerability(cdx.Vulnerability{
@@ -1285,10 +1358,10 @@ func TestVulnerabilities(t *testing.T) {
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 		assert.NotNil(t, vulns[0].Analysis)
-		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
+		assert.Equal(t, cdx.IASExploitable, vulns[0].Analysis.State)
 	})
 
-	t.Run("same ID same affects - neither has InTriage keeps first", func(t *testing.T) {
+	t.Run("same ID same affects - keep exploitable", func(t *testing.T) {
 		g := NewSBOMGraph()
 		g.AddVulnerability(cdx.Vulnerability{
 			ID: "CVE-2021-1234",
@@ -1310,7 +1383,7 @@ func TestVulnerabilities(t *testing.T) {
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 	})
 
-	t.Run("same ID same affects - one with analysis one without are NOT deduplicated", func(t *testing.T) {
+	t.Run("same ID same affects - one with analysis one without are deduplicated", func(t *testing.T) {
 		// When one vuln has analysis and one doesn't, they have different storage keys
 		// The deduplication only works when both have analysis states
 		g := NewSBOMGraph()
@@ -1327,8 +1400,7 @@ func TestVulnerabilities(t *testing.T) {
 		})
 
 		vulns := slices.Collect(g.Vulnerabilities())
-		// Both kept because storage keys differ (one has state, one doesn't)
-		assert.Len(t, vulns, 2)
+		assert.Len(t, vulns, 1)
 	})
 
 	t.Run("same ID same affects - one with in triage, one with false positive", func(t *testing.T) {
@@ -1376,7 +1448,7 @@ func TestVulnerabilities(t *testing.T) {
 		g := NewSBOMGraph()
 		// Unique vuln 1
 		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-1111"})
-		// Duplicate vuln 2 - same affects, should keep InTriage
+		// Duplicate vuln 2 - same affects, should keep is_exploitable since this is a "worse" state than InTriage
 		g.AddVulnerability(cdx.Vulnerability{
 			ID: "CVE-2021-2222",
 			Analysis: &cdx.VulnerabilityAnalysis{
@@ -1413,7 +1485,7 @@ func TestVulnerabilities(t *testing.T) {
 
 		// CVE-2021-2222 should have InTriage state
 		assert.NotNil(t, vulnMap["CVE-2021-2222"].Analysis)
-		assert.Equal(t, cdx.IASInTriage, vulnMap["CVE-2021-2222"].Analysis.State)
+		assert.Equal(t, cdx.IASExploitable, vulnMap["CVE-2021-2222"].Analysis.State)
 	})
 }
 

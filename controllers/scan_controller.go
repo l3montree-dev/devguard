@@ -135,29 +135,35 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
 
+	refs := []models.ExternalReference{}
 	// store the external references from VEX upload
 	for _, url := range externalURLs {
+		// can only be cyclonedx since we are parsing them from the cyclonedx bom
 		ref := models.ExternalReference{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersionName,
 			URL:              url,
-			Type:             "vex",
+			Type:             "cyclonedx",
 		}
 		if err := s.externalReferenceRepository.Create(tx, &ref); err != nil {
 			slog.Error("could not store vex external reference", "err", err, "url", url)
 		}
+		refs = append(refs, ref)
+	}
+
+	vexReport, err := normalize.NewVexReport(&bom, origin)
+	if err != nil {
+		slog.Error("could not create vex report from bom", "err", err)
+		return echo.NewHTTPError(400, "invalid VEX BOM format", err).WithInternal(err)
 	}
 
 	vexReports := []*normalize.VexReport{}
 	// check if there are components or vulnerabilities in the bom
-	vexReports = append(vexReports, &normalize.VexReport{
-		Source: origin,
-		Report: &bom,
-	})
+	vexReports = append(vexReports, vexReport)
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
-		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(artifactName, assetVersionName, externalURLs)
+		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(refs)
 		if len(invalid) > 0 {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
@@ -230,7 +236,10 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		return scanResults, fmt.Errorf("keepOriginalSbomRootComponent provided but sbom does not include valid bom.Metadata.Component.PackageURL entry")
 	}
 
-	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	if err != nil {
+		return scanResults, fmt.Errorf("invalid sbom: %w", err)
+	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {

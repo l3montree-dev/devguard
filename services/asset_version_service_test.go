@@ -103,9 +103,12 @@ func TestCreateProjectTitle(t *testing.T) {
 func TestMarkdownTableFromSBOM(t *testing.T) {
 	t.Run("test an sbom with 3 components which have 2 , 1 and 0 licenses respectively ", func(t *testing.T) {
 		bom := cdx.BOM{
+			BOMFormat: "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_4,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: "pkg:generic/my-artifact@1.0.0",
+					Name: "my-artifact",
 				},
 			},
 			Components: &[]cdx.Component{

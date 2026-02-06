@@ -529,104 +529,103 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
+			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, "sbom:"+url, keepOriginalSbomRootComponent)
+			if err != nil {
+				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
+				invalidURLs = append(invalidURLs, url)
+				continue
+			}
+
 			validURLs = append(validURLs, url)
 			// add the sbom prefix
-			boms = append(boms, normalize.SBOMGraphFromCycloneDX(&bom, artifactName, "sbom:"+url, keepOriginalSbomRootComponent))
+			boms = append(boms, normalizedBOM)
 		}
 	}
 
 	return boms, validURLs, invalidURLs
 }
 
-func (s *scanService) FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) (vexReports []*normalize.VexReport, validURLs []string, invalidURLs []string) {
+func (s *scanService) FetchVexFromUpstream(upstreamURLs []models.ExternalReference) (vexReports []*normalize.VexReport, valid []models.ExternalReference, invalid []models.ExternalReference) {
 	client := &http.Client{}
 	//check if the upstream urls are valid urls
-	for _, url := range upstreamURLs {
-		url = normalize.SanitizeExternalReferencesURL(url)
-		// check if csaf provider-metadata.json is appended
-		if strings.HasSuffix(url, "/provider-metadata.json") {
-			// we need to use the csaf ingestion here.
-			// extract the purl from the url
-			// split at http or https
-			protocol := "http://"
-			purlSlice := strings.SplitN(url, "http://", 2)
-			if len(purlSlice) == 1 {
-				purlSlice = strings.SplitN(url, "https://", 2)
-				protocol = "https://"
-			}
-			if len(purlSlice) != 2 {
-				invalidURLs = append(invalidURLs, url)
-				continue
-			}
-			purlStr := strings.TrimSuffix(purlSlice[0], ":")
-			sanitizedURL := fmt.Sprintf("%s%s", protocol, purlSlice[1])
-
-			purl, err := packageurl.FromString(purlStr)
+	for _, ref := range upstreamURLs {
+		switch ref.Type {
+		case models.ExternalReferenceTypeCSAF:
+			purl, err := packageurl.FromString(ref.CSAFPackageScope)
 			if err != nil {
-				invalidURLs = append(invalidURLs, url)
+				// this should actually never happen, because we validate the purl on creation of the external reference, but just to be sure, we catch this error and continue with the next url
+				invalid = append(invalid, ref)
 				continue
 			}
-			bom, err := s.csafService.GetVexFromCsafProvider(purl, ref, url, sanitizedURL)
+
+			bom, err := s.csafService.GetVexFromCsafProvider(purl, ref.URL)
 			if err != nil {
 				slog.Warn("could not download csaf from csaf provider", "err", err)
-				invalidURLs = append(invalidURLs, url)
+				invalid = append(invalid, ref)
 				continue
 			}
-			validURLs = append(validURLs, url)
-			vexReports = append(vexReports, &normalize.VexReport{
-				Report: bom,
-				Source: sanitizedURL,
-			})
-			continue
-		}
-		//check if the file is a valid url
-		if url == "" || !strings.HasPrefix(url, "http") {
-			invalidURLs = append(invalidURLs, url)
-			continue
-		}
 
-		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-		defer cancel()
-		// fetch the file from the url
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+			vexReport, err := normalize.NewVexReport(bom, ref.URL)
+			if err != nil {
+				slog.Warn("could not normalize csaf from csaf provider", "err", err)
+				invalid = append(invalid, ref)
+				continue
+			}
 
-		if err != nil {
-			invalidURLs = append(invalidURLs, url)
-			continue
-		}
+			valid = append(valid, ref)
+			vexReports = append(vexReports, vexReport)
 
-		resp, err := client.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			invalidURLs = append(invalidURLs, url)
-			continue
-		}
-		defer resp.Body.Close()
+		case models.ExternalReferenceTypeCycloneDxVEX:
+			//check if the file is a valid url
 
-		// download the url and check if it is a valid vex file
-		file, err := io.ReadAll(resp.Body)
-		if err != nil {
-			invalidURLs = append(invalidURLs, url)
-			continue
-		}
+			if ref.URL == "" || !strings.HasPrefix(ref.URL, "http") {
+				invalid = append(invalid, ref)
+				continue
+			}
 
-		err = json.Unmarshal(file, &bom)
-		if err != nil {
-			invalidURLs = append(invalidURLs, url)
-			continue
-		}
+			var bom cyclonedx.BOM
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancel()
+			// fetch the file from the url
+			req, err := http.NewRequestWithContext(ctx, "GET", ref.URL, nil)
 
-		// Only process VEX (not SBOMs)
-		if !normalize.BomIsSBOM(&bom) {
-			validURLs = append(validURLs, url)
-			vexReports = append(vexReports, &normalize.VexReport{
-				Report: &bom,
-				Source: url,
-			})
+			if err != nil {
+				invalid = append(invalid, ref)
+				continue
+			}
+
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != 200 {
+				invalid = append(invalid, ref)
+				continue
+			}
+			defer resp.Body.Close()
+
+			// download the url and check if it is a valid vex file
+			file, err := io.ReadAll(resp.Body)
+			if err != nil {
+				invalid = append(invalid, ref)
+				continue
+			}
+
+			err = json.Unmarshal(file, &bom)
+			if err != nil {
+				invalid = append(invalid, ref)
+				continue
+			}
+
+			// Only process VEX (not SBOMs)
+			if !normalize.BomIsSBOM(&bom) {
+				valid = append(valid, ref)
+				vexReports = append(vexReports, &normalize.VexReport{
+					Report: &bom,
+					Source: ref.URL,
+				})
+			}
 		}
 	}
 
-	return vexReports, validURLs, invalidURLs
+	return vexReports, valid, invalid
 }
 
 // RunArtifactSecurityLifecycle orchestrates the complete security lifecycle for an artifact:
@@ -670,20 +669,9 @@ func (s *scanService) RunArtifactSecurityLifecycle(
 		// Don't fail the entire operation if fetching external refs fails
 	}
 
-	// Collect VEX URLs from external references
-	vexURLs := make([]string, 0, len(vexRefs))
-	for _, ref := range vexRefs {
-		if ref.Type == "vex" {
-			vexURLs = append(vexURLs, ref.URL)
-		}
-	}
-
-	// Combine SBOM and VEX URLs
-	allURLs := append(sbomUpstreamURLs, vexURLs...)
-
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs, asset.KeepOriginalSbomRootComponent)
-	vexReports, _, _ := s.FetchVexFromUpstream(artifact.ArtifactName, assetVersion.Name, allURLs)
+	boms, _, _ := s.FetchSbomsFromUpstream(artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs, asset.KeepOriginalSbomRootComponent)
+	vexReports, _, _ := s.FetchVexFromUpstream(vexRefs)
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
 	for _, bom := range boms {

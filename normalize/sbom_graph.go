@@ -119,6 +119,27 @@ type VexReport struct {
 	Source string
 }
 
+func validateVexReport(report *cdx.BOM) error {
+	if report.Metadata == nil || report.Metadata.Component == nil {
+		return fmt.Errorf("invalid VEX report: missing metadata.component")
+	}
+	if report.Metadata.Component.PackageURL == "" {
+		return fmt.Errorf("invalid VEX report: root component must have a PackageURL")
+	}
+	return nil
+}
+
+func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
+	if err := validateVexReport(report); err != nil {
+		return nil, err
+	}
+
+	return &VexReport{
+		Report: report,
+		Source: source,
+	}, nil
+}
+
 func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
 	depMap := make(map[string][]string)
 	for parent, children := range edges {
@@ -208,6 +229,35 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 	return id
 }
 
+// isValidComponentType checks if a component type is valid per CycloneDX spec
+func isValidComponentType(ct cdx.ComponentType) bool {
+	validTypes := map[cdx.ComponentType]bool{
+		cdx.ComponentTypeApplication:          true,
+		cdx.ComponentTypeContainer:            true,
+		cdx.ComponentTypeCryptographicAsset:   true,
+		cdx.ComponentTypeData:                 true,
+		cdx.ComponentTypeDevice:               true,
+		cdx.ComponentTypeDeviceDriver:         true,
+		cdx.ComponentTypeFile:                 true,
+		cdx.ComponentTypeFirmware:             true,
+		cdx.ComponentTypeFramework:            true,
+		cdx.ComponentTypeLibrary:              true,
+		cdx.ComponentTypeMachineLearningModel: true,
+		cdx.ComponentTypeOS:                   true,
+		cdx.ComponentTypePlatform:             true,
+	}
+	return validTypes[ct]
+}
+
+// sanitizeComponentType ensures the component type is valid, falling back to Library if not
+func sanitizeComponentType(ct cdx.ComponentType) cdx.ComponentType {
+	if isValidComponentType(ct) {
+		return ct
+	}
+	// Fall back to Library for invalid types
+	return cdx.ComponentTypeLibrary
+}
+
 // AddComponent adds a component node.
 func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 	if comp.PackageURL != "" {
@@ -217,6 +267,9 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 			comp.PackageURL = unescapedPurl
 		}
 	}
+
+	// Sanitize component type - fall back to Library if invalid
+	comp.Type = sanitizeComponentType(comp.Type)
 
 	if g.nodes[comp.BOMRef] == nil {
 		g.nodes[comp.BOMRef] = &GraphNode{
@@ -1354,51 +1407,144 @@ func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string)
 // =============================================================================
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
-func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) *SBOMGraph {
+func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) (*SBOMGraph, error) {
+	// Validate required fields
+	if bom == nil {
+		return nil, fmt.Errorf("BOM cannot be nil")
+	}
+
+	// Validate metadata and root component exist
+	if bom.Metadata == nil {
+		return nil, fmt.Errorf("BOM metadata is required")
+	}
+	if bom.Metadata.Component == nil {
+		return nil, fmt.Errorf("metadata component is required")
+	}
+
+	rootComponent := bom.Metadata.Component
+
+	// Validate root component required fields
+	if rootComponent.BOMRef == "" {
+		return nil, fmt.Errorf("root component BOMRef is required")
+	}
+	if rootComponent.Name == "" {
+		return nil, fmt.Errorf("root component name is required")
+	}
+
+	// Validate BOM format
+	if bom.BOMFormat != "CycloneDX" {
+		return nil, fmt.Errorf("invalid BOM format: %s (expected CycloneDX)", bom.BOMFormat)
+	}
+
+	// Validate BOM version
+	if bom.SpecVersion < 1 {
+		return nil, fmt.Errorf("BOM spec version must be >= 1, got %d", bom.SpecVersion)
+	}
+
 	g := NewSBOMGraph()
 
 	artifactID := g.AddArtifact(artifactName)
-
 	infoID := g.AddInfoSource(artifactID, infoSourceID, InfoSourceSBOM)
 
+	// Add root component
+	if err := g.validateAndAddComponent(*rootComponent); err != nil {
+		return nil, fmt.Errorf("invalid root component: %w", err)
+	}
+
+	// Track BOMRefs to detect duplicates
+	seenBOMRefs := make(map[string]bool)
+	// Process regular components
 	if bom.Components != nil {
-		for _, comp := range *bom.Components {
+		for idx, comp := range *bom.Components {
+			// Validate required fields
+			if comp.BOMRef == "" {
+				return nil, fmt.Errorf("component at index %d has missing BOMRef", idx)
+			}
+			if comp.Name == "" {
+				return nil, fmt.Errorf("component at index %d (%s) has missing Name", idx, comp.BOMRef)
+			}
+
+			// Check for duplicate BOMRef
+			if seenBOMRefs[comp.BOMRef] {
+				return nil, fmt.Errorf("duplicate BOMRef found: %s", comp.BOMRef)
+			}
+			seenBOMRefs[comp.BOMRef] = true
+
+			// Validate PackageURL format if present
+			if comp.PackageURL != "" {
+				if _, err := packageurl.FromString(comp.PackageURL); err != nil {
+					return nil, fmt.Errorf("component %s has invalid PackageURL: %w", comp.BOMRef, err)
+				}
+			}
+
+			// Validate scope if set
+			if comp.Scope != "" {
+				validScopes := map[cdx.Scope]bool{
+					cdx.ScopeExcluded: true,
+					cdx.ScopeOptional: true,
+					cdx.ScopeRequired: true,
+				}
+				if !validScopes[comp.Scope] {
+					return nil, fmt.Errorf("component %s has invalid scope: %s", comp.BOMRef, comp.Scope)
+				}
+			}
+
+			// Sanitize invalid hashes (remove them instead of erroring)
+			if comp.Hashes != nil {
+				validHashes := []cdx.Hash{}
+				for _, hash := range *comp.Hashes {
+					if isValidHashAlgorithm(hash.Algorithm) {
+						validHashes = append(validHashes, hash)
+					}
+					// Invalid hashes are silently dropped
+				}
+				if len(validHashes) > 0 {
+					comp.Hashes = &validHashes
+				} else {
+					comp.Hashes = nil
+				}
+			}
+
+			// Sanitize external references (remove invalid types)
+			if comp.ExternalReferences != nil {
+				validRefs := []cdx.ExternalReference{}
+				for _, ref := range *comp.ExternalReferences {
+					if isValidExternalReferenceType(ref.Type) {
+						validRefs = append(validRefs, ref)
+					}
+					// Invalid references are silently dropped
+				}
+				if len(validRefs) > 0 {
+					comp.ExternalReferences = &validRefs
+				} else {
+					comp.ExternalReferences = nil
+				}
+			}
+
+			// Add component (type sanitization already happens in AddComponent)
 			if isComponentNodeID(comp.PackageURL) {
-				// add only real components
 				g.AddComponent(comp)
 			}
 		}
 	}
 
-	// Build dependency map
+	// Validate and build dependency map
 	depMap := make(map[string][]string)
 	if bom.Dependencies != nil {
 		for _, dep := range *bom.Dependencies {
 			if dep.Dependencies != nil {
+				// Validate that referenced components exist
+				for _, childRef := range *dep.Dependencies {
+					if childRef != "" && childRef != rootComponent.BOMRef && !seenBOMRefs[childRef] {
+						return nil, fmt.Errorf("dependency references undefined component: %s", childRef)
+					}
+				}
 				depMap[dep.Ref] = *dep.Dependencies
 			}
 		}
 	}
 
-	// Find root ref
-	rootRef := ""
-	if bom.Metadata != nil && bom.Metadata.Component != nil {
-		rootRef = bom.Metadata.Component.BOMRef
-		// make sure root component exists
-		if g.nodes[rootRef] == nil {
-			// add root component as well
-			g.AddComponent(*bom.Metadata.Component)
-		}
-		// originalRootPurl is now stored in VexReport
-	} else if g.nodes[""] == nil {
-		// add the empty root component
-		g.AddComponent(cdx.Component{
-			BOMRef:     "",
-			PackageURL: "",
-			Name:       "ROOT",
-			Type:       cdx.ComponentTypeApplication,
-		})
-	}
+	rootRef := rootComponent.BOMRef
 
 	// Add edges
 	for parent := range depMap {
@@ -1450,14 +1596,106 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		g.AddEdge(infoID, rootRef)
 	}
 
-	// Add vulnerabilities
+	// Add vulnerabilities (ignore invalid severity values)
 	if bom.Vulnerabilities != nil {
 		for _, vuln := range *bom.Vulnerabilities {
+			// Sanitize invalid severity values in ratings
+			if vuln.Ratings != nil {
+				validRatings := []cdx.VulnerabilityRating{}
+				for _, rating := range *vuln.Ratings {
+					if isValidSeverity(rating.Severity) {
+						validRatings = append(validRatings, rating)
+					}
+					// Invalid ratings are silently dropped
+				}
+				if len(validRatings) > 0 {
+					vuln.Ratings = &validRatings
+				} else {
+					vuln.Ratings = nil
+				}
+			}
 			g.AddVulnerability(vuln)
 		}
 	}
 
-	return g
+	return g, nil
+}
+
+// validateAndAddComponent validates a component before adding it
+func (g *SBOMGraph) validateAndAddComponent(comp cdx.Component) error {
+	if comp.BOMRef == "" {
+		return fmt.Errorf("component BOMRef is required")
+	}
+	if comp.Name == "" {
+		return fmt.Errorf("component Name is required")
+	}
+	if comp.PackageURL != "" {
+		if _, err := packageurl.FromString(comp.PackageURL); err != nil {
+			return fmt.Errorf("invalid PackageURL: %w", err)
+		}
+	}
+	g.AddComponent(comp)
+	return nil
+}
+
+// isValidHashAlgorithm checks if hash algorithm is valid
+func isValidHashAlgorithm(alg cdx.HashAlgorithm) bool {
+	validAlgos := map[cdx.HashAlgorithm]bool{
+		cdx.HashAlgoMD5:         true,
+		cdx.HashAlgoSHA1:        true,
+		cdx.HashAlgoSHA256:      true,
+		cdx.HashAlgoSHA384:      true,
+		cdx.HashAlgoSHA512:      true,
+		cdx.HashAlgoSHA3_256:    true,
+		cdx.HashAlgoSHA3_384:    true,
+		cdx.HashAlgoSHA3_512:    true,
+		cdx.HashAlgoBlake2b_256: true,
+		cdx.HashAlgoBlake2b_384: true,
+		cdx.HashAlgoBlake2b_512: true,
+		cdx.HashAlgoBlake3:      true,
+	}
+	return validAlgos[alg]
+}
+
+// isValidExternalReferenceType checks if external reference type is valid
+func isValidExternalReferenceType(t cdx.ExternalReferenceType) bool {
+	validTypes := map[cdx.ExternalReferenceType]bool{
+		cdx.ERTypeAdversaryModel:          true,
+		cdx.ERTypeAdvisories:              true,
+		cdx.ERTypeAttestation:             true,
+		cdx.ERTypeBOM:                     true,
+		cdx.ERTypeBuildMeta:               true,
+		cdx.ERTypeBuildSystem:             true,
+		cdx.ERTypeCertificationReport:     true,
+		cdx.ERTypeChat:                    true,
+		cdx.ERTypeConfiguration:           true,
+		cdx.ERTypeCodifiedInfrastructure:  true,
+		cdx.ERTypeComponentAnalysisReport: true,
+		cdx.ERTypeDistribution:            true,
+		cdx.ERTypeDistributionIntake:      true,
+		cdx.ERTypeDocumentation:           true,
+		cdx.ERTypeDynamicAnalysisReport:   true,
+		cdx.ERTypeEvidence:                true,
+		cdx.ERTypeExploitabilityStatement: true,
+		cdx.ERTypeFormulation:             true,
+		cdx.ERTypeIssueTracker:            true,
+		cdx.ERTypeLicense:                 true,
+	}
+	return validTypes[t]
+}
+
+// isValidSeverity checks if severity is valid
+func isValidSeverity(severity cdx.Severity) bool {
+	validSeverities := map[cdx.Severity]bool{
+		cdx.SeverityUnknown:  true,
+		cdx.SeverityLow:      true,
+		cdx.SeverityMedium:   true,
+		cdx.SeverityHigh:     true,
+		cdx.SeverityCritical: true,
+		cdx.SeverityInfo:     true,
+		cdx.SeverityNone:     true,
+	}
+	return validSeverities[severity]
 }
 
 func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {

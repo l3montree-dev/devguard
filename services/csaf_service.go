@@ -249,9 +249,9 @@ func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageur
 	return cdxVulns, nil
 }
 
-func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*cyclonedx.BOM, error) {
+func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, url string) (*cyclonedx.BOM, error) {
 	// download all advisories
-	advisories, err := service.downloadCsafReports(domain)
+	advisories, err := service.downloadCsafReports(url)
 	if err != nil {
 		return nil, err
 	}
@@ -286,9 +286,9 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 		Vulnerabilities: &cdxVulns,
 		Metadata: &cyclonedx.Metadata{
 			Component: &cyclonedx.Component{
-				Type:   cyclonedx.ComponentTypeApplication,
-				Name:   "root",
-				BOMRef: "root",
+				Type:       cyclonedx.ComponentTypeApplication,
+				PackageURL: purlString,
+				Name:       purlString,
 			},
 		},
 		Components: &[]cyclonedx.Component{
