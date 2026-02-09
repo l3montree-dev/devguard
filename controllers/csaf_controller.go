@@ -244,15 +244,16 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	asset := shared.GetAsset(ctx)
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
+	yearNumber, err := strconv.Atoi(year)
+	if err != nil {
+		return fmt.Errorf("invalid year format")
+	}
+
 	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
 	if err != nil {
 		return err
 	}
 
-	yearNumber, err := strconv.Atoi(year)
-	if err != nil {
-		return fmt.Errorf("invalid year format")
-	}
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
 	})
@@ -260,6 +261,11 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	// deduplicate Slice to avoid listing the same CVEs
 	vulnsOfThatYear = utils.DeduplicateSlice(vulnsOfThatYear, func(vuln models.DependencyVuln) string {
 		return vuln.CVEID
+	})
+
+	// sort reports alphabetically by CVEID for better usability
+	slices.SortFunc(vulnsOfThatYear, func(vuln1 models.DependencyVuln, vuln2 models.DependencyVuln) int {
+		return strings.Compare(vuln1.CVEID, vuln2.CVEID)
 	})
 
 	type pageData struct {
@@ -492,11 +498,12 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		return err
 	}
 
+	// make the report canonical
 	cjsonData, err := normalize.EncodeCanonical(report)
 	if err != nil {
 		return err
 	}
-	// then choose which type of requested needs to be served
+	// then choose which type of requested needs to be served based on the last file extension
 	fileName := strings.TrimRight(ctx.Param("version"), "/")
 
 	index := strings.LastIndex(fileName, ".")
@@ -504,21 +511,25 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		return fmt.Errorf("invalid file name syntax")
 	}
 	mode := fileName[index+1:]
+
 	switch mode {
 	case "json":
 		// just return the csaf report
 		return ctx.JSONBlob(200, cjsonData)
 	case "asc":
+		// generate and return the signature
 		signature, err := services.SignCSAFReport(cjsonData)
 		if err != nil {
 			return err
 		}
 		return ctx.String(200, string(signature))
 	case "sha256":
+		// generate and return the sha256 hash
 		hash := sha256.Sum256(cjsonData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
 	case "sha512":
+		// generate and return the sha512 hash
 		hash := sha512.Sum512(cjsonData)
 		hashString := hex.EncodeToString(hash[:])
 		return ctx.String(200, hashString)
