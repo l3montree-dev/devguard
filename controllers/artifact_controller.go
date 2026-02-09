@@ -16,33 +16,31 @@ import (
 )
 
 type ArtifactController struct {
-	artifactRepository          shared.ArtifactRepository
-	artifactService             shared.ArtifactService
-	dependencyVulnService       shared.DependencyVulnService
-	dependencyVulnRepository    shared.DependencyVulnRepository
-	statisticsService           shared.StatisticsService
-	componentService            shared.ComponentService
-	assetVersionService         shared.AssetVersionService
-	vexRuleService              shared.VEXRuleService
-	externalReferenceRepository shared.ExternalReferenceRepository
+	artifactRepository       shared.ArtifactRepository
+	artifactService          shared.ArtifactService
+	dependencyVulnService    shared.DependencyVulnService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	statisticsService        shared.StatisticsService
+	componentService         shared.ComponentService
+	assetVersionService      shared.AssetVersionService
+	vexRuleService           shared.VEXRuleService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService) *ArtifactController {
 	return &ArtifactController{
-		artifactRepository:          artifactRepository,
-		artifactService:             artifactService,
-		dependencyVulnService:       dependencyVulnService,
-		statisticsService:           statisticsService,
-		FireAndForgetSynchronizer:   synchronizer,
-		componentService:            componentService,
-		assetVersionService:         assetVersionService,
-		dependencyVulnRepository:    dependencyVulnRepository,
-		ScanService:                 scanService,
-		vexRuleService:              vexRuleService,
-		externalReferenceRepository: externalReferenceRepository,
+		artifactRepository:        artifactRepository,
+		artifactService:           artifactService,
+		dependencyVulnService:     dependencyVulnService,
+		statisticsService:         statisticsService,
+		FireAndForgetSynchronizer: synchronizer,
+		componentService:          componentService,
+		assetVersionService:       assetVersionService,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		ScanService:               scanService,
+		vexRuleService:            vexRuleService,
 	}
 }
 
@@ -212,52 +210,6 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	}
 
 	return ctx.NoContent(200)
-}
-
-// @Summary Sync external sources for artifact
-// @Tags Artifacts
-// @Security CookieAuth
-// @Security PATAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param artifactName path string true "Artifact name"
-// @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync [post]
-func (c *ArtifactController) SyncExternalSources(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
-	artifact := shared.GetArtifact(ctx)
-	org := shared.GetOrg(ctx)
-
-	tx := c.artifactRepository.Begin()
-
-	_, _, vulns, err := c.RunArtifactSecurityLifecycle(tx, org, shared.GetProject(ctx), asset, assetVersion, artifact, shared.GetSession(ctx).GetUserID())
-
-	if err != nil {
-		tx.Rollback()
-		slog.Error("could not scan sbom after syncing external sources", "err", err)
-		return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
-	}
-
-	tx.Commit()
-
-	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(org, shared.GetProject(ctx), asset, assetVersion, vulns)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	c.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
-
-	return nil
 }
 
 // @Summary Update artifact
