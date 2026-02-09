@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,7 +41,7 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []string) {
+func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError) {
 	ret := _mock.Called(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 
 	if len(ret) == 0 {
@@ -49,8 +50,8 @@ func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string
 
 	var r0 []*normalize.SBOMGraph
 	var r1 []string
-	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string, bool) ([]*normalize.SBOMGraph, []string, []string)); ok {
+	var r2 []dtos.ExternalReferenceError
+	if returnFunc, ok := ret.Get(0).(func(string, string, []string, bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)); ok {
 		return returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string, string, []string, bool) []*normalize.SBOMGraph); ok {
@@ -67,11 +68,11 @@ func (_mock *ScanService) FetchSbomsFromUpstream(artifactName string, ref string
 			r1 = ret.Get(1).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(string, string, []string, bool) []string); ok {
+	if returnFunc, ok := ret.Get(2).(func(string, string, []string, bool) []dtos.ExternalReferenceError); ok {
 		r2 = returnFunc(artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
 	} else {
 		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]string)
+			r2 = ret.Get(2).([]dtos.ExternalReferenceError)
 		}
 	}
 	return r0, r1, r2
@@ -119,49 +120,49 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(artifactName str
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, strings1 []string) *ScanService_FetchSbomsFromUpstream_Call {
-	_c.Call.Return(sBOMGraphs, strings, strings1)
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, externalReferenceErrors []dtos.ExternalReferenceError) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Return(sBOMGraphs, strings, externalReferenceErrors)
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []string)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FetchVexFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchVexFromUpstream(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string) {
-	ret := _mock.Called(artifactName, ref, upstreamURLs)
+func (_mock *ScanService) FetchVexFromUpstream(upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference) {
+	ret := _mock.Called(upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchVexFromUpstream")
 	}
 
 	var r0 []*normalize.VexReport
-	var r1 []string
-	var r2 []string
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) ([]*normalize.VexReport, []string, []string)); ok {
-		return returnFunc(artifactName, ref, upstreamURLs)
+	var r1 []models.ExternalReference
+	var r2 []models.ExternalReference
+	if returnFunc, ok := ret.Get(0).(func([]models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)); ok {
+		return returnFunc(upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, []string) []*normalize.VexReport); ok {
-		r0 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func([]models.ExternalReference) []*normalize.VexReport); ok {
+		r0 = returnFunc(upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*normalize.VexReport)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, []string) []string); ok {
-		r1 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(1).(func([]models.ExternalReference) []models.ExternalReference); ok {
+		r1 = returnFunc(upstreamURLs)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]string)
+			r1 = ret.Get(1).([]models.ExternalReference)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(string, string, []string) []string); ok {
-		r2 = returnFunc(artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(2).(func([]models.ExternalReference) []models.ExternalReference); ok {
+		r2 = returnFunc(upstreamURLs)
 	} else {
 		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]string)
+			r2 = ret.Get(2).([]models.ExternalReference)
 		}
 	}
 	return r0, r1, r2
@@ -173,42 +174,30 @@ type ScanService_FetchVexFromUpstream_Call struct {
 }
 
 // FetchVexFromUpstream is a helper method to define mock.On call
-//   - artifactName string
-//   - ref string
-//   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchVexFromUpstream(artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
-	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", artifactName, ref, upstreamURLs)}
+//   - upstreamURLs []models.ExternalReference
+func (_e *ScanService_Expecter) FetchVexFromUpstream(upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
+	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", upstreamURLs)}
 }
 
-func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchVexFromUpstream_Call {
+func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(upstreamURLs []models.ExternalReference)) *ScanService_FetchVexFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 []models.ExternalReference
 		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg0 = args[0].([]models.ExternalReference)
 		}
 		run(
 			arg0,
-			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *ScanService_FetchVexFromUpstream_Call) Return(vexReports []*normalize.VexReport, strings []string, strings1 []string) *ScanService_FetchVexFromUpstream_Call {
-	_c.Call.Return(vexReports, strings, strings1)
+func (_c *ScanService_FetchVexFromUpstream_Call) Return(vexReports []*normalize.VexReport, externalReferences []models.ExternalReference, externalReferences1 []models.ExternalReference) *ScanService_FetchVexFromUpstream_Call {
+	_c.Call.Return(vexReports, externalReferences, externalReferences1)
 	return _c
 }
 
-func (_c *ScanService_FetchVexFromUpstream_Call) RunAndReturn(run func(artifactName string, ref string, upstreamURLs []string) ([]*normalize.VexReport, []string, []string)) *ScanService_FetchVexFromUpstream_Call {
+func (_c *ScanService_FetchVexFromUpstream_Call) RunAndReturn(run func(upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)) *ScanService_FetchVexFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }

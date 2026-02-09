@@ -310,8 +310,9 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: GraphRootNodeID,
-					Name:   artifactName,
+					BOMRef:     GraphRootNodeID,
+					Name:       artifactName,
+					PackageURL: "pkg:npm/test-artifact@1.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -359,8 +360,9 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: GraphRootNodeID,
-					Name:   artifactName,
+					BOMRef:     GraphRootNodeID,
+					Name:       artifactName,
+					PackageURL: "pkg:npm/artifactName@1.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -414,8 +416,9 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 			SpecVersion: cdx.SpecVersion1_6,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: GraphRootNodeID,
-					Name:   artifactName,
+					BOMRef:     GraphRootNodeID,
+					Name:       artifactName,
+					PackageURL: "pkg:npm/artifactName@1.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -626,12 +629,12 @@ func TestMergeCdxBoms(t *testing.T) {
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "merged-artifact",
+					BOMRef: "merged-artifact@0.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "merged-artifact",
+					BOMRef: "merged-artifact@0.0.0",
 				},
 				{
 					BOMRef: "pkg:npm/component-2@2.0.0",
@@ -641,14 +644,15 @@ func TestMergeCdxBoms(t *testing.T) {
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "merged-artifact", Dependencies: &[]string{"pkg:npm/component-1@1.0.0", "pkg:npm/component-2@2.0.0"}},
+				{Ref: "merged-artifact@0.0.0", Dependencies: &[]string{"pkg:npm/component-1@1.0.0", "pkg:npm/component-2@2.0.0"}},
 				{Ref: "pkg:npm/component-1@1.0.0", Dependencies: &[]string{}},
 				{Ref: "pkg:npm/component-2@2.0.0", Dependencies: &[]string{}},
 			},
 		}
 
 		actual := result.ToCycloneDX(BOMMetadata{
-			ArtifactName: "merged-artifact",
+			ArtifactName:     "merged-artifact",
+			AssetVersionName: "0.0.0",
 		})
 
 		assert.Nil(t, StructuralCompareCdxBoms(actual, expected))
@@ -706,24 +710,25 @@ func TestMergeCdxBoms(t *testing.T) {
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: "merged-artifact",
+					BOMRef: "merged-artifact@0.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: "merged-artifact",
+					BOMRef: "merged-artifact@0.0.0",
 				},
 				{
 					BOMRef: "pkg:npm/component-1@1.0.0",
 				},
 			},
 			Dependencies: &[]cdx.Dependency{
-				{Ref: "merged-artifact", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
+				{Ref: "merged-artifact@0.0.0", Dependencies: &[]string{"pkg:npm/component-1@1.0.0"}},
 				{Ref: "pkg:npm/component-1@1.0.0", Dependencies: &[]string{}},
 			},
 		}
 		actual := result.ToCycloneDX(BOMMetadata{
-			ArtifactName: "merged-artifact",
+			ArtifactName:     "merged-artifact",
+			AssetVersionName: "0.0.0",
 		})
 
 		assert.Nil(t, StructuralCompareCdxBoms(actual, expected))
@@ -829,12 +834,12 @@ func TestMergeComplex(t *testing.T) {
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: artifactName,
+					BOMRef: artifactName + "@0.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: artifactName,
+					BOMRef: artifactName + "@0.0.0",
 				},
 				{
 					BOMRef: "pkg:container",
@@ -845,7 +850,7 @@ func TestMergeComplex(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: artifactName,
+					Ref: artifactName + "@0.0.0",
 					Dependencies: &[]string{
 						"pkg:container",
 						"pkg:source",
@@ -863,7 +868,8 @@ func TestMergeComplex(t *testing.T) {
 		}
 
 		assert.Nil(t, StructuralCompareCdxBoms(currentGraph.ToCycloneDX(BOMMetadata{
-			ArtifactName: artifactName,
+			ArtifactName:     artifactName,
+			AssetVersionName: "0.0.0",
 		}), expected))
 	})
 
@@ -927,12 +933,12 @@ func TestMergeComplex(t *testing.T) {
 		expected := &cdx.BOM{
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
-					BOMRef: artifactName,
+					BOMRef: artifactName + "@0.0.0",
 				},
 			},
 			Components: &[]cdx.Component{
 				{
-					BOMRef: artifactName,
+					BOMRef: artifactName + "@0.0.0",
 				},
 				{
 					BOMRef: "pkg:container@2.0.0",
@@ -940,7 +946,7 @@ func TestMergeComplex(t *testing.T) {
 			},
 			Dependencies: &[]cdx.Dependency{
 				{
-					Ref: artifactName,
+					Ref: artifactName + "@0.0.0",
 					Dependencies: &[]string{
 						"pkg:container@2.0.0",
 					},
@@ -953,7 +959,8 @@ func TestMergeComplex(t *testing.T) {
 		}
 
 		assert.Nil(t, StructuralCompareCdxBoms(resultGraph.ToCycloneDX(BOMMetadata{
-			ArtifactName: artifactName,
+			ArtifactName:     artifactName,
+			AssetVersionName: "0.0.0",
 		}), expected))
 	})
 

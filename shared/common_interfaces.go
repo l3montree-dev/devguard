@@ -563,7 +563,7 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)
+	GetAndSaveLicenseInformation(tx DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
 	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)

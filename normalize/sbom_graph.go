@@ -1117,7 +1117,10 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if metadata.AddExternalReferences {
 		apiURL := os.Getenv("API_URL")
-		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, metadata.AssetID.String())
+		// we need to path escape the artifact name for the URL, but not the asset version slug or asset id since those are already URL safe
+		escapedArtifactName := url.PathEscape(metadata.ArtifactName)
+
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
 		vexURL, dashboardURL := calculateExternalURLs(vexURL, metadata)
 
@@ -1138,11 +1141,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	rootName := metadata.RootName
 	if rootName == "" {
-		rootName = metadata.ArtifactName
-	}
-	// add the assetVersionName to the rootName if it exists
-	if metadata.AssetVersionName != "" {
-		rootName = fmt.Sprintf("%s@%s", rootName, metadata.AssetVersionName)
+		rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
 	}
 
 	// check if valid purl
@@ -1421,6 +1420,16 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	}
 	if rootComponent.Name == "" {
 		return nil, fmt.Errorf("root component name is required")
+	}
+
+	// if we want to keep the original root component, we need to validate that it has a valid purl, otherwise we will not be able to add it to the graph
+	if keepOriginalSbomRootComponent {
+		if rootComponent.PackageURL == "" {
+			return nil, fmt.Errorf("root component PackageURL is required when keepOriginalSbomRootComponent is true")
+		}
+		if _, err := packageurl.FromString(rootComponent.PackageURL); err != nil {
+			return nil, fmt.Errorf("root component has invalid PackageURL: %w", err)
+		}
 	}
 
 	// Validate BOM format

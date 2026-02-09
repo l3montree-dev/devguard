@@ -238,7 +238,6 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 		g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
 
 		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:         "my-app",
 			ArtifactName:     "my-app",
 			AssetVersionName: "1.2.3",
 		})
@@ -296,7 +295,6 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 		g.AddEdge(infoSourceID, compID)
 
 		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:         "my-app",
 			ArtifactName:     "my-app",
 			AssetVersionName: "2.0.0",
 		})

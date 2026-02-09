@@ -57,7 +57,7 @@ func (repository *assetVersionRepository) Read(assetVersionName string, assetID 
 
 func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *models.AssetVersion) error {
 	// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-	return repository.GetDB(tx).Transaction(func(dbTx *gorm.DB) error {
+	err := repository.GetDB(tx).Transaction(func(dbTx *gorm.DB) error {
 		// First, explicitly delete all related artifacts to ensure proper cleanup
 		if err := dbTx.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Delete(&models.Artifact{}).Error; err != nil {
 			slog.Error("error deleting artifacts for asset version", "err", err, "assetVersion", assetVersion.Name)
@@ -70,16 +70,19 @@ func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *mode
 			return err
 		}
 
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err := repository.db.Exec(sql).Error
-			if err != nil {
-				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-			}
-		}() //nolint:errcheck
 		slog.Info("successfully deleted asset version and all related artifacts", "assetVersion", assetVersion.Name)
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	err = repository.db.Exec(CleanupOrphanedRecordsSQL).Error
+	if err != nil {
+		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+	}
+
+	return nil
 }
 
 func (repository *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {

@@ -1328,7 +1328,7 @@ func TestIdempotency(t *testing.T) {
 		controller := f.App.ScanController
 		app := echo.New()
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
-		assetVersionController := f.App.AssetVersionController
+		artifactController := f.App.ArtifactController
 
 		setupContext := func(ctx shared.Context) {
 			authSession := mocks.AuthSession{}
@@ -1361,8 +1361,9 @@ func TestIdempotency(t *testing.T) {
 			req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 			firstDownload := recorder.Body.String()
@@ -1385,7 +1386,8 @@ func TestIdempotency(t *testing.T) {
 			req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
-			err = assetVersionController.SBOMJSON(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 			secondDownload := recorder.Body.String()
@@ -1742,7 +1744,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
-		assetVersionController := f.App.AssetVersionController
+		artifactController := f.App.ArtifactController
 
 		app := echo.New()
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
@@ -1802,8 +1804,9 @@ func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 			req = httptest.NewRequest("GET", "/sbom/json", nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "header-1-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
@@ -1847,8 +1850,9 @@ func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 			req = httptest.NewRequest("GET", "/sbom/json", nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "asset-default-true-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
@@ -1868,7 +1872,7 @@ func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
-		assetVersionController := f.App.AssetVersionController
+		artifactController := f.App.ArtifactController
 
 		app := echo.New()
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
@@ -1928,8 +1932,9 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 			req = httptest.NewRequest("GET", "/sbom/json", nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "no-header-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
@@ -1973,8 +1978,9 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 			req = httptest.NewRequest("GET", "/sbom/json", nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "header-0-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
@@ -2018,8 +2024,9 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 			req = httptest.NewRequest("GET", "/sbom/json", nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "invalid-header-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
 
-			err = assetVersionController.SBOMJSON(ctx)
+			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 

@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -99,8 +100,8 @@ func (_c *ComponentService_FetchInformationSources_Call) RunAndReturn(run func(a
 }
 
 // GetAndSaveLicenseInformation provides a mock function for the type ComponentService
-func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	ret := _mock.Called(assetVersion, artifactName, forceRefresh)
+func (_mock *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	ret := _mock.Called(tx, assetVersion, artifactName, forceRefresh)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -108,18 +109,18 @@ func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.
 
 	var r0 []models.Component
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) ([]models.Component, error)); ok {
-		return returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.AssetVersion, *string, bool) ([]models.Component, error)); ok {
+		return returnFunc(tx, assetVersion, artifactName, forceRefresh)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, *string, bool) []models.Component); ok {
-		r0 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.AssetVersion, *string, bool) []models.Component); ok {
+		r0 = returnFunc(tx, assetVersion, artifactName, forceRefresh)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, *string, bool) error); ok {
-		r1 = returnFunc(assetVersion, artifactName, forceRefresh)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, models.AssetVersion, *string, bool) error); ok {
+		r1 = returnFunc(tx, assetVersion, artifactName, forceRefresh)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -132,31 +133,37 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 }
 
 // GetAndSaveLicenseInformation is a helper method to define mock.On call
+//   - tx shared.DB
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
-	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName, forceRefresh)}
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(tx interface{}, assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", tx, assetVersion, artifactName, forceRefresh)}
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetVersion
+		var arg0 shared.DB
 		if args[0] != nil {
-			arg0 = args[0].(models.AssetVersion)
+			arg0 = args[0].(shared.DB)
 		}
-		var arg1 *string
+		var arg1 models.AssetVersion
 		if args[1] != nil {
-			arg1 = args[1].(*string)
+			arg1 = args[1].(models.AssetVersion)
 		}
-		var arg2 bool
+		var arg2 *string
 		if args[2] != nil {
-			arg2 = args[2].(bool)
+			arg2 = args[2].(*string)
+		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -167,7 +174,7 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 	return _c
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }
