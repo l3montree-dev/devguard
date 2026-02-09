@@ -222,7 +222,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 		})
 	}
 
-	return nil
+	return ctx.NoContent(200)
 }
 
 // @Summary Delete all external references for an asset version
