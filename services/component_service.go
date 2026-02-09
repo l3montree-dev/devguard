@@ -183,8 +183,8 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}

@@ -18,27 +18,19 @@ package controllers
 import (
 	"os"
 
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetadata {
-	assetVersion := shared.GetAssetVersion(ctx)
+func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 	orgSlug, _ := shared.GetOrgSlug(ctx)
 	projectSlug, _ := shared.GetProjectSlug(ctx)
 	frontendURL := os.Getenv("FRONTEND_URL")
 	assetSlug, _ := shared.GetAssetSlug(ctx)
 
-	// Try to get artifact name from URL param first, then from context
-	artifactName, err := shared.GetArtifactName(ctx)
-	if err != nil || artifactName == "" {
-		// Fall back to artifact in context
-		artifact, err := shared.MaybeGetArtifact(ctx)
-		if err == nil {
-			artifactName = artifact.ArtifactName
-		}
-	}
+	assetVersion := shared.GetAssetVersion(ctx)
+	artifact := shared.GetArtifact(ctx)
+	asset := shared.GetAsset(ctx)
 
 	return normalize.BOMMetadata{
 		AssetVersionSlug:      assetVersion.Slug,
@@ -46,7 +38,7 @@ func ctxToBOMMetadata(ctx shared.Context, asset models.Asset) normalize.BOMMetad
 		OrgSlug:               orgSlug,
 		ProjectSlug:           projectSlug,
 		FrontendURL:           frontendURL,
-		ArtifactName:          artifactName,
+		ArtifactName:          artifact.ArtifactName,
 		AssetID:               asset.ID,
 		AddExternalReferences: asset.SharesInformation,
 		AssetVersionName:      assetVersion.Name,

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"log/slog"
 	"math"
 	"os"
 	"slices"
@@ -100,40 +99,6 @@ func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project m
 
 	if err := s.componentRepository.HandleStateDiff(tx, assetVersion, wholeAssetGraph, diff); err != nil {
 		return nil, errors.Wrap(err, "could not handle state diff")
-	}
-
-	// update the license information in the background
-	s.FireAndForget(func() {
-		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, utils.Ptr(artifactName), false)
-		if err != nil {
-			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
-		} else {
-			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		}
-	})
-
-	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
-		s.FireAndForget(func() {
-			// Export the updated graph back to CycloneDX format for the event
-			exportedBOM := wholeAssetGraph.ToCycloneDX(normalize.BOMMetadata{
-				RootName: artifactName,
-			})
-			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
-				AssetVersion: shared.ToAssetVersionObject(assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Artifact: shared.ArtifactObject{
-					ArtifactName: artifactName,
-				},
-				SBOM: exportedBOM,
-			}); err != nil {
-				slog.Error("could not handle SBOM updated event", "err", err)
-			} else {
-				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-			}
-		})
 	}
 
 	return wholeAssetGraph, nil

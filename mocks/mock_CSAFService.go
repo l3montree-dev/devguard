@@ -38,8 +38,8 @@ func (_m *CSAFService) EXPECT() *CSAFService_Expecter {
 }
 
 // GetVexFromCsafProvider provides a mock function for the type CSAFService
-func (_mock *CSAFService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL string, domain string) (*cyclonedx.BOM, error) {
-	ret := _mock.Called(purl, ref, realURL, domain)
+func (_mock *CSAFService) GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error) {
+	ret := _mock.Called(purl, domain)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVexFromCsafProvider")
@@ -47,18 +47,18 @@ func (_mock *CSAFService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref
 
 	var r0 *cyclonedx.BOM
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(packageurl.PackageURL, string, string, string) (*cyclonedx.BOM, error)); ok {
-		return returnFunc(purl, ref, realURL, domain)
+	if returnFunc, ok := ret.Get(0).(func(packageurl.PackageURL, string) (*cyclonedx.BOM, error)); ok {
+		return returnFunc(purl, domain)
 	}
-	if returnFunc, ok := ret.Get(0).(func(packageurl.PackageURL, string, string, string) *cyclonedx.BOM); ok {
-		r0 = returnFunc(purl, ref, realURL, domain)
+	if returnFunc, ok := ret.Get(0).(func(packageurl.PackageURL, string) *cyclonedx.BOM); ok {
+		r0 = returnFunc(purl, domain)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*cyclonedx.BOM)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(packageurl.PackageURL, string, string, string) error); ok {
-		r1 = returnFunc(purl, ref, realURL, domain)
+	if returnFunc, ok := ret.Get(1).(func(packageurl.PackageURL, string) error); ok {
+		r1 = returnFunc(purl, domain)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,14 +72,12 @@ type CSAFService_GetVexFromCsafProvider_Call struct {
 
 // GetVexFromCsafProvider is a helper method to define mock.On call
 //   - purl packageurl.PackageURL
-//   - ref string
-//   - realURL string
 //   - domain string
-func (_e *CSAFService_Expecter) GetVexFromCsafProvider(purl interface{}, ref interface{}, realURL interface{}, domain interface{}) *CSAFService_GetVexFromCsafProvider_Call {
-	return &CSAFService_GetVexFromCsafProvider_Call{Call: _e.mock.On("GetVexFromCsafProvider", purl, ref, realURL, domain)}
+func (_e *CSAFService_Expecter) GetVexFromCsafProvider(purl interface{}, domain interface{}) *CSAFService_GetVexFromCsafProvider_Call {
+	return &CSAFService_GetVexFromCsafProvider_Call{Call: _e.mock.On("GetVexFromCsafProvider", purl, domain)}
 }
 
-func (_c *CSAFService_GetVexFromCsafProvider_Call) Run(run func(purl packageurl.PackageURL, ref string, realURL string, domain string)) *CSAFService_GetVexFromCsafProvider_Call {
+func (_c *CSAFService_GetVexFromCsafProvider_Call) Run(run func(purl packageurl.PackageURL, domain string)) *CSAFService_GetVexFromCsafProvider_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 packageurl.PackageURL
 		if args[0] != nil {
@@ -89,19 +87,9 @@ func (_c *CSAFService_GetVexFromCsafProvider_Call) Run(run func(purl packageurl.
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -112,7 +100,7 @@ func (_c *CSAFService_GetVexFromCsafProvider_Call) Return(bOM *cyclonedx.BOM, er
 	return _c
 }
 
-func (_c *CSAFService_GetVexFromCsafProvider_Call) RunAndReturn(run func(purl packageurl.PackageURL, ref string, realURL string, domain string) (*cyclonedx.BOM, error)) *CSAFService_GetVexFromCsafProvider_Call {
+func (_c *CSAFService_GetVexFromCsafProvider_Call) RunAndReturn(run func(purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)) *CSAFService_GetVexFromCsafProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }

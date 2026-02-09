@@ -41,12 +41,14 @@ type ScanController struct {
 	firstPartyVulnService       shared.FirstPartyVulnService
 	vexRuleService              shared.VEXRuleService
 	externalReferenceRepository shared.ExternalReferenceRepository
+	componentService            shared.ComponentService
+	thirdPartyIntegration       shared.IntegrationAggregate
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate) *ScanController {
 	return &ScanController{
 		assetVersionService:         assetVersionService,
 		assetVersionRepository:      assetVersionRepository,
@@ -58,6 +60,8 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 		ScanService:                 scanService,
 		vexRuleService:              vexRuleService,
 		externalReferenceRepository: externalReferenceRepository,
+		componentService:            componentService,
+		thirdPartyIntegration:       thirdPartyIntegration,
 	}
 }
 
@@ -275,6 +279,40 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 
 	tx.Commit()
+
+	// update the license information in the background
+	s.FireAndForget(func() {
+		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+		_, err := s.componentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifactName), false)
+		if err != nil {
+			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
+		} else {
+			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+		}
+	})
+
+	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
+		s.FireAndForget(func() {
+			// Export the updated graph back to CycloneDX format for the event
+			exportedBOM := wholeSBOM.ToCycloneDX(normalize.BOMMetadata{
+				RootName: artifactName,
+			})
+			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
+				AssetVersion: shared.ToAssetVersionObject(assetVersion),
+				Asset:        shared.ToAssetObject(asset),
+				Project:      shared.ToProjectObject(project),
+				Org:          shared.ToOrgObject(org),
+				Artifact: shared.ArtifactObject{
+					ArtifactName: artifactName,
+				},
+				SBOM: exportedBOM,
+			}); err != nil {
+				slog.Error("could not handle SBOM updated event", "err", err)
+			} else {
+				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+			}
+		})
+	}
 
 	//Check if we want to create an issue for this assetVersion
 	s.FireAndForget(func() {

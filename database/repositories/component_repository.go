@@ -166,7 +166,7 @@ func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Compo
 func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
 	// Create new components in the database
 	if len(diff.AddedNodes) > 0 {
-		if err := c.CreateBatch(nil, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
+		if err := c.CreateBatch(tx, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
 			return models.Component{
 				ID: node.Component.PackageURL,
 			}
@@ -178,7 +178,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	// delete removed components from the database
 	removedNodeIDs := diff.RemovedNodeIDs()
 	if len(removedNodeIDs) > 0 {
-		if err := c.DeleteBatch(nil, utils.Map(removedNodeIDs, func(componentID string) models.Component {
+		if err := c.DeleteBatch(tx, utils.Map(removedNodeIDs, func(componentID string) models.Component {
 			node := wholeAssetGraph.Node(componentID)
 			return models.Component{
 				ID: node.Component.PackageURL,
@@ -214,7 +214,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 			AND asset_version_name = ?
 		`, values)
 		// execute the query
-		err := c.GetDB(nil).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
+		err := c.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
 
 		if err != nil {
 			return err
@@ -244,7 +244,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 		deps = append(deps, componentDependency)
 	}
 
-	if err := c.CreateComponents(nil, deps); err != nil {
+	if err := c.CreateComponents(tx, deps); err != nil {
 		return errors.Wrap(err, "could not create component dependencies")
 	}
 	return nil
