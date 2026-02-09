@@ -201,7 +201,11 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 			return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
 		}
 
-		tx.Commit()
+		commitResult := tx.Commit()
+		if commitResult.Error != nil {
+			slog.Error("could not commit transaction after syncing external sources", "err", commitResult.Error, "artifact", artifact.ArtifactName)
+			return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
+		}
 
 		artifact := artifact // capture loop variable
 		c.FireAndForget(func() {
