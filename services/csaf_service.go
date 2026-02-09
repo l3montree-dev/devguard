@@ -249,9 +249,9 @@ func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageur
 	return cdxVulns, nil
 }
 
-func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, ref string, realURL, domain string) (*cyclonedx.BOM, error) {
+func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, url string) (*cyclonedx.BOM, error) {
 	// download all advisories
-	advisories, err := service.downloadCsafReports(domain)
+	advisories, err := service.downloadCsafReports(url)
 	if err != nil {
 		return nil, err
 	}
@@ -286,9 +286,9 @@ func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, re
 		Vulnerabilities: &cdxVulns,
 		Metadata: &cyclonedx.Metadata{
 			Component: &cyclonedx.Component{
-				Type:   cyclonedx.ComponentTypeApplication,
-				Name:   "root",
-				BOMRef: "root",
+				Type:       cyclonedx.ComponentTypeApplication,
+				PackageURL: purlString,
+				Name:       purlString,
 			},
 		},
 		Components: &[]cyclonedx.Component{
@@ -795,7 +795,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	org := shared.GetOrg(ctx)
 	asset := shared.GetAsset(ctx)
 	// remove everything <asset-slug>_ from the beginning of the document id
-	cveID = strings.ToUpper(strings.Split(cveID, ".json")[0])
+	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// fetch the cve from the database
 	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)

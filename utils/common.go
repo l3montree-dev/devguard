@@ -158,3 +158,18 @@ func GetDirFromPath(path string) string {
 	}
 	return path
 }
+
+// DeduplicateSlice deduplicates a slice in O(n) out of place.
+func DeduplicateSlice[T any](slice []T, idFunc func(t T) string) []T {
+	deduplicatedSlice := make([]T, 0, len(slice))
+	seen := make(map[string]struct{}, len(slice))
+	for i := range slice {
+		id := idFunc(slice[i])
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		deduplicatedSlice = append(deduplicatedSlice, slice[i])
+	}
+	return deduplicatedSlice
+}

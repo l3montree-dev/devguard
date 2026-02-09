@@ -28,18 +28,18 @@ type ArtifactRouter struct {
 
 func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
-	assetVersionController *controllers.AssetVersionController,
 	artifactController *controllers.ArtifactController,
 	artifactRepository shared.ArtifactRepository,
 ) ArtifactRouter {
 	artifactRouter := assetVersionGroup.Group.Group("/artifacts/:artifactName", middlewares.ArtifactMiddleware(artifactRepository))
 
-	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
-	artifactRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
-	artifactRouter.GET("/vex.json/", assetVersionController.VEXJSON)
-	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
-	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
-	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	artifactRouter.GET("/sbom.json/", artifactController.SBOMJSON)
+	artifactRouter.GET("/sbom.xml/", artifactController.SBOMXML)
+	artifactRouter.GET("/vex.json/", artifactController.VEXJSON)
+	artifactRouter.GET("/openvex.json/", artifactController.OpenVEXJSON)
+	artifactRouter.GET("/vex.xml/", artifactController.VEXXML)
+	artifactRouter.GET("/sbom.pdf/", artifactController.BuildPDFFromSBOM)
+	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}))

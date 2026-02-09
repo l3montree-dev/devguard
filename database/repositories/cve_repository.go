@@ -243,7 +243,7 @@ func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
 	) as new
 	WHERE cves.cve = new.cve;`
 	// avoid slow sql log
-	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, epss, percentiles).Error
+	return g.GetDB(tx).Exec(sql, ids, epss, percentiles).Error
 }
 
 // this function is used by the CISA KEV mirror function to update the KEV information for all cves

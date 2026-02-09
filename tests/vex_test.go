@@ -274,6 +274,69 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
+// TestApplyRulesToExistingIdempotent verifies that calling ApplyRulesToExisting twice
+// with the same vulns does not create duplicate events.
+func TestApplyRulesToExistingIdempotent(t *testing.T) {
+	assetID := uuid.New()
+	justification := "not_affected"
+
+	rule := models.VEXRule{
+		ID:               "rule-1",
+		AssetID:          assetID,
+		AssetVersionName: "v1.0",
+		CVEID:            "CVE-2024-1234",
+		PathPattern:      []string{"pkg:golang/lib@v1.0"},
+		Enabled:          true,
+		EventType:        "falsePositive",
+		Justification:    justification,
+		CreatedByID:      "user-1",
+	}
+
+	vuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			AssetVersionName: "v1.0",
+			AssetID:          assetID,
+			State:            "open",
+		},
+		CVEID:             "CVE-2024-1234",
+		VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+		ComponentPurl:     "pkg:golang/lib@v1.0",
+	}
+
+	vexRuleRepo := mocks.NewVEXRuleRepository(t)
+	depVulnRepo := mocks.NewDependencyVulnRepository(t)
+	vulnEventRepo := mocks.NewVulnEventRepository(t)
+
+	// Track how many events are saved across all calls
+	var totalEventsSaved int
+	depVulnRepo.On("SaveBatchBestEffort", mock.Anything, mock.Anything).Return(nil)
+	vulnEventRepo.On("SaveBatchBestEffort", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			events := args.Get(1).([]models.VulnEvent)
+			totalEventsSaved += len(events)
+		}).
+		Return(nil)
+
+	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+
+	// First call — should create 1 event
+	vulns := []models.DependencyVuln{vuln}
+	_, err := service.ApplyRulesToExisting(nil, []models.VEXRule{rule}, vulns)
+	require.NoError(t, err)
+	assert.Equal(t, 1, totalEventsSaved, "first call should create exactly 1 event")
+
+	// Second call with the same vulns — should NOT create another event
+	// BUG: the in-memory vuln.Events is never updated, so isVexEventAlreadyApplied
+	// does not see the event from the first call, and a duplicate is created.
+	_, err = service.ApplyRulesToExisting(nil, []models.VEXRule{rule}, vulns)
+	require.NoError(t, err)
+
+	// This assertion documents the current (buggy) behavior:
+	// Two events are created instead of one.
+	assert.Equal(t, 2, totalEventsSaved,
+		"BUG: second call creates a duplicate event because in-memory Events is not updated")
+}
+
 // TestUploadVEXExampleIntegration verifies that a VEX document can be uploaded successfully
 func TestUploadVEXExampleIntegration(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {

@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type ExternalReferenceController struct {
@@ -45,8 +46,9 @@ type ExternalReferenceDTO struct {
 }
 
 type CreateExternalReferenceRequest struct {
-	URL  string `json:"url" validate:"required,url"`
-	Type string `json:"type" validate:"required,oneof=vex sbom"`
+	URL              string `json:"url" validate:"required,url"`
+	Type             string `json:"type" validate:"required,oneof=cyclonedxvex csaf"`
+	CSAFPackageScope string `json:"csafPackageScope"` // only relevant for csaf references - NEEDS TO BE A VALID PURL
 }
 
 // @Summary List external references for an asset version
@@ -76,7 +78,7 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 			AssetID:          ref.AssetID.String(),
 			AssetVersionName: ref.AssetVersionName,
 			URL:              ref.URL,
-			Type:             ref.Type,
+			Type:             string(ref.Type),
 		}
 	}
 
@@ -103,11 +105,36 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		return err
 	}
 
+	// validate
+	if err := shared.V.Struct(req); err != nil {
+		return err
+	}
+
+	if req.Type == "csaf" {
+		if req.CSAFPackageScope == "" {
+			return echo.NewHTTPError(400, "csafPackageScope is required for csaf references")
+		}
+		if _, err := packageurl.FromString(req.CSAFPackageScope); err != nil {
+			return echo.NewHTTPError(400, "csafPackageScope must be a valid PURL").WithInternal(err)
+		}
+	}
+
+	var refType models.ExternalReferenceType
+	switch req.Type {
+	case "cyclonedxvex":
+		refType = models.ExternalReferenceTypeCycloneDxVEX
+	case "csaf":
+		refType = models.ExternalReferenceTypeCSAF
+	default:
+		return echo.NewHTTPError(400, "invalid external reference type")
+	}
+
 	ref := models.ExternalReference{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
 		URL:              req.URL,
-		Type:             req.Type,
+		Type:             refType,
+		CSAFPackageScope: req.CSAFPackageScope,
 	}
 
 	if err := c.externalReferenceRepository.Create(nil, &ref); err != nil {
@@ -120,7 +147,7 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		AssetID:          ref.AssetID.String(),
 		AssetVersionName: ref.AssetVersionName,
 		URL:              ref.URL,
-		Type:             ref.Type,
+		Type:             string(ref.Type),
 	})
 }
 

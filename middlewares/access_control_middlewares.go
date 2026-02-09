@@ -286,32 +286,30 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 
-			var assetVersion models.AssetVersion
-			// lets check for ref and artifact name query parameters
-			if ref := ctx.QueryParam("ref"); ref != "" {
-				// find the ref
-				assetVersion, err = assetVersionRepository.ReadBySlug(asset.ID, ref)
-				if err != nil {
-					slog.Error("could not find asset version by ref in ShareMiddleware", "assetID", assetID, "ref", ref, "err", err)
-					return echo.NewHTTPError(404, "could not find asset version for the provided ref")
-				}
-			} else {
-				// use the default branch
-				assetVersion, err = assetVersionRepository.GetDefaultAssetVersion(asset.ID)
-				if err != nil {
-					slog.Error("could not find default asset version in ShareMiddleware", "assetID", assetID, "err", err)
-					return echo.NewHTTPError(404, "could not find default asset version")
-				}
+			// resolve asset version from path param
+			assetVersionSlug, err := shared.GetURLDecodedParam(ctx, "assetVersionSlug")
+			if err != nil {
+				slog.Error("could not get assetVersionSlug from url", "err", err)
+				return echo.NewHTTPError(400, "invalid assetVersionSlug")
+			}
+			assetVersion, err := assetVersionRepository.ReadBySlug(asset.ID, assetVersionSlug)
+			if err != nil {
+				slog.Error("could not find asset version in ShareMiddleware", "assetID", assetID, "assetVersionSlug", assetVersionSlug, "err", err)
+				return echo.NewHTTPError(404, "could not find asset version")
 			}
 
-			if artifactName := ctx.QueryParam("artifactName"); artifactName != "" {
-				artifact, err := artifactRepository.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
-				if err != nil {
-					slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
-					return echo.NewHTTPError(404, "could not find artifact for the provided artifact name")
-				}
-				shared.SetArtifact(ctx, artifact)
+			// resolve artifact from path param
+			artifactName, err := shared.GetURLDecodedParam(ctx, "artifactName")
+			if err != nil {
+				slog.Error("could not get artifactName from url", "err", err)
+				return echo.NewHTTPError(400, "invalid artifactName")
 			}
+			artifact, err := artifactRepository.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
+			if err != nil {
+				slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
+				return echo.NewHTTPError(404, "could not find artifact")
+			}
+			shared.SetArtifact(ctx, artifact)
 
 			shared.SetOrg(ctx, org)
 			shared.SetProject(ctx, project)

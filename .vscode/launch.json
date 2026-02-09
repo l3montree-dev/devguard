@@ -87,6 +87,8 @@
             "args": [
                 "vulndb",
                 "sync",
+                "--databases",
+                "epss"
             ]
         },
         {

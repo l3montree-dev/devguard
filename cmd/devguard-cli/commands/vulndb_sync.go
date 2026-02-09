@@ -68,6 +68,15 @@ Use --databases flag to sync specific sources only.`,
 						slog.Info("finished cwe database sync", "duration", time.Since(now))
 					}
 
+					if emptyOrContains(databasesToSync, "osv") {
+						slog.Info("starting osv database sync")
+						now := time.Now()
+						if err := osvService.Mirror(); err != nil {
+							slog.Error("could not sync osv database", "err", err)
+						}
+						slog.Info("finished osv database sync", "duration", time.Since(now))
+					}
+
 					if emptyOrContains(databasesToSync, "epss") {
 						slog.Info("starting epss database sync")
 						now := time.Now()
@@ -86,15 +95,6 @@ Use --databases flag to sync specific sources only.`,
 							slog.Error("could not sync cisa-kev database", "err", err)
 						}
 						slog.Info("finished cisa-kev database sync", "duration", time.Since(now))
-					}
-
-					if emptyOrContains(databasesToSync, "osv") {
-						slog.Info("starting osv database sync")
-						now := time.Now()
-						if err := osvService.Mirror(); err != nil {
-							slog.Error("could not sync osv database", "err", err)
-						}
-						slog.Info("finished osv database sync", "duration", time.Since(now))
 					}
 
 					if emptyOrContains(databasesToSync, "exploitdb") {

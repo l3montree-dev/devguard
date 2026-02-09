@@ -14,7 +14,6 @@ import (
 	"time"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/secure-systems-lab/go-securesystemslib/cjson"
 
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -246,7 +245,6 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	// extract the requested year and build the revision history first
 	year := strings.TrimRight(ctx.Param("year"), "/")
 	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
-
 	if err != nil {
 		return err
 	}
@@ -258,6 +256,12 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
 	})
+
+	// deduplicate Slice to avoid listing the same CVEs
+	vulnsOfThatYear = utils.DeduplicateSlice(vulnsOfThatYear, func(vuln models.DependencyVuln) string {
+		return vuln.CVEID
+	})
+
 	type pageData struct {
 		Year           int
 		Filenames      []string
@@ -483,12 +487,12 @@ func getPublicKeyFingerprint() string {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version} [get]
 func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
 	// generate the report first
-	csafReport, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
+	report, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
 	if err != nil {
 		return err
 	}
 
-	cjsonData, err := cjson.EncodeCanonical(normalize.DeepSort(csafReport))
+	cjsonData, err := normalize.EncodeCanonical(report)
 	if err != nil {
 		return err
 	}

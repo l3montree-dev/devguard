@@ -106,19 +106,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
-		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
-			return dtos.VulnEventDTO{
-				ID:                      ev.ID,
-				Type:                    ev.Type,
-				VulnID:                  ev.VulnID,
-				UserID:                  ev.UserID,
-				Justification:           ev.Justification,
-				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        GetAssetVersionName(dependencyVuln.Vulnerability, ev),
-				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
-				CreatedAt:               ev.CreatedAt,
-			}
-		}),
+		Events: utils.Map(dependencyVuln.Events, ConvertVulnEventToDto),
 	}
 }
 

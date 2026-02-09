@@ -202,6 +202,13 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 				_, err := w.Write([]byte(`{
 					"bomFormat": "CycloneDX",
 					"specVersion": "1.4",
+					"metadata": {
+						"component": {
+							"bom-ref": "pkg:npm/test-component@1.0.0",
+							"name": "test-component",
+							"version": "1.0.0"
+						}
+					},
 					"version": 1,
 					"components": []
 				}`))
@@ -274,6 +281,6 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
 		assert.Equal(t, 1, len(invalidURLs))
-		assert.Equal(t, sbomURL, invalidURLs[0])
+		assert.Equal(t, sbomURL, invalidURLs[0].URL)
 	})
 }

@@ -28,7 +28,7 @@ func NewCISAKEVService(cveRepository shared.CveRepository, cveRelationshipReposi
 	}
 }
 
-var cisaKEVURL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+var CisaKEVURL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 type cisaKEVCatalog struct {
 	Title           string         `json:"title"`
@@ -55,7 +55,7 @@ type cisaKEVEntry struct {
 const kevBatchSize int = 50_000
 
 func (s *cisaKEVService) fetchJSON(ctx context.Context) ([]models.CVE, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cisaKEVURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, CisaKEVURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-func (s cisaKEVService) Mirror() (currentErr error) {
+func (s cisaKEVService) Mirror() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	cves, err := s.fetchJSON(ctx)
 	cancel()
@@ -121,17 +121,6 @@ func (s cisaKEVService) Mirror() (currentErr error) {
 	}
 
 	tx := s.cveRepository.Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("could not start new transaction: %w", tx.Error)
-	}
-	defer func() {
-		if currentErr != nil {
-			rollbackError := tx.Rollback().Error
-			if rollbackError != nil {
-				slog.Error("could not rollback transaction, there might be a corrupted database state")
-			}
-		}
-	}()
 
 	// build a map of CVE ID -> KEV data for quick lookup
 	kevMap := make(map[string]models.CVE, len(cves))

@@ -33,11 +33,11 @@ func NewShareRouter(apiV1Router APIV1Router,
 	assetRepository shared.AssetRepository,
 	assetVersionRepository shared.AssetVersionRepository,
 	artifactRepository shared.ArtifactRepository,
-	assetVersionController *controllers.AssetVersionController,
+	artifactController *controllers.ArtifactController,
 ) ShareRouter {
-	shareRouter := apiV1Router.Group.Group("/public/:assetID", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	shareRouter.GET("/vex.json/", assetVersionController.VEXJSON)
-	shareRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	shareRouter := apiV1Router.Group.Group("/public/:assetID/refs/:assetVersionSlug/artifacts/:artifactName", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
+	shareRouter.GET("/vex.json/", artifactController.VEXJSON)
+	shareRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	shareRouter.GET("/badges/:badge/", assetController.GetBadges)
 
 	return ShareRouter{

@@ -38,7 +38,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.AssetVersionController.VEXJSON(ctx)
+			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -50,8 +50,8 @@ func TestBuildVEX(t *testing.T) {
 			assert.Nil(t, err)
 
 			//test general metadata
-			assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.BOMRef)
-			assert.Equal(t, "test-artifact", VEXResult.Metadata.Component.Name)
+			assert.Equal(t, "test-artifact@main", VEXResult.Metadata.Component.BOMRef)
+			assert.Equal(t, "test-artifact@main", VEXResult.Metadata.Component.Name)
 
 			assert.Empty(t, VEXResult.Vulnerabilities)
 		})
@@ -62,7 +62,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.AssetVersionController.VEXJSON(ctx)
+			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -119,7 +119,7 @@ func TestBuildVEX(t *testing.T) {
 				panic(err)
 			}
 
-			err := f.App.AssetVersionController.VEXJSON(ctx)
+			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -159,7 +159,7 @@ func TestBuildVEX(t *testing.T) {
 			if err := f.DB.Save(&vuln1).Error; err != nil {
 				panic(err)
 			}
-			err := f.App.AssetVersionController.VEXJSON(ctx)
+			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing

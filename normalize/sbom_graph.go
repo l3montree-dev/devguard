@@ -112,14 +112,32 @@ type SBOMGraph struct {
 	rootID string // ID of the root node (constant: "ROOT")
 
 	scopeID string // The id of the current scope node
-
-	keepOriginalSbomRootComponent bool   // Whether to keep the original root component from the input BOM
-	originalRootRef               string // The original root component reference from input BOM
 }
 
 type VexReport struct {
 	Report *cdx.BOM
 	Source string
+}
+
+func validateVexReport(report *cdx.BOM) error {
+	if report.Metadata == nil || report.Metadata.Component == nil {
+		return fmt.Errorf("invalid VEX report: missing metadata.component")
+	}
+	if report.Metadata.Component.PackageURL == "" {
+		return fmt.Errorf("invalid VEX report: root component must have a PackageURL")
+	}
+	return nil
+}
+
+func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
+	if err := validateVexReport(report); err != nil {
+		return nil, err
+	}
+
+	return &VexReport{
+		Report: report,
+		Source: source,
+	}, nil
 }
 
 func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
@@ -130,14 +148,6 @@ func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
 		}
 	}
 	return depMap
-}
-
-func (v *VexReport) GetRootPurl() (packageurl.PackageURL, error) {
-	root := v.Report.Metadata.Component
-	if root == nil || root.PackageURL == "" {
-		return packageurl.PackageURL{}, fmt.Errorf("no root component with PURL found in VEX report")
-	}
-	return packageurl.FromString(root.PackageURL)
 }
 
 const GraphRootNodeID = "ROOT"
@@ -211,6 +221,35 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 	return id
 }
 
+// isValidComponentType checks if a component type is valid per CycloneDX spec
+func isValidComponentType(ct cdx.ComponentType) bool {
+	validTypes := map[cdx.ComponentType]bool{
+		cdx.ComponentTypeApplication:          true,
+		cdx.ComponentTypeContainer:            true,
+		cdx.ComponentTypeCryptographicAsset:   true,
+		cdx.ComponentTypeData:                 true,
+		cdx.ComponentTypeDevice:               true,
+		cdx.ComponentTypeDeviceDriver:         true,
+		cdx.ComponentTypeFile:                 true,
+		cdx.ComponentTypeFirmware:             true,
+		cdx.ComponentTypeFramework:            true,
+		cdx.ComponentTypeLibrary:              true,
+		cdx.ComponentTypeMachineLearningModel: true,
+		cdx.ComponentTypeOS:                   true,
+		cdx.ComponentTypePlatform:             true,
+	}
+	return validTypes[ct]
+}
+
+// sanitizeComponentType ensures the component type is valid, falling back to Library if not
+func sanitizeComponentType(ct cdx.ComponentType) cdx.ComponentType {
+	if isValidComponentType(ct) {
+		return ct
+	}
+	// Fall back to Library for invalid types
+	return cdx.ComponentTypeLibrary
+}
+
 // AddComponent adds a component node.
 func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 	if comp.PackageURL != "" {
@@ -220,6 +259,10 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 			comp.PackageURL = unescapedPurl
 		}
 	}
+
+	// Sanitize component type - fall back to Library if invalid
+	comp.Type = sanitizeComponentType(comp.Type)
+
 	if g.nodes[comp.BOMRef] == nil {
 		g.nodes[comp.BOMRef] = &GraphNode{
 			BOMRef:    comp.BOMRef,
@@ -238,7 +281,24 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 	g.edges[parentID][childID] = struct{}{}
 }
 
-// AddVulnerability adds a vulnerability.
+// statePriority returns a priority value for vulnerability states.
+// Higher value = higher priority. exploitable > in_triage > false_positive
+func statePriority(state cdx.ImpactAnalysisState) int {
+	switch state {
+	case cdx.IASExploitable:
+		return 3
+	case cdx.IASInTriage:
+		return 2
+	case cdx.IASFalsePositive:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// AddVulnerability adds a vulnerability with deduplication.
+// When the same CVE+Affects combination exists, state priority determines which one to keep:
+// exploitable > in_triage > false_positive
 func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 	affectsStr := ""
 	if vuln.Affects != nil {
@@ -247,11 +307,28 @@ func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 		}
 	}
 
-	state := ""
-	if vuln.Analysis != nil {
-		state = string(vuln.Analysis.State)
+	key := vuln.ID + "@" + affectsStr
+
+	existing, exists := g.vulnerabilities[key]
+	if !exists {
+		g.vulnerabilities[key] = &vuln
+		return
 	}
-	g.vulnerabilities[vuln.ID+"@"+affectsStr+"@"+state] = &vuln
+
+	// Compare state priorities - higher priority wins
+	existingState := cdx.ImpactAnalysisState("")
+	if existing.Analysis != nil {
+		existingState = existing.Analysis.State
+	}
+
+	newState := cdx.ImpactAnalysisState("")
+	if vuln.Analysis != nil {
+		newState = vuln.Analysis.State
+	}
+
+	if statePriority(newState) > statePriority(existingState) {
+		g.vulnerabilities[key] = &vuln
+	}
 }
 
 func (g *SBOMGraph) ClearScope() {
@@ -663,33 +740,11 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 	}
 }
 
-// Vulnerabilities returns all vulnerabilities, deduplicated by ID and affects.
-// When duplicates exist, vulnerabilities with "is triage" state are prioritized.
+// Vulnerabilities returns all vulnerabilities.
+// Deduplication with state priority is handled in AddVulnerability.
 func (g *SBOMGraph) Vulnerabilities() iter.Seq[*cdx.Vulnerability] {
 	return func(yield func(*cdx.Vulnerability) bool) {
-		// Deduplicate vulnerabilities
-		deduplicated := make(map[string]*cdx.Vulnerability)
-		for i, v := range g.vulnerabilities {
-			var key string
-			if v.Analysis != nil {
-				key = strings.TrimSuffix(i, "@"+string(v.Analysis.State))
-			} else {
-				key = i
-			}
-			existing, ok := deduplicated[key]
-			if !ok {
-				deduplicated[key] = v
-			} else {
-				// Prioritize "is triage" state
-				if existing.Analysis != nil && existing.Analysis.State == cdx.IASInTriage {
-					continue
-				} else if v.Analysis != nil && v.Analysis.State == cdx.IASInTriage {
-					deduplicated[key] = v
-				}
-			}
-		}
-
-		for _, v := range deduplicated {
+		for _, v := range g.vulnerabilities {
 			if !yield(v) {
 				return
 			}
@@ -1062,7 +1117,10 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if metadata.AddExternalReferences {
 		apiURL := os.Getenv("API_URL")
-		vexURL := fmt.Sprintf("%s/api/v1/public/%s/vex.json", apiURL, metadata.AssetID.String())
+		// we need to path escape the artifact name for the URL, but not the asset version slug or asset id since those are already URL safe
+		escapedArtifactName := url.PathEscape(metadata.ArtifactName)
+
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
 		vexURL, dashboardURL := calculateExternalURLs(vexURL, metadata)
 
@@ -1083,11 +1141,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	rootName := metadata.RootName
 	if rootName == "" {
-		rootName = metadata.ArtifactName
-	}
-	// add the assetVersionName to the rootName if it exists
-	if metadata.AssetVersionName != "" {
-		rootName = fmt.Sprintf("%s@%s", rootName, metadata.AssetVersionName)
+		rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
 	}
 
 	// check if valid purl
@@ -1344,51 +1398,154 @@ func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string)
 // =============================================================================
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
-func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) *SBOMGraph {
+func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) (*SBOMGraph, error) {
+	// Validate required fields
+	if bom == nil {
+		return nil, fmt.Errorf("BOM cannot be nil")
+	}
+
+	// Validate metadata and root component exist
+	if bom.Metadata == nil {
+		return nil, fmt.Errorf("BOM metadata is required")
+	}
+	if bom.Metadata.Component == nil {
+		return nil, fmt.Errorf("metadata component is required")
+	}
+
+	rootComponent := bom.Metadata.Component
+
+	// Validate root component required fields
+	if rootComponent.BOMRef == "" {
+		return nil, fmt.Errorf("root component BOMRef is required")
+	}
+	if rootComponent.Name == "" {
+		return nil, fmt.Errorf("root component name is required")
+	}
+
+	// if we want to keep the original root component, we need to validate that it has a valid purl, otherwise we will not be able to add it to the graph
+	if keepOriginalSbomRootComponent {
+		if rootComponent.PackageURL == "" {
+			return nil, fmt.Errorf("root component PackageURL is required when keepOriginalSbomRootComponent is true")
+		}
+		if _, err := packageurl.FromString(rootComponent.PackageURL); err != nil {
+			return nil, fmt.Errorf("root component has invalid PackageURL: %w", err)
+		}
+	}
+
+	// Validate BOM format
+	if bom.BOMFormat != "CycloneDX" {
+		return nil, fmt.Errorf("invalid BOM format: %s (expected CycloneDX)", bom.BOMFormat)
+	}
+
+	// Validate BOM version
+	if bom.SpecVersion < 1 {
+		return nil, fmt.Errorf("BOM spec version must be >= 1, got %d", bom.SpecVersion)
+	}
+
 	g := NewSBOMGraph()
 
 	artifactID := g.AddArtifact(artifactName)
-
 	infoID := g.AddInfoSource(artifactID, infoSourceID, InfoSourceSBOM)
 
+	// Add root component
+	if err := g.validateAndAddComponent(*rootComponent); err != nil {
+		return nil, fmt.Errorf("invalid root component: %w", err)
+	}
+
+	// Track BOMRefs to detect duplicates
+	seenBOMRefs := make(map[string]bool)
+	// Process regular components
 	if bom.Components != nil {
-		for _, comp := range *bom.Components {
+		for idx, comp := range *bom.Components {
+			// Validate required fields
+			if comp.BOMRef == "" {
+				return nil, fmt.Errorf("component at index %d has missing BOMRef", idx)
+			}
+			if comp.Name == "" {
+				return nil, fmt.Errorf("component at index %d (%s) has missing Name", idx, comp.BOMRef)
+			}
+
+			// Check for duplicate BOMRef
+			if seenBOMRefs[comp.BOMRef] {
+				return nil, fmt.Errorf("duplicate BOMRef found: %s", comp.BOMRef)
+			}
+			seenBOMRefs[comp.BOMRef] = true
+
+			// Validate PackageURL format if present
+			if comp.PackageURL != "" {
+				if _, err := packageurl.FromString(comp.PackageURL); err != nil {
+					return nil, fmt.Errorf("component %s has invalid PackageURL: %w", comp.BOMRef, err)
+				}
+			}
+
+			// Validate scope if set
+			if comp.Scope != "" {
+				validScopes := map[cdx.Scope]bool{
+					cdx.ScopeExcluded: true,
+					cdx.ScopeOptional: true,
+					cdx.ScopeRequired: true,
+				}
+				if !validScopes[comp.Scope] {
+					return nil, fmt.Errorf("component %s has invalid scope: %s", comp.BOMRef, comp.Scope)
+				}
+			}
+
+			// Sanitize invalid hashes (remove them instead of erroring)
+			if comp.Hashes != nil {
+				validHashes := []cdx.Hash{}
+				for _, hash := range *comp.Hashes {
+					if isValidHashAlgorithm(hash.Algorithm) {
+						validHashes = append(validHashes, hash)
+					}
+					// Invalid hashes are silently dropped
+				}
+				if len(validHashes) > 0 {
+					comp.Hashes = &validHashes
+				} else {
+					comp.Hashes = nil
+				}
+			}
+
+			// Sanitize external references (remove invalid types)
+			if comp.ExternalReferences != nil {
+				validRefs := []cdx.ExternalReference{}
+				for _, ref := range *comp.ExternalReferences {
+					if isValidExternalReferenceType(ref.Type) {
+						validRefs = append(validRefs, ref)
+					}
+					// Invalid references are silently dropped
+				}
+				if len(validRefs) > 0 {
+					comp.ExternalReferences = &validRefs
+				} else {
+					comp.ExternalReferences = nil
+				}
+			}
+
+			// Add component (type sanitization already happens in AddComponent)
 			if isComponentNodeID(comp.PackageURL) {
-				// add only real components
 				g.AddComponent(comp)
 			}
 		}
 	}
 
-	// Build dependency map
+	// Validate and build dependency map
 	depMap := make(map[string][]string)
 	if bom.Dependencies != nil {
 		for _, dep := range *bom.Dependencies {
 			if dep.Dependencies != nil {
+				// Validate that referenced components exist
+				for _, childRef := range *dep.Dependencies {
+					if childRef != "" && childRef != rootComponent.BOMRef && !seenBOMRefs[childRef] {
+						return nil, fmt.Errorf("dependency references undefined component: %s", childRef)
+					}
+				}
 				depMap[dep.Ref] = *dep.Dependencies
 			}
 		}
 	}
 
-	// Find root ref
-	rootRef := ""
-	if bom.Metadata != nil && bom.Metadata.Component != nil {
-		rootRef = bom.Metadata.Component.BOMRef
-		// make sure root component exists
-		if g.nodes[rootRef] == nil {
-			// add root component as well
-			g.AddComponent(*bom.Metadata.Component)
-		}
-		// originalRootPurl is now stored in VexReport
-	} else if g.nodes[""] == nil {
-		// add the empty root component
-		g.AddComponent(cdx.Component{
-			BOMRef:     "",
-			PackageURL: "",
-			Name:       "ROOT",
-			Type:       cdx.ComponentTypeApplication,
-		})
-	}
+	rootRef := rootComponent.BOMRef
 
 	// Add edges
 	for parent := range depMap {
@@ -1440,14 +1597,106 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		g.AddEdge(infoID, rootRef)
 	}
 
-	// Add vulnerabilities
+	// Add vulnerabilities (ignore invalid severity values)
 	if bom.Vulnerabilities != nil {
 		for _, vuln := range *bom.Vulnerabilities {
+			// Sanitize invalid severity values in ratings
+			if vuln.Ratings != nil {
+				validRatings := []cdx.VulnerabilityRating{}
+				for _, rating := range *vuln.Ratings {
+					if isValidSeverity(rating.Severity) {
+						validRatings = append(validRatings, rating)
+					}
+					// Invalid ratings are silently dropped
+				}
+				if len(validRatings) > 0 {
+					vuln.Ratings = &validRatings
+				} else {
+					vuln.Ratings = nil
+				}
+			}
 			g.AddVulnerability(vuln)
 		}
 	}
 
-	return g
+	return g, nil
+}
+
+// validateAndAddComponent validates a component before adding it
+func (g *SBOMGraph) validateAndAddComponent(comp cdx.Component) error {
+	if comp.BOMRef == "" {
+		return fmt.Errorf("component BOMRef is required")
+	}
+	if comp.Name == "" {
+		return fmt.Errorf("component Name is required")
+	}
+	if comp.PackageURL != "" {
+		if _, err := packageurl.FromString(comp.PackageURL); err != nil {
+			return fmt.Errorf("invalid PackageURL: %w", err)
+		}
+	}
+	g.AddComponent(comp)
+	return nil
+}
+
+// isValidHashAlgorithm checks if hash algorithm is valid
+func isValidHashAlgorithm(alg cdx.HashAlgorithm) bool {
+	validAlgos := map[cdx.HashAlgorithm]bool{
+		cdx.HashAlgoMD5:         true,
+		cdx.HashAlgoSHA1:        true,
+		cdx.HashAlgoSHA256:      true,
+		cdx.HashAlgoSHA384:      true,
+		cdx.HashAlgoSHA512:      true,
+		cdx.HashAlgoSHA3_256:    true,
+		cdx.HashAlgoSHA3_384:    true,
+		cdx.HashAlgoSHA3_512:    true,
+		cdx.HashAlgoBlake2b_256: true,
+		cdx.HashAlgoBlake2b_384: true,
+		cdx.HashAlgoBlake2b_512: true,
+		cdx.HashAlgoBlake3:      true,
+	}
+	return validAlgos[alg]
+}
+
+// isValidExternalReferenceType checks if external reference type is valid
+func isValidExternalReferenceType(t cdx.ExternalReferenceType) bool {
+	validTypes := map[cdx.ExternalReferenceType]bool{
+		cdx.ERTypeAdversaryModel:          true,
+		cdx.ERTypeAdvisories:              true,
+		cdx.ERTypeAttestation:             true,
+		cdx.ERTypeBOM:                     true,
+		cdx.ERTypeBuildMeta:               true,
+		cdx.ERTypeBuildSystem:             true,
+		cdx.ERTypeCertificationReport:     true,
+		cdx.ERTypeChat:                    true,
+		cdx.ERTypeConfiguration:           true,
+		cdx.ERTypeCodifiedInfrastructure:  true,
+		cdx.ERTypeComponentAnalysisReport: true,
+		cdx.ERTypeDistribution:            true,
+		cdx.ERTypeDistributionIntake:      true,
+		cdx.ERTypeDocumentation:           true,
+		cdx.ERTypeDynamicAnalysisReport:   true,
+		cdx.ERTypeEvidence:                true,
+		cdx.ERTypeExploitabilityStatement: true,
+		cdx.ERTypeFormulation:             true,
+		cdx.ERTypeIssueTracker:            true,
+		cdx.ERTypeLicense:                 true,
+	}
+	return validTypes[t]
+}
+
+// isValidSeverity checks if severity is valid
+func isValidSeverity(severity cdx.Severity) bool {
+	validSeverities := map[cdx.Severity]bool{
+		cdx.SeverityUnknown:  true,
+		cdx.SeverityLow:      true,
+		cdx.SeverityMedium:   true,
+		cdx.SeverityHigh:     true,
+		cdx.SeverityCritical: true,
+		cdx.SeverityInfo:     true,
+		cdx.SeverityNone:     true,
+	}
+	return validSeverities[severity]
 }
 
 func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {

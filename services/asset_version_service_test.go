@@ -103,9 +103,12 @@ func TestCreateProjectTitle(t *testing.T) {
 func TestMarkdownTableFromSBOM(t *testing.T) {
 	t.Run("test an sbom with 3 components which have 2 , 1 and 0 licenses respectively ", func(t *testing.T) {
 		bom := cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_4,
 			Metadata: &cdx.Metadata{
 				Component: &cdx.Component{
 					BOMRef: "pkg:generic/my-artifact@1.0.0",
+					Name:   "my-artifact",
 				},
 			},
 			Components: &[]cdx.Component{
@@ -118,13 +121,86 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 		err := MarkdownTableFromSBOM(&markdownFile, &bom)
 		fmt.Println(markdownFile.String())
 		assert.Nil(t, err)
-		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** \n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
+		assert.Equal(t, "# SBOM\n\n## Overview\n\n- **Artifact Name:** my-artifact\n- **Version:** \n- **Created:** \n- **Publisher:** \n\n## Statistics\n\n### Ecosystem Distribution\nTotal Components: 3\n\n| Ecosystem | Count | Percentage |\n|-----------|-------|------------|\n| deb | 3 | 100.0% |\n\n\n### License Distribution\n| License | Count | Percentage |\n|---------|-------|------------|\n| MIT | 2 | 66.7% |\n| Unknown | 1 | 33.3% |\n\n\n\\newpage\n## Components\n\n| Package \t\t\t\t\t\t  | Version | Licenses  |\n|---------------------------------|---------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | 12.2.0-14 | MIT  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
 	})
 }
 
 func TestBuildVeX(t *testing.T) {
 	// Create a mock assetVersionService instance for testing
 	s := &assetVersionService{}
+
+	t.Run("two dependency vulns with same CVE and component but different paths are deduplicated", func(t *testing.T) {
+		asset := models.Asset{
+			Model: models.Model{ID: uuid.New()},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: asset.ID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "ALPINE-CVE-2026-24515"
+		componentPurl := "pkg:apk/alpine/libexpat@2.7.3-r0?arch=x86_64&distro=3.22.2"
+
+		// Two vulns with the same CVE and component but different vulnerability paths.
+		// VulnerabilityPath is not used in VEX output — only ComponentPurl goes into Affects.
+		dependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{"pkg:oci/my-image@sha256:abc", componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   7.5,
+					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateOpen,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{"pkg:oci/another-image@sha256:def", componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   7.5,
+					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateOpen,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+		}
+
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Vulnerabilities)
+
+		// Vulns with the same CVE ID + Affects + State are deduplicated by SBOMGraph.AddVulnerability.
+		// The map key is: vuln.ID + "@" + affectsStr + "@" + state
+		// Since both vulns have the same CVE, same ComponentPurl, and same state,
+		// only ONE vulnerability entry appears in the output.
+		assert.Len(t, *result.Vulnerabilities, 1,
+			"Vulns with same CVE+Affects+State are deduplicated — VulnerabilityPath is not in the key")
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Equal(t, cveID, vuln.ID)
+		assert.NotNil(t, vuln.Affects)
+		assert.Len(t, *vuln.Affects, 1)
+		assert.Equal(t, componentPurl, (*vuln.Affects)[0].Ref)
+	})
 
 	t.Run("should handle justification from events", func(t *testing.T) {
 		asset := models.Asset{
@@ -192,5 +268,218 @@ func TestBuildVeX(t *testing.T) {
 
 		vuln := (*result.Vulnerabilities)[0]
 		assert.Equal(t, justification, vuln.Analysis.Detail)
+	})
+
+	t.Run("accepted (exploitable) state wins over open (in_triage) state for same CVE", func(t *testing.T) {
+		asset := models.Asset{
+			Model: models.Model{ID: uuid.New()},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: asset.ID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "CVE-2024-STATE-PRIORITY"
+		componentPurl := "pkg:npm/lib@1.0.0"
+
+		// Two vulns with same CVE and component but different states:
+		// One is open (in_triage), one is accepted (exploitable)
+		// The accepted state should win because it means the vuln is confirmed exploitable
+		dependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   7.5,
+					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateOpen,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   7.5,
+					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateAccepted,
+					Events: []models.VulnEvent{{
+						Type:          dtos.EventTypeAccepted,
+						Justification: utils.Ptr("Risk accepted"),
+						Model:         models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+		}
+
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Vulnerabilities)
+
+		// Should be deduplicated to ONE vulnerability with the winning state
+		assert.Len(t, *result.Vulnerabilities, 1,
+			"Same CVE+Affects should be deduplicated to one entry with priority state")
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Equal(t, cveID, vuln.ID)
+		// Accepted = exploitable should win over open = in_triage
+		assert.Equal(t, cdx.IASExploitable, vuln.Analysis.State,
+			"Accepted (exploitable) state should win over open (in_triage)")
+	})
+
+	t.Run("open (in_triage) state wins over false_positive when at least one is open", func(t *testing.T) {
+		asset := models.Asset{
+			Model: models.Model{ID: uuid.New()},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: asset.ID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "CVE-2024-OPEN-WINS"
+		componentPurl := "pkg:npm/lib@1.0.0"
+
+		// Two vulns: one false_positive, one open
+		// Open should win because at least one occurrence needs triage
+		dependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateFalsePositive,
+					Events: []models.VulnEvent{{
+						Type:          dtos.EventTypeFalsePositive,
+						Justification: utils.Ptr("Not affected in this context"),
+						Model:         models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateOpen,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+		}
+
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Vulnerabilities)
+
+		assert.Len(t, *result.Vulnerabilities, 1,
+			"Same CVE+Affects should be deduplicated to one entry")
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Equal(t, cveID, vuln.ID)
+		// Open = in_triage should win over false_positive
+		assert.Equal(t, cdx.IASInTriage, vuln.Analysis.State,
+			"Open (in_triage) state should win over false_positive when at least one is open")
+	})
+
+	t.Run("false_positive state only when ALL occurrences are false_positive", func(t *testing.T) {
+		asset := models.Asset{
+			Model: models.Model{ID: uuid.New()},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: asset.ID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "CVE-2024-ALL-FP"
+		componentPurl := "pkg:npm/lib@1.0.0"
+
+		// Two vulns both marked as false_positive
+		// Result should be false_positive since ALL are false_positive
+		dependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{"pkg:npm/app@1.0.0", componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateFalsePositive,
+					Events: []models.VulnEvent{{
+						Type:          dtos.EventTypeFalsePositive,
+						Justification: utils.Ptr("Not affected via path 1"),
+						Model:         models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+			{
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{"pkg:npm/other-app@2.0.0", componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+				Vulnerability: models.Vulnerability{
+					State: dtos.VulnStateFalsePositive,
+					Events: []models.VulnEvent{{
+						Type:          dtos.EventTypeFalsePositive,
+						Justification: utils.Ptr("Not affected via path 2"),
+						Model:         models.Model{CreatedAt: time.Now()},
+					}},
+				},
+			},
+		}
+
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Vulnerabilities)
+
+		assert.Len(t, *result.Vulnerabilities, 1,
+			"Same CVE+Affects should be deduplicated to one entry")
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Equal(t, cveID, vuln.ID)
+		// All false_positive = result should be false_positive
+		assert.Equal(t, cdx.IASFalsePositive, vuln.Analysis.State,
+			"False positive state should be used when ALL occurrences are false_positive")
 	})
 }

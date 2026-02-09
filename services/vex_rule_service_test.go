@@ -198,6 +198,34 @@ func TestIsVulnInTargetState(t *testing.T) {
 	})
 }
 
+// TestIsVexEventAlreadyApplied_PointerComparison demonstrates that isVexEventAlreadyApplied
+// fails to detect duplicates because Justification is *string and == compares pointer addresses.
+func TestIsVexEventAlreadyApplied_PointerComparison(t *testing.T) {
+	justificationA := "not_affected"
+	justificationB := "not_affected" // same value, different pointer
+
+	existingEvent := models.VulnEvent{
+		Type:          dtos.EventTypeFalsePositive,
+		Justification: &justificationA,
+	}
+
+	newEvent := models.VulnEvent{
+		Type:          dtos.EventTypeFalsePositive,
+		Justification: &justificationB,
+	}
+
+	vuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			Events: []models.VulnEvent{existingEvent},
+		},
+	}
+
+	// This SHOULD return true (same type + same justification string),
+	// but returns false because &justificationA != &justificationB.
+	assert.True(t, isVexEventAlreadyApplied(vuln, newEvent),
+		"should detect duplicate event with same type and justification value")
+}
+
 // TestVEXRuleServiceUpdate tests the Update method
 func TestVEXRuleServiceUpdate(t *testing.T) {
 	assetID := uuid.New()

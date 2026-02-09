@@ -78,7 +78,11 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, []string{csafURL})
+			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+				URL:              csafURL,
+				Type:             models.ExternalReferenceTypeCSAF,
+				CSAFPackageScope: normalize.Purlify(artifact.ArtifactName, assetVersion.Name),
+			}})
 			assert.Equal(t, 1, len(invalidURLs))
 		})
 
@@ -163,10 +167,13 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 
 			// we need to add the purl to the url
 			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
-			csafURL := purl + ":" + testserver.URL + "/provider-metadata.json"
 
 			// we create a fake VEX report for the same artifact which has the same purl
-			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(artifact.ArtifactName, assetVersion.Name, []string{csafURL})
+			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+				URL:              testserver.URL + "/provider-metadata.json",
+				Type:             models.ExternalReferenceTypeCSAF,
+				CSAFPackageScope: purl,
+			}})
 			assert.Equal(t, 0, len(invalidURLs))
 			assert.Equal(t, 1, len(validURLs))
 			assert.Equal(t, 1, len(vexReports), "should return vex reports from CSAF provider")

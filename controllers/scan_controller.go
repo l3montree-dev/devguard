@@ -41,12 +41,14 @@ type ScanController struct {
 	firstPartyVulnService       shared.FirstPartyVulnService
 	vexRuleService              shared.VEXRuleService
 	externalReferenceRepository shared.ExternalReferenceRepository
+	componentService            shared.ComponentService
+	thirdPartyIntegration       shared.IntegrationAggregate
 	shared.ScanService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService, externalReferenceRepository shared.ExternalReferenceRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate) *ScanController {
 	return &ScanController{
 		assetVersionService:         assetVersionService,
 		assetVersionRepository:      assetVersionRepository,
@@ -58,6 +60,8 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 		ScanService:                 scanService,
 		vexRuleService:              vexRuleService,
 		externalReferenceRepository: externalReferenceRepository,
+		componentService:            componentService,
+		thirdPartyIntegration:       thirdPartyIntegration,
 	}
 }
 
@@ -135,29 +139,35 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
 
+	refs := []models.ExternalReference{}
 	// store the external references from VEX upload
 	for _, url := range externalURLs {
+		// can only be cyclonedx since we are parsing them from the cyclonedx bom
 		ref := models.ExternalReference{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersionName,
 			URL:              url,
-			Type:             "vex",
+			Type:             "cyclonedx",
 		}
 		if err := s.externalReferenceRepository.Create(tx, &ref); err != nil {
 			slog.Error("could not store vex external reference", "err", err, "url", url)
 		}
+		refs = append(refs, ref)
+	}
+
+	vexReport, err := normalize.NewVexReport(&bom, origin)
+	if err != nil {
+		slog.Error("could not create vex report from bom", "err", err)
+		return echo.NewHTTPError(400, fmt.Sprintf("Invalid VEX BOM format: %s", err)).WithInternal(err)
 	}
 
 	vexReports := []*normalize.VexReport{}
 	// check if there are components or vulnerabilities in the bom
-	vexReports = append(vexReports, &normalize.VexReport{
-		Source: origin,
-		Report: &bom,
-	})
+	vexReports = append(vexReports, vexReport)
 
 	for _, url := range externalURLs {
 		slog.Info("found VEX external reference", "url", url)
-		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(artifactName, assetVersionName, externalURLs)
+		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(refs)
 		if len(invalid) > 0 {
 			slog.Warn("some VEX external references are invalid", "invalid", invalid)
 		}
@@ -230,7 +240,10 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		return scanResults, fmt.Errorf("keepOriginalSbomRootComponent provided but sbom does not include valid bom.Metadata.Component.PackageURL entry")
 	}
 
-	normalized := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	if err != nil {
+		return scanResults, echo.NewHTTPError(400, fmt.Sprintf("Invalid SBOM: %s", err))
+	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
@@ -266,6 +279,40 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 
 	tx.Commit()
+
+	// update the license information in the background
+	s.FireAndForget(func() {
+		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+		_, err := s.componentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifactName), false)
+		if err != nil {
+			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
+		} else {
+			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+		}
+	})
+
+	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
+		s.FireAndForget(func() {
+			// Export the updated graph back to CycloneDX format for the event
+			exportedBOM := wholeSBOM.ToCycloneDX(normalize.BOMMetadata{
+				RootName: artifactName,
+			})
+			if err = s.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
+				AssetVersion: shared.ToAssetVersionObject(assetVersion),
+				Asset:        shared.ToAssetObject(asset),
+				Project:      shared.ToProjectObject(project),
+				Org:          shared.ToOrgObject(org),
+				Artifact: shared.ArtifactObject{
+					ArtifactName: artifactName,
+				},
+				SBOM: exportedBOM,
+			}); err != nil {
+				slog.Error("could not handle SBOM updated event", "err", err)
+			} else {
+				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+			}
+		})
+	}
 
 	//Check if we want to create an issue for this assetVersion
 	s.FireAndForget(func() {

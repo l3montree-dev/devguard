@@ -97,7 +97,10 @@ func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, k
 	}
 
 	// Convert to SBOMGraph
-	graph := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render", keepOriginalSbomRootComponent)
+	graph, err := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render", keepOriginalSbomRootComponent)
+	if err != nil {
+		return fmt.Errorf("failed to convert SBOM to graph: %w", err)
+	}
 
 	// Generate DOT format
 	dotContent := generateDOT(graph, maxDepth, showVulns)
