@@ -1791,7 +1791,7 @@ type GraphComponent interface {
 // The components include artifact nodes, information source nodes, and regular components.
 // This function reconstructs the full graph structure from the flat component list.
 // Uses generics to avoid slice type conversion and reduce memory allocations.
-func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites map[string]string) *SBOMGraph {
+func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites map[string]string) (*SBOMGraph, error) {
 	g := NewSBOMGraph()
 
 	// Build dependency map: parent -> children
@@ -1862,7 +1862,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		}
 	}
 
-	return g
+	return g, nil
 }
 
 // NodeIDsAndEdges returns a flat representation of the graph for comparison.

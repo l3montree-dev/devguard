@@ -617,7 +617,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			if err != nil {
 				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {
-				sbom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
+				sbom, _ := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
 
 				for _, oldVuln := range vulns {
 					paths := sbom.FindAllComponentOnlyPathsToPURL(oldVuln.ComponentPurl, 0)

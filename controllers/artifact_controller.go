@@ -467,11 +467,6 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
-	// scope to artifact
-	artifact := shared.GetArtifact(ctx)
-	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
-		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
-	}
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
@@ -493,11 +488,6 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
 	if err != nil {
 		return err
-	}
-	// scope to artifact
-	artifact := shared.GetArtifact(ctx)
-	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
-		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
 
 	ctx.Response().Header().Set("Content-Type", "application/json")

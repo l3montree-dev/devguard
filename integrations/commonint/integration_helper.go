@@ -408,7 +408,10 @@ func RenderPathToComponent(componentRepository shared.ComponentRepository, asset
 		return "", err
 	}
 
-	bom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
+	bom, err := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
+	if err != nil {
+		return "", err
+	}
 
 	paths := bom.FindAllComponentOnlyPathsToPURL(pURL, 0)
 	// we want to show fake nodes in the mermaid graph (root, artifact, info sources)
