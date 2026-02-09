@@ -155,6 +155,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not scan sbom after creating artifact").WithInternal(err)
 	}
 
+	tx.Commit()
+
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
@@ -480,6 +482,12 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 		return err
 	}
 
+	// scope to artifact
+	artifact := shared.GetArtifact(ctx)
+	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
+		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+	}
+
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
@@ -495,7 +503,9 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	}
 	// scope to artifact
 	artifact := shared.GetArtifact(ctx)
-	sbom.ScopeToArtifact(artifact.ArtifactName)
+	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
+		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+	}
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
@@ -504,6 +514,11 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
 	if err != nil {
 		return err
+	}
+	// scope to artifact
+	artifact := shared.GetArtifact(ctx)
+	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
+		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
@@ -526,6 +541,11 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
 	if err != nil {
 		return err
+	}
+	// scope to artifact
+	artifact := shared.GetArtifact(ctx)
+	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
+		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
 
 	ctx.Response().Header().Set("Content-Type", "application/json")
