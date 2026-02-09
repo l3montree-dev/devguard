@@ -207,7 +207,6 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 			return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
 		}
 
-		artifact := artifact // capture loop variable
 		c.FireAndForget(func() {
 			if err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns); err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
