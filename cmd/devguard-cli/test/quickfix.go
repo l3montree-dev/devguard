@@ -72,22 +72,28 @@ func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]st
 				if version[2] >= currentParts[2] {
 					// fmt.Println(strings.Join(version, "."))
 					recommended = append(recommended, strings.Join(version, "."))
-					fmt.Println(recommended)
 				}
 			}
 		}
 	}
+	fmt.Println(recommended)
 	return recommended, nil
 }
 
-// func getDependencyTree() {}
+func walkDependencyTree(npmRegisterResp []byte) map[string]string {
+	var jsonData NPMResponse
 
-// func transitiveDependencyWalker() {
-
-// }
+	if err := json.Unmarshal(npmRegisterResp, &jsonData); err != nil {
+		fmt.Println("Error unmarshalling JSON:", err)
+		return nil
+	}
+	// fmt.Println(jsonData)
+	fmt.Println(jsonData.Dependencies)
+	return jsonData.Dependencies
+}
 
 func main() {
-	DirectDependency := "lodash"
+	DirectDependency := "playwright"
 
 	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
@@ -101,6 +107,19 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	filterMajorVersions(generalizeAllVersions(body), "4.17.21")
-
+	versions, err := filterMajorVersions(generalizeAllVersions(body), "1.50.1")
+	if err != nil {
+		fmt.Println("Error filtering versions:", err)
+		return
+	}
+	for _, version := range versions {
+		npmResponse, err := GetNPMRegistry(RegistryRequest{Dependency: DirectDependency, Version: version})
+		response, err := io.ReadAll(npmResponse.Body)
+		// fmt.Println(string(response))
+		if err != nil {
+			fmt.Println("Error fetching version details:", err)
+			continue
+		}
+		walkDependencyTree(response)
+	}
 }

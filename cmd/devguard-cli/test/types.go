@@ -32,6 +32,7 @@ type NPMResponse struct {
 	ReadMe         string                 `json:"readme"`
 	ReadMeFilename string                 `json:"readmeFilename"`
 	Users          map[string]bool        `json:"users"`
+	Dependencies   map[string]string      `json:"dependencies"`
 }
 
 type DistTags struct {
