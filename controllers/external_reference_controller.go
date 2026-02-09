@@ -17,23 +17,40 @@ package controllers
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
 )
 
 type ExternalReferenceController struct {
 	externalReferenceRepository shared.ExternalReferenceRepository
+	artifactRepository          shared.ArtifactRepository
+	dependencyVulnService       shared.DependencyVulnService
+	statisticsService           shared.StatisticsService
+	utils.FireAndForgetSynchronizer
+	shared.ScanService
 }
 
 func NewExternalReferenceController(
 	externalReferenceRepository shared.ExternalReferenceRepository,
+	artifactRepository shared.ArtifactRepository,
+	dependencyVulnService shared.DependencyVulnService,
+	statisticsService shared.StatisticsService,
+	synchronizer utils.FireAndForgetSynchronizer,
+	scanService shared.ScanService,
 ) *ExternalReferenceController {
 	return &ExternalReferenceController{
 		externalReferenceRepository: externalReferenceRepository,
+		artifactRepository:          artifactRepository,
+		dependencyVulnService:       dependencyVulnService,
+		statisticsService:           statisticsService,
+		FireAndForgetSynchronizer:   synchronizer,
+		ScanService:                 scanService,
 	}
 }
 
@@ -149,6 +166,62 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		URL:              ref.URL,
 		Type:             string(ref.Type),
 	})
+}
+
+// @Summary Sync external sources for all artifacts of an asset version
+// @Tags ExternalReferences
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync [post]
+func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
+
+	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(asset.ID, assetVersion.Name)
+	if err != nil {
+		slog.Error("could not get artifacts for asset version", "err", err)
+		return echo.NewHTTPError(500, "could not get artifacts for asset version").WithInternal(err)
+	}
+
+	for _, artifact := range artifacts {
+		tx := c.artifactRepository.Begin()
+
+		_, _, vulns, err := c.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersion, artifact, userID)
+		if err != nil {
+			tx.Rollback()
+			slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
+			return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
+		}
+
+		commitResult := tx.Commit()
+		if commitResult.Error != nil {
+			slog.Error("could not commit transaction after syncing external sources", "err", commitResult.Error, "artifact", artifact.ArtifactName)
+			return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
+		}
+
+		c.FireAndForget(func() {
+			if err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns); err != nil {
+				slog.Error("could not create issues for vulnerabilities", "err", err)
+			}
+		})
+
+		c.FireAndForget(func() {
+			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+				slog.Error("could not recalculate risk history", "err", err)
+			}
+		})
+	}
+
+	return ctx.NoContent(200)
 }
 
 // @Summary Delete all external references for an asset version
