@@ -202,6 +202,10 @@ func (g *SBOMGraph) AddArtifact(name string) string {
 func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSourceType) string {
 	// Extract artifact name from artifactID (e.g., "artifact:my-app" -> "my-app")
 	_, artifactName := ParseGraphNodeID(artifactID)
+	// Strip existing source type prefix to prevent double-prefixing (e.g., "sbom:sbom:url")
+	if after, found := strings.CutPrefix(sourceID, string(sourceType)+":"); found {
+		sourceID = after
+	}
 	// Create a unique ID that includes the artifact name
 	id := fmt.Sprintf("%s:%s@%s", sourceType, sourceID, artifactName)
 	if g.nodes[id] == nil {

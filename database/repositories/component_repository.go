@@ -199,22 +199,27 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 			if edge[0] == normalize.GraphRootNodeID {
 				componentID = "NULL"
 			} else {
-				componentID = fmt.Sprintf("'%s'", edge[0])
+				componentID = fmt.Sprintf("'%s'", strings.ReplaceAll(edge[0], "'", "''"))
 			}
 
-			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, edge[1]))
+			escapedDep := strings.ReplaceAll(edge[1], "'", "''")
+			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, escapedDep))
 		}
 		// Join the value clauses with commas
 		values := strings.Join(valueClauses, ",")
-		// Construct the SQL query
+		// Escape the asset version name for safe SQL embedding
+		escapedVersionName := strings.ReplaceAll(assetVersion.Name, "'", "''")
+		// Construct the full SQL query without GORM ? placeholders,
+		// because purls in the VALUES can contain ? (e.g. ?arch=x86_64)
+		// which GORM would misinterpret as bind parameters.
 		query := fmt.Sprintf(`
 			DELETE FROM component_dependencies
 			WHERE (component_id, dependency_id) IN (VALUES %s)
-			AND asset_id = ?
-			AND asset_version_name = ?
-		`, values)
-		// execute the query
-		err := c.GetDB(tx).Exec(query, assetVersion.AssetID, assetVersion.Name).Error
+			AND asset_id = '%s'
+			AND asset_version_name = '%s'
+		`, values, assetVersion.AssetID.String(), escapedVersionName)
+		// execute the query without any GORM bind parameters
+		err := c.GetDB(tx).Exec(query).Error
 
 		if err != nil {
 			return err

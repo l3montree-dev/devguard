@@ -574,6 +574,44 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.True(t, reachable["pkg:npm/component-c@3.0.0"], "component-c should be reachable")
 	})
 
+	t.Run("info source ID must not get double-prefixed with sbom:sbom:", func(t *testing.T) {
+		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
+				},
+			},
+			Components: &[]cdx.Component{{
+				BOMRef:     "pkg:npm/dep@1.0.0",
+				Name:       "dep",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/dep@1.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			}},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{"pkg:npm/dep@1.0.0"}},
+			},
+		}
+
+		// Simulate the caller already adding a "sbom:" prefix (the bug that was fixed).
+		// AddInfoSource prepends sourceType ("sbom") automatically, so passing "sbom:url"
+		// would produce "sbom:sbom:url@artifact" — a double prefix.
+		for _, sourceID := range []string{"https://example.com/sbom.json", "sbom:https://example.com/sbom.json"} {
+			result, err := SBOMGraphFromCycloneDX(bom, artifactName, sourceID, false)
+			assert.NoError(t, err)
+
+			artifactID := "artifact:" + artifactName
+			infoSourceIDs := result.GetInfoSourceIDs(artifactID)
+			assert.Len(t, infoSourceIDs, 1, "expected exactly one info source")
+
+			id := infoSourceIDs[0]
+			assert.NotContains(t, id, "sbom:sbom:", "info source ID must not contain double sbom: prefix, got: %s", id)
+		}
+	})
+
 }
 
 func TestMergeCdxBoms(t *testing.T) {

@@ -544,7 +544,7 @@ func (s *scanService) FetchSbomsFromUpstream(artifactName string, ref string, up
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, "sbom:"+url, keepOriginalSbomRootComponent)
+			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url, keepOriginalSbomRootComponent)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
