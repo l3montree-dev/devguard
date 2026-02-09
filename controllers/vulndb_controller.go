@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -18,14 +20,16 @@ import (
 )
 
 type VulnDBController struct {
-	cveRepository           shared.CveRepository
-	maliciousPackageChecker shared.MaliciousPackageChecker
+	cveRepository               shared.CveRepository
+	maliciousPackageChecker     shared.MaliciousPackageChecker
+	affectedComponentRepository shared.AffectedComponentRepository
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository) *VulnDBController {
 	return &VulnDBController{
-		cveRepository:           cveRepository,
-		maliciousPackageChecker: maliciousPackageChecker,
+		cveRepository:               cveRepository,
+		maliciousPackageChecker:     maliciousPackageChecker,
+		affectedComponentRepository: affectedComponentRepository,
 	}
 }
 
@@ -205,4 +209,42 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 		CVEData: results,
 	}
 	return ctx.JSON(200, response)
+}
+
+type ecosystemRow struct {
+	Ecosystem string `gorm:"ecosystem" json:"ecosystem"`
+	Count     int    `gorm:"count" json:"count"`
+}
+
+// return the number of affected packages by ecosystem
+func (c VulnDBController) GetEcosystemDistribution(ctx shared.Context) error {
+	results := make([]ecosystemRow, 1024)
+
+	// static sql to get amount of packages by ecosystem
+	sql := `SELECT ecosystem, COUNT(*) FROM affected_components GROUP BY ecosystem;`
+	err := c.affectedComponentRepository.GetDB(nil).Raw(sql).Find(&results).Error
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
+	}
+
+	// since ecosystem have tags behind the : character we want to group them by their prefix
+	jsonResults := buildResultsJSON(results)
+
+	return ctx.String(200, jsonResults)
+}
+
+// group ecosystem by prefix ecosystem string and return the equivalent json encoding
+func buildResultsJSON(rows []ecosystemRow) string {
+	// map to deduplicate ecosystem with different tags
+	aggregatedResults := make(map[string]int)
+
+	// fill the map with the value of the rows
+	for _, row := range rows {
+		before, _, _ := strings.Cut(row.Ecosystem, ":")
+		aggregatedResults[before] += row.Count
+	}
+
+	// marshal to JSON with proper indentation
+	data, _ := json.MarshalIndent(aggregatedResults, "", config.PrettyJSONIndent)
+	return string(data)
 }
