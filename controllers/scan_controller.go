@@ -237,7 +237,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// keepOriginalSbomRootComponent DOES NOT MAKE SENSE IF THE root component has no valid purl!
 	if keepOriginalSbomRootComponent && (bom.Metadata == nil || bom.Metadata.Component == nil || bom.Metadata.Component.PackageURL == "") {
-		return scanResults, fmt.Errorf("keepOriginalSbomRootComponent provided but sbom does not include valid bom.Metadata.Component.PackageURL entry")
+		return scanResults, echo.NewHTTPError(400, "keepOriginalSbomRootComponent provided but sbom does not include valid bom.Metadata.Component.PackageURL entry")
 	}
 
 	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
