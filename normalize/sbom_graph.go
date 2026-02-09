@@ -1120,9 +1120,9 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		// we need to path escape the artifact name for the URL, but not the asset version slug or asset id since those are already URL safe
 		escapedArtifactName := url.PathEscape(metadata.ArtifactName)
 
-		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
-		vexURL, dashboardURL := calculateExternalURLs(vexURL, metadata)
+		dashboardURL := getDashboardURL(metadata)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
@@ -1364,33 +1364,17 @@ func (g *SBOMGraph) isReachable(id string) bool {
 	return g.reachableNodes()[id]
 }
 
-func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string) {
+func getDashboardURL(metadata BOMMetadata) string {
 	dashboardURL := ""
 	if metadata.FrontendURL != "" && metadata.OrgSlug != "" && metadata.ProjectSlug != "" && metadata.AssetSlug != "" {
 		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", metadata.FrontendURL, metadata.OrgSlug, metadata.ProjectSlug, metadata.AssetSlug)
 	}
 
-	if metadata.AssetVersionSlug != "" {
-		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(metadata.AssetVersionSlug))
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(metadata.AssetVersionSlug))
-		}
-	} else {
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
-		}
+	if dashboardURL != "" {
+		dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
 	}
 
-	if metadata.AssetVersionSlug != "" && metadata.ArtifactName != "" {
-		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(metadata.ArtifactName))
-		}
-	} else if metadata.ArtifactName != "" {
-		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
-	}
-
-	return docURL, dashboardURL
+	return dashboardURL
 }
 
 // =============================================================================
