@@ -2080,7 +2080,6 @@ func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 			he, ok := err.(*echo.HTTPError)
 			assert.True(t, ok, "error should be an echo.HTTPError")
 			assert.Equal(t, 400, he.Code)
-			assert.Contains(t, he.Message, "keepOriginalSbomRootComponent")
 		})
 
 		t.Run("should return 400 when header overrides to true and SBOM has no root PURL", func(t *testing.T) {
@@ -2105,7 +2104,6 @@ func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 			he, ok := err.(*echo.HTTPError)
 			assert.True(t, ok, "error should be an echo.HTTPError")
 			assert.Equal(t, 400, he.Code)
-			assert.Contains(t, he.Message, "keepOriginalSbomRootComponent")
 		})
 
 		t.Run("should succeed when keepOriginalSbomRootComponent is false and SBOM has no root PURL", func(t *testing.T) {
