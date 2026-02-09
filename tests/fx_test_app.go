@@ -65,17 +65,18 @@ type TestApp struct {
 	MaliciousPackageChecker  shared.MaliciousPackageChecker
 
 	// Controllers
-	AssetController          *controllers.AssetController
-	AssetVersionController   *controllers.AssetVersionController
-	ScanController           *controllers.ScanController
-	ProjectController        *controllers.ProjectController
-	OrgController            *controllers.OrgController
-	DependencyVulnController *controllers.DependencyVulnController
-	FirstPartyVulnController *controllers.FirstPartyVulnController
-	ComponentController      *controllers.ComponentController
-	ArtifactController       *controllers.ArtifactController
-	CSAFController           *controllers.CSAFController
-	VEXRuleController        *controllers.VEXRuleController
+	AssetController             *controllers.AssetController
+	AssetVersionController      *controllers.AssetVersionController
+	ScanController              *controllers.ScanController
+	ProjectController           *controllers.ProjectController
+	OrgController               *controllers.OrgController
+	DependencyVulnController    *controllers.DependencyVulnController
+	FirstPartyVulnController    *controllers.FirstPartyVulnController
+	ComponentController         *controllers.ComponentController
+	ArtifactController          *controllers.ArtifactController
+	CSAFController              *controllers.CSAFController
+	VEXRuleController           *controllers.VEXRuleController
+	ExternalReferenceController *controllers.ExternalReferenceController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
