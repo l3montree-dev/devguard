@@ -15,7 +15,10 @@
 
 package dtos
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/normalize"
+)
 
 // PathPattern wildcard for VEX rules
 const (
@@ -34,7 +37,10 @@ type PathPattern []string
 
 // IsWildcard returns true if the element is a wildcard (*).
 func IsWildcard(elem string) bool {
-	return elem == PathPatternWildcard
+	// ROOT is a special element in the path
+	// this means, THE CURRENT application does not call the vulnerable code
+	// therefore, we can just replace it with a wildcard for matching purposes
+	return elem == PathPatternWildcard || elem == normalize.GraphRootNodeID
 }
 
 // MatchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
@@ -46,6 +52,7 @@ func IsWildcard(elem string) bool {
 //   - Pattern ["*", "lib"] matches ["lib"] or ["a", "lib"] or ["a", "b", "lib"]
 //   - Pattern ["a", "*", "b"] matches ["a", "b"] or ["a", "x", "b"] or ["a", "x", "y", "z", "b"]
 func (p PathPattern) MatchesSuffix(path []string) bool {
+
 	if len(p) == 0 {
 		return true
 	}
