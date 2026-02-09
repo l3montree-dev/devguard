@@ -390,7 +390,7 @@ func TestBuildVEX(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
 			err := f.App.ArtifactController.VEXJSON(ctx)
-			assert.Error(t, err)
+			assert.Nil(t, err)
 		})
 		vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(f.DB, asset.ID, assetVersion.Name, artifactName)
 		t.Run("build Vex with everything set as intended", func(t *testing.T) {

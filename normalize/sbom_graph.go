@@ -1126,10 +1126,12 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if metadata.AddExternalReferences {
 		apiURL := os.Getenv("API_URL")
-		// we need to path escape the artifact name for the URL, but not the asset version slug or asset id since those are already URL safe
-		escapedArtifactName := url.PathEscape(metadata.ArtifactName)
+		// Use QueryEscape to encode all special characters including colons
+		// PathEscape is too lenient for artifact names which may contain PURLs or other special chars
+		escapedArtifactName := url.QueryEscape(metadata.ArtifactName)
 
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
+		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/sbom.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
 		dashboardURL := getDashboardURL(metadata)
 
@@ -1137,6 +1139,10 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 			URL:     vexURL,
 			Comment: "Up to date Vulnerability exploitability information.",
 			Type:    cdx.ERTypeExploitabilityStatement,
+		}, {
+			URL:     sbomURL,
+			Comment: "Software bill of materials.",
+			Type:    cdx.ERTypeBOM,
 		}}
 
 		if dashboardURL != "" {
