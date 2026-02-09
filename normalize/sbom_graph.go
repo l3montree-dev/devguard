@@ -1791,7 +1791,7 @@ func ParseGraphNodeID(id string) (prefix, name string) {
 type GraphComponent interface {
 	GetID() string
 	GetDependentID() *string
-	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
+	ToCdxComponent(componentLicenseOverwrites map[string]string) (cdx.Component, error)
 }
 
 // SBOMGraphFromComponents builds an SBOMGraph from database components.
@@ -1822,7 +1822,10 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		}
 		processedComponents[id] = struct{}{}
 
-		cdxComp := comp.ToCdxComponent(licenseOverwrites)
+		cdxComp, err := comp.ToCdxComponent(licenseOverwrites)
+		if err != nil {
+			continue
+		}
 
 		// Determine node type from ID prefix
 		prefix, name := ParseGraphNodeID(id)
