@@ -944,7 +944,6 @@ type stateDistributionOfPathsInProduct struct {
 }
 
 func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
-	slog.Info("Calculated Product ID")
 	if assetVersionName == "" {
 		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
 	}
@@ -1233,15 +1232,15 @@ func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent)
 
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Detected path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Reopened path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Fixed path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Accepted path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked as false positive in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Marked path as false positive in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	default:
 		return "", fmt.Errorf("unknown event type: %s (artifact: %s)", event.Type, artifactNameString)
 	}
