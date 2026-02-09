@@ -12,7 +12,9 @@ type RegistryRequest struct {
 	Version    string // empty string means "all versions"
 }
 
-func timeoutDetection(err error) {}
+func timeoutDetection(err error) {
+	// check if error is a timeout error
+}
 
 // get all versions if no version is specified
 func GetNPMRegistry(pkg RegistryRequest) (*http.Response, error) {

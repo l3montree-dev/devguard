@@ -89,6 +89,9 @@ func walkDependencyTree(npmRegisterResp []byte) map[string]string {
 	}
 	// fmt.Println(jsonData)
 	fmt.Println(jsonData.Dependencies)
+	for jsonData.Dependencies != nil {
+		for key, value := range jsonData.Dependencies {
+			fmt.Printf("Dependency: %s, Version: %s\n", key, value)
 	return jsonData.Dependencies
 }
 
@@ -113,13 +116,16 @@ func main() {
 		return
 	}
 	for _, version := range versions {
+
 		npmResponse, err := GetNPMRegistry(RegistryRequest{Dependency: DirectDependency, Version: version})
 		response, err := io.ReadAll(npmResponse.Body)
-		// fmt.Println(string(response))
+		fmt.Println(string(response))
 		if err != nil {
 			fmt.Println("Error fetching version details:", err)
 			continue
 		}
 		walkDependencyTree(response)
+
+		}
 	}
 }
