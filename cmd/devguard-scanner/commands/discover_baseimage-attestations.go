@@ -67,7 +67,7 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 		if predicate, ok := attestation["predicateType"].(string); ok {
 			// get everything after the last / in the predicate type
 			predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
-			attestationFileName = filepath.Join(output, predicate)
+			attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%d-%s.json", i+1, predicate))
 		}
 
 		attestationFile, err := os.Create(attestationFileName)
