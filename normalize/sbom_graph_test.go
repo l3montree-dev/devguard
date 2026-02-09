@@ -1282,6 +1282,56 @@ func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
 		assert.Len(t, limitedPaths, 2, "Should return only 2 paths with limit=2")
 	})
+
+	t.Run("root component with non-PURL BOMRef should still appear in vulnerability path", func(t *testing.T) {
+		// Regression: when the root component's BOMRef is not a PURL (e.g. "my-app"),
+		// but its PackageURL IS a valid PURL, the root should still appear in the
+		// vulnerability path. Previously, isComponentNodeID checked the BOMRef format
+		// and would incorrectly skip non-PURL BOMRefs.
+		g := NewSBOMGraph()
+
+		artifactID := g.AddArtifact("test-artifact")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
+
+		// Root component with non-PURL BOMRef but valid PackageURL
+		root := cdx.Component{
+			BOMRef:     "my-app", // NOT a PURL
+			Name:       "my-app",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/my-app@1.0.0",
+			Type:       cdx.ComponentTypeApplication,
+		}
+		rootID := g.AddComponent(root)
+		g.AddEdge(infoSource, rootID)
+
+		// Intermediate dependency
+		mid := cdx.Component{
+			BOMRef:     "pkg:npm/express@4.18.0",
+			Name:       "express",
+			Version:    "4.18.0",
+			PackageURL: "pkg:npm/express@4.18.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		midID := g.AddComponent(mid)
+		g.AddEdge(rootID, midID)
+
+		// Vulnerable leaf dependency
+		vuln := cdx.Component{
+			BOMRef:     "pkg:npm/qs@6.5.0",
+			Name:       "qs",
+			Version:    "6.5.0",
+			PackageURL: "pkg:npm/qs@6.5.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		vulnID := g.AddComponent(vuln)
+		g.AddEdge(midID, vulnID)
+
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/qs@6.5.0", 0)
+		assert.Len(t, paths, 1, "Should find exactly one path")
+		// Path should include the root component even though its BOMRef is not a PURL
+		assert.Equal(t, Path{"pkg:npm/my-app@1.0.0", "pkg:npm/express@4.18.0", "pkg:npm/qs@6.5.0"}, paths[0],
+			"Root component with non-PURL BOMRef must still appear in the vulnerability path")
+	})
 }
 
 func TestVulnerabilities(t *testing.T) {

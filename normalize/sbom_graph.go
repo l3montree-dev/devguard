@@ -871,7 +871,10 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			}
 
 			// Check if parent is NOT a component (termination condition)
-			if !isComponentNodeID(parentID) {
+			// Use node type from graph instead of ID format, because BOMRef
+			// may not be a PURL even though the component has a valid PackageURL.
+			parentNode := g.nodes[parentID]
+			if parentNode == nil || parentNode.Type != GraphNodeTypeComponent {
 				foundTermination = true
 				// Build path in correct order (root to target)
 				result := make([]string, len(current.path))
@@ -901,7 +904,8 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				if current.onPath[parentID] {
 					continue
 				}
-				if !isComponentNodeID(parentID) {
+				pNode := g.nodes[parentID]
+				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 					continue // Skip non-components for path extension
 				}
 				// Extend path
@@ -909,9 +913,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				copy(newPath, current.path)
 				newPath[len(current.path)] = parentID
 				newOnPath := make(map[string]bool, len(current.onPath)+1)
-				for k, v := range current.onPath {
-					newOnPath[k] = v
-				}
+				maps.Copy(newOnPath, current.onPath)
 				newOnPath[parentID] = true
 				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 			}
@@ -1073,7 +1075,10 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 		// Process all parents of current node
 		for _, parentID := range reverseEdges[current.nodeID] {
 			// Only follow component edges for the tree structure
-			if !isComponentNodeID(parentID) {
+			// Use node type from graph instead of ID format, because BOMRef
+			// may not be a PURL even though the component has a valid PackageURL.
+			pNode := g.nodes[parentID]
+			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 				continue
 			}
 
@@ -1511,7 +1516,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 			}
 
 			// Add component (type sanitization already happens in AddComponent)
-			if isComponentNodeID(comp.PackageURL) {
+			if looksLikePackagePURL(comp.PackageURL) {
 				g.AddComponent(comp)
 			}
 		}
@@ -1562,7 +1567,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if !isComponentNodeID(comp.PackageURL) {
+				if !looksLikePackagePURL(comp.PackageURL) {
 					continue // Skip root project components
 				}
 				// Check if this component is a child of any other
@@ -1753,7 +1758,7 @@ func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 	return g
 }
 
-func isComponentNodeID(id string) bool {
+func looksLikePackagePURL(id string) bool {
 	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
 }
 
