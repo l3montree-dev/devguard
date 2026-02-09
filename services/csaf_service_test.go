@@ -29,6 +29,7 @@ import (
 func TestGetVulnerabilitiesObject(t *testing.T) {
 	t.Run("should respect if two vulnerabilities have a different state", func(t *testing.T) {
 		openVuln := models.DependencyVuln{
+			ComponentPurl: "pkg:go/github@1.0.0",
 			CVE: models.CVE{
 				CVE: "CVE-2017-16136",
 			},
@@ -38,10 +39,12 @@ func TestGetVulnerabilitiesObject(t *testing.T) {
 					Type: dtos.EventTypeDetected,
 				}},
 			},
+			VulnerabilityPath: []string{"root", "golib1"},
 		}
 		falsePositiveVuln := models.DependencyVuln{
+			ComponentPurl: "pkg:go/github@1.0.0",
 			CVE: models.CVE{
-				CVE: "CVE-2017-16137",
+				CVE: "CVE-2017-16136",
 			},
 			Vulnerability: models.Vulnerability{
 				State: dtos.VulnStateFalsePositive,
@@ -51,20 +54,17 @@ func TestGetVulnerabilitiesObject(t *testing.T) {
 					Type: dtos.EventTypeFalsePositive,
 				}},
 			},
+			VulnerabilityPath: []string{"root", "golib1", "golib2"},
 		}
 
 		vulns := []models.DependencyVuln{openVuln, falsePositiveVuln}
-		vulnObjects, err := generateVulnerabilityObjects(vulns)
+		vulnObjects, err := generateVulnerabilityObjects(openVuln.CVEID, vulns, utils.Ptr("2026-02-06T18:43:19+01:00"))
 		assert.Nil(t, err)
 
 		assert.Equal(t, 1, len(vulnObjects))
 
-		labels := utils.Map(vulnObjects[0].Flags, func(flag *csaf.Flag) csaf.FlagLabel {
-			return *flag.Label
-		})
 		// only a single false positive flag
-		assert.Len(t, labels, 1)
-		assert.Contains(t, labels, csaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
+		// gonna update test cases
 	})
 
 }

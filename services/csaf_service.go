@@ -827,7 +827,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 		},
 	}
 
-	tracking, err := generateTrackingObject(asset, vulns)
+	tracking, err := generateTrackingObject(vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -944,6 +944,7 @@ type stateDistributionOfPathsInProduct struct {
 }
 
 func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
+	slog.Info("Calculated Product ID")
 	if assetVersionName == "" {
 		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
 	}
@@ -975,7 +976,8 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 	vulnsByProductName := make(map[string][]models.DependencyVuln, len(allVulnsOfCVE))
 	for _, vuln := range allVulnsOfCVE {
 		for _, artifact := range vuln.Artifacts {
-			vulnsByProductName[string(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))] = append(vulnsByProductName[string(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))], vuln)
+			key := string(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))
+			vulnsByProductName[key] = append(vulnsByProductName[key], vuln)
 		}
 	}
 
@@ -1134,33 +1136,17 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 	for _, distribution := range distributions {
 		vulnDetails := gocsaf.Note{
 			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
-			Title:        utils.Ptr("State of vulnerability paths in the product"),
+			Title:        utils.Ptr(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
 		}
-		vulnDetails.Text = utils.Ptr(fmt.Sprintf("Total paths for product %s: %d. Amount of accepted paths: %d, amount of paths marked as false positive: %d, amount of fixed paths: %d, amount of unhandled paths: %d", distribution.productID, distribution.totalAmountOfPaths, distribution.amountAccepted, distribution.amountFalsePositive, distribution.amountFixed, distribution.amountUnhandled))
+		vulnDetails.Text = utils.Ptr(fmt.Sprintf("Total amount of paths in product: %d. Amount of accepted paths: %d, amount of paths marked as false positive: %d, amount of fixed paths: %d, amount of unhandled paths: %d", distribution.totalAmountOfPaths, distribution.amountAccepted, distribution.amountFalsePositive, distribution.amountFixed, distribution.amountUnhandled))
 		notes = append(notes, &vulnDetails)
 	}
 
 	return notes, nil
 }
 
-// Helper function to map state to human-readable string
-func stateToString(state dtos.VulnState) string {
-	switch state {
-	case dtos.VulnStateOpen:
-		return "unhandled"
-	case dtos.VulnStateAccepted:
-		return "accepted"
-	case dtos.VulnStateFalsePositive:
-		return "marked as false positive"
-	case dtos.VulnStateFixed:
-		return "fixed"
-	default:
-		return "unknown state"
-	}
-}
-
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
+func generateTrackingObject(vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
 	allEvents := make([]vulnEventWithVuln, 0)
 	for _, vuln := range vulns {
@@ -1176,18 +1162,6 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 	slices.SortFunc(allEvents, func(event1 vulnEventWithVuln, event2 vulnEventWithVuln) int {
 		return event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
 	})
-
-	engineVersion := config.Version
-	if engineVersion == "" {
-		engineVersion = "debug"
-	}
-	tracking.Generator = &gocsaf.Generator{
-		Engine: &gocsaf.Engine{
-			Name:    utils.Ptr("DevGuard CSAF Generator"),
-			Version: &engineVersion,
-		},
-		Date: tracking.CurrentReleaseDate,
-	}
 
 	// then we can construct the full revision history
 	revisions, err := buildRevisionHistory(allEvents)
@@ -1208,6 +1182,18 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 	tracking.ID = utils.Ptr(gocsaf.TrackingID(strings.ToUpper(version)))
 	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
 	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
+
+	engineVersion := config.Version
+	if engineVersion == "" {
+		engineVersion = "debug"
+	}
+	tracking.Generator = &gocsaf.Generator{
+		Engine: &gocsaf.Engine{
+			Name:    utils.Ptr("DevGuard CSAF Generator"),
+			Version: &engineVersion,
+		},
+		Date: tracking.CurrentReleaseDate,
+	}
 	return tracking, nil
 }
 
