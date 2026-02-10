@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -216,35 +215,36 @@ type ecosystemRow struct {
 	Count     int    `gorm:"count" json:"count"`
 }
 
-// return the number of affected packages by ecosystem
-func (c VulnDBController) GetEcosystemDistribution(ctx shared.Context) error {
-	results := make([]ecosystemRow, 1024)
+// return the number of vulnerabilities in affected packages per ecosystem
+func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
+	cveResults := make([]ecosystemRow, 1024)
+	maliciousPackageResults := make([]ecosystemRow, 64)
 
-	// static sql to get amount of packages by ecosystem
-	sql := `SELECT ecosystem, COUNT(*) FROM affected_components GROUP BY ecosystem;`
-	err := c.affectedComponentRepository.GetDB(nil).Raw(sql).Find(&results).Error
+	// get the amount of CVEs in affected packages per ecosystem
+	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM cve_affected_component a
+	LEFT JOIN affected_components b ON b.id = a.affected_component_id
+	GROUP BY LOWER(b.ecosystem);`
+	err := c.affectedComponentRepository.GetDB(nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
 
-	// since ecosystem have tags behind the : character we want to group them by their prefix
-	jsonResults := buildResultsJSON(results)
-
-	return ctx.String(200, jsonResults)
-}
-
-// group ecosystem by prefix ecosystem string and return the equivalent json encoding
-func buildResultsJSON(rows []ecosystemRow) string {
-	// map to deduplicate ecosystem with different tags
-	aggregatedResults := make(map[string]int)
-
-	// fill the map with the value of the rows
-	for _, row := range rows {
-		before, _, _ := strings.Cut(row.Ecosystem, ":")
-		aggregatedResults[before] += row.Count
+	// do the same thing for malicious packages
+	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a 
+	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id 
+	GROUP BY LOWER(b.ecosystem);`
+	err = c.affectedComponentRepository.GetDB(nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
 
-	// marshal to JSON with proper indentation
-	data, _ := json.MarshalIndent(aggregatedResults, "", config.PrettyJSONIndent)
-	return string(data)
+	// group the results in a map by cutting the ecosystem identifier before the ':'
+	ecosystemToAmount := make(map[string]int, len(cveResults))
+	for _, row := range append(cveResults, maliciousPackageResults...) {
+		key, _, _ := strings.Cut(row.Ecosystem, ":")
+		ecosystemToAmount[key] += row.Count
+	}
+
+	// covert the result in a map and return it
+	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
 }
