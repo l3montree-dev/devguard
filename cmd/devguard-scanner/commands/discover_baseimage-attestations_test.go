@@ -20,18 +20,18 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 		expectedPrefixPattern string
 	}{
 		{
-			name: "attestations with identical predicateType should have unique filenames",
+			name: "attestations with identical predicateType produce same filename (merged by DevGuard)",
 			attestations: []map[string]interface{}{
 				{"predicateType": "https://cyclonedx.org/vex"},
 				{"predicateType": "https://cyclonedx.org/vex"},
 				{"predicateType": "https://cyclonedx.org/vex"},
 			},
 			expectedFilenames: []string{
-				"attestation-1-vex.json",
-				"attestation-2-vex.json",
-				"attestation-3-vex.json",
+				"attestation-vex.json",
+				"attestation-vex.json",
+				"attestation-vex.json",
 			},
-			expectedUniqueCount:   3,
+			expectedUniqueCount:   1,
 			expectedPrefixPattern: "attestation-",
 		},
 		{
@@ -42,9 +42,9 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 				{"predicateType": "https://in-toto.io/attestation/v1"},
 			},
 			expectedFilenames: []string{
-				"attestation-1-vex.json",
-				"attestation-2-Document.json",
-				"attestation-3-v1.json",
+				"attestation-vex.json",
+				"attestation-Document.json",
+				"attestation-v1.json",
 			},
 			expectedUniqueCount:   3,
 			expectedPrefixPattern: "attestation-",
@@ -57,15 +57,15 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 				{"predicateType": "https://example.com/sbom"},
 			},
 			expectedFilenames: []string{
-				"attestation-1-bom.json",
+				"attestation-bom.json",
 				"attestation-2.json",
-				"attestation-3-sbom.json",
+				"attestation-sbom.json",
 			},
 			expectedUniqueCount:   3,
 			expectedPrefixPattern: "attestation-",
 		},
 		{
-			name: "mixed identical and different predicateTypes",
+			name: "mixed identical and different predicateTypes (duplicates merged)",
 			attestations: []map[string]interface{}{
 				{"predicateType": "https://slsa.dev/provenance/v1"},
 				{"predicateType": "https://slsa.dev/provenance/v1"},
@@ -73,12 +73,12 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 				{"predicateType": "https://cyclonedx.org/vex"},
 			},
 			expectedFilenames: []string{
-				"attestation-1-v1.json",
-				"attestation-2-v1.json",
-				"attestation-3-vex.json",
-				"attestation-4-vex.json",
+				"attestation-v1.json",
+				"attestation-v1.json",
+				"attestation-vex.json",
+				"attestation-vex.json",
 			},
-			expectedUniqueCount:   4,
+			expectedUniqueCount:   2,
 			expectedPrefixPattern: "attestation-",
 		},
 	}
@@ -95,7 +95,9 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 				if predicate, ok := attestation["predicateType"].(string); ok {
 					// get everything after the last / in the predicate type
 					predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
-					attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%d-%s.json", i+1, predicate))
+					// remove .json suffix if it exists
+					predicate = strings.TrimSuffix(predicate, ".json")
+					attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%s.json", predicate))
 				}
 
 				generatedFilenames = append(generatedFilenames, filepath.Base(attestationFileName))
@@ -109,12 +111,12 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 			// Verify expected filenames match
 			assert.Equal(t, tt.expectedFilenames, generatedFilenames, "generated filenames should match expected")
 
-			// Verify all filenames are unique
+			// Verify unique filename count
 			uniqueFilenames := make(map[string]bool)
 			for _, filename := range generatedFilenames {
 				uniqueFilenames[filename] = true
 			}
-			assert.Equal(t, tt.expectedUniqueCount, len(uniqueFilenames), "all filenames should be unique")
+			assert.Equal(t, tt.expectedUniqueCount, len(uniqueFilenames), "unique filename count should match expected")
 
 			// Verify all filenames start with expected prefix
 			for _, filename := range generatedFilenames {
@@ -128,10 +130,10 @@ func TestAttestationFilenameGeneration(t *testing.T) {
 					"filename %s should have .json extension", filename)
 			}
 
-			// Verify the files were actually created
+			// Verify the files were actually created (unique files only)
 			entries, err := os.ReadDir(output)
 			require.NoError(t, err)
-			assert.Equal(t, len(tt.attestations), len(entries), "should have created correct number of files")
+			assert.Equal(t, tt.expectedUniqueCount, len(entries), "should have created correct number of unique files")
 		})
 	}
 }

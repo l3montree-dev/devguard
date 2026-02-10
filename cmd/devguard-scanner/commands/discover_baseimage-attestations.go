@@ -62,12 +62,14 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 
 	for i, attestation := range attestations {
 		// try to read the predicate type from the attestation
-
 		attestationFileName := filepath.Join(output, fmt.Sprintf("attestation-%d.json", i+1))
 		if predicate, ok := attestation["predicateType"].(string); ok {
 			// get everything after the last / in the predicate type
 			predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
-			attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%d-%s.json", i+1, predicate))
+			// remove .json suffix if it exists
+			predicate = strings.TrimSuffix(predicate, ".json")
+			// DevGuard merges attestations with the same predicate type, so we don't need to include the index in the filename if we have a predicate type
+			attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%s.json", predicate))
 		}
 
 		attestationFile, err := os.Create(attestationFileName)
