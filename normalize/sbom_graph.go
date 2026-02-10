@@ -1164,7 +1164,14 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	rootName := metadata.RootName
 	if rootName == "" {
-		rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
+		// If ArtifactName is a valid PURL, parse it and set the version properly
+		// so that the version appears before qualifiers (e.g. pkg:oci/name@version?qualifier=value)
+		if p, err := packageurl.FromString(metadata.ArtifactName); err == nil && metadata.AssetVersionName != "" {
+			p.Version = metadata.AssetVersionName
+			rootName = p.String()
+		} else {
+			rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
+		}
 	}
 
 	// check if valid purl

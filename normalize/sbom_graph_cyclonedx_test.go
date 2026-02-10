@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -398,4 +399,70 @@ func TestSBOMGraphFromVulnerabilities(t *testing.T) {
 		assert.True(t, componentPurls["pkg:npm/package-a@1.0.0"], "package-a should be in the BOM")
 		assert.True(t, componentPurls["pkg:npm/package-b@2.0.0"], "package-b should be in the BOM")
 	})
+}
+
+func TestToCycloneDXRootPURLWithQualifiers(t *testing.T) {
+	tests := []struct {
+		name             string
+		artifactName     string
+		assetVersionName string
+		expectedVersion  string
+		expectedPURL     string
+	}{
+		{
+			name:             "PURL with qualifiers should have version before qualifiers",
+			artifactName:     "pkg:oci/devguard?repository_url=ghcr.io/l3montree-dev/devguard",
+			assetVersionName: "1.0.0",
+			expectedVersion:  "1.0.0",
+			expectedPURL:     "pkg:oci/devguard@1.0.0?repository_url=ghcr.io%2Fl3montree-dev%2Fdevguard",
+		},
+		{
+			name:             "PURL without qualifiers works normally",
+			artifactName:     "pkg:oci/devguard",
+			assetVersionName: "2.0.0",
+			expectedVersion:  "2.0.0",
+			expectedPURL:     "pkg:oci/devguard@2.0.0",
+		},
+		{
+			name:             "PURL with multiple qualifiers preserves all qualifiers",
+			artifactName:     "pkg:oci/myapp?repository_url=ghcr.io/org/myapp&tag=latest",
+			assetVersionName: "3.0.0",
+			expectedVersion:  "3.0.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewSBOMGraph()
+			artifactID := g.AddArtifact(tt.artifactName)
+			g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+
+			bom := g.ToCycloneDX(BOMMetadata{
+				ArtifactName:     tt.artifactName,
+				AssetVersionName: tt.assetVersionName,
+			})
+
+			// Find the root component
+			var rootComp *cdx.Component
+			for i := range *bom.Components {
+				c := &(*bom.Components)[i]
+				if c.Type == cdx.ComponentTypeApplication {
+					rootComp = c
+					break
+				}
+			}
+
+			assert.NotNil(t, rootComp, "Root component should exist")
+			assert.NotEmpty(t, rootComp.PackageURL, "Root component should have a valid PackageURL")
+
+			// Parse the resulting PURL to verify it's structurally valid
+			parsedPURL, err := packageurl.FromString(rootComp.PackageURL)
+			assert.NoError(t, err, "Root PackageURL should be a valid PURL: %s", rootComp.PackageURL)
+			assert.Equal(t, tt.expectedVersion, parsedPURL.Version, "PURL version should match")
+
+			if tt.expectedPURL != "" {
+				assert.Equal(t, tt.expectedPURL, rootComp.PackageURL, "PackageURL should be correctly formed")
+			}
+		})
+	}
 }
