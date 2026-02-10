@@ -217,8 +217,8 @@ type ecosystemRow struct {
 
 // return the number of vulnerabilities in affected packages per ecosystem
 func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
-	cveResults := make([]ecosystemRow, 1024)
-	maliciousPackageResults := make([]ecosystemRow, 64)
+	cveResults := make([]ecosystemRow, 0, 1024)
+	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 
 	// get the amount of CVEs in affected packages per ecosystem
 	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM cve_affected_component a
