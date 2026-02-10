@@ -200,10 +200,19 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
 	}
+	// Update artifact risk aggregations in background
+	c.updateArtifactRiskAggregation(asset, vulns)
+
+	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
+}
+
+func (c *VEXRuleController) updateArtifactRiskAggregation(asset models.Asset, vulns []models.DependencyVuln) {
 	c.FireAndForget(func() {
-		artifacts := []models.Artifact{}
+		artifacts := map[string]models.Artifact{}
 		for _, vuln := range vulns {
-			artifacts = append(artifacts, vuln.GetArtifacts()...)
+			for _, artifact := range vuln.Artifacts {
+				artifacts[artifact.ArtifactName] = artifact
+			}
 		}
 		for _, artifact := range artifacts {
 			if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
@@ -211,8 +220,6 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 			}
 		}
 	})
-
-	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
 }
 
 // @Summary Update a VEX rule
@@ -283,17 +290,8 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 			ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
 		}
 
-		c.FireAndForget(func() {
-			artifacts := []models.Artifact{}
-			for _, vuln := range vulns {
-				artifacts = append(artifacts, vuln.GetArtifacts()...)
-			}
-			for _, artifact := range artifacts {
-				if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
-					slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
-				}
-			}
-		})
+		// Update artifact risk aggregations in background
+		c.updateArtifactRiskAggregation(asset, vulns)
 
 		// Log if rule was just enabled
 		if !wasEnabled {
