@@ -965,6 +965,21 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 		DiscoveryDate: initialRelease,
 	}
 
+	productStatus, distributions, remediations := calculateVulnStateInformation(allVulnsOfCVE)
+
+	// build and assign the notes for the vulnerability
+	notes, err := generateNotesForVulnerabilityObject(allVulnsOfCVE, distributions)
+	if err != nil {
+		return nil, err
+	}
+	vulnObject.Notes = notes
+	vulnObject.Remediations = remediations
+	vulnObject.ProductStatus = productStatus
+
+	return append(vulnerabilities, &vulnObject), nil
+}
+
+func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocsaf.ProductStatus, []stateDistributionOfPathsInProduct, gocsaf.Remediations) {
 	// build a map for each status type
 	affected := map[string]struct{}{}
 	notAffected := map[string]struct{}{}
@@ -988,13 +1003,13 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 			productID:          productName,
 			totalAmountOfPaths: len(vulns),
 		}
-		exploitableVulns := make([]models.DependencyVuln, 0, len(vulns))
+		acceptedVulns := make([]models.DependencyVuln, 0, len(vulns))
 		falsePositiveVulns := make([]models.DependencyVuln, 0, len(vulns))
 		fixedVulns := make([]models.DependencyVuln, 0, len(vulns))
 		for _, vuln := range vulns {
 			switch vuln.State {
 			case dtos.VulnStateAccepted:
-				exploitableVulns = append(exploitableVulns, vuln)
+				acceptedVulns = append(acceptedVulns, vuln)
 				distribution.amountAccepted++
 			case dtos.VulnStateFalsePositive:
 				falsePositiveVulns = append(falsePositiveVulns, vuln)
@@ -1010,9 +1025,9 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 		distribution.amountUnhandled = distribution.totalAmountOfPaths - (distribution.amountFalsePositive + distribution.amountAccepted + distribution.amountFixed)
 		distributions = append(distributions, distribution)
 		// case: there is an accepted vuln amongst the vulns
-		if len(exploitableVulns) > 0 {
+		if len(acceptedVulns) > 0 {
 			// determine the most recent event and therefor the most recent justification
-			justification := getMostRecentJustification(exploitableVulns)
+			justification := getMostRecentJustification(acceptedVulns)
 			details := "The risk of this vulnerability has been accepted."
 			if justification != nil {
 				details += fmt.Sprintf(" Justification: %s", *justification)
@@ -1054,7 +1069,7 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 	}
 
 	// after putting each vuln in their respective category we build the product status lists with them
-	vulnObject.ProductStatus = &gocsaf.ProductStatus{
+	productStatus := &gocsaf.ProductStatus{
 		Fixed: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
 			return utils.Ptr(gocsaf.ProductID(el))
 		})))),
@@ -1068,17 +1083,7 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 			return utils.Ptr(gocsaf.ProductID(el))
 		})))),
 	}
-
-	// build and assign the notes for the vulnerability
-	notes, err := generateNotesForVulnerabilityObject(allVulnsOfCVE, distributions)
-	if err != nil {
-		return nil, err
-	}
-	vulnObject.Notes = notes
-	vulnObject.Remediations = remediations
-	vulnerabilities = append(vulnerabilities, &vulnObject)
-
-	return vulnerabilities, nil
+	return productStatus, distributions, remediations
 }
 
 func getMostRecentJustification(vulns []models.DependencyVuln) *string {
