@@ -1857,6 +1857,12 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 				expectedInURL: "artifact%3Fwith%26special%3Dchars",
 				description:   "query string characters fully encoded by QueryEscape",
 			},
+			{
+				name:          "PURL with qualifiers",
+				artifactName:  "pkg:oci/devguard?repository_url=ghcr.io/l3montree-dev/devguard",
+				expectedInURL: "pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard",
+				description:   "full PURL with qualifiers is fully encoded",
+			},
 		}
 
 		for _, tc := range testCases {
