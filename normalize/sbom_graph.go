@@ -795,6 +795,10 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 // ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs or have VEX/CSAF.
 // These cannot be automatically marked as "fixed".
 func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
+	// we need to reset the scope
+	oldScope := g.CurrentScopeID()
+	g.ClearScope()
+
 	counts := g.CountInfoSourcesPerComponent()
 	var result []string
 
@@ -802,6 +806,10 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 		if typeCounts[InfoSourceSBOM] > 1 {
 			result = append(result, id)
 		}
+	}
+	err := g.Scope(oldScope)
+	if err != nil {
+		panic("failed to restore scope after counting info sources: " + err.Error())
 	}
 
 	return result

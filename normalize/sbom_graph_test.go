@@ -1970,3 +1970,140 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 		}
 	})
 }
+
+func TestScoping(t *testing.T) {
+	// Build graph:
+	// ROOT
+	// ├── artifact:app1
+	// │   ├── sbom:s1@app1
+	// │   │   ├── pkg:npm/shared@1.0.0
+	// │   │   └── pkg:npm/only1@1.0.0
+	// │   └── sbom:s2@app1
+	// │       └── pkg:npm/shared@1.0.0
+	// └── artifact:app2
+	//     └── sbom:s3@app2
+	//         └── pkg:npm/only2@1.0.0
+	buildGraph := func() *SBOMGraph {
+		g := NewSBOMGraph()
+		a1 := g.AddArtifact("app1")
+		a2 := g.AddArtifact("app2")
+		s1 := g.AddInfoSource(a1, "s1", InfoSourceSBOM)
+		s2 := g.AddInfoSource(a1, "s2", InfoSourceSBOM)
+		s3 := g.AddInfoSource(a2, "s3", InfoSourceSBOM)
+
+		shared := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/shared@1.0.0", PackageURL: "pkg:npm/shared@1.0.0", Name: "shared"})
+		only1 := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/only1@1.0.0", PackageURL: "pkg:npm/only1@1.0.0", Name: "only1"})
+		only2 := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/only2@1.0.0", PackageURL: "pkg:npm/only2@1.0.0", Name: "only2"})
+
+		g.AddEdge(s1, shared)
+		g.AddEdge(s1, only1)
+		g.AddEdge(s2, shared)
+		g.AddEdge(s3, only2)
+		return g
+	}
+
+	componentIDs := func(g *SBOMGraph) []string {
+		var ids []string
+		for c := range g.Components() {
+			ids = append(ids, c.BOMRef)
+		}
+		return ids
+	}
+
+	t.Run("ClearScope sees all components", func(t *testing.T) {
+		g := buildGraph()
+		g.ClearScope()
+		ids := componentIDs(g)
+		assert.Len(t, ids, 3)
+		assert.Contains(t, ids, "pkg:npm/shared@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only1@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ScopeToArtifact restricts visibility", func(t *testing.T) {
+		g := buildGraph()
+		err := g.ScopeToArtifact("app1")
+		assert.NoError(t, err)
+		ids := componentIDs(g)
+		assert.Contains(t, ids, "pkg:npm/shared@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only1@1.0.0")
+		assert.NotContains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ScopeToArtifact other artifact", func(t *testing.T) {
+		g := buildGraph()
+		err := g.ScopeToArtifact("app2")
+		assert.NoError(t, err)
+		ids := componentIDs(g)
+		assert.Equal(t, []string{"pkg:npm/only2@1.0.0"}, ids)
+	})
+
+	t.Run("Scope to unreachable node returns error", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		err := g.Scope("artifact:app1")
+		assert.ErrorIs(t, err, ErrNodeNotReachable)
+	})
+
+	t.Run("IsScoped", func(t *testing.T) {
+		g := buildGraph()
+		assert.False(t, g.IsScoped())
+		_ = g.ScopeToArtifact("app1")
+		assert.True(t, g.IsScoped())
+		g.ClearScope()
+		assert.False(t, g.IsScoped())
+	})
+
+	t.Run("Node returns nil for out-of-scope node", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		assert.Nil(t, g.Node("pkg:npm/only1@1.0.0"))
+		assert.NotNil(t, g.Node("pkg:npm/only2@1.0.0"))
+	})
+
+	t.Run("Edges respects scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		for _, child := range g.Edges() {
+			assert.NotEqual(t, "pkg:npm/only1@1.0.0", child)
+			assert.NotEqual(t, "pkg:npm/shared@1.0.0", child)
+		}
+	})
+
+	t.Run("Clone preserves scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		clone := g.Clone()
+		assert.Equal(t, g.CurrentScopeID(), clone.CurrentScopeID())
+		ids := componentIDs(clone)
+		assert.NotContains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ComponentsWithMultipleSources returns shared component", func(t *testing.T) {
+		g := buildGraph()
+		multi := g.ComponentsWithMultipleSources()
+		assert.Equal(t, []string{"pkg:npm/shared@1.0.0"}, multi)
+	})
+
+	t.Run("ComponentsWithMultipleSources preserves scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		before := g.CurrentScopeID()
+		_ = g.ComponentsWithMultipleSources()
+		assert.Equal(t, before, g.CurrentScopeID())
+	})
+
+	t.Run("ComponentsWithMultipleSources works when scoped", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		multi := g.ComponentsWithMultipleSources()
+		assert.Equal(t, []string{"pkg:npm/shared@1.0.0"}, multi)
+	})
+
+	t.Run("single source component not in ComponentsWithMultipleSources", func(t *testing.T) {
+		g := buildGraph()
+		multi := g.ComponentsWithMultipleSources()
+		assert.NotContains(t, multi, "pkg:npm/only1@1.0.0")
+		assert.NotContains(t, multi, "pkg:npm/only2@1.0.0")
+	})
+}
