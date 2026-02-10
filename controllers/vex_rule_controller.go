@@ -42,7 +42,6 @@ func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsServic
 }
 
 type CreateVEXRuleRequest struct {
-	VulnID                  string                           `json:"vulnId"`
 	CVEID                   string                           `json:"cveId" validate:"required"`
 	Justification           string                           `json:"justification" validate:"required"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
