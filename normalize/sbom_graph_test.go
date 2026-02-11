@@ -5,7 +5,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -2121,8 +2120,8 @@ func TestDependencyGraph(t *testing.T) {
 		b, err := os.Open("testdata/sbom-dependency-tree.json")
 		assert.Nil(t, err)
 
-		var sbom cyclonedx.BOM
-		assert.Nil(t, cyclonedx.NewBOMDecoder(b, cyclonedx.BOMFileFormatJSON).Decode(&sbom))
+		var sbom cdx.BOM
+		assert.Nil(t, cdx.NewBOMDecoder(b, cdx.BOMFileFormatJSON).Decode(&sbom))
 
 		g, err := SBOMGraphFromCycloneDX(&sbom, "artifact", "infosource", false)
 		assert.Nil(t, err)
