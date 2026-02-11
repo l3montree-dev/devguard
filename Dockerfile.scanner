@@ -68,11 +68,11 @@ RUN python -m venv ${VENV_DIR}/semgrep && \
 
 # Install semgrep in its venv
 RUN ${VENV_DIR}/semgrep/bin/pip install --upgrade pip && \
-    ${VENV_DIR}/semgrep/bin/pip install semgrep==1.142.0
+    ${VENV_DIR}/semgrep/bin/pip install semgrep==1.151.0
 
 # Install checkov in its venv
 RUN ${VENV_DIR}/checkov/bin/pip install --upgrade pip && \
-    ${VENV_DIR}/checkov/bin/pip install checkov==3.2.495
+    ${VENV_DIR}/checkov/bin/pip install checkov==3.2.501
 
 # Create wrapper scripts using printf to avoid heredoc issues
 RUN printf '#!/bin/sh\nexec %s/semgrep/bin/semgrep "$@"\n' "${VENV_DIR}" > /usr/local/bin/semgrep && \
