@@ -53,11 +53,11 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 		PrintSastScanResults(openVulns, webUI, assetName, assetVersionName, tw)
 	}
 
-	link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
-	wrappedLink := text.WrapText(link, rowLengthLimit)
-	tw.AppendRow(table.Row{"Link", wrappedLink})
-
 	fmt.Println(tw.Render())
+
+	link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
+	//wrappedLink := text.WrapText(link, rowLengthLimit)
+	fmt.Printf("See all code risks at:\n%s\n", link)
 
 	if len(openVulns) > 0 {
 		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
