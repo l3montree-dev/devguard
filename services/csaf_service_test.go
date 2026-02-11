@@ -17,6 +17,7 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -236,7 +237,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
-		testVulnsArtifact2[len(testVulnsArtifact2)-1].Events = append(testVulnsArtifact2[len(testVulnsArtifact2)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
 
 		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
 		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
@@ -290,8 +291,156 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
 
 		assert.Len(t, underInvestigation, 2)
-		assert.Equal(t, string(artifact2ProductID1), underInvestigation[0])
-		assert.Equal(t, string(artifact1ProductID1), underInvestigation[1])
+		assert.Equal(t, string(artifact1ProductID1), underInvestigation[0])
+		assert.Equal(t, string(artifact2ProductID1), underInvestigation[1])
+
+	})
+}
+
+func TestGetMostRecentJustification(t *testing.T) {
+	_, _, _, vulns := setUpVulns()
+	eventTimeLatest, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+	eventTimeEarlier, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+	t.Run("should return nil if no justification can be found", func(t *testing.T) {
+		justification := getMostRecentJustification(vulns)
+		assert.Nil(t, justification)
+	})
+	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
+		vulns[0].State = dtos.VulnStateFalsePositive
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeEarlier}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+
+		vulns[1].State = dtos.VulnStateFalsePositive
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+
+		justification := getMostRecentJustification(vulns)
+		assert.Equal(t, "this information is up to date", *justification)
+	})
+}
+
+func TestGenerateTrackingObject(t *testing.T) {
+	_, _, artifact1, vulns := setUpVulns()
+	eventTimeFalsePositives, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+	eventTimeFixed, err := time.Parse(time.RFC3339, "2026-02-12T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+	t.Run("build history with different vulns in different artifacts at different times", func(t *testing.T) {
+		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
+		testVulnsArtifact2 := testVulnsArtifact1 // end state 4 vulns (comp1: 2 paths (unhandled, falsePositive), comp2: 2 paths (falsePositive, falsePositive))
+
+		vuln2Depth1 := vulns[len(vulns)-1]
+		vuln2Depth1.VulnerabilityPath = []string{"comp1"}
+		testVulnsArtifact2 = append(testVulnsArtifact2, vuln2Depth1)
+
+		artifact2 := artifact1
+		artifact2.ArtifactName = "pkg:oci/scanner"
+
+		artifact2.DependencyVuln = testVulnsArtifact2
+		for i := range testVulnsArtifact2 {
+			testVulnsArtifact2[i].Artifacts = []models.Artifact{artifact2}
+		}
+
+		// mark 3 vulns as false positives (2/2 for the purl2 in artifact2 and 1/2 for purl1 in artifact2)
+		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
+		for _, vulnPtr := range falsePositiveVulns {
+			vulnPtr.SetState(dtos.VulnStateFalsePositive)
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeFalsePositives}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+		}
+
+		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeFixed}, Type: dtos.EventTypeFixed})
+
+		// calculate all vuln ID so we can sort by it
+		for i := range testVulnsArtifact1 {
+			testVulnsArtifact1[i].ID = testVulnsArtifact1[i].CalculateHash()
+		}
+		for i := range testVulnsArtifact2 {
+			testVulnsArtifact2[i].ID = testVulnsArtifact2[i].CalculateHash()
+		}
+
+		tracking, err := generateTrackingObject(append(testVulnsArtifact1, testVulnsArtifact2...))
+		assert.NoError(t, err)
+
+		// the current release date should be the timestamp of the latest event
+		currentRelease, err := time.Parse(time.RFC3339, *tracking.CurrentReleaseDate)
+		assert.NoError(t, err)
+		assert.True(t, eventTimeFixed.Equal(currentRelease))
+
+		// 7 vulns each has a detected event + 1 fix event + 3 false positive events = we expect 11 entries
+		assert.Len(t, tracking.RevisionHistory, 11)
+		// the version number should match the number of entries
+		assert.Equal(t, strconv.Itoa(len(tracking.RevisionHistory)), string(*tracking.Version))
+
+		// all detected Events should happen the earliest
+		detectedEntries := tracking.RevisionHistory[:7]
+		detectionTime := vulns[0].Events[0].CreatedAt
+		for i, entry := range detectedEntries {
+			date, err := time.Parse(time.RFC3339, *entry.Date)
+			assert.NoError(t, err)
+			assert.True(t, detectionTime.Equal(date))
+
+			assert.Equal(t, strconv.Itoa(i+1), string(*entry.Number))
+			assert.True(t, strings.Contains(*entry.Summary, "Detected path in package"))
+		}
+
+		// then we should find all the false positives events
+		falsePositiveEntries := tracking.RevisionHistory[7:10]
+		for i, entry := range falsePositiveEntries {
+			date, err := time.Parse(time.RFC3339, *entry.Date)
+			assert.NoError(t, err)
+			assert.True(t, eventTimeFalsePositives.Equal(date))
+
+			assert.Equal(t, strconv.Itoa(i+1+len(detectedEntries)), string(*entry.Number))
+			assert.True(t, strings.Contains(*entry.Summary, "Marked path as false positive"))
+		}
+
+		// lastly check for the fixed event as the last entry
+		entry := tracking.RevisionHistory[len(tracking.RevisionHistory)-1]
+		date, err := time.Parse(time.RFC3339, *entry.Date)
+		assert.NoError(t, err)
+		assert.True(t, eventTimeFixed.Equal(date))
+
+		assert.Equal(t, strconv.Itoa(len(detectedEntries)+len(falsePositiveEntries)+1), string(*entry.Number))
+		assert.True(t, strings.Contains(*entry.Summary, "Fixed path in package"))
+
+		amountPurl1 := 0
+		amountPurl2 := 0
+
+		amountArtifact1 := 0
+		amountArtifact2 := 0
+
+		for _, entry := range tracking.RevisionHistory {
+			if strings.Contains(*entry.Summary, "pkg:github.com/jetbrains/kotlin@v872") {
+				amountPurl1++
+			}
+			if strings.Contains(*entry.Summary, "pkg:rpm/redhat/openssh-debugsource@v1.0.1") {
+				amountPurl2++
+			}
+			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
+				amountArtifact1++
+			}
+			if strings.Contains(*entry.Summary, normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName)) {
+				amountArtifact2++
+			}
+		}
+
+		assert.Equal(t, len(tracking.RevisionHistory), amountArtifact1+amountArtifact2, amountPurl1+amountPurl2)
+		// 3 detected events 1 fixed event
+		assert.Equal(t, 3+1, amountArtifact1)
+		// 4 detected events 3 falsePositives
+		assert.Equal(t, 4+3, amountArtifact2)
+		assert.Equal(t, 5, amountPurl1)
+		assert.Equal(t, 6, amountPurl2)
 
 	})
 }

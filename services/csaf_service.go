@@ -1129,6 +1129,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 	}
 	notes := []*gocsaf.Note{}
 
+	// always append CVE description node
 	cve := vulns[0].CVE
 	cveDescriptionNote := gocsaf.Note{
 		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
@@ -1175,9 +1176,13 @@ func generateTrackingObject(vulns []models.DependencyVuln) (gocsaf.Tracking, err
 		}
 	}
 
-	// sort them by their creation timestamp
+	// sort them by their creation timestamp and id to make it deterministic
 	slices.SortFunc(allEvents, func(event1 vulnEventWithVuln, event2 vulnEventWithVuln) int {
-		return event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
+		timeComp := event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
+		if timeComp != 0 {
+			return timeComp
+		}
+		return strings.Compare(event1.Vuln.ID, event2.Vuln.ID)
 	})
 
 	// then we can construct the full revision history
