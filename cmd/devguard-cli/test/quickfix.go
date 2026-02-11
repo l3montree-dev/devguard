@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -39,38 +40,25 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	return nil, nil
 }
 
-func generalizeAllVersions(resp []byte) [][]string {
-	var npmResponseObject NPMResponse
-
-	err := json.Unmarshal(resp, &npmResponseObject)
-
-	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
-		return nil
-	}
-
+func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]string, error) {
 	var versions [][]string
-	for _, Obj := range npmResponseObject.Versions {
-		// skip release candidates since recommending alpha version is not a good idea for security updates haha
-		if strings.Contains(Obj.Version, "-") {
+
+	// Extract and filter versions from NPMResponse
+	for _, obj := range npmResponse.Versions {
+		// skip release candidates
+		if strings.Contains(obj.Version, "-") {
 			continue
 		}
-		// split numbers into array to easily compare major versions later
-		versionParts := strings.Split(Obj.Version, ".")
+		versionParts := strings.Split(obj.Version, ".")
 		versions = append(versions, versionParts)
-
 	}
-	return versions
-}
 
-func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]string, error) {
-	// currentParts := strings.Split(currentVersion, ".")
+	// Filter by major version and sort
 	var currentMajor, currentMinor, currentPatch int
 	fmt.Sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch)
 
 	var recommended []string
-
-	for _, version := range versionHistory {
+	for _, version := range versions {
 		var major, minor, patch int
 		versionStr := strings.Join(version, ".")
 		fmt.Sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch)
@@ -113,48 +101,57 @@ type DependencyNode struct {
 	Dependencies map[string]*DependencyNode
 }
 
-func caretHandler(version []string) string {
-	//version range detection:
-	// example
-	/*
-		| Dependency                             |  Actual Range   |
-		| ---------------------------------------|---------------- |
-		| socks-proxy-agent@^7.0.0               | >=7.0.0 <8.0.0  |
-		| debug@^4.3.3                           | >=4.3.3 <5.0.0  |
-		| ip@^1.1.5                              |>=1.1.5 <2.0.0   |
-		| test@^0.2.3                            | >= 0.2.3 < 0.3.0|
-		caret applies to the most left non-zero digit in the version
-		Range detection:
+func IsValidSemver(version string) bool {
 
-
-	*/
-	//todo detect minRange maxRange
-	// minRange := "7.0.0"
-	// maxRange := "8.0.0"
-
-	// for _, version := range versionHistory {
-	// 	if version[0] == currentParts[0] {
-	// 		if version[1] >= currentParts[1] {
-	// 			if version[2] >= currentParts[2] {
-	// 				// fmt.Println(strings.Join(version, "."))
-	// 				recommended = append(recommended, strings.Join(version, "."))
-	// 			}
-	// 		}
-	// 	}
-	// 	return ""
-	// }
-	return ""
+	pattern := `^\d+\.\d+\.\d+$`
+	matched, _ := regexp.MatchString(pattern, version)
+	return matched
 }
-func suggestVersion(currentVersion string, vulnerableVersion string) string {
-	// alright so
-	return ""
+
+func processDependencies(depMap map[string]string, depName string, depVersion string, visited map[string]bool, vulnerablePackage string, vulnerableVersion string, node *DependencyNode) {
+	for depKey, depVal := range depMap {
+		// remove ^, ~, quotes
+		normalizedDepVal := strings.Trim(depVal, "^~\"")
+
+		// Skip non-semver versions
+		if !IsValidSemver(normalizedDepVal) {
+			continue
+		}
+
+		// Check if version exists before fetching
+		if !VersionExists(depKey, normalizedDepVal) {
+			fmt.Printf("Skipping %s@%s: version not found\n", depKey, normalizedDepVal)
+			continue
+		}
+
+		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
+		if err != nil {
+			fmt.Printf("Error fetching %s@%s: %v\n", depKey, depVal, err)
+			continue
+		}
+
+		depBody, err := io.ReadAll(depResp.Body)
+		depResp.Body.Close()
+		if err != nil {
+			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
+			continue
+		}
+
+		// Recursive call
+		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
+		if childNode != nil {
+			node.Dependencies[depKey] = childNode
+		}
+		if depKey == vulnerablePackage && depVal == vulnerableVersion {
+			fmt.Printf("Vulnerable package found: %s@%s\n", depKey, depVal)
+		}
+	}
 }
 
 func walkDependencyTree(npmRegisterResp []byte, depName string, depVersion string, visited map[string]bool, vulnerablePackage string, vulnerableVersion string) *DependencyNode {
 	var jsonData NPMResponse
 
 	if err := json.Unmarshal(npmRegisterResp, &jsonData); err != nil {
-		// fmt.Println("Error unmarshalling JSON:", err)
 		return nil
 	}
 
@@ -171,105 +168,13 @@ func walkDependencyTree(npmRegisterResp []byte, depName string, depVersion strin
 	}
 
 	if jsonData.Dependencies == nil && jsonData.DevDependencies == nil && jsonData.PeerDependencies == nil && jsonData.OptionalDependencies == nil {
-		//fmt.Printf("No dependencies found for %s@%s\n", depName, depVersion)
 		return node
 	}
 
-	for depKey, depVal := range jsonData.Dependencies {
-		//fmt.Printf("Fetching dependency: %s@%s\n", depKey, depVal)
-
-		// Check if version exists before fetching
-		if !VersionExists(depKey, depVal) {
-			fmt.Printf("Skipping %s@%s: version not found\n", depKey, depVal)
-			continue
-		}
-
-		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
-		if err != nil {
-			fmt.Printf("Error fetching %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		depBody, err := io.ReadAll(depResp.Body)
-		depResp.Body.Close()
-		if err != nil {
-			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		// Recursive call
-		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
-		if childNode != nil {
-			node.Dependencies[depKey] = childNode
-		}
-		if depKey == vulnerablePackage && depVal == vulnerableVersion {
-			fmt.Printf("Vulnerable package found: %s@%s\n", depKey, depVal)
-		}
-	}
-
-	for depKey, depVal := range jsonData.OptionalDependencies {
-		//fmt.Printf("Fetching optional dependency: %s@%s\n", depKey, depVal)
-
-		// Check if version exists before fetching
-		if !VersionExists(depKey, depVal) {
-			fmt.Printf("Skipping %s@%s: version not found\n", depKey, depVal)
-			continue
-		}
-
-		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
-		if err != nil {
-			fmt.Printf("Error fetching %s@%s: %v\n", depKey, node.Version, err)
-			continue
-		}
-
-		depBody, err := io.ReadAll(depResp.Body)
-		depResp.Body.Close()
-		if err != nil {
-			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		// Recursive call
-		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
-		if childNode != nil {
-			node.Dependencies[depKey] = childNode
-		}
-		if depKey == vulnerablePackage && depVal == vulnerableVersion {
-			fmt.Printf("Vulnerable package found: %s@%s\n", depKey, depVal)
-		}
-	}
-
-	for depKey, depVal := range jsonData.DevDependencies {
-		//fmt.Printf("Fetching dev dependency: %s@%s\n", depKey, depVal)
-
-		// Check if version exists before fetching
-		if !VersionExists(depKey, depVal) {
-			fmt.Printf("Skipping %s@%s: version not found\n", depKey, depVal)
-			continue
-		}
-
-		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
-		if err != nil {
-			fmt.Printf("Error fetching %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		depBody, err := io.ReadAll(depResp.Body)
-		depResp.Body.Close()
-		if err != nil {
-			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		// Recursive call
-		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
-		if childNode != nil {
-			node.Dependencies[depKey] = childNode
-		}
-		if depKey == vulnerablePackage && depVal == vulnerableVersion {
-			fmt.Printf("Vulnerable package found: %s@%s\n", depKey, depVal)
-		}
-	}
+	// Process all dependency types using the same logic
+	processDependencies(jsonData.Dependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
+	processDependencies(jsonData.OptionalDependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
+	processDependencies(jsonData.DevDependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
 
 	return node
 }
@@ -286,51 +191,114 @@ func printDependencyTree(node *DependencyNode, indent string) {
 	}
 }
 
-func main() {
-	DirectDependency := "playwright"
-	currentVersion := "1.50.1"
-	vulnerablePackage := "ip"
-	vulnerableVersion := "1.1.5"
-	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
+func findDependencyVersion(npmResp NPMResponse, depName string) string {
+	// Check all dependency types
+	if version, ok := npmResp.Dependencies[depName]; ok {
+		return version
 	}
+	if version, ok := npmResp.OptionalDependencies[depName]; ok {
+		return version
+	}
+	if version, ok := npmResp.DevDependencies[depName]; ok {
+		return version
+	}
+	if version, ok := npmResp.PeerDependencies[depName]; ok {
+		return version
+	}
+	return ""
+}
+
+func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMResponse, error) {
+	resp, err := getVersion(pkgManager, RegistryRequest{Dependency: dep, Version: version})
+	if err != nil {
+		return nil, fmt.Errorf("error fetching %s@%s: %w", dep, version, err)
+	}
+
 	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
-		fmt.Println("Error reading body:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	versions, err := filterMajorVersions(generalizeAllVersions(body), currentVersion)
-	if err != nil {
-		fmt.Println("Error filtering versions:", err)
-		return
+		return nil, fmt.Errorf("error reading response for %s@%s: %w", dep, version, err)
 	}
 
-	for _, version := range versions {
-		npmResponse, err := GetNPMRegistry(RegistryRequest{Dependency: DirectDependency, Version: version})
-		if err != nil {
-			fmt.Println("Error fetching version details:", err)
-			continue
-		}
+	var npmResp NPMResponse
+	if err := json.Unmarshal(body, &npmResp); err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON for %s@%s: %w", dep, version, err)
+	}
 
-		response, err := io.ReadAll(npmResponse.Body)
-		npmResponse.Body.Close()
-		if err != nil {
-			fmt.Println("Error reading response:", err)
-			continue
-		}
+	return &npmResp, nil
+}
 
-		// Build dependency tree recursively
-		visited := make(map[string]bool)
-		tree := walkDependencyTree(response, DirectDependency, version, visited, vulnerablePackage, vulnerableVersion)
+func checkVersionAvailability(versions []string, currentVersion string) (string, error) {
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no versions available")
+	}
 
-		// fmt.Println(tree)
-		for _, dep := range tree.Dependencies {
-			fmt.Println(dep)
-		}
-		printDependencyTree(tree, "")
+	if versions[0] == currentVersion {
+		return "", fmt.Errorf("no new version available (current: %s)", currentVersion)
+	}
+
+	return versions[0], nil
+}
+
+func checkVulnerabilityStatus(latestMeta *NPMResponse, vulnPkg string, vulnVer string) (bool, string) {
+	latestVulnVer := findDependencyVersion(*latestMeta, vulnPkg)
+
+	if latestVulnVer == vulnVer {
+		return false, latestVulnVer
+	}
+
+	if latestVulnVer != "" && latestVulnVer != vulnVer {
+		return true, latestVulnVer
+	}
+
+	return false, latestVulnVer
+}
+
+func checkVulnerabilityFix(directDep string, currentVer string, vulnPkg string, vulnVer string) error {
+
+	npmMeta, err := fetchPackageMetadata(getPackageManager("npm"), directDep, "")
+	if err != nil {
+		return fmt.Errorf("failed to fetch package metadata: %w", err)
+	}
+
+	versions, err := getRecommendedVersions(*npmMeta, currentVer)
+	if err != nil {
+		return fmt.Errorf("failed to filter versions: %w", err)
+	}
+
+	latestVer, err := checkVersionAvailability(versions, currentVer)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Printf("New versions available for %s: %s -> %s\n", directDep, currentVer, latestVer)
+
+	latestMeta, err := fetchPackageMetadata(getPackageManager("npm"), directDep, "latest")
+	if err != nil {
+		return fmt.Errorf("failed to fetch latest version metadata: %w", err)
+	}
+
+	isFixed, newVer := checkVulnerabilityStatus(latestMeta, vulnPkg, vulnVer)
+
+	if !isFixed {
+		fmt.Printf("Vulnerability NOT fixed in latest %s (still uses %s@%s)\n", directDep, vulnPkg, vulnVer)
+		return nil
+	}
+
+	fmt.Printf("✓ Vulnerability FIXED in latest (uses %s@%s instead of %s)\n", vulnPkg, newVer, vulnVer)
+	return nil
+}
+
+func main() {
+	directDependency := "playwright"
+	currentVersion := "1.50.1"
+	directVulnerablePackage := "fsevents"
+	directVulnerableVersion := "2.3.2"
+	// transitiveVulnerablePackage := "ip"
+	// transitiveVulnerableVersion := "1.1.5"
+
+	if err := checkVulnerabilityFix(directDependency, currentVersion, directVulnerablePackage, directVulnerableVersion); err != nil {
+		fmt.Println("Error:", err)
 	}
 }
