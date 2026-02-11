@@ -1,9 +1,11 @@
 package normalize
 
 import (
+	"os"
 	"slices"
 	"testing"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -2111,5 +2113,38 @@ func TestScoping(t *testing.T) {
 		multi := g.ComponentsWithMultipleSources()
 		assert.NotContains(t, multi, "pkg:npm/only1@1.0.0")
 		assert.NotContains(t, multi, "pkg:npm/only2@1.0.0")
+	})
+}
+
+func TestDependencyGraph(t *testing.T) {
+	t.Run("loading the sbom-dependency-tree.json should have only two direct dependencies", func(t *testing.T) {
+		b, err := os.Open("testdata/sbom-dependency-tree.json")
+		assert.Nil(t, err)
+
+		var sbom cyclonedx.BOM
+		assert.Nil(t, cyclonedx.NewBOMDecoder(b, cyclonedx.BOMFileFormatJSON).Decode(&sbom))
+
+		g, err := SBOMGraphFromCycloneDX(&sbom, "artifact", "infosource", false)
+		assert.Nil(t, err)
+
+		old := NewSBOMGraph()
+
+		directDeps := g.edges["sbom:infosource@artifact"]
+		assert.Len(t, directDeps, 2)
+		assert.Contains(t, directDeps, "pkg:npm/%40l3montree/service-app@1.0.0")
+		assert.Contains(t, directDeps, "pkg:npm/express@4.22.1")
+
+		diff := old.MergeGraph(g)
+		// check that we are only adding two edges to root
+		rootEdges := make(map[string]struct{})
+		for _, edge := range diff.AddedEdges {
+			if edge[0] == "sbom:infosource@artifact" {
+				rootEdges[edge[1]] = struct{}{}
+			}
+		}
+		assert.Len(t, rootEdges, 2)
+		// expect the correct edges to be added
+		assert.Contains(t, rootEdges, "pkg:npm/%40l3montree/service-app@1.0.0")
+		assert.Contains(t, rootEdges, "pkg:npm/express@4.22.1")
 	})
 }
