@@ -18,6 +18,7 @@ package normalize
 import (
 	"fmt"
 	"iter"
+	"log/slog"
 	"maps"
 	"net/url"
 	"os"
@@ -1481,7 +1482,8 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 
 			// Check for duplicate BOMRef
 			if seenBOMRefs[comp.BOMRef] {
-				return nil, fmt.Errorf("duplicate BOMRef found: %s", comp.BOMRef)
+				slog.Warn("duplicate BOMRef found, skipping component", "bomRef", comp.BOMRef)
+				continue
 			}
 			seenBOMRefs[comp.BOMRef] = true
 

@@ -579,7 +579,7 @@ func TestSchemaBreakers(t *testing.T) {
 		assert.NotNil(t, graph, "Graph should be created successfully")
 	})
 
-	t.Run("duplicate component BOMRef will return error during sbom graph construction", func(t *testing.T) {
+	t.Run("duplicate component BOMRef is skipped gracefully", func(t *testing.T) {
 		bom := &cdx.BOM{
 			SpecVersion: cdx.SpecVersion1_6,
 			BOMFormat:   "CycloneDX",
@@ -598,17 +598,17 @@ func TestSchemaBreakers(t *testing.T) {
 					Type:   cdx.ComponentTypeLibrary,
 				},
 				{
-					BOMRef: "pkg:npm/dup@1.0.0", // Same BOMRef - INVALID
+					BOMRef: "pkg:npm/dup@1.0.0", // Same BOMRef - skipped
 					Name:   "dup2",
 					Type:   cdx.ComponentTypeLibrary,
 				},
 			},
 		}
 
-		// Try to construct graph with duplicate BOMRefs - should return error
+		// Duplicate BOMRefs should be skipped with a warning, not cause an error
 		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
-		assert.NotNil(t, err, "Should return error for duplicate BOMRef")
-		assert.Nil(t, graph, "Graph should be nil when error occurs")
+		assert.Nil(t, err, "Should not return error for duplicate BOMRef")
+		assert.NotNil(t, graph, "Graph should be constructed successfully")
 	})
 
 	t.Run("missing required component BOMRef - will return error during graph construction", func(t *testing.T) {
