@@ -80,24 +80,95 @@ func filterMajorVersions(versionHistory [][]string, currentVersion string) ([]st
 	return recommended, nil
 }
 
-func walkDependencyTree(npmRegisterResp []byte) map[string]string {
+// single node in the dependency tree
+type DependencyNode struct {
+	Name         string
+	Version      string
+	Dependencies map[string]*DependencyNode
+}
+
+func caretHandler(version string) string {
+	//version range detection:
+	// example
+	/*
+		| Dependency               | Caret Range | Actual Range |
+		| ------------------------ | ----------- | ------------------- |
+		| socks-proxy-agent@^7.0.0 | ^7.0.0      | >=7.0.0 <8.0.0      |
+		| debug@^4.3.3             | ^4.3.3      | >=4.3.3 <5.0.0      |
+		| ip@^1.1.5                | ^1.1.5      | >=1.1.5 <2.0.0      |
+		| test@^0.2.3              | ^0.0.1      | >= 0.2.3 < 0.3.0    |
+		caret applies to the most left non-zero digit in the version
+	*/
+}
+
+func walkDependencyTree(npmRegisterResp []byte, depName string, depVersion string, visited map[string]bool, vulnerablePackage string, vulnerableVersion string) *DependencyNode {
 	var jsonData NPMResponse
 
 	if err := json.Unmarshal(npmRegisterResp, &jsonData); err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
+		// fmt.Println("Error unmarshalling JSON:", err)
 		return nil
 	}
-	// fmt.Println(jsonData)
-	fmt.Println(jsonData.Dependencies)
-	for jsonData.Dependencies != nil {
-		for key, value := range jsonData.Dependencies {
-			fmt.Printf("Dependency: %s, Version: %s\n", key, value)
-	return jsonData.Dependencies
+
+	nodeKey := depName + "@" + depVersion
+	if visited[nodeKey] {
+		return nil
+	}
+	visited[nodeKey] = true
+
+	node := &DependencyNode{
+		Name:         depName,
+		Version:      depVersion,
+		Dependencies: make(map[string]*DependencyNode),
+	}
+
+	if jsonData.Dependencies == nil {
+		//fmt.Printf("No dependencies found for %s@%s\n", depName, depVersion)
+		return node
+	}
+
+	for depKey, depVal := range jsonData.Dependencies {
+		//fmt.Printf("Fetching dependency: %s@%s\n", depKey, depVal)
+
+		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
+		if err != nil {
+			fmt.Printf("Error fetching %s@%s: %v\n", depKey, depVal, err)
+			continue
+		}
+
+		depBody, err := io.ReadAll(depResp.Body)
+		depResp.Body.Close()
+		if err != nil {
+			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
+			continue
+		}
+
+		// Recursive call
+		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
+		if childNode != nil {
+			node.Dependencies[depKey] = childNode
+		}
+	}
+
+	return node
 }
 
-func main() {
-	DirectDependency := "playwright"
+// func printDependencyTree(node *DependencyNode, indent string) {
+// 	if node == nil {
+// 		return
+// 	}
 
+// 	fmt.Printf("%s%s@%s\n", indent, node.Name, node.Version)
+
+// 	for _, dep := range node.Dependencies {
+// 		printDependencyTree(dep, indent+"  ")
+// 	}
+// }
+
+func main() {
+	DirectDependency := "make-fetch-happen"
+	currentVersion := "10.1.6"
+	vulnerablePackage := "ip"
+	vulnerableVersion := "1.1.5"
 	resp, err := getVersion(getPackageManager("npm"), RegistryRequest{Dependency: DirectDependency})
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -110,22 +181,33 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	versions, err := filterMajorVersions(generalizeAllVersions(body), "1.50.1")
+	versions, err := filterMajorVersions(generalizeAllVersions(body), currentVersion)
 	if err != nil {
 		fmt.Println("Error filtering versions:", err)
 		return
 	}
-	for _, version := range versions {
 
+	for _, version := range versions {
 		npmResponse, err := GetNPMRegistry(RegistryRequest{Dependency: DirectDependency, Version: version})
-		response, err := io.ReadAll(npmResponse.Body)
-		fmt.Println(string(response))
 		if err != nil {
 			fmt.Println("Error fetching version details:", err)
 			continue
 		}
-		walkDependencyTree(response)
 
+		response, err := io.ReadAll(npmResponse.Body)
+		npmResponse.Body.Close()
+		if err != nil {
+			fmt.Println("Error reading response:", err)
+			continue
+		}
+
+		// Build dependency tree recursively
+		visited := make(map[string]bool)
+		tree := walkDependencyTree(response, DirectDependency, version, visited, vulnerablePackage, vulnerableVersion)
+
+		fmt.Println(tree)
+		for _, dep := range tree.Dependencies {
+			fmt.Println(dep)
 		}
 	}
 }
