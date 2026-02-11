@@ -32,6 +32,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
@@ -936,11 +937,11 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 
 type stateDistributionOfPathsInProduct struct {
 	productID           string
-	totalAmountOfPaths  int
-	amountUnhandled     int
-	amountFalsePositive int
-	amountAccepted      int
-	amountFixed         int
+	TotalAmountOfPaths  int
+	AmountUnhandled     int
+	AmountFalsePositive int
+	AmountAccepted      int
+	AmountFixed         int
 }
 
 func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
@@ -995,13 +996,13 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 		}
 	}
 
-	// build the remediations based off the productNames -> decide the state of the product by analyzing each vuln state of the present vulns
+	// build the remediations based off the productNames -> decide the state of the product by analyzing each state of the vulns present
 	remediations := []*gocsaf.Remediation{}
 	distributions := make([]stateDistributionOfPathsInProduct, 0, len(vulnsByProductName))
 	for productName, vulns := range vulnsByProductName {
 		distribution := stateDistributionOfPathsInProduct{
 			productID:          productName,
-			totalAmountOfPaths: len(vulns),
+			TotalAmountOfPaths: len(vulns),
 		}
 		acceptedVulns := make([]models.DependencyVuln, 0, len(vulns))
 		falsePositiveVulns := make([]models.DependencyVuln, 0, len(vulns))
@@ -1010,19 +1011,19 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 			switch vuln.State {
 			case dtos.VulnStateAccepted:
 				acceptedVulns = append(acceptedVulns, vuln)
-				distribution.amountAccepted++
+				distribution.AmountAccepted++
 			case dtos.VulnStateFalsePositive:
 				falsePositiveVulns = append(falsePositiveVulns, vuln)
-				distribution.amountFalsePositive++
+				distribution.AmountFalsePositive++
 			case dtos.VulnStateFixed:
 				// maybe this does not make sense currently
 				fixedVulns = append(fixedVulns, vuln)
-				distribution.amountFixed++
+				distribution.AmountFixed++
 			}
 		}
 
 		// calculate the amount of unhandled vulns
-		distribution.amountUnhandled = distribution.totalAmountOfPaths - (distribution.amountFalsePositive + distribution.amountAccepted + distribution.amountFixed)
+		distribution.AmountUnhandled = distribution.TotalAmountOfPaths - (distribution.AmountFalsePositive + distribution.AmountAccepted + distribution.AmountFixed)
 		distributions = append(distributions, distribution)
 		// case: there is an accepted vuln amongst the vulns
 		if len(acceptedVulns) > 0 {
@@ -1138,11 +1139,23 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 
 	// make a node containing a textual summary for each productID
 	for _, distribution := range distributions {
+		// build the summary template
+		tmpl, err := template.New("build path states").Parse("Total amount of paths in product: {{.TotalAmountOfPaths}}.{{if .AmountAccepted}} Amount of accepted paths: {{.AmountAccepted}}.{{end}}{{if .AmountFalsePositive}} Amount of paths marked as false positives: {{.AmountFalsePositive}}.{{end}}{{if .AmountFixed}} Amount of fixed paths: {{.AmountFixed}}.{{end}}{{if .AmountUnhandled}} Amount of unhandled paths: {{.AmountUnhandled}}.{{end}}")
+		if err != nil {
+			return nil, fmt.Errorf("could not parse template: %w", err)
+		}
+
+		// build the summary for the distribution and assign it to the note object
+		var summary strings.Builder
+		if err := tmpl.Execute(&summary, distribution); err != nil {
+			return nil, fmt.Errorf("could not execute template on distribution: %w", err)
+		}
+
 		vulnDetails := gocsaf.Note{
 			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
 			Title:        utils.Ptr(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
+			Text:         utils.Ptr(summary.String()),
 		}
-		vulnDetails.Text = utils.Ptr(fmt.Sprintf("Total amount of paths in product: %d. Amount of accepted paths: %d, amount of paths marked as false positive: %d, amount of fixed paths: %d, amount of unhandled paths: %d", distribution.totalAmountOfPaths, distribution.amountAccepted, distribution.amountFalsePositive, distribution.amountFixed, distribution.amountUnhandled))
 		notes = append(notes, &vulnDetails)
 	}
 

@@ -126,6 +126,10 @@ func TestGenerateProductTree(t *testing.T) {
 
 func TestCalculateVulnStateInformation(t *testing.T) {
 	_, _, artifact1, vulns := setUpVulns()
+	eventTime, err := time.Parse(time.RFC3339, "2028-02-11T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
 	t.Run("generate basic test with 1 dependency vuln for this CVE", func(t *testing.T) {
 		testVuln := vulns[0]
 		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
@@ -145,18 +149,14 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		// TEST Distributions
 		assert.Len(t, distributions, 1)
 		assert.Equal(t, string(productID), distributions[0].productID)
-		assert.Equal(t, 1, distributions[0].totalAmountOfPaths)
-		assert.Equal(t, 1, distributions[0].amountUnhandled)
+		assert.Equal(t, 1, distributions[0].TotalAmountOfPaths)
+		assert.Equal(t, 1, distributions[0].AmountUnhandled)
 
 		// TEST remediations
 		// we expect 0 remediations if only unhandled vulns are passed
 		assert.Len(t, remediations, 0)
 	})
 	t.Run("multiple different paths inside a vuln which are all handled differently should result in a correct distribution and a correct classification as accepted", func(t *testing.T) {
-		eventTime, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
-		if err != nil {
-			panic(err)
-		}
 		baseVuln := vulns[len(vulns)-1]
 		testVulns := []models.DependencyVuln{}
 
@@ -195,13 +195,14 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 
 		// check if the path distribution have been calculated correctly
 		assert.Len(t, distributions, 1)
-		assert.Equal(t, 4, distributions[0].totalAmountOfPaths)
+		assert.Equal(t, 4, distributions[0].TotalAmountOfPaths)
+		assert.Equal(t, string(productID), distributions[0].productID)
 
 		// all categories should have exactly 1 occurrence
-		assert.Equal(t, 1, distributions[0].amountUnhandled)
-		assert.Equal(t, 1, distributions[0].amountAccepted)
-		assert.Equal(t, 1, distributions[0].amountFixed)
-		assert.Equal(t, 1, distributions[0].amountFalsePositive)
+		assert.Equal(t, 1, distributions[0].AmountUnhandled)
+		assert.Equal(t, 1, distributions[0].AmountAccepted)
+		assert.Equal(t, 1, distributions[0].AmountFixed)
+		assert.Equal(t, 1, distributions[0].AmountFalsePositive)
 
 		emptyCategories := [][]string{fixed, notAffected, underInvestigation}
 		for _, slice := range emptyCategories {
@@ -209,6 +210,89 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		}
 		assert.Len(t, affected, 1)
 		assert.Equal(t, string(productID), affected[0])
+	})
+	t.Run("CVE in multiple different components each with multiple differently handled paths", func(t *testing.T) {
+		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
+		testVulnsArtifact2 := testVulnsArtifact1 // end state 4 vulns (comp1: 2 paths (unhandled, falsePositive), comp2: 2 paths (falsePositive, falsePositive))
+
+		vuln2Depth1 := vulns[len(vulns)-1]
+		vuln2Depth1.VulnerabilityPath = []string{"comp1"}
+		testVulnsArtifact2 = append(testVulnsArtifact2, vuln2Depth1)
+
+		artifact2 := artifact1
+		artifact2.ArtifactName = "pkg:oci/scanner"
+
+		artifact2.DependencyVuln = testVulnsArtifact2
+		for i := range testVulnsArtifact2 {
+			testVulnsArtifact2[i].Artifacts = []models.Artifact{artifact2}
+		}
+
+		// mark 3 vulns as false positives (2/2 for the purl2 in artifact2 and 1/2 for purl1 in artifact2)
+		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
+		for _, vulnPtr := range falsePositiveVulns {
+			vulnPtr.SetState(dtos.VulnStateFalsePositive)
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+		}
+
+		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
+		testVulnsArtifact2[len(testVulnsArtifact2)-1].Events = append(testVulnsArtifact2[len(testVulnsArtifact2)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
+
+		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
+		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
+
+		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
+		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
+
+		productStatus, distributions, remediations := calculateVulnStateInformation(append(testVulnsArtifact1, testVulnsArtifact2...))
+		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
+
+		// first test the distributions
+		// we expect 1 distribution for each of the 4 products
+		assert.Len(t, distributions, 4)
+
+		// reminder: artifact1: end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
+		// reminder: artifact2: end state 4 vulns (comp1: 2 paths (unhandled, falsePositive), comp2: 2 paths (falsePositive, falsePositive))
+		for _, distribution := range distributions {
+			switch distribution.productID {
+			case string(artifact1ProductID1):
+				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
+				assert.Equal(t, 2, distribution.AmountUnhandled)
+				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountFixed, distribution.AmountFalsePositive)
+			case string(artifact1ProductID2):
+				assert.Equal(t, 1, distribution.TotalAmountOfPaths)
+				assert.Equal(t, 1, distribution.AmountFixed)
+				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountUnhandled, distribution.AmountFalsePositive)
+			case string(artifact2ProductID1):
+				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
+				assert.Equal(t, 1, distribution.AmountUnhandled, distribution.AmountFalsePositive)
+				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountFixed)
+			case string(artifact2ProductID2):
+				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
+				assert.Equal(t, 2, distribution.AmountFalsePositive)
+				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountUnhandled, distribution.AmountFixed)
+			default:
+				// unexpected product ID
+				t.Fail()
+			}
+		}
+
+		// now test for correct remediations (we expect 1 for artifact2 comp2 -> false positive)
+		assert.Len(t, remediations, 1)
+		assert.Equal(t, csaf.CSAFRemediationCategoryMitigation, *remediations[0].Category)
+		assert.True(t, strings.Contains(*remediations[0].Details, "marked as false positive. Justification: This is a false positive"))
+		assert.Equal(t, string(artifact2ProductID2), string(*(*remediations[0].ProductIds)[0]))
+
+		// finally test the productStatus classifications
+		assert.Empty(t, affected)
+		assert.Equal(t, 1, len(fixed), len(notAffected))
+		assert.Equal(t, string(artifact1ProductID2), fixed[0])
+		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
+
+		assert.Len(t, underInvestigation, 2)
+		assert.Equal(t, string(artifact2ProductID1), underInvestigation[0])
+		assert.Equal(t, string(artifact1ProductID1), underInvestigation[1])
+
 	})
 }
 
@@ -287,23 +371,23 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	affectedComponent2 := models.AffectedComponent{Ecosystem: "GIT", PurlWithoutVersion: "pkg:github.com/jetbrains/kotlin", Version: utils.Ptr("build-0.7.536")}
 	affectedComponent3 := models.AffectedComponent{Ecosystem: "rpm", PurlWithoutVersion: "pkg:rpm/redhat/openssh-debugsource", Version: utils.Ptr("v1.0.1")}
 
-	cve1.AffectedComponents = append(cve1.AffectedComponents, affectedComponent1, affectedComponent2)
+	cve1.AffectedComponents = append(cve1.AffectedComponents, affectedComponent1, affectedComponent2, affectedComponent3)
 
-	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: fmt.Sprintf("%s@%s", affectedComponent1.PurlWithoutVersion, *affectedComponent1.Version), VulnerabilityPath: []string{}, CVE: cve1}
-	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: fmt.Sprintf("%s@%s", affectedComponent1.PurlWithoutVersion, *affectedComponent1.Version), VulnerabilityPath: []string{"dep1"}, CVE: cve1}
-	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: fmt.Sprintf("%s@%s", affectedComponent3.PurlWithoutVersion, *affectedComponent3.Version), VulnerabilityPath: []string{}, CVE: cve1}
+	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVE: cve1}
+	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVE: cve1}
+	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVE: cve1}
 
 	vuln1Depth0.Artifacts = append(vuln1Depth0.Artifacts, artifact)
-	vuln1Depth1.Artifacts = append(vuln1Depth0.Artifacts, artifact)
+	vuln1Depth1.Artifacts = append(vuln1Depth1.Artifacts, artifact)
 	vuln2Depth0.Artifacts = append(vuln2Depth0.Artifacts, artifact)
 
 	vuln10Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln1Depth0.CalculateHash(), Model: models.Model{CreatedAt: time2}}
 	vuln11Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln1Depth1.CalculateHash(), Model: models.Model{CreatedAt: time2}}
-	vuln20Event0 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln2Depth0.CalculateHash(), Model: models.Model{CreatedAt: time2}}
+	vuln20Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln2Depth0.CalculateHash(), Model: models.Model{CreatedAt: time2}}
 
 	vuln1Depth0.Events = append(vuln1Depth0.Events, vuln10Event1)
-	vuln1Depth1.Events = append(vuln1Depth0.Events, vuln11Event1)
-	vuln2Depth0.Events = append(vuln2Depth0.Events, vuln20Event0)
+	vuln1Depth1.Events = append(vuln1Depth1.Events, vuln11Event1)
+	vuln2Depth0.Events = append(vuln2Depth0.Events, vuln20Event1)
 
 	artifact.DependencyVuln = append(artifact.DependencyVuln, vuln1Depth0, vuln1Depth1, vuln2Depth0)
 	assetVersion.Artifacts = append(assetVersion.Artifacts, artifact)
