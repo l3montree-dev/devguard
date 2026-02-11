@@ -17,12 +17,26 @@ func timeoutDetection(err error) {
 	// check if error is a timeout error
 }
 
+// VersionExists checks if a package version exists on npm registry
+func VersionExists(dependency string, version string) bool {
+	normalizedVersion := strings.Trim(version, "/^\"")
+	url := "https://registry.npmjs.org/" + dependency + "/" + normalizedVersion
+
+	resp, err := http.Head(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == 200
+}
+
 // get all versions if no version is specified
 func GetNPMRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var req *http.Response
 	var err error
 
-	normalizedVersion := strings.Trim(pkg.Version, "^\"") // remove quotes if present
+	normalizedVersion := strings.Trim(pkg.Version, "/") // remove quotes if present
 
 	if pkg.Version != "" {
 		req, err = http.Get("https://registry.npmjs.org/" + pkg.Dependency + "/" + normalizedVersion)
@@ -45,8 +59,7 @@ func GetCratesRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var err error
 
 	if pkg.Version != "" {
-		normalizedVersion := strings.Trim(pkg.Version, "^\"") // remove quotes if present
-		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency + "/" + normalizedVersion)
+		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency + "/" + pkg.Version)
 	} else {
 		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency)
 	}

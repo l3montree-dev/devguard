@@ -14,25 +14,28 @@
 package main
 
 type NPMResponse struct {
-	ID             string                 `json:"_id"`
-	Rev            string                 `json:"_rev"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description"`
-	DistTags       DistTags               `json:"dist-tags"`
-	Versions       map[string]VersionData `json:"versions"`
-	Time           map[string]string      `json:"time"`
-	Bugs           Bugs                   `json:"bugs"`
-	Author         Person                 `json:"author"`
-	License        string                 `json:"license"`
-	Homepage       string                 `json:"homepage"`
-	Keywords       []string               `json:"keywords"`
-	Repository     Repository             `json:"repository"`
-	Contributors   []Person               `json:"contributors"`
-	Maintainers    []Person               `json:"maintainers"`
-	ReadMe         string                 `json:"readme"`
-	ReadMeFilename string                 `json:"readmeFilename"`
-	Users          map[string]bool        `json:"users"`
-	Dependencies   map[string]string      `json:"dependencies"`
+	ID                   string                 `json:"_id"`
+	Rev                  string                 `json:"_rev"`
+	Name                 string                 `json:"name"`
+	Description          string                 `json:"description"`
+	DistTags             DistTags               `json:"dist-tags"`
+	Versions             map[string]VersionData `json:"versions"`
+	Time                 map[string]string      `json:"time"`
+	Bugs                 Bugs                   `json:"bugs"`
+	Author               Person                 `json:"author"`
+	License              string                 `json:"license"`
+	Homepage             string                 `json:"homepage"`
+	Keywords             []string               `json:"keywords"`
+	Repository           Repository             `json:"repository"`
+	Contributors         []Person               `json:"contributors"`
+	Maintainers          []Person               `json:"maintainers"`
+	ReadMe               string                 `json:"readme"`
+	ReadMeFilename       string                 `json:"readmeFilename"`
+	Users                map[string]bool        `json:"users"`
+	Dependencies         map[string]string      `json:"dependencies"`
+	DevDependencies      map[string]string      `json:"devDependencies"`
+	PeerDependencies     map[string]string      `json:"peerDependencies"`
+	OptionalDependencies map[string]string      `json:"optionalDependencies"`
 }
 
 type DistTags struct {
