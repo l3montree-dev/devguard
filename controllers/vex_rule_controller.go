@@ -17,21 +17,27 @@ package controllers
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
 type VEXRuleController struct {
-	vexRuleService shared.VEXRuleService
+	vexRuleService    shared.VEXRuleService
+	statisticsService shared.StatisticsService
+	utils.FireAndForgetSynchronizer
 }
 
-func NewVEXRuleController(vexRuleService shared.VEXRuleService) *VEXRuleController {
+func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsService shared.StatisticsService, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
 	return &VEXRuleController{
-		vexRuleService: vexRuleService,
+		vexRuleService:            vexRuleService,
+		statisticsService:         statisticsService,
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
@@ -177,7 +183,8 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	// Apply this rule to all matching existing dependency vulns
-	if _, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, []models.VEXRule{*rule}); err != nil {
+	vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, []models.VEXRule{*rule})
+	if err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
 		tx.Rollback()
@@ -193,8 +200,26 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
 	}
+	// Update artifact risk aggregations in background
+	c.updateArtifactRiskAggregation(asset, vulns)
 
 	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
+}
+
+func (c *VEXRuleController) updateArtifactRiskAggregation(asset models.Asset, vulns []models.DependencyVuln) {
+	c.FireAndForget(func() {
+		artifacts := map[string]models.Artifact{}
+		for _, vuln := range vulns {
+			for _, artifact := range vuln.Artifacts {
+				artifacts[artifact.ArtifactName] = artifact
+			}
+		}
+		for _, artifact := range artifacts {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
+			}
+		}
+	})
 }
 
 // @Summary Update a VEX rule
@@ -259,10 +284,15 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 	// Apply the rule to existing vulnerabilities if it's enabled
 	// Only apply if rule is now enabled (either was already enabled, or just got enabled)
 	if rule.Enabled {
-		if _, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, []models.VEXRule{rule}); err != nil {
+		vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, []models.VEXRule{rule})
+		if err != nil {
 			// Log the error but don't fail the update - the rule was saved
 			ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
 		}
+
+		// Update artifact risk aggregations in background
+		c.updateArtifactRiskAggregation(asset, vulns)
+
 		// Log if rule was just enabled
 		if !wasEnabled {
 			slog.Info("VEX rule enabled and applied to existing vulnerabilities", "ruleID", rule.ID, "cveID", rule.CVEID)

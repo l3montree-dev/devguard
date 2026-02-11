@@ -396,7 +396,7 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 		}
 		return vulns, nil
 	} else {
-		if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, dtos.VulnStateOpen).Find(&vulns).Error; err != nil {
+		if err := repository.Repository.GetDB(tx).Preload("CVE").Preload("Artifacts").Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, dtos.VulnStateOpen).Find(&vulns).Error; err != nil {
 			return nil, err
 		}
 		return vulns, nil
