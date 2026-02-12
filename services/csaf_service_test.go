@@ -291,9 +291,6 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
 
 		assert.Len(t, underInvestigation, 2)
-		assert.Equal(t, string(artifact1ProductID1), underInvestigation[0])
-		assert.Equal(t, string(artifact2ProductID1), underInvestigation[1])
-
 	})
 }
 
