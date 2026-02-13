@@ -43,7 +43,6 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]string, error) {
 	var versions [][]string
 
-	// Extract and filter versions from NPMResponse
 	for _, obj := range npmResponse.Versions {
 		// skip release candidates
 		if strings.Contains(obj.Version, "-") {
@@ -53,15 +52,18 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 		versions = append(versions, versionParts)
 	}
 
-	// Filter by major version and sort
 	var currentMajor, currentMinor, currentPatch int
-	fmt.Sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch)
+	if _, err := fmt.Sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch); err != nil {
+		return nil, fmt.Errorf("invalid current version format: %s", currentVersion)
+	}
 
 	var recommended []string
 	for _, version := range versions {
 		var major, minor, patch int
 		versionStr := strings.Join(version, ".")
-		fmt.Sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch)
+		if _, err := fmt.Sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch); err != nil {
+			continue
+		}
 
 		if major == currentMajor {
 			if minor >= currentMinor {
@@ -90,7 +92,9 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 
 func parseVersion(version string) [3]int {
 	var result [3]int
-	fmt.Sscanf(version, "%d.%d.%d", &result[0], &result[1], &result[2])
+	if _, err := fmt.Sscanf(version, "%d.%d.%d", &result[0], &result[1], &result[2]); err != nil {
+		return [3]int{0, 0, 0}
+	}
 	return result
 }
 
@@ -108,87 +112,41 @@ func IsValidSemver(version string) bool {
 	return matched
 }
 
-func processDependencies(depMap map[string]string, depName string, depVersion string, visited map[string]bool, vulnerablePackage string, vulnerableVersion string, node *DependencyNode) {
-	for depKey, depVal := range depMap {
-		// remove ^, ~, quotes
-		normalizedDepVal := strings.Trim(depVal, "^~\"")
+func parsePurl(purl string) (string, string, error) {
+	// Format: pkg:npm/package-name@version
+	if !strings.HasPrefix(purl, "pkg:npm/") {
+		return "", "", fmt.Errorf("invalid purl format: %s", purl)
+	}
 
-		// Skip non-semver versions
-		if !IsValidSemver(normalizedDepVal) {
-			continue
-		}
+	purl = strings.TrimPrefix(purl, "pkg:npm/")
+	parts := strings.Split(purl, "@")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid purl format: %s", purl)
+	}
 
-		// Check if version exists before fetching
-		if !VersionExists(depKey, normalizedDepVal) {
-			fmt.Printf("Skipping %s@%s: version not found\n", depKey, normalizedDepVal)
-			continue
-		}
+	return parts[0], parts[1], nil
+}
 
-		depResp, err := GetNPMRegistry(RegistryRequest{Dependency: depKey, Version: depVal})
-		if err != nil {
-			fmt.Printf("Error fetching %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
+func normalizeVersion(version string) string {
+	return strings.Trim(version, "^~\"")
+}
 
-		depBody, err := io.ReadAll(depResp.Body)
-		depResp.Body.Close()
-		if err != nil {
-			fmt.Printf("Error reading response for %s@%s: %v\n", depKey, depVal, err)
-			continue
-		}
-
-		// Recursive call
-		childNode := walkDependencyTree(depBody, depKey, depVal, visited, vulnerablePackage, vulnerableVersion)
-		if childNode != nil {
-			node.Dependencies[depKey] = childNode
-		}
-		if depKey == vulnerablePackage && depVal == vulnerableVersion {
-			fmt.Printf("Vulnerable package found: %s@%s\n", depKey, depVal)
-		}
+func getAllDependencyMaps(depMeta *NPMResponse) []map[string]string {
+	return []map[string]string{
+		depMeta.Dependencies,
+		depMeta.PeerDependencies,
+		depMeta.OptionalDependencies,
+		depMeta.DevDependencies,
 	}
 }
 
-func walkDependencyTree(npmRegisterResp []byte, depName string, depVersion string, visited map[string]bool, vulnerablePackage string, vulnerableVersion string) *DependencyNode {
-	var jsonData NPMResponse
-
-	if err := json.Unmarshal(npmRegisterResp, &jsonData); err != nil {
-		return nil
+func findDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) string {
+	for _, depType := range getAllDependencyMaps(depMeta) {
+		if version, ok := depType[pkgName]; ok {
+			return version
+		}
 	}
-
-	nodeKey := depName + "@" + depVersion
-	if visited[nodeKey] {
-		return nil
-	}
-	visited[nodeKey] = true
-
-	node := &DependencyNode{
-		Name:         depName,
-		Version:      depVersion,
-		Dependencies: make(map[string]*DependencyNode),
-	}
-
-	if jsonData.Dependencies == nil && jsonData.DevDependencies == nil && jsonData.PeerDependencies == nil && jsonData.OptionalDependencies == nil {
-		return node
-	}
-
-	// Process all dependency types using the same logic
-	processDependencies(jsonData.Dependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
-	processDependencies(jsonData.OptionalDependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
-	processDependencies(jsonData.DevDependencies, depName, depVersion, visited, vulnerablePackage, vulnerableVersion, node)
-
-	return node
-}
-
-func printDependencyTree(node *DependencyNode, indent string) {
-	if node == nil {
-		return
-	}
-
-	fmt.Printf("%s%s@%s\n", indent, node.Name, node.Version)
-
-	for _, dep := range node.Dependencies {
-		printDependencyTree(dep, indent+"  ")
-	}
+	return ""
 }
 
 func findDependencyVersion(npmResp NPMResponse, depName string) string {
@@ -206,6 +164,101 @@ func findDependencyVersion(npmResp NPMResponse, depName string) string {
 		return version
 	}
 	return ""
+}
+
+func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, error) {
+
+	packages := make([]struct {
+		name    string
+		version string
+	}, len(purls))
+
+	for i, purl := range purls {
+		name, version, err := parsePurl(purl)
+		if err != nil {
+			return false, err
+		}
+		packages[i].name = name
+		packages[i].version = version
+	}
+
+	for i := 0; i < len(packages)-1; i++ {
+		pkgName := packages[i].name
+		currentVersion := packages[i].version
+
+		// fetch all version
+		allVersionsMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, "")
+		if err != nil {
+			return false, fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
+		}
+
+		// get major versions and sort
+		versions, err := getRecommendedVersions(*allVersionsMeta, currentVersion)
+		if err != nil {
+			return false, fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
+		}
+
+		if len(versions) == 0 {
+			return false, fmt.Errorf("no newer version available for %s@%s in the same major band", pkgName, currentVersion)
+		}
+
+		latestVersion := versions[0]
+		if latestVersion == currentVersion {
+			return false, fmt.Errorf("no new version available for %s (current: %s)", pkgName, currentVersion)
+		}
+
+		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
+
+		// Second: check latest version
+		latestMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, latestVersion)
+		if err != nil {
+			return false, fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
+		}
+
+		nextPkgName := packages[i+1].name
+
+		nextVersionInLatest := findDependencyVersion(*latestMeta, nextPkgName)
+		if nextVersionInLatest == "" {
+			return false, fmt.Errorf("package %s not found in %s@%s dependencies", nextPkgName, pkgName, latestVersion)
+		}
+
+		normalizedNextVersion := normalizeVersion(nextVersionInLatest)
+		fmt.Printf(" %s found in %s@%s dependencies: %s\n", nextPkgName, pkgName, latestVersion, normalizedNextVersion)
+
+		packages[i+1].version = normalizedNextVersion
+	}
+
+	vulnPkgName := packages[len(packages)-1].name
+	vulnVersion := packages[len(packages)-1].version
+
+	if !IsValidSemver(vulnVersion) {
+		return false, fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
+	}
+
+	// Parse versions to compare
+	vulnParts := parseVersion(vulnVersion)
+	fixedParts := parseVersion(fixedVersion)
+
+	isFixed := false
+	if vulnParts[0] > fixedParts[0] {
+		isFixed = true
+	} else if vulnParts[0] == fixedParts[0] {
+		if vulnParts[1] > fixedParts[1] {
+			isFixed = true
+		} else if vulnParts[1] == fixedParts[1] {
+			if vulnParts[2] >= fixedParts[2] {
+				isFixed = true
+			}
+		}
+	}
+
+	if isFixed {
+		fmt.Printf("Fix verified: %s@%s is >= %s (fixed version)\n", vulnPkgName, vulnVersion, fixedVersion)
+		return true, nil
+	}
+
+	fmt.Printf("Fix not verified: %s@%s is < %s\n", vulnPkgName, vulnVersion, fixedVersion)
+	return false, nil
 }
 
 func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMResponse, error) {
@@ -228,77 +281,18 @@ func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMRe
 	return &npmResp, nil
 }
 
-func checkVersionAvailability(versions []string, currentVersion string) (string, error) {
-	if len(versions) == 0 {
-		return "", fmt.Errorf("no versions available")
-	}
-
-	if versions[0] == currentVersion {
-		return "", fmt.Errorf("no new version available (current: %s)", currentVersion)
-	}
-
-	return versions[0], nil
-}
-
-func checkVulnerabilityStatus(latestMeta *NPMResponse, vulnPkg string, vulnVer string) (bool, string) {
-	latestVulnVer := findDependencyVersion(*latestMeta, vulnPkg)
-
-	if latestVulnVer == vulnVer {
-		return false, latestVulnVer
-	}
-
-	if latestVulnVer != "" && latestVulnVer != vulnVer {
-		return true, latestVulnVer
-	}
-
-	return false, latestVulnVer
-}
-
-func checkVulnerabilityFix(directDep string, currentVer string, vulnPkg string, vulnVer string) error {
-
-	npmMeta, err := fetchPackageMetadata(getPackageManager("npm"), directDep, "")
-	if err != nil {
-		return fmt.Errorf("failed to fetch package metadata: %w", err)
-	}
-
-	versions, err := getRecommendedVersions(*npmMeta, currentVer)
-	if err != nil {
-		return fmt.Errorf("failed to filter versions: %w", err)
-	}
-
-	latestVer, err := checkVersionAvailability(versions, currentVer)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	fmt.Printf("New versions available for %s: %s -> %s\n", directDep, currentVer, latestVer)
-
-	latestMeta, err := fetchPackageMetadata(getPackageManager("npm"), directDep, "latest")
-	if err != nil {
-		return fmt.Errorf("failed to fetch latest version metadata: %w", err)
-	}
-
-	isFixed, newVer := checkVulnerabilityStatus(latestMeta, vulnPkg, vulnVer)
-
-	if !isFixed {
-		fmt.Printf("Vulnerability NOT fixed in latest %s (still uses %s@%s)\n", directDep, vulnPkg, vulnVer)
-		return nil
-	}
-
-	fmt.Printf("✓ Vulnerability FIXED in latest (uses %s@%s instead of %s)\n", vulnPkg, newVer, vulnVer)
-	return nil
-}
-
 func main() {
-	directDependency := "playwright"
-	currentVersion := "1.50.1"
-	directVulnerablePackage := "fsevents"
-	directVulnerableVersion := "2.3.2"
-	// transitiveVulnerablePackage := "ip"
-	// transitiveVulnerableVersion := "1.1.5"
-
-	if err := checkVulnerabilityFix(directDependency, currentVersion, directVulnerablePackage, directVulnerableVersion); err != nil {
-		fmt.Println("Error:", err)
+	purls := []string{
+		"pkg:npm/react-markdown@9.0.1",
+		"pkg:npm/remark-rehype@11.1.1",
+		"pkg:npm/mdast-util-to-hast@13.2.0",
 	}
+	fixedVersion := "13.2.1"
+
+	isFixed, err := checkVulnerabilityFixChain(purls, fixedVersion)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(isFixed)
 }
