@@ -12,9 +12,9 @@ import (
 	"strings"
 )
 
-func getPackageManager(Package string) string {
+func getPackageManager(pkg string) string {
 	// insert future Package Managers later
-	switch Package {
+	switch pkg {
 
 	case "npm", "yarn", "pnpm":
 		return "node"
@@ -35,9 +35,9 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 		return GetNPMRegistry(pkg)
 	case "crates":
 		return GetCratesRegistry(pkg)
+	default:
+		return nil, fmt.Errorf("unsupported package manager: %s", packageManager)
 	}
-	// add more in the future
-	return nil, nil
 }
 
 func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]string, error) {
@@ -86,7 +86,6 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 		return vi[2] > vj[2]
 	})
 
-	fmt.Println(recommended)
 	return recommended, nil
 }
 
@@ -99,11 +98,6 @@ func parseVersion(version string) [3]int {
 }
 
 // single node in the dependency tree
-type DependencyNode struct {
-	Name         string
-	Version      string
-	Dependencies map[string]*DependencyNode
-}
 
 func IsValidSemver(version string) bool {
 
@@ -145,23 +139,6 @@ func findDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) string {
 		if version, ok := depType[pkgName]; ok {
 			return version
 		}
-	}
-	return ""
-}
-
-func findDependencyVersion(npmResp NPMResponse, depName string) string {
-	// Check all dependency types
-	if version, ok := npmResp.Dependencies[depName]; ok {
-		return version
-	}
-	if version, ok := npmResp.OptionalDependencies[depName]; ok {
-		return version
-	}
-	if version, ok := npmResp.DevDependencies[depName]; ok {
-		return version
-	}
-	if version, ok := npmResp.PeerDependencies[depName]; ok {
-		return version
 	}
 	return ""
 }
@@ -217,7 +194,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 
 		nextPkgName := packages[i+1].name
 
-		nextVersionInLatest := findDependencyVersion(*latestMeta, nextPkgName)
+		nextVersionInLatest := findDependencyVersionInMeta(latestMeta, nextPkgName)
 		if nextVersionInLatest == "" {
 			return false, fmt.Errorf("package %s not found in %s@%s dependencies", nextPkgName, pkgName, latestVersion)
 		}

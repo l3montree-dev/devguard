@@ -13,24 +13,6 @@ type RegistryRequest struct {
 	Version    string // empty string means "all versions"
 }
 
-func timeoutDetection(err error) {
-	// check if error is a timeout error
-}
-
-// VersionExists checks if a package version exists on npm registry
-func VersionExists(dependency string, version string) bool {
-	normalizedVersion := strings.Trim(version, "/^\"")
-	url := "https://registry.npmjs.org/" + dependency + "/" + normalizedVersion
-
-	resp, err := http.Head(url)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
-	return resp.StatusCode == 200
-}
-
 // get all versions if no version is specified
 func GetNPMRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var req *http.Response
