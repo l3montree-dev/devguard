@@ -119,18 +119,27 @@ func IsValidSemver(version string) bool {
 }
 
 func parsePurl(purl string) (string, string, error) {
-	// Format: pkg:npm/package-name@version
+	// Format: pkg:npm/package-name@version or pkg:npm/@scoped/package@version
 	if !strings.HasPrefix(purl, "pkg:npm/") {
 		return "", "", fmt.Errorf("invalid purl format: %s", purl)
 	}
 
 	purl = strings.TrimPrefix(purl, "pkg:npm/")
-	parts := strings.Split(purl, "@")
-	if len(parts) != 2 {
+
+	// Find the last @ which separates package name from version
+	lastAtIndex := strings.LastIndex(purl, "@")
+	if lastAtIndex == -1 {
+		return "", "", fmt.Errorf("invalid purl format: %s (missing @)", purl)
+	}
+
+	pkgName := purl[:lastAtIndex]
+	version := purl[lastAtIndex+1:]
+
+	if pkgName == "" || version == "" {
 		return "", "", fmt.Errorf("invalid purl format: %s", purl)
 	}
 
-	return parts[0], parts[1], nil
+	return pkgName, version, nil
 }
 
 func normalizeVersion(version string) string {
@@ -155,14 +164,14 @@ func findDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) string {
 	return ""
 }
 
-func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, error) {
+func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, error) {
 
 	if len(purls) < 2 {
-		return false, fmt.Errorf("purl array must contain at least 2 elements")
+		return "", fmt.Errorf("purl array must contain at least 2 elements")
 	}
 
 	if !IsValidSemver(fixedVersion) {
-		return false, fmt.Errorf("fixed version has invalid semver format")
+		return "", fmt.Errorf("fixed version has invalid semver format")
 	}
 
 	packages := make([]struct {
@@ -173,7 +182,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 	for i, purl := range purls {
 		name, version, err := parsePurl(purl)
 		if err != nil {
-			return false, err
+			return "", err
 		}
 		packages[i].name = name
 		packages[i].version = version
@@ -186,22 +195,22 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 		// fetch all version
 		allVersionsMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, "")
 		if err != nil {
-			return false, fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
+			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
 
 		// get major versions and sort
 		versions, err := getRecommendedVersions(*allVersionsMeta, currentVersion)
 		if err != nil {
-			return false, fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
+			return "", fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
 		}
 
 		if len(versions) == 0 {
-			return false, fmt.Errorf("no newer version available for %s@%s in the same major band", pkgName, currentVersion)
+			return "", fmt.Errorf("no newer version available for %s@%s in the same major band", pkgName, currentVersion)
 		}
 
 		latestVersion := versions[0]
 		if latestVersion == currentVersion {
-			return false, fmt.Errorf("no new version available for %s (current: %s)", pkgName, currentVersion)
+			return "", fmt.Errorf("no new version available for %s (current: %s)", pkgName, currentVersion)
 		}
 
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
@@ -209,14 +218,14 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 		// Second: check latest version
 		latestMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, latestVersion)
 		if err != nil {
-			return false, fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
+			return "", fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
 		}
 
 		nextPkgName := packages[i+1].name
 
 		nextVersionInLatest := findDependencyVersionInMeta(latestMeta, nextPkgName)
 		if nextVersionInLatest == "" {
-			return false, fmt.Errorf("package %s not found in %s@%s dependencies", nextPkgName, pkgName, latestVersion)
+			return "", fmt.Errorf("package %s not found in %s@%s dependencies", nextPkgName, pkgName, latestVersion)
 		}
 
 		normalizedNextVersion := normalizeVersion(nextVersionInLatest)
@@ -229,7 +238,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 	vulnVersion := packages[len(packages)-1].version
 
 	if !IsValidSemver(vulnVersion) {
-		return false, fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
+		return "", fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
 	}
 
 	// Parse versions to compare
@@ -250,12 +259,12 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, erro
 	}
 
 	if isFixed {
-		fmt.Printf("Fix verified: %s@%s is >= %s (fixed version)\n", vulnPkgName, vulnVersion, fixedVersion)
-		return true, nil
+		fixingVersion := packages[0].name + "@" + packages[0].version
+		return fixingVersion, nil
 	}
 
 	fmt.Printf("Fix not verified: %s@%s is < %s\n", vulnPkgName, vulnVersion, fixedVersion)
-	return false, nil
+	return "", nil
 }
 
 func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMResponse, error) {
@@ -280,16 +289,17 @@ func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMRe
 
 func main() {
 	purls := []string{
-		"pkg:npm/react-markdown@9.0.1",
-		"pkg:npm/remark-rehype@11.1.1",
-		"pkg:npm/mdast-util-to-hast@13.2.0",
+		"pkg:npm/@sentry/nextjs@9.38.0",
+		"pkg:npm/next@15.4.7",
 	}
-	fixedVersion := "13.2.1"
 
-	isFixed, err := checkVulnerabilityFixChain(purls, fixedVersion)
+	// in component_fixed_version in database
+	fixedVersion := "15.4.9"
+
+	fixingVersion, err := checkVulnerabilityFixChain(purls, fixedVersion)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
-	fmt.Println(isFixed)
+	fmt.Println(fixingVersion)
 }
