@@ -157,6 +157,14 @@ func findDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) string {
 
 func checkVulnerabilityFixChain(purls []string, fixedVersion string) (bool, error) {
 
+	if len(purls) < 2 {
+		return false, fmt.Errorf("purl array must contain at least 2 elements")
+	}
+
+	if !IsValidSemver(fixedVersion) {
+		return false, fmt.Errorf("fixed version has invalid semver format")
+	}
+
 	packages := make([]struct {
 		name    string
 		version string
