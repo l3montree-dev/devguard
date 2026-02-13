@@ -359,6 +359,12 @@ func (g *SBOMGraph) ScopeToArtifact(artifactName string) error {
 	return g.Scope(artifactID)
 }
 
+func (g *SBOMGraph) ScopeToInfoSource(infoSource string, t InfoSourceType) error {
+	infoSourceID := fmt.Sprintf("%s:%s", t, infoSource) // info sources are uniquely identified by their name and type
+
+	return g.Scope(infoSourceID)
+}
+
 func (g *SBOMGraph) IsScoped() bool {
 	return g.scopeID != g.rootID
 }
@@ -1000,25 +1006,38 @@ type minimalTree struct {
 }
 
 func (g *SBOMGraph) ToMinimalTree() minimalTree {
-	// we need to make sure, that we translate component node ids to purls
-	nodes := make([]string, 0, len(g.nodes))
+	reachable := g.reachableNodes()
+	nodes := make([]string, 0, len(reachable))
 	dependencies := make(map[string][]string)
 	depMap := edgesToDepMap(g.edges)
 
-	for _, v := range g.nodes {
-		nodes = append(nodes, v.Component.PackageURL)
+	// Only add nodes that are reachable in current scope
+	for id := range reachable {
+		node := g.nodes[id]
+		if node != nil && node.Component != nil {
+			nodes = append(nodes, node.Component.PackageURL)
+		}
 	}
+
+	// add the ROOT node PackageURL (which is an empty string to the nodes list to ensure it's included in the minimal tree)
+	nodes = append(nodes, "")
+
 	for parent := range g.edges {
+		if !reachable[parent] {
+			continue
+		}
 		parentNode := g.nodes[parent]
 		if parentNode == nil {
 			continue
 		}
-
 		parentPURL := parentNode.Component.PackageURL
 
 		children := getChildrenOfParent(depMap, g.nodes, parent)
 		deps := make([]string, 0, len(children))
 		for _, child := range children {
+			if !reachable[child] {
+				continue
+			}
 			childNode := g.nodes[child]
 			if childNode == nil {
 				continue
