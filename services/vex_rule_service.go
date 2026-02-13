@@ -392,7 +392,12 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 		}
 
 		if componentPurl.String() != "" {
-			pathPattern = dtos.PathPattern{componentPurl.String(), dtos.PathPatternWildcard, purlString}
+			componentPurlStr, err := normalize.PURLToString(componentPurl)
+			if err != nil {
+				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
+				componentPurlStr = componentPurl.String()
+			}
+			pathPattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
 		} else {
 			// If no metadata component PURL, use the affected package directly
 			pathPattern = dtos.PathPattern{purlString}
@@ -545,19 +550,23 @@ func extractCVE(s string) string {
 func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
 	result := make(map[string][]models.DependencyVuln)
 	// Filter by each rule's cve and path pattern - only match ENABLED rules
+	// group by cve id
+	m := make(map[string][]models.VEXRule)
 	for _, rule := range rules {
 		if !rule.Enabled {
 			continue
 		}
-		pattern := dtos.PathPattern(rule.PathPattern)
-		var matched []models.DependencyVuln
-		for _, vuln := range vulns {
-			if vuln.CVEID == rule.CVEID && pattern.MatchesSuffix(vuln.VulnerabilityPath) {
-				matched = append(matched, vuln)
-			}
-		}
-		result[rule.ID] = matched
+		m[rule.CVEID] = append(m[rule.CVEID], rule)
 	}
 
+	for _, vuln := range vulns {
+		rulesForCVE := m[vuln.CVEID]
+		for _, rule := range rulesForCVE {
+			pattern := dtos.PathPattern(rule.PathPattern)
+			if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+				result[rule.ID] = append(result[rule.ID], vuln)
+			}
+		}
+	}
 	return result
 }

@@ -198,7 +198,5 @@ func QualifiersMapToString(qualifiers map[string]string) string {
 }
 
 func PURLToString(purl packageurl.PackageURL) (string, error) {
-
 	return url.PathUnescape(purl.ToString())
-
 }
