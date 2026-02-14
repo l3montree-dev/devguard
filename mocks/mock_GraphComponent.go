@@ -127,7 +127,7 @@ func (_c *GraphComponent_GetID_Call) RunAndReturn(run func() string) *GraphCompo
 }
 
 // ToCdxComponent provides a mock function for the type GraphComponent
-func (_mock *GraphComponent) ToCdxComponent(componentLicenseOverwrites map[string]string) cyclonedx.Component {
+func (_mock *GraphComponent) ToCdxComponent(componentLicenseOverwrites map[string]string) (cyclonedx.Component, error) {
 	ret := _mock.Called(componentLicenseOverwrites)
 
 	if len(ret) == 0 {
@@ -135,12 +135,21 @@ func (_mock *GraphComponent) ToCdxComponent(componentLicenseOverwrites map[strin
 	}
 
 	var r0 cyclonedx.Component
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(map[string]string) (cyclonedx.Component, error)); ok {
+		return returnFunc(componentLicenseOverwrites)
+	}
 	if returnFunc, ok := ret.Get(0).(func(map[string]string) cyclonedx.Component); ok {
 		r0 = returnFunc(componentLicenseOverwrites)
 	} else {
 		r0 = ret.Get(0).(cyclonedx.Component)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(map[string]string) error); ok {
+		r1 = returnFunc(componentLicenseOverwrites)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // GraphComponent_ToCdxComponent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ToCdxComponent'
@@ -167,12 +176,12 @@ func (_c *GraphComponent_ToCdxComponent_Call) Run(run func(componentLicenseOverw
 	return _c
 }
 
-func (_c *GraphComponent_ToCdxComponent_Call) Return(component cyclonedx.Component) *GraphComponent_ToCdxComponent_Call {
-	_c.Call.Return(component)
+func (_c *GraphComponent_ToCdxComponent_Call) Return(component cyclonedx.Component, err error) *GraphComponent_ToCdxComponent_Call {
+	_c.Call.Return(component, err)
 	return _c
 }
 
-func (_c *GraphComponent_ToCdxComponent_Call) RunAndReturn(run func(componentLicenseOverwrites map[string]string) cyclonedx.Component) *GraphComponent_ToCdxComponent_Call {
+func (_c *GraphComponent_ToCdxComponent_Call) RunAndReturn(run func(componentLicenseOverwrites map[string]string) (cyclonedx.Component, error)) *GraphComponent_ToCdxComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }

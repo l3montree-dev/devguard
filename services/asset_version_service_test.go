@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -11,9 +12,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -125,11 +129,17 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 	})
 }
 
-func TestBuildVeX(t *testing.T) {
-	// Create a mock assetVersionService instance for testing
-	s := &assetVersionService{}
+// buildVeXTestService creates an assetVersionService with a mocked VEXRuleService
+// that returns the given rules for any FindByAssetVersion call.
+func buildVeXTestService(t *testing.T, rules []models.VEXRule) *assetVersionService {
+	vexRuleService := mocks.NewVEXRuleService(t)
+	vexRuleService.On("FindByAssetVersion", mock.Anything, mock.Anything, mock.Anything).Return(rules, nil)
+	return &assetVersionService{vexRuleService: vexRuleService}
+}
 
+func TestBuildVeX(t *testing.T) {
 	t.Run("two dependency vulns with same CVE and component but different paths are deduplicated", func(t *testing.T) {
+		s := buildVeXTestService(t, nil)
 		asset := models.Asset{
 			Model: models.Model{ID: uuid.New()},
 			Name:  "test-asset",
@@ -203,6 +213,7 @@ func TestBuildVeX(t *testing.T) {
 	})
 
 	t.Run("should handle justification from events", func(t *testing.T) {
+		s := buildVeXTestService(t, nil)
 		asset := models.Asset{
 			Model: models.Model{
 				ID: uuid.New(),
@@ -271,6 +282,7 @@ func TestBuildVeX(t *testing.T) {
 	})
 
 	t.Run("accepted (exploitable) state wins over open (in_triage) state for same CVE", func(t *testing.T) {
+		s := buildVeXTestService(t, nil)
 		asset := models.Asset{
 			Model: models.Model{ID: uuid.New()},
 			Name:  "test-asset",
@@ -343,6 +355,7 @@ func TestBuildVeX(t *testing.T) {
 	})
 
 	t.Run("open (in_triage) state wins over false_positive when at least one is open", func(t *testing.T) {
+		s := buildVeXTestService(t, nil)
 		asset := models.Asset{
 			Model: models.Model{ID: uuid.New()},
 			Name:  "test-asset",
@@ -413,6 +426,7 @@ func TestBuildVeX(t *testing.T) {
 	})
 
 	t.Run("false_positive state only when ALL occurrences are false_positive", func(t *testing.T) {
+		s := buildVeXTestService(t, nil)
 		asset := models.Asset{
 			Model: models.Model{ID: uuid.New()},
 			Name:  "test-asset",
@@ -481,5 +495,121 @@ func TestBuildVeX(t *testing.T) {
 		// All false_positive = result should be false_positive
 		assert.Equal(t, cdx.IASFalsePositive, vuln.Analysis.State,
 			"False positive state should be used when ALL occurrences are false_positive")
+	})
+
+	t.Run("includes pathPattern properties from matching VEX rules", func(t *testing.T) {
+		assetID := uuid.New()
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: assetID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "CVE-2024-PATH"
+		vulnID := "vuln-path-1"
+		componentPurl := "pkg:golang/vulnerable-lib@v1.0"
+		pathPattern := dtos.PathPattern{"pkg:golang/myapp@v1.0", dtos.PathPatternWildcard, componentPurl}
+
+		// VEX rule that matches this vuln
+		rules := []models.VEXRule{
+			{
+				CVEID:       cveID,
+				PathPattern: pathPattern,
+				Enabled:     true,
+				EventType:   dtos.EventTypeFalsePositive,
+			},
+		}
+
+		dependencyVulns := []models.DependencyVuln{
+			{
+				Vulnerability: models.Vulnerability{
+					ID:    vulnID,
+					State: dtos.VulnStateFalsePositive,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{"pkg:golang/myapp@v1.0", "pkg:golang/mid@v1.0", componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+			},
+		}
+
+		s := buildVeXTestService(t, rules)
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		require.NotNil(t, result)
+		require.NotNil(t, result.Vulnerabilities)
+		require.Len(t, *result.Vulnerabilities, 1)
+
+		vuln := (*result.Vulnerabilities)[0]
+		require.NotNil(t, vuln.Properties, "vulnerability should have properties with pathPattern")
+		require.Len(t, *vuln.Properties, 1)
+
+		prop := (*vuln.Properties)[0]
+		assert.Equal(t, "devguard:pathPattern", prop.Name)
+
+		// The value should be the JSON-marshalled path pattern
+		expectedJSON, _ := json.Marshal(pathPattern)
+		assert.Equal(t, string(expectedJSON), prop.Value)
+	})
+
+	t.Run("no pathPattern properties when no VEX rules match", func(t *testing.T) {
+		assetID := uuid.New()
+		asset := models.Asset{
+			Model: models.Model{ID: assetID},
+			Name:  "test-asset",
+			Slug:  "test-asset",
+		}
+		assetVersion := models.AssetVersion{
+			Name:    "v1.0.0",
+			AssetID: assetID,
+			Slug:    "v1-0-0",
+		}
+
+		cveID := "CVE-2024-NOMATCH"
+		componentPurl := "pkg:golang/lib@v1.0"
+
+		dependencyVulns := []models.DependencyVuln{
+			{
+				Vulnerability: models.Vulnerability{
+					ID:    "vuln-no-match",
+					State: dtos.VulnStateOpen,
+					Events: []models.VulnEvent{{
+						Type:  dtos.EventTypeDetected,
+						Model: models.Model{CreatedAt: time.Now()},
+					}},
+				},
+				CVEID:             cveID,
+				ComponentPurl:     componentPurl,
+				VulnerabilityPath: []string{componentPurl},
+				CVE: models.CVE{
+					CVE:    cveID,
+					CVSS:   5.0,
+					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
+				},
+			},
+		}
+
+		s := buildVeXTestService(t, nil)
+		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+
+		require.NotNil(t, result)
+		require.NotNil(t, result.Vulnerabilities)
+		require.Len(t, *result.Vulnerabilities, 1)
+
+		vuln := (*result.Vulnerabilities)[0]
+		assert.Nil(t, vuln.Properties, "vulnerability should have no properties when no rules match")
 	})
 }

@@ -16,6 +16,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -383,7 +384,45 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 		}
 
 		// now create the path pattern
-		var pathPattern dtos.PathPattern
+		var pathPattern []dtos.PathPattern
+		// first check if we have a concrete properties object with the path pattern (created by devguard itself, see AssetVersionService.BuildVeX)
+		if vuln.Properties != nil {
+			patterns := utils.Filter(*vuln.Properties, func(p cdx.Property) bool {
+				return p.Name == "devguard:pathPattern"
+			})
+			if len(patterns) > 0 {
+				for _, p := range patterns {
+					var pp dtos.PathPattern
+					err := json.Unmarshal([]byte(p.Value), &pp)
+					if err != nil {
+						slog.Info("failed to unmarshal path pattern from vuln properties, skipping this property", "value", p.Value, "error", err)
+						continue
+					}
+					pathPattern = append(pathPattern, pp)
+				}
+			}
+		}
+
+		// if we already found a path pattern in the properties, we can use it directly. If not, we need to create it based on the purl and component purl
+		if len(pathPattern) > 0 {
+			// we already have a path pattern, so we can skip creating it from the purl
+			// but we still want to create a VEX rule for each path pattern found in the properties
+			for _, pp := range pathPattern {
+				rule := models.VEXRule{
+					AssetID:          assetID,
+					AssetVersionName: assetVersionName,
+					CVEID:            cveID,
+					VexSource:        report.Source,
+					Justification:    justification,
+					EventType:        eventType,
+					PathPattern:      pp,
+					CreatedByID:      "system", // system user
+				}
+				rule.SetPathPattern(rule.PathPattern)
+				rules = append(rules, rule)
+			}
+			continue
+		}
 
 		purlString, err := normalize.PURLToString(purl)
 		if err != nil {
@@ -391,16 +430,18 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 			purlString = purl.String()
 		}
 
+		var pattern dtos.PathPattern
+
 		if componentPurl.String() != "" {
 			componentPurlStr, err := normalize.PURLToString(componentPurl)
 			if err != nil {
 				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
 				componentPurlStr = componentPurl.String()
 			}
-			pathPattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
+			pattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
 		} else {
 			// If no metadata component PURL, use the affected package directly
-			pathPattern = dtos.PathPattern{purlString}
+			pattern = dtos.PathPattern{purlString}
 		}
 
 		rule := models.VEXRule{
@@ -410,7 +451,7 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 			VexSource:        report.Source,
 			Justification:    justification,
 			EventType:        eventType,
-			PathPattern:      pathPattern,
+			PathPattern:      pattern,
 			CreatedByID:      "system", // system user
 		}
 		rule.SetPathPattern(rule.PathPattern) // compute the hash
@@ -545,6 +586,30 @@ func extractCVE(s string) string {
 		return parts[len(parts)-1]
 	}
 	return s
+}
+
+func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) map[string][]models.VEXRule {
+	result := make(map[string][]models.VEXRule)
+	// Filter by each rule's cve and path pattern - only match ENABLED rules
+	// group by vuln ID
+	m := make(map[string][]models.DependencyVuln)
+	for _, vuln := range vulns {
+		m[vuln.CVEID] = append(m[vuln.CVEID], vuln)
+	}
+
+	for _, rule := range rules {
+		if !rule.Enabled {
+			continue
+		}
+		vulnsForCVE := m[rule.CVEID]
+		for _, vuln := range vulnsForCVE {
+			pattern := dtos.PathPattern(rule.PathPattern)
+			if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+				result[vuln.ID] = append(result[vuln.ID], rule)
+			}
+		}
+	}
+	return result
 }
 
 func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
