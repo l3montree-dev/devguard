@@ -89,6 +89,35 @@ func (s *VEXRuleService) FindByAssetVersionPaged(tx shared.DB, assetID uuid.UUID
 	return s.vexRuleRepository.FindByAssetVersionPaged(tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
 }
 
+func (s *VEXRuleService) FindByAssetVersionAndCVE(tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
+	return s.vexRuleRepository.FindByAssetVersionAndCVE(tx, assetID, assetVersionName, cveID)
+}
+
+func (s *VEXRuleService) FindByAssetVersionAndVulnID(tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error) {
+	// Fetch the vulnerability to get its CVEID and path
+	vuln, err := s.dependencyVulnRepository.Read(vulnID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find vulnerability: %w", err)
+	}
+
+	// Find rules for this CVE
+	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(tx, assetID, assetVersionName, vuln.CVEID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter rules to only those matching the vulnerability path pattern
+	var matchingRules []models.VEXRule
+	for _, rule := range rules {
+		pattern := dtos.PathPattern(rule.PathPattern)
+		if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+			matchingRules = append(matchingRules, rule)
+		}
+	}
+
+	return matchingRules, nil
+}
+
 func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, error) {
 	return s.vexRuleRepository.FindByID(tx, id)
 }
@@ -163,6 +192,15 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 }
 
 func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	return s.applyRulesToExistingInternal(tx, rules, vulns, false)
+}
+
+// ApplyRulesToExistingForce applies rules to existing vulns ignoring duplicate checks
+func (s *VEXRuleService) ApplyRulesToExistingForce(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	return s.applyRulesToExistingInternal(tx, rules, vulns, true)
+}
+
+func (s *VEXRuleService) applyRulesToExistingInternal(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
 	vulnsByRule := matchRulesToVulns(rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
@@ -182,7 +220,8 @@ func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRu
 				continue
 			}
 
-			if isVexEventAlreadyApplied(vuln, ev) {
+			// Skip duplicate events unless force reapply is enabled
+			if !forceReapply && isVexEventAlreadyApplied(vuln, ev) {
 				continue
 			}
 
@@ -218,7 +257,11 @@ func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRu
 		return nil, fmt.Errorf("failed to save events: %w", err)
 	}
 
-	slog.Info("applied VEX rules to existing vulnerabilities",
+	logAction := "applied"
+	if forceReapply {
+		logAction = "reapplied"
+	}
+	slog.Info(logAction+" VEX rules to existing vulnerabilities",
 		"rulesApplied", len(rules),
 		"vulnsUpdated", len(updatedVulns),
 		"eventsCreated", len(allEvents))
@@ -239,6 +282,20 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, rules []models.
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
 	return s.ApplyRulesToExisting(tx, rules, vulns)
+}
+
+// ApplyRulesToExistingVulnsForce applies rules to existing vulns ignoring duplicate checks
+func (s *VEXRuleService) ApplyRulesToExistingVulnsForce(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+	if len(rules) == 0 {
+		return nil, nil
+	}
+	// Find all vulns matching all rules at once
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
+	}
+	return s.ApplyRulesToExistingForce(tx, rules, vulns)
 }
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {

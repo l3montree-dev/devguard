@@ -73,6 +73,25 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
+	vulnId := ctx.QueryParam("vulnId")
+	if vulnId != "" {
+		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(nil, asset.ID, assetVersion.Name, vulnId)
+		if err != nil {
+			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
+		}
+
+		// Count matching vulnerabilities for all rules in batch
+		counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, rules)
+		if err != nil {
+			ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
+			counts = make(map[string]int)
+		}
+
+		return ctx.JSON(200, utils.Map(rules, func(rule models.VEXRule) any {
+			return transformer.VEXRuleToDTOWithCount(rule, counts[rule.ID]) // Count is not needed for this endpoint
+		}))
+	}
+
 	pageInfo := shared.GetPageInfo(ctx)
 	search := ctx.QueryParam("search")
 	filterQuery := shared.GetFilterQuery(ctx)
@@ -298,6 +317,54 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 			slog.Info("VEX rule enabled and applied to existing vulnerabilities", "ruleID", rule.ID, "cveID", rule.CVEID)
 		}
 	}
+
+	// Count matching vulnerabilities for the response
+	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	if err != nil {
+		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
+		count = 0
+	}
+
+	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
+}
+
+// @Summary Reapply a VEX rule
+// @Tags VEXRules
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug (ref)"
+// @Param ruleId path string true "Rule ID"
+// @Success 200 {object} dtos.VEXRuleDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}/reapply [post]
+func (c *VEXRuleController) Reapply(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+
+	ruleID := ctx.Param("ruleId")
+	if ruleID == "" {
+		return echo.NewHTTPError(400, "ruleId path parameter is required")
+	}
+
+	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	if err != nil {
+		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
+	}
+
+	// Verify the rule belongs to this asset
+	if rule.AssetID != asset.ID {
+		return echo.NewHTTPError(403, "rule does not belong to this asset")
+	}
+
+	// Reapply the rule to existing vulnerabilities (force reapply ignoring duplicate checks)
+	vulns, err := c.vexRuleService.ApplyRulesToExistingVulnsForce(nil, []models.VEXRule{rule})
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to reapply VEX rule").WithInternal(err)
+	}
+
+	// Update artifact risk aggregations in background
+	c.updateArtifactRiskAggregation(asset, vulns)
 
 	// Count matching vulnerabilities for the response
 	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)

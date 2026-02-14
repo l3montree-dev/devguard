@@ -298,6 +298,7 @@ type VEXRuleRepository interface {
 	DeleteBatch(db DB, rules []models.VEXRule) error
 	DeleteByAssetVersion(db DB, assetID uuid.UUID, assetVersionName string) error
 	Begin() DB
+	FindByAssetVersionAndCVE(db DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 }
 
 type OrganizationRepository interface {
@@ -435,12 +436,16 @@ type VEXRuleService interface {
 	FindByAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	FindByAssetVersionPaged(tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	ApplyRulesToExistingVulns(tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
+	ApplyRulesToExistingVulnsForce(tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
+	ApplyRulesToExistingForce(tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	IngestVEX(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error
 	IngestVexes(tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error
 	CountMatchingVulns(tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(tx DB, id string) (models.VEXRule, error)
+	FindByAssetVersionAndCVE(tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
+	FindByAssetVersionAndVulnID(tx DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error)
 }
 
 type VulnEventRepository interface {
