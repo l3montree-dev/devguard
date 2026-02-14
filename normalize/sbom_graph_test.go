@@ -1682,6 +1682,45 @@ func TestToMinimalTree(t *testing.T) {
 		assert.Contains(t, tree.Nodes, "") // ROOT has empty PackageURL
 		assert.Empty(t, tree.Dependencies[""])
 	})
+
+	t.Run("scoped to info source only shows its subtree", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artifactID := g.AddArtifact("my-app")
+		infoSourceID1 := g.AddInfoSource(artifactID, "package.json", InfoSourceSBOM)
+		infoSourceID2 := g.AddInfoSource(artifactID, "other.json", InfoSourceSBOM)
+
+		compA := cdx.Component{PackageURL: "pkg:npm/a@1.0.0", BOMRef: "pkg:npm/a@1.0.0"}
+		compB := cdx.Component{PackageURL: "pkg:npm/b@1.0.0", BOMRef: "pkg:npm/b@1.0.0"}
+		compC := cdx.Component{PackageURL: "pkg:npm/c@1.0.0", BOMRef: "pkg:npm/c@1.0.0"}
+
+		compAID := g.AddComponent(compA)
+		compBID := g.AddComponent(compB)
+		compCID := g.AddComponent(compC)
+
+		// infoSource1 -> a -> b
+		g.AddEdge(infoSourceID1, compAID)
+		g.AddEdge(compAID, compBID)
+		// infoSource2 -> c
+		g.AddEdge(infoSourceID2, compCID)
+
+		// Scope to infoSource1
+		err := g.ScopeToInfoSource("package.json@my-app", InfoSourceSBOM)
+		assert.NoError(t, err)
+		tree := g.ToMinimalTree()
+
+		// Only a and b should be present (plus root)
+		assert.Contains(t, tree.Nodes, "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/b@1.0.0")
+		assert.NotContains(t, tree.Nodes, "pkg:npm/c@1.0.0")
+
+		// infoSource1 should have a as dependency, a should have b
+		assert.Contains(t, tree.Dependencies["sbom:package.json@my-app"], "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Dependencies["pkg:npm/a@1.0.0"], "pkg:npm/b@1.0.0")
+		// infoSource2 and c should not appear
+		assert.NotContains(t, tree.Dependencies, "sbom:other.json@my-app")
+		assert.NotContains(t, tree.Nodes, "pkg:npm/c@1.0.0")
+	})
+
 }
 
 func TestAddComponent_URLUnescaping(t *testing.T) {

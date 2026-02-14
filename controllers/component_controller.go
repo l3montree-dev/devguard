@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/licenses"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
@@ -130,6 +131,15 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 		err = sbom.ScopeToArtifact(artifactName)
 		if err != nil {
 			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
+		}
+
+		origin := ctx.QueryParam("origin")
+		if origin != "" {
+			origin, _ = url.PathUnescape(origin)
+			err = sbom.ScopeToInfoSource(origin, normalize.InfoSourceSBOM)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not scope sbom to origin").WithInternal(err)
+			}
 		}
 
 		// Get all component IDs in this artifact
