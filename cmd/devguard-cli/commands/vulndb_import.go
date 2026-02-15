@@ -21,6 +21,13 @@ func newImportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 
+			// cveRepository                shared.CveRepository
+			// cweRepository                shared.CweRepository
+			// exploitRepository            shared.ExploitRepository
+			// affectedComponentsRepository shared.AffectedComponentRepository
+			// configService                shared.ConfigService
+			// pool                         *pgxpool.Pool
+
 			migrateDB()
 			app := fx.New(
 				fx.NopLogger,

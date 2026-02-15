@@ -39,6 +39,7 @@ import (
 	pgpv2Crypto "github.com/ProtonMail/gopenpgp/v2/crypto"
 	pgpCrypto "github.com/ProtonMail/gopenpgp/v3/crypto"
 	"github.com/ProtonMail/gopenpgp/v3/profile"
+	"github.com/google/uuid"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/gocsaf/csaf/v3/util"
@@ -53,12 +54,22 @@ import (
 )
 
 type csafService struct {
-	client http.Client
+	client                   http.Client
+	dependencyVulnRepository shared.DependencyVulnRepository
+	vulnEventRepository      shared.VulnEventRepository
+	assetVersionRepository   shared.AssetVersionRepository
+	cveRepository            shared.CveRepository
+	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFService(client http.Client) *csafService {
+func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafService {
 	return &csafService{
-		client: client,
+		client:                   client,
+		dependencyVulnRepository: dependencyVulnRepository,
+		vulnEventRepository:      vulnEventRepository,
+		assetVersionRepository:   assetVersionRepository,
+		cveRepository:            cveRepository,
+		artifactRepository:       artifactRepository,
 	}
 }
 
@@ -616,11 +627,7 @@ func loadOpenPGPKeys(
 	return result, nil
 }
 
-func downloadAdvisory(
-	client *http.Client,
-	keys *pgpv2Crypto.KeyRing,
-	file gocsaf.AdvisoryFile,
-) (gocsaf.Advisory, error) {
+func downloadAdvisory(client *http.Client, keys *pgpv2Crypto.KeyRing, file gocsaf.AdvisoryFile) (gocsaf.Advisory, error) {
 	u, err := url.Parse(file.URL())
 	if err != nil {
 		return gocsaf.Advisory{}, err
@@ -786,20 +793,11 @@ func hasExactFit(vulnPurl packageurl.PackageURL, purls []packageurl.PackageURL) 
 }
 
 // generate a csaf report for a specific vulnerability in an asset
-func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) (gocsaf.Advisory, error) {
+func (service csafService) GenerateCSAFReport(org models.Org, asset models.Asset, cveID string) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
-	// extract context information
-	cveID := ctx.Param("version")
-	if cveID == "" {
-		return csafDoc, fmt.Errorf("version parameter is required")
-	}
-	org := shared.GetOrg(ctx)
-	asset := shared.GetAsset(ctx)
-	// remove everything <asset-slug>_ from the beginning of the document id
-	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// fetch all vulns associated with this cve from the database
-	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
+	vulns, err := service.dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -834,7 +832,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	}
 	csafDoc.Document.Tracking = &tracking
 
-	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository, vulns)
+	tree, err := generateProductTree(asset, service.assetVersionRepository, service.artifactRepository, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -1309,4 +1307,17 @@ func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 		return nil, err
 	}
 	return signature, nil
+}
+
+func GetCSAFVulnsForAsset(assetID uuid.UUID, dependencyVulnRepository shared.DependencyVulnRepository) ([]models.DependencyVuln, error) {
+	allVulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, assetID)
+	if err != nil {
+		return nil, err
+	}
+
+	// deduplicate Slice to avoid listing the same CVEs
+	allVulns = utils.DeduplicateSlice(allVulns, func(vuln models.DependencyVuln) string {
+		return vuln.CVEID
+	})
+	return allVulns, nil
 }

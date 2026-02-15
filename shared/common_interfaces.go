@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
@@ -71,6 +72,7 @@ type PersonalAccessTokenService interface {
 
 type CSAFService interface {
 	GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
+	GenerateCSAFReport(org models.Org, asset models.Asset, cveID string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {
