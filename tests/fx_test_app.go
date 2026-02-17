@@ -239,6 +239,9 @@ func createMockedComponentService(t testing.TB, realCS shared.ComponentService) 
 	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]models.Component{}, nil)
 
+	mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return([]models.ComponentDependency{}, nil)
+
 	// Mock other methods to delegate to real implementation
 	mockCS.On("GetLicense", mock.Anything).
 		Return(func(component models.Component) models.Component {
