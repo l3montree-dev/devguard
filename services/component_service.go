@@ -197,7 +197,10 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	}
 
 	if artifactName != nil {
-		sbomGraph.ScopeToArtifact(*artifactName)
+		err := sbomGraph.ScopeToArtifact(*artifactName)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not scope sbom graph to artifact")
+		}
 	}
 
 	minimalTree := sbomGraph.ToMinimalTree()
