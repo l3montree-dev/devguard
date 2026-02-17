@@ -9,10 +9,14 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/fx"
 )
 
 // createTestAffectedComponent creates a properly populated AffectedComponent for testing
@@ -541,7 +545,51 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 
 // TestDaemonPipelineScanAssetDetectVulns tests scanning assets and detecting vulnerabilities
 func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:scan-test-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@scan-test-artifact", ComponentID: utils.Ptr("artifact:scan-test-artifact")},
+					// info source to component
+					{DependencyID: "pkg:npm/vulnerable-package@2.0.0", ComponentID: utils.Ptr("sbom:test-origin@scan-test-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		org := f.CreateOrg("test-org-scan-vuln")
 		project := f.CreateProject(org.ID, "test-project-scan")
 		asset := f.CreateAsset(project.ID, "test-asset-scan")

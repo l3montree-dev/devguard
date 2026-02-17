@@ -420,7 +420,6 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
-					bom.ClearScope()
 					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
 					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {

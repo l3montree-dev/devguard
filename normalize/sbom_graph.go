@@ -356,13 +356,20 @@ func (g *SBOMGraph) CurrentScopeID() string {
 }
 func (g *SBOMGraph) ScopeToArtifact(artifactName string) error {
 	artifactID := "artifact:" + artifactName
-	return g.Scope(artifactID)
+	if _, exists := g.nodes[artifactID]; !exists {
+		return fmt.Errorf("artifact %s does not exist in graph", artifactName)
+	}
+	g.scopeID = artifactID
+	return nil
 }
 
 func (g *SBOMGraph) ScopeToInfoSource(infoSource string, t InfoSourceType) error {
 	infoSourceID := fmt.Sprintf("%s:%s", t, infoSource) // info sources are uniquely identified by their name and type
-
-	return g.Scope(infoSourceID)
+	if _, exists := g.nodes[infoSourceID]; !exists {
+		return fmt.Errorf("info source %s of type %s does not exist in graph", infoSource, t)
+	}
+	g.scopeID = infoSourceID
+	return nil
 }
 
 func (g *SBOMGraph) IsScoped() bool {
