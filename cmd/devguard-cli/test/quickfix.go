@@ -22,6 +22,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/package-url/packageurl-go"
+	"golang.org/x/mod/semver"
 )
 
 func getPackageManager(pkg string) string {
@@ -53,6 +56,7 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 }
 
 func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]string, error) {
+
 	var versions [][]string
 
 	for _, obj := range npmResponse.Versions {
@@ -71,18 +75,16 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 
 	var recommended []string
 	for _, version := range versions {
-		var major, minor, patch int
 		versionStr := strings.Join(version, ".")
-		if _, err := fmt.Sscanf(versionStr, "%d.%d.%d", &major, &minor, &patch); err != nil {
+		if !IsValidSemver(versionStr) {
 			continue
 		}
 
-		if major == currentMajor {
-			if minor >= currentMinor {
-				if patch >= currentPatch {
-					recommended = append(recommended, versionStr)
-				}
-			}
+		vSemver := "v" + versionStr
+		currentSemver := "v" + currentVersion
+
+		if semver.Major(vSemver) == semver.Major(currentSemver) && semver.Compare(vSemver, currentSemver) >= 0 {
+			recommended = append(recommended, versionStr)
 		}
 	}
 
@@ -120,23 +122,19 @@ func IsValidSemver(version string) bool {
 
 func parsePurl(purl string) (string, string, error) {
 	// Format: pkg:npm/package-name@version or pkg:npm/@scoped/package@version
-	if !strings.HasPrefix(purl, "pkg:npm/") {
-		return "", "", fmt.Errorf("invalid purl format: %s", purl)
+	input, err := packageurl.FromString(purl)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid purl format: %w", err)
 	}
 
-	purl = strings.TrimPrefix(purl, "pkg:npm/")
-
-	// Find the last @ which separates package name from version
-	lastAtIndex := strings.LastIndex(purl, "@")
-	if lastAtIndex == -1 {
-		return "", "", fmt.Errorf("invalid purl format: %s (missing @)", purl)
+	pkgName := input.Name
+	if input.Namespace != "" {
+		pkgName = input.Namespace + "/" + input.Name
 	}
 
-	pkgName := purl[:lastAtIndex]
-	version := purl[lastAtIndex+1:]
-
-	if pkgName == "" || version == "" {
-		return "", "", fmt.Errorf("invalid purl format: %s", purl)
+	version := input.Version
+	if version == "" {
+		return "", "", fmt.Errorf("invalid purl format: missing version")
 	}
 
 	return pkgName, version, nil
@@ -198,19 +196,26 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
 
-		// get major versions and sort
-		versions, err := getRecommendedVersions(*allVersionsMeta, currentVersion)
-		if err != nil {
-			return "", fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
-		}
+		var latestVersion string
+		if i == 0 {
+			// get major versions and sort
+			versions, err := getRecommendedVersions(*allVersionsMeta, currentVersion)
+			if err != nil {
+				return "", fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
+			}
 
-		if len(versions) == 0 {
-			return "", fmt.Errorf("no newer version available for %s@%s in the same major band", pkgName, currentVersion)
-		}
+			if len(versions) == 0 {
+				return "", fmt.Errorf("no newer version available for %s@%s in the same major band", pkgName, currentVersion)
+			}
 
-		latestVersion := versions[0]
-		if latestVersion == currentVersion {
-			return "", fmt.Errorf("no new version available for %s (current: %s)", pkgName, currentVersion)
+			latestVersion = versions[0]
+			if latestVersion == currentVersion {
+				return "", fmt.Errorf("no new version available for %s (current: %s)", pkgName, currentVersion)
+			}
+		} else {
+			// we are not resolving any ^ or ~, therefore we are only allowed to use the EXACT version specified in the previous package's dependencies
+			latestVersion = currentVersion
+			// if packageurl.
 		}
 
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
@@ -290,6 +295,13 @@ func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMRe
 func main() {
 	purls := []string{
 		"pkg:npm/@sentry/nextjs@9.38.0",
+		/*
+			nextjs@9.39.0 ---> Ist abhängig von react@6.28.0
+
+			packages[i+1].version = 6.28.0
+			1. Erneut getRecommendedVersions für react@6.28.0??? Aber ist doch fixed von nextjs
+			Wenn ^react@6.28.0 in nextjs@9.39.0
+		*/
 		"pkg:npm/next@15.4.7",
 	}
 
