@@ -796,8 +796,8 @@ func (_c *ComponentRepository_List_Call) RunAndReturn(run func(ids []string) ([]
 }
 
 // LoadComponents provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponents(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
+func (_mock *ComponentRepository) LoadComponents(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadComponents")
@@ -805,18 +805,18 @@ func (_mock *ComponentRepository) LoadComponents(tx shared.DB, assetVersionName 
 
 	var r0 []models.ComponentDependency
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID) ([]models.ComponentDependency, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) []models.ComponentDependency); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID) []models.ComponentDependency); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, *string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -832,12 +832,11 @@ type ComponentRepository_LoadComponents_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - artifactName *string
-func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_LoadComponents_Call {
-	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID, artifactName)}
+func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}) *ComponentRepository_LoadComponents_Call {
+	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID)}
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *ComponentRepository_LoadComponents_Call {
+func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.DB
 		if args[0] != nil {
@@ -851,15 +850,10 @@ func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx shared.DB, as
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 *string
-		if args[3] != nil {
-			arg3 = args[3].(*string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -870,7 +864,7 @@ func (_c *ComponentRepository_LoadComponents_Call) Return(componentDependencys [
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
+func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -123,7 +123,7 @@ func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion
 	}
 
 	// Load ALL components for the asset version
-	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, nil)
+	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load components")
 	}

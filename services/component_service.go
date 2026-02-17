@@ -9,9 +9,11 @@ import (
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
+	"github.com/pkg/errors"
 )
 
 type ComponentService struct {
@@ -184,15 +186,31 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 }
 
 func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID, artifactName)
+	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, err
 	}
+
+	sbomGraph, err := normalize.SBOMGraphFromComponents(componentDependencies, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create sbom graph from components")
+	}
+
+	if artifactName != nil {
+		sbomGraph.ScopeToArtifact(*artifactName)
+	}
+
+	minimalTree := sbomGraph.ToMinimalTree()
 
 	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)
 	seen := make(map[string]bool)
 	for _, componentDependency := range componentDependencies {
+		// check if exists in minimal tree
+		if _, ok := minimalTree.Dependencies[componentDependency.DependencyID]; !ok {
+			continue
+		}
+
 		if _, ok := seen[componentDependency.DependencyID]; !ok && (forceRefresh || componentDependency.Dependency.License == nil) {
 			seen[componentDependency.DependencyID] = true
 			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
