@@ -34,7 +34,7 @@ services:
       - devguard-local
 
   kratos-migrate:
-    image: oryd/kratos:v1.3.1
+    image: oryd/kratos:v25.4.0-distroless@sha256:368667ee3713797f86ddec669c36751f6484c7d675c78fd27c795b2e79271c31
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -54,7 +54,7 @@ services:
       - devguard-local
 
   kratos:
-    image: oryd/kratos:v1.3.1
+    image: oryd/kratos:v25.4.0-distroless@sha256:368667ee3713797f86ddec669c36751f6484c7d675c78fd27c795b2e79271c31
     container_name: devguard-kratos
     read_only: true
     security_opt:
