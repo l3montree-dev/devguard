@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -175,6 +176,86 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 }
 
 func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetComponentsByAssetVersion provides a mock function for the type ComponentService
+func (_mock *ComponentService) GetComponentsByAssetVersion(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetComponentsByAssetVersion")
+	}
+
+	var r0 []models.ComponentDependency
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) ([]models.ComponentDependency, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID, artifactName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID, *string) []models.ComponentDependency); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentDependency)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID, *string) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentService_GetComponentsByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetComponentsByAssetVersion'
+type ComponentService_GetComponentsByAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetComponentsByAssetVersion is a helper method to define mock.On call
+//   - tx shared.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - artifactName *string
+func (_e *ComponentService_Expecter) GetComponentsByAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentService_GetComponentsByAssetVersion_Call {
+	return &ComponentService_GetComponentsByAssetVersion_Call{Call: _e.mock.On("GetComponentsByAssetVersion", tx, assetVersionName, assetID, artifactName)}
+}
+
+func (_c *ComponentService_GetComponentsByAssetVersion_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string)) *ComponentService_GetComponentsByAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.DB
+		if args[0] != nil {
+			arg0 = args[0].(shared.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *string
+		if args[3] != nil {
+			arg3 = args[3].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentService_GetComponentsByAssetVersion_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentService_GetComponentsByAssetVersion_Call {
+	_c.Call.Return(componentDependencys, err)
+	return _c
+}
+
+func (_c *ComponentService_GetComponentsByAssetVersion_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)) *ComponentService_GetComponentsByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }

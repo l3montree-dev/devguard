@@ -396,14 +396,14 @@ func pathsToMermaid(paths [][]string) string {
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
+func RenderPathToComponent(componentService shared.ComponentService, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
 	artifactName := ""
 	if len(artifacts) > 0 {
 		artifactName = artifacts[0].ArtifactName
 	}
 
 	// Load all components for the asset version
-	components, err := componentRepository.LoadComponents(nil, assetVersionName, assetID, utils.EmptyThenNil(artifactName))
+	components, err := componentService.GetComponentsByAssetVersion(nil, assetVersionName, assetID, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return "", err
 	}

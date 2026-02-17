@@ -41,7 +41,7 @@ type JiraIntegration struct {
 	aggregatedVulnRepository  shared.VulnRepository
 	dependencyVulnRepository  shared.DependencyVulnRepository
 	firstPartyVulnRepository  shared.FirstPartyVulnRepository
-	componentRepository       shared.ComponentRepository
+	componentService          shared.ComponentService
 	externalUserRepository    shared.ExternalUserRepository
 	vulnEventRepository       shared.VulnEventRepository
 	assetVersionRepository    shared.AssetVersionRepository
@@ -61,7 +61,7 @@ func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationReposito
 	aggregatedVulnRepository shared.VulnRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	firstPartyVulnRepository shared.FirstPartyVulnRepository,
-	componentRepository shared.ComponentRepository,
+	componentService shared.ComponentService,
 	externalUserRepository shared.ExternalUserRepository,
 	vulnEventRepository shared.VulnEventRepository,
 	assetVersionRepository shared.AssetVersionRepository,
@@ -84,7 +84,7 @@ func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationReposito
 		externalUserRepository:    externalUserRepository,
 		assetRepository:           assetRepository,
 		assetVersionRepository:    assetVersionRepository,
-		componentRepository:       componentRepository,
+		componentService:          componentService,
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		frontendURL:               frontendURL,
@@ -336,7 +336,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	assetSlug := asset.Slug
 
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(i.componentService, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -675,7 +675,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(i.componentService, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}

@@ -5,13 +5,16 @@ import (
 	_ "embed"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
+	"github.com/pkg/errors"
 )
 
 type ComponentService struct {
@@ -183,11 +186,82 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID, artifactName)
+func (s *ComponentService) GetComponentsByAssetVersion(tx shared.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
+
+	if artifactName != nil {
+		sbom, err := normalize.SBOMGraphFromComponents(componentDependencies, nil)
+		if err != nil {
+			slog.Error("could not create sbom graph from components", "err", err, "assetVersionName", assetVersionName, "assetID", assetID)
+			return nil, err
+		}
+
+		err = sbom.ScopeToArtifact(*artifactName)
+		if err != nil {
+			// If artifact node is not reachable, it means the artifact has no components (empty artifact)
+			// This is a valid scenario, so we return early with no vulnerabilities
+			if errors.Is(err, normalize.ErrNodeNotReachable) {
+				slog.Debug("artifact has no components, skipping scan", "artifactName", *artifactName, "assetVersionName", assetVersionName, "assetID", assetID)
+				return nil, nil
+			}
+			slog.Error("could not scope bom to artifact", "err", err)
+			return nil, err
+		}
+
+		minimalTree := sbom.ToMinimalTree()
+
+		dependencies := minimalTree.Dependencies
+
+		componentDependencies = utils.Filter(componentDependencies, func(componentDependency models.ComponentDependency) bool {
+			if _, ok := dependencies[componentDependency.DependencyID]; ok {
+				return true
+			}
+			return false
+		})
+	}
+
+	return componentDependencies, nil
+}
+
+func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	componentDependencies, err := s.GetComponentsByAssetVersion(tx, assetVersion.Name, assetVersion.AssetID, artifactName)
+	if err != nil {
+		return nil, err
+	}
+
+	sbom, err := normalize.SBOMGraphFromComponents(componentDependencies, nil)
+	if err != nil {
+		slog.Error("could not create sbom graph from components", "err", err, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+		return nil, err
+	}
+
+	if artifactName != nil {
+		err = sbom.ScopeToArtifact(*artifactName)
+		if err != nil {
+			// If artifact node is not reachable, it means the artifact has no components (empty artifact)
+			// This is a valid scenario, so we return early with no vulnerabilities
+			if errors.Is(err, normalize.ErrNodeNotReachable) {
+				slog.Debug("artifact has no components, skipping scan", "artifactName", *artifactName, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+				return nil, nil
+			}
+			slog.Error("could not scope bom to artifact", "err", err)
+			return nil, err
+		}
+	}
+
+	minimalTree := sbom.ToMinimalTree()
+
+	dependencies := minimalTree.Dependencies
+
+	componentDependencies = utils.Filter(componentDependencies, func(componentDependency models.ComponentDependency) bool {
+		if _, ok := dependencies[componentDependency.DependencyID]; ok {
+			return true
+		}
+		return false
+	})
 
 	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)

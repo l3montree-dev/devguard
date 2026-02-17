@@ -194,7 +194,7 @@ type MaliciousPackageChecker interface {
 
 type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SearchComponentOccurrencesByProject(tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
 	SaveBatch(tx DB, components []models.Component) error
@@ -573,6 +573,7 @@ type ComponentService interface {
 	GetLicense(component models.Component) (models.Component, error)
 	FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error)
 	RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error
+	GetComponentsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
 }
 
 type CVERelationshipRepository interface {

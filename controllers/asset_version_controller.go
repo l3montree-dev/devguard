@@ -157,7 +157,7 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 }
 
 func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	components, err := a.componentService.GetComponentsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}

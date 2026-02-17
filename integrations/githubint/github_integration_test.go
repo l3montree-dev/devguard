@@ -138,8 +138,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
+		componentService := mocks.NewComponentService(t)
+		componentService.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
@@ -180,7 +180,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendURL:              "http://localhost:3000",
-			componentRepository:      componentRepository,
+			componentService:         componentService,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 
@@ -231,8 +231,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
+		componentService := mocks.NewComponentService(t)
+		componentService.On("GetComponentsByAssetVersion	", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		expectedEvent := models.VulnEvent{
 			Type:   dtos.EventTypeMitigate,
@@ -264,7 +264,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendURL:              "http://localhost:3000",
-			componentRepository:      componentRepository,
+			componentService:         componentService,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 

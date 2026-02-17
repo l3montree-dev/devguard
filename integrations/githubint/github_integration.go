@@ -64,7 +64,7 @@ type GithubIntegration struct {
 	frontendURL                     string
 	assetRepository                 shared.AssetRepository
 	assetVersionRepository          shared.AssetVersionRepository
-	componentRepository             shared.ComponentRepository
+	componentService                shared.ComponentService
 	licenseRiskRepository           shared.LicenseRiskRepository
 
 	orgRepository       shared.OrganizationRepository
@@ -87,7 +87,7 @@ func NewGithubIntegration(
 	aggregatedVulnRepository shared.VulnRepository,
 	assetRepository shared.AssetRepository,
 	assetVersionRepository shared.AssetVersionRepository,
-	componentRepository shared.ComponentRepository,
+	componentService shared.ComponentService,
 	licenseRiskRepository shared.LicenseRiskRepository,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
@@ -109,7 +109,7 @@ func NewGithubIntegration(
 		frontendURL:                     frontendURL,
 		assetRepository:                 assetRepository,
 		assetVersionRepository:          assetVersionRepository,
-		componentRepository:             componentRepository,
+		componentService:                componentService,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 		licenseRiskRepository:           licenseRiskRepository,
@@ -795,7 +795,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentService, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -958,7 +958,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentService, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
