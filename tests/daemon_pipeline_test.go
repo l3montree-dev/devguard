@@ -140,7 +140,51 @@ func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.
 
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:test-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@test-artifact", ComponentID: utils.Ptr("artifact:test-artifact")},
+					// info source to component
+					{DependencyID: "pkg:npm/test-package@1.0.0", ComponentID: utils.Ptr("sbom:test-origin@test-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		t.Run("should successfully process an asset through the entire pipeline", func(t *testing.T) {
 			// Create test data
 			org := f.CreateOrg("test-org-end-to-end")
@@ -238,7 +282,51 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 // TestDaemonPipelineAutoReopenExceedThreshold tests that vulnerabilities are reopened when they exceed the threshold
 func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:test-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@test-artifact", ComponentID: utils.Ptr("artifact:test-artifact")},
+					// info source to component
+					{DependencyID: "pkg:npm/test-package@1.0.0", ComponentID: utils.Ptr("sbom:test-origin@test-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		org := f.CreateOrg("test-org-reopen-exceed")
 		project := f.CreateProject(org.ID, "test-project-reopen-exceed")
 		asset := f.CreateAsset(project.ID, "test-asset-reopen-exceed")
@@ -343,7 +431,51 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 
 // TestDaemonPipelineAutoReopenWithinThreshold tests that vulnerabilities are not reopened within the threshold
 func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:test-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@test-artifact", ComponentID: utils.Ptr("artifact:test-artifact")},
+					// info source to component
+					{DependencyID: "pkg:npm/test-package@1.0.0", ComponentID: utils.Ptr("sbom:test-origin@test-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		org := f.CreateOrg("test-org-reopen-within")
 		project := f.CreateProject(org.ID, "test-project-reopen-within")
 		asset := f.CreateAsset(project.ID, "test-asset-reopen-within")
@@ -676,7 +808,49 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 
 // TestDaemonPipelineScanAssetEmptyComponents tests handling assets with no components
 func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:empty-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@test-artifact", ComponentID: utils.Ptr("artifact:empty-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		org := f.CreateOrg("test-org-scan-empty")
 		project := f.CreateProject(org.ID, "test-project-empty")
 		asset := f.CreateAsset(project.ID, "test-asset-empty")
@@ -709,7 +883,51 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 
 // TestDaemonPipelineRiskCalculation tests the risk calculation stage
 func TestDaemonPipelineRiskCalculation(t *testing.T) {
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
+				mockCS := &mocks.ComponentService{}
+
+				// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
+				mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]models.Component{}, nil)
+
+				// Mock other methods to delegate to real implementation
+				mockCS.On("GetLicense", mock.Anything).
+					Return(func(component models.Component) models.Component {
+						result, _ := cs.GetLicense(component)
+						return result
+					}, nil)
+
+				mockCS.On("FetchInformationSources", mock.Anything).
+					Return(func(artifact *models.Artifact) []models.ComponentDependency {
+						result, _ := cs.FetchInformationSources(artifact)
+						return result
+					}, nil)
+
+				mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
+					Return(func(artifact *models.Artifact, rootNodePurls []string) error {
+						return cs.RemoveInformationSources(artifact, rootNodePurls)
+					})
+
+				mockCS.On("RefreshComponentProjectInformation", mock.Anything).
+					Return(func(project models.ComponentProject) {
+						cs.RefreshComponentProjectInformation(project)
+					})
+
+				mockCS.On("GetComponentsByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{
+					// root edge to artifact
+					{DependencyID: "artifact:risk-test-artifact"},
+					// artifact to info source
+					{DependencyID: "sbom:test-origin@risk-test-artifact", ComponentID: utils.Ptr("artifact:risk-test-artifact")},
+					// info source to component
+					{DependencyID: "pkg:npm/risk-test-package@1.0.0", ComponentID: utils.Ptr("sbom:test-origin@risk-test-artifact")},
+				}, nil)
+				return mockCS
+			}),
+		},
+	}, func(f *TestFixture) {
 		t.Run("should recalculate risk for detected vulnerabilities", func(t *testing.T) {
 			org := f.CreateOrg("test-org-risk-calc")
 			project := f.CreateProject(org.ID, "test-project-risk")
