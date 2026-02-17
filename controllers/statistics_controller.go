@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
 
@@ -231,4 +232,13 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
 		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
 	})
+}
+
+func (c *StatisticsController) GetOrgVulnStatistics(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get vuln statistics")
+	}
+	return ctx.JSON(200, distribution)
 }

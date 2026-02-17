@@ -98,7 +98,7 @@ WITH events AS (
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -137,7 +137,7 @@ WITH events AS (
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -207,7 +207,7 @@ events AS (
 	FROM dependency_vulns dv
 	JOIN vuln_events fe ON dv.id = fe.vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND dv.raw_risk_assessment >= ? AND dv.raw_risk_assessment <= ?
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND dv.raw_risk_assessment >= ? AND dv.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -274,7 +274,7 @@ WITH events AS (
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss <= ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -314,7 +314,7 @@ WITH events AS (
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -385,7 +385,7 @@ events AS (
 	JOIN vuln_events fe ON dv.id = fe.vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
 	JOIN cves c ON dv.cve_id = c.cve
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND c.cvss >= ? AND c.cvss <= ?
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -438,4 +438,29 @@ func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion 
 
 	return cves, nil
 
+}
+
+// TO-DO refactor to dtos
+
+func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Distribution, error) {
+	distribution := dtos.Distribution{}
+	err := r.db.Raw(`
+	SELECT 
+		COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+		COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+       	COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+       	COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical,
+       	COUNT(*) filter (where d.cvss < 4) as cvss_low,
+		COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
+       	COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
+       	COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+	FROM dependency_vulns a 
+	LEFT JOIN assets b ON a.asset_id = b.id 
+	LEFT JOIN projects c ON b.project_id = c.id
+	LEFT JOIN cves d ON a.cve_id = d.cve 
+	WHERE c.organization_id = ?;`, orgID).Find(&distribution).Error
+	if err != nil {
+		return distribution, err
+	}
+	return distribution, nil
 }

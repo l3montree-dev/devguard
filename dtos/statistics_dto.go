@@ -17,15 +17,15 @@ type DependencyVulnAggregationStateAndChange struct {
 }
 
 type Distribution struct {
-	Low      int `json:"low"`
-	High     int `json:"high"`
-	Medium   int `json:"medium"`
-	Critical int `json:"critical"`
+	LowRisk      int `json:"lowRisk" gorm:"column:risk_low"`
+	MediumRisk   int `json:"mediumRisk" gorm:"column:risk_medium"`
+	HighRisk     int `json:"highRisk" gorm:"column:risk_high"`
+	CriticalRisk int `json:"criticalRisk" gorm:"column:risk_critical"`
 
-	LowCVSS      int `json:"lowCvss"`
-	MediumCVSS   int `json:"mediumCvss"`
-	HighCVSS     int `json:"highCvss"`
-	CriticalCVSS int `json:"criticalCvss"`
+	LowCVSS      int `json:"lowCvss" gorm:"column:cvss_low"`
+	MediumCVSS   int `json:"mediumCvss" gorm:"column:cvss_medium"`
+	HighCVSS     int `json:"highCvss" gorm:"column:cvss_high"`
+	CriticalCVSS int `json:"criticalCvss" gorm:"column:cvss_critical"`
 
 	CVEPurlLow      int `json:"cvePurlLow"`
 	CVEPurlMedium   int `json:"cvePurlMedium"`

@@ -24,10 +24,10 @@ func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHisto
 	return dtos.RiskHistoryDTO{
 		History: dtos.History{
 			Distribution: dtos.Distribution{
-				Low:          history.Low,
-				High:         history.High,
-				Medium:       history.Medium,
-				Critical:     history.Critical,
+				LowRisk:      history.Low,
+				HighRisk:     history.High,
+				MediumRisk:   history.Medium,
+				CriticalRisk: history.Critical,
 				LowCVSS:      history.LowCVSS,
 				MediumCVSS:   history.MediumCVSS,
 				HighCVSS:     history.HighCVSS,
