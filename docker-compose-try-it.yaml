@@ -157,7 +157,7 @@ services:
       - "3000:3000"
     environment:
       - DEVGUARD_API_URL=http://devguard-api:8080
-      - ORY_KRATOS_URL=http://kratos:4433
+      - ORY_SDK_URL=http://kratos:4433
     networks:
       - devguard-local
 
