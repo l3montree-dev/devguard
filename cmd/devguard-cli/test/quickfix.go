@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -76,7 +75,7 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 	var recommended []string
 	for _, version := range versions {
 		versionStr := strings.Join(version, ".")
-		if !IsValidSemver(versionStr) {
+		if !semver.IsValid("v" + versionStr) {
 			continue
 		}
 
@@ -112,15 +111,6 @@ func parseVersion(version string) [3]int {
 	return result
 }
 
-// single node in the dependency tree
-
-func IsValidSemver(version string) bool {
-
-	pattern := `^\d+\.\d+\.\d+$`
-	matched, _ := regexp.MatchString(pattern, version)
-	return matched
-}
-
 func parsePurl(purl string) (string, string, error) {
 	// Format: pkg:npm/package-name@version or pkg:npm/@scoped/package@version
 	// Note: version can be empty string to indicate "all versions" (see RegistryRequest)
@@ -137,10 +127,6 @@ func parsePurl(purl string) (string, string, error) {
 	version := input.Version
 
 	return pkgName, version, nil
-}
-
-func normalizeVersion(version string) string {
-	return strings.Trim(version, "^~\"")
 }
 
 func getAllDependencyMaps(depMeta *NPMResponse) []map[string]string {
@@ -200,7 +186,7 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 
 	baseVersion = strings.TrimSpace(baseVersion)
 
-	if !IsValidSemver(baseVersion) {
+	if !semver.IsValid("v" + baseVersion) {
 		return "", fmt.Errorf("invalid semver in spec: %s", versionSpec)
 	}
 
@@ -224,7 +210,7 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 			continue
 		}
 
-		if !IsValidSemver(v) {
+		if !semver.IsValid("v" + v) {
 			continue
 		}
 
@@ -286,7 +272,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		return "", fmt.Errorf("purl array must contain at least 2 elements")
 	}
 
-	if !IsValidSemver(fixedVersion) {
+	if !semver.IsValid("v" + fixedVersion) {
 		return "", fmt.Errorf("fixed version has invalid semver format")
 	}
 
@@ -336,7 +322,6 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		} else {
 			// we are not resolving any ^ or ~, therefore we are only allowed to use the EXACT version specified in the previous package's dependencies
 			latestVersion = currentVersion
-			// if packageurl.
 		}
 
 		packages[i].version = latestVersion
@@ -374,7 +359,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 	vulnPkgName := packages[len(packages)-1].name
 	vulnVersion := packages[len(packages)-1].version
 
-	if !IsValidSemver(vulnVersion) {
+	if !semver.IsValid("v" + vulnVersion) {
 		return "", fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
 	}
 
