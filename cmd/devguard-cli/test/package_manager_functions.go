@@ -19,11 +19,16 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type RegistryRequest struct {
 	Dependency string
 	Version    string // empty string means "all versions"
+}
+
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
 }
 
 // get all versions if no version is specified
@@ -34,20 +39,20 @@ func GetNPMRegistry(pkg RegistryRequest) (*http.Response, error) {
 	normalizedVersion := strings.Trim(pkg.Version, "/") // remove quotes if present
 
 	if pkg.Version != "" {
-		req, err = http.Get("https://registry.npmjs.org/" + pkg.Dependency + "/" + normalizedVersion)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + pkg.Dependency + "/" + normalizedVersion)
 	} else {
-		req, err = http.Get("https://registry.npmjs.org/" + pkg.Dependency)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + pkg.Dependency)
 	}
 
 	if err != nil {
 		if req != nil {
-			defer req.Body.Close()
+			req.Body.Close()
 		}
 		return nil, err
 	}
 
 	if req.StatusCode != 200 {
-		defer req.Body.Close()
+		req.Body.Close()
 		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Dependency, req.Status)
 	}
 	return req, nil
@@ -58,20 +63,20 @@ func GetCratesRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var err error
 
 	if pkg.Version != "" {
-		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency + "/" + pkg.Version)
+		req, err = httpClient.Get("https://crates.io/api/v1/crates/" + pkg.Dependency + "/" + pkg.Version)
 	} else {
-		req, err = http.Get("https://crates.io/api/v1/crates/" + pkg.Dependency)
+		req, err = httpClient.Get("https://crates.io/api/v1/crates/" + pkg.Dependency)
 	}
 
 	if err != nil {
 		if req != nil {
-			defer req.Body.Close()
+			req.Body.Close()
 		}
 		return nil, err
 	}
 
 	if req.StatusCode != 200 {
-		defer req.Body.Close()
+		req.Body.Close()
 		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Dependency, req.Status)
 	}
 	return req, nil

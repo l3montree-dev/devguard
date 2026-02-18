@@ -17,7 +17,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -135,8 +134,6 @@ func parsePurl(purl string) (string, string, error) {
 		pkgName = input.Namespace + "/" + input.Name
 	}
 
-	// Empty version is valid - it means "fetch all versions" (see RegistryRequest.Version)
-	// Callers can decide whether to reject empty versions based on their use case
 	version := input.Version
 
 	return pkgName, version, nil
@@ -342,6 +339,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 			// if packageurl.
 		}
 
+		packages[i].version = latestVersion
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
 
 		// Second: check latest version
@@ -397,16 +395,11 @@ func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMRe
 	if err != nil {
 		return nil, fmt.Errorf("error fetching %s@%s: %w", dep, version, err)
 	}
-
-	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("error reading response for %s@%s: %w", dep, version, err)
-	}
+	defer resp.Body.Close()
 
 	var npmResp NPMResponse
-	if err := json.Unmarshal(body, &npmResp); err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON for %s@%s: %w", dep, version, err)
+	if err := json.NewDecoder(resp.Body).Decode(&npmResp); err != nil {
+		return nil, fmt.Errorf("error decoding JSON for %s@%s: %w", dep, version, err)
 	}
 
 	return &npmResp, nil
