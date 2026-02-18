@@ -52,6 +52,8 @@ type Asset struct {
 	PipelineError   *string   `json:"pipelineError" gorm:"type:text;"`
 
 	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent" gorm:"default:false;not null;"`
+
+	Archived bool `json:"archived" gorm:"default:false;"`
 }
 
 func (m Asset) TableName() string {

@@ -77,6 +77,7 @@ func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID st
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", project.ID)),
+		Archived:                 project.Archived,
 	}
 }
 
