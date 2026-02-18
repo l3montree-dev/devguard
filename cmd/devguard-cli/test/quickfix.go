@@ -104,7 +104,18 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 
 func parseVersion(version string) [3]int {
 	var result [3]int
-	if _, err := fmt.Sscanf(version, "%d.%d.%d", &result[0], &result[1], &result[2]); err != nil {
+
+	// Skip parsing if version is empty
+	if version == "" {
+		return [3]int{0, 0, 0}
+	}
+
+	cleanVersion := version
+	if idx := strings.IndexAny(version, "-+"); idx != -1 {
+		cleanVersion = version[:idx]
+	}
+
+	if _, err := fmt.Sscanf(cleanVersion, "%d.%d.%d", &result[0], &result[1], &result[2]); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to parse version %q: %v (this indicates a validation bypass)\n", version, err)
 		return [3]int{0, 0, 0}
 	}
@@ -146,6 +157,79 @@ func findDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) string {
 	}
 	return ""
 }
+func splitOrExpression(versionSpec string) []string {
+	parts := strings.Split(versionSpec, "||")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	fmt.Println(result)
+	return result
+}
+
+func matchesVersionSpec(rangeType string, version string, versionParts [3]int, baseVersion string, baseParts [3]int) bool {
+	switch rangeType {
+	case "^":
+		// Caret: same major version, >= base
+		return versionParts[0] == baseParts[0] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+
+	case "~":
+		// Tilde: same major.minor, >= patch
+		return versionParts[0] == baseParts[0] && versionParts[1] == baseParts[1] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+
+	case ">=":
+		// Greater than or equal: same major version, >= base
+		return versionParts[0] == baseParts[0] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+
+	case ">":
+		// Greater than: same major version, > base
+		return versionParts[0] == baseParts[0] && semver.Compare("v"+version, "v"+baseVersion) > 0
+
+	case "exact":
+		// Exact version match
+		return version == baseVersion
+
+	default:
+		return false
+	}
+}
+
+// parseVersionSpec extracts the range type and base version from a version spec
+// Returns the range type ("^", "~", ">=", ">", "exact") and the trimmed base version
+// Pre-release versions are stripped (e.g., "15.0.0-rc.0" becomes "15.0.0")
+func parseVersionSpec(spec string) (rangeType string, baseVersion string) {
+	spec = strings.TrimSpace(spec)
+
+	// Extract base version (without range prefix)
+	var extracted string
+	if strings.HasPrefix(spec, "^") {
+		rangeType = "^"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "^"))
+	} else if strings.HasPrefix(spec, "~") {
+		rangeType = "~"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "~"))
+	} else if strings.HasPrefix(spec, ">=") {
+		rangeType = ">="
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">="))
+	} else if strings.HasPrefix(spec, ">") {
+		rangeType = ">"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">"))
+	} else {
+		// Exact version (no prefix)
+		rangeType = "exact"
+		extracted = spec
+	}
+
+	// Strip pre-release and build metadata (e.g., "15.0.0-rc.0" -> "15.0.0")
+	if idx := strings.IndexAny(extracted, "-+"); idx != -1 {
+		extracted = extracted[:idx]
+	}
+
+	return rangeType, extracted
+}
 
 // resolveBestVersion finds the best matching version given a version spec and all available versions
 // versionSpec examples: "15.4.7", "^15.0.0", "~15.4.0", ">15.0.0", ">=15.4.0"
@@ -163,30 +247,14 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 	var baseVersions []string
 
 	// Determine range type and extract base version
-	if strings.HasPrefix(versionSpec, "^") {
-		rangeType = "^"
-		baseVersion = strings.TrimPrefix(versionSpec, "^")
-	} else if strings.HasPrefix(versionSpec, "~") {
-		rangeType = "~"
-		baseVersion = strings.TrimPrefix(versionSpec, "~")
-	} else if strings.HasPrefix(versionSpec, ">=") {
-		rangeType = ">="
-		baseVersion = strings.TrimPrefix(versionSpec, ">=")
-	} else if strings.HasPrefix(versionSpec, ">") {
-		rangeType = ">"
-		baseVersion = strings.TrimPrefix(versionSpec, ">")
-	} else if strings.Contains(versionSpec, "||") {
+	if strings.Contains(versionSpec, "||") {
 		rangeType = "||"
-		baseVersions = strings.Split(versionSpec, "||")
+		baseVersions = splitOrExpression(versionSpec)
 	} else {
-		// Exact version
-		rangeType = "exact"
-		baseVersion = versionSpec
+		rangeType, baseVersion = parseVersionSpec(versionSpec)
 	}
 
-	baseVersion = strings.TrimSpace(baseVersion)
-
-	if !semver.IsValid("v" + baseVersion) {
+	if rangeType != "||" && !semver.IsValid("v"+baseVersion) {
 		return "", fmt.Errorf("invalid semver in spec: %s", versionSpec)
 	}
 
@@ -218,34 +286,33 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 		matches := false
 
 		switch rangeType {
-		case "^":
-			// Caret: same major version, >= base
-			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
-				matches = true
-			}
-
-		case "~":
-			// Tilde: same major.minor, >= patch
-			if vParts[0] == baseParts[0] && vParts[1] == baseParts[1] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
-				matches = true
-			}
-
-		case ">=":
-			// Greater than or equal: same major version, >= base
-			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
-				matches = true
-			}
-
-		case ">":
-			// Greater than: same major version, > base
-			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) > 0 {
-				matches = true
-			}
+		case "^", "~", ">=", ">":
+			matches = matchesVersionSpec(rangeType, v, vParts, baseVersion, baseParts)
 		case "||":
-			// OR: matches if it satisfies any of the base versions
-			for _, bv := range baseVersions {
-				bv = strings.TrimSpace(bv)
-				fmt.Println(bv)
+			for _, orSpec := range baseVersions {
+				orRangeType, orBaseVersion := parseVersionSpec(orSpec)
+
+				parts := strings.Split(orBaseVersion, ".")
+				fmt.Println(parts)
+				// 14.0 is not getting caught by semver.isValid
+				if len(parts) < 3 {
+					continue // Skip incomplete specs like "14.0" or "13"
+				}
+
+				if !semver.IsValid("v" + orBaseVersion) {
+					continue // Skip invalid specs
+				}
+
+				orBaseParts := parseVersion(orBaseVersion)
+
+				// Check if current version matches this OR spec
+				orMatches := matchesVersionSpec(orRangeType, v, vParts, orBaseVersion, orBaseParts)
+
+				// If any OR element matches, the whole OR expression matches
+				if orMatches {
+					matches = true
+					break
+				}
 			}
 		}
 
@@ -255,6 +322,9 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 	}
 
 	if len(candidates) == 0 {
+		if rangeType == "||" {
+			return "", fmt.Errorf("no versions match spec %s", versionSpec)
+		}
 		return "", fmt.Errorf("no versions match spec %s in major version %d", versionSpec, baseParts[0])
 	}
 
