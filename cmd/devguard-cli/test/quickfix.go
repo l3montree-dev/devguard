@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -27,7 +28,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func getPackageManager(pkg string) string {
+func mapPackageManagerToEcosystem(pkg string) string {
 	// insert future Package Managers later
 	switch pkg {
 
@@ -106,6 +107,7 @@ func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]s
 func parseVersion(version string) [3]int {
 	var result [3]int
 	if _, err := fmt.Sscanf(version, "%d.%d.%d", &result[0], &result[1], &result[2]); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Failed to parse version %q: %v (this indicates a validation bypass)\n", version, err)
 		return [3]int{0, 0, 0}
 	}
 	return result
@@ -122,6 +124,7 @@ func IsValidSemver(version string) bool {
 
 func parsePurl(purl string) (string, string, error) {
 	// Format: pkg:npm/package-name@version or pkg:npm/@scoped/package@version
+	// Note: version can be empty string to indicate "all versions" (see RegistryRequest)
 	input, err := packageurl.FromString(purl)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid purl format: %w", err)
@@ -132,10 +135,9 @@ func parsePurl(purl string) (string, string, error) {
 		pkgName = input.Namespace + "/" + input.Name
 	}
 
+	// Empty version is valid - it means "fetch all versions" (see RegistryRequest.Version)
+	// Callers can decide whether to reject empty versions based on their use case
 	version := input.Version
-	if version == "" {
-		return "", "", fmt.Errorf("invalid purl format: missing version")
-	}
 
 	return pkgName, version, nil
 }
@@ -169,12 +171,13 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 	versionSpec = strings.TrimSpace(versionSpec)
 
 	// Handle OR expressions - not implemented yet, return error
-	if strings.Contains(versionSpec, "||") {
-		return "", fmt.Errorf("OR expressions (||) not yet supported: %s", versionSpec)
-	}
+	// if strings.Contains(versionSpec, "||") {
+	// 	return "", fmt.Errorf("OR expressions (||) not yet supported: %s", versionSpec)
+	// }
 
 	var rangeType string
 	var baseVersion string
+	var baseVersions []string
 
 	// Determine range type and extract base version
 	if strings.HasPrefix(versionSpec, "^") {
@@ -189,6 +192,9 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 	} else if strings.HasPrefix(versionSpec, ">") {
 		rangeType = ">"
 		baseVersion = strings.TrimPrefix(versionSpec, ">")
+	} else if strings.Contains(versionSpec, "||") {
+		rangeType = "||"
+		baseVersions = strings.Split(versionSpec, "||")
 	} else {
 		// Exact version
 		rangeType = "exact"
@@ -201,7 +207,7 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 		return "", fmt.Errorf("invalid semver in spec: %s", versionSpec)
 	}
 
-	// For exact version, check if it's the same as current
+	// For exact version, simply return the requested version; equality with currentVersion is allowed
 	if rangeType == "exact" {
 		if baseVersion == currentVersion {
 			return "", fmt.Errorf("exact version %s is same as current version, no upgrade possible", baseVersion)
@@ -230,35 +236,33 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 
 		switch rangeType {
 		case "^":
-			// Caret: same major version, >= minor.patch
-			if vParts[0] == baseParts[0] {
-				if vParts[1] > baseParts[1] || (vParts[1] == baseParts[1] && vParts[2] >= baseParts[2]) {
-					matches = true
-				}
+			// Caret: same major version, >= base
+			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
+				matches = true
 			}
 
 		case "~":
 			// Tilde: same major.minor, >= patch
-			if vParts[0] == baseParts[0] && vParts[1] == baseParts[1] {
-				if vParts[2] >= baseParts[2] {
-					matches = true
-				}
+			if vParts[0] == baseParts[0] && vParts[1] == baseParts[1] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
+				matches = true
 			}
 
 		case ">=":
 			// Greater than or equal: same major version, >= base
-			if vParts[0] == baseParts[0] {
-				if vParts[1] > baseParts[1] || (vParts[1] == baseParts[1] && vParts[2] >= baseParts[2]) {
-					matches = true
-				}
+			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) >= 0 {
+				matches = true
 			}
 
 		case ">":
 			// Greater than: same major version, > base
-			if vParts[0] == baseParts[0] {
-				if vParts[1] > baseParts[1] || (vParts[1] == baseParts[1] && vParts[2] > baseParts[2]) {
-					matches = true
-				}
+			if vParts[0] == baseParts[0] && semver.Compare("v"+v, "v"+baseVersion) > 0 {
+				matches = true
+			}
+		case "||":
+			// OR: matches if it satisfies any of the base versions
+			for _, bv := range baseVersions {
+				bv = strings.TrimSpace(bv)
+				fmt.Println(bv)
 			}
 		}
 
@@ -273,15 +277,7 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 
 	// Sort candidates and return the highest version
 	sort.Slice(candidates, func(i, j int) bool {
-		vi := parseVersion(candidates[i])
-		vj := parseVersion(candidates[j])
-		if vi[0] != vj[0] {
-			return vi[0] > vj[0]
-		}
-		if vi[1] != vj[1] {
-			return vi[1] > vj[1]
-		}
-		return vi[2] > vj[2]
+		return semver.Compare("v"+candidates[i], "v"+candidates[j]) > 0
 	})
 
 	return candidates[0], nil
@@ -307,6 +303,10 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		if err != nil {
 			return "", err
 		}
+		// In the context of dependency chains, versions are required (not "all versions")
+		if version == "" {
+			return "", fmt.Errorf("dependency chain purl must include version: %s", purl)
+		}
 		packages[i].name = name
 		packages[i].version = version
 	}
@@ -316,7 +316,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		currentVersion := packages[i].version
 
 		// fetch all version
-		allVersionsMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, "")
+		allVersionsMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), pkgName, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
@@ -345,7 +345,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
 
 		// Second: check latest version
-		latestMeta, err := fetchPackageMetadata(getPackageManager("npm"), pkgName, latestVersion)
+		latestMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), pkgName, latestVersion)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
 		}
@@ -359,7 +359,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 
 		fmt.Printf(" %s@%s requires %s: %s\n", pkgName, latestVersion, nextPkgName, nextVersionSpec)
 
-		nextAllVersionsMeta, err := fetchPackageMetadata(getPackageManager("npm"), nextPkgName, "")
+		nextAllVersionsMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), nextPkgName, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", nextPkgName, err)
 		}
@@ -380,22 +380,8 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		return "", fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
 	}
 
-	// Parse versions to compare
-	vulnParts := parseVersion(vulnVersion)
-	fixedParts := parseVersion(fixedVersion)
-
-	isFixed := false
-	if vulnParts[0] > fixedParts[0] {
-		isFixed = true
-	} else if vulnParts[0] == fixedParts[0] {
-		if vulnParts[1] > fixedParts[1] {
-			isFixed = true
-		} else if vulnParts[1] == fixedParts[1] {
-			if vulnParts[2] >= fixedParts[2] {
-				isFixed = true
-			}
-		}
-	}
+	// Check if vulnerability is fixed using semver comparison
+	isFixed := semver.Compare("v"+vulnVersion, "v"+fixedVersion) >= 0
 
 	if isFixed {
 		fixingVersion := packages[0].name + "@" + packages[0].version
