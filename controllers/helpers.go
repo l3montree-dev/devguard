@@ -23,20 +23,19 @@ import (
 )
 
 func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
-	orgSlug, _ := shared.GetOrgSlug(ctx)
-	projectSlug, _ := shared.GetProjectSlug(ctx)
 	frontendURL := os.Getenv("FRONTEND_URL")
-	assetSlug, _ := shared.GetAssetSlug(ctx)
 
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := shared.GetArtifact(ctx)
 	asset := shared.GetAsset(ctx)
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
 
 	return normalize.BOMMetadata{
 		AssetVersionSlug:      assetVersion.Slug,
-		AssetSlug:             assetSlug,
-		OrgSlug:               orgSlug,
-		ProjectSlug:           projectSlug,
+		AssetSlug:             asset.Slug,
+		OrgSlug:               org.Slug,
+		ProjectSlug:           project.Slug,
 		FrontendURL:           frontendURL,
 		ArtifactName:          artifact.ArtifactName,
 		AssetID:               asset.ID,

@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"os"
 	"slices"
 	"testing"
 
@@ -572,6 +573,44 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.True(t, reachable["pkg:npm/component-a@1.0.0"], "component-a should be reachable")
 		assert.True(t, reachable["pkg:npm/component-b@2.0.0"], "component-b should be reachable")
 		assert.True(t, reachable["pkg:npm/component-c@3.0.0"], "component-c should be reachable")
+	})
+
+	t.Run("info source ID must not get double-prefixed with sbom:sbom:", func(t *testing.T) {
+		bom := &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					BOMRef: GraphRootNodeID,
+					Name:   artifactName,
+				},
+			},
+			Components: &[]cdx.Component{{
+				BOMRef:     "pkg:npm/dep@1.0.0",
+				Name:       "dep",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/dep@1.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			}},
+			Dependencies: &[]cdx.Dependency{
+				{Ref: GraphRootNodeID, Dependencies: &[]string{"pkg:npm/dep@1.0.0"}},
+			},
+		}
+
+		// Simulate the caller already adding a "sbom:" prefix (the bug that was fixed).
+		// AddInfoSource prepends sourceType ("sbom") automatically, so passing "sbom:url"
+		// would produce "sbom:sbom:url@artifact" — a double prefix.
+		for _, sourceID := range []string{"https://example.com/sbom.json", "sbom:https://example.com/sbom.json"} {
+			result, err := SBOMGraphFromCycloneDX(bom, artifactName, sourceID, false)
+			assert.NoError(t, err)
+
+			artifactID := "artifact:" + artifactName
+			infoSourceIDs := result.GetInfoSourceIDs(artifactID)
+			assert.Len(t, infoSourceIDs, 1, "expected exactly one info source")
+
+			id := infoSourceIDs[0]
+			assert.NotContains(t, id, "sbom:sbom:", "info source ID must not contain double sbom: prefix, got: %s", id)
+		}
 	})
 
 }
@@ -1244,6 +1283,56 @@ func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 		limitedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/target@1.0.0", 2)
 		assert.Len(t, limitedPaths, 2, "Should return only 2 paths with limit=2")
 	})
+
+	t.Run("root component with non-PURL BOMRef should still appear in vulnerability path", func(t *testing.T) {
+		// Regression: when the root component's BOMRef is not a PURL (e.g. "my-app"),
+		// but its PackageURL IS a valid PURL, the root should still appear in the
+		// vulnerability path. Previously, isComponentNodeID checked the BOMRef format
+		// and would incorrectly skip non-PURL BOMRefs.
+		g := NewSBOMGraph()
+
+		artifactID := g.AddArtifact("test-artifact")
+		infoSource := g.AddInfoSource(artifactID, "sbom.json", InfoSourceSBOM)
+
+		// Root component with non-PURL BOMRef but valid PackageURL
+		root := cdx.Component{
+			BOMRef:     "my-app", // NOT a PURL
+			Name:       "my-app",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/my-app@1.0.0",
+			Type:       cdx.ComponentTypeApplication,
+		}
+		rootID := g.AddComponent(root)
+		g.AddEdge(infoSource, rootID)
+
+		// Intermediate dependency
+		mid := cdx.Component{
+			BOMRef:     "pkg:npm/express@4.18.0",
+			Name:       "express",
+			Version:    "4.18.0",
+			PackageURL: "pkg:npm/express@4.18.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		midID := g.AddComponent(mid)
+		g.AddEdge(rootID, midID)
+
+		// Vulnerable leaf dependency
+		vuln := cdx.Component{
+			BOMRef:     "pkg:npm/qs@6.5.0",
+			Name:       "qs",
+			Version:    "6.5.0",
+			PackageURL: "pkg:npm/qs@6.5.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}
+		vulnID := g.AddComponent(vuln)
+		g.AddEdge(midID, vulnID)
+
+		paths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/qs@6.5.0", 0)
+		assert.Len(t, paths, 1, "Should find exactly one path")
+		// Path should include the root component even though its BOMRef is not a PURL
+		assert.Equal(t, Path{"pkg:npm/my-app@1.0.0", "pkg:npm/express@4.18.0", "pkg:npm/qs@6.5.0"}, paths[0],
+			"Root component with non-PURL BOMRef must still appear in the vulnerability path")
+	})
 }
 
 func TestVulnerabilities(t *testing.T) {
@@ -1593,6 +1682,45 @@ func TestToMinimalTree(t *testing.T) {
 		assert.Contains(t, tree.Nodes, "") // ROOT has empty PackageURL
 		assert.Empty(t, tree.Dependencies[""])
 	})
+
+	t.Run("scoped to info source only shows its subtree", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artifactID := g.AddArtifact("my-app")
+		infoSourceID1 := g.AddInfoSource(artifactID, "package.json", InfoSourceSBOM)
+		infoSourceID2 := g.AddInfoSource(artifactID, "other.json", InfoSourceSBOM)
+
+		compA := cdx.Component{PackageURL: "pkg:npm/a@1.0.0", BOMRef: "pkg:npm/a@1.0.0"}
+		compB := cdx.Component{PackageURL: "pkg:npm/b@1.0.0", BOMRef: "pkg:npm/b@1.0.0"}
+		compC := cdx.Component{PackageURL: "pkg:npm/c@1.0.0", BOMRef: "pkg:npm/c@1.0.0"}
+
+		compAID := g.AddComponent(compA)
+		compBID := g.AddComponent(compB)
+		compCID := g.AddComponent(compC)
+
+		// infoSource1 -> a -> b
+		g.AddEdge(infoSourceID1, compAID)
+		g.AddEdge(compAID, compBID)
+		// infoSource2 -> c
+		g.AddEdge(infoSourceID2, compCID)
+
+		// Scope to infoSource1
+		err := g.ScopeToInfoSource("package.json@my-app", InfoSourceSBOM)
+		assert.NoError(t, err)
+		tree := g.ToMinimalTree()
+
+		// Only a and b should be present (plus root)
+		assert.Contains(t, tree.Nodes, "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Nodes, "pkg:npm/b@1.0.0")
+		assert.NotContains(t, tree.Nodes, "pkg:npm/c@1.0.0")
+
+		// infoSource1 should have a as dependency, a should have b
+		assert.Contains(t, tree.Dependencies["sbom:package.json@my-app"], "pkg:npm/a@1.0.0")
+		assert.Contains(t, tree.Dependencies["pkg:npm/a@1.0.0"], "pkg:npm/b@1.0.0")
+		// infoSource2 and c should not appear
+		assert.NotContains(t, tree.Dependencies, "sbom:other.json@my-app")
+		assert.NotContains(t, tree.Nodes, "pkg:npm/c@1.0.0")
+	})
+
 }
 
 func TestAddComponent_URLUnescaping(t *testing.T) {
@@ -1732,5 +1860,329 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 		assert.NotNil(t, foundVuln)
 		assert.NotNil(t, foundVuln.Affects)
 		assert.Len(t, *foundVuln.Affects, 1)
+	})
+}
+
+func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
+	t.Run("artifact name with special characters should be properly URL encoded", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		testCases := []struct {
+			name          string
+			artifactName  string
+			expectedInURL string
+			description   string
+		}{
+			{
+				name:          "simple artifact name",
+				artifactName:  "my-app",
+				expectedInURL: "my-app",
+				description:   "simple alphanumeric with dashes",
+			},
+			{
+				name:          "artifact with slashes",
+				artifactName:  "pkg:devguard/second-level",
+				expectedInURL: "pkg%3Adevguard%2Fsecond-level",
+				description:   "artifact name with colon and slash - fully encoded with QueryEscape",
+			},
+			{
+				name:          "artifact with spaces",
+				artifactName:  "my artifact name",
+				expectedInURL: "my+artifact+name",
+				description:   "spaces encoded as + by QueryEscape",
+			},
+			{
+				name:          "artifact with special URL characters",
+				artifactName:  "artifact?with&special=chars",
+				expectedInURL: "artifact%3Fwith%26special%3Dchars",
+				description:   "query string characters fully encoded by QueryEscape",
+			},
+			{
+				name:          "PURL with qualifiers",
+				artifactName:  "pkg:oci/devguard?repository_url=ghcr.io/l3montree-dev/devguard",
+				expectedInURL: "pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard",
+				description:   "full PURL with qualifiers is fully encoded",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.description, func(t *testing.T) {
+				// Add a simple component
+				g.AddComponent(cdx.Component{
+					BOMRef:     "pkg:npm/test@1.0.0",
+					Name:       "test",
+					PackageURL: "pkg:npm/test@1.0.0",
+					Type:       cdx.ComponentTypeLibrary,
+				})
+
+				metadata := BOMMetadata{
+					ArtifactName:          tc.artifactName,
+					AssetVersionName:      "main",
+					AssetVersionSlug:      "main",
+					AssetSlug:             "my-asset",
+					OrgSlug:               "my-org",
+					ProjectSlug:           "my-project",
+					AssetID:               [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, // dummy UUID
+					AddExternalReferences: true,
+					FrontendURL:           "http://localhost:3000",
+					RootName:              "",
+				}
+
+				// Set API_URL for test
+				t.Setenv("API_URL", "http://localhost:8080")
+
+				bom := g.ToCycloneDX(metadata)
+
+				// Check that external references exist
+				assert.NotNil(t, bom.ExternalReferences)
+				assert.GreaterOrEqual(t, len(*bom.ExternalReferences), 2, "should have at least VEX and SBOM URLs")
+
+				// Find the VEX reference
+				var vexRef *cdx.ExternalReference
+				var sbomRef *cdx.ExternalReference
+				for i := range *bom.ExternalReferences {
+					if (*bom.ExternalReferences)[i].Type == cdx.ERTypeExploitabilityStatement {
+						vexRef = &(*bom.ExternalReferences)[i]
+					}
+					if (*bom.ExternalReferences)[i].Type == cdx.ERTypeBOM {
+						sbomRef = &(*bom.ExternalReferences)[i]
+					}
+				}
+				assert.NotNil(t, vexRef, "should have VEX reference")
+				assert.NotNil(t, sbomRef, "should have SBOM reference")
+				assert.Contains(t, vexRef.URL, "/artifacts/"+tc.expectedInURL+"/vex.json/")
+				assert.Contains(t, sbomRef.URL, "/artifacts/"+tc.expectedInURL+"/sbom.json/")
+			})
+		}
+	})
+
+	t.Run("all external reference URLs should be present", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Add a simple component
+		g.AddComponent(cdx.Component{
+			BOMRef:     "pkg:npm/test@1.0.0",
+			Name:       "test",
+			PackageURL: "pkg:npm/test@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		})
+
+		metadata := BOMMetadata{
+			ArtifactName:          "my-app",
+			AssetVersionName:      "main",
+			AssetVersionSlug:      "main",
+			AssetSlug:             "my-asset",
+			OrgSlug:               "my-org",
+			ProjectSlug:           "my-project",
+			AssetID:               [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			AddExternalReferences: true,
+			FrontendURL:           "http://localhost:3000",
+			RootName:              "",
+		}
+
+		// Set API_URL for test
+		t.Setenv("API_URL", "http://localhost:8080")
+
+		bom := g.ToCycloneDX(metadata)
+
+		// Check that external references exist
+		assert.NotNil(t, bom.ExternalReferences)
+		assert.GreaterOrEqual(t, len(*bom.ExternalReferences), 3)
+
+		// Verify we have VEX, SBOM, and Dashboard URLs
+		typeCount := make(map[cdx.ExternalReferenceType]int)
+		urlCount := make(map[string]int)
+
+		for _, ref := range *bom.ExternalReferences {
+			typeCount[ref.Type]++
+			urlCount[ref.URL]++
+		}
+
+		// Check that we have exactly one of each type
+		assert.Equal(t, 1, typeCount[cdx.ERTypeExploitabilityStatement], "should have exactly one VEX URL")
+		assert.Equal(t, 1, typeCount[cdx.ERTypeBOM], "should have exactly one SBOM URL")
+		assert.Equal(t, 1, typeCount[cdx.ERTypeDynamicAnalysisReport], "should have exactly one Dashboard URL")
+
+		// Verify the URLs contain correct paths
+		for _, ref := range *bom.ExternalReferences {
+			switch ref.Type {
+			case cdx.ERTypeExploitabilityStatement:
+				assert.Contains(t, ref.URL, "/vex.json/")
+			case cdx.ERTypeBOM:
+				assert.Contains(t, ref.URL, "/sbom.json/")
+			case cdx.ERTypeDynamicAnalysisReport:
+				assert.Contains(t, ref.URL, "/assets/my-asset/refs/main")
+			}
+		}
+	})
+}
+
+func TestScoping(t *testing.T) {
+	// Build graph:
+	// ROOT
+	// ├── artifact:app1
+	// │   ├── sbom:s1@app1
+	// │   │   ├── pkg:npm/shared@1.0.0
+	// │   │   └── pkg:npm/only1@1.0.0
+	// │   └── sbom:s2@app1
+	// │       └── pkg:npm/shared@1.0.0
+	// └── artifact:app2
+	//     └── sbom:s3@app2
+	//         └── pkg:npm/only2@1.0.0
+	buildGraph := func() *SBOMGraph {
+		g := NewSBOMGraph()
+		a1 := g.AddArtifact("app1")
+		a2 := g.AddArtifact("app2")
+		s1 := g.AddInfoSource(a1, "s1", InfoSourceSBOM)
+		s2 := g.AddInfoSource(a1, "s2", InfoSourceSBOM)
+		s3 := g.AddInfoSource(a2, "s3", InfoSourceSBOM)
+
+		shared := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/shared@1.0.0", PackageURL: "pkg:npm/shared@1.0.0", Name: "shared"})
+		only1 := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/only1@1.0.0", PackageURL: "pkg:npm/only1@1.0.0", Name: "only1"})
+		only2 := g.AddComponent(cdx.Component{BOMRef: "pkg:npm/only2@1.0.0", PackageURL: "pkg:npm/only2@1.0.0", Name: "only2"})
+
+		g.AddEdge(s1, shared)
+		g.AddEdge(s1, only1)
+		g.AddEdge(s2, shared)
+		g.AddEdge(s3, only2)
+		return g
+	}
+
+	componentIDs := func(g *SBOMGraph) []string {
+		var ids []string
+		for c := range g.Components() {
+			ids = append(ids, c.BOMRef)
+		}
+		return ids
+	}
+
+	t.Run("ClearScope sees all components", func(t *testing.T) {
+		g := buildGraph()
+		g.ClearScope()
+		ids := componentIDs(g)
+		assert.Len(t, ids, 3)
+		assert.Contains(t, ids, "pkg:npm/shared@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only1@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ScopeToArtifact restricts visibility", func(t *testing.T) {
+		g := buildGraph()
+		err := g.ScopeToArtifact("app1")
+		assert.NoError(t, err)
+		ids := componentIDs(g)
+		assert.Contains(t, ids, "pkg:npm/shared@1.0.0")
+		assert.Contains(t, ids, "pkg:npm/only1@1.0.0")
+		assert.NotContains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ScopeToArtifact other artifact", func(t *testing.T) {
+		g := buildGraph()
+		err := g.ScopeToArtifact("app2")
+		assert.NoError(t, err)
+		ids := componentIDs(g)
+		assert.Equal(t, []string{"pkg:npm/only2@1.0.0"}, ids)
+	})
+
+	t.Run("Scope to unreachable node returns error", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		err := g.Scope("artifact:app1")
+		assert.ErrorIs(t, err, ErrNodeNotReachable)
+	})
+
+	t.Run("IsScoped", func(t *testing.T) {
+		g := buildGraph()
+		assert.False(t, g.IsScoped())
+		_ = g.ScopeToArtifact("app1")
+		assert.True(t, g.IsScoped())
+		g.ClearScope()
+		assert.False(t, g.IsScoped())
+	})
+
+	t.Run("Node returns nil for out-of-scope node", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		assert.Nil(t, g.Node("pkg:npm/only1@1.0.0"))
+		assert.NotNil(t, g.Node("pkg:npm/only2@1.0.0"))
+	})
+
+	t.Run("Edges respects scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app2")
+		for _, child := range g.Edges() {
+			assert.NotEqual(t, "pkg:npm/only1@1.0.0", child)
+			assert.NotEqual(t, "pkg:npm/shared@1.0.0", child)
+		}
+	})
+
+	t.Run("Clone preserves scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		clone := g.Clone()
+		assert.Equal(t, g.CurrentScopeID(), clone.CurrentScopeID())
+		ids := componentIDs(clone)
+		assert.NotContains(t, ids, "pkg:npm/only2@1.0.0")
+	})
+
+	t.Run("ComponentsWithMultipleSources returns shared component", func(t *testing.T) {
+		g := buildGraph()
+		multi := g.ComponentsWithMultipleSources()
+		assert.Equal(t, []string{"pkg:npm/shared@1.0.0"}, multi)
+	})
+
+	t.Run("ComponentsWithMultipleSources preserves scope", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		before := g.CurrentScopeID()
+		_ = g.ComponentsWithMultipleSources()
+		assert.Equal(t, before, g.CurrentScopeID())
+	})
+
+	t.Run("ComponentsWithMultipleSources works when scoped", func(t *testing.T) {
+		g := buildGraph()
+		_ = g.ScopeToArtifact("app1")
+		multi := g.ComponentsWithMultipleSources()
+		assert.Equal(t, []string{"pkg:npm/shared@1.0.0"}, multi)
+	})
+
+	t.Run("single source component not in ComponentsWithMultipleSources", func(t *testing.T) {
+		g := buildGraph()
+		multi := g.ComponentsWithMultipleSources()
+		assert.NotContains(t, multi, "pkg:npm/only1@1.0.0")
+		assert.NotContains(t, multi, "pkg:npm/only2@1.0.0")
+	})
+}
+
+func TestDependencyGraph(t *testing.T) {
+	t.Run("loading the sbom-dependency-tree.json should have only two direct dependencies", func(t *testing.T) {
+		b, err := os.Open("testdata/sbom-dependency-tree.json")
+		assert.Nil(t, err)
+
+		var sbom cdx.BOM
+		assert.Nil(t, cdx.NewBOMDecoder(b, cdx.BOMFileFormatJSON).Decode(&sbom))
+
+		g, err := SBOMGraphFromCycloneDX(&sbom, "artifact", "infosource", false)
+		assert.Nil(t, err)
+
+		old := NewSBOMGraph()
+
+		directDeps := g.edges["sbom:infosource@artifact"]
+		assert.Len(t, directDeps, 2)
+		assert.Contains(t, directDeps, "pkg:npm/%40l3montree/service-app@1.0.0")
+		assert.Contains(t, directDeps, "pkg:npm/express@4.22.1")
+
+		diff := old.MergeGraph(g)
+		// check that we are only adding two edges to root
+		rootEdges := make(map[string]struct{})
+		for _, edge := range diff.AddedEdges {
+			if edge[0] == "sbom:infosource@artifact" {
+				rootEdges[edge[1]] = struct{}{}
+			}
+		}
+		assert.Len(t, rootEdges, 2)
+		// expect the correct edges to be added
+		assert.Contains(t, rootEdges, "pkg:npm/%40l3montree/service-app@1.0.0")
+		assert.Contains(t, rootEdges, "pkg:npm/express@4.22.1")
 	})
 }

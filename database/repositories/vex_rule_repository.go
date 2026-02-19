@@ -52,6 +52,12 @@ func (r *vexRuleRepository) FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, a
 	return rules, err
 }
 
+func (r *vexRuleRepository) FindByAssetVersionAndCVE(db *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
+	var rules []models.VEXRule
+	err := r.GetDB(db).Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
+	return rules, err
+}
+
 func (r *vexRuleRepository) FindByAssetVersionPaged(db *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
 	var rules []models.VEXRule
 	var total int64

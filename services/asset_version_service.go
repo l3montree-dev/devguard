@@ -2,8 +2,10 @@ package services
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"math"
 	"os"
 	"slices"
@@ -33,12 +35,13 @@ type assetVersionService struct {
 	componentService       shared.ComponentService
 	thirdPartyIntegration  shared.IntegrationAggregate
 	licenseRiskRepository  shared.LicenseRiskRepository
+	vexRuleService         shared.VEXRuleService
 	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.AssetVersionService = &assetVersionService{}
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
@@ -46,6 +49,7 @@ func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository
 		thirdPartyIntegration:     thirdPartyIntegration,
 		licenseRiskRepository:     licenseRiskRepository,
 		FireAndForgetSynchronizer: synchronizer,
+		vexRuleService:            vexRuleService,
 	}
 }
 
@@ -119,13 +123,17 @@ func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion
 	}
 
 	// Load ALL components for the asset version
-	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, nil)
+	components, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load components")
 	}
 
 	// Uses generics to avoid slice type conversion (reduces allocations)
-	return normalize.SBOMGraphFromComponents(components, componentLicenseOverwrites), nil
+	sbom, err := normalize.SBOMGraphFromComponents(components, componentLicenseOverwrites)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not build SBOM graph from components")
+	}
+	return sbom, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -181,10 +189,34 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 }
 
 func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
+	// get all vex rules for this asset version
+	// this way, we can again match them against the vulns and add more information about any false positive path
+	vexRules, err := s.vexRuleService.FindByAssetVersion(nil, assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		slog.Error("could not fetch vex rules", "err", err)
+		return nil
+	}
+	// match the vulns with the rules and create a map for easy access when building the VEX
+	matches := matchVulnsToRules(dependencyVulns, vexRules)
+
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
 		cve := dependencyVuln.CVE
+		// check if we have a matching VEX rule for this vuln
+		var properties *[]cdx.Property = nil
+		if rules, ok := matches[dependencyVuln.ID]; ok {
+			// we have a matching rule, let's add the information to the vulnerability
+
+			properties = utils.Ptr(utils.Map(rules, func(r models.VEXRule) cdx.Property {
+				// stringify the path pattern for the property value
+				b, _ := json.Marshal(r.PathPattern)
+				return cdx.Property{
+					Name:  "devguard:pathPattern",
+					Value: string(b),
+				}
+			}))
+		}
 
 		firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 		vuln := cdx.Vulnerability{
@@ -201,9 +233,17 @@ func (s *assetVersionService) BuildVeX(frontendURL string, organizationName stri
 				FirstIssued: firstIssued.UTC().Format(time.RFC3339),
 				LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 			},
+			Properties: properties,
 		}
 		if !firstResponded.IsZero() {
-			vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
+			// check if we already have properties, if not create a new slice
+			if vuln.Properties == nil {
+				vuln.Properties = &[]cdx.Property{}
+			}
+			vuln.Properties = utils.Ptr(append(*vuln.Properties, cdx.Property{
+				Name:  "firstResponded",
+				Value: firstResponded.UTC().Format(time.RFC3339),
+			}))
 		}
 
 		response := dependencyVulnStateToResponseStatus(dependencyVuln.State)

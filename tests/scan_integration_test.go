@@ -2042,3 +2042,88 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 		})
 	})
 }
+
+func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("should return 400 when asset keepOriginalSbomRootComponent is true and SBOM has no root PURL", func(t *testing.T) {
+			asset.KeepOriginalSbomRootComponent = true
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile := emptySbom() // empty-sbom.json has metadata.component but no PackageURL
+			req := httptest.NewRequest("POST", "/scan", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "no-purl-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.NotNil(t, err)
+
+			he, ok := err.(*echo.HTTPError)
+			assert.True(t, ok, "error should be an echo.HTTPError")
+			assert.Equal(t, 400, he.Code)
+		})
+
+		t.Run("should return 400 when header overrides to true and SBOM has no root PURL", func(t *testing.T) {
+			asset.KeepOriginalSbomRootComponent = false
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile := emptySbom()
+			req := httptest.NewRequest("POST", "/scan", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "no-purl-header-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.NotNil(t, err)
+
+			he, ok := err.(*echo.HTTPError)
+			assert.True(t, ok, "error should be an echo.HTTPError")
+			assert.Equal(t, 400, he.Code)
+		})
+
+		t.Run("should succeed when keepOriginalSbomRootComponent is false and SBOM has no root PURL", func(t *testing.T) {
+			asset.KeepOriginalSbomRootComponent = false
+			err := f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
+			recorder := httptest.NewRecorder()
+			sbomFile := emptySbom()
+			req := httptest.NewRequest("POST", "/scan", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "no-purl-ok-artifact")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+		})
+	})
+}

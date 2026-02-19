@@ -67,7 +67,7 @@ type baseConfig struct {
 	UpstreamVersion               string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
 	Architecture                  string `json:"architecture" mapstructure:"architecture"`
 	ImageVariant                  string `json:"imageVariant" mapstructure:"imageVariant"`
-	KeepOriginalSbomRootComponent bool   `json:"keepOriginalSbomRootNodes" mapstructure:"keepOriginalSbomRootNodes"`
+	KeepOriginalSbomRootComponent *bool  `json:"keepOriginalSbomRootNodes" mapstructure:"keepOriginalSbomRootComponent"`
 }
 
 type InTotoConfig struct {

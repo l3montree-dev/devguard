@@ -396,19 +396,17 @@ func pathsToMermaid(paths [][]string) string {
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
-	artifactName := ""
-	if len(artifacts) > 0 {
-		artifactName = artifacts[0].ArtifactName
-	}
-
+func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, pURL string) (string, error) {
 	// Load all components for the asset version
-	components, err := componentRepository.LoadComponents(nil, assetVersionName, assetID, utils.EmptyThenNil(artifactName))
+	components, err := componentRepository.LoadComponents(nil, assetVersionName, assetID)
 	if err != nil {
 		return "", err
 	}
 
-	bom := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
+	bom, err := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
+	if err != nil {
+		return "", err
+	}
 
 	paths := bom.FindAllComponentOnlyPathsToPURL(pURL, 0)
 	// we want to show fake nodes in the mermaid graph (root, artifact, info sources)

@@ -30,6 +30,7 @@ func NewVulnDBRouter(apiV1Router APIV1Router, vulndbController *controllers.Vuln
 	cveRouter.GET("/:cveID/", vulndbController.Read)
 	cveRouter.GET("/purl-inspect/:purl", vulndbController.PURLInspect)
 	cveRouter.GET("/list-ids-by-creation-date/", vulndbController.ListIDsByCreationDate)
+	cveRouter.GET("/affected-package-distribution/", vulndbController.GetEcosystemDistribution)
 	return VulnDBRouter{
 		Group: cveRouter,
 	}

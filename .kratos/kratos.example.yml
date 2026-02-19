@@ -8,7 +8,7 @@ session:
 
 serve:
   public:
-    base_url: http://localhost:4433/
+    base_url: http://localhost:3000/
     cors:
       enabled: true
   admin:

@@ -14,14 +14,14 @@ ARG TARGETPLATFORM
 ENV CRANE_VERSION=v0.20.7
 ENV OS=Linux
 ENV ARCH=x86_64
-ENV TRIVY_VERSION=v0.68.1
-ENV COSIGN_VERSION=v2.6.1
+ENV TRIVY_VERSION=v0.69.1
+ENV COSIGN_VERSION=v2.6.2
 ENV GITLEAKS_VERSION=v8.30.0
 
 # Expected checksums for security verification
 ENV CRANE_CHECKSUM=8ef3564d264e6b5ca93f7b7f5652704c4dd29d33935aff6947dd5adefd05953e
-ENV TRIVY_CHECKSUM=63e37242088e418651931f891963c19554faa19f0591fe6b40b606152051df2f
-ENV COSIGN_CHECKSUM=064954c5d8c7e3b28188eee5b1727b31c411550bc5fefd41aa672d3c761d103a
+ENV TRIVY_CHECKSUM=dd93975bc1e58053810a9bafea89923e5df42ddd3f99905fdf840fd797145157
+ENV COSIGN_CHECKSUM=d437b8f0d30f5dec169337607fcfa0238de1348503e175f1bb5b94330b1ee409
 ENV GITLEAKS_CHECKSUM=79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
 
 # install crane with checksum verification
@@ -68,11 +68,11 @@ RUN python -m venv ${VENV_DIR}/semgrep && \
 
 # Install semgrep in its venv
 RUN ${VENV_DIR}/semgrep/bin/pip install --upgrade pip && \
-    ${VENV_DIR}/semgrep/bin/pip install semgrep==1.142.0
+    ${VENV_DIR}/semgrep/bin/pip install semgrep==1.151.0
 
 # Install checkov in its venv
 RUN ${VENV_DIR}/checkov/bin/pip install --upgrade pip && \
-    ${VENV_DIR}/checkov/bin/pip install checkov==3.2.495
+    ${VENV_DIR}/checkov/bin/pip install checkov==3.2.501
 
 # Create wrapper scripts using printf to avoid heredoc issues
 RUN printf '#!/bin/sh\nexec %s/semgrep/bin/semgrep "$@"\n' "${VENV_DIR}" > /usr/local/bin/semgrep && \

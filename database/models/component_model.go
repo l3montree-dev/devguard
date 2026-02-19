@@ -16,6 +16,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -164,8 +165,54 @@ func isLicenseExpression(license string) bool {
 	return strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH")
 }
 
-func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[string]string) cyclonedx.Component {
+// isValidCycloneDXComponentType validates that a component type is valid per CycloneDX spec
+func isValidCycloneDXComponentType(ct cyclonedx.ComponentType) bool {
+	// CycloneDX 1.6 valid component types
+	validTypes := map[cyclonedx.ComponentType]bool{
+		cyclonedx.ComponentTypeApplication:          true,
+		cyclonedx.ComponentTypeContainer:            true,
+		cyclonedx.ComponentTypeCryptographicAsset:   true,
+		cyclonedx.ComponentTypeData:                 true,
+		cyclonedx.ComponentTypeDevice:               true,
+		cyclonedx.ComponentTypeDeviceDriver:         true,
+		cyclonedx.ComponentTypeFile:                 true,
+		cyclonedx.ComponentTypeFirmware:             true,
+		cyclonedx.ComponentTypeFramework:            true,
+		cyclonedx.ComponentTypeLibrary:              true,
+		cyclonedx.ComponentTypeMachineLearningModel: true,
+		cyclonedx.ComponentTypeOS:                   true,
+		cyclonedx.ComponentTypePlatform:             true,
+	}
+	return validTypes[ct]
+}
+
+// sanitizeCycloneDXComponentType ensures a component type is valid per CycloneDX spec
+// If invalid, defaults to Library as a safe fallback
+func sanitizeCycloneDXComponentType(ct dtos.ComponentType) cyclonedx.ComponentType {
+	cdxType := cyclonedx.ComponentType(ct)
+	if isValidCycloneDXComponentType(cdxType) {
+		return cdxType
+	}
+	// Default to Library for unknown types - safe and commonly used
+	return cyclonedx.ComponentTypeLibrary
+}
+
+func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[string]string) (cyclonedx.Component, error) {
+	// DependencyID (used for BOMRef and Name) must not be empty per CycloneDX spec
+	if c.DependencyID == "" {
+		return cyclonedx.Component{}, fmt.Errorf("DependencyID must not be empty: required for BOMRef and Name per CycloneDX spec")
+	}
+
 	licenses := resolveLicense(c, componentLicenseOverwrites)
+
+	// Sanitize component type to ensure it's valid per CycloneDX spec - guarantees spec compliance
+	// Only exception to error-first approach: invalid types are sanitized instead of erroring
+	componentType := sanitizeCycloneDXComponentType(c.Dependency.ComponentType)
+	if !isValidCycloneDXComponentType(componentType) {
+		// This should never happen after sanitization, but we enforce it as a safety net
+		componentType = cyclonedx.ComponentTypeLibrary
+	}
+
 	// parse the purl to set the version column
 	parsed, err := packageurl.FromString(c.DependencyID)
 	if err != nil {
@@ -174,21 +221,21 @@ func (c ComponentDependency) ToCdxComponent(componentLicenseOverwrites map[strin
 		return cyclonedx.Component{
 			Licenses:   &licenses,
 			BOMRef:     c.DependencyID,
-			Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
+			Type:       componentType,
 			PackageURL: "", // Empty for non-PURL identifiers
 			Version:    "",
 			Name:       c.DependencyID,
-		}
+		}, nil
 	}
 	// parsing succeeded - use version from PURL
 	return cyclonedx.Component{
 		Licenses:   &licenses,
 		BOMRef:     c.DependencyID,
-		Type:       cyclonedx.ComponentType(c.Dependency.ComponentType),
+		Type:       componentType,
 		PackageURL: c.DependencyID,
 		Version:    parsed.Version,
 		Name:       c.DependencyID,
-	}
+	}, nil
 }
 
 func (c ComponentDependency) GetID() string {

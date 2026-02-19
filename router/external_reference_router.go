@@ -37,7 +37,8 @@ func NewExternalReferenceRouter(
 	// Write access - requires asset update permission
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
 	refWriteGroup.POST("/", externalReferenceController.Create)       // Create reference
-	refWriteGroup.DELETE("/:id/", externalReferenceController.Delete) // Delete all references for asset version
+	refWriteGroup.POST("/sync/", externalReferenceController.Sync)    // Sync external sources
+	refWriteGroup.DELETE("/:id/", externalReferenceController.Delete) // Delete reference
 
 	return ExternalReferenceRouter{Group: refGroup}
 }

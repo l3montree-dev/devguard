@@ -57,12 +57,10 @@ type VulnEventDTO struct {
 
 	ArbitraryJSONData map[string]any `json:"arbitraryJSONData"`
 
-	CreatedAt time.Time `json:"createdAt"`
-
-	AssetVersionName  string `json:"assetVersionName"`
-	AssetVersionSlug  string `json:"assetVersionSlug"`
-	VulnerabilityName string `json:"vulnerabilityName"`
-	PackageName       string `json:"packageName"`
-	URI               string `json:"uri"`
-	CreatedByVexRule  bool   `json:"createdByVexRule"`
+	CreatedAt                time.Time `json:"createdAt"`
+	OriginalAssetVersionName *string   `json:"originalAssetVersionName,omitempty"`
+	VulnerabilityName        string    `json:"vulnerabilityName"`
+	PackageName              string    `json:"packageName"`
+	URI                      string    `json:"uri"`
+	CreatedByVexRule         bool      `json:"createdByVexRule"`
 }

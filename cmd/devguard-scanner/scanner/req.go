@@ -97,7 +97,15 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
-	req.Header.Set("X-Keep-Original-SBOM-Root-Component", fmt.Sprintf("%t", config.RuntimeBaseConfig.KeepOriginalSbomRootComponent))
+
+	if config.RuntimeBaseConfig.KeepOriginalSbomRootComponent != nil {
+		// convert bool to number
+		if *config.RuntimeBaseConfig.KeepOriginalSbomRootComponent {
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1")
+		} else {
+			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "0")
+		}
+	}
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)

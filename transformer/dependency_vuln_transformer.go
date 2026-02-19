@@ -110,13 +110,6 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	}
 }
 
-func GetAssetVersionName(vuln models.Vulnerability, ev models.VulnEvent) string {
-	if ev.OriginalAssetVersionName != nil {
-		return *ev.OriginalAssetVersionName
-	}
-	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
-}
-
 // VulnInPackageToDependencyVulns converts a vulnerability to multiple DependencyVuln objects,
 // one for each unique path through the dependency graph. This ensures that the same CVE
 // appearing through different dependency paths (e.g., A -> trivy -> stdlib vs A -> cosign -> stdlib)

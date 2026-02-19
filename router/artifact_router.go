@@ -43,7 +43,6 @@ func NewArtifactRouter(
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}))
-	artifactRouter.POST("/sync-external-sources/", artifactController.SyncExternalSources)
 
 	return ArtifactRouter{Group: artifactRouter}
 }

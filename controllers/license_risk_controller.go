@@ -129,17 +129,17 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 		LicenseRiskDTO: transformer.LicenseRiskToDTO(licenseRisk),
 		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
 			return dtos.VulnEventDTO{
-				ID:                      ev.ID,
-				Type:                    ev.Type,
-				VulnID:                  ev.VulnID,
-				UserID:                  ev.UserID,
-				Justification:           ev.Justification,
-				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        transformer.GetAssetVersionName(licenseRisk.Vulnerability, ev),
-				VulnerabilityName:       licenseRisk.ComponentPurl,
-				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
-				CreatedAt:               ev.CreatedAt,
-				CreatedByVexRule:        ev.CreatedByVexRule,
+				ID:                       ev.ID,
+				Type:                     ev.Type,
+				VulnID:                   ev.VulnID,
+				UserID:                   ev.UserID,
+				Justification:            ev.Justification,
+				MechanicalJustification:  ev.MechanicalJustification,
+				OriginalAssetVersionName: ev.OriginalAssetVersionName,
+				VulnerabilityName:        licenseRisk.ComponentPurl,
+				ArbitraryJSONData:        ev.GetArbitraryJSONData(),
+				CreatedAt:                ev.CreatedAt,
+				CreatedByVexRule:         ev.CreatedByVexRule,
 			}
 		}),
 	}

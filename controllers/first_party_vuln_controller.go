@@ -360,16 +360,16 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 		FirstPartyVulnDTO: transformer.FirstPartyVulnToDto(firstPartyVuln),
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
 			return dtos.VulnEventDTO{
-				ID:                      ev.ID,
-				Type:                    ev.Type,
-				VulnID:                  ev.VulnID,
-				UserID:                  ev.UserID,
-				Justification:           ev.Justification,
-				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        transformer.GetAssetVersionName(firstPartyVuln.Vulnerability, ev),
-				VulnerabilityName:       firstPartyVuln.RuleName,
-				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
-				CreatedAt:               ev.CreatedAt,
+				ID:                       ev.ID,
+				Type:                     ev.Type,
+				VulnID:                   ev.VulnID,
+				UserID:                   ev.UserID,
+				Justification:            ev.Justification,
+				MechanicalJustification:  ev.MechanicalJustification,
+				OriginalAssetVersionName: ev.OriginalAssetVersionName,
+				VulnerabilityName:        firstPartyVuln.RuleName,
+				ArbitraryJSONData:        ev.GetArbitraryJSONData(),
+				CreatedAt:                ev.CreatedAt,
 			}
 		}),
 	}

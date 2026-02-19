@@ -18,6 +18,7 @@ package normalize
 import (
 	"fmt"
 	"iter"
+	"log/slog"
 	"maps"
 	"net/url"
 	"os"
@@ -202,6 +203,10 @@ func (g *SBOMGraph) AddArtifact(name string) string {
 func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSourceType) string {
 	// Extract artifact name from artifactID (e.g., "artifact:my-app" -> "my-app")
 	_, artifactName := ParseGraphNodeID(artifactID)
+	// Strip existing source type prefix to prevent double-prefixing (e.g., "sbom:sbom:url")
+	if after, found := strings.CutPrefix(sourceID, string(sourceType)+":"); found {
+		sourceID = after
+	}
 	// Create a unique ID that includes the artifact name
 	id := fmt.Sprintf("%s:%s@%s", sourceType, sourceID, artifactName)
 	if g.nodes[id] == nil {
@@ -352,6 +357,12 @@ func (g *SBOMGraph) CurrentScopeID() string {
 func (g *SBOMGraph) ScopeToArtifact(artifactName string) error {
 	artifactID := "artifact:" + artifactName
 	return g.Scope(artifactID)
+}
+
+func (g *SBOMGraph) ScopeToInfoSource(infoSource string, t InfoSourceType) error {
+	infoSourceID := fmt.Sprintf("%s:%s", t, infoSource) // info sources are uniquely identified by their name and type
+
+	return g.Scope(infoSourceID)
 }
 
 func (g *SBOMGraph) IsScoped() bool {
@@ -791,6 +802,10 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 // ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs or have VEX/CSAF.
 // These cannot be automatically marked as "fixed".
 func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
+	// we need to reset the scope
+	oldScope := g.CurrentScopeID()
+	g.ClearScope()
+
 	counts := g.CountInfoSourcesPerComponent()
 	var result []string
 
@@ -798,6 +813,10 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 		if typeCounts[InfoSourceSBOM] > 1 {
 			result = append(result, id)
 		}
+	}
+	err := g.Scope(oldScope)
+	if err != nil {
+		panic("failed to restore scope after counting info sources: " + err.Error())
 	}
 
 	return result
@@ -867,7 +886,10 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			}
 
 			// Check if parent is NOT a component (termination condition)
-			if !isComponentNodeID(parentID) {
+			// Use node type from graph instead of ID format, because BOMRef
+			// may not be a PURL even though the component has a valid PackageURL.
+			parentNode := g.nodes[parentID]
+			if parentNode == nil || parentNode.Type != GraphNodeTypeComponent {
 				foundTermination = true
 				// Build path in correct order (root to target)
 				result := make([]string, len(current.path))
@@ -897,7 +919,8 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				if current.onPath[parentID] {
 					continue
 				}
-				if !isComponentNodeID(parentID) {
+				pNode := g.nodes[parentID]
+				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 					continue // Skip non-components for path extension
 				}
 				// Extend path
@@ -905,9 +928,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				copy(newPath, current.path)
 				newPath[len(current.path)] = parentID
 				newOnPath := make(map[string]bool, len(current.onPath)+1)
-				for k, v := range current.onPath {
-					newOnPath[k] = v
-				}
+				maps.Copy(newOnPath, current.onPath)
 				newOnPath[parentID] = true
 				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 			}
@@ -985,25 +1006,38 @@ type minimalTree struct {
 }
 
 func (g *SBOMGraph) ToMinimalTree() minimalTree {
-	// we need to make sure, that we translate component node ids to purls
-	nodes := make([]string, 0, len(g.nodes))
+	reachable := g.reachableNodes()
+	nodes := make([]string, 0, len(reachable))
 	dependencies := make(map[string][]string)
 	depMap := edgesToDepMap(g.edges)
 
-	for _, v := range g.nodes {
-		nodes = append(nodes, v.Component.PackageURL)
+	// Only add nodes that are reachable in current scope
+	for id := range reachable {
+		node := g.nodes[id]
+		if node != nil && node.Component != nil {
+			nodes = append(nodes, node.Component.PackageURL)
+		}
 	}
+
+	// add the ROOT node PackageURL (which is an empty string to the nodes list to ensure it's included in the minimal tree)
+	nodes = append(nodes, "")
+
 	for parent := range g.edges {
+		if !reachable[parent] {
+			continue
+		}
 		parentNode := g.nodes[parent]
 		if parentNode == nil {
 			continue
 		}
-
 		parentPURL := parentNode.Component.PackageURL
 
 		children := getChildrenOfParent(depMap, g.nodes, parent)
 		deps := make([]string, 0, len(children))
 		for _, child := range children {
+			if !reachable[child] {
+				continue
+			}
 			childNode := g.nodes[child]
 			if childNode == nil {
 				continue
@@ -1069,7 +1103,10 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 		// Process all parents of current node
 		for _, parentID := range reverseEdges[current.nodeID] {
 			// Only follow component edges for the tree structure
-			if !isComponentNodeID(parentID) {
+			// Use node type from graph instead of ID format, because BOMRef
+			// may not be a PURL even though the component has a valid PackageURL.
+			pNode := g.nodes[parentID]
+			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 				continue
 			}
 
@@ -1117,17 +1154,23 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	var externalRefs *[]cdx.ExternalReference
 	if metadata.AddExternalReferences {
 		apiURL := os.Getenv("API_URL")
-		// we need to path escape the artifact name for the URL, but not the asset version slug or asset id since those are already URL safe
-		escapedArtifactName := url.PathEscape(metadata.ArtifactName)
+		// Use QueryEscape to encode all special characters including colons
+		// PathEscape is too lenient for artifact names which may contain PURLs or other special chars
+		escapedArtifactName := url.QueryEscape(metadata.ArtifactName)
 
-		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
+		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
+		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/sbom.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
-		vexURL, dashboardURL := calculateExternalURLs(vexURL, metadata)
+		dashboardURL := getDashboardURL(metadata)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
 			Comment: "Up to date Vulnerability exploitability information.",
 			Type:    cdx.ERTypeExploitabilityStatement,
+		}, {
+			URL:     sbomURL,
+			Comment: "Software bill of materials.",
+			Type:    cdx.ERTypeBOM,
 		}}
 
 		if dashboardURL != "" {
@@ -1141,7 +1184,14 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	rootName := metadata.RootName
 	if rootName == "" {
-		rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
+		// If ArtifactName is a valid PURL, parse it and set the version properly
+		// so that the version appears before qualifiers (e.g. pkg:oci/name@version?qualifier=value)
+		if p, err := packageurl.FromString(metadata.ArtifactName); err == nil && metadata.AssetVersionName != "" {
+			p.Version = metadata.AssetVersionName
+			rootName = p.String()
+		} else {
+			rootName = fmt.Sprintf("%s@%s", metadata.ArtifactName, metadata.AssetVersionName)
+		}
 	}
 
 	// check if valid purl
@@ -1364,33 +1414,17 @@ func (g *SBOMGraph) isReachable(id string) bool {
 	return g.reachableNodes()[id]
 }
 
-func calculateExternalURLs(docURL string, metadata BOMMetadata) (string, string) {
+func getDashboardURL(metadata BOMMetadata) string {
 	dashboardURL := ""
 	if metadata.FrontendURL != "" && metadata.OrgSlug != "" && metadata.ProjectSlug != "" && metadata.AssetSlug != "" {
 		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", metadata.FrontendURL, metadata.OrgSlug, metadata.ProjectSlug, metadata.AssetSlug)
 	}
 
-	if metadata.AssetVersionSlug != "" {
-		docURL = fmt.Sprintf("%s?ref=%s", docURL, url.QueryEscape(metadata.AssetVersionSlug))
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s/refs/%s", dashboardURL, url.QueryEscape(metadata.AssetVersionSlug))
-		}
-	} else {
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
-		}
+	if dashboardURL != "" {
+		dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
 	}
 
-	if metadata.AssetVersionSlug != "" && metadata.ArtifactName != "" {
-		docURL = fmt.Sprintf("%s&artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
-		if dashboardURL != "" {
-			dashboardURL = fmt.Sprintf("%s?artifact=%s", dashboardURL, url.QueryEscape(metadata.ArtifactName))
-		}
-	} else if metadata.ArtifactName != "" {
-		docURL = fmt.Sprintf("%s?artifactName=%s", docURL, url.QueryEscape(metadata.ArtifactName))
-	}
-
-	return docURL, dashboardURL
+	return dashboardURL
 }
 
 // =============================================================================
@@ -1467,7 +1501,8 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 
 			// Check for duplicate BOMRef
 			if seenBOMRefs[comp.BOMRef] {
-				return nil, fmt.Errorf("duplicate BOMRef found: %s", comp.BOMRef)
+				slog.Warn("duplicate BOMRef found, skipping component", "bomRef", comp.BOMRef)
+				continue
 			}
 			seenBOMRefs[comp.BOMRef] = true
 
@@ -1523,7 +1558,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 			}
 
 			// Add component (type sanitization already happens in AddComponent)
-			if isComponentNodeID(comp.PackageURL) {
+			if looksLikePackagePURL(comp.PackageURL) {
 				g.AddComponent(comp)
 			}
 		}
@@ -1574,7 +1609,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if !isComponentNodeID(comp.PackageURL) {
+				if !looksLikePackagePURL(comp.PackageURL) {
 					continue // Skip root project components
 				}
 				// Check if this component is a child of any other
@@ -1765,7 +1800,7 @@ func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 	return g
 }
 
-func isComponentNodeID(id string) bool {
+func looksLikePackagePURL(id string) bool {
 	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
 }
 
@@ -1791,14 +1826,14 @@ func ParseGraphNodeID(id string) (prefix, name string) {
 type GraphComponent interface {
 	GetID() string
 	GetDependentID() *string
-	ToCdxComponent(componentLicenseOverwrites map[string]string) cdx.Component
+	ToCdxComponent(componentLicenseOverwrites map[string]string) (cdx.Component, error)
 }
 
 // SBOMGraphFromComponents builds an SBOMGraph from database components.
 // The components include artifact nodes, information source nodes, and regular components.
 // This function reconstructs the full graph structure from the flat component list.
 // Uses generics to avoid slice type conversion and reduce memory allocations.
-func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites map[string]string) *SBOMGraph {
+func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites map[string]string) (*SBOMGraph, error) {
 	g := NewSBOMGraph()
 
 	// Build dependency map: parent -> children
@@ -1822,7 +1857,10 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		}
 		processedComponents[id] = struct{}{}
 
-		cdxComp := comp.ToCdxComponent(licenseOverwrites)
+		cdxComp, err := comp.ToCdxComponent(licenseOverwrites)
+		if err != nil {
+			continue
+		}
 
 		// Determine node type from ID prefix
 		prefix, name := ParseGraphNodeID(id)
@@ -1866,7 +1904,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		}
 	}
 
-	return g
+	return g, nil
 }
 
 // NodeIDsAndEdges returns a flat representation of the graph for comparison.

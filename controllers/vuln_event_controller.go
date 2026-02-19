@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
@@ -36,30 +35,6 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.ConvertVulnEventsToDtos(events))
 }
 
-func convertSingleToDetailedDTO(event models.VulnEventDetail) dtos.VulnEventDTO {
-	originalAssetVersionName := event.AssetVersionName
-	if event.OriginalAssetVersionName != nil {
-		originalAssetVersionName = *event.OriginalAssetVersionName
-	}
-
-	return dtos.VulnEventDTO{
-		ID:                event.ID,
-		Type:              event.Type,
-		VulnID:            event.VulnID,
-		VulnType:          event.VulnType,
-		UserID:            event.UserID,
-		Justification:     event.Justification,
-		ArbitraryJSONData: event.GetArbitraryJSONData(),
-		CreatedAt:         event.CreatedAt,
-		AssetVersionName:  originalAssetVersionName,
-		AssetVersionSlug:  event.Slug,
-		VulnerabilityName: event.CVEID,
-		PackageName:       event.ComponentPurl,
-		URI:               event.URI,
-		CreatedByVexRule:  event.CreatedByVexRule,
-	}
-}
-
 func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
@@ -80,7 +55,7 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 	return ctx.JSON(200, events.Map(func(ved models.VulnEventDetail) any {
-		return convertSingleToDetailedDTO(ved)
+		return transformer.ConvertVulnEventToDto(ved.VulnEvent)
 	}))
 }
 

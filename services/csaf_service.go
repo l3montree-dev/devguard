@@ -32,6 +32,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
@@ -784,7 +785,7 @@ func hasExactFit(vulnPurl packageurl.PackageURL, purls []packageurl.PackageURL) 
 	return false
 }
 
-// generate a specific csaf report version
+// generate a csaf report for a specific vulnerability in an asset
 func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
 	// extract context information
@@ -797,7 +798,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	// remove everything <asset-slug>_ from the beginning of the document id
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
-	// fetch the cve from the database
+	// fetch all vulns associated with this cve from the database
 	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
 	if err != nil {
 		return csafDoc, err
@@ -807,10 +808,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	}
 
 	// now we can start building the document
-	// just use the first vulnerability - if there are multiple, we do not currently support that
-	// TODO support multiple vulnerabilities in one csaf report?
-
-	// build trivial parts of the document field
+	// build static parts of the document field first
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
@@ -818,7 +816,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 			Name:      &org.Name,
 			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of asset: %s", asset.Slug)),
+		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, asset.Slug)),
 		SourceLang: utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
@@ -830,7 +828,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 		},
 	}
 
-	tracking, err := generateTrackingObject(asset, vulns)
+	tracking, err := generateTrackingObject(vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -842,7 +840,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	}
 	csafDoc.ProductTree = &tree
 
-	vulnerabilities, err := generateVulnerabilityObjects(vulns)
+	vulnerabilities, err := generateVulnerabilityObjects(cveID, vulns, tracking.CurrentReleaseDate)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -855,6 +853,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_vex"))
 	}
 
+	// calculate the current release date based on the latest revision event
 	csafDoc.Document.Tracking.CurrentReleaseDate = csafDoc.Document.Tracking.RevisionHistory[len(csafDoc.Document.Tracking.RevisionHistory)-1].Date
 
 	return csafDoc, nil
@@ -877,9 +876,10 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 		return tree, err
 	}
 
+	// use maps (of the productID) to deduplicate
 	productNames := make([]*gocsaf.FullProductName, 0)
 	relationships := make([]*gocsaf.Relationship, 0)
-	// append each relevant asset version
+	// for each artifact build the productName using the purlify function and append to the slice
 	for _, artifact := range artifacts {
 		artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
 		productName := &gocsaf.FullProductName{
@@ -891,6 +891,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 		}
 		productNames = append(productNames, productName)
 	}
+
 	// append each vulnerable component as well as their relationship to the affected artifact
 	for _, vuln := range vulnsForCVE {
 		// first append the component itself
@@ -921,10 +922,26 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 		}
 	}
 
+	productNames = utils.DeduplicateSlice(productNames, func(product *gocsaf.FullProductName) string {
+		return string(*product.ProductID)
+	})
+	relationships = utils.DeduplicateSlice(relationships, func(relationship *gocsaf.Relationship) string {
+		return string(*relationship.FullProductName.ProductID)
+	})
+
 	tree.FullProductNames = utils.Ptr(gocsaf.FullProductNames(productNames))
 	tree.RelationShips = utils.Ptr(gocsaf.Relationships(relationships))
 
 	return tree, nil
+}
+
+type stateDistributionOfPathsInProduct struct {
+	productID           string
+	TotalAmountOfPaths  int
+	AmountUnhandled     int
+	AmountFalsePositive int
+	AmountAccepted      int
+	AmountFixed         int
 }
 
 func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
@@ -935,126 +952,163 @@ func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, com
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
-func generateVulnerabilityObjects(allVulnsOfAsset []models.DependencyVuln) ([]*gocsaf.Vulnerability, error) {
+func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.DependencyVuln, initialRelease *string) ([]*gocsaf.Vulnerability, error) {
 	vulnerabilities := []*gocsaf.Vulnerability{}
 
-	// maps a cve ID to a set of asset versions where it is present to reduce clutter
-	cveGroups := make(map[string][]models.DependencyVuln)
-	for _, vuln := range allVulnsOfAsset {
-		cveGroups[vuln.CVEID] = append(cveGroups[vuln.CVEID], vuln)
+	if len(allVulnsOfCVE) == 0 {
+		return vulnerabilities, nil
 	}
 
-	// then make a vulnerability object for every cve and list the asset version in the product status property
-	for cve, vulnsInGroup := range cveGroups {
-		vulnObject := gocsaf.Vulnerability{
-			CVE:   utils.Ptr(gocsaf.CVE(cve)),
-			Title: utils.Ptr(fmt.Sprintf("Additional information about %s", cve)),
+	// built the vulnerability object for the CVE
+	vulnObject := gocsaf.Vulnerability{
+		CVE:           utils.Ptr(gocsaf.CVE(cveID)),
+		Title:         utils.Ptr(fmt.Sprintf("Additional information about %s", cveID)),
+		DiscoveryDate: initialRelease,
+	}
+
+	productStatus, distributions, remediations := calculateVulnStateInformation(allVulnsOfCVE)
+
+	// build and assign the notes for the vulnerability
+	notes, err := generateNotesForVulnerabilityObject(allVulnsOfCVE, distributions)
+	if err != nil {
+		return nil, err
+	}
+	vulnObject.Notes = notes
+	vulnObject.Remediations = remediations
+	vulnObject.ProductStatus = productStatus
+
+	return append(vulnerabilities, &vulnObject), nil
+}
+
+func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocsaf.ProductStatus, []stateDistributionOfPathsInProduct, gocsaf.Remediations) {
+	// build a map for each status type
+	affected := map[string]struct{}{}
+	notAffected := map[string]struct{}{}
+	fixed := map[string]struct{}{}
+	underInvestigation := map[string]struct{}{}
+
+	// map each vuln to their respective productID to be able to make decisions on productID group
+	vulnsByProductName := make(map[string][]models.DependencyVuln, len(allVulnsOfCVE))
+	for _, vuln := range allVulnsOfCVE {
+		for _, artifact := range vuln.Artifacts {
+			key := string(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))
+			vulnsByProductName[key] = append(vulnsByProductName[key], vuln)
 		}
-		affected := map[string]struct{}{}
-		notAffected := map[string]struct{}{}
-		fixed := map[string]struct{}{}
-		underInvestigation := map[string]struct{}{}
-		flags := []*gocsaf.Flag{}
-		threats := []*gocsaf.Threat{}
-		for _, vuln := range vulnsInGroup {
-			// determine the discovery date
-			if vulnObject.DiscoveryDate == nil {
-				vulnObject.DiscoveryDate = utils.Ptr(vulnsInGroup[0].CreatedAt.Format(time.RFC3339))
-			} else {
-				currentDiscoveryDate, err := time.Parse(time.RFC3339, *vulnObject.DiscoveryDate)
-				if err == nil {
-					if currentDiscoveryDate.After(vuln.CreatedAt) {
-						vulnObject.DiscoveryDate = utils.Ptr(vuln.CreatedAt.Format(time.RFC3339))
-					}
-				}
-			}
+	}
 
-			productIDs := make([]*gocsaf.ProductID, 0)
-			for _, artifact := range vuln.Artifacts {
-				productIDs = append(productIDs, utils.Ptr(gocsaf.ProductID(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))))
-			}
-
+	// build the remediations based off the productNames -> decide the state of the product by analyzing each state of the vulns present
+	remediations := []*gocsaf.Remediation{}
+	distributions := make([]stateDistributionOfPathsInProduct, 0, len(vulnsByProductName))
+	for productName, vulns := range vulnsByProductName {
+		distribution := stateDistributionOfPathsInProduct{
+			productID:          productName,
+			TotalAmountOfPaths: len(vulns),
+		}
+		acceptedVulns := make([]models.DependencyVuln, 0, len(vulns))
+		falsePositiveVulns := make([]models.DependencyVuln, 0, len(vulns))
+		fixedVulns := make([]models.DependencyVuln, 0, len(vulns))
+		for _, vuln := range vulns {
 			switch vuln.State {
-			case dtos.VulnStateOpen:
-				for _, pid := range productIDs {
-					underInvestigation[string(*pid)] = struct{}{}
-				}
 			case dtos.VulnStateAccepted:
-				lastEvent := vuln.Events[len(vuln.Events)-1]
-				vulnObject.Remediations = append(vulnObject.Remediations, &gocsaf.Remediation{
-					Details:    utils.Ptr(fmt.Sprintf("Accepted the risk of this vulnerability. %s", utils.SafeDereference(lastEvent.Justification))),
-					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
-					Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
-				})
-
-				for _, pid := range productIDs {
-					affected[string(*pid)] = struct{}{}
-				}
-			case dtos.VulnStateFixed:
-				for _, pid := range productIDs {
-					fixed[string(*pid)] = struct{}{}
-				}
+				acceptedVulns = append(acceptedVulns, vuln)
+				distribution.AmountAccepted++
 			case dtos.VulnStateFalsePositive:
-				lastEvent := vuln.Events[len(vuln.Events)-1]
-				justification := string(lastEvent.MechanicalJustification)
-				if lastEvent.MechanicalJustification == "" {
-					justification = string(gocsaf.CSAFFlagLabelVulnerableCodeNotInExecutePath)
-				}
-				vulnObject.Remediations = append(vulnObject.Remediations, &gocsaf.Remediation{
-					Details:    utils.Ptr(fmt.Sprintf("Marked as false positive: %s", utils.SafeDereference(lastEvent.Justification))),
-					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
-					Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryMitigation),
-				})
-
-				flags = append(flags, &gocsaf.Flag{
-					Label:      utils.Ptr(gocsaf.FlagLabel(justification)),
-					ProductIds: utils.Ptr(gocsaf.Products(productIDs)),
-				})
-				for _, pid := range productIDs {
-					notAffected[string(*pid)] = struct{}{}
-				}
+				falsePositiveVulns = append(falsePositiveVulns, vuln)
+				distribution.AmountFalsePositive++
+			case dtos.VulnStateFixed:
+				// maybe this does not make sense currently
+				fixedVulns = append(fixedVulns, vuln)
+				distribution.AmountFixed++
 			}
 		}
 
-		vulnObject.ProductStatus = &gocsaf.ProductStatus{
-			Fixed: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
-				return utils.Ptr(gocsaf.ProductID(el))
-			})))),
-			KnownAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(affected)), func(el string) *gocsaf.ProductID {
-				return utils.Ptr(gocsaf.ProductID(el))
-			})))),
-			KnownNotAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(notAffected)), func(el string) *gocsaf.ProductID {
-				return utils.Ptr(gocsaf.ProductID(el))
-			})))),
-			UnderInvestigation: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(underInvestigation)), func(el string) *gocsaf.ProductID {
-				return utils.Ptr(gocsaf.ProductID(el))
-			})))),
-		}
-		vulnObject.Flags = flags
-		vulnObject.Threats = threats
+		// calculate the amount of unhandled vulns
+		distribution.AmountUnhandled = distribution.TotalAmountOfPaths - (distribution.AmountFalsePositive + distribution.AmountAccepted + distribution.AmountFixed)
+		distributions = append(distributions, distribution)
+		// case: there is an accepted vuln amongst the vulns
+		if len(acceptedVulns) > 0 {
+			// determine the most recent event and therefor the most recent justification
+			justification := getMostRecentJustification(acceptedVulns)
+			details := "The risk of this vulnerability has been accepted."
+			if justification != nil {
+				details += fmt.Sprintf(" Justification: %s", *justification)
+			}
+			remediations = append(remediations, &gocsaf.Remediation{
+				Details:    &details,
+				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
+				ProductIds: utils.Ptr(gocsaf.Products([]*gocsaf.ProductID{utils.Ptr(gocsaf.ProductID(productName))})),
+			})
 
-		notes, err := generateNotesForVulnerabilityObject(vulnsInGroup)
-		if err != nil {
-			return nil, err
+			affected[productName] = struct{}{}
+			continue
 		}
-		vulnObject.Notes = notes
-		vulnerabilities = append(vulnerabilities, &vulnObject)
+
+		// case: all vulns are handled (for this decision we can treat fixed paths as if they weren't existing)
+		if len(fixedVulns)+len(falsePositiveVulns) == len(vulns) {
+			if len(fixedVulns) == len(vulns) {
+				fixed[productName] = struct{}{}
+				// nothing to do regarding remediations
+				continue
+			}
+
+			// else determine the latest justification of the false positive events
+			justification := getMostRecentJustification(falsePositiveVulns)
+			details := "This vulnerability has been marked as false positive."
+			if justification != nil {
+				details += fmt.Sprintf(" Justification: %s", *justification)
+			}
+
+			remediations = append(remediations, &gocsaf.Remediation{
+				Details:    &details,
+				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryMitigation),
+				ProductIds: utils.Ptr(gocsaf.Products([]*gocsaf.ProductID{utils.Ptr(gocsaf.ProductID(productName))})),
+			})
+			notAffected[productName] = struct{}{}
+			continue
+		}
+		underInvestigation[productName] = struct{}{}
 	}
 
-	slices.SortFunc(vulnerabilities, func(vuln1, vuln2 *gocsaf.Vulnerability) int {
-		if vuln1.CVE == nil && vuln2.CVE == nil {
-			return 0
-		}
-		if vuln1.CVE == nil {
-			return 1
-		}
-		if vuln2.CVE == nil {
-			return -1
+	// after putting each vuln in their respective category we build the product status lists with them
+	productStatus := &gocsaf.ProductStatus{
+		Fixed: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
+			return utils.Ptr(gocsaf.ProductID(el))
+		})))),
+		KnownAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(affected)), func(el string) *gocsaf.ProductID {
+			return utils.Ptr(gocsaf.ProductID(el))
+		})))),
+		KnownNotAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(notAffected)), func(el string) *gocsaf.ProductID {
+			return utils.Ptr(gocsaf.ProductID(el))
+		})))),
+		UnderInvestigation: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(underInvestigation)), func(el string) *gocsaf.ProductID {
+			return utils.Ptr(gocsaf.ProductID(el))
+		})))),
+	}
+	return productStatus, distributions, remediations
+}
 
+func getMostRecentJustification(vulns []models.DependencyVuln) *string {
+	var latestEventWithJustification *models.VulnEvent
+	for _, vuln := range vulns {
+		lastEventForVuln := vuln.Events[len(vuln.Events)-1]
+
+		// no justification for this event -> we can skip this one
+		if lastEventForVuln.Justification == nil {
+			continue
 		}
-		return -strings.Compare(string(*vuln1.CVE), string(*vuln2.CVE))
-	})
-	return vulnerabilities, nil
+
+		// determine the most recent justification
+		if latestEventWithJustification == nil {
+			latestEventWithJustification = &lastEventForVuln
+		} else if latestEventWithJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
+			latestEventWithJustification = &lastEventForVuln
+		}
+	}
+
+	if latestEventWithJustification == nil {
+		return nil
+	}
+	return latestEventWithJustification.Justification
 }
 
 func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
@@ -1069,81 +1123,48 @@ func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
 }
 
 // generate the textual summary for a vulnerability object
-func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln) ([]*gocsaf.Note, error) {
+func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distributions []stateDistributionOfPathsInProduct) ([]*gocsaf.Note, error) {
 	if len(vulns) == 0 {
 		return nil, nil
 	}
 	notes := []*gocsaf.Note{}
 
+	// always append CVE description node
 	cve := vulns[0].CVE
-	cveDescription := gocsaf.Note{
+	cveDescriptionNote := gocsaf.Note{
 		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
-		Title:        utils.Ptr("textual description of CVE"),
+		Title:        utils.Ptr(fmt.Sprintf("textual description of %s", cve.CVE)),
 		Text:         &cve.Description,
 	}
+	notes = append(notes, &cveDescriptionNote)
 
-	notes = append(notes, &cveDescription)
-
-	vulnDetails := gocsaf.Note{
-
-		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
-		Title:        utils.Ptr("state of the vulnerability in the product"),
-	}
-
-	// group vulnerabilities by artifact
-	artifactToVulns := map[string][]models.DependencyVuln{}
-	for _, vuln := range vulns {
-
-		for _, artifact := range vuln.Artifacts {
-			key := fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName)
-			artifactToVulns[key] = append(artifactToVulns[key], vuln)
+	// make a node containing a textual summary for each productID
+	for _, distribution := range distributions {
+		// build the summary template
+		tmpl, err := template.New("build path states").Parse("Total amount of paths in product: {{.TotalAmountOfPaths}}.{{if .AmountAccepted}} Amount of accepted paths: {{.AmountAccepted}}.{{end}}{{if .AmountFalsePositive}} Amount of paths marked as false positives: {{.AmountFalsePositive}}.{{end}}{{if .AmountFixed}} Amount of fixed paths: {{.AmountFixed}}.{{end}}{{if .AmountUnhandled}} Amount of unhandled paths: {{.AmountUnhandled}}.{{end}}")
+		if err != nil {
+			return nil, fmt.Errorf("could not parse template: %w", err)
 		}
-	}
 
-	// Generate summary for each artifact
-	var summaryParts []string
-	for artifact, vulns := range artifactToVulns {
-		var vulnStates []string
-		for _, vuln := range vulns {
-			recentJustification := vuln.Events[len(vuln.Events)-1].Justification
-			eventType := vuln.Events[len(vuln.Events)-1].Type
-			if recentJustification != nil && eventType != dtos.EventTypeMitigate {
-				id := string(artifactNameAndComponentPurlToProductID(artifact, "", vuln.ComponentPurl))
-				notes = append(notes, &gocsaf.Note{
-					Title:        utils.Ptr(fmt.Sprintf("Justification for %s", id)),
-					NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
-					Text:         recentJustification,
-				})
-			}
-			vulnStates = append(vulnStates, fmt.Sprintf("%s for package %s", stateToString(vuln.State), vuln.ComponentPurl))
+		// build the summary for the distribution and assign it to the note object
+		var summary strings.Builder
+		if err := tmpl.Execute(&summary, distribution); err != nil {
+			return nil, fmt.Errorf("could not execute template on distribution: %w", err)
 		}
-		summaryParts = append(summaryParts, fmt.Sprintf("ProductID %s: %s", artifact, strings.Join(normalize.SortStringsSlice(vulnStates), ", ")))
-	}
 
-	vulnDetails.Text = utils.Ptr(strings.Join(normalize.SortStringsSlice(summaryParts), ", "))
-	notes = append(notes, &vulnDetails)
+		vulnDetails := gocsaf.Note{
+			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
+			Title:        utils.Ptr(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
+			Text:         utils.Ptr(summary.String()),
+		}
+		notes = append(notes, &vulnDetails)
+	}
 
 	return notes, nil
 }
 
-// Helper function to map state to human-readable string
-func stateToString(state dtos.VulnState) string {
-	switch state {
-	case dtos.VulnStateOpen:
-		return "unhandled"
-	case dtos.VulnStateAccepted:
-		return "accepted"
-	case dtos.VulnStateFalsePositive:
-		return "marked as false positive"
-	case dtos.VulnStateFixed:
-		return "fixed"
-	default:
-		return "unknown state"
-	}
-}
-
 // generate the tracking object used by the document object
-func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
+func generateTrackingObject(vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
 	allEvents := make([]vulnEventWithVuln, 0)
 	for _, vuln := range vulns {
@@ -1155,25 +1176,17 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 		}
 	}
 
-	// sort them by their creation timestamp
+	// sort them by their creation timestamp and id to make it deterministic
 	slices.SortFunc(allEvents, func(event1 vulnEventWithVuln, event2 vulnEventWithVuln) int {
-		return event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
+		timeComp := event1.VulnEvent.CreatedAt.Compare(event2.VulnEvent.CreatedAt)
+		if timeComp != 0 {
+			return timeComp
+		}
+		return strings.Compare(event1.Vuln.ID, event2.Vuln.ID)
 	})
 
-	engineVersion := config.Version
-	if engineVersion == "" {
-		engineVersion = "debug"
-	}
-	tracking.Generator = &gocsaf.Generator{
-		Engine: &gocsaf.Engine{
-			Name:    utils.Ptr("DevGuard CSAF Generator"),
-			Version: &engineVersion,
-		},
-		Date: tracking.CurrentReleaseDate,
-	}
-
 	// then we can construct the full revision history
-	revisions, err := buildRevisionHistory(asset, allEvents)
+	revisions, err := buildRevisionHistory(allEvents)
 	if err != nil {
 		return tracking, err
 	}
@@ -1191,6 +1204,18 @@ func generateTrackingObject(asset models.Asset, vulns []models.DependencyVuln) (
 	tracking.ID = utils.Ptr(gocsaf.TrackingID(strings.ToUpper(version)))
 	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
 	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
+
+	engineVersion := config.Version
+	if engineVersion == "" {
+		engineVersion = "debug"
+	}
+	tracking.Generator = &gocsaf.Generator{
+		Engine: &gocsaf.Engine{
+			Name:    utils.Ptr("DevGuard CSAF Generator"),
+			Version: &engineVersion,
+		},
+		Date: tracking.CurrentReleaseDate,
+	}
 	return tracking, nil
 }
 
@@ -1200,7 +1225,7 @@ type vulnEventWithVuln struct {
 }
 
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
-func buildRevisionHistory(asset models.Asset, vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, error) {
+func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, error) {
 	var revisions []*gocsaf.Revision
 	// then just create a revision entry for every event group
 	version := 0
@@ -1230,21 +1255,21 @@ func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent)
 
 	switch event.Type {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Detected path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Reopened path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Fixed path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted vulnerability %s in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Accepted path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked vulnerability %s as false positive in package %s (%s).", vuln.CVEID, vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Marked path as false positive in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
 	default:
-		return "", fmt.Errorf("unknown event type: %s (%s)", event.Type, artifactNameString)
+		return "", fmt.Errorf("unknown event type: %s (artifact: %s)", event.Type, artifactNameString)
 	}
 }
 
-// signs data and returns the resulting signature
+// signs report and returns the resulting signature
 func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 	// configure pgp profile to meet the csaf standard
 	pgp := pgpCrypto.PGPWithProfile(profile.RFC4880())

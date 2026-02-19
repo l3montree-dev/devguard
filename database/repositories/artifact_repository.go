@@ -56,23 +56,16 @@ func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, 
 
 func (r *artifactRepository) DeleteArtifact(tx *gorm.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
 
-	db := r.db
-	if tx != nil {
-		db = tx
-	}
-
-	err := db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
+	err := r.GetDB(tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
 	if err != nil {
 		return err
 	}
 
-	r.FireAndForget(func() {
-		sql := CleanupOrphanedRecordsSQL
-		err = db.Exec(sql).Error
-		if err != nil {
-			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-		}
-	})
+	sql := CleanupOrphanedRecordsSQL
+	err = r.GetDB(tx).Exec(sql).Error
+	if err != nil {
+		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+	}
 
 	return err
 }

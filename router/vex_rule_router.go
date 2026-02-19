@@ -37,9 +37,10 @@ func NewVEXRuleRouter(
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("/", vexRuleController.Create)           // Create rule
-	ruleWriteGroup.PUT("/:ruleId/", vexRuleController.Update)    // Update rule by ID
-	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete) // Delete rule by ID
+	ruleWriteGroup.POST("/", vexRuleController.Create)                  // Create rule
+	ruleWriteGroup.PUT("/:ruleId/", vexRuleController.Update)           // Update rule by ID
+	ruleWriteGroup.POST("/:ruleId/reapply/", vexRuleController.Reapply) // Reapply rule to existing vulns
+	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete)        // Delete rule by ID
 
 	return VEXRuleRouter{Group: ruleGroup}
 }
