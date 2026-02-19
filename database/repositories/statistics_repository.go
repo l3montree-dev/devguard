@@ -464,3 +464,8 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Di
 	}
 	return distribution, nil
 }
+
+// func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
+// 	structure := dtos.OrgStructureDistribution{}
+// 	r.db.Raw(``)
+// }

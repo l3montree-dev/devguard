@@ -61,7 +61,7 @@ func NewOrgRouter(
 	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	// overview page endpoints
-	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgVulnStatistics)
+	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics)
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)

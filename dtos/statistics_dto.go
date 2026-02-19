@@ -16,6 +16,12 @@ type DependencyVulnAggregationStateAndChange struct {
 	Was DependencyVulnAggregationState `json:"was"`
 }
 
+type OrgStructureDistribution struct {
+	AmountOfProjects  int `json:"amountOfProjects" gorm:"amount_of_projects"`
+	AmountOfAssets    int `json:"amountOfAssets" gorm:"amount_of_assets"`
+	AmountOfArtifacts int `json:"amountOfArtifacts" gorm:"amount_of_artifacts"`
+}
+
 type Distribution struct {
 	LowRisk      int `json:"lowRisk" gorm:"column:risk_low"`
 	MediumRisk   int `json:"mediumRisk" gorm:"column:risk_medium"`
@@ -26,16 +32,6 @@ type Distribution struct {
 	MediumCVSS   int `json:"mediumCvss" gorm:"column:cvss_medium"`
 	HighCVSS     int `json:"highCvss" gorm:"column:cvss_high"`
 	CriticalCVSS int `json:"criticalCvss" gorm:"column:cvss_critical"`
-
-	CVEPurlLow      int `json:"cvePurlLow"`
-	CVEPurlMedium   int `json:"cvePurlMedium"`
-	CVEPurlHigh     int `json:"cvePurlHigh"`
-	CVEPurlCritical int `json:"cvePurlCritical"`
-
-	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
-	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
-	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
-	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
 }
 
 type History struct {

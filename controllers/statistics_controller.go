@@ -234,7 +234,7 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 	})
 }
 
-func (c *StatisticsController) GetOrgVulnStatistics(ctx shared.Context) error {
+func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
 	if err != nil {
