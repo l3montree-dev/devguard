@@ -129,6 +129,83 @@ func TestParsePurl(t *testing.T) {
 	}
 }
 
+func TestParseVersionSpec(t *testing.T) {
+	tests := []struct {
+		name              string
+		spec              string
+		expectedRangeType string
+		expectedVersion   string
+	}{
+		{"caret range", "^1.2.3", "^", "1.2.3"},
+		{"caret with pre-release", "^1.2.3-rc.0", "^", "1.2.3"},
+		{"tilde range", "~1.2.3", "~", "1.2.3"},
+		{"greater than or equal", ">=1.2.3", ">=", "1.2.3"},
+		{"greater than", ">1.2.3", ">", "1.2.3"},
+		{"exact version", "1.2.3", "exact", "1.2.3"},
+		{"exact with pre-release", "1.2.3-alpha", "exact", "1.2.3"},
+		{"with whitespace", "  ^  1.2.3  ", "^", "1.2.3"},
+		{"caret with build metadata", "^1.2.3+build", "^", "1.2.3"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rangeType, version := parseVersionSpec(tt.spec)
+			if rangeType != tt.expectedRangeType {
+				t.Errorf("parseVersionSpec(%q) rangeType = %q, want %q", tt.spec, rangeType, tt.expectedRangeType)
+			}
+			if version != tt.expectedVersion {
+				t.Errorf("parseVersionSpec(%q) version = %q, want %q", tt.spec, version, tt.expectedVersion)
+			}
+		})
+	}
+}
+
+func TestMatchesVersionSpec(t *testing.T) {
+	tests := []struct {
+		name         string
+		rangeType    string
+		version      string
+		versionParts [3]int
+		baseVersion  string
+		baseParts    [3]int
+		expected     bool
+	}{
+		// Caret tests (^)
+		{"caret: same major, >= base", "^", "1.2.3", [3]int{1, 2, 3}, "1.0.0", [3]int{1, 0, 0}, true},
+		{"caret: same major, < base", "^", "1.0.0", [3]int{1, 0, 0}, "1.2.3", [3]int{1, 2, 3}, false},
+		{"caret: different major", "^", "2.0.0", [3]int{2, 0, 0}, "1.0.0", [3]int{1, 0, 0}, false},
+
+		// Tilde tests (~)
+		{"tilde: same major.minor, >= patch", "~", "1.2.5", [3]int{1, 2, 5}, "1.2.3", [3]int{1, 2, 3}, true},
+		{"tilde: same major.minor, < patch", "~", "1.2.1", [3]int{1, 2, 1}, "1.2.3", [3]int{1, 2, 3}, false},
+		{"tilde: different minor", "~", "1.3.0", [3]int{1, 3, 0}, "1.2.3", [3]int{1, 2, 3}, false},
+
+		// Greater than or equal (>=)
+		{">=: same major, >= base", ">=", "1.5.0", [3]int{1, 5, 0}, "1.0.0", [3]int{1, 0, 0}, true},
+		{">=: different major", ">=", "2.0.0", [3]int{2, 0, 0}, "1.0.0", [3]int{1, 0, 0}, false},
+
+		// Greater than (>)
+		{"greater: same major, > base", ">", "1.5.0", [3]int{1, 5, 0}, "1.0.0", [3]int{1, 0, 0}, true},
+		{"greater: same major, = base", ">", "1.0.0", [3]int{1, 0, 0}, "1.0.0", [3]int{1, 0, 0}, false},
+
+		// Exact tests
+		{"exact: matching", "exact", "1.2.3", [3]int{1, 2, 3}, "1.2.3", [3]int{1, 2, 3}, true},
+		{"exact: not matching", "exact", "1.2.4", [3]int{1, 2, 4}, "1.2.3", [3]int{1, 2, 3}, false},
+
+		// Invalid range type
+		{"invalid range type", "invalid", "1.2.3", [3]int{1, 2, 3}, "1.2.3", [3]int{1, 2, 3}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := matchesVersionSpec(tt.rangeType, tt.version, tt.versionParts, tt.baseVersion, tt.baseParts)
+			if result != tt.expected {
+				t.Errorf("matchesVersionSpec(%q, %q, ...) = %v, want %v", tt.rangeType, tt.version, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetAllDependencyMaps(t *testing.T) {
 	npmResp := &NPMResponse{
 		Dependencies: map[string]string{
@@ -232,6 +309,153 @@ func TestSplitOrExpression(t *testing.T) {
 			result := splitOrExpression(tt.versionSpec)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("splitOrExpression(%q) = %v, want %v", tt.versionSpec, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetRecommendedVersions(t *testing.T) {
+	npmResp := NPMResponse{
+		Versions: map[string]VersionData{
+			"1.0.0":      {Version: "1.0.0"},
+			"1.1.0":      {Version: "1.1.0"},
+			"1.2.0":      {Version: "1.2.0"},
+			"1.2.1":      {Version: "1.2.1"},
+			"2.0.0":      {Version: "2.0.0"},
+			"1.2.0-rc.0": {Version: "1.2.0-rc.0"},
+		},
+	}
+
+	tests := []struct {
+		name             string
+		currentVersion   string
+		expectedCount    int
+		shouldContain    []string
+		shouldNotContain []string
+	}{
+		{
+			name:             "from 1.0.0",
+			currentVersion:   "1.0.0",
+			expectedCount:    4,
+			shouldContain:    []string{"1.0.0", "1.1.0", "1.2.0", "1.2.1"},
+			shouldNotContain: []string{"2.0.0", "1.2.0-rc.0"},
+		},
+		{
+			name:             "from 1.2.0",
+			currentVersion:   "1.2.0",
+			expectedCount:    2,
+			shouldContain:    []string{"1.2.0", "1.2.1"},
+			shouldNotContain: []string{"1.0.0", "1.1.0", "2.0.0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := getRecommendedVersions(npmResp, tt.currentVersion)
+			if err != nil {
+				t.Errorf("getRecommendedVersions() error = %v", err)
+				return
+			}
+
+			if len(result) != tt.expectedCount {
+				t.Errorf("getRecommendedVersions() returned %d versions, want %d", len(result), tt.expectedCount)
+			}
+
+			for _, shouldContain := range tt.shouldContain {
+				found := false
+				for _, v := range result {
+					if v == shouldContain {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("getRecommendedVersions() missing %q in result", shouldContain)
+				}
+			}
+
+			for _, shouldNotContain := range tt.shouldNotContain {
+				for _, v := range result {
+					if v == shouldNotContain {
+						t.Errorf("getRecommendedVersions() should not contain %q", shouldNotContain)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestResolveBestVersion(t *testing.T) {
+	allVersionsMeta := &NPMResponse{
+		Versions: map[string]VersionData{
+			"1.0.0": {Version: "1.0.0"},
+			"1.1.0": {Version: "1.1.0"},
+			"1.2.0": {Version: "1.2.0"},
+			"1.2.1": {Version: "1.2.1"},
+			"2.0.0": {Version: "2.0.0"},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		versionSpec    string
+		currentVersion string
+		expected       string
+		shouldError    bool
+	}{
+		{"exact version", "1.2.0", "1.0.0", "1.2.0", false},
+		{"caret: highest in range", "^1.2.0", "1.0.0", "1.2.1", false},
+		{"caret: no match default", "^3.0.0", "1.0.0", "", true},
+		{"greater than or equal", ">=1.1.0", "1.0.0", "1.2.1", false},
+		{"exact: same as current", "1.0.0", "1.0.0", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := resolveBestVersion(allVersionsMeta, tt.versionSpec, tt.currentVersion)
+			if (err != nil) != tt.shouldError {
+				t.Errorf("resolveBestVersion(%q, %q) error = %v, shouldError = %v", tt.versionSpec, tt.currentVersion, err, tt.shouldError)
+				return
+			}
+			if !tt.shouldError && result != tt.expected {
+				t.Errorf("resolveBestVersion(%q, %q) = %q, want %q", tt.versionSpec, tt.currentVersion, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestResolveBestVersionWithOrExpression(t *testing.T) {
+	allVersionsMeta := &NPMResponse{
+		Versions: map[string]VersionData{
+			"13.0.0": {Version: "13.0.0"},
+			"14.0.0": {Version: "14.0.0"},
+			"14.5.0": {Version: "14.5.0"},
+			"15.0.0": {Version: "15.0.0"},
+			"15.4.0": {Version: "15.4.0"},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		versionSpec    string
+		currentVersion string
+		expected       string
+		shouldError    bool
+	}{
+		{"OR expression: match both, returns highest", "^14.0.0 || ^15.0.0", "13.0.0", "15.4.0", false},
+		{"OR expression: match second", "^14.0.0 || ^15.4.0", "13.0.0", "15.4.0", false},
+		{"OR expression: no match", "^16.0.0 || ^17.0.0", "13.0.0", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := resolveBestVersion(allVersionsMeta, tt.versionSpec, tt.currentVersion)
+			if (err != nil) != tt.shouldError {
+				t.Errorf("resolveBestVersion(%q, %q) error = %v, shouldError = %v", tt.versionSpec, tt.currentVersion, err, tt.shouldError)
+				return
+			}
+			if !tt.shouldError && result != tt.expected {
+				t.Errorf("resolveBestVersion(%q, %q) = %q, want %q", tt.versionSpec, tt.currentVersion, result, tt.expected)
 			}
 		})
 	}
