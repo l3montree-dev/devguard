@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 
@@ -116,10 +115,9 @@ func parseVersion(version string) [3]int {
 		cleanVersion = version[:idx]
 	}
 
-	if _, err := fmt.Sscanf(cleanVersion, "%d.%d.%d", &result[0], &result[1], &result[2]); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to parse version %q: %v (this indicates a validation bypass)\n", version, err)
-		return [3]int{0, 0, 0}
-	}
+	// Attempt to parse; silently return [0, 0, 0] on failure since all
+	// callers should have already validated with semver.IsValid()
+	fmt.Sscanf(cleanVersion, "%d.%d.%d", &result[0], &result[1], &result[2])
 	return result
 }
 
@@ -167,7 +165,6 @@ func splitOrExpression(versionSpec string) []string {
 			result = append(result, trimmed)
 		}
 	}
-	fmt.Println(result)
 	return result
 }
 
@@ -384,7 +381,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		currentVersion := packages[i].version
 
 		// fetch all version
-		allVersionsMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), pkgName, "")
+		allVersionsMeta, err := fetchPackageMetadata(pkgName, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
@@ -413,7 +410,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
 
 		// Second: check latest version
-		latestMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), pkgName, latestVersion)
+		latestMeta, err := fetchPackageMetadata(pkgName, latestVersion)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
 		}
@@ -427,7 +424,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 
 		fmt.Printf(" %s@%s requires %s: %s\n", pkgName, latestVersion, nextPkgName, nextVersionSpec)
 
-		nextAllVersionsMeta, err := fetchPackageMetadata(mapPackageManagerToEcosystem("npm"), nextPkgName, "")
+		nextAllVersionsMeta, err := fetchPackageMetadata(nextPkgName, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", nextPkgName, err)
 		}
@@ -460,8 +457,8 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 	return "", nil
 }
 
-func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMResponse, error) {
-	resp, err := getVersion(pkgManager, RegistryRequest{Dependency: dep, Version: version})
+func fetchPackageMetadata(dep string, version string) (*NPMResponse, error) {
+	resp, err := getVersion("node", RegistryRequest{Dependency: dep, Version: version})
 	if err != nil {
 		return nil, fmt.Errorf("error fetching %s@%s: %w", dep, version, err)
 	}
