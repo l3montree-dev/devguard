@@ -89,7 +89,7 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
-	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.Project], error)
+	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
@@ -111,6 +111,7 @@ type PolicyRepository interface {
 type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
+	GetAllowedAssetsByProjectIDPaged(allowedAssetIDs []string, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Asset], error)
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
@@ -337,6 +338,7 @@ type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
+	ListAllowedAssetsPaged(c Context) (Paged[models.Asset], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)

@@ -13,6 +13,13 @@ const (
 	ProjectTypeKubernetesCluster   ProjectType = "kubernetesCluster"
 )
 
+type ProjectState string
+
+const (
+	ProjectStateActive  ProjectState = "active"
+	ProjectStateDeleted ProjectState = "deleted"
+)
+
 type Project struct {
 	Model
 	Name           string    `json:"name" gorm:"type:text"`
@@ -43,6 +50,8 @@ type Project struct {
 	ExternalEntityParentID   *string `json:"externalEntityProviderParentId" gorm:"type:text;"`
 
 	Webhooks []WebhookIntegration `json:"webhooks" gorm:"foreignKey:ProjectID;"`
+
+	State ProjectState `json:"state" gorm:"type:text;default:'active';"`
 }
 
 func (m Project) TableName() string {

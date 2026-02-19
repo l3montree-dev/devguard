@@ -58,6 +58,11 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 		externalEntityParentID = utils.Ptr(fmt.Sprintf("%d", group.ParentID))
 	}
 
+	state := models.ProjectStateActive
+	if utils.CheckIfDeleted(group.Name) {
+		state = models.ProjectStateDeleted
+	}
+
 	return models.Project{
 		Name:                     group.FullName,
 		Description:              group.Description,
@@ -66,10 +71,18 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityParentID:   externalEntityParentID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", group.ID)),
+		State:                    state,
 	}
 }
 
 func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID string) models.Asset {
+	state := models.AssetStateActive
+	if utils.CheckIfDeleted(project.Name) {
+		state = models.AssetStateDeleted
+	} else if project.Archived {
+		state = models.AssetStateArchived
+	}
+
 	return models.Asset{
 		Name:                     project.Name,
 		Avatar:                   avatarBase64,
@@ -77,7 +90,7 @@ func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID st
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", project.ID)),
-		Archived:                 project.Archived,
+		State:                    state,
 	}
 }
 

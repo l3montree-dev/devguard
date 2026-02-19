@@ -13,5 +13,9 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 ALTER TABLE public.assets
-DROP COLUMN IF EXISTS archived;
+ADD COLUMN IF NOT EXISTS state TEXT DEFAULT 'active';
+
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS state TEXT DEFAULT 'active';

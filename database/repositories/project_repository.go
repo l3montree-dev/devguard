@@ -108,7 +108,7 @@ func (g *projectRepository) Update(tx *gorm.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
 
-func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.Project], error) {
+func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Project], error) {
 	var projects []models.Project
 
 	var q *gorm.DB
@@ -126,7 +126,19 @@ func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUI
 
 	// apply search
 	if search != "" {
-		q = q.Where("name ILIKE ?", "%"+search+"%")
+		q = q.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
 	}
 
 	var count int64

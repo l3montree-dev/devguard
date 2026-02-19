@@ -173,6 +173,26 @@ func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []stri
 	return projectIDsSlice, parentID, nil
 }
 
+func (s *projectService) ListAllowedAssetsPaged(c shared.Context) (shared.Paged[models.Asset], error) {
+
+	project := shared.GetProject(c)
+	rbac := shared.GetRBAC(c)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	if err != nil {
+		return shared.Paged[models.Asset]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+	}
+	// lets fetch the assets related to this project
+	assets, err := s.assetRepository.GetAllowedAssetsByProjectIDPaged(allowedAssetIDs, project.ID, shared.GetPageInfo(c),
+		c.QueryParam("search"),
+		shared.GetFilterQuery(c),
+		shared.GetSortQuery(c))
+	if err != nil {
+		return shared.Paged[models.Asset]{}, err
+	}
+
+	return assets, nil
+}
+
 func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Paged[models.Project], error) {
 
 	pageInfo := shared.GetPageInfo(c)
@@ -192,7 +212,10 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 		return shared.Paged[models.Project]{}, err
 	}
 
-	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search)
+	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	if err != nil {
+		return shared.Paged[models.Project]{}, err
+	}
 
 	if err != nil {
 		return shared.Paged[models.Project]{}, err

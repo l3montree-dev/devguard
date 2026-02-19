@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -158,11 +159,48 @@ func (repository *assetRepository) FindByName(name string) (models.Asset, error)
 
 func (repository *assetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := repository.db.Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).Or("project_id = ? AND is_public = true", projectID).Find(&apps).Error
-	if err != nil {
-		return nil, err
+	q := repository.db.Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).Or("project_id = ? AND is_public = true", projectID).Find(&apps)
+	if q.Error != nil {
+		return nil, q.Error
 	}
+
 	return apps, nil
+}
+
+func (repository *assetRepository) GetAllowedAssetsByProjectIDPaged(allowedAssetIDs []string, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Asset], error) {
+	var apps []models.Asset
+	q := repository.db.Model(&models.Asset{}).Where(
+		repository.db.
+			Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).
+			Or("project_id = ? AND is_public = true", projectID),
+	)
+
+	if search != "" {
+		q = q.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
+	}
+
+	var count int64
+	err := q.Count(&count).Error
+	if err != nil {
+		return shared.Paged[models.Asset]{}, err
+	}
+
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&apps).Error
+	if err != nil {
+		return shared.Paged[models.Asset]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, count, apps), nil
 }
 
 func (repository *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {

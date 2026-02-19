@@ -609,8 +609,8 @@ func (_c *AssetRepository_GetAllAssetsFromDB_Call) RunAndReturn(run func() ([]mo
 }
 
 // GetAllowedAssetsByProjectID provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error) {
-	ret := _mock.Called(allowedAssetIDs, projectID)
+func (_mock *AssetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]models.Asset, error) {
+	ret := _mock.Called(allowedAssetIDs, projectID, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllowedAssetsByProjectID")
@@ -618,18 +618,18 @@ func (_mock *AssetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []stri
 
 	var r0 []models.Asset
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string, uuid.UUID) ([]models.Asset, error)); ok {
-		return returnFunc(allowedAssetIDs, projectID)
+	if returnFunc, ok := ret.Get(0).(func([]string, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) ([]models.Asset, error)); ok {
+		return returnFunc(allowedAssetIDs, projectID, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string, uuid.UUID) []models.Asset); ok {
-		r0 = returnFunc(allowedAssetIDs, projectID)
+	if returnFunc, ok := ret.Get(0).(func([]string, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) []models.Asset); ok {
+		r0 = returnFunc(allowedAssetIDs, projectID, search, filter, sort)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]string, uuid.UUID) error); ok {
-		r1 = returnFunc(allowedAssetIDs, projectID)
+	if returnFunc, ok := ret.Get(1).(func([]string, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(allowedAssetIDs, projectID, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -644,11 +644,14 @@ type AssetRepository_GetAllowedAssetsByProjectID_Call struct {
 // GetAllowedAssetsByProjectID is a helper method to define mock.On call
 //   - allowedAssetIDs []string
 //   - projectID uuid.UUID
-func (_e *AssetRepository_Expecter) GetAllowedAssetsByProjectID(allowedAssetIDs interface{}, projectID interface{}) *AssetRepository_GetAllowedAssetsByProjectID_Call {
-	return &AssetRepository_GetAllowedAssetsByProjectID_Call{Call: _e.mock.On("GetAllowedAssetsByProjectID", allowedAssetIDs, projectID)}
+//   - search string
+//   - filter []shared.FilterQuery
+//   - sort []shared.SortQuery
+func (_e *AssetRepository_Expecter) GetAllowedAssetsByProjectID(allowedAssetIDs interface{}, projectID interface{}, search interface{}, filter interface{}, sort interface{}) *AssetRepository_GetAllowedAssetsByProjectID_Call {
+	return &AssetRepository_GetAllowedAssetsByProjectID_Call{Call: _e.mock.On("GetAllowedAssetsByProjectID", allowedAssetIDs, projectID, search, filter, sort)}
 }
 
-func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) Run(run func(allowedAssetIDs []string, projectID uuid.UUID)) *AssetRepository_GetAllowedAssetsByProjectID_Call {
+func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) Run(run func(allowedAssetIDs []string, projectID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *AssetRepository_GetAllowedAssetsByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []string
 		if args[0] != nil {
@@ -658,9 +661,24 @@ func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) Run(run func(allowed
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []shared.FilterQuery
+		if args[3] != nil {
+			arg3 = args[3].([]shared.FilterQuery)
+		}
+		var arg4 []shared.SortQuery
+		if args[4] != nil {
+			arg4 = args[4].([]shared.SortQuery)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -671,7 +689,7 @@ func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) Return(assets []mode
 	return _c
 }
 
-func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) RunAndReturn(run func(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)) *AssetRepository_GetAllowedAssetsByProjectID_Call {
+func (_c *AssetRepository_GetAllowedAssetsByProjectID_Call) RunAndReturn(run func(allowedAssetIDs []string, projectID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]models.Asset, error)) *AssetRepository_GetAllowedAssetsByProjectID_Call {
 	_c.Call.Return(run)
 	return _c
 }

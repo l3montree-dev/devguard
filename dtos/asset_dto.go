@@ -66,7 +66,7 @@ type AssetDTO struct {
 
 	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent"`
 
-	Archived bool `json:"archived"`
+	State string `json:"state"`
 }
 
 type AssetWithSecretsDTO struct {
