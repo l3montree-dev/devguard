@@ -276,6 +276,33 @@ func TestFindDependencyVersionInMeta(t *testing.T) {
 	}
 }
 
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		version  string
+		expected string
+	}{
+		{"full semver", "14.0.0", "14.0.0"},
+		{"missing patch", "14.0", "14.0.0"},
+		{"missing minor and patch", "14", "14.0.0"},
+		{"with pre-release", "14.0.0-rc.0", "14.0.0"},
+		{"incomplete with pre-release", "14.0-rc.0", "14.0.0"},
+		{"single version with pre-release", "14-rc.0", "14.0.0"},
+		{"with build metadata", "14.0.0+build", "14.0.0"},
+		{"incomplete with build metadata", "14.0+build", "14.0.0"},
+		{"with whitespace", "  14.0  ", "14.0.0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := normalizeVersion(tt.version)
+			if result != tt.expected {
+				t.Errorf("normalizeVersion(%q) = %q, want %q", tt.version, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSplitOrExpression(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -445,6 +472,10 @@ func TestResolveBestVersionWithOrExpression(t *testing.T) {
 		{"OR expression: match both, returns highest", "^14.0.0 || ^15.0.0", "13.0.0", "15.4.0", false},
 		{"OR expression: match second", "^14.0.0 || ^15.4.0", "13.0.0", "15.4.0", false},
 		{"OR expression: no match", "^16.0.0 || ^17.0.0", "13.0.0", "", true},
+		{"OR expression: incomplete semver ^14.0", "^14.0 || ^15.0.0", "13.0.0", "15.4.0", false},
+		{"OR expression: incomplete semver ^14", "^14 || ^15.0.0", "13.0.0", "15.4.0", false},
+		{"OR expression: incomplete semver ^14.0 matches", "^14.0", "13.0.0", "14.5.0", false},
+		{"OR expression: incomplete semver ^14 matches", "^14", "13.0.0", "14.5.0", false},
 	}
 
 	for _, tt := range tests {

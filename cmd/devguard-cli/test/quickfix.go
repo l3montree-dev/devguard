@@ -54,6 +54,7 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 	}
 }
 
+// this currently implements the versioning algorithm for "always take latest"
 func getRecommendedVersions(npmResponse NPMResponse, currentVersion string) ([]string, error) {
 
 	var versions [][]string
@@ -197,6 +198,22 @@ func matchesVersionSpec(rangeType string, version string, versionParts [3]int, b
 	}
 }
 
+// Examples: "14" -> "14.0.0", "14.0" -> "14.0.0", "14.0.0" -> "14.0.0"
+func normalizeVersion(version string) string {
+	version = strings.TrimSpace(version)
+
+	// Strip pre-release and build metadata first
+	if idx := strings.IndexAny(version, "-+"); idx != -1 {
+		version = version[:idx]
+	}
+
+	parts := strings.Split(version, ".")
+	for len(parts) < 3 {
+		parts = append(parts, "0")
+	}
+	return strings.Join(parts, ".")
+}
+
 // parseVersionSpec extracts the range type and base version from a version spec
 // Returns the range type ("^", "~", ">=", ">", "exact") and the trimmed base version
 // Pre-release versions are stripped (e.g., "15.0.0-rc.0" becomes "15.0.0")
@@ -233,6 +250,7 @@ func parseVersionSpec(spec string) (rangeType string, baseVersion string) {
 
 // resolveBestVersion finds the best matching version given a version spec and all available versions
 // versionSpec examples: "15.4.7", "^15.0.0", "~15.4.0", ">15.0.0", ">=15.4.0"
+// Also supports incomplete semver like "^14.0", "^14", "~15", etc.
 // Returns the highest matching version, or error if no match or spec is invalid
 func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, currentVersion string) (string, error) {
 	versionSpec = strings.TrimSpace(versionSpec)
@@ -245,13 +263,14 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 	var rangeType string
 	var baseVersion string
 	var baseVersions []string
-
 	// Determine range type and extract base version
 	if strings.Contains(versionSpec, "||") {
 		rangeType = "||"
 		baseVersions = splitOrExpression(versionSpec)
 	} else {
 		rangeType, baseVersion = parseVersionSpec(versionSpec)
+		// Normalize incomplete semver versions (e.g., "14.0" -> "14.0.0", "14" -> "14.0.0")
+		baseVersion = normalizeVersion(baseVersion)
 	}
 
 	if rangeType != "||" && !semver.IsValid("v"+baseVersion) {
@@ -292,21 +311,17 @@ func resolveBestVersion(allVersionsMeta *NPMResponse, versionSpec string, curren
 			for _, orSpec := range baseVersions {
 				orRangeType, orBaseVersion := parseVersionSpec(orSpec)
 
-				parts := strings.Split(orBaseVersion, ".")
-				fmt.Println(parts)
-				// 14.0 is not getting caught by semver.isValid
-				if len(parts) < 3 {
-					continue // Skip incomplete specs like "14.0" or "13"
+				// Normalize incomplete semver versions (e.g., "14.0" -> "14.0.0", "14" -> "14.0.0")
+				orBaseVersionNormalized := normalizeVersion(orBaseVersion)
+
+				if !semver.IsValid("v" + orBaseVersionNormalized) {
+					continue // Skip invalid specs after normalization
 				}
 
-				if !semver.IsValid("v" + orBaseVersion) {
-					continue // Skip invalid specs
-				}
-
-				orBaseParts := parseVersion(orBaseVersion)
+				orBaseParts := parseVersion(orBaseVersionNormalized)
 
 				// Check if current version matches this OR spec
-				orMatches := matchesVersionSpec(orRangeType, v, vParts, orBaseVersion, orBaseParts)
+				orMatches := matchesVersionSpec(orRangeType, v, vParts, orBaseVersionNormalized, orBaseParts)
 
 				// If any OR element matches, the whole OR expression matches
 				if orMatches {
@@ -462,7 +477,7 @@ func fetchPackageMetadata(pkgManager string, dep string, version string) (*NPMRe
 
 func main() {
 	purls := []string{
-		"pkg:npm/@sentry/nextjs@9.38.0",
+		"pkg:npm/@ory/integrations@1.3.1",
 		/*
 			nextjs@9.39.0 ---> Ist abhängig von react@6.28.0
 
@@ -474,7 +489,7 @@ func main() {
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "15.4.9"
+	fixedVersion := "15.4.8"
 
 	fixingVersion, err := checkVulnerabilityFixChain(purls, fixedVersion)
 	if err != nil {
