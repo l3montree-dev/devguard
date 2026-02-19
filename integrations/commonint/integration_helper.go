@@ -114,7 +114,7 @@ func RenderMarkdownForFirstPartyVuln(firstPartyVuln models.FirstPartyVuln, baseU
 	}
 
 	str.WriteString("\n\n")
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
+	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID)
 
 	utils.AddSlashCommandsToFirstPartyVuln(&str)
 
@@ -124,11 +124,11 @@ func RenderMarkdownForFirstPartyVuln(firstPartyVuln models.FirstPartyVuln, baseU
 func RenderMarkdownForLicenseRisk(licenseRisk models.LicenseRisk, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
 	var str strings.Builder
 	str.WriteString("## License Risk Description\n\n")
-	str.WriteString(fmt.Sprintf("The license of the component %s could not be determined or isn't [OSI-approved](https://opensource.org/licenses)!", licenseRisk.ComponentPurl))
+	fmt.Fprintf(&str, "The license of the component %s could not be determined or isn't [OSI-approved](https://opensource.org/licenses)!", licenseRisk.ComponentPurl)
 	str.WriteString("\n\n")
 	str.WriteString("To handle the risk, make a final license decision in DevGuard.")
 	str.WriteString("\n\n")
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/license-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, licenseRisk.ID))
+	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/license-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, licenseRisk.ID)
 
 	//utils.AddSlashCommandsToFirstPartyVuln(&str) To-Do?
 
