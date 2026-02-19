@@ -471,7 +471,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 				}
 			}
 
-		// get all parent groups
+			// get all parent groups
 			parentGroups := getAllParentGroups(idMap, group)
 			res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
 			// add the current group
