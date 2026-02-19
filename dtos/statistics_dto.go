@@ -17,9 +17,9 @@ type DependencyVulnAggregationStateAndChange struct {
 }
 
 type OrgStructureDistribution struct {
-	AmountOfProjects  int `json:"amountOfProjects" gorm:"amount_of_projects"`
-	AmountOfAssets    int `json:"amountOfAssets" gorm:"amount_of_assets"`
-	AmountOfArtifacts int `json:"amountOfArtifacts" gorm:"amount_of_artifacts"`
+	AmountOfProjects  int `json:"numProjects" gorm:"column:num_projects"`
+	AmountOfAssets    int `json:"numAssets" gorm:"column:num_assets"`
+	AmountOfArtifacts int `json:"numArtifacts" gorm:"column:num_artifacts"`
 }
 
 type Distribution struct {

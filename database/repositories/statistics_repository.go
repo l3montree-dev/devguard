@@ -465,7 +465,18 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Di
 	return distribution, nil
 }
 
-// func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
-// 	structure := dtos.OrgStructureDistribution{}
-// 	r.db.Raw(``)
-// }
+func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
+	structure := dtos.OrgStructureDistribution{}
+	err := r.db.Raw(`SELECT COUNT(DISTINCT(p.id)) as num_projects, 
+			COUNT(DISTINCT(a.id)) as num_assets, 
+			COUNT(DISTINCT CASE 
+				WHEN 
+					art.artifact_name IS NOT NULL OR art.asset_version_name IS NOT NULL 
+				THEN 
+					(art.artifact_name, art.asset_version_name) END) as num_artifacts 
+			FROM projects p 
+			LEFT JOIN assets a ON p.id = a.project_id
+			LEFT JOIN artifacts art ON art.asset_id = a.id
+			WHERE p.organization_id = ?;`, orgID).Find(&structure).Error
+	return structure, err
+}

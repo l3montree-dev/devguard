@@ -242,3 +242,12 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	}
 	return ctx.JSON(200, distribution)
 }
+
+func (c *StatisticsController) GetOrgStructure(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+	structure, err := c.statisticsRepository.GetOrgStructureDistribution(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get org structure")
+	}
+	return ctx.JSON(200, structure)
+}
