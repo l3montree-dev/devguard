@@ -613,7 +613,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			var eventsToCreate []models.VulnEvent
 
 			// Load SBOM components for this asset version
-			componentDeps, err := componentRepository.LoadComponents(tx, key.AssetVersionName, key.AssetID, nil)
+			componentDeps, err := componentRepository.LoadComponents(tx, key.AssetVersionName, key.AssetID)
 			if err != nil {
 				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {

@@ -128,7 +128,7 @@ func (client gitlabClient) CreateNewLabel(ctx context.Context, projectID int, la
 }
 
 func (client gitlabClient) GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error) {
-	return client.GroupMembers.GetInheritedGroupMember(groupID, userID, gitlab.WithContext(ctx))
+	return client.GroupMembers.GetInheritedGroupMember(int64(groupID), int64(userID), gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error) {
@@ -179,7 +179,7 @@ func (client gitlabClient) FetchGroupAvatarBase64(groupID int) (string, error) {
 }
 
 func (client gitlabClient) GetMemberInProject(ctx context.Context, userID int, projectID int) (*gitlab.ProjectMember, *gitlab.Response, error) {
-	return client.ProjectMembers.GetInheritedProjectMember(projectID, userID, nil, gitlab.WithContext(ctx))
+	return client.ProjectMembers.GetInheritedProjectMember(int64(projectID), int64(userID), nil, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) ListProjectsInGroup(ctx context.Context, groupID int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
@@ -206,7 +206,7 @@ func (client gitlabClient) AddProjectHook(ctx context.Context, projectID int, op
 	return client.Projects.AddProjectHook(projectID, opt, gitlab.WithContext(ctx))
 }
 func (client gitlabClient) DeleteProjectHook(ctx context.Context, projectID int, hookID int) (*gitlab.Response, error) {
-	return client.Projects.DeleteProjectHook(projectID, hookID, gitlab.WithContext(ctx))
+	return client.Projects.DeleteProjectHook(int64(projectID), int64(hookID), gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error) {
@@ -233,7 +233,7 @@ func (client gitlabClient) IsProjectMember(ctx context.Context, projectID int, u
 	members, err := FetchPaginatedData(func(page int) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
 		// get the groups for this user
 		return client.ListProjectMembers(ctx, projectID, &gitlab.ListProjectMembersOptions{
-			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
+			ListOptions: gitlab.ListOptions{Page: int64(page), PerPage: 100},
 		}, nil)
 	})
 
@@ -241,7 +241,7 @@ func (client gitlabClient) IsProjectMember(ctx context.Context, projectID int, u
 		return false, err
 	}
 	for _, member := range members {
-		if member.ID == userID {
+		if member.ID == int64(userID) {
 			return true, nil
 		}
 	}
@@ -269,11 +269,11 @@ func (client gitlabClient) CreateIssue(ctx context.Context, projectID int, issue
 }
 
 func (client gitlabClient) CreateIssueComment(ctx context.Context, projectID int, issueID int, comment *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error) {
-	return client.Notes.CreateIssueNote(projectID, issueID, comment, gitlab.WithContext(ctx))
+	return client.Notes.CreateIssueNote(int64(projectID), int64(issueID), comment, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) EditIssue(ctx context.Context, projectID int, issueID int, issueOptions *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
-	return client.Issues.UpdateIssue(projectID, issueID, issueOptions, gitlab.WithContext(ctx))
+	return client.Issues.UpdateIssue(int64(projectID), int64(issueID), issueOptions, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) ListLabels(ctx context.Context, projectID int, opt *gitlab.ListLabelsOptions) ([]*gitlab.Label, *gitlab.Response, error) {
@@ -286,7 +286,7 @@ func (client gitlabClient) UpdateLabel(ctx context.Context, projectID int, label
 
 func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, issueID int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error) {
 	// fetch the issue to check the existing labels
-	issue, _, err := client.Issues.GetIssue(projectID, issueID, gitlab.WithContext(ctx))
+	issue, _, err := client.Issues.GetIssue(int64(projectID), int64(issueID), gitlab.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -308,13 +308,13 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, is
 	// make sure each label exists
 	for _, label := range labels {
 		// make sure to create the label beforehand
-		_, _, err := client.Labels.CreateLabel(projectID, label)
+		_, _, err := client.Labels.CreateLabel(int64(projectID), label)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, _, err = client.Issues.UpdateIssue(projectID, issueID, &gitlab.UpdateIssueOptions{
+	_, _, err = client.Issues.UpdateIssue(int64(projectID), int64(issueID), &gitlab.UpdateIssueOptions{
 		Labels: gitlab.Ptr(gitlab.LabelOptions(issueLabels)),
 	})
 
