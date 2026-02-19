@@ -36,7 +36,7 @@ require (
 	github.com/lmittmann/tint v1.1.3
 	github.com/open-policy-agent/opa v1.13.2
 	github.com/openvex/go-vex v0.2.7
-	github.com/ory/client-go v1.22.23
+	github.com/ory/client-go v1.22.9
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pandatix/go-cvss v0.6.2
 	github.com/pkg/errors v0.9.1
