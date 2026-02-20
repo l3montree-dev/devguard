@@ -145,6 +145,11 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	q = g.db.Table("(?) AS combined", g.db.Raw("? UNION ALL ?", assetQuery, projectQuery))
 
+	//add sort by name as default if no other sorting is provided, to ensure consistent pagination
+	if len(sort) == 0 {
+		q = q.Order("name ASC")
+	}
+
 	// apply search
 	if search != "" {
 		q = q.Where("name ILIKE ?", "%"+search+"%")
