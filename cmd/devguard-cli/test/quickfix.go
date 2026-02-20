@@ -121,21 +121,21 @@ func parseVersion(version string) [3]int {
 	return result
 }
 
-func parsePurl(purl string) (string, string, error) {
-	// Format: pkg:npm/package-name@version or pkg:npm/@scoped/package@version
+func parsePurl(purl string) (pkgType string, name string, version string, err error) {
+	// Format: pkg:npm/package-name@version, pkg:cargo/crate@version, etc.
 	// Note: version can be empty string to indicate "all versions" (see RegistryRequest)
 	input, err := packageurl.FromString(purl)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid purl format: %w", err)
+		return "", "", "", fmt.Errorf("invalid purl format: %w", err)
 	}
 
 	pkgName := input.Name
 	if input.Namespace != "" {
 		pkgName = input.Namespace + "/" + input.Name
 	}
-	version := strings.TrimSpace(input.Version)
+	pkgVersion := strings.TrimSpace(input.Version)
 
-	return pkgName, version, nil
+	return input.Type, pkgName, pkgVersion, nil
 }
 
 func getAllDependencyMaps(depMeta *NPMResponse) []map[string]string {
@@ -364,12 +364,13 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 	}
 
 	packages := make([]struct {
+		pkgType string
 		name    string
 		version string
 	}, len(purls))
 
 	for i, purl := range purls {
-		name, version, err := parsePurl(purl)
+		pkgType, name, version, err := parsePurl(purl)
 		if err != nil {
 			return "", err
 		}
@@ -377,6 +378,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		if version == "" {
 			return "", fmt.Errorf("dependency chain purl must include version: %s", purl)
 		}
+		packages[i].pkgType = pkgType
 		packages[i].name = name
 		packages[i].version = version
 	}
@@ -479,19 +481,13 @@ func fetchPackageMetadata(dep string, version string) (*NPMResponse, error) {
 
 func main() {
 	purls := []string{
-		"pkg:npm/@ory/integrations@1.3.1",
-		/*
-			nextjs@9.39.0 ---> Ist abhängig von react@6.28.0
-
-			packages[i+1].version = 6.28.0
-			1. Erneut getRecommendedVersions für react@6.28.0??? Aber ist doch fixed von nextjs
-			Wenn ^react@6.28.0 in nextjs@9.39.0
-		*/
-		"pkg:npm/next@15.4.7",
+		"pkg:npm/nextra-theme-docs@3.3.1",
+		"pkg:npm/nextra@3.3.1",
+		"pkg:npm/next@15.5.12",
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "15.4.8"
+	fixedVersion := "15.6.0"
 
 	fixingVersion, err := checkVulnerabilityFixChain(purls, fixedVersion)
 	if err != nil {

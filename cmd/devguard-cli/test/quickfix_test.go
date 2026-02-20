@@ -76,13 +76,15 @@ func TestParsePurl(t *testing.T) {
 	tests := []struct {
 		name         string
 		purl         string
+		expectedType string
 		expectedName string
 		expectedVer  string
 		expectError  bool
 	}{
 		{
-			name:         "simple package",
+			name:         "simple npm package",
 			purl:         "pkg:npm/express@4.18.2",
+			expectedType: "npm",
 			expectedName: "express",
 			expectedVer:  "4.18.2",
 			expectError:  false,
@@ -90,13 +92,23 @@ func TestParsePurl(t *testing.T) {
 		{
 			name:         "scoped package",
 			purl:         "pkg:npm/@sentry/nextjs@9.38.0",
+			expectedType: "npm",
 			expectedName: "@sentry/nextjs",
 			expectedVer:  "9.38.0",
 			expectError:  false,
 		},
 		{
+			name:         "cargo package",
+			purl:         "pkg:cargo/serde@1.0.0",
+			expectedType: "cargo",
+			expectedName: "serde",
+			expectedVer:  "1.0.0",
+			expectError:  false,
+		},
+		{
 			name:         "package without version",
 			purl:         "pkg:npm/react",
+			expectedType: "npm",
 			expectedName: "react",
 			expectedVer:  "",
 			expectError:  false,
@@ -110,7 +122,7 @@ func TestParsePurl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			name, version, err := parsePurl(tt.purl)
+			pkgType, name, version, err := parsePurl(tt.purl)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("parsePurl(%q) expected error but got none", tt.purl)
@@ -118,6 +130,9 @@ func TestParsePurl(t *testing.T) {
 			} else {
 				if err != nil {
 					t.Errorf("parsePurl(%q) unexpected error: %v", tt.purl, err)
+				}
+				if pkgType != tt.expectedType {
+					t.Errorf("parsePurl(%q) type = %q, want %q", tt.purl, pkgType, tt.expectedType)
 				}
 				if name != tt.expectedName {
 					t.Errorf("parsePurl(%q) name = %q, want %q", tt.purl, name, tt.expectedName)
