@@ -407,7 +407,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		// Update hash migration version
 		config := models.Config{
 			Key: HashMigrationVersionKey,
-			Val: strconv.Itoa(CurrentHashVersion),
+			Val: strconv.Itoa(2),
 		}
 		if err := tx.Save(&config).Error; err != nil {
 			slog.Error("failed to update hash migration version", "err", err)
@@ -423,6 +423,34 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		return err
 	}
 
+	// Clean up orphaned rows before recreating foreign key constraints.
+	// The vulnDB import runs with DisableForeignKeyFix=true so orphaned references
+	// may have accumulated and would cause constraint creation to fail.
+	err = db.Exec(`
+			DELETE FROM public.dependency_vulns
+			WHERE NOT EXISTS (
+				SELECT 1 FROM public.cves WHERE cves.cve = dependency_vulns.cve_id
+			);
+
+			DELETE FROM public.cve_affected_component
+			WHERE NOT EXISTS (
+				SELECT 1 FROM public.cves WHERE cves.cve = cve_affected_component.cvecve
+			);
+
+			DELETE FROM public.cve_affected_component
+			WHERE NOT EXISTS (
+				SELECT 1 FROM public.affected_components WHERE affected_components.id = cve_affected_component.affected_component_id
+			);
+
+			DELETE FROM public.cve_relationships
+			WHERE NOT EXISTS (
+				SELECT 1 FROM public.cves WHERE cves.cve = cve_relationships.source_cve
+			);
+		`).Error
+	if err != nil {
+		return fmt.Errorf("failed to clean up orphaned rows before recreating FK constraints: %w", err)
+	}
+
 	// Recreate the foreign key constraints as cleanup
 	err = db.Exec(`
 			ALTER TABLE public.dependency_vulns
@@ -436,12 +464,12 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			ON DELETE CASCADE ON UPDATE CASCADE;
 
 			ALTER TABLE ONLY public.cve_affected_component
-			ADD CONSTRAINT fk_cve_affected_component_affected_component 
-			FOREIGN KEY (affected_component_id) REFERENCES public.affected_components(id) 
+			ADD CONSTRAINT fk_cve_affected_component_affected_component
+			FOREIGN KEY (affected_component_id) REFERENCES public.affected_components(id)
 			ON UPDATE CASCADE ON DELETE CASCADE;
 
-			ALTER TABLE ONLY public.cve_relationships 
-    		ADD CONSTRAINT fk_cve_relationships_cve 
+			ALTER TABLE ONLY public.cve_relationships
+    		ADD CONSTRAINT fk_cve_relationships_cve
 			FOREIGN KEY (source_cve) REFERENCES public.cves(cve)
 			ON UPDATE CASCADE ON DELETE CASCADE;
 		`).Error
