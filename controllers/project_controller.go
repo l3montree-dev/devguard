@@ -336,6 +336,16 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 	}), nil
 }
 
+// @Summary List sub-projects and assets
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search query for filtering sub-projects and assets"
+// @Success 200 {array} dtos.ProjectAssetDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
+
 func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
 	results, err := ProjectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)

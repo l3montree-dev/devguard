@@ -124,14 +124,24 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	var q *gorm.DB
 
 	assetQuery := g.db.Model(&models.Asset{}).
-		Select("'asset' AS type, id, name, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
-		Where("project_id = ?", parentID).
-		Where("id IN ? OR is_public = true", allowedAssetIDs)
+		Select("'asset' AS type, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
+		Where("project_id = ?", parentID)
+
+	if len(allowedAssetIDs) > 0 {
+		assetQuery = assetQuery.Where("id IN ? OR is_public = true", allowedAssetIDs)
+	} else {
+		assetQuery = assetQuery.Where("is_public = true")
+	}
 
 	projectQuery := g.db.Model(&models.Project{}).
-		Select("'project' AS type, id, name, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
-		Where("parent_id = ?", parentID).
-		Where("id IN ? OR (organization_id = ? AND is_public = true)", allowedProjectIDs, orgID)
+		Select("'project' AS type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
+		Where("parent_id = ?", parentID)
+
+	if len(allowedProjectIDs) > 0 {
+		projectQuery = projectQuery.Where("id IN ? OR (organization_id = ? AND is_public = true)", allowedProjectIDs, orgID)
+	} else {
+		projectQuery = projectQuery.Where("organization_id = ? AND is_public = true", orgID)
+	}
 
 	q = g.db.Table("(?) AS combined", g.db.Raw("? UNION ALL ?", assetQuery, projectQuery))
 
@@ -158,9 +168,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	// Pagination
 	err := q.
-		Limit(pageInfo.PageSize).
-		Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().
-		Scan(&results).Error
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&results).Error
 
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
@@ -187,7 +195,7 @@ func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUI
 
 	// apply search
 	if search != "" {
-		q = q.Where("name LIKE ?", "%"+search+"%")
+		q = q.Where("name ILIKE ?", "%"+search+"%")
 	}
 
 	// apply filters
