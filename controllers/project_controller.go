@@ -338,26 +338,12 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 
 func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
-	projects, err := ProjectController.projectService.ListAllowedProjectsPaged(c)
+	results, err := ProjectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
 	if err != nil {
 		return err
 	}
 
-	assets, err := ProjectController.projectService.ListAllowedAssetsPaged(c)
-	if err != nil {
-		return err
-	}
-
-	results := make([]any, 0, projects.Total+assets.Total)
-	for _, project := range projects.Data {
-		results = append(results, project)
-	}
-
-	for _, asset := range assets.Data {
-		results = append(results, asset)
-	}
-
-	return c.JSON(200, shared.NewPaged(shared.GetPageInfo(c), int64(len(results)), results))
+	return c.JSON(200, results)
 }
 
 // @Summary List projects

@@ -16,5 +16,5 @@
 ALTER TABLE public.assets
 DROP COLUMN IF EXISTS state;
 
-ALTEr TABLE public.projects
+ALTER TABLE public.projects
 DROP COLUMN IF EXISTS state;

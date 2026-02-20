@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
@@ -106,6 +107,66 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 
 func (g *projectRepository) Update(tx *gorm.DB, project *models.Project) error {
 	return g.db.Save(project).Error
+}
+
+func (g *projectRepository) ListSubProjectsAndAssets(
+	allowedAssetIDs []string,
+	allowedProjectIDs []uuid.UUID,
+	parentID *uuid.UUID,
+	orgID uuid.UUID,
+	pageInfo shared.PageInfo,
+	search string,
+	filter []shared.FilterQuery,
+	sort []shared.SortQuery,
+) (shared.Paged[dtos.ProjectAssetDTO], error) {
+
+	var results []dtos.ProjectAssetDTO
+	var q *gorm.DB
+
+	assetQuery := g.db.Model(&models.Asset{}).
+		Select("'asset' AS type, id, name, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
+		Where("project_id = ?", parentID).
+		Where("id IN ? OR is_public = true", allowedAssetIDs)
+
+	projectQuery := g.db.Model(&models.Project{}).
+		Select("'project' AS type, id, name, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
+		Where("parent_id = ?", parentID).
+		Where("id IN ? OR (organization_id = ? AND is_public = true)", allowedProjectIDs, orgID)
+
+	q = g.db.Table("(?) AS combined", g.db.Raw("? UNION ALL ?", assetQuery, projectQuery))
+
+	// apply search
+	if search != "" {
+		q = q.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// Sorting
+	for _, s := range sort {
+		q = q.Order(s.SQL())
+	}
+
+	// Count
+	var count int64
+	if err := q.Count(&count).Error; err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	// Pagination
+	err := q.
+		Limit(pageInfo.PageSize).
+		Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().
+		Scan(&results).Error
+
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, count, results), nil
 }
 
 func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Project], error) {

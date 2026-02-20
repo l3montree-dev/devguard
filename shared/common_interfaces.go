@@ -95,6 +95,7 @@ type ProjectRepository interface {
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(tx DB, projectID uuid.UUID) error
 	UpsertSplit(tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
+	ListSubProjectsAndAssets(allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 }
 
 type Verifier interface {
@@ -111,7 +112,6 @@ type PolicyRepository interface {
 type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
-	GetAllowedAssetsByProjectIDPaged(allowedAssetIDs []string, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Asset], error)
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
@@ -338,7 +338,7 @@ type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
-	ListAllowedAssetsPaged(c Context) (Paged[models.Asset], error)
+	ListAllowedSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectAssetDTO], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)

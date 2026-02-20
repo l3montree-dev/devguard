@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -332,6 +333,66 @@ func (_c *ProjectService_ListAllowedProjectsPaged_Call) Return(paged shared.Page
 }
 
 func (_c *ProjectService_ListAllowedProjectsPaged_Call) RunAndReturn(run func(c shared.Context) (shared.Paged[models.Project], error)) *ProjectService_ListAllowedProjectsPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListAllowedSubProjectsAndAssetsPaged provides a mock function for the type ProjectService
+func (_mock *ProjectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAllowedSubProjectsAndAssetsPaged")
+	}
+
+	var r0 shared.Paged[dtos.ProjectAssetDTO]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error)); ok {
+		return returnFunc(c)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) shared.Paged[dtos.ProjectAssetDTO]); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[dtos.ProjectAssetDTO])
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
+		r1 = returnFunc(c)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAllowedSubProjectsAndAssetsPaged'
+type ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call struct {
+	*mock.Call
+}
+
+// ListAllowedSubProjectsAndAssetsPaged is a helper method to define mock.On call
+//   - c shared.Context
+func (_e *ProjectService_Expecter) ListAllowedSubProjectsAndAssetsPaged(c interface{}) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	return &ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("ListAllowedSubProjectsAndAssetsPaged", c)}
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) Run(run func(c shared.Context)) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.ProjectAssetDTO], err error) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error)) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -16,8 +16,6 @@
 package transformer
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -75,7 +73,7 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		KeepOriginalSbomRootComponent: asset.KeepOriginalSbomRootComponent,
 		PipelineLastRun:               asset.PipelineLastRun,
 		PipelineError:                 asset.PipelineError,
-		State:                         fmt.Sprintf("%v", asset.State),
+		State:                         string(asset.State),
 	}
 }
 
