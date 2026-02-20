@@ -175,6 +175,11 @@ func TestMatchesVersionSpec(t *testing.T) {
 		{"caret: same major, >= base", "^", "1.2.3", [3]int{1, 2, 3}, "1.0.0", [3]int{1, 0, 0}, true},
 		{"caret: same major, < base", "^", "1.0.0", [3]int{1, 0, 0}, "1.2.3", [3]int{1, 2, 3}, false},
 		{"caret: different major", "^", "2.0.0", [3]int{2, 0, 0}, "1.0.0", [3]int{1, 0, 0}, false},
+		// Caret with 0-major versions (semver-correct behavior)
+		{"caret: 0.Y.Z allows same minor", "^", "0.2.5", [3]int{0, 2, 5}, "0.2.3", [3]int{0, 2, 3}, true},
+		{"caret: 0.Y.Z rejects different minor", "^", "0.3.0", [3]int{0, 3, 0}, "0.2.3", [3]int{0, 2, 3}, false},
+		{"caret: 0.0.Z allows only same patch", "^", "0.0.3", [3]int{0, 0, 3}, "0.0.3", [3]int{0, 0, 3}, true},
+		{"caret: 0.0.Z rejects different patch", "^", "0.0.4", [3]int{0, 0, 4}, "0.0.3", [3]int{0, 0, 3}, false},
 
 		// Tilde tests (~)
 		{"tilde: same major.minor, >= patch", "~", "1.2.5", [3]int{1, 2, 5}, "1.2.3", [3]int{1, 2, 3}, true},

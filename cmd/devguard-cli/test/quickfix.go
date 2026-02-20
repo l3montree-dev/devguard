@@ -1,5 +1,5 @@
-// Copyright 2026 lars hermges @ l3montree GmbH
-
+// Copyright (C) 2026 l3montree GmbH
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
@@ -133,8 +133,7 @@ func parsePurl(purl string) (string, string, error) {
 	if input.Namespace != "" {
 		pkgName = input.Namespace + "/" + input.Name
 	}
-
-	version := input.Version
+	version := strings.TrimSpace(input.Version)
 
 	return pkgName, version, nil
 }
@@ -171,8 +170,14 @@ func splitOrExpression(versionSpec string) []string {
 func matchesVersionSpec(rangeType string, version string, versionParts [3]int, baseVersion string, baseParts [3]int) bool {
 	switch rangeType {
 	case "^":
-		// Caret: same major version, >= base
-		return versionParts[0] == baseParts[0] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+		// ^0.2.3 resolves to <0.3.0 not <0.99.0
+		if baseParts[0] > 0 {
+			return versionParts[0] == baseParts[0] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+		} else if baseParts[1] > 0 {
+			return versionParts[0] == 0 && versionParts[1] == baseParts[1] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+		} else {
+			return versionParts[0] == 0 && versionParts[1] == 0 && versionParts[2] == baseParts[2] && semver.Compare("v"+version, "v"+baseVersion) >= 0
+		}
 
 	case "~":
 		// Tilde: same major.minor, >= patch
