@@ -73,6 +73,7 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		KeepOriginalSbomRootComponent: asset.KeepOriginalSbomRootComponent,
 		PipelineLastRun:               asset.PipelineLastRun,
 		PipelineError:                 asset.PipelineError,
+		State:                         string(asset.State),
 	}
 }
 
