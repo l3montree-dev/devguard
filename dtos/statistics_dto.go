@@ -22,16 +22,44 @@ type OrgStructureDistribution struct {
 	AmountOfArtifacts int `json:"numArtifacts" gorm:"column:num_artifacts"`
 }
 
-type Distribution struct {
+type ProjectRiskDistribution struct {
+	ProjectName string `json:"projectName" gorm:"column:name"`
+	Total       int    `json:"total" gorm:"column:total"`
+
+	RiskDistribution
+}
+
+type AssetRiskDistribution struct {
+	AssetName string `json:"assetName" gorm:"column:name"`
+	Total     int    `json:"total" gorm:"column:total"`
+
+	RiskDistribution
+}
+
+type ArtifactRiskDistribution struct {
+	ArtifactName string `json:"artifactName" gorm:"column:artifactName"`
+	Total        int    `json:"total" gorm:"column:total"`
+
+	RiskDistribution
+}
+
+type RiskDistribution struct {
 	LowRisk      int `json:"lowRisk" gorm:"column:risk_low"`
 	MediumRisk   int `json:"mediumRisk" gorm:"column:risk_medium"`
 	HighRisk     int `json:"highRisk" gorm:"column:risk_high"`
 	CriticalRisk int `json:"criticalRisk" gorm:"column:risk_critical"`
+}
 
-	LowCVSS      int `json:"lowCvss" gorm:"column:cvss_low"`
-	MediumCVSS   int `json:"mediumCvss" gorm:"column:cvss_medium"`
-	HighCVSS     int `json:"highCvss" gorm:"column:cvss_high"`
-	CriticalCVSS int `json:"criticalCvss" gorm:"column:cvss_critical"`
+type CVSSDistribution struct {
+	LowCVSS      int `json:"lowCVSS" gorm:"column:cvss_low"`
+	MediumCVSS   int `json:"mediumCVSS" gorm:"column:cvss_medium"`
+	HighCVSS     int `json:"highCVSS" gorm:"column:cvss_high"`
+	CriticalCVSS int `json:"criticalCVSS" gorm:"column:cvss_critical"`
+}
+
+type Distribution struct {
+	RiskDistribution `json:"riskDistribution"`
+	CVSSDistribution `json:"cvssDistribution"`
 }
 
 type History struct {
@@ -57,4 +85,12 @@ type RiskHistoryDTO struct {
 	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
+}
+
+type OrgOverview struct {
+	VulnDistribution Distribution               `json:"vulnDistribution"`
+	OrgStructure     OrgStructureDistribution   `json:"structure"`
+	TopProjects      []ProjectRiskDistribution  `json:"topProjects"`
+	TopAssets        []AssetRiskDistribution    `json:"topAssets"`
+	TopArtifacts     []ArtifactRiskDistribution `json:"topArtifacts"`
 }

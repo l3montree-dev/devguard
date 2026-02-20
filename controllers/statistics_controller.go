@@ -236,18 +236,37 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 
 func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
+
 	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get vuln statistics")
+		return echo.NewHTTPError(500, "could not get vuln distribution in org")
 	}
-	return ctx.JSON(200, distribution)
-}
-
-func (c *StatisticsController) GetOrgStructure(ctx shared.Context) error {
-	org := shared.GetOrg(ctx)
 	structure, err := c.statisticsRepository.GetOrgStructureDistribution(org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get org structure")
 	}
-	return ctx.JSON(200, structure)
+
+	// get most vulnerable components of org
+	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(org.ID, 5)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get most vulnerable projects in org")
+	}
+	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(org.ID, 5)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get most vulnerable assets in org")
+	}
+	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(org.ID, 5)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org")
+	}
+
+	orgStatistics := dtos.OrgOverview{
+		VulnDistribution: distribution,
+		OrgStructure:     structure,
+		TopProjects:      projects,
+		TopAssets:        assets,
+		TopArtifacts:     artifacts,
+	}
+
+	return ctx.JSON(200, orgStatistics)
 }

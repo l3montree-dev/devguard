@@ -480,3 +480,56 @@ func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dto
 			WHERE p.organization_id = ?;`, orgID).Find(&structure).Error
 	return structure, err
 }
+
+func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.ProjectRiskDistribution, error) {
+	projects := []dtos.ProjectRiskDistribution{}
+	err := r.db.Raw(`SELECT c.name,
+			 COUNT(*) as total,
+			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical
+			 FROM dependency_vulns a
+			 LEFT JOIN assets b ON a.asset_id = b.id 
+			 LEFT JOIN projects c ON b.project_id = c.id
+			 LEFT JOIN cves d ON a.cve_id = d.cve 
+			 WHERE c.organization_id = ? GROUP BY c.id 
+			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&projects).Error
+	return projects, err
+}
+
+func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.AssetRiskDistribution, error) {
+	assets := []dtos.AssetRiskDistribution{}
+	err := r.db.Raw(`SELECT b.name,
+			 COUNT(*) as total,
+			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical
+			 FROM dependency_vulns a
+			 LEFT JOIN assets b ON a.asset_id = b.id 
+			 LEFT JOIN projects c ON b.project_id = c.id
+			 LEFT JOIN cves d ON a.cve_id = d.cve 
+			 WHERE c.organization_id = ? GROUP BY b.id 
+			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&assets).Error
+	return assets, err
+}
+
+func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.ArtifactRiskDistribution, error) {
+	artifacts := []dtos.ArtifactRiskDistribution{}
+	err := r.db.Raw(`SELECT e.artifact_name as name,
+			 COUNT(*) as total,
+			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+       		 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+       		 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical
+			 FROM dependency_vulns a
+			 LEFT JOIN assets b ON a.asset_id = b.id 
+			 LEFT JOIN projects c ON b.project_id = c.id
+			 LEFT JOIN cves d ON a.cve_id = d.cve
+			 LEFT JOIN artifacts e ON e.asset_id = b.id
+			 WHERE c.organization_id = ?
+			 GROUP BY e.artifact_name,e.asset_version_name 
+			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&artifacts).Error
+	return artifacts, err
+}
