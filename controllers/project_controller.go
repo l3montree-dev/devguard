@@ -97,16 +97,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	}
 
 	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
-		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-		var name string
-		if nameMap != nil {
-			if nameMap["first"] != nil {
-				name += nameMap["first"].(string)
-			}
-			if nameMap["last"] != nil {
-				name += " " + nameMap["last"].(string)
-			}
-		}
+		name := shared.IdentityName(i.Traits)
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
 			return dtos.UserDTO{

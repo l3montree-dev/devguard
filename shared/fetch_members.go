@@ -24,6 +24,48 @@ import (
 	"github.com/ory/client-go"
 )
 
+// IdentityName safely extracts a display name from Kratos identity traits.
+// The "name" field may be a plain string (v1 schema) or a map with "first"
+// and "last" entries (pre-v1 schema). Any unexpected layout returns "".
+func IdentityName(traits any) string {
+	traitsMap, ok := traits.(map[string]any)
+	if !ok {
+		return ""
+	}
+	nameVal, exists := traitsMap["name"]
+	if !exists || nameVal == nil {
+		return ""
+	}
+	switch name := nameVal.(type) {
+	case string:
+		return name
+	case map[string]any:
+		var result string
+		if first, ok := name["first"].(string); ok {
+			result = first
+		}
+		if last, ok := name["last"].(string); ok && last != "" {
+			if result != "" {
+				result += " "
+			}
+			result += last
+		}
+		return result
+	}
+	return ""
+}
+
+// IdentityEmail safely extracts the email address from Kratos identity traits.
+// Returns "" if the traits do not contain a valid string "email" entry.
+func IdentityEmail(traits any) string {
+	traitsMap, ok := traits.(map[string]any)
+	if !ok {
+		return ""
+	}
+	email, _ := traitsMap["email"].(string)
+	return email
+}
+
 // FetchMembersOfOrganization retrieves all members of an organization including their roles
 // from both the RBAC system and third-party integrations
 func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
@@ -70,34 +112,11 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 		}, make(map[string]Role))
 
 		for _, member := range m {
-			// might either be an object with first or last (pre v1.) or a simple string (v1.)
-			switch name := member.Traits.(map[string]any)["name"].(type) {
-			case string:
-				users = append(users, dtos.UserDTO{
-					ID:   member.Id,
-					Name: name,
-					Role: string(roleMap[member.Id]),
-				})
-				continue
-
-			case map[string]any:
-
-				nameStr := ""
-				if name != nil {
-					if name["first"] != nil {
-						nameStr += name["first"].(string)
-					}
-					if name["last"] != nil {
-						nameStr += " " + name["last"].(string)
-					}
-				}
-
-				users = append(users, dtos.UserDTO{
-					ID:   member.Id,
-					Name: nameStr,
-					Role: string(roleMap[member.Id]),
-				})
-			}
+			users = append(users, dtos.UserDTO{
+				ID:   member.Id,
+				Name: IdentityName(member.Traits),
+				Role: string(roleMap[member.Id]),
+			})
 		}
 	}
 
