@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -173,6 +174,32 @@ func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []stri
 	return projectIDsSlice, parentID, nil
 }
 
+func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+
+	rbac := shared.GetRBAC(c)
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+	}
+	allowedProjectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
+	}
+
+	projectsIdsStr := allowedProjectIDs
+	projectsIdsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	return assetsAndProjects, nil
+}
+
 func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Paged[models.Project], error) {
 
 	pageInfo := shared.GetPageInfo(c)
@@ -192,8 +219,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 		return shared.Paged[models.Project]{}, err
 	}
 
-	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search)
-
+	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
