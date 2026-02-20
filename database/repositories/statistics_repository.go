@@ -49,18 +49,23 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 		return nil, err
 	}
 
-	// now remove all events of the dependencyVulns, which were created after the given time
-	for _, dependencyVuln := range dependencyVulns {
-		// get the last event of the dependencyVuln based on the created_at timestamp.
-		tmpDependencyVuln := dependencyVuln
+	return replayHistoricalEvents(dependencyVulns), nil
+}
 
-		events := dependencyVuln.Events
-		// iterate through all events and apply them
-		for _, event := range events {
-			statemachine.Apply(&tmpDependencyVuln, event)
+// replayHistoricalEvents reconstructs the historical state of each
+// DependencyVuln by replaying its (already time-filtered) Events in order.
+// The State field is reset to the zero value before replay so that
+// EventTypeDetected can correctly set state to "open" even when the current
+// persisted state is "fixed" (the statemachine guard that protects fixed /
+// accepted vulns from being re-opened by detected events must not apply here).
+func replayHistoricalEvents(dependencyVulns []models.DependencyVuln) []models.DependencyVuln {
+	for i := range dependencyVulns {
+		dependencyVulns[i].State = "" // start from neutral state for correct replay
+		for _, event := range dependencyVulns[i].Events {
+			statemachine.Apply(&dependencyVulns[i], event)
 		}
 	}
-	return dependencyVulns, nil
+	return dependencyVulns
 }
 
 var fixedEvents = []dtos.VulnEventType{
