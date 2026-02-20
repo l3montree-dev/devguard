@@ -654,6 +654,17 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 				continue
 			}
 
+			// Remove just-deleted versions from the in-memory slice.
+			// DeleteOldAssetVersionsOfAsset deletes branch versions with
+			// last_accessed_at older than 7 days. Without this filter, downstream
+			// stages (e.g. CollectStats) iterate over stale artifacts that no
+			// longer exist in the DB, causing fk_artifact FK violations when
+			// inserting artifact_risk_history rows.
+			cutoff := time.Now().AddDate(0, 0, -7)
+			assetWithDetails.assetVersions = utils.Filter(assetWithDetails.assetVersions, func(av models.AssetVersion) bool {
+				return av.DefaultBranch || av.Type != models.AssetVersionBranch || !av.LastAccessedAt.Before(cutoff)
+			})
+
 			out <- assetWithDetails
 		}
 	}()
