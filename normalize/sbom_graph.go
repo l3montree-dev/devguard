@@ -683,7 +683,7 @@ func (g *SBOMGraph) NodesOfType(nodeType GraphNodeType) iter.Seq[*GraphNode] {
 				}
 			}
 
-			for childID := range g.edges[id] {
+			for _, childID := range slices.Sorted(maps.Keys(g.edges[id])) {
 				if !visit(childID) {
 					return false
 				}

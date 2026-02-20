@@ -70,22 +70,34 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 		}, make(map[string]Role))
 
 		for _, member := range m {
-			nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
-			var name string
-			if nameMap != nil {
-				if nameMap["first"] != nil {
-					name += nameMap["first"].(string)
-				}
-				if nameMap["last"] != nil {
-					name += " " + nameMap["last"].(string)
-				}
-			}
+			// might either be an object with first or last (pre v1.) or a simple string (v1.)
+			switch name := member.Traits.(map[string]any)["name"].(type) {
+			case string:
+				users = append(users, dtos.UserDTO{
+					ID:   member.Id,
+					Name: name,
+					Role: string(roleMap[member.Id]),
+				})
+				continue
 
-			users = append(users, dtos.UserDTO{
-				ID:   member.Id,
-				Name: name,
-				Role: string(roleMap[member.Id]),
-			})
+			case map[string]any:
+
+				nameStr := ""
+				if name != nil {
+					if name["first"] != nil {
+						nameStr += name["first"].(string)
+					}
+					if name["last"] != nil {
+						nameStr += " " + name["last"].(string)
+					}
+				}
+
+				users = append(users, dtos.UserDTO{
+					ID:   member.Id,
+					Name: nameStr,
+					Role: string(roleMap[member.Id]),
+				})
+			}
 		}
 	}
 

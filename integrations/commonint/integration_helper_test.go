@@ -121,9 +121,9 @@ func TestGetLabels(t *testing.T) {
 			"devguard",
 			"state:open",
 			"risk:low",
-			"source-code",
 			"container",
 			"container:test",
+			"source-code",
 			"source-code:test",
 		}
 
@@ -302,5 +302,80 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
 		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
+	})
+}
+
+// TestTicketContentBitwiseReproducibility proves that GitLab ticket content
+// (labels and Mermaid path diagrams) is identical byte-for-byte across runs,
+// regardless of the order in which artifacts or components are provided.
+func TestTicketContentBitwiseReproducibility(t *testing.T) {
+	t.Run("GetLabels produces identical output regardless of artifact slice order", func(t *testing.T) {
+		artifacts := []models.Artifact{
+			{ArtifactName: "source-code"},
+			{ArtifactName: "container"},
+			{ArtifactName: "binary"},
+		}
+
+		// Three permutations of the same artifact set
+		orders := [][]models.Artifact{
+			{artifacts[0], artifacts[1], artifacts[2]},
+			{artifacts[2], artifacts[0], artifacts[1]},
+			{artifacts[1], artifacts[2], artifacts[0]},
+		}
+
+		var reference []string
+		for i, order := range orders {
+			vuln := &models.DependencyVuln{
+				Vulnerability:     models.Vulnerability{State: dtos.VulnStateOpen},
+				Artifacts:         order,
+				RawRiskAssessment: utils.Ptr(0.5),
+			}
+			labels := GetLabels(vuln)
+			if i == 0 {
+				reference = labels
+			} else {
+				assert.Equal(t, reference, labels, "labels differ for artifact permutation %d", i)
+			}
+		}
+	})
+
+	t.Run("RenderPathToComponent produces identical Mermaid output across repeated calls", func(t *testing.T) {
+		// Graph: sbom → route-b and route-a (intentionally "wrong" alphabetical order in slice)
+		// both routes lead to the target, producing two component-only paths.
+		// Previously, map iteration randomness caused the two path edges to appear
+		// in non-deterministic order in the Mermaid output.
+		components := []models.ComponentDependency{
+			{ComponentID: nil, DependencyID: "artifact:art", Dependency: models.Component{ID: "artifact:art"}},
+			{ComponentID: utils.Ptr("artifact:art"), DependencyID: "sbom:s@art", Dependency: models.Component{ID: "sbom:s@art"}},
+			{ComponentID: utils.Ptr("sbom:s@art"), DependencyID: "pkg:npm/route-b@1.0", Dependency: models.Component{ID: "pkg:npm/route-b@1.0"}},
+			{ComponentID: utils.Ptr("sbom:s@art"), DependencyID: "pkg:npm/route-a@1.0", Dependency: models.Component{ID: "pkg:npm/route-a@1.0"}},
+			{ComponentID: utils.Ptr("pkg:npm/route-a@1.0"), DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
+			{ComponentID: utils.Ptr("pkg:npm/route-b@1.0"), DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
+		}
+
+		assetID := uuid.New()
+		pURL := "pkg:npm/target@1.0"
+
+		// Run 50 times — enough to surface any map-iteration randomness.
+		const runs = 50
+		results := make([]string, runs)
+		for i := range runs {
+			repo := mocks.NewComponentRepository(t)
+			repo.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
+			result, err := RenderPathToComponent(repo, assetID, "v1.0.0", pURL)
+			assert.NoError(t, err)
+			results[i] = result
+		}
+
+		for i := 1; i < runs; i++ {
+			assert.Equal(t, results[0], results[i], "Mermaid output differed on run %d", i)
+		}
+
+		// Also verify route-a edges appear before route-b edges (alphabetical DFS order).
+		assert.Less(t,
+			strings.Index(results[0], "route-a"),
+			strings.Index(results[0], "route-b"),
+			"route-a should appear before route-b in sorted DFS output",
+		)
 	})
 }
