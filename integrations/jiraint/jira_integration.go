@@ -336,7 +336,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	assetSlug := asset.Slug
 
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, assetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -675,7 +675,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}

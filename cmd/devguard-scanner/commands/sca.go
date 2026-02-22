@@ -372,7 +372,7 @@ DevGuard and return vulnerability results.`,
   devguard-scanner sca ./path/to/project
 
   # Scan with custom asset name
-  devguard-scanner sca --image ghcr.io/org/image:tag --assetName my-app
+  devguard-scanner sca --image ghcr.io/org/image:tag --assetName my-app --token YOUR_TOKEN
 
   # Scan and fail on high risk vulnerabilities
   devguard-scanner sca ./project --failOnRisk high`,

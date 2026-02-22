@@ -49,18 +49,23 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 		return nil, err
 	}
 
-	// now remove all events of the dependencyVulns, which were created after the given time
-	for _, dependencyVuln := range dependencyVulns {
-		// get the last event of the dependencyVuln based on the created_at timestamp.
-		tmpDependencyVuln := dependencyVuln
+	return replayHistoricalEvents(dependencyVulns), nil
+}
 
-		events := dependencyVuln.Events
-		// iterate through all events and apply them
-		for _, event := range events {
-			statemachine.Apply(&tmpDependencyVuln, event)
+// replayHistoricalEvents reconstructs the historical state of each
+// DependencyVuln by replaying its (already time-filtered) Events in order.
+// The State field is reset to the zero value before replay so that
+// EventTypeDetected can correctly set state to "open" even when the current
+// persisted state is "fixed" (the statemachine guard that protects fixed /
+// accepted vulns from being re-opened by detected events must not apply here).
+func replayHistoricalEvents(dependencyVulns []models.DependencyVuln) []models.DependencyVuln {
+	for i := range dependencyVulns {
+		dependencyVulns[i].State = "" // start from neutral state for correct replay
+		for _, event := range dependencyVulns[i].Events {
+			statemachine.Apply(&dependencyVulns[i], event)
 		}
 	}
-	return dependencyVulns, nil
+	return dependencyVulns
 }
 
 var fixedEvents = []dtos.VulnEventType{
@@ -98,7 +103,7 @@ WITH events AS (
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -137,7 +142,7 @@ WITH events AS (
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -207,7 +212,7 @@ events AS (
 	FROM dependency_vulns dv
 	JOIN vuln_events fe ON dv.id = fe.vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND dv.raw_risk_assessment >= ? AND dv.raw_risk_assessment <= ?
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND dv.raw_risk_assessment >= ? AND dv.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -274,7 +279,7 @@ WITH events AS (
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss <= ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -314,7 +319,7 @@ WITH events AS (
 	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss <= ?
+        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -385,7 +390,7 @@ events AS (
 	JOIN vuln_events fe ON dv.id = fe.vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
 	JOIN cves c ON dv.cve_id = c.cve
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND c.cvss >= ? AND c.cvss <= ?
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT

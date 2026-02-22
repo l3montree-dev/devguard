@@ -97,16 +97,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	}
 
 	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
-		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-		var name string
-		if nameMap != nil {
-			if nameMap["first"] != nil {
-				name += nameMap["first"].(string)
-			}
-			if nameMap["last"] != nil {
-				name += " " + nameMap["last"].(string)
-			}
-		}
+		name := shared.IdentityName(i.Traits)
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
 			return dtos.UserDTO{
@@ -334,6 +325,26 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 			VulnEnabled: w.VulnEnabled,
 		}
 	}), nil
+}
+
+// @Summary List sub-projects and assets
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search query for filtering sub-projects and assets"
+// @Success 200 {array} dtos.ProjectAssetDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
+
+func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
+
+	results, err := ProjectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, results)
 }
 
 // @Summary List projects

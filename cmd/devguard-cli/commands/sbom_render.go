@@ -358,12 +358,12 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 			nodeAttrs = fmt.Sprintf("label=\"%s\", fillcolor=\"%s\", style=\"rounded,filled\"", label, color)
 		}
 
-		sb.WriteString(fmt.Sprintf("  \"%s\" [%s];\n", sanitizedID, nodeAttrs))
+		fmt.Fprintf(&sb, "  \"%s\" [%s];\n", sanitizedID, nodeAttrs)
 
 		// Add edges to children
 		for child := range graph.Children(node.BOMRef) {
 			childSanitizedID := sanitizeID(child.BOMRef)
-			sb.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\";\n", sanitizedID, childSanitizedID))
+			fmt.Fprintf(&sb, "  \"%s\" -> \"%s\";\n", sanitizedID, childSanitizedID)
 			traverse(child, depth+1)
 		}
 	}
@@ -390,8 +390,8 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 				}
 				label = escapeLabel(fmt.Sprintf("%s\\n%s", vulnID, desc))
 			}
-			sb.WriteString(fmt.Sprintf("  \"%s\" [label=\"%s\", fillcolor=red, style=\"rounded,filled\", fontcolor=white, shape=ellipse];\n",
-				sanitizedVulnID, label))
+			fmt.Fprintf(&sb, "  \"%s\" [label=\"%s\", fillcolor=red, style=\"rounded,filled\", fontcolor=white, shape=ellipse];\n",
+				sanitizedVulnID, label)
 		}
 	}
 

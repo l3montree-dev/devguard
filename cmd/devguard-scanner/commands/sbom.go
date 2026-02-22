@@ -34,21 +34,25 @@ import (
 )
 
 func sbomCmd(cmd *cobra.Command, args []string) error {
-	filePath := args[0]
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("file does not exist: %s", filePath)
-	}
-
-	// read the file
-	file, err := os.Open(filePath)
-	// check for errors
-	if err != nil {
-		slog.Error("could not read file", "err", err)
-		return err
+	var src io.Reader
+	if len(args) == 0 || args[0] == "-" {
+		src = os.Stdin
+	} else {
+		filePath := args[0]
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			return fmt.Errorf("file does not exist: %s", filePath)
+		}
+		file, err := os.Open(filePath)
+		if err != nil {
+			slog.Error("could not read file", "err", err)
+			return err
+		}
+		defer file.Close()
+		src = file
 	}
 
 	// upload the bom to the scan endpoint
-	resp, cancel, err := scanner.UploadBOM(file)
+	resp, cancel, err := scanner.UploadBOM(src)
 	defer cancel()
 
 	if err != nil {
@@ -84,21 +88,24 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 
 func NewSbomCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "sbom <sbom.json>",
+		Use:               "sbom [sbom.json|-]",
 		Short:             "Scan a CycloneDX SBOM for vulnerabilities",
 		DisableAutoGenTag: true,
 		Long: `Scan a CycloneDX Software Bill of Materials (SBOM) and upload it to DevGuard for vulnerability analysis.
 
-Only CycloneDX-formatted SBOMs are supported. The command signs the request using the configured token and returns scan results.`,
-		Example: `  # Scan a CycloneDX SBOM
+Only CycloneDX-formatted SBOMs are supported. Pass a file path, '-' to read from stdin, or omit the argument to read from stdin.`,
+		Example: `  # Scan a CycloneDX SBOM from a file
   devguard-scanner sbom my-bom.json
 
+  # Scan from stdin (pipe from merge-sboms)
+  devguard-scanner merge-sboms config.json | devguard-scanner sbom -
+
   # Scan with custom asset name
-  devguard-scanner sbom my-bom.json --assetName my-app
+  devguard-scanner sbom my-bom.json --assetName my-app --token YOUR_TOKEN
 
   # Fail on high risk vulnerabilities
   devguard-scanner sbom my-bom.json --failOnRisk high`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: sbomCmd,
 	}
 

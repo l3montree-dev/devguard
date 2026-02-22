@@ -328,7 +328,7 @@ type groupWithAccessLevel struct {
 	accessLevel  gitlab.AccessLevelValue
 }
 
-func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*gitlab.Group {
+func getAllParentGroups(idMap map[int64]*gitlab.Group, group *gitlab.Group) []*gitlab.Group {
 	var parentGroups []*gitlab.Group
 	for group.ParentID != 0 {
 		parentGroup, ok := idMap[group.ParentID]
@@ -372,7 +372,7 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models
 		listIssuesOptions := gitlab.ListProjectIssuesOptions{
 			ListOptions: gitlab.ListOptions{
 				PerPage: 100,
-				Page:    page,
+				Page:    int64(page),
 			},
 			State: utils.Ptr("opened"),
 			Labels: &gitlab.LabelOptions{
@@ -388,7 +388,7 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models
 	gitlabIIDs := make([]int, 0, len(issues))
 	// only count open tickets created by devguard
 	for _, issue := range issues {
-		gitlabIIDs = append(gitlabIIDs, issue.IID)
+		gitlabIIDs = append(gitlabIIDs, int(issue.IID))
 	}
 
 	// compare both states
@@ -431,7 +431,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		// get the groups for this user
 		// this WONT list public groups - user is really a member - or at least member of a subproject
 		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
-			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
+			ListOptions: gitlab.ListOptions{Page: int64(page), PerPage: 100},
 		})
 	})
 
@@ -443,7 +443,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 	errgroup := utils.ErrGroup[[]*groupWithAccessLevel](10)
 
 	// !!!we need to mark the user as member in ALL PARENT-GROUPS he has access to!!!
-	idMap := make(map[int]*gitlab.Group)
+	idMap := make(map[int64]*gitlab.Group)
 	for _, group := range groups {
 		idMap[group.ID] = group
 	}
@@ -452,7 +452,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		errgroup.Go(func() ([]*groupWithAccessLevel, error) {
 
 			var accessLevel gitlab.AccessLevelValue
-			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
+			member, _, err := gitlabClient.GetMemberInGroup(ctx, int(token.GitLabUserID), int((*group).ID))
 			if err != nil {
 				// the user is not really part of the group but part of a subproject
 				accessLevel = gitlab.GuestPermissions
@@ -463,7 +463,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 			// check if we can fetch the avatar
 			var avatarBase64 *string
 			if group.AvatarURL != "" {
-				avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+				avatar, err := gitlabClient.FetchGroupAvatarBase64(int(group.ID))
 				if err != nil {
 					slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
 				} else {
@@ -502,7 +502,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 	})
 
 	// there might be duplicates now in the cleanedGroupsFlat - unique them by group ID. If a group has an avatar, we use that one, otherwise we use the first one we find.
-	uniqueIDMap := make(map[int]*groupWithAccessLevel)
+	uniqueIDMap := make(map[int64]*groupWithAccessLevel)
 	for _, group := range cleanedGroupsFlat {
 		if existing, ok := uniqueIDMap[group.group.ID]; ok {
 			// if the existing group has an avatar, we keep it, otherwise we use the new one
@@ -551,7 +551,7 @@ func FetchPaginatedData[T any](
 		// work with the next page
 		for response.NextPage != 0 {
 			// Fetch the page
-			pageData, r, err := fetchPage(response.NextPage)
+			pageData, r, err := fetchPage(int(response.NextPage))
 
 			// update the response - otherwise this loop would run forever
 			response = r
@@ -568,12 +568,12 @@ func FetchPaginatedData[T any](
 
 	} else if response.TotalPages > 1 { // we already fetched one page.
 		// Start fetching remaining pages concurrently
-		for page := response.NextPage; page <= response.TotalPages; page++ {
+		for page := response.NextPage; page <= int64(response.TotalPages); page++ {
 			wg.Add(1)
-			go func(page int) {
+			go func(page int64) {
 				defer wg.Done()
 				// Fetch the page
-				pageData, _, err := fetchPage(page)
+				pageData, _, err := fetchPage(int(page))
 				if err != nil {
 					return
 				}
@@ -637,7 +637,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		return gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
 			WithShared:     gitlab.Ptr(false),
 			MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
-			ListOptions:    gitlab.ListOptions{Page: page, PerPage: 100},
+			ListOptions:    gitlab.ListOptions{Page: int64(page), PerPage: 100},
 		})
 	})
 	if err != nil {
@@ -652,7 +652,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		// check if we can fetch the avatar
 		var avatarBase64 *string
 		if project.AvatarURL != "" {
-			avatar, err := gitlabClient.FetchProjectAvatarBase64(project.ID)
+			avatar, err := gitlabClient.FetchProjectAvatarBase64(int(project.ID))
 			if err != nil {
 				slog.Error("failed to fetch avatar", "err", err, "projectID", project.ID)
 				// Continue without avatar instead of returning error
@@ -662,7 +662,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		}
 
 		// do another fetch to get the access level of the user in this project
-		accessLevel, _, err := gitlabClient.GetMemberInProject(ctx, token.GitLabUserID, project.ID)
+		accessLevel, _, err := gitlabClient.GetMemberInProject(ctx, int(token.GitLabUserID), int(project.ID))
 		if err != nil {
 			// has to be a member of the project - otherwise we would not see it in the list
 			result = append(result, projectToAsset(avatarBase64, project, providerID))
@@ -707,7 +707,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 	// check if the group has an avatar
 	var avatarBase64 *string
 	if group.AvatarURL != "" {
-		avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+		avatar, err := gitlabClient.FetchGroupAvatarBase64(int(group.ID))
 		if err != nil {
 			slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
 			return models.Project{}, err
@@ -826,7 +826,7 @@ func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client shared.Gitla
 		slog.Error("missing event data, could not resolve if user is authorized")
 		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
 	}
-	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID, nil)
+	return client.IsProjectMember(context.TODO(), int(event.ProjectID), int(event.User.ID), nil)
 }
 
 func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
@@ -1302,7 +1302,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1429,7 +1429,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	}
 
 	// create a comment with the justification
-	_, _, err = client.CreateIssueComment(ctx, projectID, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
+	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	if err != nil {
@@ -1447,7 +1447,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -1464,7 +1464,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	}
 
 	// create a comment with the justification
-	_, _, err = client.CreateIssueComment(ctx, projectID, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
+	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
@@ -1486,7 +1486,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 	}
 
 	// create a comment with the justification
-	_, _, err = client.CreateIssueComment(ctx, projectID, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
+	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	if err != nil {
@@ -1565,7 +1565,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	for _, labelToUpdate := range labelsToUpdate {
 		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
-			_, _, err := client.UpdateLabel(ctx, projectID, label.ID, &gitlab.UpdateLabelOptions{
+			_, _, err := client.UpdateLabel(ctx, projectID, int(label.ID), &gitlab.UpdateLabelOptions{
 				Color:       gitlab.Ptr(labelToUpdate.Color),
 				Description: gitlab.Ptr(labelToUpdate.Description),
 			})

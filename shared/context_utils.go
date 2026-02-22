@@ -15,12 +15,14 @@
 package shared
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -594,72 +596,97 @@ type BadgeValues struct {
 	Color string
 }
 
+type badgeRect struct {
+	X      int
+	Width  int
+	Height int
+	Color  string
+}
+
+type badgeText struct {
+	X       string
+	Content string
+}
+
+type badgeSVGData struct {
+	TotalWidth int
+	BoxHeight  int
+	LabelWidth int
+	Label      string
+	Rects      []badgeRect
+	Texts      []badgeText
+}
+
+var badgeSVGTmpl = template.Must(template.New("badge").Parse(
+	`<svg xmlns="http://www.w3.org/2000/svg" width="{{.TotalWidth}}" height="{{.BoxHeight}}" role="img" aria-label="{{.Label}}">` +
+		`<linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>` +
+		`<clipPath id="r"><rect width="{{.TotalWidth}}" height="{{.BoxHeight}}" rx="3" fill="#fff"/></clipPath>` +
+		`<g clip-path="url(#r)">` +
+		`<rect width="{{.LabelWidth}}" height="{{.BoxHeight}}" fill="#000"/>` +
+		`{{range .Rects}}<rect x="{{.X}}" width="{{.Width}}" height="{{.Height}}" fill="{{.Color}}"/>{{end}}` +
+		`<rect width="{{.TotalWidth}}" height="{{.BoxHeight}}" fill="url(#s)"/></g>` +
+		`<g fill="#fff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-rendering="geometricPrecision">` +
+		`<text x="4" y="14">{{.Label}}</text>` +
+		`{{range .Texts}}<text x="{{.X}}" y="14" text-anchor="middle">{{.Content}}</text>{{end}}` +
+		`</g></svg>`,
+))
+
 func GetBadgeSVG(label string, values []BadgeValues) string {
 	labelWidth := 40
 	boxHeight := 20
 
-	// Calculate boxWidth dynamically based on the max number of digits
 	maxDigits := 1
 	for _, val := range values {
-		digits := len(strconv.Itoa(val.Value))
-		if digits > maxDigits {
+		if digits := len(strconv.Itoa(val.Value)); digits > maxDigits {
 			maxDigits = digits
 		}
 	}
 
-	boxWidth := 25 // base width for 1 digit
+	boxWidth := 25
 	if maxDigits == 2 {
 		boxWidth = 35
 	} else if maxDigits >= 3 {
 		boxWidth = 45
 	}
-
 	if len(values) == 1 {
-		boxWidth = 60 // Adjusted width for single value
+		boxWidth = 60
 	}
 
 	totalWidth := labelWidth + len(values)*boxWidth
 
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf(
-		`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" role="img" aria-label="%s">`,
-		totalWidth, boxHeight, label,
-	))
-
-	sb.WriteString(fmt.Sprintf(`
-<linearGradient id="s" x2="0" y2="100%%">
-	<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-	<stop offset="1" stop-opacity=".1"/>
-</linearGradient>
-<clipPath id="r"><rect width="%d" height="%d" rx="3" fill="#fff"/></clipPath>
-<g clip-path="url(#r)">`, totalWidth, boxHeight))
-
-	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="#000"/>`, labelWidth, boxHeight))
-
+	rects := make([]badgeRect, len(values))
 	for i, val := range values {
-		x := labelWidth + i*boxWidth
-		sb.WriteString(fmt.Sprintf(`<rect x="%d" width="%d" height="%d" fill="%s"/>`, x, boxWidth, boxHeight, val.Color))
+		rects[i] = badgeRect{
+			X:      labelWidth + i*boxWidth,
+			Width:  boxWidth,
+			Height: boxHeight,
+			Color:  val.Color,
+		}
 	}
 
-	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="url(#s)"/>`, totalWidth, boxHeight))
-	sb.WriteString(`</g>`)
-
-	sb.WriteString(`<g fill="#fff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-rendering="geometricPrecision">`)
-	sb.WriteString(fmt.Sprintf(`<text x="4" y="14">%s</text>`, label))
-
+	texts := make([]badgeText, len(values))
 	for i, val := range values {
 		x := float64(labelWidth) + float64(i)*float64(boxWidth) + float64(boxWidth)/2.0
-		// if there is only one value, just show the key, it's unknown or all clear
 		content := val.Key
 		if len(values) > 1 {
-			// If there are multiple values, show the value next to the key
-			content = fmt.Sprintf(`%s:%d`, val.Key, val.Value)
+			content = fmt.Sprintf("%s:%d", val.Key, val.Value)
 		}
-		sb.WriteString(fmt.Sprintf(`<text x="%.1f" y="14" text-anchor="middle">%s</text>`, x, content))
+		texts[i] = badgeText{
+			X:       fmt.Sprintf("%.1f", x),
+			Content: content,
+		}
 	}
 
-	sb.WriteString(`</g></svg>`)
-
-	return sb.String()
+	var buf bytes.Buffer
+	if err := badgeSVGTmpl.Execute(&buf, badgeSVGData{
+		TotalWidth: totalWidth,
+		BoxHeight:  boxHeight,
+		LabelWidth: labelWidth,
+		Label:      label,
+		Rects:      rects,
+		Texts:      texts,
+	}); err != nil {
+		return ""
+	}
+	return buf.String()
 }

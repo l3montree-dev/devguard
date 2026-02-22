@@ -726,3 +726,31 @@ func (s *scanService) RunArtifactSecurityLifecycle(
 
 	return normalizedBom, vexReports, dependencyVulns, nil
 }
+
+func (s *scanService) ScanSBOMWithoutSaving(bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT", false)
+	if err != nil {
+		return dtos.ScanResponse{}, fmt.Errorf("invalid SBOM: %w", err)
+	}
+
+	vulns, err := s.sbomScanner.Scan(normalized)
+	if err != nil {
+		return dtos.ScanResponse{}, err
+	}
+
+	vulnDTOs := make([]dtos.DependencyVulnDTO, len(vulns))
+	for i, v := range vulns {
+		vulnDTOs[i] = dtos.DependencyVulnDTO{
+			CVEID:                 v.CVEID,
+			CVE:                   transformer.CVEToDTO(v.CVE),
+			ComponentPurl:         v.Purl.String(),
+			ComponentFixedVersion: v.FixedVersion,
+			State:                 dtos.VulnStateOpen,
+		}
+	}
+
+	return dtos.ScanResponse{
+		AmountOpened:    len(vulns),
+		DependencyVulns: vulnDTOs,
+	}, nil
+}

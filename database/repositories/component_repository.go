@@ -62,7 +62,7 @@ func (c *componentRepository) CreateComponents(tx *gorm.DB, components []models.
 //
 //	tree := normalize.BuildDependencyTree(root, models.ToNodes(deps), models.BuildDepMap(deps))
 //	subtreeIDs := tree.ExtractSubtree("artifact:" + artifactName)
-func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	db := c.GetDB(tx)
 
 	// Pre-count to allocate slice with correct capacity (reduces slice growing allocations)

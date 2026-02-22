@@ -24,6 +24,48 @@ import (
 	"github.com/ory/client-go"
 )
 
+// IdentityName safely extracts a display name from Kratos identity traits.
+// The "name" field may be a plain string (v1 schema) or a map with "first"
+// and "last" entries (pre-v1 schema). Any unexpected layout returns "".
+func IdentityName(traits any) string {
+	traitsMap, ok := traits.(map[string]any)
+	if !ok {
+		return ""
+	}
+	nameVal, exists := traitsMap["name"]
+	if !exists || nameVal == nil {
+		return ""
+	}
+	switch name := nameVal.(type) {
+	case string:
+		return name
+	case map[string]any:
+		var result string
+		if first, ok := name["first"].(string); ok {
+			result = first
+		}
+		if last, ok := name["last"].(string); ok && last != "" {
+			if result != "" {
+				result += " "
+			}
+			result += last
+		}
+		return result
+	}
+	return ""
+}
+
+// IdentityEmail safely extracts the email address from Kratos identity traits.
+// Returns "" if the traits do not contain a valid string "email" entry.
+func IdentityEmail(traits any) string {
+	traitsMap, ok := traits.(map[string]any)
+	if !ok {
+		return ""
+	}
+	email, _ := traitsMap["email"].(string)
+	return email
+}
+
 // FetchMembersOfOrganization retrieves all members of an organization including their roles
 // from both the RBAC system and third-party integrations
 func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
@@ -70,20 +112,9 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 		}, make(map[string]Role))
 
 		for _, member := range m {
-			nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
-			var name string
-			if nameMap != nil {
-				if nameMap["first"] != nil {
-					name += nameMap["first"].(string)
-				}
-				if nameMap["last"] != nil {
-					name += " " + nameMap["last"].(string)
-				}
-			}
-
 			users = append(users, dtos.UserDTO{
 				ID:   member.Id,
-				Name: name,
+				Name: IdentityName(member.Traits),
 				Role: string(roleMap[member.Id]),
 			})
 		}

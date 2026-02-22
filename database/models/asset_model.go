@@ -16,6 +16,14 @@ const (
 	AssetTypeInfrastructure AssetType = "infrastructure"
 )
 
+type AssetState string
+
+const (
+	AssetStateActive   AssetState = "active"
+	AssetStateArchived AssetState = "archived"
+	AssetStateDeleted  AssetState = "deleted"
+)
+
 type Asset struct {
 	Model
 	Name                         string                `json:"name" gorm:"type:text"`
@@ -52,6 +60,8 @@ type Asset struct {
 	PipelineError   *string   `json:"pipelineError" gorm:"type:text;"`
 
 	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent" gorm:"default:false;not null;"`
+
+	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
 }
 
 func (m Asset) TableName() string {

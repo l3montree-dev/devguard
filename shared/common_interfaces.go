@@ -91,12 +91,13 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
-	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.Project], error)
+	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(tx DB, projectID uuid.UUID) error
 	UpsertSplit(tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
+	ListSubProjectsAndAssets(allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 }
 
 type Verifier interface {
@@ -196,7 +197,7 @@ type MaliciousPackageChecker interface {
 
 type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.ComponentDependency, error)
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SearchComponentOccurrencesByProject(tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
 	SaveBatch(tx DB, components []models.Component) error
@@ -339,6 +340,7 @@ type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
+	ListAllowedSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectAssetDTO], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
@@ -422,6 +424,7 @@ type ScanService interface {
 	FetchSbomsFromUpstream(artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)
 	RunArtifactSecurityLifecycle(tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
+	ScanSBOMWithoutSaving(bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 }
 
 type ConfigRepository interface {

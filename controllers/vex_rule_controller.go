@@ -67,7 +67,7 @@ type UpdateVEXRuleRequest struct {
 // @Param page query int false "Page number (default: 1)"
 // @Param pageSize query int false "Page size (default: 10, max: 100)"
 // @Param search query string false "Search term for CVE ID or justification"
-// @Success 200 {object} shared.Paged[dtos.VEXRuleDTO]
+// @Success 200 {object} object{pageSize=int,page=int,total=int64,data=[]dtos.VEXRuleDTO}
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
