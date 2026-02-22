@@ -446,6 +446,27 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	return c.JSON(200, scanResults)
 }
 
+// @Summary Scan for dependency vulnerabilities without authentication (scan-only, results are not saved)
+// @Tags Scanning
+// @Param body body object true "CycloneDX SBOM"
+// @Success 200 {object} dtos.ScanResponse
+// @Router /scan-unauthenticated [post]
+func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error {
+	bom := new(cdx.BOM)
+	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
+	defer c.Request().Body.Close()
+	if err := decoder.Decode(bom); err != nil {
+		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
+	}
+
+	scanResults, err := s.ScanSBOMWithoutSaving(bom)
+	if err != nil {
+		return echo.NewHTTPError(400, err.Error()).WithInternal(err)
+	}
+
+	return c.JSON(200, scanResults)
+}
+
 // @Summary Scan SBOM file
 // @Tags Scanning
 // @Security CookieAuth

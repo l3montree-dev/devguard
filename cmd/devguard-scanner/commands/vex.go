@@ -74,5 +74,11 @@ configured token before upload.`,
 		},
 	}
 	scanner.AddDependencyVulnsScanFlags(vexCommand)
+	if err := vexCommand.MarkPersistentFlagRequired("assetName"); err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+	}
+	if err := vexCommand.MarkPersistentFlagRequired("token"); err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+	}
 	return vexCommand
 }
