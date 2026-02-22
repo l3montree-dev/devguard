@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -162,17 +163,10 @@ func (runner csafRunner) validationController(outputPath *string) error {
 	}
 
 	waitGroup.Wait()
+
 	slog.Info("finished checking all csaf reports", "time elapsed", time.Since(start))
-	incorrect := collector.CorrectValidations[0]
-	incorrect.IsSemanticError = true
-	incorrect.Description = "This is not an actual error"
-
-	incorrect2 := collector.CorrectValidations[1]
-	incorrect2.InternalError = fmt.Errorf("my custom error")
-	incorrect2.Description = "The revision entry numbers under document.tracking.revision_history.number are not properly iterating"
-
-	collector.IncorrectValidations = append(collector.IncorrectValidations, incorrect, incorrect2)
 	collector.outputResults(outputPath)
+
 	return nil
 }
 
@@ -405,7 +399,15 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 		}
 	}
 
-	// check if product IDs in remediations are properly defined in product tree
+	// build a map of each affected product to check remediation productIDs
+	knownAffected := make(map[string]struct{})
+	if vulnObject.ProductStatus.KnownAffected != nil {
+		for _, productID := range *vulnObject.ProductStatus.KnownAffected {
+			knownAffected[string(*productID)] = struct{}{}
+		}
+	}
+
+	// check if product IDs in remediations are properly defined in product tree and also present in the not affected category
 	for _, remediation := range vulnObject.Remediations {
 		if remediation.ProductIds == nil {
 			collector.addIncorrectValidation(valResult.buildSemanticError("no products found in remediation (vulnerabilities.remediations.product_ids)"))
@@ -415,6 +417,11 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 			_, ok := productIDs[string(*productID)]
 			if !ok {
 				collector.addIncorrectValidation(valResult.buildSemanticError(fmt.Sprintf("product ID %s in vulnerabilities.remediations.product_ids is not defined in product IDs (product_tree.full_product_names.product_id)", string(*productID))))
+				return
+			}
+			_, ok = knownAffected[string(*productID)]
+			if !ok {
+				collector.addIncorrectValidation(valResult.buildSemanticError(fmt.Sprintf("product ID %s in vulnerabilities.remediations.product_ids is not listed in vulnerabilities.product_status.known_affected", string(*productID))))
 				return
 			}
 		}
@@ -438,6 +445,42 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 		}
 		previousTimestamp = currentTimestamp
 	}
+
+	// test the flags of the vulnerabilities Object
+	if vulnObject.ProductStatus.KnownNotAffected != nil && len(*vulnObject.ProductStatus.KnownNotAffected) > 0 {
+		if vulnObject.Flags == nil || len(vulnObject.Flags) != len(*vulnObject.ProductStatus.KnownNotAffected) {
+			collector.addIncorrectValidation(valResult.buildSemanticError("lengths of flags at vulnerabilities.flags does not match length of false positive productIDs at vulnerabilities.product_status.known_not_affected"))
+			return
+		}
+		// build a map of each not affected product to check flag productIDs
+		knownNotAffected := make(map[string]struct{})
+		for _, productID := range *vulnObject.ProductStatus.KnownNotAffected {
+			knownNotAffected[string(*productID)] = struct{}{}
+		}
+		for _, flag := range vulnObject.Flags {
+			if flag.ProductIds == nil {
+				collector.addIncorrectValidation(valResult.buildSemanticError("missing productIDs in vulnerabilities.flags"))
+				return
+			}
+			for _, productID := range *flag.ProductIds {
+				_, ok := knownNotAffected[string(*productID)]
+				if !ok {
+					collector.addIncorrectValidation(valResult.buildSemanticError(fmt.Sprintf("ProductID %s in vulnerabilities.flags does not appear in vulnerabilities.product_status.known_not_affected", string(*productID))))
+					return
+				}
+			}
+			if flag.Label == nil {
+				collector.addIncorrectValidation(valResult.buildSemanticError("missing label in vulnerabilities.flags"))
+				return
+			}
+			labels := []string{string(csaf.CSAFFlagLabelComponentNotPresent), string(csaf.CSAFFlagLabelInlineMitigationsAlreadyExist), string(csaf.CSAFFlagLabelVulnerableCodeCannotBeControlledByAdversary), string(csaf.CSAFFlagLabelVulnerableCodeNotInExecutePath), string(csaf.CSAFFlagLabelVulnerableCodeNotPresent)}
+			if !slices.Contains(labels, string(*flag.Label)) {
+				collector.addIncorrectValidation(valResult.buildSemanticError(fmt.Sprintf("flag label %s is not a valid flag label", string(*flag.Label))))
+				return
+			}
+		}
+	}
+
 	collector.addCorrectValidation(valResult)
 }
 
