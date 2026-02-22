@@ -41,7 +41,7 @@ configured token before upload.`,
   devguard-scanner vex vex.json
 
   # Upload VEX with custom asset name
-  devguard-scanner vex vex.json --assetName my-app`,
+  devguard-scanner vex vex.json --assetName my-app --token YOUR_TOKEN`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// check the first argument and read the file

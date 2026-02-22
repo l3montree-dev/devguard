@@ -19,7 +19,7 @@ devguard-scanner vex <vex-file> [flags]
   devguard-scanner vex vex.json
 
   # Upload VEX with custom asset name
-  devguard-scanner vex vex.json --assetName my-app
+  devguard-scanner vex vex.json --assetName my-app --token YOUR_TOKEN
 ```
 
 ### Options

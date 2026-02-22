@@ -22,7 +22,7 @@ devguard-scanner sbom [sbom.json|-] [flags]
   devguard-scanner merge-sboms config.json | devguard-scanner sbom -
 
   # Scan with custom asset name
-  devguard-scanner sbom my-bom.json --assetName my-app
+  devguard-scanner sbom my-bom.json --assetName my-app --token YOUR_TOKEN
 
   # Fail on high risk vulnerabilities
   devguard-scanner sbom my-bom.json --failOnRisk high
