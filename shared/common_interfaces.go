@@ -72,7 +72,7 @@ type PersonalAccessTokenService interface {
 
 type CSAFService interface {
 	GetVexFromCsafProvider(purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
-	GenerateCSAFReport(org models.Org, asset models.Asset, cveID string) (csaf.Advisory, error)
+	GenerateCSAFReport(orgName string, assetID uuid.UUID, assetSlug string, cveID string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {

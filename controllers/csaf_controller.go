@@ -501,7 +501,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// generate the report first
-	report, err := controller.csafService.GenerateCSAFReport(org, asset, cveID)
+	report, err := controller.csafService.GenerateCSAFReport(org.Name, asset.ID, asset.Slug, cveID)
 	if err != nil {
 		return err
 	}

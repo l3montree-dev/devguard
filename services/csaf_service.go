@@ -793,16 +793,16 @@ func hasExactFit(vulnPurl packageurl.PackageURL, purls []packageurl.PackageURL) 
 }
 
 // generate a csaf report for a specific vulnerability in an asset
-func (service csafService) GenerateCSAFReport(org models.Org, asset models.Asset, cveID string) (gocsaf.Advisory, error) {
+func (service csafService) GenerateCSAFReport(orgName string, assetID uuid.UUID, assetSlug string, cveID string) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
 
 	// fetch all vulns associated with this cve from the database
-	vulns, err := service.dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
+	vulns, err := service.dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, assetID)
 	if err != nil {
 		return csafDoc, err
 	}
 	if len(vulns) == 0 {
-		return csafDoc, fmt.Errorf("no vulnerability found for asset %s with cve id %s", asset.Slug, cveID)
+		return csafDoc, fmt.Errorf("no vulnerability found for asset %s with cve id %s", assetSlug, cveID)
 	}
 
 	// now we can start building the document
@@ -811,10 +811,10 @@ func (service csafService) GenerateCSAFReport(org models.Org, asset models.Asset
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
 			Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
-			Name:      &org.Name,
+			Name:      &orgName,
 			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, asset.Slug)),
+		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, assetSlug)),
 		SourceLang: utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
@@ -832,7 +832,7 @@ func (service csafService) GenerateCSAFReport(org models.Org, asset models.Asset
 	}
 	csafDoc.Document.Tracking = &tracking
 
-	tree, err := generateProductTree(asset, service.assetVersionRepository, service.artifactRepository, vulns)
+	tree, err := generateProductTree(assetID, service.assetVersionRepository, service.artifactRepository, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -858,9 +858,9 @@ func (service csafService) GenerateCSAFReport(org models.Org, asset models.Asset
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(asset models.Asset, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
+func generateProductTree(assetID uuid.UUID, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
 	tree := gocsaf.ProductTree{}
-	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
+	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, assetID)
 	if err != nil {
 		return tree, err
 	}
@@ -869,7 +869,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 		return el.Name
 	})
 
-	artifacts, err := artifactRepository.GetByAssetVersions(asset.ID, assetVersionNames)
+	artifacts, err := artifactRepository.GetByAssetVersions(assetID, assetVersionNames)
 	if err != nil {
 		return tree, err
 	}
@@ -964,13 +964,15 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 		DiscoveryDate: initialRelease,
 	}
 
-	productStatus, distributions, remediations := calculateVulnStateInformation(allVulnsOfCVE)
+	productStatus, flagValues, distributions, remediations := calculateVulnStateInformation(allVulnsOfCVE)
 
 	// build and assign the notes for the vulnerability
 	notes, err := generateNotesForVulnerabilityObject(allVulnsOfCVE, distributions)
 	if err != nil {
 		return nil, err
 	}
+	flags := generateFlagsForVulnerabilityObject(flagValues)
+	vulnObject.Flags = flags
 	vulnObject.Notes = notes
 	vulnObject.Remediations = remediations
 	vulnObject.ProductStatus = productStatus
@@ -978,7 +980,13 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 	return append(vulnerabilities, &vulnObject), nil
 }
 
-func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocsaf.ProductStatus, []stateDistributionOfPathsInProduct, gocsaf.Remediations) {
+type falsePositiveFlag struct {
+	Justification *string
+	Date          *time.Time
+	ProductIDs    gocsaf.Products
+}
+
+func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocsaf.ProductStatus, []falsePositiveFlag, []stateDistributionOfPathsInProduct, gocsaf.Remediations) {
 	// build a map for each status type
 	affected := map[string]struct{}{}
 	notAffected := map[string]struct{}{}
@@ -997,6 +1005,7 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 	// build the remediations based off the productNames -> decide the state of the product by analyzing each state of the vulns present
 	remediations := []*gocsaf.Remediation{}
 	distributions := make([]stateDistributionOfPathsInProduct, 0, len(vulnsByProductName))
+	falsePositiveFlags := make([]falsePositiveFlag, 0, len(vulnsByProductName))
 	for productName, vulns := range vulnsByProductName {
 		distribution := stateDistributionOfPathsInProduct{
 			productID:          productName,
@@ -1025,12 +1034,13 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 		distributions = append(distributions, distribution)
 		// case: there is an accepted vuln amongst the vulns
 		if len(acceptedVulns) > 0 {
-			// determine the most recent event and therefor the most recent justification
-			justification := getMostRecentJustification(acceptedVulns)
+			// determine the most recent event and therefore the most recent justification
+			justification, _ := getMostRecentJustification(acceptedVulns)
 			details := "The risk of this vulnerability has been accepted."
 			if justification != nil {
 				details += fmt.Sprintf(" Justification: %s", *justification)
 			}
+
 			remediations = append(remediations, &gocsaf.Remediation{
 				Details:    &details,
 				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
@@ -1050,19 +1060,17 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 			}
 
 			// else determine the latest justification of the false positive events
-			justification := getMostRecentJustification(falsePositiveVulns)
-			details := "This vulnerability has been marked as false positive."
-			if justification != nil {
-				details += fmt.Sprintf(" Justification: %s", *justification)
-			}
-
-			remediations = append(remediations, &gocsaf.Remediation{
-				Details:    &details,
-				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryMitigation),
-				ProductIds: utils.Ptr(gocsaf.Products([]*gocsaf.ProductID{utils.Ptr(gocsaf.ProductID(productName))})),
-			})
+			justification, date := getMostRecentJustification(falsePositiveVulns)
 			notAffected[productName] = struct{}{}
+
+			// lastly append vuln information to the false positive flags to generate the responsible flag objects later
+			falsePositiveFlags = append(falsePositiveFlags, falsePositiveFlag{
+				Justification: justification,
+				Date:          date,
+				ProductIDs:    gocsaf.Products{(*gocsaf.ProductID)(&productName)},
+			})
 			continue
+
 		}
 		underInvestigation[productName] = struct{}{}
 	}
@@ -1082,10 +1090,10 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 			return utils.Ptr(gocsaf.ProductID(el))
 		})))),
 	}
-	return productStatus, distributions, remediations
+	return productStatus, falsePositiveFlags, distributions, remediations
 }
 
-func getMostRecentJustification(vulns []models.DependencyVuln) *string {
+func getMostRecentJustification(vulns []models.DependencyVuln) (*string, *time.Time) {
 	var latestEventWithJustification *models.VulnEvent
 	for _, vuln := range vulns {
 		lastEventForVuln := vuln.Events[len(vuln.Events)-1]
@@ -1104,9 +1112,9 @@ func getMostRecentJustification(vulns []models.DependencyVuln) *string {
 	}
 
 	if latestEventWithJustification == nil {
-		return nil
+		return nil, nil
 	}
-	return latestEventWithJustification.Justification
+	return latestEventWithJustification.Justification, &latestEventWithJustification.CreatedAt
 }
 
 func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
@@ -1118,6 +1126,25 @@ func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
 		return nil
 	}
 	return s
+}
+
+func generateFlagsForVulnerabilityObject(flags []falsePositiveFlag) gocsaf.Flags {
+	vulnFlags := make([]*gocsaf.Flag, 0, len(flags))
+	for _, flagValues := range flags {
+		flag := gocsaf.Flag{
+			ProductIds: &flagValues.ProductIDs,
+		}
+		if flagValues.Date != nil {
+			flag.Date = utils.Ptr(flagValues.Date.String())
+		}
+		summary := "This vulnerability has been marked as false positive."
+		if flagValues.Justification != nil {
+			summary += fmt.Sprintf(" Justification: %s", *flagValues.Justification)
+		}
+		flag.Label = utils.Ptr(gocsaf.FlagLabel(summary))
+		vulnFlags = append(vulnFlags, &flag)
+	}
+	return vulnFlags
 }
 
 // generate the textual summary for a vulnerability object
@@ -1157,7 +1184,6 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 		}
 		notes = append(notes, &vulnDetails)
 	}
-
 	return notes, nil
 }
 
