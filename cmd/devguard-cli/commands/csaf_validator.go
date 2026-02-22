@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/gocsaf/csaf/v3/csaf"
@@ -43,7 +45,7 @@ type csafPath struct {
 	CVEID     string
 }
 
-func (path csafPath) toString() string {
+func (path csafPath) ToString() string {
 	if path.Year != 0 {
 		return fmt.Sprintf("%s/%s/%d/%s", path.OrgName, path.AssetName, path.Year, path.CVEID)
 	}
@@ -51,10 +53,10 @@ func (path csafPath) toString() string {
 }
 
 type detailedError struct {
-	InternalError error
-	SemanticError bool
-	Description   string
-	Path          csafPath
+	InternalError   error
+	IsSemanticError bool
+	Description     string
+	Path            csafPath
 }
 
 type validationJob struct {
@@ -88,7 +90,10 @@ func NewCSAFValidateCommand() *cobra.Command {
 				fx.Invoke(func(
 					runner *csafRunner,
 				) error {
-					return runner.validationController()
+					if len(args) == 1 {
+						return runner.validationController(&args[0])
+					}
+					return runner.validationController(nil)
 				}),
 			)
 			if err := app.Start(context.Background()); err != nil {
@@ -102,19 +107,19 @@ func NewCSAFValidateCommand() *cobra.Command {
 
 type resultCollector struct {
 	validationMutex      *sync.Mutex
-	correctValidations   []detailedError
-	incorrectValidations []detailedError
+	CorrectValidations   []detailedError
+	IncorrectValidations []detailedError
 }
 
 func (collector *resultCollector) addCorrectValidation(validation detailedError) {
 	collector.validationMutex.Lock()
-	collector.correctValidations = append(collector.correctValidations, validation)
+	collector.CorrectValidations = append(collector.CorrectValidations, validation)
 	collector.validationMutex.Unlock()
 }
 
 func (collector *resultCollector) addIncorrectValidation(validation detailedError) {
 	collector.validationMutex.Lock()
-	collector.incorrectValidations = append(collector.incorrectValidations, validation)
+	collector.IncorrectValidations = append(collector.IncorrectValidations, validation)
 	collector.validationMutex.Unlock()
 }
 
@@ -125,7 +130,7 @@ var (
 	csafBuilderAmount        = 7
 )
 
-func (runner csafRunner) validationController() error {
+func (runner csafRunner) validationController(outputPath *string) error {
 	start := time.Now()
 
 	buildingJobs := make(chan buildingJob, csafBuildingBufferSize)
@@ -157,7 +162,17 @@ func (runner csafRunner) validationController() error {
 	}
 
 	waitGroup.Wait()
-	slog.Info("finished checking all csaf reports", "time elapsed", time.Since(start), "amount of correct validations", len(collector.correctValidations), "amount of incorrect validations", len(collector.incorrectValidations))
+	slog.Info("finished checking all csaf reports", "time elapsed", time.Since(start))
+	incorrect := collector.CorrectValidations[0]
+	incorrect.IsSemanticError = true
+	incorrect.Description = "This is not an actual error"
+
+	incorrect2 := collector.CorrectValidations[1]
+	incorrect2.InternalError = fmt.Errorf("my custom error")
+	incorrect2.Description = "The revision entry numbers under document.tracking.revision_history.number are not properly iterating"
+
+	collector.IncorrectValidations = append(collector.IncorrectValidations, incorrect, incorrect2)
+	collector.outputResults(outputPath)
 	return nil
 }
 
@@ -214,7 +229,7 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 		if r := recover(); r != nil {
 			collector.addIncorrectValidation(valResult.buildInternalError(
 				fmt.Errorf("panic: %v", r),
-				fmt.Sprintf("ran into panic in path: %s", valResult.Path.toString()),
+				fmt.Sprintf("ran into panic in path: %s", valResult.Path.ToString()),
 			))
 			slog.Error("recovered from panic whilst validating csaf report", "path", valResult.Path, "panic", r)
 		}
@@ -434,7 +449,7 @@ func safeDereferenceProducts(products *csaf.Products) csaf.Products {
 }
 
 func (detErr detailedError) buildSemanticError(description string) detailedError {
-	detErr.SemanticError = true
+	detErr.IsSemanticError = true
 	detErr.Description = description
 	return detErr
 }
@@ -443,4 +458,66 @@ func (detErr detailedError) buildInternalError(err error, description string) de
 	detErr.InternalError = err
 	detErr.Description = description
 	return detErr
+}
+
+func (collector resultCollector) outputResults(outputPath *string) {
+	type templateData struct {
+		resultCollector
+		Timestamp                      string
+		Total                          int
+		AmountCorrectClassifications   int
+		AmountIncorrectClassifications int
+	}
+
+	data := templateData{
+		resultCollector:                collector,
+		Timestamp:                      time.Now().Format(time.RFC3339),
+		Total:                          len(collector.CorrectValidations) + len(collector.IncorrectValidations),
+		AmountCorrectClassifications:   len(collector.CorrectValidations),
+		AmountIncorrectClassifications: len(collector.IncorrectValidations),
+	}
+
+	tmpl, err := template.New("output").Parse(`
+----------------------------CSAF VALIDATOR OUTPUT----------------------------
+
+Date: 				{{.Timestamp}}
+Total reports processed: 	{{.Total}}
+Successful validations: 	{{.AmountCorrectClassifications}}
+Unsuccessful validations: 	{{.AmountIncorrectClassifications}}
+{{if eq .AmountIncorrectClassifications 0}}
+All reports are valid.{{else}}
+-------------------------------Error Summaries--------------------------------
+{{range .IncorrectValidations}}
+
+Error-Type:			{{if .IsSemanticError}}Semantic Error{{else}}Internal Error{{end}}
+Path: 	 			{{.Path.ToString}}
+Summary:			{{.Description}}
+{{if .InternalError}}
+Internal-Error: 		{{.InternalError}}{{end}}
+
+##############################################################################{{end}}{{end}}
+--------------------------END-CSAF VALIDATOR OUTPUT--------------------------`)
+	if err != nil {
+		slog.Error("could not parse template", "err", err)
+		return
+	}
+	var summary strings.Builder
+	err = tmpl.Execute(&summary, data)
+	if err != nil {
+		slog.Error("could not format validation data", "err", err)
+	}
+	if outputPath == nil {
+		slog.Info(summary.String())
+	} else {
+		fd, err := os.Create(*outputPath)
+		if err != nil {
+			slog.Error("could not create file for output")
+			return
+		}
+		defer fd.Close()
+		_, err = fd.WriteString(summary.String())
+		if err != nil {
+			slog.Error("could not write output to file", "err", err)
+		}
+	}
 }
