@@ -72,8 +72,8 @@ type buildingJob struct {
 func NewCSAFValidateCommand() *cobra.Command {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
-		Short: "TODO",
-		Long:  "TODO",
+		Short: "Validate all CSAF report",
+		Long:  "Iterates over all CSAF reports in all orgs and validates each one syntactically and semantically, and reports any encountered errors with a detailed description",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 
@@ -138,7 +138,7 @@ func (runner csafRunner) validationController() error {
 	waitGroup := &sync.WaitGroup{}
 
 	waitGroup.Add(1)
-	go runner.IterateAssets(buildingJobs, waitGroup)
+	go runner.IterateAssets(buildingJobs, collector, waitGroup)
 
 	for range csafBuilderAmount {
 		buildingWaitGroup.Add(1)
@@ -174,22 +174,25 @@ func (runner csafRunner) buildCSAFReports(buildingJobs chan buildingJob, validat
 	}
 }
 
-func (runner csafRunner) IterateAssets(buildingJobs chan buildingJob, waitGroup *sync.WaitGroup) {
+func (runner csafRunner) IterateAssets(buildingJobs chan buildingJob, collector *resultCollector, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	defer close(buildingJobs)
 	orgs, err := runner.orgRepository.All()
 	if err != nil {
+		collector.addIncorrectValidation(detailedError{}.buildInternalError(err, "could not fetch organizations"))
 		return
 	}
 	for _, org := range orgs {
 		assets, err := runner.assetRepository.GetByOrgID(org.ID)
 		if err != nil {
-			return
+			collector.addIncorrectValidation(detailedError{Path: csafPath{OrgName: org.Name}}.buildInternalError(err, "could not fetch assets for organization"))
+			continue
 		}
 		for _, asset := range assets {
 			vulns, err := services.GetCSAFVulnsForAsset(asset.ID, runner.dependencyVulnRepository)
 			if err != nil {
-				return
+				collector.addIncorrectValidation(detailedError{Path: csafPath{OrgName: org.Name, AssetName: asset.Slug}}.buildInternalError(err, "could not fetch vulnerabilities for asset"))
+				continue
 			}
 			for _, vuln := range vulns {
 				buildingJobs <- buildingJob{orgName: org.Name, assetID: asset.ID, assetSlug: asset.Slug, cveID: vuln.CVEID}
@@ -389,6 +392,10 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 
 	// check if product IDs in remediations are properly defined in product tree
 	for _, remediation := range vulnObject.Remediations {
+		if remediation.ProductIds == nil {
+			collector.addIncorrectValidation(valResult.buildSemanticError("no products found in remediation (vulnerabilities.remediations.product_ids)"))
+			return
+		}
 		for _, productID := range *remediation.ProductIds {
 			_, ok := productIDs[string(*productID)]
 			if !ok {
@@ -414,6 +421,7 @@ func processJob(currentJob validationJob, collector *resultCollector) {
 			collector.addIncorrectValidation(valResult.buildSemanticError(fmt.Sprintf("%d. revision history entry timestamp (document.tracking.revision_history.date) is not after the previous timestamp", i+2)))
 			return
 		}
+		previousTimestamp = currentTimestamp
 	}
 	collector.addCorrectValidation(valResult)
 }

@@ -73,9 +73,9 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	vulnId := ctx.QueryParam("vulnId")
-	if vulnId != "" {
-		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(nil, asset.ID, assetVersion.Name, vulnId)
+	vulnID := ctx.QueryParam("vulnId")
+	if vulnID != "" {
+		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(nil, asset.ID, assetVersion.Name, vulnID)
 		if err != nil {
 			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 		}

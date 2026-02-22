@@ -6,6 +6,8 @@ package mocks
 
 import (
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/gocsaf/csaf/v3/csaf"
+	"github.com/google/uuid"
 	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -35,6 +37,84 @@ type CSAFService_Expecter struct {
 
 func (_m *CSAFService) EXPECT() *CSAFService_Expecter {
 	return &CSAFService_Expecter{mock: &_m.Mock}
+}
+
+// GenerateCSAFReport provides a mock function for the type CSAFService
+func (_mock *CSAFService) GenerateCSAFReport(orgName string, assetID uuid.UUID, assetSlug string, cveID string) (csaf.Advisory, error) {
+	ret := _mock.Called(orgName, assetID, assetSlug, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCSAFReport")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string, string) (csaf.Advisory, error)); ok {
+		return returnFunc(orgName, assetID, assetSlug, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string, string) csaf.Advisory); ok {
+		r0 = returnFunc(orgName, assetID, assetSlug, cveID)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(orgName, assetID, assetSlug, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GenerateCSAFReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCSAFReport'
+type CSAFService_GenerateCSAFReport_Call struct {
+	*mock.Call
+}
+
+// GenerateCSAFReport is a helper method to define mock.On call
+//   - orgName string
+//   - assetID uuid.UUID
+//   - assetSlug string
+//   - cveID string
+func (_e *CSAFService_Expecter) GenerateCSAFReport(orgName interface{}, assetID interface{}, assetSlug interface{}, cveID interface{}) *CSAFService_GenerateCSAFReport_Call {
+	return &CSAFService_GenerateCSAFReport_Call{Call: _e.mock.On("GenerateCSAFReport", orgName, assetID, assetSlug, cveID)}
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) Run(run func(orgName string, assetID uuid.UUID, assetSlug string, cveID string)) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) Return(advisory csaf.Advisory, err error) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Return(advisory, err)
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) RunAndReturn(run func(orgName string, assetID uuid.UUID, assetSlug string, cveID string) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetVexFromCsafProvider provides a mock function for the type CSAFService
