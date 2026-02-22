@@ -981,9 +981,9 @@ func generateVulnerabilityObjects(cveID string, allVulnsOfCVE []models.Dependenc
 }
 
 type falsePositiveFlag struct {
-	Justification *string
-	Date          *time.Time
-	ProductIDs    gocsaf.Products
+	MechanicalJustification *dtos.MechanicalJustificationType
+	Date                    *time.Time
+	ProductIDs              gocsaf.Products
 }
 
 func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocsaf.ProductStatus, []falsePositiveFlag, []stateDistributionOfPathsInProduct, gocsaf.Remediations) {
@@ -1035,7 +1035,7 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 		// case: there is an accepted vuln amongst the vulns
 		if len(acceptedVulns) > 0 {
 			// determine the most recent event and therefore the most recent justification
-			justification, _ := getMostRecentJustification(acceptedVulns)
+			justification, _, _ := getMostRecentJustifications(acceptedVulns)
 			details := "The risk of this vulnerability has been accepted."
 			if justification != nil {
 				details += fmt.Sprintf(" Justification: %s", *justification)
@@ -1060,14 +1060,14 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 			}
 
 			// else determine the latest justification of the false positive events
-			justification, date := getMostRecentJustification(falsePositiveVulns)
+			_, mechanicalJustification, date := getMostRecentJustifications(falsePositiveVulns)
 			notAffected[productName] = struct{}{}
 
 			// lastly append vuln information to the false positive flags to generate the responsible flag objects later
 			falsePositiveFlags = append(falsePositiveFlags, falsePositiveFlag{
-				Justification: justification,
-				Date:          date,
-				ProductIDs:    gocsaf.Products{(*gocsaf.ProductID)(&productName)},
+				MechanicalJustification: mechanicalJustification,
+				Date:                    date,
+				ProductIDs:              gocsaf.Products{(*gocsaf.ProductID)(&productName)},
 			})
 			continue
 
@@ -1093,28 +1093,36 @@ func calculateVulnStateInformation(allVulnsOfCVE []models.DependencyVuln) (*gocs
 	return productStatus, falsePositiveFlags, distributions, remediations
 }
 
-func getMostRecentJustification(vulns []models.DependencyVuln) (*string, *time.Time) {
+func getMostRecentJustifications(vulns []models.DependencyVuln) (*string, *dtos.MechanicalJustificationType, *time.Time) {
 	var latestEventWithJustification *models.VulnEvent
+	var latestEventWithMechanicalJustification *models.VulnEvent
 	for _, vuln := range vulns {
 		lastEventForVuln := vuln.Events[len(vuln.Events)-1]
 
 		// no justification for this event -> we can skip this one
-		if lastEventForVuln.Justification == nil {
-			continue
+		if lastEventForVuln.Justification != nil {
+			// determine the most recent justification
+			if latestEventWithJustification == nil {
+				latestEventWithJustification = &lastEventForVuln
+			} else if latestEventWithJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
+				latestEventWithJustification = &lastEventForVuln
+			}
 		}
 
-		// determine the most recent justification
-		if latestEventWithJustification == nil {
-			latestEventWithJustification = &lastEventForVuln
-		} else if latestEventWithJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
-			latestEventWithJustification = &lastEventForVuln
+		if lastEventForVuln.MechanicalJustification != "" {
+			if latestEventWithMechanicalJustification == nil {
+				latestEventWithMechanicalJustification = &lastEventForVuln
+			} else if latestEventWithMechanicalJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
+				latestEventWithMechanicalJustification = &lastEventForVuln
+			}
 		}
+
 	}
 
 	if latestEventWithJustification == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return latestEventWithJustification.Justification, &latestEventWithJustification.CreatedAt
+	return latestEventWithJustification.Justification, &latestEventWithJustification.MechanicalJustification, &latestEventWithJustification.CreatedAt
 }
 
 func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
@@ -1131,17 +1139,24 @@ func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
 func generateFlagsForVulnerabilityObject(flags []falsePositiveFlag) gocsaf.Flags {
 	vulnFlags := make([]*gocsaf.Flag, 0, len(flags))
 	for _, flagValues := range flags {
+		if flagValues.ProductIDs == nil {
+			continue
+		}
+		if flagValues.MechanicalJustification == nil {
+			continue
+		}
+
+		// mandatory fields
 		flag := gocsaf.Flag{
 			ProductIds: &flagValues.ProductIDs,
 		}
+		flag.Label = (*gocsaf.FlagLabel)(flagValues.MechanicalJustification)
+
+		// optional fields
 		if flagValues.Date != nil {
 			flag.Date = utils.Ptr(flagValues.Date.String())
 		}
-		summary := "This vulnerability has been marked as false positive."
-		if flagValues.Justification != nil {
-			summary += fmt.Sprintf(" Justification: %s", *flagValues.Justification)
-		}
-		flag.Label = utils.Ptr(gocsaf.FlagLabel(summary))
+
 		vulnFlags = append(vulnFlags, &flag)
 	}
 	return vulnFlags

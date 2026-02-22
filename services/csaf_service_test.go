@@ -237,7 +237,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, MechanicalJustification: dtos.ComponentNotPresent, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
@@ -286,9 +286,9 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		// since 1 component is marked as false positive we expect 1 flag with a justification (we expect 1 for artifact2 comp2 -> false positive)
 		assert.Len(t, flags, 1)
 		flag := flags[0]
-		assert.NotNil(t, flag.Justification, flag.Date)
+		assert.NotNil(t, flag.MechanicalJustification, flag.Date)
 		assert.True(t, flag.Date.Equal(eventTime))
-		assert.Equal(t, "This is a false positive", *flag.Justification)
+		assert.Equal(t, dtos.ComponentNotPresent, *flag.MechanicalJustification)
 		assert.Equal(t, string(artifact2ProductID2), string(*flag.ProductIDs[0]))
 
 		// now test for correct remediations (we expect 0 since we do not have any accepted vulns)
@@ -316,7 +316,7 @@ func TestGetMostRecentJustification(t *testing.T) {
 		panic(err)
 	}
 	t.Run("should return nil if no justification can be found", func(t *testing.T) {
-		justification, date := getMostRecentJustification(vulns)
+		justification, _, date := getMostRecentJustifications(vulns)
 		assert.Nil(t, justification)
 		assert.Nil(t, date)
 	})
@@ -327,7 +327,7 @@ func TestGetMostRecentJustification(t *testing.T) {
 		vulns[1].State = dtos.VulnStateFalsePositive
 		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
-		justification, date := getMostRecentJustification(vulns)
+		justification, _, date := getMostRecentJustifications(vulns)
 		assert.NotNil(t, justification, date)
 		assert.Equal(t, "this information is up to date", *justification)
 		assert.True(t, eventTimeLatest.Equal(*date))
