@@ -1154,7 +1154,7 @@ func generateFlagsForVulnerabilityObject(flags []falsePositiveFlag) gocsaf.Flags
 
 		// optional fields
 		if flagValues.Date != nil {
-			flag.Date = utils.Ptr(flagValues.Date.String())
+			flag.Date = utils.Ptr(flagValues.Date.Format(time.RFC3339))
 		}
 
 		vulnFlags = append(vulnFlags, &flag)
