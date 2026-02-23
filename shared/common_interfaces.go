@@ -530,11 +530,11 @@ type StatisticsRepository interface {
 	AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 
-	VulnClassificationByOrg(orgID uuid.UUID) (dtos.Distribution, error)
+	VulnClassificationByOrg(orgID uuid.UUID) (dtos.VulnDistribution, error)
 	GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error)
-	GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.ArtifactRiskDistribution, error)
-	GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.ProjectRiskDistribution, error)
-	GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.AssetRiskDistribution, error)
+	GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
 }
 
 type ArtifactRiskHistoryRepository interface {

@@ -24,18 +24,23 @@ func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHisto
 	return dtos.RiskHistoryDTO{
 		History: dtos.History{
 			Distribution: dtos.Distribution{
-				RiskDistribution: dtos.RiskDistribution{
-					LowRisk:      history.Low,
-					HighRisk:     history.High,
-					MediumRisk:   history.Medium,
-					CriticalRisk: history.Critical,
-				},
-				CVSSDistribution: dtos.CVSSDistribution{
-					LowCVSS:      history.LowCVSS,
-					MediumCVSS:   history.MediumCVSS,
-					HighCVSS:     history.HighCVSS,
-					CriticalCVSS: history.CriticalCVSS,
-				},
+				Low:          history.Low,
+				High:         history.High,
+				Medium:       history.Medium,
+				Critical:     history.Critical,
+				LowCVSS:      history.LowCVSS,
+				MediumCVSS:   history.MediumCVSS,
+				HighCVSS:     history.HighCVSS,
+				CriticalCVSS: history.CriticalCVSS,
+
+				CVEPurlLow:          history.CVEPurlLow,
+				CVEPurlMedium:       history.CVEPurlMedium,
+				CVEPurlHigh:         history.CVEPurlHigh,
+				CVEPurlCritical:     history.CVEPurlCritical,
+				CVEPurlLowCVSS:      history.CVEPurlLowCVSS,
+				CVEPurlMediumCVSS:   history.CVEPurlMediumCVSS,
+				CVEPurlHighCVSS:     history.CVEPurlHighCVSS,
+				CVEPurlCriticalCVSS: history.CVEPurlCriticalCVSS,
 			},
 			Day:                  history.Day,
 			SumOpenRisk:          history.SumOpenRisk,

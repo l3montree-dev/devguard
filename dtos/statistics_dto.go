@@ -22,25 +22,14 @@ type OrgStructureDistribution struct {
 	AmountOfArtifacts int `json:"numArtifacts" gorm:"column:num_artifacts"`
 }
 
-type ProjectRiskDistribution struct {
-	ProjectName string `json:"projectName" gorm:"column:name"`
-	Total       int    `json:"total" gorm:"column:total"`
+type VulnDistributionInStructure struct {
+	Name             string  `json:"name" gorm:"column:name"`
+	Slug             string  `json:"slug" gorm:"column:slug"`
+	ProjectSlug      *string `json:"projectSlug" gorm:"column:project_slug"`
+	AssetSlug        *string `json:"assetSlug" gorm:"column:asset_slug"`
+	AssetVersionName *string `json:"assetVersionName" gorm:"column:asset_version_name"`
 
-	RiskDistribution
-}
-
-type AssetRiskDistribution struct {
-	AssetName string `json:"assetName" gorm:"column:name"`
-	Total     int    `json:"total" gorm:"column:total"`
-
-	RiskDistribution
-}
-
-type ArtifactRiskDistribution struct {
-	ArtifactName string `json:"artifactName" gorm:"column:artifactName"`
-	Total        int    `json:"total" gorm:"column:total"`
-
-	RiskDistribution
+	VulnDistribution
 }
 
 type RiskDistribution struct {
@@ -57,9 +46,31 @@ type CVSSDistribution struct {
 	CriticalCVSS int `json:"criticalCVSS" gorm:"column:cvss_critical"`
 }
 
+type VulnDistribution struct {
+	RiskDistribution
+	CVSSDistribution
+}
+
 type Distribution struct {
-	RiskDistribution `json:"riskDistribution"`
-	CVSSDistribution `json:"cvssDistribution"`
+	Low      int `json:"low"`
+	High     int `json:"high"`
+	Medium   int `json:"medium"`
+	Critical int `json:"critical"`
+
+	LowCVSS      int `json:"lowCvss"`
+	MediumCVSS   int `json:"mediumCvss"`
+	HighCVSS     int `json:"highCvss"`
+	CriticalCVSS int `json:"criticalCvss"`
+
+	CVEPurlLow      int `json:"cvePurlLow"`
+	CVEPurlMedium   int `json:"cvePurlMedium"`
+	CVEPurlHigh     int `json:"cvePurlHigh"`
+	CVEPurlCritical int `json:"cvePurlCritical"`
+
+	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
+	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
+	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
+	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
 }
 
 type History struct {
@@ -88,9 +99,9 @@ type RiskHistoryDTO struct {
 }
 
 type OrgOverview struct {
-	VulnDistribution Distribution               `json:"vulnDistribution"`
-	OrgStructure     OrgStructureDistribution   `json:"structure"`
-	TopProjects      []ProjectRiskDistribution  `json:"topProjects"`
-	TopAssets        []AssetRiskDistribution    `json:"topAssets"`
-	TopArtifacts     []ArtifactRiskDistribution `json:"topArtifacts"`
+	VulnDistribution VulnDistribution              `json:"vulnDistribution"`
+	OrgStructure     OrgStructureDistribution      `json:"structure"`
+	TopProjects      []VulnDistributionInStructure `json:"topProjects"`
+	TopAssets        []VulnDistributionInStructure `json:"topAssets"`
+	TopArtifacts     []VulnDistributionInStructure `json:"topArtifacts"`
 }
