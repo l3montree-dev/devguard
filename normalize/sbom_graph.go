@@ -1801,7 +1801,7 @@ func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 }
 
 func looksLikePackagePURL(id string) bool {
-	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
+	return strings.HasPrefix(id, "pkg:") // && strings.Contains(id, "@")
 }
 
 // =============================================================================
