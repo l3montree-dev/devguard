@@ -98,10 +98,24 @@ type RiskHistoryDTO struct {
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
+type ComponentUsageAcrossOrg struct {
+	PackageURL       string `json:"purl" gorm:"column:purl"`
+	TotalAmountInOrg string `json:"totalAmount" gorm:"column:total_amount"`
+}
+
+type CVEOccurrencesAcrossOrg struct {
+	PackageURL       string `json:"cveID" gorm:"column:cve_id"`
+	TotalAmountInOrg string `json:"totalAmount" gorm:"column:total_amount"`
+}
+
 type OrgOverview struct {
-	VulnDistribution VulnDistribution              `json:"vulnDistribution"`
-	OrgStructure     OrgStructureDistribution      `json:"structure"`
-	TopProjects      []VulnDistributionInStructure `json:"topProjects"`
-	TopAssets        []VulnDistributionInStructure `json:"topAssets"`
-	TopArtifacts     []VulnDistributionInStructure `json:"topArtifacts"`
+	VulnDistribution VulnDistribution `json:"vulnDistribution"`
+
+	OrgStructure OrgStructureDistribution      `json:"structure"`
+	TopProjects  []VulnDistributionInStructure `json:"topProjects"`
+	TopAssets    []VulnDistributionInStructure `json:"topAssets"`
+	TopArtifacts []VulnDistributionInStructure `json:"topArtifacts"`
+
+	TopComponents []ComponentUsageAcrossOrg `json:"topComponents"`
+	TopCVEs       []CVEOccurrencesAcrossOrg `json:"topCVEs"`
 }

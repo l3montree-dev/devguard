@@ -535,6 +535,8 @@ type StatisticsRepository interface {
 	GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
 	GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
 	GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
+	GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
 }
 
 type ArtifactRiskHistoryRepository interface {

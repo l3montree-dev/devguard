@@ -545,3 +545,33 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, 
 			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&artifacts).Error
 	return artifacts, err
 }
+
+func (r *statisticsRepository) GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
+	components := []dtos.ComponentUsageAcrossOrg{}
+	err := r.db.Raw(`
+	SELECT a.dependency_id as purl, 
+	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
+	FROM component_dependencies a
+	LEFT JOIN assets b ON a.asset_id = b.id
+	LEFT JOIN projects c ON b.project_id = c.id
+	WHERE c.organization_id = ?
+	GROUP BY a.dependency_id
+	ORDER BY total_amount DESC
+	LIMIT ?;`, orgID, limit).Find(&components).Error
+	return components, err
+}
+
+func (r *statisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
+	topCVEs := []dtos.CVEOccurrencesAcrossOrg{}
+	err := r.db.Raw(`
+	SELECT a.cve_id, 
+	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
+	FROM dependency_vulns a
+	LEFT JOIN assets b ON a.asset_id = b.id
+	LEFT JOIN projects c ON b.project_id = c.id
+	WHERE c.organization_id = '7634964a-2993-4c08-9907-da4db1add135'
+	GROUP BY a.cve_id
+	ORDER BY total_amount DESC
+	LIMIT 10;`).Find(&topCVEs).Error
+	return topCVEs, err
+}

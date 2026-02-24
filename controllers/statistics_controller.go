@@ -260,12 +260,24 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org")
 	}
 
+	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(org.ID, 10)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get most used components across org")
+	}
+
+	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, 10)
+	if err != nil {
+		return err
+	}
+
 	orgStatistics := dtos.OrgOverview{
 		VulnDistribution: distribution,
 		OrgStructure:     structure,
 		TopProjects:      projects,
 		TopAssets:        assets,
 		TopArtifacts:     artifacts,
+		TopComponents:    topComponents,
+		TopCVES:          topCVEs,
 	}
 
 	return ctx.JSON(200, orgStatistics)
