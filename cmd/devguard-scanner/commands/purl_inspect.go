@@ -87,8 +87,8 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 
 	var result struct {
 		PURL               packageurl.PackageURL       `json:"purl"`
-		MatchContext       *normalize.PurlMatchContext `json:"match_context"`
-		AffectedComponents []models.AffectedComponent  `json:"affected_components"`
+		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
+		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
 		Vulns              []models.VulnInPackage      `json:"vulns"`
 	}
 

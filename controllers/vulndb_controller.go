@@ -113,7 +113,7 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 	purlString := shared.GetParam(ctx, "purl")
 
-	purlString, err := url.QueryUnescape(purlString)
+	purlString, err := url.PathUnescape(purlString)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid URL encoding in PURL").WithInternal(err)
 	}
