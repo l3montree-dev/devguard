@@ -277,7 +277,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		TopAssets:        assets,
 		TopArtifacts:     artifacts,
 		TopComponents:    topComponents,
-		TopCVES:          topCVEs,
+		TopCVEs:          topCVEs,
 	}
 
 	return ctx.JSON(200, orgStatistics)
