@@ -37,7 +37,10 @@ func mapPackageManagerToEcosystem(pkg string) string {
 
 	case "cargo":
 		return "crates"
+	case "deb", "debian":
+		return "deb"
 	}
+
 	return "unknown"
 }
 
