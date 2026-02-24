@@ -37,6 +37,7 @@ func mapPackageManagerToEcosystem(pkg string) string {
 
 	case "cargo":
 		return "crates"
+
 	case "deb", "debian":
 		return "deb"
 	}
@@ -51,6 +52,8 @@ func getVersion(packageManager string, pkg RegistryRequest) (*http.Response, err
 		return GetNPMRegistry(pkg)
 	case "crates":
 		return GetCratesRegistry(pkg)
+	case "deb":
+		return GetDebRegistry(pkg)
 	default:
 		return nil, fmt.Errorf("unsupported package manager: %s", packageManager)
 	}
@@ -388,10 +391,11 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 
 	for i := 0; i < len(packages)-1; i++ {
 		pkgName := packages[i].name
+		pkgType := packages[i].pkgType
 		currentVersion := packages[i].version
 
 		// fetch all version
-		allVersionsMeta, err := fetchPackageMetadata(pkgName, "")
+		allVersionsMeta, err := fetchPackageMetadata(pkgName, pkgType, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
@@ -420,7 +424,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
 
 		// Second: check latest version
-		latestMeta, err := fetchPackageMetadata(pkgName, latestVersion)
+		latestMeta, err := fetchPackageMetadata(pkgName, pkgType, latestVersion)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
 		}
@@ -434,7 +438,7 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 
 		fmt.Printf(" %s@%s requires %s: %s\n", pkgName, latestVersion, nextPkgName, nextVersionSpec)
 
-		nextAllVersionsMeta, err := fetchPackageMetadata(nextPkgName, "")
+		nextAllVersionsMeta, err := fetchPackageMetadata(nextPkgName, packages[i+1].pkgType, "")
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", nextPkgName, err)
 		}
@@ -467,8 +471,9 @@ func checkVulnerabilityFixChain(purls []string, fixedVersion string) (string, er
 	return "", nil
 }
 
-func fetchPackageMetadata(dep string, version string) (*NPMResponse, error) {
-	resp, err := getVersion("node", RegistryRequest{Dependency: dep, Version: version})
+func fetchPackageMetadata(dep string, pkgType string, version string) (*NPMResponse, error) {
+	ecosystem := mapPackageManagerToEcosystem(pkgType)
+	resp, err := getVersion(ecosystem, RegistryRequest{Dependency: dep, Version: version})
 	if err != nil {
 		return nil, fmt.Errorf("error fetching %s@%s: %w", dep, version, err)
 	}

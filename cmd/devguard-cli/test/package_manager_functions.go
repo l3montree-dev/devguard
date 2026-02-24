@@ -99,6 +99,7 @@ func GetCratesRegistry(pkg RegistryRequest) (*http.Response, error) {
 func GetDebRegistry(pkg RegistryRequest) (*http.Response, error) {
 	var req *http.Response
 	var err error
+	// pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8
 
 	if pkg.Version != "" {
 		req, err = httpClient.Get("https://sources.debian.org/data/main/" + DebianPrefix(pkg.Dependency) + "/" + pkg.Dependency + "/" + pkg.Version + "/debian/control")
