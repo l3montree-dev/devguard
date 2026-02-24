@@ -117,7 +117,7 @@ func TestHandleComponent(t *testing.T) {
 
 		service := NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
-		actual, err := service.GetLicense(c)
+		actual, err := service.FetchComponentProject(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, utils.Ptr("github/test/project"), actual.ComponentProjectKey)
