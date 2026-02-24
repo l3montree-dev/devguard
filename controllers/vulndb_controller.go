@@ -13,6 +13,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
@@ -23,13 +25,17 @@ type VulnDBController struct {
 	cveRepository               shared.CveRepository
 	maliciousPackageChecker     shared.MaliciousPackageChecker
 	affectedComponentRepository shared.AffectedComponentRepository
+	componentRepository         shared.ComponentRepository
+	componentService            shared.ComponentService
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService) *VulnDBController {
 	return &VulnDBController{
 		cveRepository:               cveRepository,
 		maliciousPackageChecker:     maliciousPackageChecker,
 		affectedComponentRepository: affectedComponentRepository,
+		componentRepository:         componentRepository,
+		componentService:            componentService,
 	}
 }
 
@@ -142,17 +148,36 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
 
+	var componentDTO *dtos.ComponentDTO
+	comp := models.Component{ID: purlString}
+	if err := c.componentRepository.GetDB(nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil {
+		// Component not in DB yet — fetch license and project info on-demand and create it
+		comp, _ = c.componentService.GetLicense(comp)
+		comp, _ = c.componentService.FetchComponentProject(comp)
+		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+	} else if comp.ComponentProject == nil {
+		// Component exists but has no project info yet — fetch it now
+		comp, _ = c.componentService.FetchComponentProject(comp)
+		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+	}
+	if comp.ComponentProject != nil || comp.License != nil {
+		dto := transformer.ComponentModelToDTO(comp)
+		componentDTO = &dto
+	}
+
 	return ctx.JSON(200, struct {
-		PURL               packageurl.PackageURL       `json:"purl"`
+		PURL               string                      `json:"purl"`
 		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
-		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
-		Vulns              []models.VulnInPackage      `json:"vulns"`
+		Component          *dtos.ComponentDTO          `json:"component"`
+		AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
+		Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
 		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 	}{
-		PURL:               purl,
+		PURL:               purl.ToString(),
 		MatchContext:       matchCtx,
-		AffectedComponents: affectedComponents,
-		Vulns:              vulns,
+		Component:          componentDTO,
+		AffectedComponents: utils.Map(affectedComponents, transformer.AffectedComponentToDTO),
+		Vulns:              utils.Map(vulns, transformer.VulnInPackageToDTO),
 		MaliciousPackage:   maliciousPackage,
 	})
 }

@@ -99,7 +99,7 @@ func (_c *Context_Attachment_Call) RunAndReturn(run func(file string, name strin
 }
 
 // Bind provides a mock function for the type Context
-func (_mock *Context) Bind(i interface{}) error {
+func (_mock *Context) Bind(i any) error {
 	ret := _mock.Called(i)
 
 	if len(ret) == 0 {
@@ -107,7 +107,7 @@ func (_mock *Context) Bind(i interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(any) error); ok {
 		r0 = returnFunc(i)
 	} else {
 		r0 = ret.Error(0)
@@ -121,16 +121,16 @@ type Context_Bind_Call struct {
 }
 
 // Bind is a helper method to define mock.On call
-//   - i interface{}
+//   - i any
 func (_e *Context_Expecter) Bind(i interface{}) *Context_Bind_Call {
 	return &Context_Bind_Call{Call: _e.mock.On("Bind", i)}
 }
 
-func (_c *Context_Bind_Call) Run(run func(i interface{})) *Context_Bind_Call {
+func (_c *Context_Bind_Call) Run(run func(i any)) *Context_Bind_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 interface{}
+		var arg0 any
 		if args[0] != nil {
-			arg0 = args[0].(interface{})
+			arg0 = args[0].(any)
 		}
 		run(
 			arg0,
@@ -144,7 +144,7 @@ func (_c *Context_Bind_Call) Return(err error) *Context_Bind_Call {
 	return _c
 }
 
-func (_c *Context_Bind_Call) RunAndReturn(run func(i interface{}) error) *Context_Bind_Call {
+func (_c *Context_Bind_Call) RunAndReturn(run func(i any) error) *Context_Bind_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -626,19 +626,19 @@ func (_c *Context_FormValue_Call) RunAndReturn(run func(name string) string) *Co
 }
 
 // Get provides a mock function for the type Context
-func (_mock *Context) Get(key string) interface{} {
+func (_mock *Context) Get(key string) any {
 	ret := _mock.Called(key)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 interface{}
-	if returnFunc, ok := ret.Get(0).(func(string) interface{}); ok {
+	var r0 any
+	if returnFunc, ok := ret.Get(0).(func(string) any); ok {
 		r0 = returnFunc(key)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(interface{})
+			r0 = ret.Get(0).(any)
 		}
 	}
 	return r0
@@ -668,12 +668,12 @@ func (_c *Context_Get_Call) Run(run func(key string)) *Context_Get_Call {
 	return _c
 }
 
-func (_c *Context_Get_Call) Return(ifaceVal interface{}) *Context_Get_Call {
-	_c.Call.Return(ifaceVal)
+func (_c *Context_Get_Call) Return(v any) *Context_Get_Call {
+	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *Context_Get_Call) RunAndReturn(run func(key string) interface{}) *Context_Get_Call {
+func (_c *Context_Get_Call) RunAndReturn(run func(key string) any) *Context_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -984,7 +984,7 @@ func (_c *Context_IsWebSocket_Call) RunAndReturn(run func() bool) *Context_IsWeb
 }
 
 // JSON provides a mock function for the type Context
-func (_mock *Context) JSON(code int, i interface{}) error {
+func (_mock *Context) JSON(code int, i any) error {
 	ret := _mock.Called(code, i)
 
 	if len(ret) == 0 {
@@ -992,7 +992,7 @@ func (_mock *Context) JSON(code int, i interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, any) error); ok {
 		r0 = returnFunc(code, i)
 	} else {
 		r0 = ret.Error(0)
@@ -1007,20 +1007,20 @@ type Context_JSON_Call struct {
 
 // JSON is a helper method to define mock.On call
 //   - code int
-//   - i interface{}
+//   - i any
 func (_e *Context_Expecter) JSON(code interface{}, i interface{}) *Context_JSON_Call {
 	return &Context_JSON_Call{Call: _e.mock.On("JSON", code, i)}
 }
 
-func (_c *Context_JSON_Call) Run(run func(code int, i interface{})) *Context_JSON_Call {
+func (_c *Context_JSON_Call) Run(run func(code int, i any)) *Context_JSON_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
 			arg0 = args[0].(int)
 		}
-		var arg1 interface{}
+		var arg1 any
 		if args[1] != nil {
-			arg1 = args[1].(interface{})
+			arg1 = args[1].(any)
 		}
 		run(
 			arg0,
@@ -1035,7 +1035,7 @@ func (_c *Context_JSON_Call) Return(err error) *Context_JSON_Call {
 	return _c
 }
 
-func (_c *Context_JSON_Call) RunAndReturn(run func(code int, i interface{}) error) *Context_JSON_Call {
+func (_c *Context_JSON_Call) RunAndReturn(run func(code int, i any) error) *Context_JSON_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1098,7 +1098,7 @@ func (_c *Context_JSONBlob_Call) RunAndReturn(run func(code int, b []byte) error
 }
 
 // JSONP provides a mock function for the type Context
-func (_mock *Context) JSONP(code int, callback string, i interface{}) error {
+func (_mock *Context) JSONP(code int, callback string, i any) error {
 	ret := _mock.Called(code, callback, i)
 
 	if len(ret) == 0 {
@@ -1106,7 +1106,7 @@ func (_mock *Context) JSONP(code int, callback string, i interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, string, interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, string, any) error); ok {
 		r0 = returnFunc(code, callback, i)
 	} else {
 		r0 = ret.Error(0)
@@ -1122,12 +1122,12 @@ type Context_JSONP_Call struct {
 // JSONP is a helper method to define mock.On call
 //   - code int
 //   - callback string
-//   - i interface{}
+//   - i any
 func (_e *Context_Expecter) JSONP(code interface{}, callback interface{}, i interface{}) *Context_JSONP_Call {
 	return &Context_JSONP_Call{Call: _e.mock.On("JSONP", code, callback, i)}
 }
 
-func (_c *Context_JSONP_Call) Run(run func(code int, callback string, i interface{})) *Context_JSONP_Call {
+func (_c *Context_JSONP_Call) Run(run func(code int, callback string, i any)) *Context_JSONP_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
@@ -1137,9 +1137,9 @@ func (_c *Context_JSONP_Call) Run(run func(code int, callback string, i interfac
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 interface{}
+		var arg2 any
 		if args[2] != nil {
-			arg2 = args[2].(interface{})
+			arg2 = args[2].(any)
 		}
 		run(
 			arg0,
@@ -1155,7 +1155,7 @@ func (_c *Context_JSONP_Call) Return(err error) *Context_JSONP_Call {
 	return _c
 }
 
-func (_c *Context_JSONP_Call) RunAndReturn(run func(code int, callback string, i interface{}) error) *Context_JSONP_Call {
+func (_c *Context_JSONP_Call) RunAndReturn(run func(code int, callback string, i any) error) *Context_JSONP_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1224,7 +1224,7 @@ func (_c *Context_JSONPBlob_Call) RunAndReturn(run func(code int, callback strin
 }
 
 // JSONPretty provides a mock function for the type Context
-func (_mock *Context) JSONPretty(code int, i interface{}, indent string) error {
+func (_mock *Context) JSONPretty(code int, i any, indent string) error {
 	ret := _mock.Called(code, i, indent)
 
 	if len(ret) == 0 {
@@ -1232,7 +1232,7 @@ func (_mock *Context) JSONPretty(code int, i interface{}, indent string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, interface{}, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, any, string) error); ok {
 		r0 = returnFunc(code, i, indent)
 	} else {
 		r0 = ret.Error(0)
@@ -1247,21 +1247,21 @@ type Context_JSONPretty_Call struct {
 
 // JSONPretty is a helper method to define mock.On call
 //   - code int
-//   - i interface{}
+//   - i any
 //   - indent string
 func (_e *Context_Expecter) JSONPretty(code interface{}, i interface{}, indent interface{}) *Context_JSONPretty_Call {
 	return &Context_JSONPretty_Call{Call: _e.mock.On("JSONPretty", code, i, indent)}
 }
 
-func (_c *Context_JSONPretty_Call) Run(run func(code int, i interface{}, indent string)) *Context_JSONPretty_Call {
+func (_c *Context_JSONPretty_Call) Run(run func(code int, i any, indent string)) *Context_JSONPretty_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
 			arg0 = args[0].(int)
 		}
-		var arg1 interface{}
+		var arg1 any
 		if args[1] != nil {
-			arg1 = args[1].(interface{})
+			arg1 = args[1].(any)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1281,7 +1281,7 @@ func (_c *Context_JSONPretty_Call) Return(err error) *Context_JSONPretty_Call {
 	return _c
 }
 
-func (_c *Context_JSONPretty_Call) RunAndReturn(run func(code int, i interface{}, indent string) error) *Context_JSONPretty_Call {
+func (_c *Context_JSONPretty_Call) RunAndReturn(run func(code int, i any, indent string) error) *Context_JSONPretty_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1868,7 +1868,7 @@ func (_c *Context_Redirect_Call) RunAndReturn(run func(code int, url1 string) er
 }
 
 // Render provides a mock function for the type Context
-func (_mock *Context) Render(code int, name string, data interface{}) error {
+func (_mock *Context) Render(code int, name string, data any) error {
 	ret := _mock.Called(code, name, data)
 
 	if len(ret) == 0 {
@@ -1876,7 +1876,7 @@ func (_mock *Context) Render(code int, name string, data interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, string, interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, string, any) error); ok {
 		r0 = returnFunc(code, name, data)
 	} else {
 		r0 = ret.Error(0)
@@ -1892,12 +1892,12 @@ type Context_Render_Call struct {
 // Render is a helper method to define mock.On call
 //   - code int
 //   - name string
-//   - data interface{}
+//   - data any
 func (_e *Context_Expecter) Render(code interface{}, name interface{}, data interface{}) *Context_Render_Call {
 	return &Context_Render_Call{Call: _e.mock.On("Render", code, name, data)}
 }
 
-func (_c *Context_Render_Call) Run(run func(code int, name string, data interface{})) *Context_Render_Call {
+func (_c *Context_Render_Call) Run(run func(code int, name string, data any)) *Context_Render_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
@@ -1907,9 +1907,9 @@ func (_c *Context_Render_Call) Run(run func(code int, name string, data interfac
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 interface{}
+		var arg2 any
 		if args[2] != nil {
-			arg2 = args[2].(interface{})
+			arg2 = args[2].(any)
 		}
 		run(
 			arg0,
@@ -1925,7 +1925,7 @@ func (_c *Context_Render_Call) Return(err error) *Context_Render_Call {
 	return _c
 }
 
-func (_c *Context_Render_Call) RunAndReturn(run func(code int, name string, data interface{}) error) *Context_Render_Call {
+func (_c *Context_Render_Call) RunAndReturn(run func(code int, name string, data any) error) *Context_Render_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2113,7 +2113,7 @@ func (_c *Context_Scheme_Call) RunAndReturn(run func() string) *Context_Scheme_C
 }
 
 // Set provides a mock function for the type Context
-func (_mock *Context) Set(key string, val interface{}) {
+func (_mock *Context) Set(key string, val any) {
 	_mock.Called(key, val)
 	return
 }
@@ -2125,20 +2125,20 @@ type Context_Set_Call struct {
 
 // Set is a helper method to define mock.On call
 //   - key string
-//   - val interface{}
+//   - val any
 func (_e *Context_Expecter) Set(key interface{}, val interface{}) *Context_Set_Call {
 	return &Context_Set_Call{Call: _e.mock.On("Set", key, val)}
 }
 
-func (_c *Context_Set_Call) Run(run func(key string, val interface{})) *Context_Set_Call {
+func (_c *Context_Set_Call) Run(run func(key string, val any)) *Context_Set_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 interface{}
+		var arg1 any
 		if args[1] != nil {
-			arg1 = args[1].(interface{})
+			arg1 = args[1].(any)
 		}
 		run(
 			arg0,
@@ -2153,7 +2153,7 @@ func (_c *Context_Set_Call) Return() *Context_Set_Call {
 	return _c
 }
 
-func (_c *Context_Set_Call) RunAndReturn(run func(key string, val interface{})) *Context_Set_Call {
+func (_c *Context_Set_Call) RunAndReturn(run func(key string, val any)) *Context_Set_Call {
 	_c.Run(run)
 	return _c
 }
@@ -2615,7 +2615,7 @@ func (_c *Context_String_Call) RunAndReturn(run func(code int, s string) error) 
 }
 
 // Validate provides a mock function for the type Context
-func (_mock *Context) Validate(i interface{}) error {
+func (_mock *Context) Validate(i any) error {
 	ret := _mock.Called(i)
 
 	if len(ret) == 0 {
@@ -2623,7 +2623,7 @@ func (_mock *Context) Validate(i interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(any) error); ok {
 		r0 = returnFunc(i)
 	} else {
 		r0 = ret.Error(0)
@@ -2637,16 +2637,16 @@ type Context_Validate_Call struct {
 }
 
 // Validate is a helper method to define mock.On call
-//   - i interface{}
+//   - i any
 func (_e *Context_Expecter) Validate(i interface{}) *Context_Validate_Call {
 	return &Context_Validate_Call{Call: _e.mock.On("Validate", i)}
 }
 
-func (_c *Context_Validate_Call) Run(run func(i interface{})) *Context_Validate_Call {
+func (_c *Context_Validate_Call) Run(run func(i any)) *Context_Validate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 interface{}
+		var arg0 any
 		if args[0] != nil {
-			arg0 = args[0].(interface{})
+			arg0 = args[0].(any)
 		}
 		run(
 			arg0,
@@ -2660,13 +2660,13 @@ func (_c *Context_Validate_Call) Return(err error) *Context_Validate_Call {
 	return _c
 }
 
-func (_c *Context_Validate_Call) RunAndReturn(run func(i interface{}) error) *Context_Validate_Call {
+func (_c *Context_Validate_Call) RunAndReturn(run func(i any) error) *Context_Validate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // XML provides a mock function for the type Context
-func (_mock *Context) XML(code int, i interface{}) error {
+func (_mock *Context) XML(code int, i any) error {
 	ret := _mock.Called(code, i)
 
 	if len(ret) == 0 {
@@ -2674,7 +2674,7 @@ func (_mock *Context) XML(code int, i interface{}) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, interface{}) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, any) error); ok {
 		r0 = returnFunc(code, i)
 	} else {
 		r0 = ret.Error(0)
@@ -2689,20 +2689,20 @@ type Context_XML_Call struct {
 
 // XML is a helper method to define mock.On call
 //   - code int
-//   - i interface{}
+//   - i any
 func (_e *Context_Expecter) XML(code interface{}, i interface{}) *Context_XML_Call {
 	return &Context_XML_Call{Call: _e.mock.On("XML", code, i)}
 }
 
-func (_c *Context_XML_Call) Run(run func(code int, i interface{})) *Context_XML_Call {
+func (_c *Context_XML_Call) Run(run func(code int, i any)) *Context_XML_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
 			arg0 = args[0].(int)
 		}
-		var arg1 interface{}
+		var arg1 any
 		if args[1] != nil {
-			arg1 = args[1].(interface{})
+			arg1 = args[1].(any)
 		}
 		run(
 			arg0,
@@ -2717,7 +2717,7 @@ func (_c *Context_XML_Call) Return(err error) *Context_XML_Call {
 	return _c
 }
 
-func (_c *Context_XML_Call) RunAndReturn(run func(code int, i interface{}) error) *Context_XML_Call {
+func (_c *Context_XML_Call) RunAndReturn(run func(code int, i any) error) *Context_XML_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2780,7 +2780,7 @@ func (_c *Context_XMLBlob_Call) RunAndReturn(run func(code int, b []byte) error)
 }
 
 // XMLPretty provides a mock function for the type Context
-func (_mock *Context) XMLPretty(code int, i interface{}, indent string) error {
+func (_mock *Context) XMLPretty(code int, i any, indent string) error {
 	ret := _mock.Called(code, i, indent)
 
 	if len(ret) == 0 {
@@ -2788,7 +2788,7 @@ func (_mock *Context) XMLPretty(code int, i interface{}, indent string) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(int, interface{}, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, any, string) error); ok {
 		r0 = returnFunc(code, i, indent)
 	} else {
 		r0 = ret.Error(0)
@@ -2803,21 +2803,21 @@ type Context_XMLPretty_Call struct {
 
 // XMLPretty is a helper method to define mock.On call
 //   - code int
-//   - i interface{}
+//   - i any
 //   - indent string
 func (_e *Context_Expecter) XMLPretty(code interface{}, i interface{}, indent interface{}) *Context_XMLPretty_Call {
 	return &Context_XMLPretty_Call{Call: _e.mock.On("XMLPretty", code, i, indent)}
 }
 
-func (_c *Context_XMLPretty_Call) Run(run func(code int, i interface{}, indent string)) *Context_XMLPretty_Call {
+func (_c *Context_XMLPretty_Call) Run(run func(code int, i any, indent string)) *Context_XMLPretty_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 int
 		if args[0] != nil {
 			arg0 = args[0].(int)
 		}
-		var arg1 interface{}
+		var arg1 any
 		if args[1] != nil {
-			arg1 = args[1].(interface{})
+			arg1 = args[1].(any)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -2837,7 +2837,7 @@ func (_c *Context_XMLPretty_Call) Return(err error) *Context_XMLPretty_Call {
 	return _c
 }
 
-func (_c *Context_XMLPretty_Call) RunAndReturn(run func(code int, i interface{}, indent string) error) *Context_XMLPretty_Call {
+func (_c *Context_XMLPretty_Call) RunAndReturn(run func(code int, i any, indent string) error) *Context_XMLPretty_Call {
 	_c.Call.Return(run)
 	return _c
 }

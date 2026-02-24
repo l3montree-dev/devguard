@@ -21,11 +21,11 @@ const (
 
 // PurlMatchContext holds the parsed purl information for matching
 type PurlMatchContext struct {
-	SearchPurl                  string
-	NormalizedVersion           string
-	HowToInterpretVersionString VersionInterpretationType
-	Qualifiers                  packageurl.Qualifiers
-	Namespace                   string
+	SearchPurl                  string                    `json:"searchPurl"` // purl without version and qualifiers, used for database matching
+	NormalizedVersion           string                    `json:"normalizedVersion"`
+	HowToInterpretVersionString VersionInterpretationType `json:"howToInterpretVersionString"`
+	Qualifiers                  packageurl.Qualifiers     `json:"qualifiers"`
+	Namespace                   string                    `json:"namespace"`
 }
 
 // ParsePurlForMatching parses a purl and version into a context for database matching
