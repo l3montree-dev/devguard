@@ -93,3 +93,21 @@ type Signatures struct {
 	Sig   string `json:"sig"`
 	KeyID string `json:"keyid"`
 }
+
+type DebianResponse struct {
+	PackageName  string
+	Versions     []string          // All available versions (sorted newest first)
+	Dependencies map[string]string // For a specific version: dependency_name -> version_constraint
+	RawMetadata  interface{}       // Store raw response if needed
+}
+
+type snapshotMRResult struct {
+	Package  string                       `json:"package"`
+	Binary   string                       `json:"binary"`
+	Versions map[string][]snapshotVersion `json:"versions"` // version -> list of results
+}
+
+type snapshotVersion struct {
+	BinaryVersion string `json:"binary_version"`
+	Version       string `json:"version"` // source version
+}

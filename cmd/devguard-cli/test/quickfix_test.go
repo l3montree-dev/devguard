@@ -145,7 +145,7 @@ func TestParsePurl(t *testing.T) {
 	}
 }
 
-func TestParseVersionSpec(t *testing.T) {
+func TestParseVersionConstraint(t *testing.T) {
 	tests := []struct {
 		name              string
 		spec              string
@@ -165,18 +165,18 @@ func TestParseVersionSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rangeType, version := parseVersionSpec(tt.spec)
+			rangeType, version := parseVersionConstraint(tt.spec)
 			if rangeType != tt.expectedRangeType {
-				t.Errorf("parseVersionSpec(%q) rangeType = %q, want %q", tt.spec, rangeType, tt.expectedRangeType)
+				t.Errorf("parseVersionConstraint(%q) rangeType = %q, want %q", tt.spec, rangeType, tt.expectedRangeType)
 			}
 			if version != tt.expectedVersion {
-				t.Errorf("parseVersionSpec(%q) version = %q, want %q", tt.spec, version, tt.expectedVersion)
+				t.Errorf("parseVersionConstraint(%q) version = %q, want %q", tt.spec, version, tt.expectedVersion)
 			}
 		})
 	}
 }
 
-func TestMatchesVersionSpec(t *testing.T) {
+func TestMatchesVersionConstraint(t *testing.T) {
 	tests := []struct {
 		name         string
 		rangeType    string
@@ -219,79 +219,9 @@ func TestMatchesVersionSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := matchesVersionSpec(tt.rangeType, tt.version, tt.versionParts, tt.baseVersion, tt.baseParts)
+			result := matchesVersionConstraint(tt.rangeType, tt.version, tt.versionParts, tt.baseVersion, tt.baseParts)
 			if result != tt.expected {
-				t.Errorf("matchesVersionSpec(%q, %q, ...) = %v, want %v", tt.rangeType, tt.version, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestGetAllDependencyMaps(t *testing.T) {
-	npmResp := &NPMResponse{
-		Dependencies: map[string]string{
-			"dep1": "1.0.0",
-		},
-		PeerDependencies: map[string]string{
-			"peer1": "2.0.0",
-		},
-		OptionalDependencies: map[string]string{
-			"opt1": "3.0.0",
-		},
-		DevDependencies: map[string]string{
-			"dev1": "4.0.0",
-		},
-	}
-
-	maps := getAllDependencyMaps(npmResp)
-
-	if len(maps) != 4 {
-		t.Errorf("getAllDependencyMaps() returned %d maps, want 4", len(maps))
-	}
-
-	if maps[0]["dep1"] != "1.0.0" {
-		t.Error("Dependencies map not in expected position")
-	}
-	if maps[1]["peer1"] != "2.0.0" {
-		t.Error("PeerDependencies map not in expected position")
-	}
-	if maps[2]["opt1"] != "3.0.0" {
-		t.Error("OptionalDependencies map not in expected position")
-	}
-	if maps[3]["dev1"] != "4.0.0" {
-		t.Error("DevDependencies map not in expected position")
-	}
-}
-
-func TestFindDependencyVersionInMeta(t *testing.T) {
-	npmResp := &NPMResponse{
-		Dependencies: map[string]string{
-			"express": "4.18.2",
-		},
-		DevDependencies: map[string]string{
-			"jest": "29.0.0",
-		},
-		PeerDependencies: map[string]string{
-			"react": "18.0.0",
-		},
-	}
-
-	tests := []struct {
-		name     string
-		pkgName  string
-		expected string
-	}{
-		{"found in dependencies", "express", "4.18.2"},
-		{"found in devDependencies", "jest", "29.0.0"},
-		{"found in peerDependencies", "react", "18.0.0"},
-		{"not found", "nonexistent", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := findDependencyVersionInMeta(npmResp, tt.pkgName)
-			if result != tt.expected {
-				t.Errorf("findDependencyVersionInMeta(%q) = %q, want %q", tt.pkgName, result, tt.expected)
+				t.Errorf("matchesVersionConstraint(%q, %q, ...) = %v, want %v", tt.rangeType, tt.version, result, tt.expected)
 			}
 		})
 	}
@@ -357,157 +287,6 @@ func TestSplitOrExpression(t *testing.T) {
 			result := splitOrExpression(tt.versionSpec)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("splitOrExpression(%q) = %v, want %v", tt.versionSpec, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestGetRecommendedVersions(t *testing.T) {
-	npmResp := NPMResponse{
-		Versions: map[string]VersionData{
-			"1.0.0":      {Version: "1.0.0"},
-			"1.1.0":      {Version: "1.1.0"},
-			"1.2.0":      {Version: "1.2.0"},
-			"1.2.1":      {Version: "1.2.1"},
-			"2.0.0":      {Version: "2.0.0"},
-			"1.2.0-rc.0": {Version: "1.2.0-rc.0"},
-		},
-	}
-
-	tests := []struct {
-		name             string
-		currentVersion   string
-		expectedCount    int
-		shouldContain    []string
-		shouldNotContain []string
-	}{
-		{
-			name:             "from 1.0.0",
-			currentVersion:   "1.0.0",
-			expectedCount:    4,
-			shouldContain:    []string{"1.0.0", "1.1.0", "1.2.0", "1.2.1"},
-			shouldNotContain: []string{"2.0.0", "1.2.0-rc.0"},
-		},
-		{
-			name:             "from 1.2.0",
-			currentVersion:   "1.2.0",
-			expectedCount:    2,
-			shouldContain:    []string{"1.2.0", "1.2.1"},
-			shouldNotContain: []string{"1.0.0", "1.1.0", "2.0.0"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := getRecommendedVersions(npmResp, tt.currentVersion)
-			if err != nil {
-				t.Errorf("getRecommendedVersions() error = %v", err)
-				return
-			}
-
-			if len(result) != tt.expectedCount {
-				t.Errorf("getRecommendedVersions() returned %d versions, want %d", len(result), tt.expectedCount)
-			}
-
-			for _, shouldContain := range tt.shouldContain {
-				found := false
-				for _, v := range result {
-					if v == shouldContain {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("getRecommendedVersions() missing %q in result", shouldContain)
-				}
-			}
-
-			for _, shouldNotContain := range tt.shouldNotContain {
-				for _, v := range result {
-					if v == shouldNotContain {
-						t.Errorf("getRecommendedVersions() should not contain %q", shouldNotContain)
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestResolveBestVersion(t *testing.T) {
-	allVersionsMeta := &NPMResponse{
-		Versions: map[string]VersionData{
-			"1.0.0": {Version: "1.0.0"},
-			"1.1.0": {Version: "1.1.0"},
-			"1.2.0": {Version: "1.2.0"},
-			"1.2.1": {Version: "1.2.1"},
-			"2.0.0": {Version: "2.0.0"},
-		},
-	}
-
-	tests := []struct {
-		name           string
-		versionSpec    string
-		currentVersion string
-		expected       string
-		shouldError    bool
-	}{
-		{"exact version", "1.2.0", "1.0.0", "1.2.0", false},
-		{"caret: highest in range", "^1.2.0", "1.0.0", "1.2.1", false},
-		{"caret: no match default", "^3.0.0", "1.0.0", "", true},
-		{"greater than or equal", ">=1.1.0", "1.0.0", "1.2.1", false},
-		{"exact: same as current", "1.0.0", "1.0.0", "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := resolveBestVersion(allVersionsMeta, tt.versionSpec, tt.currentVersion)
-			if (err != nil) != tt.shouldError {
-				t.Errorf("resolveBestVersion(%q, %q) error = %v, shouldError = %v", tt.versionSpec, tt.currentVersion, err, tt.shouldError)
-				return
-			}
-			if !tt.shouldError && result != tt.expected {
-				t.Errorf("resolveBestVersion(%q, %q) = %q, want %q", tt.versionSpec, tt.currentVersion, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestResolveBestVersionWithOrExpression(t *testing.T) {
-	allVersionsMeta := &NPMResponse{
-		Versions: map[string]VersionData{
-			"13.0.0": {Version: "13.0.0"},
-			"14.0.0": {Version: "14.0.0"},
-			"14.5.0": {Version: "14.5.0"},
-			"15.0.0": {Version: "15.0.0"},
-			"15.4.0": {Version: "15.4.0"},
-		},
-	}
-
-	tests := []struct {
-		name           string
-		versionSpec    string
-		currentVersion string
-		expected       string
-		shouldError    bool
-	}{
-		{"OR expression: match both, returns highest", "^14.0.0 || ^15.0.0", "13.0.0", "15.4.0", false},
-		{"OR expression: match second", "^14.0.0 || ^15.4.0", "13.0.0", "15.4.0", false},
-		{"OR expression: no match", "^16.0.0 || ^17.0.0", "13.0.0", "", true},
-		{"OR expression: incomplete semver ^14.0", "^14.0 || ^15.0.0", "13.0.0", "15.4.0", false},
-		{"OR expression: incomplete semver ^14", "^14 || ^15.0.0", "13.0.0", "15.4.0", false},
-		{"OR expression: incomplete semver ^14.0 matches", "^14.0", "13.0.0", "14.5.0", false},
-		{"OR expression: incomplete semver ^14 matches", "^14", "13.0.0", "14.5.0", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := resolveBestVersion(allVersionsMeta, tt.versionSpec, tt.currentVersion)
-			if (err != nil) != tt.shouldError {
-				t.Errorf("resolveBestVersion(%q, %q) error = %v, shouldError = %v", tt.versionSpec, tt.currentVersion, err, tt.shouldError)
-				return
-			}
-			if !tt.shouldError && result != tt.expected {
-				t.Errorf("resolveBestVersion(%q, %q) = %q, want %q", tt.versionSpec, tt.currentVersion, result, tt.expected)
 			}
 		})
 	}

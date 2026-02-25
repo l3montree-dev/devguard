@@ -195,9 +195,8 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 		return "", fmt.Errorf("purl array must contain at least 2 elements")
 	}
 
-	if !semver.IsValid("v" + fixedVersion) {
-		return "", fmt.Errorf("fixed version has invalid semver format")
-	}
+	// Version format validation is delegated to each resolver
+	// (semver for NPM, Debian version for Debian packages)
 
 	for i := 0; i < len(purls)-1; i++ {
 		pkgName := purls[i].Name
@@ -250,9 +249,11 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 		// create a new purl - like we updated the purl in the next iteration
 		// image A --> B
 		// we updated A to A', now we check the new version of B
+		// Important: copy qualifiers (arch, distro) from original PURL to preserve suite/arch info
 		nextPURL := packageurl.PackageURL{
-			Type: purls[i+1].Type,
-			Name: purls[i+1].Name,
+			Type:       purls[i+1].Type,
+			Name:       purls[i+1].Name,
+			Qualifiers: purls[i+1].Qualifiers,
 			// we do not define version right here
 			// since versionConstraint might be a range or a constraint, we want to fetch ALL versions of that package and then resolve the versionConstraint to a specific version using the resolver's ResolveBestVersion function
 		}
@@ -274,11 +275,10 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 	vulnPkgName := purls[len(purls)-1].Name
 	vulnVersion := purls[len(purls)-1].Version
 
-	if !semver.IsValid("v" + vulnVersion) {
-		return "", fmt.Errorf("vulnerable package has invalid semver: %s@%s", vulnPkgName, vulnVersion)
-	}
+	// Version format validation is delegated to resolver's CheckIfVulnerabilityIsFixed
+	// (each resolver validates according to its version scheme)
 
-	// Check if vulnerability is fixed using semver comparison
+	// Check if vulnerability is fixed using resolver-specific comparison
 	isFixed := resolver.CheckIfVulnerabilityIsFixed(vulnVersion, fixedVersion)
 
 	if isFixed {
@@ -292,9 +292,10 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 
 func main() {
 
-	purl3, _ := packageurl.FromString("pkg:npm/next@15.5.12")
-	purl2, _ := packageurl.FromString("pkg:npm/nextra@3.3.1")
-	purl1, _ := packageurl.FromString("pkg:npm/nextra-theme-docs@3.3.1")
+	// ["debian@12.8","pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8","pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8","pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1"]
+	purl3, _ := packageurl.FromString("pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8")
+	purl2, _ := packageurl.FromString("pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8")
+	purl1, _ := packageurl.FromString("pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1")
 
 	purls := []packageurl.PackageURL{
 		purl1,
@@ -303,21 +304,16 @@ func main() {
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "15.6.0"
+	fixedVersion := "1:4.0.14-9"
 
-	// init new npm resolver
-	resolver := DebianResolver{}
+	resolver := &DebianResolver{}
 
-	fixingVersion, err := checkVulnerabilityFixChain(&resolver, purls, fixedVersion)
+	fixingVersion, err := checkVulnerabilityFixChain(resolver, purls, fixedVersion)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 	fmt.Println(fixingVersion)
-	// req, err := GetDebRegistry(RegistryRequest{Dependency: "nginx", Version: "1.28.2-2"})
-
-	// if err != nil {
-	// 	fmt.Print(req)
-	// }
+	// Example output: nextra-theme-docs@3.4.0 (or similar if a fix is found)
 
 }
