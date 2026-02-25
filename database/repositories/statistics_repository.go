@@ -575,3 +575,29 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int
 	LIMIT 10;`).Find(&topCVEs).Error
 	return topCVEs, err
 }
+
+func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
+	averageByType := []dtos.VulnEventAverage{}
+	err := r.db.Raw(`
+	SELECT 
+		type, AVG(count) as weekly_average
+	FROM(
+	SELECT
+		weeks.week,
+		types.type,
+		COALESCE(counts.count, 0) AS count
+	FROM
+		(SELECT DISTINCT date_trunc('week', created_at) AS week FROM vuln_events) weeks
+		CROSS JOIN (SELECT DISTINCT type FROM vuln_events) types
+		LEFT JOIN (
+		SELECT date_trunc('week', a.created_at) AS week, a.type, COUNT(*)
+		FROM vuln_events a
+		LEFT JOIN dependency_vulns b ON a.vuln_id = b.id
+		LEFT JOIN assets c ON b.asset_id = c.id
+		LEFT JOIN projects d ON c.project_id = d.id
+		WHERE d.organization_id = ?
+		GROUP BY week, a.type
+		) counts USING (week, type)
+	) GROUP BY type;`, orgID).Find(&averageByType).Error
+	return averageByType, err
+}

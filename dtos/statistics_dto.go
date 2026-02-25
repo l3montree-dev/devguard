@@ -108,6 +108,19 @@ type CVEOccurrencesAcrossOrg struct {
 	TotalAmountInOrg string `json:"totalAmount" gorm:"column:total_amount"`
 }
 
+type VulnEventAverage struct {
+	VulnEventType VulnEventType `gorm:"column:type"`
+	Average       float32       `gorm:"column:weekly_average"`
+}
+
+type AverageVulnEventsPerWeek struct {
+	AverageDetectedEvents      float32 `json:"averageDetectedEvents"`
+	AverageReopenedEvents      float32 `json:"averageReopenedEvents"`
+	AverageFalsePositiveEvents float32 `json:"averageFalsePositiveEvents"`
+	AverageAcceptedEvents      float32 `json:"averageAcceptedEvents"`
+	AverageFixedEvents         float32 `json:"averageFixedEvents"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -118,4 +131,6 @@ type OrgOverview struct {
 
 	TopComponents []ComponentUsageAcrossOrg `json:"topComponents"`
 	TopCVEs       []CVEOccurrencesAcrossOrg `json:"topCVEs"`
+
+	VulnEventAverage AverageVulnEventsPerWeek `json:"vulnEventAverage"`
 }

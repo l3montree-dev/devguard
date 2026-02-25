@@ -537,6 +537,7 @@ type StatisticsRepository interface {
 	GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
 	GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
 	GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
+	GetWeeklyAveragePerVulnEventType(orgID uuid.UUID) ([]dtos.VulnEventAverage, error)
 }
 
 type ArtifactRiskHistoryRepository interface {

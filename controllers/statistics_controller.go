@@ -267,10 +267,32 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, 10)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not get most common CVEs across org")
+	}
+
+	vulnEventAverages, err := c.statisticsRepository.GetWeeklyAveragePerVulnEventType(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get weekly average for vuln events")
+	}
+
+	vulnEventAverageDistribution := dtos.AverageVulnEventsPerWeek{}
+	for _, average := range vulnEventAverages {
+		switch average.VulnEventType {
+		case dtos.EventTypeDetected:
+			vulnEventAverageDistribution.AverageDetectedEvents = average.Average
+		case dtos.EventTypeAccepted:
+			vulnEventAverageDistribution.AverageAcceptedEvents = average.Average
+		case dtos.EventTypeFalsePositive:
+			vulnEventAverageDistribution.AverageFalsePositiveEvents = average.Average
+		case dtos.EventTypeFixed:
+			vulnEventAverageDistribution.AverageFixedEvents = average.Average
+		case dtos.EventTypeReopened:
+			vulnEventAverageDistribution.AverageReopenedEvents = average.Average
+		}
 	}
 
 	orgStatistics := dtos.OrgOverview{
+		VulnEventAverage: vulnEventAverageDistribution,
 		VulnDistribution: distribution,
 		OrgStructure:     structure,
 		TopProjects:      projects,
