@@ -290,6 +290,23 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 	return "", nil
 }
 
+func CheckVulnerabilityFixChainAuto(purls []packageurl.PackageURL, fixedVersion string) (string, error) {
+	if len(purls) == 0 {
+		return "", fmt.Errorf("no PURLs provided")
+	}
+
+	switch purls[0].Type {
+	case "deb":
+		resolver := &DebianResolver{}
+		return checkVulnerabilityFixChain(resolver, purls, fixedVersion)
+	case "npm":
+		resolver := &NPMResolver{}
+		return checkVulnerabilityFixChain(resolver, purls, fixedVersion)
+	default:
+		return "", fmt.Errorf("unsupported package type: %s", purls[0].Type)
+	}
+}
+
 func main() {
 
 	// ["debian@12.8","pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8","pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8","pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1"]
@@ -306,9 +323,7 @@ func main() {
 	// in component_fixed_version in database
 	fixedVersion := "1:4.0.14-9"
 
-	resolver := &DebianResolver{}
-
-	fixingVersion, err := checkVulnerabilityFixChain(resolver, purls, fixedVersion)
+	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
