@@ -287,6 +287,7 @@ func TestRunMergeSBOMs(t *testing.T) {
 				Component: &cyclonedx.Component{
 					BOMRef:     "pkg:test/lib@1.0.0",
 					PackageURL: "pkg:test/lib@1.0.0",
+					Name:       "lib",
 				},
 			},
 			Components:   &[]cyclonedx.Component{},
