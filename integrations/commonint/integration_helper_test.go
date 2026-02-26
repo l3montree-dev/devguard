@@ -18,6 +18,117 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func TestMergeGitlabCiTemplateWithExistingContent(t *testing.T) {
+
+	t.Run("only existing stages", func(t *testing.T) {
+		template := map[string]any{}
+		existing := map[string]any{
+			"stages": []any{"build", "test"},
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- test")
+	})
+
+	t.Run("only template stages", func(t *testing.T) {
+		template := map[string]any{
+			"stages": []any{"deploy", "lint"},
+		}
+		existing := map[string]any{}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "- lint")
+	})
+
+	t.Run("merge stages with duplicates", func(t *testing.T) {
+		template := map[string]any{
+			"stages": []any{"test", "deploy"},
+		}
+		existing := map[string]any{
+			"stages": []any{"build", "test"},
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- test")
+		assert.Contains(t, result, "- deploy")
+	})
+
+	t.Run("merge includes", func(t *testing.T) {
+		template := map[string]any{
+			"include": []any{"template.yml"},
+		}
+		existing := map[string]any{
+			"include": []any{"existing.yml"},
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- existing.yml")
+		assert.Contains(t, result, "- template.yml")
+	})
+
+	t.Run("merge stages and includes with other fields", func(t *testing.T) {
+		template := map[string]any{
+			"stages":  []any{"lint"},
+			"include": []any{"template.yml"},
+		}
+		existing := map[string]any{
+			"stages":  []any{"build"},
+			"include": []any{"existing.yml"},
+			"variables": map[string]any{
+				"ENV": "dev",
+			},
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- lint")
+		assert.Contains(t, result, "- existing.yml")
+		assert.Contains(t, result, "- template.yml")
+		assert.Contains(t, result, "variables:")
+		assert.Contains(t, result, "ENV: dev")
+	})
+
+	t.Run("existing nil stages and includes", func(t *testing.T) {
+		template := map[string]any{
+			"stages":  []any{"deploy"},
+			"include": []any{"template.yml"},
+		}
+		existing := map[string]any{
+			"stages":  nil,
+			"include": nil,
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- deploy")
+		assert.Contains(t, result, "- template.yml")
+	})
+
+	t.Run("template nil stages and includes", func(t *testing.T) {
+		template := map[string]any{
+			"stages":  nil,
+			"include": nil,
+		}
+		existing := map[string]any{
+			"stages":  []any{"build"},
+			"include": []any{"existing.yml"},
+		}
+
+		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "- build")
+		assert.Contains(t, result, "- existing.yml")
+	})
+}
+
 func TestRenderPathToComponent(t *testing.T) {
 	t.Run("Everything works as expected with empty lists", func(t *testing.T) {
 		components := []models.ComponentDependency{}
