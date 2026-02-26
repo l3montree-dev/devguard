@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -28,8 +27,6 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
-
-	"gopkg.in/yaml.v3"
 )
 
 // receives an uri and matches the extension to supported extensions, if not valid or not supported we return txt extension
@@ -253,7 +250,9 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 	}
 
 	//read the file
-	var oldContent map[string]any
+	//var newContent string
+	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
+
 	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0644)
 	if err != nil {
 		//make the file
@@ -261,22 +260,20 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 		if err != nil {
 			return fmt.Errorf("could not create file: %v", err)
 		}
-	} else {
-		content, err := io.ReadAll(f)
-		if err != nil {
-			return fmt.Errorf("could not read file: %v", err)
+		//newContent = fmt.Sprintf("include:\n%s\n", template)
+	} /*
+		else {
+			content, err := io.ReadAll(f)
+			if err != nil {
+				return fmt.Errorf("could not read file: %v", err)
+			}
+			newContent = addPipelineTemplate(content, template)
 		}
-
-		err = yaml.Unmarshal(content, &oldContent)
-		if err != nil {
-			return fmt.Errorf("could not unmarshal yaml: %v", err)
-		}
-
-	}
+	*/
 
 	f.Close()
-
-	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0)
+	// open the file in truncate mode to overwrite the content
+	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_TRUNC|os.O_RDWR, 0644)
 	if err != nil {
 		return fmt.Errorf("could not open file: %v", err)
 	}
@@ -284,19 +281,6 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 	template, err := buildGitlabCiTemplate(templateID)
 	if err != nil {
 		return fmt.Errorf("could not build template: %v", err)
-	}
-
-	if oldContent != nil {
-		newContent := map[string]any{}
-		err = yaml.Unmarshal([]byte(template), &newContent)
-		if err != nil {
-			return fmt.Errorf("could not unmarshal new template yaml: %v", err)
-		}
-		template, err = mergeGitlabCiTemplateWithExistingContent(newContent, oldContent)
-		if err != nil {
-			return fmt.Errorf("could not merge template with existing content: %v", err)
-		}
-
 	}
 
 	_, err = f.Write([]byte(template))
@@ -332,75 +316,6 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 	}
 
 	return nil
-}
-
-func mergeGitlabCiTemplateWithExistingContent(templateContent, existingContent map[string]any) (string, error) {
-
-	existingStages := []string{}
-	templateStages := []string{}
-
-	if existingContent["stages"] != nil {
-		for _, stage := range existingContent["stages"].([]any) {
-			existingStages = append(existingStages, stage.(string))
-		}
-	}
-
-	if templateContent["stages"] != nil {
-		for _, stage := range templateContent["stages"].([]any) {
-			templateStages = append(templateStages, stage.(string))
-		}
-	}
-
-	mergedStages := append(existingStages, templateStages...)
-
-	seen := make(map[string]bool)
-	uniqueMergedStages := []string{}
-
-	for _, stage := range mergedStages {
-		if !seen[stage] {
-			uniqueMergedStages = append(uniqueMergedStages, stage)
-			seen[stage] = true
-		}
-	}
-
-	// merge include
-	existingInclude := []any{}
-	templateInclude := []any{}
-
-	if v, ok := existingContent["include"].([]any); ok {
-		existingInclude = v
-	}
-
-	if v, ok := templateContent["include"].([]any); ok {
-		templateInclude = v
-	}
-
-	mergedInclude := append(existingInclude, templateInclude...)
-
-	other := make(map[string]any)
-	for k, v := range existingContent {
-		if k != "stages" && k != "include" {
-			other[k] = v
-		}
-	}
-
-	mergedContent := struct {
-		Stages  []string       `yaml:"stages,omitempty"`
-		Include []any          `yaml:"include,omitempty"`
-		Other   map[string]any `yaml:",inline"`
-	}{
-		Stages:  uniqueMergedStages,
-		Include: mergedInclude,
-		Other:   other,
-	}
-
-	// marshal the merged content back to yaml
-	mergedContentBytes, err := yaml.Marshal(mergedContent)
-	if err != nil {
-		return "", fmt.Errorf("could not marshal merged content: %v", err)
-	}
-
-	return string(mergedContentBytes), nil
 }
 
 func escapeNodeID(s string) string {
@@ -462,21 +377,6 @@ func pathsToMermaid(paths [][]string) string {
 	var existingPaths = make(map[string]bool)
 
 	for _, path := range paths {
-
-		if len(path) > 0 {
-			fromLabel := "Your application"
-			toLabel := path[0]
-			mermaidPath := fmt.Sprintf("%s([\"%s\"]) --- %s([\"%s\"])\n",
-				"Your_application", fromLabel, escapeNodeID(toLabel), beautifyNodeLabel(toLabel))
-			if existingPaths[mermaidPath] {
-				// skip if path already exists
-				continue
-			}
-			existingPaths[mermaidPath] = true
-
-			builder.WriteString(mermaidPath)
-		}
-
 		for i := 0; i < len(path)-1; i++ {
 			fromLabel := path[i]
 			toLabel := path[i+1]
