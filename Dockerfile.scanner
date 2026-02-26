@@ -94,4 +94,8 @@ COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 
+# Semgrep tries to communicate with the ocaml analysis engine via io_uring, which causes the scanner to fail in container environments. Setting EIO_BACKEND to posix forces semgrep to use a different communication method that is compatible with containers. https://github.com/moby/moby/issues/47532
+# First reported here: https://gitlab.opencode.de/open-code/werkzeugkasten/helm-devguard/-/issues/1
+ENV EIO_BACKEND=posix
+
 ENTRYPOINT [""]
