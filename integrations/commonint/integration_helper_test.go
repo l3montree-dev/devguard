@@ -73,7 +73,7 @@ func TestRenderPathToComponent(t *testing.T) {
 
 		// FindAllComponentOnlyPathsToPURL only returns component-only paths (nodes starting with pkg:)
 		// The path should be: root-dep -> test-package
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
@@ -99,8 +99,26 @@ func TestRenderPathToComponent(t *testing.T) {
 
 		// Verify @ symbols are escaped as \@ in the mermaid output
 		assert.Contains(t, result, "\\@1.0.0")
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 
+	})
+
+	t.Run("should render single node path", func(t *testing.T) {
+		// Simulate a single node path (e.g., only root component)
+		components := []models.ComponentDependency{
+			{ComponentID: nil, DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
+		}
+		componentRepository := mocks.NewComponentRepository(t)
+		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
+
+		assetID := uuid.New()
+		assetVersionName := "TestName"
+		pURL := "pkg:npm/single@1.0.0"
+
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		assert.NoError(t, err)
+		// The output should contain the single node mermaid representation
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 }
 func TestGetLabels(t *testing.T) {

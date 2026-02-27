@@ -377,6 +377,21 @@ func pathsToMermaid(paths [][]string) string {
 	var existingPaths = make(map[string]bool)
 
 	for _, path := range paths {
+
+		if len(path) > 0 {
+			fromLabel := "Your application"
+			toLabel := path[0]
+			mermaidPath := fmt.Sprintf("%s([\"%s\"]) --- %s([\"%s\"])\n",
+				"Your_application", fromLabel, escapeNodeID(toLabel), beautifyNodeLabel(toLabel))
+			if existingPaths[mermaidPath] {
+				// skip if path already exists
+				continue
+			}
+			existingPaths[mermaidPath] = true
+
+			builder.WriteString(mermaidPath)
+		}
+
 		for i := 0; i < len(path)-1; i++ {
 			fromLabel := path[i]
 			toLabel := path[i+1]
