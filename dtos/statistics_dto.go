@@ -104,8 +104,9 @@ type ComponentUsageAcrossOrg struct {
 }
 
 type CVEOccurrencesAcrossOrg struct {
-	PackageURL       string `json:"cveID" gorm:"column:cve_id"`
-	TotalAmountInOrg string `json:"totalAmount" gorm:"column:total_amount"`
+	CVEID            string  `json:"cveID" gorm:"column:cve_id"`
+	CVSS             float32 `json:"cvss" gorm:"cvss"`
+	TotalAmountInOrg string  `json:"totalAmount" gorm:"column:total_amount"`
 }
 
 type VulnEventAverage struct {

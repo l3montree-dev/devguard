@@ -565,12 +565,14 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int
 	topCVEs := []dtos.CVEOccurrencesAcrossOrg{}
 	err := r.db.Raw(`
 	SELECT a.cve_id, 
+	cves.cvss,
 	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
 	FROM dependency_vulns a
+	LEFT JOIN cves ON cves.cve = a.cve_id
 	LEFT JOIN assets b ON a.asset_id = b.id
 	LEFT JOIN projects c ON b.project_id = c.id
 	WHERE c.organization_id = '7634964a-2993-4c08-9907-da4db1add135'
-	GROUP BY a.cve_id
+	GROUP BY a.cve_id, cves.cvss
 	ORDER BY total_amount DESC
 	LIMIT 10;`).Find(&topCVEs).Error
 	return topCVEs, err
