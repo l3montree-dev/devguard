@@ -125,15 +125,15 @@ type AverageVulnEventsPerWeek struct {
 type OrgRiskHistory struct {
 	Day time.Time `json:"day" gorm:"column:day"`
 
-	LowRisk      int `json:"low" gorm:"column:low_risk"`
-	HighRisk     int `json:"high" gorm:"column:high_risk"`
-	MediumRisk   int `json:"medium" gorm:"column:medium_risk"`
-	CriticalRisk int `json:"critical" gorm:"column:critical_risk"`
+	LowRisk      int `json:"lowRisk" gorm:"column:low_risk"`
+	HighRisk     int `json:"highRisk" gorm:"column:high_risk"`
+	MediumRisk   int `json:"mediumRisk" gorm:"column:medium_risk"`
+	CriticalRisk int `json:"criticalRisk" gorm:"column:critical_risk"`
 
-	LowCVSS      int `json:"lowCvss" gorm:"column:low_cvss"`
-	MediumCVSS   int `json:"mediumCvss" gorm:"column:medium_cvss"`
-	HighCVSS     int `json:"highCvss" gorm:"column:high_cvss"`
-	CriticalCVSS int `json:"criticalCvss" gorm:"column:critical_cvss"`
+	LowCVSS      int `json:"lowCVSS" gorm:"column:low_cvss"`
+	MediumCVSS   int `json:"mediumCVSS" gorm:"column:medium_cvss"`
+	HighCVSS     int `json:"highCVSS" gorm:"column:high_cvss"`
+	CriticalCVSS int `json:"criticalCVSS" gorm:"column:critical_cvss"`
 }
 
 type OrgOverview struct {
