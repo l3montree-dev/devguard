@@ -122,6 +122,20 @@ type AverageVulnEventsPerWeek struct {
 	AverageFixedEvents         float32 `json:"averageFixedEvents"`
 }
 
+type OrgRiskHistory struct {
+	Day time.Time `json:"day" gorm:"column:day"`
+
+	LowRisk      int `json:"low" gorm:"column:low_risk"`
+	HighRisk     int `json:"high" gorm:"column:high_risk"`
+	MediumRisk   int `json:"medium" gorm:"column:medium_risk"`
+	CriticalRisk int `json:"critical" gorm:"column:critical_risk"`
+
+	LowCVSS      int `json:"lowCvss" gorm:"column:low_cvss"`
+	MediumCVSS   int `json:"mediumCvss" gorm:"column:medium_cvss"`
+	HighCVSS     int `json:"highCvss" gorm:"column:high_cvss"`
+	CriticalCVSS int `json:"criticalCvss" gorm:"column:critical_cvss"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -134,4 +148,5 @@ type OrgOverview struct {
 	TopCVEs       []CVEOccurrencesAcrossOrg `json:"topCVEs"`
 
 	VulnEventAverage AverageVulnEventsPerWeek `json:"vulnEventAverage"`
+	OrgRiskHistory   []OrgRiskHistory         `json:"orgRiskHistory"`
 }

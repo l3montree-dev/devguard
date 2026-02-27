@@ -571,10 +571,10 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int
 	LEFT JOIN cves ON cves.cve = a.cve_id
 	LEFT JOIN assets b ON a.asset_id = b.id
 	LEFT JOIN projects c ON b.project_id = c.id
-	WHERE c.organization_id = '7634964a-2993-4c08-9907-da4db1add135'
+	WHERE c.organization_id = ?
 	GROUP BY a.cve_id, cves.cvss
-	ORDER BY total_amount DESC
-	LIMIT 10;`).Find(&topCVEs).Error
+	ORDER BY total_amount DESC, cvss DESC
+	LIMIT ?;`, orgID, limit).Find(&topCVEs).Error
 	return topCVEs, err
 }
 

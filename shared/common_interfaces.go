@@ -546,6 +546,7 @@ type ArtifactRiskHistoryRepository interface {
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryByRelease(releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
 	UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error
+	GetRiskHistoryForOrg(orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 }
 
 type ProjectRiskHistoryRepository interface {

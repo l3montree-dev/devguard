@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -88,4 +89,27 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.U
 	}
 
 	return assetRisk, nil
+}
+
+func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error) {
+	history := []dtos.OrgRiskHistory{}
+	err := r.GetDB(r.db).Raw(`
+	SELECT 
+		day,
+		SUM(low) low_risk, SUM(medium) medium_risk, SUM(high) high_risk, SUM(critical) critical_risk, 
+		SUM(low_cvss) low_cvss, SUM(medium_cvss) medium_cvss, SUM(high_cvss) high_cvss, SUM(critical_cvss) critical_cvss
+	FROM 
+		artifact_risk_history a 
+	LEFT JOIN 
+		assets b ON a.asset_id = b.id
+	LEFT JOIN 
+		projects c ON b.project_id = c.id
+	WHERE 
+		c.organization_id = ?
+	AND 
+		a.day >= ? 
+	AND 
+		a.day <= ?
+	GROUP BY day;`, orgID, start, end).Find(&history).Error
+	return history, err
 }

@@ -16,16 +16,18 @@ import (
 )
 
 type StatisticsController struct {
-	statisticsService      shared.StatisticsService
-	statisticsRepository   shared.StatisticsRepository
-	assetVersionRepository shared.AssetVersionRepository
+	statisticsService             shared.StatisticsService
+	statisticsRepository          shared.StatisticsRepository
+	assetVersionRepository        shared.AssetVersionRepository
+	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
 }
 
-func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetVersionRepository shared.AssetVersionRepository) *StatisticsController {
+func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository) *StatisticsController {
 	return &StatisticsController{
-		statisticsService:      statisticsService,
-		statisticsRepository:   statisticsRepository,
-		assetVersionRepository: assetVersionRepository,
+		statisticsService:             statisticsService,
+		statisticsRepository:          statisticsRepository,
+		assetVersionRepository:        assetVersionRepository,
+		artifactRiskHistoryRepository: artifactRiskHistoryRepository,
 	}
 }
 
@@ -291,6 +293,12 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		}
 	}
 
+	now := time.Now()
+	riskHistory, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(org.ID, now.Add(-30*time.Hour*24), now)
+	if err != nil {
+		return err
+	}
+
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage: vulnEventAverageDistribution,
 		VulnDistribution: distribution,
@@ -300,6 +308,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		TopArtifacts:     artifacts,
 		TopComponents:    topComponents,
 		TopCVEs:          topCVEs,
+		OrgRiskHistory:   riskHistory,
 	}
 
 	return ctx.JSON(200, orgStatistics)
