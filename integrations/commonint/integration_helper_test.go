@@ -18,114 +18,346 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestMergeGitlabCiTemplateWithExistingContent(t *testing.T) {
+// devguardTemplate is the output of buildGitlabCiTemplate("full") with default env vars.
+// Tests use it as the incoming template to merge into an existing .gitlab-ci.yml.
+const devguardTemplate = `stages:
+  - test
+  - oci-image
+  - attestation
+include:
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_token: "$DEVGUARD_TOKEN"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "app.devguard.org"
+`
 
-	t.Run("only existing stages", func(t *testing.T) {
-		template := map[string]any{}
-		existing := map[string]any{
-			"stages": []any{"build", "test"},
-		}
+func TestMergeGitlabCiTemplate(t *testing.T) {
+	// Case 1: a simple Go project that has no include: block.
+	// Expected: oci-image and attestation appended to stages (test already present),
+	// include: block added at the end. Blank lines between jobs are not preserved
+	// by the yaml.v3 encoder — this is the only formatting change.
+	t.Run("simple Go project without existing include", func(t *testing.T) {
+		existing := `# Build and test pipeline for the API service
+stages:
+  - build
+  - test
+  - deploy
 
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+variables:
+  GO_VERSION: "1.22"
+  BINARY_NAME: api-server
+
+build:
+  stage: build
+  image: golang:${GO_VERSION}
+  script:
+    - go build -o $BINARY_NAME ./cmd/api
+
+unit-test:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - go test ./...
+
+deploy-staging:
+  stage: deploy
+  script:
+    - echo "Deploying to staging"
+  environment:
+    name: staging
+  only:
+    - main
+`
+		expected := `# Build and test pipeline for the API service
+stages:
+  - build
+  - test
+  - deploy
+  - oci-image
+  - attestation
+variables:
+  GO_VERSION: "1.22"
+  BINARY_NAME: api-server
+build:
+  stage: build
+  image: golang:${GO_VERSION}
+  script:
+    - go build -o $BINARY_NAME ./cmd/api
+unit-test:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - go test ./...
+deploy-staging:
+  stage: deploy
+  script:
+    - echo "Deploying to staging"
+  environment:
+    name: staging
+  only:
+    - main
+include:
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_token: "$DEVGUARD_TOKEN"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "app.devguard.org"
+`
+		result, err := mergeGitlabCiTemplate([]byte(existing), devguardTemplate)
 		assert.NoError(t, err)
-		assert.Contains(t, result, "- build")
-		assert.Contains(t, result, "- test")
+		assert.Equal(t, expected, result)
 	})
 
-	t.Run("only template stages", func(t *testing.T) {
-		template := map[string]any{
-			"stages": []any{"deploy", "lint"},
-		}
-		existing := map[string]any{}
+	// Case 2: a Docker build project that already has an include: block (GitLab SAST template).
+	// Expected: oci-image and attestation appended to stages (test already present),
+	// devguard remote include appended after the existing template include.
+	t.Run("Docker build project with existing GitLab template include", func(t *testing.T) {
+		existing := `stages:
+  - test
+  - build
+  - release
 
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+include:
+  - template: "Security/SAST.gitlab-ci.yml"
+
+variables:
+  DOCKER_DRIVER: overlay2
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+
+lint:
+  stage: test
+  image: node:20
+  script:
+    - npm ci
+    - npm run lint
+
+docker-build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+
+release:
+  stage: release
+  script:
+    - echo "Creating release"
+  only:
+    - tags
+`
+		expected := `stages:
+  - test
+  - build
+  - release
+  - oci-image
+  - attestation
+include:
+  - template: "Security/SAST.gitlab-ci.yml"
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_token: "$DEVGUARD_TOKEN"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "app.devguard.org"
+variables:
+  DOCKER_DRIVER: overlay2
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+lint:
+  stage: test
+  image: node:20
+  script:
+    - npm ci
+    - npm run lint
+docker-build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+release:
+  stage: release
+  script:
+    - echo "Creating release"
+  only:
+    - tags
+`
+		result, err := mergeGitlabCiTemplate([]byte(existing), devguardTemplate)
 		assert.NoError(t, err)
-		assert.Contains(t, result, "- deploy")
-		assert.Contains(t, result, "- lint")
+		assert.Equal(t, expected, result)
 	})
 
-	t.Run("merge stages with duplicates", func(t *testing.T) {
-		template := map[string]any{
-			"stages": []any{"test", "deploy"},
-		}
-		existing := map[string]any{
-			"stages": []any{"build", "test"},
-		}
+	// Case 3: a complex microservices project with workflow rules, many stages, two
+	// project-based includes, global default config, and multiple jobs with artifacts,
+	// caches, and services. Expected: only oci-image and attestation are appended
+	// (all other stages already present), devguard remote include appended as third entry.
+	// The two-line header comment and the blank line below it are both preserved.
+	t.Run("complex microservices project with workflow rules and project includes", func(t *testing.T) {
+		existing := `# Production pipeline for the microservices platform
+# Handles build, test, security scanning, and deployment
 
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - .pre
+  - test
+  - build
+  - scan
+  - package
+  - deploy
+  - .post
+
+include:
+  - project: "company/shared-ci-templates"
+    ref: main
+    file: "/templates/docker.yml"
+  - project: "company/shared-ci-templates"
+    ref: main
+    file: "/templates/kubernetes.yml"
+
+variables:
+  KUBE_NAMESPACE: production
+  DOCKER_BUILDKIT: "1"
+  CACHE_KEY: ${CI_COMMIT_REF_SLUG}
+
+default:
+  tags:
+    - kubernetes
+  retry:
+    max: 2
+    when: runner_system_failure
+
+unit-tests:
+  stage: test
+  image: golang:1.22
+  cache:
+    key: $CACHE_KEY
+    paths:
+      - vendor/
+  script:
+    - go test ./... -coverprofile=coverage.out
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.out
+
+integration-tests:
+  stage: test
+  services:
+    - name: postgres:15
+      alias: db
+  variables:
+    POSTGRES_DB: testdb
+    POSTGRES_PASSWORD: secret
+  script:
+    - go test ./integration/...
+
+build-image:
+  stage: build
+  script:
+    - docker build -t $IMAGE_TAG .
+
+deploy-production:
+  stage: deploy
+  when: manual
+  environment:
+    name: production
+    url: https://api.example.com
+  script:
+    - helm upgrade --install api ./chart
+`
+		expected := `# Production pipeline for the microservices platform
+# Handles build, test, security scanning, and deployment
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+stages:
+  - .pre
+  - test
+  - build
+  - scan
+  - package
+  - deploy
+  - .post
+  - oci-image
+  - attestation
+include:
+  - project: "company/shared-ci-templates"
+    ref: main
+    file: "/templates/docker.yml"
+  - project: "company/shared-ci-templates"
+    ref: main
+    file: "/templates/kubernetes.yml"
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_token: "$DEVGUARD_TOKEN"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "app.devguard.org"
+variables:
+  KUBE_NAMESPACE: production
+  DOCKER_BUILDKIT: "1"
+  CACHE_KEY: ${CI_COMMIT_REF_SLUG}
+default:
+  tags:
+    - kubernetes
+  retry:
+    max: 2
+    when: runner_system_failure
+unit-tests:
+  stage: test
+  image: golang:1.22
+  cache:
+    key: $CACHE_KEY
+    paths:
+      - vendor/
+  script:
+    - go test ./... -coverprofile=coverage.out
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.out
+integration-tests:
+  stage: test
+  services:
+    - name: postgres:15
+      alias: db
+  variables:
+    POSTGRES_DB: testdb
+    POSTGRES_PASSWORD: secret
+  script:
+    - go test ./integration/...
+build-image:
+  stage: build
+  script:
+    - docker build -t $IMAGE_TAG .
+deploy-production:
+  stage: deploy
+  when: manual
+  environment:
+    name: production
+    url: https://api.example.com
+  script:
+    - helm upgrade --install api ./chart
+`
+		result, err := mergeGitlabCiTemplate([]byte(existing), devguardTemplate)
 		assert.NoError(t, err)
-		assert.Contains(t, result, "- build")
-		assert.Contains(t, result, "- test")
-		assert.Contains(t, result, "- deploy")
-	})
-
-	t.Run("merge includes", func(t *testing.T) {
-		template := map[string]any{
-			"include": []any{"template.yml"},
-		}
-		existing := map[string]any{
-			"include": []any{"existing.yml"},
-		}
-
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
-		assert.NoError(t, err)
-		assert.Contains(t, result, "- existing.yml")
-		assert.Contains(t, result, "- template.yml")
-	})
-
-	t.Run("merge stages and includes with other fields", func(t *testing.T) {
-		template := map[string]any{
-			"stages":  []any{"lint"},
-			"include": []any{"template.yml"},
-		}
-		existing := map[string]any{
-			"stages":  []any{"build"},
-			"include": []any{"existing.yml"},
-			"variables": map[string]any{
-				"ENV": "dev",
-			},
-		}
-
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
-		assert.NoError(t, err)
-		assert.Contains(t, result, "- build")
-		assert.Contains(t, result, "- lint")
-		assert.Contains(t, result, "- existing.yml")
-		assert.Contains(t, result, "- template.yml")
-		assert.Contains(t, result, "variables:")
-		assert.Contains(t, result, "ENV: dev")
-	})
-
-	t.Run("existing nil stages and includes", func(t *testing.T) {
-		template := map[string]any{
-			"stages":  []any{"deploy"},
-			"include": []any{"template.yml"},
-		}
-		existing := map[string]any{
-			"stages":  nil,
-			"include": nil,
-		}
-
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
-		assert.NoError(t, err)
-		assert.Contains(t, result, "- deploy")
-		assert.Contains(t, result, "- template.yml")
-	})
-
-	t.Run("template nil stages and includes", func(t *testing.T) {
-		template := map[string]any{
-			"stages":  nil,
-			"include": nil,
-		}
-		existing := map[string]any{
-			"stages":  []any{"build"},
-			"include": []any{"existing.yml"},
-		}
-
-		result, err := mergeGitlabCiTemplateWithExistingContent(template, existing)
-		assert.NoError(t, err)
-		assert.Contains(t, result, "- build")
-		assert.Contains(t, result, "- existing.yml")
+		assert.Equal(t, expected, result)
 	})
 }
 
