@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -27,6 +28,8 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+
+	"gopkg.in/yaml.v3"
 )
 
 // receives an uri and matches the extension to supported extensions, if not valid or not supported we return txt extension
@@ -249,33 +252,15 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 		return fmt.Errorf("could not checkout branch: %v", err)
 	}
 
-	//read the file
-	//var newContent string
-	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
-
-	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0644)
-	if err != nil {
-		//make the file
-		f, err = w.Filesystem.Create(".gitlab-ci.yml")
+	// Read existing file content if it exists.
+	var existingContent []byte
+	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDONLY, 0)
+	if err == nil {
+		existingContent, err = io.ReadAll(f)
+		f.Close()
 		if err != nil {
-			return fmt.Errorf("could not create file: %v", err)
+			return fmt.Errorf("could not read file: %v", err)
 		}
-		//newContent = fmt.Sprintf("include:\n%s\n", template)
-	} /*
-		else {
-			content, err := io.ReadAll(f)
-			if err != nil {
-				return fmt.Errorf("could not read file: %v", err)
-			}
-			newContent = addPipelineTemplate(content, template)
-		}
-	*/
-
-	f.Close()
-	// open the file in truncate mode to overwrite the content
-	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_TRUNC|os.O_RDWR, 0644)
-	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
 	}
 
 	template, err := buildGitlabCiTemplate(templateID)
@@ -283,9 +268,22 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 		return fmt.Errorf("could not build template: %v", err)
 	}
 
-	_, err = f.Write([]byte(template))
+	if len(existingContent) > 0 {
+		template, err = mergeGitlabCiTemplate(existingContent, template)
+		if err != nil {
+			return fmt.Errorf("could not merge template with existing content: %v", err)
+		}
+	}
 
+	// Create truncates the file if it exists, so no leftover bytes.
+	f, err = w.Filesystem.Create(".gitlab-ci.yml")
 	if err != nil {
+		return fmt.Errorf("could not open file for writing: %v", err)
+	}
+
+	_, err = f.Write([]byte(template))
+	if err != nil {
+		f.Close()
 		return fmt.Errorf("could not write to file: %v", err)
 	}
 
@@ -316,6 +314,131 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 	}
 
 	return nil
+}
+
+// mergeGitlabCiTemplate merges the devguard CI template into an existing .gitlab-ci.yml
+// by appending only missing stages and include entries. All other content, comments, and
+// key ordering from the existing file are preserved.
+func mergeGitlabCiTemplate(existingYAML []byte, templateYAML string) (string, error) {
+	var existingDoc yaml.Node
+	if err := yaml.Unmarshal(existingYAML, &existingDoc); err != nil {
+		return "", fmt.Errorf("could not parse existing .gitlab-ci.yml: %w", err)
+	}
+
+	existingMapping := yamlDocumentMapping(&existingDoc)
+	if existingMapping == nil {
+		// Existing file is empty or not a mapping — use template as-is.
+		return templateYAML, nil
+	}
+
+	var templateDoc yaml.Node
+	if err := yaml.Unmarshal([]byte(templateYAML), &templateDoc); err != nil {
+		return "", fmt.Errorf("could not parse template yaml: %w", err)
+	}
+
+	templateMapping := yamlDocumentMapping(&templateDoc)
+	if templateMapping == nil {
+		return string(existingYAML), nil
+	}
+
+	// Merge stages — deduplicate by scalar value.
+	mergeYAMLSequenceKey(existingMapping, templateMapping, "stages", func(a, b *yaml.Node) bool {
+		return a.Kind == yaml.ScalarNode && b.Kind == yaml.ScalarNode && a.Value == b.Value
+	})
+
+	// Merge include — deduplicate by remote URL.
+	mergeYAMLSequenceKey(existingMapping, templateMapping, "include", func(a, b *yaml.Node) bool {
+		ra := yamlMappingScalarValue(a, "remote")
+		rb := yamlMappingScalarValue(b, "remote")
+		return ra != "" && ra == rb
+	})
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&existingDoc); err != nil {
+		return "", fmt.Errorf("could not marshal merged yaml: %w", err)
+	}
+
+	return strings.TrimPrefix(buf.String(), "---\n"), nil
+}
+
+// yamlDocumentMapping returns the top-level MappingNode from a DocumentNode, or nil.
+func yamlDocumentMapping(doc *yaml.Node) *yaml.Node {
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 && doc.Content[0].Kind == yaml.MappingNode {
+		return doc.Content[0]
+	}
+	return nil
+}
+
+// yamlMappingScalarValue finds a scalar value for key in a MappingNode, or "".
+func yamlMappingScalarValue(node *yaml.Node, key string) string {
+	if node.Kind != yaml.MappingNode {
+		return ""
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key && node.Content[i+1].Kind == yaml.ScalarNode {
+			return node.Content[i+1].Value
+		}
+	}
+	return ""
+}
+
+// yamlMappingKeyIndex returns the Content index of a key node in a MappingNode, or -1.
+func yamlMappingKeyIndex(mapping *yaml.Node, key string) int {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			return i
+		}
+	}
+	return -1
+}
+
+// mergeYAMLSequenceKey appends items from the template sequence into the existing sequence
+// for the given key, skipping items where isDuplicate returns true.
+// If the key is absent from the existing mapping, it is added wholesale from the template.
+func mergeYAMLSequenceKey(existingMapping, templateMapping *yaml.Node, key string, isDuplicate func(existing, incoming *yaml.Node) bool) {
+	tIdx := yamlMappingKeyIndex(templateMapping, key)
+	if tIdx < 0 {
+		return
+	}
+	templateSeq := templateMapping.Content[tIdx+1]
+	if templateSeq.Kind != yaml.SequenceNode {
+		return
+	}
+
+	eIdx := yamlMappingKeyIndex(existingMapping, key)
+	if eIdx < 0 {
+		// Key missing from existing — add the entire template sequence.
+		existingMapping.Content = append(existingMapping.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: key, Tag: "!!str"},
+			templateSeq,
+		)
+		return
+	}
+
+	existingSeq := existingMapping.Content[eIdx+1]
+	// Wrap a bare scalar (e.g. `include: single.yml`) into a sequence.
+	if existingSeq.Kind == yaml.ScalarNode {
+		scalar := *existingSeq
+		existingSeq.Kind = yaml.SequenceNode
+		existingSeq.Tag = "!!seq"
+		existingSeq.Value = ""
+		existingSeq.Content = []*yaml.Node{&scalar}
+	}
+
+	for _, incoming := range templateSeq.Content {
+		dup := false
+		for _, existing := range existingSeq.Content {
+			if isDuplicate(existing, incoming) {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			existingSeq.Content = append(existingSeq.Content, incoming)
+		}
+	}
 }
 
 func escapeNodeID(s string) string {
