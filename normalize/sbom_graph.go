@@ -1161,7 +1161,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		vexURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/vex.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 		sbomURL := fmt.Sprintf("%s/api/v1/public/%s/refs/%s/artifacts/%s/sbom.json/", apiURL, metadata.AssetID.String(), metadata.AssetVersionSlug, escapedArtifactName)
 
-		dashboardURL := getDashboardURL(metadata)
+		dashboardURL := getDashboardURL(metadata, escapedArtifactName)
 
 		externalRefs = &[]cdx.ExternalReference{{
 			URL:     vexURL,
@@ -1414,14 +1414,14 @@ func (g *SBOMGraph) isReachable(id string) bool {
 	return g.reachableNodes()[id]
 }
 
-func getDashboardURL(metadata BOMMetadata) string {
+func getDashboardURL(metadata BOMMetadata, escapedArtifactName string) string {
 	dashboardURL := ""
 	if metadata.FrontendURL != "" && metadata.OrgSlug != "" && metadata.ProjectSlug != "" && metadata.AssetSlug != "" {
 		dashboardURL = fmt.Sprintf("%s/%s/projects/%s/assets/%s", metadata.FrontendURL, metadata.OrgSlug, metadata.ProjectSlug, metadata.AssetSlug)
 	}
 
 	if dashboardURL != "" {
-		dashboardURL = fmt.Sprintf("%s/refs/main", dashboardURL)
+		dashboardURL = fmt.Sprintf("%s/refs/%s?artifact=%s", dashboardURL, metadata.AssetVersionSlug, escapedArtifactName)
 	}
 
 	return dashboardURL
