@@ -1496,7 +1496,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 				return nil, fmt.Errorf("component at index %d has missing BOMRef", idx)
 			}
 			if comp.Name == "" {
-				return nil, fmt.Errorf("component at index %d (%s) has missing Name", idx, comp.BOMRef)
+				comp.Name = comp.BOMRef // Default to BOMRef if name is missing
 			}
 
 			// Check for duplicate BOMRef
