@@ -41,6 +41,16 @@
             "program": "${workspaceRoot}/cmd/devguard/main.go",
             "args": [],
         },
+    {
+        "name": "Launch DepTreeWalk",
+        "type": "go",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "mode": "auto",
+        "program": "${workspaceRoot}/cmd/devguard-cli/test",
+        "args": [
+        ],
+    },
         {
             "name": "Launch Policy eval",
             "type": "go",
