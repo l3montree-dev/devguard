@@ -97,17 +97,17 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
-			return component, nil
+		} else {
+			component.License = &l
 		}
-		component.License = &l
 	case "apk":
 		l := licenses.GetAlpineLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
 			component.License = utils.Ptr("unknown")
-			return component, nil
+		} else {
+			component.License = &l
 		}
-		component.License = &l
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
 			context.Background(),
@@ -118,68 +118,72 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-
-			// set the license to unknown
 			component.License = utils.Ptr("unknown")
 			return component, nil
 		}
 
-		// check if there is a license
 		if len(resp.Licenses) > 0 {
-			// update the license
 			component.License = &resp.Licenses[0]
 			component.Published = &resp.PublishedAt
 		} else {
-			// set the license to unknown
 			component.License = utils.Ptr("unknown")
 		}
+	}
+	return component, nil
+}
 
-		// check if there is a related project
-		if len(resp.RelatedProjects) == 0 {
-			slog.Warn("no related projects found", "purl", pURL)
-			return component, nil
-		}
+func (s *ComponentService) FetchComponentProject(component models.Component) (models.Component, error) {
+	pURL := component.ID
+	parsedPurl, err := packageurl.FromString(pURL)
+	if err != nil {
+		return component, nil
+	}
 
-		// find the project with the "SOURCE_REPO" type
-		for _, project := range resp.RelatedProjects {
-			if project.RelationType == "SOURCE_REPO" {
-				// get the project key and fetch the project
-				projectKey := project.ProjectKey.ID
+	resp, err := s.openSourceInsightsService.GetVersion(
+		context.Background(),
+		parsedPurl.Type,
+		combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
+		parsedPurl.Version,
+	)
+	if err != nil {
+		slog.Warn("could not get version information for component project", "err", err, "purl", pURL)
+		return component, nil
+	}
 
-				// fetch the project
-				projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
-				if err != nil {
-					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
-				}
+	for _, project := range resp.RelatedProjects {
+		if project.RelationType == "SOURCE_REPO" {
+			projectKey := project.ProjectKey.ID
 
-				var jsonbScorecard *databasetypes.JSONB = nil
-				var scoreCardScore *float64 = nil
-				if projectResp.Scorecard != nil {
-					jsonb, err := databasetypes.JSONBFromStruct(*projectResp.Scorecard)
-					scoreCardScore = &projectResp.Scorecard.OverallScore
-
-					if err != nil {
-						slog.Warn("could not convert scorecard to jsonb", "err", err)
-					} else {
-						jsonbScorecard = &jsonb
-					}
-				}
-				// save the project information
-				componentProject := &models.ComponentProject{
-					ProjectKey:     projectKey,
-					StarsCount:     projectResp.StarsCount,
-					ForksCount:     projectResp.ForksCount,
-					License:        projectResp.License,
-					Description:    projectResp.Description,
-					Homepage:       projectResp.Homepage,
-					ScoreCard:      jsonbScorecard,
-					ScoreCardScore: scoreCardScore,
-				}
-
-				component.ComponentProject = componentProject
-				component.ComponentProjectKey = &projectKey
-				break
+			projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
+			if err != nil {
+				slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
+				return component, nil
 			}
+
+			var jsonbScorecard *databasetypes.JSONB = nil
+			var scoreCardScore *float64 = nil
+			if projectResp.Scorecard != nil {
+				jsonb, err := databasetypes.JSONBFromStruct(*projectResp.Scorecard)
+				scoreCardScore = &projectResp.Scorecard.OverallScore
+				if err != nil {
+					slog.Warn("could not convert scorecard to jsonb", "err", err)
+				} else {
+					jsonbScorecard = &jsonb
+				}
+			}
+
+			component.ComponentProject = &models.ComponentProject{
+				ProjectKey:     projectKey,
+				StarsCount:     projectResp.StarsCount,
+				ForksCount:     projectResp.ForksCount,
+				License:        projectResp.License,
+				Description:    projectResp.Description,
+				Homepage:       projectResp.Homepage,
+				ScoreCard:      jsonbScorecard,
+				ScoreCardScore: scoreCardScore,
+			}
+			component.ComponentProjectKey = &projectKey
+			break
 		}
 	}
 	return component, nil
@@ -225,7 +229,11 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
 		errGroup.Go(func() (models.Component, error) {
-			return s.GetLicense(component)
+			comp, err := s.GetLicense(component)
+			if err != nil {
+				return comp, err
+			}
+			return s.FetchComponentProject(comp)
 		})
 	}
 

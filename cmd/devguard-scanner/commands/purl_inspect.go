@@ -27,9 +27,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -86,10 +85,12 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	var result struct {
-		PURL               packageurl.PackageURL       `json:"purl"`
-		MatchContext       *normalize.PurlMatchContext `json:"match_context"`
-		AffectedComponents []models.AffectedComponent  `json:"affected_components"`
-		Vulns              []models.VulnInPackage      `json:"vulns"`
+		PURL               string                      `json:"purl"`
+		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
+		Component          *dtos.ComponentDTO          `json:"component"`
+		AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
+		Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
+		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&result)
@@ -97,7 +98,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not decode response")
 	}
 
-	r := outputInspectResult(purlString, result.PURL, result.MatchContext, result.AffectedComponents, result.Vulns)
+	r := outputInspectResult(purlString, result.PURL, result.MatchContext, result.Component, result.AffectedComponents, result.Vulns, result.MaliciousPackage)
 	if config.RuntimeBaseConfig.OutputPath != "" {
 		outputData, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
@@ -112,17 +113,17 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	return r
 }
 
-func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx *normalize.PurlMatchContext, affectedComponents []models.AffectedComponent, vulns []models.VulnInPackage) error {
+func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.PurlMatchContext, component *dtos.ComponentDTO, affectedComponents []dtos.AffectedComponentDTO, vulns []dtos.VulnInPackageDTO, maliciousPackage *dtos.OSV) error {
 	// Collect unique CVEs from raw affected components
-	rawCVEMap := make(map[string]models.CVE)
+	rawCVEMap := make(map[string]dtos.CVEDTO)
 	for _, ac := range affectedComponents {
-		for _, cve := range ac.CVE {
+		for _, cve := range ac.CVEs {
 			rawCVEMap[cve.CVE] = cve
 		}
 	}
 
 	// Collect deduplicated CVEs
-	dedupCVEMap := make(map[string]models.VulnInPackage)
+	dedupCVEMap := make(map[string]dtos.VulnInPackageDTO)
 	for _, v := range vulns {
 		dedupCVEMap[v.CVEID] = v
 	}
@@ -133,6 +134,27 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 		if _, exists := dedupCVEMap[cveID]; !exists {
 			removedByAlias = append(removedByAlias, cveID)
 		}
+	}
+
+	// Malicious package warning (shown first, prominently)
+	if maliciousPackage != nil {
+		fmt.Println(text.FgHiRed.Sprint("\n⚠ MALICIOUS PACKAGE DETECTED"))
+		fmt.Println(strings.Repeat("─", 60))
+		malTable := table.NewWriter()
+		malTable.SetStyle(table.StyleLight)
+		malTable.AppendRows([]table.Row{
+			{"ID", maliciousPackage.ID},
+			{"Summary", maliciousPackage.Summary},
+			{"Published", maliciousPackage.Published.Format("2006-01-02")},
+		})
+		if maliciousPackage.Details != "" {
+			details := maliciousPackage.Details
+			if len(details) > 120 {
+				details = details[:120] + "..."
+			}
+			malTable.AppendRow(table.Row{"Details", details})
+		}
+		fmt.Println(malTable.Render())
 	}
 
 	// Summary table
@@ -146,11 +168,8 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 		{"Search PURL", matchCtx.SearchPurl},
 		{"Version", matchCtx.NormalizedVersion},
 		{"Version Type", matchCtx.HowToInterpretVersionString},
-		{"PURL Type", purl.Type},
 	})
-	if purl.Namespace != "" {
-		summaryTable.AppendRow(table.Row{"Namespace", purl.Namespace})
-	}
+
 	if matchCtx.Qualifiers.String() != "" {
 		summaryTable.AppendRow(table.Row{"Qualifiers", matchCtx.Qualifiers.String()})
 	}
@@ -161,6 +180,47 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 		{"After Deduplication", text.FgHiGreen.Sprintf("%d", len(dedupCVEMap))},
 	})
 	fmt.Println(summaryTable.Render())
+
+	// Component project information
+	if component != nil && component.ComponentProject != nil {
+		proj := component.ComponentProject
+		fmt.Println(text.FgHiCyan.Sprint("\nCOMPONENT PROJECT"))
+		fmt.Println(strings.Repeat("─", 60))
+
+		projTable := table.NewWriter()
+		projTable.SetStyle(table.StyleLight)
+		projTable.AppendRows([]table.Row{
+			{"Project", proj.ProjectKey},
+		})
+		if proj.Description != "" {
+			desc := proj.Description
+			if len(desc) > 80 {
+				desc = desc[:80] + "..."
+			}
+			projTable.AppendRow(table.Row{"Description", desc})
+		}
+		if proj.Homepage != "" {
+			projTable.AppendRow(table.Row{"Homepage", proj.Homepage})
+		}
+		if proj.License != "" {
+			projTable.AppendRow(table.Row{"License", proj.License})
+		}
+		projTable.AppendRows([]table.Row{
+			{"Stars", proj.StarsCount},
+			{"Forks", proj.ForksCount},
+			{"Open Issues", proj.OpenIssuesCount},
+		})
+		if proj.ScoreCardScore != nil {
+			scoreColor := text.FgGreen
+			if *proj.ScoreCardScore < 5.0 {
+				scoreColor = text.FgRed
+			} else if *proj.ScoreCardScore < 7.0 {
+				scoreColor = text.FgYellow
+			}
+			projTable.AppendRow(table.Row{"OpenSSF Scorecard", scoreColor.Sprintf("%.1f / 10", *proj.ScoreCardScore)})
+		}
+		fmt.Println(projTable.Render())
+	}
 
 	// Show deduplication details
 	if len(removedByAlias) > 0 {
@@ -174,7 +234,7 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 
 		for _, removedCVE := range removedByAlias {
 			if cve, exists := rawCVEMap[removedCVE]; exists {
-				aliasOf := findAliasOf(cve, dedupCVEMap, removedCVE)
+				aliasOf := findAliasOf(cve, rawCVEMap, dedupCVEMap, removedCVE)
 				if aliasOf != "" {
 					dedupTable.AppendRow(table.Row{text.FgRed.Sprint(removedCVE), text.FgGreen.Sprint(aliasOf)})
 				} else {
@@ -192,26 +252,22 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 
 		cveTable := table.NewWriter()
 		cveTable.SetStyle(table.StyleLight)
-		cveTable.AppendHeader(table.Row{"CVE", "CVSS", "EPSS", "CWEs", "Exploits", "Status"})
+		cveTable.AppendHeader(table.Row{"CVE", "CVSS", "EPSS", "Exploits", "Fixed Version", "Status"})
 
 		for _, cve := range rawCVEMap {
 			status := text.FgGreen.Sprint("KEPT")
-			if _, exists := dedupCVEMap[cve.CVE]; !exists {
+			fixedVersion := "-"
+			if vuln, exists := dedupCVEMap[cve.CVE]; exists {
+				if vuln.FixedVersion != nil {
+					fixedVersion = *vuln.FixedVersion
+				}
+			} else {
 				status = text.FgRed.Sprint("REMOVED")
 			}
 
 			epssStr := "-"
 			if cve.EPSS != nil {
 				epssStr = fmt.Sprintf("%.4f", *cve.EPSS)
-			}
-
-			cwes := []string{}
-			for _, w := range cve.Weaknesses {
-				cwes = append(cwes, w.CWEID)
-			}
-			cweStr := "-"
-			if len(cwes) > 0 {
-				cweStr = strings.Join(cwes, ", ")
 			}
 
 			exploitStr := "-"
@@ -230,8 +286,8 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 				cve.CVE,
 				cvssColor.Sprintf("%.1f", cve.CVSS),
 				epssStr,
-				cweStr,
 				exploitStr,
+				fixedVersion,
 				status,
 			})
 		}
@@ -300,7 +356,7 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 			}
 
 			cveIDs := []string{}
-			for _, cve := range ac.CVE {
+			for _, cve := range ac.CVEs {
 				cveIDs = append(cveIDs, cve.CVE)
 			}
 
@@ -320,7 +376,7 @@ func outputInspectResult(inputPurl string, purl packageurl.PackageURL, matchCtx 
 }
 
 // findAliasOf finds which kept CVE the removed CVE is an alias of
-func findAliasOf(cve models.CVE, dedupCVEMap map[string]models.VulnInPackage, removedCVE string) string {
+func findAliasOf(cve dtos.CVEDTO, rawCVEMap map[string]dtos.CVEDTO, dedupCVEMap map[string]dtos.VulnInPackageDTO, removedCVE string) string {
 	// Check if removed CVE points to a kept CVE
 	for _, rel := range cve.Relationships {
 		if rel.RelationshipType == "alias" {
@@ -330,10 +386,12 @@ func findAliasOf(cve models.CVE, dedupCVEMap map[string]models.VulnInPackage, re
 		}
 	}
 	// Check if a kept CVE points to the removed CVE
-	for keptCVE, keptVuln := range dedupCVEMap {
-		for _, rel := range keptVuln.CVE.Relationships {
-			if rel.RelationshipType == "alias" && rel.TargetCVE == removedCVE {
-				return keptCVE
+	for keptCVE := range dedupCVEMap {
+		if keptCVEDTO, exists := rawCVEMap[keptCVE]; exists {
+			for _, rel := range keptCVEDTO.Relationships {
+				if rel.RelationshipType == "alias" && rel.TargetCVE == removedCVE {
+					return keptCVE
+				}
 			}
 		}
 	}

@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -672,6 +673,66 @@ func (_c *ScanService_ScanNormalizedSBOM_Call) Return(dependencyVulns []models.D
 }
 
 func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOM_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ScanSBOMWithoutSaving provides a mock function for the type ScanService
+func (_mock *ScanService) ScanSBOMWithoutSaving(bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
+	ret := _mock.Called(bom)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ScanSBOMWithoutSaving")
+	}
+
+	var r0 dtos.ScanResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*cyclonedx.BOM) (dtos.ScanResponse, error)); ok {
+		return returnFunc(bom)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*cyclonedx.BOM) dtos.ScanResponse); ok {
+		r0 = returnFunc(bom)
+	} else {
+		r0 = ret.Get(0).(dtos.ScanResponse)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*cyclonedx.BOM) error); ok {
+		r1 = returnFunc(bom)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ScanService_ScanSBOMWithoutSaving_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ScanSBOMWithoutSaving'
+type ScanService_ScanSBOMWithoutSaving_Call struct {
+	*mock.Call
+}
+
+// ScanSBOMWithoutSaving is a helper method to define mock.On call
+//   - bom *cyclonedx.BOM
+func (_e *ScanService_Expecter) ScanSBOMWithoutSaving(bom interface{}) *ScanService_ScanSBOMWithoutSaving_Call {
+	return &ScanService_ScanSBOMWithoutSaving_Call{Call: _e.mock.On("ScanSBOMWithoutSaving", bom)}
+}
+
+func (_c *ScanService_ScanSBOMWithoutSaving_Call) Run(run func(bom *cyclonedx.BOM)) *ScanService_ScanSBOMWithoutSaving_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *cyclonedx.BOM
+		if args[0] != nil {
+			arg0 = args[0].(*cyclonedx.BOM)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_ScanSBOMWithoutSaving_Call) Return(scanResponse dtos.ScanResponse, err error) *ScanService_ScanSBOMWithoutSaving_Call {
+	_c.Call.Return(scanResponse, err)
+	return _c
+}
+
+func (_c *ScanService_ScanSBOMWithoutSaving_Call) RunAndReturn(run func(bom *cyclonedx.BOM) (dtos.ScanResponse, error)) *ScanService_ScanSBOMWithoutSaving_Call {
 	_c.Call.Return(run)
 	return _c
 }

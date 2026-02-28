@@ -1940,6 +1940,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 				// Find the VEX reference
 				var vexRef *cdx.ExternalReference
 				var sbomRef *cdx.ExternalReference
+				var dashboardRef *cdx.ExternalReference
 				for i := range *bom.ExternalReferences {
 					if (*bom.ExternalReferences)[i].Type == cdx.ERTypeExploitabilityStatement {
 						vexRef = &(*bom.ExternalReferences)[i]
@@ -1947,12 +1948,63 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 					if (*bom.ExternalReferences)[i].Type == cdx.ERTypeBOM {
 						sbomRef = &(*bom.ExternalReferences)[i]
 					}
+					if (*bom.ExternalReferences)[i].Type == cdx.ERTypeDynamicAnalysisReport {
+						dashboardRef = &(*bom.ExternalReferences)[i]
+					}
 				}
 				assert.NotNil(t, vexRef, "should have VEX reference")
 				assert.NotNil(t, sbomRef, "should have SBOM reference")
-				assert.Contains(t, vexRef.URL, "/artifacts/"+tc.expectedInURL+"/vex.json/")
-				assert.Contains(t, sbomRef.URL, "/artifacts/"+tc.expectedInURL+"/sbom.json/")
+				assert.NotNil(t, dashboardRef, "should have Dashboard reference")
+				assert.Contains(t, vexRef.URL, "/refs/main/artifacts/"+tc.expectedInURL+"/vex.json/")
+				assert.Contains(t, sbomRef.URL, "/refs/main/artifacts/"+tc.expectedInURL+"/sbom.json/")
+				assert.Contains(t, dashboardRef.URL, "/refs/main?artifact="+tc.expectedInURL)
 			})
+		}
+	})
+
+	t.Run("external reference URLs should contain correct ref paths based on metadata", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Add a simple component
+		g.AddComponent(cdx.Component{
+			BOMRef:     "pkg:npm/test@1.0.0",
+			Name:       "test",
+			PackageURL: "pkg:npm/test@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		})
+
+		metadata := BOMMetadata{
+			ArtifactName:          "my-app",
+			AssetVersionName:      "dev-branch",
+			AssetVersionSlug:      "dev-branch",
+			AssetSlug:             "my-asset",
+			OrgSlug:               "my-org",
+			ProjectSlug:           "my-project",
+			AssetID:               [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			AddExternalReferences: true,
+			FrontendURL:           "http://localhost:3000",
+			RootName:              "",
+		}
+
+		// Set API_URL for test
+		t.Setenv("API_URL", "http://localhost:8080")
+
+		bom := g.ToCycloneDX(metadata)
+
+		// Check that external references exist
+		assert.NotNil(t, bom.ExternalReferences)
+		assert.GreaterOrEqual(t, len(*bom.ExternalReferences), 3)
+
+		// Verify the URLs contain correct ref paths based on dev-branch version
+		for _, ref := range *bom.ExternalReferences {
+			switch ref.Type {
+			case cdx.ERTypeExploitabilityStatement:
+				assert.Contains(t, ref.URL, "/refs/dev-branch/artifacts/my-app/vex.json/")
+			case cdx.ERTypeBOM:
+				assert.Contains(t, ref.URL, "/refs/dev-branch/artifacts/my-app/sbom.json/")
+			case cdx.ERTypeDynamicAnalysisReport:
+				assert.Contains(t, ref.URL, "/refs/dev-branch?artifact=my-app")
+			}
 		}
 	})
 

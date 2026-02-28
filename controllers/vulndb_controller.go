@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -13,6 +12,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
@@ -23,13 +24,17 @@ type VulnDBController struct {
 	cveRepository               shared.CveRepository
 	maliciousPackageChecker     shared.MaliciousPackageChecker
 	affectedComponentRepository shared.AffectedComponentRepository
+	componentRepository         shared.ComponentRepository
+	componentService            shared.ComponentService
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService) *VulnDBController {
 	return &VulnDBController{
 		cveRepository:               cveRepository,
 		maliciousPackageChecker:     maliciousPackageChecker,
 		affectedComponentRepository: affectedComponentRepository,
+		componentRepository:         componentRepository,
+		componentService:            componentService,
 	}
 }
 
@@ -113,7 +118,7 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 	purlString := shared.GetParam(ctx, "purl")
 
-	purlString, err := url.QueryUnescape(purlString)
+	purlString, err := url.PathUnescape(purlString)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid URL encoding in PURL").WithInternal(err)
 	}
@@ -142,17 +147,36 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
 
+	var componentDTO *dtos.ComponentDTO
+	comp := models.Component{ID: purlString}
+	if err := c.componentRepository.GetDB(nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil {
+		// Component not in DB yet — fetch license and project info on-demand and create it
+		comp, _ = c.componentService.GetLicense(comp)
+		comp, _ = c.componentService.FetchComponentProject(comp)
+		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+	} else if comp.ComponentProject == nil {
+		// Component exists but has no project info yet — fetch it now
+		comp, _ = c.componentService.FetchComponentProject(comp)
+		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+	}
+	if comp.ComponentProject != nil || comp.License != nil {
+		dto := transformer.ComponentModelToDTO(comp)
+		componentDTO = &dto
+	}
+
 	return ctx.JSON(200, struct {
-		PURL               packageurl.PackageURL       `json:"purl"`
+		PURL               string                      `json:"purl"`
 		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
-		AffectedComponents []models.AffectedComponent  `json:"affectedComponents"`
-		Vulns              []models.VulnInPackage      `json:"vulns"`
+		Component          *dtos.ComponentDTO          `json:"component"`
+		AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
+		Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
 		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 	}{
-		PURL:               purl,
+		PURL:               purl.ToString(),
 		MatchContext:       matchCtx,
-		AffectedComponents: affectedComponents,
-		Vulns:              vulns,
+		Component:          componentDTO,
+		AffectedComponents: utils.Map(affectedComponents, transformer.AffectedComponentToDTO),
+		Vulns:              utils.Map(vulns, transformer.VulnInPackageToDTO),
 		MaliciousPackage:   maliciousPackage,
 	})
 }
@@ -216,35 +240,36 @@ type ecosystemRow struct {
 	Count     int    `gorm:"count" json:"count"`
 }
 
-// return the number of affected packages by ecosystem
-func (c VulnDBController) GetEcosystemDistribution(ctx shared.Context) error {
-	results := make([]ecosystemRow, 1024)
+// return the number of vulnerabilities in affected packages per ecosystem
+func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
+	cveResults := make([]ecosystemRow, 0, 1024)
+	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 
-	// static sql to get amount of packages by ecosystem
-	sql := `SELECT ecosystem, COUNT(*) FROM affected_components GROUP BY ecosystem;`
-	err := c.affectedComponentRepository.GetDB(nil).Raw(sql).Find(&results).Error
+	// get the amount of CVEs in affected packages per ecosystem
+	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM cve_affected_component a
+	LEFT JOIN affected_components b ON b.id = a.affected_component_id
+	GROUP BY LOWER(b.ecosystem);`
+	err := c.affectedComponentRepository.GetDB(nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
 
-	// since ecosystem have tags behind the : character we want to group them by their prefix
-	jsonResults := buildResultsJSON(results)
-
-	return ctx.String(200, jsonResults)
-}
-
-// group ecosystem by prefix ecosystem string and return the equivalent json encoding
-func buildResultsJSON(rows []ecosystemRow) string {
-	// map to deduplicate ecosystem with different tags
-	aggregatedResults := make(map[string]int)
-
-	// fill the map with the value of the rows
-	for _, row := range rows {
-		before, _, _ := strings.Cut(row.Ecosystem, ":")
-		aggregatedResults[before] += row.Count
+	// do the same thing for malicious packages
+	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a 
+	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id 
+	GROUP BY LOWER(b.ecosystem);`
+	err = c.affectedComponentRepository.GetDB(nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
 
-	// marshal to JSON with proper indentation
-	data, _ := json.MarshalIndent(aggregatedResults, "", config.PrettyJSONIndent)
-	return string(data)
+	// group the results in a map by cutting the ecosystem identifier before the ':'
+	ecosystemToAmount := make(map[string]int, len(cveResults))
+	for _, row := range append(cveResults, maliciousPackageResults...) {
+		key, _, _ := strings.Cut(row.Ecosystem, ":")
+		ecosystemToAmount[key] += row.Count
+	}
+
+	// convert the result in a map and return it
+	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
 }
