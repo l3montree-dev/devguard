@@ -25,6 +25,7 @@ import (
 )
 
 type CSAFController struct {
+	csafService              shared.CSAFService
 	dependencyVulnRepository shared.DependencyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
@@ -34,8 +35,9 @@ type CSAFController struct {
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
 	return &CSAFController{
+		csafService:              csafService,
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
@@ -249,18 +251,13 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return fmt.Errorf("invalid year format")
 	}
 
-	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	allVulns, err := services.GetCSAFVulnsForAsset(asset.ID, controller.dependencyVulnRepository)
 	if err != nil {
 		return err
 	}
 
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
-	})
-
-	// deduplicate Slice to avoid listing the same CVEs
-	vulnsOfThatYear = utils.DeduplicateSlice(vulnsOfThatYear, func(vuln models.DependencyVuln) string {
-		return vuln.CVEID
 	})
 
 	// sort reports alphabetically by CVEID for better usability
@@ -492,8 +489,19 @@ func getPublicKeyFingerprint() string {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version} [get]
 func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
+	// extract context information
+	cveID := ctx.Param("version")
+	if cveID == "" {
+		return fmt.Errorf("version parameter is required")
+	}
+	org := shared.GetOrg(ctx)
+	asset := shared.GetAsset(ctx)
+
+	// remove everything <asset-slug>_ from the beginning of the document id
+	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
+
 	// generate the report first
-	report, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
+	report, err := controller.csafService.GenerateCSAFReport(org.Name, asset.ID, asset.Slug, cveID)
 	if err != nil {
 		return err
 	}
