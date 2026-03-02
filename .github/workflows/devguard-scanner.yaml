@@ -91,7 +91,7 @@ jobs:
       - name: Build OCI image with Nix
         run: nix build .#devguardOCI
       - name: Prepare image.tar
-        run: cp "$(readlink -f result)" image.tar
+        run: gunzip -c "$(readlink -f result)" > image.tar
       - name: Get image digest
         run: crane digest --tarball=image.tar > image-digest.txt
       - name: Upload oci-image artifact
@@ -173,7 +173,7 @@ jobs:
       - name: Build OCI image with Nix
         run: nix build .#devguardScannerOCI
       - name: Prepare image.tar
-        run: cp "$(readlink -f result)" image.tar
+        run: gunzip -c "$(readlink -f result)" > image.tar
       - name: Get image digest
         run: crane digest --tarball=image.tar > image-digest.txt
       - name: Upload oci-image artifact
