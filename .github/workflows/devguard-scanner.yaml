@@ -21,6 +21,7 @@ jobs:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
       with:
         submodules: recursive
+        persist-credentials: false
     - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
       with:
         go-version: '1.25.5'
@@ -40,6 +41,7 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
       with:
         submodules: recursive
+        persist-credentials: false
     - name: Set up Go
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
       with:
@@ -149,16 +151,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
+          cache: false
 
       - name: Get tag
         id: tag
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
             echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
           else
@@ -170,7 +174,7 @@ jobs:
           mkdir -p dist
           
           # Build flags for security-hardened binaries
-          BUILD_FLAGS="-s -w -buildid= -X main.version=${{ steps.tag.outputs.tag }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.builtBy=github-actions"
+          BUILD_FLAGS="-s -w -buildid= -X main.version=${STEPS_TAG_OUTPUTS_TAG} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.builtBy=github-actions"
           
           # Build for Linux amd64
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-linux-amd64 ./cmd/devguard-scanner
@@ -189,6 +193,8 @@ jobs:
           
           # Build for macOS arm64
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$BUILD_FLAGS" -o dist/devguard-scanner-darwin-arm64 ./cmd/devguard-scanner
+        env:
+          STEPS_TAG_OUTPUTS_TAG: ${{ steps.tag.outputs.tag }}
 
       - name: Create archives
         run: |
