@@ -102,12 +102,13 @@ type DebianResponse struct {
 }
 
 type snapshotMRResult struct {
-	Package  string                       `json:"package"`
-	Binary   string                       `json:"binary"`
-	Versions map[string][]snapshotVersion `json:"versions"` // version -> list of results
+	Binary string            `json:"binary"`
+	Result []snapshotVersion `json:"result"`
 }
 
 type snapshotVersion struct {
 	BinaryVersion string `json:"binary_version"`
+	Name          string `json:"name"`
+	Source        string `json:"source"`
 	Version       string `json:"version"` // source version
 }

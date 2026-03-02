@@ -71,22 +71,23 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 func (resolver *DebianResolver) ParseVersionConstraint(spec string) (rangeType string, baseVersion string) {
 	spec = strings.TrimSpace(spec)
 
-	// Extract base version (without range prefix)
 	var extracted string
-	if strings.HasPrefix(spec, "^") {
-		rangeType = "^"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "^"))
-	} else if strings.HasPrefix(spec, "~") {
-		rangeType = "~"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "~"))
+	if strings.HasPrefix(spec, ">>") {
+		rangeType = ">>"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">>"))
 	} else if strings.HasPrefix(spec, ">=") {
 		rangeType = ">="
 		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">="))
-	} else if strings.HasPrefix(spec, ">") {
-		rangeType = ">"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">"))
+	} else if strings.HasPrefix(spec, "<<") {
+		rangeType = "<<"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "<<"))
+	} else if strings.HasPrefix(spec, "<=") {
+		rangeType = "<="
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "<="))
+	} else if strings.HasPrefix(spec, "=") {
+		rangeType = "="
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "="))
 	} else {
-		// Exact version (no prefix)
 		rangeType = "exact"
 		extracted = spec
 	}
@@ -99,14 +100,13 @@ var _ Resolver[DebianResponse] = &DebianResolver{}
 func (d *DebianResolver) FetchPackageMetadata(purl packageurl.PackageURL) (DebianResponse, error) {
 	pkgName := purl.Name
 
-	if purl.Version == "" {
-
-		return d.fetchAllVersions(pkgName)
-	}
-
 	suite, arch, err := d.extractSuiteAndArch(purl)
 	if err != nil {
 		return DebianResponse{}, err
+	}
+
+	if purl.Version == "" {
+		return d.fetchPackageFromSuite(pkgName, suite, arch)
 	}
 
 	return d.fetchVersionMetadata(pkgName, purl.Version, suite, arch)
@@ -131,8 +131,10 @@ func (d *DebianResolver) fetchAllVersions(pkgName string) (DebianResponse, error
 	}
 
 	versionSet := make(map[string]bool)
-	for ver := range result.Versions {
-		versionSet[ver] = true
+	for _, entry := range result.Result {
+		if entry.BinaryVersion != "" {
+			versionSet[entry.BinaryVersion] = true
+		}
 	}
 
 	versions := make([]string, 0, len(versionSet))
@@ -144,6 +146,54 @@ func (d *DebianResolver) fetchAllVersions(pkgName string) (DebianResponse, error
 		PackageName: pkgName,
 		Versions:    versions,
 	}, nil
+}
+
+func (d *DebianResolver) fetchPackageFromSuite(pkgName, suite, arch string) (DebianResponse, error) {
+	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
+
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return DebianResponse{}, fmt.Errorf("failed to fetch Packages.xz: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return DebianResponse{}, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
+	}
+
+	xzReader, err := xz.NewReader(resp.Body)
+	if err != nil {
+		return DebianResponse{}, fmt.Errorf("failed to create xz reader: %w", err)
+	}
+
+	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
+	if err != nil {
+		return DebianResponse{}, fmt.Errorf("failed to create paragraph reader: %w", err)
+	}
+
+	for {
+		pkg, err := paragraphReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return DebianResponse{}, fmt.Errorf("failed to read control paragraph: %w", err)
+		}
+
+		name := pkg.Values["Package"]
+		if name == pkgName {
+			ver := pkg.Values["Version"]
+			deps := d.parseDependencies(pkg.Values["Depends"])
+			return DebianResponse{
+				PackageName:  pkgName,
+				Versions:     []string{ver},
+				Dependencies: deps,
+				RawMetadata:  *pkg,
+			}, nil
+		}
+	}
+
+	return DebianResponse{}, fmt.Errorf("package %s not found in %s/%s", pkgName, suite, arch)
 }
 
 // fetchVersionMetadata fetches dependencies for a specific package version

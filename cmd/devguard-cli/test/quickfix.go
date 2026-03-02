@@ -199,7 +199,11 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 			latestVersion = currentVersion
 		}
 		purls[i].Version = latestVersion
-		fmt.Printf("Found newer version for %s: %s to %s\n", pkgName, currentVersion, latestVersion)
+		if latestVersion != currentVersion {
+			fmt.Printf("Found newer version for %s: %s -> %s\n", pkgName, currentVersion, latestVersion)
+		} else {
+			fmt.Printf("Using current version for %s: %s\n", pkgName, currentVersion)
+		}
 
 		// Second: check latest version
 		latestMeta, err := resolver.FetchPackageMetadata(purls[i])
@@ -286,25 +290,38 @@ func main() {
 	//Problem:
 	/*
 
-		nginx
+				["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
 
-		["pkg:deb/debian/git@2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64"]
+		["pkg:deb/debian/curl@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libcurl4t64@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/librtmp1@2.4+20151223.gitfa8646d.1-2+b5?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
+
+
+		["pkg:deb/debian/coreutils@9.7-3?arch=arm64","pkg:deb/debian/libsystemd0@257.9-1~deb13u1?arch=arm64","pkg:deb/debian/libcap2@2.75-10+b3?arch=arm64"]
+
+
+		This example is an actual fix for a quickfix, resolve : 1:5.19-2
+		["pkg:deb/debian/file@5.46-5?arch=arm64","pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64","pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64"]
+
+		["pkg:deb/debian/nano@8.4-1?arch=arm64","pkg:deb/debian/libncursesw6@6.5+20250216-2?arch=arm64","pkg:deb/debian/libtinfo6@6.5+20250216-2?arch=arm64"]
+
+		["pkg:deb/debian/git@1:2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libngtcp2-crypto-gnutls8@1.11.0-1?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64"]
 
 	*/
-	purl1, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=arm64")
+	purl1, _ := packageurl.FromString("pkg:deb/debian/git@1:2.47.3-0+deb13u1?arch=arm64")
 	purl2, _ := packageurl.FromString("pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64")
-	purl3, _ := packageurl.FromString("pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64")
-	purl4, _ := packageurl.FromString("pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64")
+	purl3, _ := packageurl.FromString("pkg:deb/debian/libngtcp2-crypto-gnutls8@1.11.0-1?arch=arm64")
+	purl4, _ := packageurl.FromString("pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64")
+	purl5, _ := packageurl.FromString("pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64")
 
 	purls := []packageurl.PackageURL{
 		purl1,
 		purl2,
 		purl3,
 		purl4,
+		purl5,
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "2.42-8"
+	fixedVersion := "6.5+20251115-2"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {
