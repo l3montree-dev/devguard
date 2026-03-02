@@ -36,7 +36,7 @@ require (
 	github.com/lmittmann/tint v1.1.3
 	github.com/open-policy-agent/opa v1.14.0
 	github.com/openvex/go-vex v0.2.7
-	github.com/ory/client-go v1.22.26
+	github.com/ory/client-go v1.22.9
 	github.com/package-url/packageurl-go v0.1.4
 	github.com/pandatix/go-cvss v0.6.2
 	github.com/pkg/errors v0.9.1
@@ -398,7 +398,6 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.67.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/mysql v1.6.0 // indirect
 	gorm.io/driver/sqlserver v1.6.3 // indirect
