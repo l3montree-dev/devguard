@@ -145,7 +145,9 @@ func TestParsePurl(t *testing.T) {
 	}
 }
 
-func TestParseVersionConstraint(t *testing.T) {
+func TestNPMParseVersionConstraint(t *testing.T) {
+
+	resolver := &NPMResolver{}
 	tests := []struct {
 		name              string
 		spec              string
@@ -165,7 +167,7 @@ func TestParseVersionConstraint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rangeType, version := parseVersionConstraint(tt.spec)
+			rangeType, version := resolver.ParseVersionConstraint(tt.spec)
 			if rangeType != tt.expectedRangeType {
 				t.Errorf("parseVersionConstraint(%q) rangeType = %q, want %q", tt.spec, rangeType, tt.expectedRangeType)
 			}

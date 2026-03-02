@@ -1,16 +1,17 @@
-// Copyright 2026 larshermges
+// Copyright (C) 2026 l3montree GmbH
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
 //
-//     https://www.apache.org/licenses/LICENSE-2.0
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
@@ -29,6 +30,36 @@ type NPMResolver struct{}
 
 var _ Resolver[*NPMResponse] = &NPMResolver{}
 
+func (resolver *NPMResolver) ParseVersionConstraint(spec string) (rangeType string, baseVersion string) {
+	spec = strings.TrimSpace(spec)
+
+	// Extract base version (without range prefix)
+	var extracted string
+	if strings.HasPrefix(spec, "^") {
+		rangeType = "^"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "^"))
+	} else if strings.HasPrefix(spec, "~") {
+		rangeType = "~"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "~"))
+	} else if strings.HasPrefix(spec, ">=") {
+		rangeType = ">="
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">="))
+	} else if strings.HasPrefix(spec, ">") {
+		rangeType = ">"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">"))
+	} else {
+		// Exact version (no prefix)
+		rangeType = "exact"
+		extracted = spec
+	}
+
+	// Strip pre-release and build metadata (e.g., "15.0.0-rc.0" -> "15.0.0")
+	if idx := strings.IndexAny(extracted, "-+"); idx != -1 {
+		extracted = extracted[:idx]
+	}
+
+	return rangeType, extracted
+}
 func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*NPMResponse, error) {
 	resp, err := getNPMRegistry(purl)
 	if err != nil {
@@ -127,7 +158,7 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 		rangeType = "||"
 		baseVersions = splitOrExpression(versionConstraintStr)
 	} else {
-		rangeType, baseVersion = parseVersionConstraint(versionConstraintStr)
+		rangeType, baseVersion = resolver.ParseVersionConstraint(versionConstraintStr)
 		// Normalize incomplete semver versions (e.g., "14.0" -> "14.0.0", "14" -> "14.0.0")
 		baseVersion = normalizeVersion(baseVersion)
 	}
@@ -168,7 +199,7 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 			matches = matchesVersionConstraint(rangeType, v, vParts, baseVersion, baseParts)
 		case "||":
 			for _, orSpec := range baseVersions {
-				orRangeType, orBaseVersion := parseVersionConstraint(orSpec)
+				orRangeType, orBaseVersion := resolver.ParseVersionConstraint(orSpec)
 
 				// Normalize incomplete semver versions (e.g., "14.0" -> "14.0.0", "14" -> "14.0.0")
 				orBaseVersionNormalized := normalizeVersion(orBaseVersion)

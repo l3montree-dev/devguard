@@ -142,36 +142,6 @@ func normalizeVersion(version string) string {
 // parseVersionConstraint extracts the range type and base version from a version spec
 // Returns the range type ("^", "~", ">=", ">", "exact") and the trimmed base version
 // Pre-release versions are stripped (e.g., "15.0.0-rc.0" becomes "15.0.0")
-func parseVersionConstraint(spec string) (rangeType string, baseVersion string) {
-	spec = strings.TrimSpace(spec)
-
-	// Extract base version (without range prefix)
-	var extracted string
-	if strings.HasPrefix(spec, "^") {
-		rangeType = "^"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "^"))
-	} else if strings.HasPrefix(spec, "~") {
-		rangeType = "~"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "~"))
-	} else if strings.HasPrefix(spec, ">=") {
-		rangeType = ">="
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">="))
-	} else if strings.HasPrefix(spec, ">") {
-		rangeType = ">"
-		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">"))
-	} else {
-		// Exact version (no prefix)
-		rangeType = "exact"
-		extracted = spec
-	}
-
-	// Strip pre-release and build metadata (e.g., "15.0.0-rc.0" -> "15.0.0")
-	if idx := strings.IndexAny(extracted, "-+"); idx != -1 {
-		extracted = extracted[:idx]
-	}
-
-	return rangeType, extracted
-}
 
 // resolveBestVersion finds the best matching version given a version spec and all available versions
 // versionConstraint examples: "15.4.7", "^15.0.0", "~15.4.0", ">15.0.0", ">=15.4.0"
@@ -187,6 +157,7 @@ type Resolver[T any] interface {
 	FindDependencyVersionInMeta(depMeta T, pkgName string) VersionConstraint
 	ResolveBestVersion(allVersionsMeta T, versionConstraint VersionConstraint, currentVersion string) (string, error)
 	CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVersion string) bool
+	ParseVersionConstraint(spec string) (rangeType string, baseVersion string)
 }
 
 func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.PackageURL, fixedVersion string) (string, error) {
@@ -308,20 +279,32 @@ func CheckVulnerabilityFixChainAuto(purls []packageurl.PackageURL, fixedVersion 
 }
 
 func main() {
+	// ["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
 
 	// ["debian@12.8","pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8","pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8","pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1"]
-	purl3, _ := packageurl.FromString("pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8")
-	purl2, _ := packageurl.FromString("pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8")
-	purl1, _ := packageurl.FromString("pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1")
+
+	//Problem:
+	/*
+
+		nginx
+
+		["pkg:deb/debian/git@2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64"]
+
+	*/
+	purl1, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=arm64")
+	purl2, _ := packageurl.FromString("pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64")
+	purl3, _ := packageurl.FromString("pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64")
+	purl4, _ := packageurl.FromString("pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64")
 
 	purls := []packageurl.PackageURL{
 		purl1,
 		purl2,
 		purl3,
+		purl4,
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "1:4.0.14-9"
+	fixedVersion := "2.42-8"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {
@@ -329,6 +312,5 @@ func main() {
 		return
 	}
 	fmt.Println(fixingVersion)
-	// Example output: nextra-theme-docs@3.4.0 (or similar if a fix is found)
 
 }

@@ -38,6 +38,7 @@ var distroToSuite = map[string]string{
 	"debian-11.9": "bullseye",
 	"debian-13":   "trixie",
 	"debian-sid":  "sid",
+	"":            "trixie", //some purls dont contain distros but they are implying latest, so trixie, if there is a newer version in the future, this will need to be updated to the newer suite
 }
 
 func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite, arch string, err error) {
@@ -48,10 +49,6 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 	if arch == "" {
 		return "", "", fmt.Errorf("missing required 'arch' qualifier in PURL: %s", purl.String())
 	}
-	if distro == "" {
-		return "", "", fmt.Errorf("missing required 'distro' qualifier in PURL: %s", purl.String())
-	}
-
 	if mappedSuite, ok := distroToSuite[distro]; ok {
 		suite = mappedSuite
 	} else {
@@ -69,6 +66,32 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 	}
 
 	return suite, arch, nil
+}
+
+func (resolver *DebianResolver) ParseVersionConstraint(spec string) (rangeType string, baseVersion string) {
+	spec = strings.TrimSpace(spec)
+
+	// Extract base version (without range prefix)
+	var extracted string
+	if strings.HasPrefix(spec, "^") {
+		rangeType = "^"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "^"))
+	} else if strings.HasPrefix(spec, "~") {
+		rangeType = "~"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, "~"))
+	} else if strings.HasPrefix(spec, ">=") {
+		rangeType = ">="
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">="))
+	} else if strings.HasPrefix(spec, ">") {
+		rangeType = ">"
+		extracted = strings.TrimSpace(strings.TrimPrefix(spec, ">"))
+	} else {
+		// Exact version (no prefix)
+		rangeType = "exact"
+		extracted = spec
+	}
+
+	return rangeType, extracted
 }
 
 var _ Resolver[DebianResponse] = &DebianResolver{}
@@ -145,31 +168,31 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 	}
 
 	// Parse Debian control format with pault.ag
-	decoder, err := control.NewDecoder(xzReader, nil)
+
+	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
 	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to create control decoder: %w", err)
+		return DebianResponse{}, fmt.Errorf("failed to create paragraph reader: %w", err)
 	}
 
 	for {
-		var pkg control.Paragraph
-		err := decoder.Decode(&pkg)
+		pkg, err := paragraphReader.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return DebianResponse{}, fmt.Errorf("failed to decode control paragraph: %w", err)
+			return DebianResponse{}, fmt.Errorf("failed to read control paragraph: %w", err)
 		}
 
 		name := pkg.Values["Package"]
 		ver := pkg.Values["Version"]
 
-		if name == pkgName && ver == pkgVersion {
+		if name == pkgName && debianVersionsMatch(ver, pkgVersion) {
 			deps := d.parseDependencies(pkg.Values["Depends"])
 			return DebianResponse{
 				PackageName:  pkgName,
-				Versions:     []string{pkgVersion},
+				Versions:     []string{ver}, // use the actual version from Packages.xz (may include epoch)
 				Dependencies: deps,
-				RawMetadata:  pkg,
+				RawMetadata:  *pkg,
 			}, nil
 		}
 	}
@@ -354,4 +377,34 @@ func debianPrefix(pkgName string) string {
 
 	// default: first rune
 	return string(runes[0])
+}
+
+// debianVersionsMatch compares two Debian version strings, handling the case
+// where one has an epoch prefix and the other doesn't.
+// PURLs from SBOMs often strip the epoch (e.g. "2.47.3-0+deb13u1"),
+// while Packages.xz includes it (e.g. "1:2.47.3-0+deb13u1").
+func debianVersionsMatch(packagesXzVer, purlVer string) bool {
+	// 1. Exact string match
+	if packagesXzVer == purlVer {
+		return true
+	}
+
+	// 2. Strip epoch from Packages.xz version and compare
+	// Epoch format is "N:rest" where N is a non-negative integer
+	if idx := strings.Index(packagesXzVer, ":"); idx != -1 {
+		withoutEpoch := packagesXzVer[idx+1:]
+		if withoutEpoch == purlVer {
+			return true
+		}
+	}
+
+	// 3. Strip epoch from PURL version and compare (in case PURL has epoch but Packages.xz doesn't)
+	if idx := strings.Index(purlVer, ":"); idx != -1 {
+		withoutEpoch := purlVer[idx+1:]
+		if packagesXzVer == withoutEpoch {
+			return true
+		}
+	}
+
+	return false
 }
