@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/package-url/packageurl-go"
@@ -219,24 +220,15 @@ func (d *DebianResolver) parseDependencies(depString string) map[string]string {
 		return deps
 	}
 
-	clauses := strings.Split(depString, ",")
+	for _, possibility := range rel.Relations {
+		// Take first alternative (MVP approach)
+		if len(possibility.Possibilities) > 0 {
+			dep := possibility.Possibilities[0]
+			pkgName := dep.Name
 
-	re := regexp.MustCompile(`^\s*([a-z0-9][a-z0-9+.-]*)\s*(?:\(([><=]+)\s+([^)]+)\))?`)
-
-	for _, clause := range clauses {
-		// Handle alternatives (pkg1 | pkg2) - take first option (MVP)
-		alternatives := strings.Split(clause, "|")
-		firstAlt := strings.TrimSpace(alternatives[0])
-
-		matches := re.FindStringSubmatch(firstAlt)
-		if len(matches) >= 2 && matches[1] != "" {
-			pkgName := matches[1]
 			var constraint string
-
-			if len(matches) >= 4 && matches[2] != "" {
-				operator := matches[2]
-				ver := strings.TrimSpace(matches[3])
-				constraint = operator + " " + ver
+			if dep.Version != nil {
+				constraint = dep.Version.Operator + " " + dep.Version.Number
 			}
 
 			deps[pkgName] = constraint
@@ -335,6 +327,13 @@ func (d *DebianResolver) ResolveBestVersion(allVersionsMeta DebianResponse, vers
 	if len(candidates) == 0 {
 		return "", fmt.Errorf("no version matches constraint '%s'", constraint)
 	}
+
+	// Sort candidates and return the highest (newest) version
+	sort.Slice(candidates, func(i, j int) bool {
+		vi, _ := version.Parse(candidates[i])
+		vj, _ := version.Parse(candidates[j])
+		return version.Compare(vi, vj) > 0
+	})
 
 	return candidates[0], nil
 }
