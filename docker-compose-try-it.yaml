@@ -101,6 +101,7 @@ services:
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
+      - FRONTEND_URL=http://localhost:3000
     command: ["devguard-cli", "migrate"]
     networks:
       - devguard-local
@@ -158,6 +159,7 @@ services:
     environment:
       - DEVGUARD_API_URL=http://devguard-api:8080
       - ORY_SDK_URL=http://kratos:4433
+      - ORY_SDK_PUBLIC_URL=http://localhost:3000
     networks:
       - devguard-local
 
