@@ -1,5 +1,5 @@
 {
-  description = "DevGuard — build minimal OCI image with Nix";
+  description = "DevGuard";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -21,7 +21,7 @@
 
         linuxSystem = builtins.replaceStrings ["darwin"] ["linux"] system;
 
-        # OCI images always target Linux x86_64, regardless of the build host.
+        # OCI images always target linux kernels, regardless of the architecture.
         # On macOS a remote Linux builder is required; configure one via
         # nix-darwin's linux-builder or ~/.config/nix/nix.conf `builders`.
         pkgsLinux = nixpkgs.legacyPackages.${linuxSystem};
@@ -41,10 +41,10 @@
           "-X github.com/l3montree-dev/devguard/config.BuildDate=${buildDate}"
         ];
 
-        # Shared build arguments for both binaries.
+        # Shared build arguments for all three binaries.
         commonArgs = {
           src = ./.;
-          vendorHash = "sha256-acYlXXbc41EdGblw8azOHUmD73c+xuGla8r5mlAXwyQ=";
+          vendorHash = "sha256-d5aZV+Qk74aUUNkwAqu/1BwhISCj2zzGo+6lgubZVWo=";
           inherit ldflags;
           buildFlags =
             [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
@@ -108,7 +108,7 @@
         # ---------------------------------------------------------------------------
         # OCI images — all contents are Linux ELF; images load on any Docker host.
         # ---------------------------------------------------------------------------
-        devguardOCIImage = pkgsLinux.dockerTools.buildLayeredImage {
+        devguardOCI = pkgsLinux.dockerTools.buildLayeredImage {
           name = "devguard";
           tag = version;
 
@@ -127,7 +127,7 @@
           };
         };
 
-        devguardScannerOCIImage = pkgsLinux.dockerTools.buildLayeredImage {
+        devguardScannerOCI = pkgsLinux.dockerTools.buildLayeredImage {
           name = "devguard-scanner";
           tag = version;
 
@@ -139,12 +139,13 @@
             pkgsLinux.semgrep
             pkgsLinux.cosign
             pkgsLinux.crane
+            pkgsLinux.gitleaks
           ];
 
           config = {
             Cmd = [ "/bin/devguard-scanner" ];
             User = "53111:53111";
-            Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ];
+            Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" ];
           };
         };
 
@@ -163,13 +164,32 @@
         #
         # nix run .#sbom-runtime   → container contents + all Go modules
         # nix run .#sbom-buildtime → full Nix closure (Go compiler etc.) + all Go modules
-        mkFullSbom = type:
-          let
-            nixFlag = if type == "buildtime" then "--buildtime" else "";
-            outFile = "devguard-sbom-${type}.cdx.json";
+        sbomRuntime = let
+            outFile = "devguard-sbom.cdx.json";
             purl = "pkg:golang/github.com/l3montree-dev/devguard@${version}";
           in pkgs.writeShellApplication {
-            name = "sbom-${type}";
+            name = "sbomRuntime";
+            runtimeInputs = [
+              pkgs.trivy # Go modules  → CycloneDX
+            ];
+            text = ''
+              set -euo pipefail
+              tmp=$(mktemp -d)
+              trap 'rm -rf "$tmp"' EXIT
+             
+              trivy fs \
+                --format cyclonedx \
+                --quiet \
+                --output "${outFile}" \
+                .
+            '';
+          };
+
+        sbomBuildtime = let
+            outFile = "devguard-sbom-buildtime.cdx.json";
+            purl = "pkg:golang/github.com/l3montree-dev/devguard@${version}";
+          in pkgs.writeShellApplication {
+            name = "sbomBuildtime";
             runtimeInputs = [
               sbomnixPkgs.sbomnix # Nix closure → CycloneDX
               pkgs.trivy # Go modules  → CycloneDX
@@ -181,9 +201,11 @@
               tmp=$(mktemp -d)
               trap 'rm -rf "$tmp"' EXIT
 
-              echo "[1/3] Nix closure SBOM (${type})…"
-              store_path=$(nix build --no-link --print-out-paths .#devguard 2>/dev/null)
-              sbomnix "$store_path" ${nixFlag} --cdx="$tmp/nix.cdx.json"
+              echo "[1/3] Nix closure SBOM"
+              
+              store_path=$(nix path-info --derivation .#devguard)
+
+              sbomnix "$store_path" --buildtime --cdx="$tmp/nix.cdx.json"
 
               echo "[2/3] Go module SBOM (trivy fs)…"
               trivy fs \
@@ -204,15 +226,11 @@
               echo "Done: ${outFile}"
             '';
           };
-
-        sbomRuntime = mkFullSbom "runtime";
-        sbomBuildtime = mkFullSbom "buildtime";
-
       in {
         packages = {
-          inherit devguard devguardCLI devguardScanner devguardOCIImage
-            devguardScannerOCIImage sbomRuntime sbomBuildtime;
-          default = devguardOCIImage;
+          inherit devguard devguardCLI devguardScanner devguardOCI
+            devguardScannerOCI sbomRuntime sbomBuildtime;
+          default = devguardOCI;
         };
 
         apps = {
@@ -227,6 +245,6 @@
         };
 
         devShells.default =
-          pkgs.mkShell { buildInputs = [ pkgs.go pkgs.gotools pkgs.gopls ]; };
+          pkgs.mkShell { buildInputs = [ pkgs.go pkgs.gotools pkgs.gopls devguardScanner devguardCLI ]; };
       });
 }
