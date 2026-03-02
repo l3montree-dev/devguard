@@ -16,8 +16,13 @@
 package accesscontrol
 
 type session struct {
-	userID string
-	scopes []string
+	userID          string
+	scopes          []string
+	isInstanceAdmin bool
+}
+
+func (a session) IsInstanceAdmin() bool {
+	return a.isInstanceAdmin
 }
 
 func (a session) GetUserID() string {
@@ -28,10 +33,11 @@ func (a session) GetScopes() []string {
 	return a.scopes
 }
 
-func NewSession(userID string, scopes []string) session {
+func NewSession(userID string, scopes []string, isInstanceAdmin bool) session {
 	return session{
-		userID: userID,
-		scopes: scopes,
+		userID:          userID,
+		scopes:          scopes,
+		isInstanceAdmin: isInstanceAdmin,
 	}
 }
 

@@ -30,3 +30,4 @@ vulndb-tmp-*
 cert.pem
 key.pem
 cache
+instance_admin_pub_key.pem

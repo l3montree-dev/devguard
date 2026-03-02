@@ -1069,8 +1069,8 @@ func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(subject s
 }
 
 // HasAccess provides a mock function for the type AccessControl
-func (_mock *AccessControl) HasAccess(subject string) (bool, error) {
-	ret := _mock.Called(subject)
+func (_mock *AccessControl) HasAccess(session shared.AuthSession) (bool, error) {
+	ret := _mock.Called(session)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HasAccess")
@@ -1078,16 +1078,16 @@ func (_mock *AccessControl) HasAccess(subject string) (bool, error) {
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (bool, error)); ok {
-		return returnFunc(subject)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession) (bool, error)); ok {
+		return returnFunc(session)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = returnFunc(subject)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession) bool); ok {
+		r0 = returnFunc(session)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(subject)
+	if returnFunc, ok := ret.Get(1).(func(shared.AuthSession) error); ok {
+		r1 = returnFunc(session)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1100,16 +1100,16 @@ type AccessControl_HasAccess_Call struct {
 }
 
 // HasAccess is a helper method to define mock.On call
-//   - subject string
-func (_e *AccessControl_Expecter) HasAccess(subject interface{}) *AccessControl_HasAccess_Call {
-	return &AccessControl_HasAccess_Call{Call: _e.mock.On("HasAccess", subject)}
+//   - session shared.AuthSession
+func (_e *AccessControl_Expecter) HasAccess(session interface{}) *AccessControl_HasAccess_Call {
+	return &AccessControl_HasAccess_Call{Call: _e.mock.On("HasAccess", session)}
 }
 
-func (_c *AccessControl_HasAccess_Call) Run(run func(subject string)) *AccessControl_HasAccess_Call {
+func (_c *AccessControl_HasAccess_Call) Run(run func(session shared.AuthSession)) *AccessControl_HasAccess_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 shared.AuthSession
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(shared.AuthSession)
 		}
 		run(
 			arg0,
@@ -1123,7 +1123,7 @@ func (_c *AccessControl_HasAccess_Call) Return(b bool, err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(subject string) (bool, error)) *AccessControl_HasAccess_Call {
+func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(session shared.AuthSession) (bool, error)) *AccessControl_HasAccess_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1369,8 +1369,8 @@ func (_c *AccessControl_InheritRole_Call) RunAndReturn(run func(roleWhichGetsPer
 }
 
 // IsAllowed provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowed(subject string, object shared.Object, action shared.Action) (bool, error) {
-	ret := _mock.Called(subject, object, action)
+func (_mock *AccessControl) IsAllowed(session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	ret := _mock.Called(session, object, action)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsAllowed")
@@ -1378,16 +1378,16 @@ func (_mock *AccessControl) IsAllowed(subject string, object shared.Object, acti
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, shared.Object, shared.Action) (bool, error)); ok {
-		return returnFunc(subject, object, action)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(session, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, shared.Object, shared.Action) bool); ok {
-		r0 = returnFunc(subject, object, action)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(session, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, shared.Object, shared.Action) error); ok {
-		r1 = returnFunc(subject, object, action)
+	if returnFunc, ok := ret.Get(1).(func(shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(session, object, action)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1400,18 +1400,18 @@ type AccessControl_IsAllowed_Call struct {
 }
 
 // IsAllowed is a helper method to define mock.On call
-//   - subject string
+//   - session shared.AuthSession
 //   - object shared.Object
 //   - action shared.Action
-func (_e *AccessControl_Expecter) IsAllowed(subject interface{}, object interface{}, action interface{}) *AccessControl_IsAllowed_Call {
-	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", subject, object, action)}
+func (_e *AccessControl_Expecter) IsAllowed(session interface{}, object interface{}, action interface{}) *AccessControl_IsAllowed_Call {
+	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", session, object, action)}
 }
 
-func (_c *AccessControl_IsAllowed_Call) Run(run func(subject string, object shared.Object, action shared.Action)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) Run(run func(session shared.AuthSession, object shared.Object, action shared.Action)) *AccessControl_IsAllowed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 shared.AuthSession
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(shared.AuthSession)
 		}
 		var arg1 shared.Object
 		if args[1] != nil {
@@ -1435,14 +1435,14 @@ func (_c *AccessControl_IsAllowed_Call) Return(b bool, err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(subject string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(session shared.AuthSession, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowed_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAllowedInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
-	ret := _mock.Called(asset, user, object, action)
+func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	ret := _mock.Called(asset, session, object, action)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsAllowedInAsset")
@@ -1450,16 +1450,16 @@ func (_mock *AccessControl) IsAllowedInAsset(asset *models.Asset, user string, o
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, shared.Object, shared.Action) (bool, error)); ok {
-		return returnFunc(asset, user, object, action)
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(asset, session, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*models.Asset, string, shared.Object, shared.Action) bool); ok {
-		r0 = returnFunc(asset, user, object, action)
+	if returnFunc, ok := ret.Get(0).(func(*models.Asset, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(asset, session, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*models.Asset, string, shared.Object, shared.Action) error); ok {
-		r1 = returnFunc(asset, user, object, action)
+	if returnFunc, ok := ret.Get(1).(func(*models.Asset, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(asset, session, object, action)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1473,22 +1473,22 @@ type AccessControl_IsAllowedInAsset_Call struct {
 
 // IsAllowedInAsset is a helper method to define mock.On call
 //   - asset *models.Asset
-//   - user string
+//   - session shared.AuthSession
 //   - object shared.Object
 //   - action shared.Action
-func (_e *AccessControl_Expecter) IsAllowedInAsset(asset interface{}, user interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInAsset_Call {
-	return &AccessControl_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", asset, user, object, action)}
+func (_e *AccessControl_Expecter) IsAllowedInAsset(asset interface{}, session interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInAsset_Call {
+	return &AccessControl_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", asset, session, object, action)}
 }
 
-func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset, user string, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInAsset_Call {
+func (_c *AccessControl_IsAllowedInAsset_Call) Run(run func(asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Asset
 		if args[0] != nil {
 			arg0 = args[0].(*models.Asset)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Object
 		if args[2] != nil {
@@ -1513,14 +1513,14 @@ func (_c *AccessControl_IsAllowedInAsset_Call) Return(b bool, err error) *Access
 	return _c
 }
 
-func (_c *AccessControl_IsAllowedInAsset_Call) RunAndReturn(run func(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInAsset_Call {
+func (_c *AccessControl_IsAllowedInAsset_Call) RunAndReturn(run func(asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAllowedInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
-	ret := _mock.Called(project, user, object, action)
+func (_mock *AccessControl) IsAllowedInProject(project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	ret := _mock.Called(project, session, object, action)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsAllowedInProject")
@@ -1528,16 +1528,16 @@ func (_mock *AccessControl) IsAllowedInProject(project *models.Project, user str
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, shared.Object, shared.Action) (bool, error)); ok {
-		return returnFunc(project, user, object, action)
+	if returnFunc, ok := ret.Get(0).(func(*models.Project, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(project, session, object, action)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*models.Project, string, shared.Object, shared.Action) bool); ok {
-		r0 = returnFunc(project, user, object, action)
+	if returnFunc, ok := ret.Get(0).(func(*models.Project, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(project, session, object, action)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*models.Project, string, shared.Object, shared.Action) error); ok {
-		r1 = returnFunc(project, user, object, action)
+	if returnFunc, ok := ret.Get(1).(func(*models.Project, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(project, session, object, action)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1551,22 +1551,22 @@ type AccessControl_IsAllowedInProject_Call struct {
 
 // IsAllowedInProject is a helper method to define mock.On call
 //   - project *models.Project
-//   - user string
+//   - session shared.AuthSession
 //   - object shared.Object
 //   - action shared.Action
-func (_e *AccessControl_Expecter) IsAllowedInProject(project interface{}, user interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInProject_Call {
-	return &AccessControl_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", project, user, object, action)}
+func (_e *AccessControl_Expecter) IsAllowedInProject(project interface{}, session interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInProject_Call {
+	return &AccessControl_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", project, session, object, action)}
 }
 
-func (_c *AccessControl_IsAllowedInProject_Call) Run(run func(project *models.Project, user string, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInProject_Call {
+func (_c *AccessControl_IsAllowedInProject_Call) Run(run func(project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action)) *AccessControl_IsAllowedInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *models.Project
 		if args[0] != nil {
 			arg0 = args[0].(*models.Project)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Object
 		if args[2] != nil {
@@ -1591,7 +1591,7 @@ func (_c *AccessControl_IsAllowedInProject_Call) Return(b bool, err error) *Acce
 	return _c
 }
 
-func (_c *AccessControl_IsAllowedInProject_Call) RunAndReturn(run func(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInProject_Call {
+func (_c *AccessControl_IsAllowedInProject_Call) RunAndReturn(run func(project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error)) *AccessControl_IsAllowedInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

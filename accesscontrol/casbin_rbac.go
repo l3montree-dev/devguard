@@ -106,8 +106,8 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(user string) (bool, error) {
-	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
+func (c *casbinRBAC) HasAccess(session shared.AuthSession) (bool, error) {
+	roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetUserID(), "domain::"+c.domain)
 	return len(roles) > 0, nil
 }
 
@@ -342,8 +342,8 @@ func (c *casbinRBAC) RevokeRoleInAsset(user string, role shared.Role, project st
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(user string, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+func (c *casbinRBAC) IsAllowed(session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 
 	if err != nil {
 		return false, err
@@ -358,8 +358,8 @@ func (c *casbinRBAC) IsAllowed(user string, object shared.Object, action shared.
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+func (c *casbinRBAC) IsAllowedInProject(project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	if err != nil {
 		return false, err
 	}
@@ -374,8 +374,8 @@ func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, ob
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInAsset(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+func (c *casbinRBAC) IsAllowedInAsset(asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	if err != nil {
 		return false, err
 	}

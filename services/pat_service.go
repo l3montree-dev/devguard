@@ -9,9 +9,11 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -21,11 +23,33 @@ import (
 
 type PatService struct {
 	patRepository shared.PersonalAccessTokenRepository
+	adminPubKey   ecdsa.PublicKey
 }
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
+	// read the admin public key from the environment variable and convert it to ecdsa.PublicKey
+	// the public key is expected to be in hex format (X and Y concatenated)
+	adminPubKeyPath := os.Getenv("INSTANCE_ADMIN_PUB_KEY_PATH")
+	if adminPubKeyPath == "" {
+		slog.Warn("no admin public key provided, admin token authentication will not work")
+		return &PatService{
+			patRepository: repository,
+		}
+	}
+
+	// read the admin public key from the file
+	adminPubKeyHexBytes, err := os.ReadFile(adminPubKeyPath)
+	if err != nil {
+		slog.Error("could not read admin public key from file", "err", err)
+		return &PatService{
+			patRepository: repository,
+		}
+	}
+
+	adminPubKey := HexPubKeyToECDSA(string(adminPubKeyHexBytes))
 	return &PatService{
 		patRepository: repository,
+		adminPubKey:   adminPubKey,
 	}
 }
 
@@ -189,29 +213,62 @@ func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 	return p.patRepository.MarkAsLastUsedNow(fingerprint)
 }
 
-func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
+func (p *PatService) verifyAdminRequest(req *http.Request) (bool, error) {
+	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
+	verifier, _ := httpsign.NewP256Verifier(p.adminPubKey, nil,
+		httpsign.Headers("@method", "content-digest"))
+
+	err := httpsign.VerifyRequest("sig77", *verifier, req)
+	if err != nil {
+		return false, fmt.Errorf("could not verify request: %v", err)
+	}
+	return true, nil
+}
+
+func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
+	verifier, err := httpsign.NewP256Verifier(pubKey, nil,
+		httpsign.Headers("@method", "content-digest"))
+
+	if err != nil {
+		return fmt.Errorf("could not create verifier: %v", err)
+	}
+
+	err = httpsign.VerifyRequest("sig77", *verifier, req)
+	if err != nil {
+		return fmt.Errorf("could not verify request: %v", err)
+	}
+	return nil
+}
+
+func (p *PatService) VerifyRequestSignature(req *http.Request) (shared.AuthSession, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
 	if fingerprint == "" {
-		return "", "", fmt.Errorf("no fingerprint provided")
+		// check if it's an admin request
+		isAdmin, err := p.verifyAdminRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("could not verify admin request: %v", err)
+		}
+		if isAdmin {
+			// add all scopes
+			return accesscontrol.NewSession("admin", dtos.AllowedScopes, true), nil
+		}
+		return nil, fmt.Errorf("no fingerprint provided")
 	}
 	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
 
 	if err != nil {
-		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return nil, fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 
-	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
-	verifier, _ := httpsign.NewP256Verifier(pubKey, nil,
-		httpsign.Headers("@method", "content-digest"))
-
-	err = httpsign.VerifyRequest("sig77", *verifier, req)
-	if err != nil {
-		return "", "", fmt.Errorf("could not verify request: %v", err)
+	requestValidErr := validateRequest(pubKey, req)
+	if requestValidErr != nil {
+		return nil, fmt.Errorf("could not validate request: %v", err)
 	}
 
 	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
 
-	return userID.String(), scopes, nil
+	scopesArray := strings.Fields(scopes)
+	return accesscontrol.NewSession(userID.String(), scopesArray, false), nil
 }
 
 func (p *PatService) RevokeByPrivateKey(privKey string) error {

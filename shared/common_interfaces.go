@@ -64,7 +64,7 @@ type ReleaseService interface {
 }
 
 type PersonalAccessTokenService interface {
-	VerifyRequestSignature(req *http.Request) (string, string, error)
+	VerifyRequestSignature(req *http.Request) (AuthSession, error)
 	RevokeByPrivateKey(privKey string) error
 	ToModel(request dtos.PatCreateRequest, userID string) models.PAT
 }
@@ -99,7 +99,7 @@ type ProjectRepository interface {
 }
 
 type Verifier interface {
-	VerifyRequestSignature(req *http.Request) (string, string, error)
+	VerifyRequestSignature(req *http.Request) (AuthSession, error)
 }
 
 type PolicyRepository interface {
@@ -601,7 +601,7 @@ type VulnDBImportService interface {
 }
 
 type AccessControl interface {
-	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -628,10 +628,10 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(role Role, object Object, action []Action) error
-	IsAllowed(subject string, object Object, action Action) (bool, error)
+	IsAllowed(session AuthSession, object Object, action Action) (bool, error)
 
-	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	IsAllowedInAsset(asset *models.Asset, user string, object Object, action Action) (bool, error)
+	IsAllowedInProject(project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInAsset(asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(asset string, role Role, object Object, action []Action) error
