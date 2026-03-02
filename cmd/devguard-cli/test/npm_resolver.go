@@ -60,6 +60,7 @@ func (resolver *NPMResolver) ParseVersionConstraint(spec string) (rangeType stri
 
 	return rangeType, extracted
 }
+
 func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*NPMResponse, error) {
 	resp, err := getNPMRegistry(purl)
 	if err != nil {
@@ -142,6 +143,10 @@ func (resolver *NPMResolver) FindDependencyVersionInMeta(depMeta *NPMResponse, p
 	return ""
 }
 
+// resolveBestVersion finds the best matching version given a version spec and all available versions
+// versionConstraint examples: "15.4.7", "^15.0.0", "~15.4.0", ">15.0.0", ">=15.4.0"
+// Also supports incomplete semver like "^14.0", "^14", "~15", etc.
+// Returns the highest matching version, or error if no match or spec is invalid
 func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, versionConstraint VersionConstraint, currentVersion string) (string, error) {
 	versionConstraintStr := strings.TrimSpace(string(versionConstraint))
 

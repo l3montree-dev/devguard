@@ -290,7 +290,7 @@ func main() {
 	//Problem:
 	/*
 
-				["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
+		["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
 
 		["pkg:deb/debian/curl@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libcurl4t64@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/librtmp1@2.4+20151223.gitfa8646d.1-2+b5?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
 
@@ -321,7 +321,7 @@ func main() {
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "6.5+20251115-2"
+	fixedVersion := "4.21.0-2"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {

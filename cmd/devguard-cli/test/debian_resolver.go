@@ -105,10 +105,6 @@ func (d *DebianResolver) FetchPackageMetadata(purl packageurl.PackageURL) (Debia
 		return DebianResponse{}, err
 	}
 
-	if purl.Version == "" {
-		return d.fetchPackageFromSuite(pkgName, suite, arch)
-	}
-
 	return d.fetchVersionMetadata(pkgName, purl.Version, suite, arch)
 }
 
@@ -148,55 +144,7 @@ func (d *DebianResolver) fetchAllVersions(pkgName string) (DebianResponse, error
 	}, nil
 }
 
-func (d *DebianResolver) fetchPackageFromSuite(pkgName, suite, arch string) (DebianResponse, error) {
-	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to fetch Packages.xz: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return DebianResponse{}, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
-	}
-
-	xzReader, err := xz.NewReader(resp.Body)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to create xz reader: %w", err)
-	}
-
-	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to create paragraph reader: %w", err)
-	}
-
-	for {
-		pkg, err := paragraphReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return DebianResponse{}, fmt.Errorf("failed to read control paragraph: %w", err)
-		}
-
-		name := pkg.Values["Package"]
-		if name == pkgName {
-			ver := pkg.Values["Version"]
-			deps := d.parseDependencies(pkg.Values["Depends"])
-			return DebianResponse{
-				PackageName:  pkgName,
-				Versions:     []string{ver},
-				Dependencies: deps,
-				RawMetadata:  *pkg,
-			}, nil
-		}
-	}
-
-	return DebianResponse{}, fmt.Errorf("package %s not found in %s/%s", pkgName, suite, arch)
-}
-
-// fetchVersionMetadata fetches dependencies for a specific package version
+// fetchVersionMetadata fetches dependencies for a specific package version (or current version if pkgVersion is empty)
 func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
 	// Fetch from Packages.xz for the specified suite
 	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
@@ -236,7 +184,7 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 		name := pkg.Values["Package"]
 		ver := pkg.Values["Version"]
 
-		if name == pkgName && debianVersionsMatch(ver, pkgVersion) {
+		if name == pkgName && (pkgVersion == "" || debianVersionsMatch(ver, pkgVersion)) {
 			deps := d.parseDependencies(pkg.Values["Depends"])
 			return DebianResponse{
 				PackageName:  pkgName,
@@ -247,6 +195,9 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 		}
 	}
 
+	if pkgVersion == "" {
+		return DebianResponse{}, fmt.Errorf("package %s not found in %s/%s", pkgName, suite, arch)
+	}
 	return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s/%s", pkgName, pkgVersion, suite, arch)
 }
 
@@ -434,13 +385,10 @@ func debianPrefix(pkgName string) string {
 // PURLs from SBOMs often strip the epoch (e.g. "2.47.3-0+deb13u1"),
 // while Packages.xz includes it (e.g. "1:2.47.3-0+deb13u1").
 func debianVersionsMatch(packagesXzVer, purlVer string) bool {
-	// 1. Exact string match
+
 	if packagesXzVer == purlVer {
 		return true
 	}
-
-	// 2. Strip epoch from Packages.xz version and compare
-	// Epoch format is "N:rest" where N is a non-negative integer
 	if idx := strings.Index(packagesXzVer, ":"); idx != -1 {
 		withoutEpoch := packagesXzVer[idx+1:]
 		if withoutEpoch == purlVer {
@@ -448,7 +396,7 @@ func debianVersionsMatch(packagesXzVer, purlVer string) bool {
 		}
 	}
 
-	// 3. Strip epoch from PURL version and compare (in case PURL has epoch but Packages.xz doesn't)
+	// Strip epoch from PURL version and compare (in case PURL has epoch but Packages.xz doesn't)
 	if idx := strings.Index(purlVer, ":"); idx != -1 {
 		withoutEpoch := purlVer[idx+1:]
 		if packagesXzVer == withoutEpoch {
