@@ -18,6 +18,8 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"github.com/package-url/packageurl-go"
 )
 
 func TestMapPackageManagerToEcosystem(t *testing.T) {
@@ -289,6 +291,110 @@ func TestSplitOrExpression(t *testing.T) {
 			result := splitOrExpression(tt.versionSpec)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("splitOrExpression(%q) = %v, want %v", tt.versionSpec, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBuildFullPackageName(t *testing.T) {
+	tests := []struct {
+		name     string
+		purl     string
+		expected string
+	}{
+		{"unscoped package", "pkg:npm/express@4.18.2", "express"},
+		{"scoped package", "pkg:npm/@babel/core@7.20.0", "@babel/core"},
+		{"scoped sentry", "pkg:npm/@sentry/nextjs@9.38.0", "@sentry/nextjs"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, _ := packageurl.FromString(tt.purl)
+			result := buildFullPackageName(purl)
+			if result != tt.expected {
+				t.Errorf("buildFullPackageName(%q) = %q, want %q", tt.purl, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDependencyLookupWithScopedPackages(t *testing.T) {
+	deps := map[string]string{"@babel/core": "^7.0.0", "express": "^4.0.0"}
+
+	tests := []struct {
+		name          string
+		purlString    string
+		expectedFound bool
+	}{
+		{"unscoped", "pkg:npm/express@4.18.2", true},
+		{"scoped", "pkg:npm/@babel/core@7.20.0", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, _ := packageurl.FromString(tt.purlString)
+			fullName := buildFullPackageName(purl)
+			_, found := deps[fullName]
+
+			if found != tt.expectedFound {
+				t.Errorf("lookup %q failed: found=%v, want %v", fullName, found, tt.expectedFound)
+			}
+		})
+	}
+
+	t.Run("scoped without proper handling would fail", func(t *testing.T) {
+		purl, _ := packageurl.FromString("pkg:npm/@babel/core@7.20.0")
+		_, found := deps[purl.Name] // Only "core", not "@babel/core"
+		if found {
+			t.Errorf("using just Name %q shouldnt find scoped dep", purl.Name)
+		}
+	})
+}
+
+func TestNPMRegistryURLConstruction(t *testing.T) {
+	tests := []struct {
+		name     string
+		purlStr  string
+		version  string
+		expected string
+	}{
+		{"unscoped", "pkg:npm/express@4.18.2", "4.18.2", "https://registry.npmjs.org/express/4.18.2"},
+		{"scoped", "pkg:npm/@babel/core@7.20.0", "7.20.0", "https://registry.npmjs.org/@babel/core/7.20.0"},
+		{"scoped sentry", "pkg:npm/@sentry/nextjs@9.38.0", "9.38.0", "https://registry.npmjs.org/@sentry/nextjs/9.38.0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, _ := packageurl.FromString(tt.purlStr)
+			fullName := buildFullPackageName(purl)
+			url := "https://registry.npmjs.org/" + fullName + "/" + tt.version
+			if url != tt.expected {
+				t.Errorf("registry URL = %q, want %q", url, tt.expected)
+			}
+		})
+	}
+}
+
+func TestPURLNamespaceHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		purlStr   string
+		namespace string
+		pkgName   string
+	}{
+		{"unscoped npm", "pkg:npm/express@4.18.2", "", "express"},
+		{"scoped npm", "pkg:npm/@babel/core@7.20.0", "@babel", "core"},
+		{"scoped sentry", "pkg:npm/@sentry/nextjs@9.38.0", "@sentry", "nextjs"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, _ := packageurl.FromString(tt.purlStr)
+			if purl.Namespace != tt.namespace {
+				t.Errorf("Namespace = %q, want %q", purl.Namespace, tt.namespace)
+			}
+			if purl.Name != tt.pkgName {
+				t.Errorf("Name = %q, want %q", purl.Name, tt.pkgName)
 			}
 		})
 	}

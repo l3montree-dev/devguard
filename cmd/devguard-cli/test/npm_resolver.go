@@ -252,10 +252,16 @@ func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
 
 	normalizedVersion := strings.Trim(pkg.Version, "/") // remove quotes if present
 
+	// Build full package name (handles scoped packages like @babel/core)
+	fullName := pkg.Name
+	if pkg.Namespace != "" {
+		fullName = pkg.Namespace + "/" + pkg.Name
+	}
+
 	if pkg.Version != "" {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + pkg.Name + "/" + normalizedVersion)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + fullName + "/" + normalizedVersion)
 	} else {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + pkg.Name)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + fullName)
 	}
 
 	if err != nil {
@@ -267,7 +273,7 @@ func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
 
 	if req.StatusCode != 200 {
 		req.Body.Close()
-		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Name, req.Status)
+		return nil, fmt.Errorf("failed to fetch data for %s: %s", fullName, req.Status)
 	}
 	return req, nil
 }

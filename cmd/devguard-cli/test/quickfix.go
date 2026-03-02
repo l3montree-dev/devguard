@@ -78,6 +78,13 @@ func parsePurl(purl string) (pkgType string, name string, version string, err er
 	return input.Type, pkgName, pkgVersion, nil
 }
 
+func buildFullPackageName(purl packageurl.PackageURL) string {
+	if purl.Namespace != "" {
+		return purl.Namespace + "/" + purl.Name
+	}
+	return purl.Name
+}
+
 func splitOrExpression(versionConstraint string) []string {
 	parts := strings.Split(versionConstraint, "||")
 	result := make([]string, 0, len(parts))
@@ -160,11 +167,13 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 	// (semver for NPM, Debian version for Debian packages)
 
 	for i := 0; i < len(purls)-1; i++ {
-		pkgName := purls[i].Name
+		pkgName := buildFullPackageName(purls[i])
 		currentVersion := purls[i].Version
 
-		// fetch all version
-		allVersionsMeta, err := resolver.FetchPackageMetadata(purls[i])
+		// fetch all versions (without locking to a specific current version)
+		allVersionsPURL := purls[i]
+		allVersionsPURL.Version = ""
+		allVersionsMeta, err := resolver.FetchPackageMetadata(allVersionsPURL)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch all versions for %s: %w", pkgName, err)
 		}
@@ -201,7 +210,7 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 			return "", fmt.Errorf("failed to fetch latest metadata for %s@%s: %w", pkgName, latestVersion, err)
 		}
 
-		nextPkgName := purls[i+1].Name
+		nextPkgName := buildFullPackageName(purls[i+1])
 
 		// next version spec might not be an exact version, but could also be a range like ^15.0.0, ~15.4.0, >15.0.0, >=15.4.0, etc.
 		nextVersionConstraint := resolver.FindDependencyVersionInMeta(latestMeta, nextPkgName)

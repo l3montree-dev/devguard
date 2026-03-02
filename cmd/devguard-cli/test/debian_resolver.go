@@ -328,6 +328,7 @@ func (d *DebianResolver) CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVe
 	return version.Compare(vVuln, vFixed) >= 0
 }
 
+
 func parseDebianConstraint(constraint string) (string, string, error) {
 	constraint = strings.TrimSpace(constraint)
 
