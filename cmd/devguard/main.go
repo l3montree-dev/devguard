@@ -110,6 +110,7 @@ func main() {
 		vulndb.Module,
 		daemons.Module,
 		// we need to invoke all routers to register their routes
+		fx.Invoke(func(AdminRouter router.AdminRouter) {}),
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
 		fx.Invoke(func(SessionRouter router.SessionRouter) {}),
