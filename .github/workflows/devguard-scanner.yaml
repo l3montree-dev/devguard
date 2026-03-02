@@ -6,17 +6,12 @@ on:
   workflow_dispatch:
   push:
 
-permissions:
-  contents: write
-  actions: read
-  security-events: write
-  packages: write
-
-
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
       with:
@@ -35,7 +30,8 @@ jobs:
   tests:
     name: tests
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read
     steps:
     - name: Check out code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
@@ -58,6 +54,11 @@ jobs:
 
   devguard:
     uses: l3montree-dev/devguard-action/.github/workflows/full.yml@main
+    permissions:
+      contents: write
+      actions: read
+      security-events: write
+      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -72,6 +73,9 @@ jobs:
 
   build-scanner-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
+    permissions:
+      contents: read
+      packages: write
     with:
       artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -85,6 +89,9 @@ jobs:
   # Image scanning job to detect vulnerabilities in the built Docker image
   scanner-container-scanning:
     uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
+    permissions:
+      contents: read
+      security-events: write
     needs: 
     - build-scanner-image
     with:
@@ -99,11 +106,14 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
       
   deploy-scanner:
-    needs: 
+    needs:
     - build-scanner-image
     - scanner-container-scanning
     - tests
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
+    permissions:
+      contents: read
+      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -112,11 +122,14 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
   
   sign-scanner:
-    needs: 
+    needs:
     - build-scanner-image
     - scanner-container-scanning
     - tests
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
+    permissions:
+      contents: read
+      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -126,11 +139,14 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
   attest-scanner:
-    needs: 
+    needs:
     - build-scanner-image
     - scanner-container-scanning
     - tests
     uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
+    permissions:
+      contents: read
+      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -142,6 +158,8 @@ jobs:
   release:
     name: Build and Release Binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # needs: [golangci, tests, sign-scanner, devguard]
     if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
     outputs:
@@ -237,7 +255,7 @@ jobs:
             "
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: "DevGuard Scanner ${{ steps.tag.outputs.tag }}"
