@@ -236,11 +236,11 @@
         apps = {
           sbom-runtime = {
             type = "app";
-            program = "${sbomRuntime}/bin/sbom-runtime";
+            program = "${sbomRuntime}/bin/sbomRuntime";
           };
           sbom-buildtime = {
             type = "app";
-            program = "${sbomBuildtime}/bin/sbom-buildtime";
+            program = "${sbomBuildtime}/bin/sbomBuildtime";
           };
         };
 
