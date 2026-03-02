@@ -538,6 +538,8 @@ type StatisticsRepository interface {
 	GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
 	GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
 	GetWeeklyAveragePerVulnEventType(orgID uuid.UUID) ([]dtos.VulnEventAverage, error)
+
+	GetAverageAmountOfOpenCodeRisksForProjectInOrg(orgID uuid.UUID) (float32, error)
 }
 
 type ArtifactRiskHistoryRepository interface {

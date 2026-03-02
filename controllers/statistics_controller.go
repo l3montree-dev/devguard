@@ -305,6 +305,13 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return err
 	}
 
+	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectInOrg(org.ID)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Values", "open code risk average", openCodeRiskAverage)
+
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage: vulnEventAverageDistribution,
 		VulnDistribution: distribution,

@@ -603,3 +603,15 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID)
 	) GROUP BY type;`, orgID).Find(&averageByType).Error
 	return averageByType, err
 }
+
+func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectInOrg(orgID uuid.UUID) (float32, error) {
+	var average float32
+	err := r.db.Raw(`
+	SELECT AVG(count) as average FROM(
+	SELECT c.id, Count(*) FROM first_party_vulnerabilities a 
+	LEFT JOIN assets b ON a.asset_id = b.id
+	LEFT JOIN projects c ON b.project_id = c.id
+	WHERE c.organization_id = ? AND a.state = 'open'
+	GROUP BY c.id);`, orgID).Find(&average).Error
+	return average, err
+}
