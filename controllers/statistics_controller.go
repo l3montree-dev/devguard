@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -239,6 +240,11 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 
+	orgComponentsLimit, topCVEsLimit, topComponentsLimit, err := evaluateOrgStatisticsParams(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Errorf("could not evaluate query parameters: %w", err))
+	}
+
 	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vuln distribution in org")
@@ -249,25 +255,25 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	}
 
 	// get most vulnerable components of org
-	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(org.ID, 5)
+	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable projects in org")
 	}
-	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(org.ID, 5)
+	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable assets in org")
 	}
-	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(org.ID, 5)
+	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org")
 	}
 
-	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(org.ID, 10)
+	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(org.ID, topComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most used components across org")
 	}
 
-	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, 10)
+	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, topCVEsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most common CVEs across org")
 	}
@@ -312,4 +318,35 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, orgStatistics)
+}
+
+func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVEsLimit, topComponentsLimit int, err error) {
+	orgComponentsLimitParam := 5
+	topCVEsLimitParam := 5
+	topComponentsLimitParam := 5
+
+	if ctx.QueryParam("orgComponentsLimit") != "" {
+		limit, err := strconv.Atoi(ctx.QueryParam("orgComponentsLimit"))
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("query parameter orgComponentsLimit has invalid format")
+		}
+		orgComponentsLimitParam = limit
+	}
+
+	if ctx.QueryParam("topCVEsLimit") != "" {
+		limit, err := strconv.Atoi(ctx.QueryParam("topCVEsLimit"))
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("query parameter topCVEsLimit has invalid format")
+		}
+		topCVEsLimitParam = limit
+	}
+
+	if ctx.QueryParam("topComponentsLimit") != "" {
+		limit, err := strconv.Atoi(ctx.QueryParam("topComponentsLimit"))
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("query parameter topComponentsLimit has invalid format")
+		}
+		topComponentsLimitParam = limit
+	}
+	return orgComponentsLimitParam, topCVEsLimitParam, topComponentsLimitParam, nil
 }
