@@ -139,21 +139,11 @@ func normalizeVersion(version string) string {
 	return strings.Join(parts, ".")
 }
 
-// parseVersionConstraint extracts the range type and base version from a version spec
-// Returns the range type ("^", "~", ">=", ">", "exact") and the trimmed base version
-// Pre-release versions are stripped (e.g., "15.0.0-rc.0" becomes "15.0.0")
-
-// resolveBestVersion finds the best matching version given a version spec and all available versions
-// versionConstraint examples: "15.4.7", "^15.0.0", "~15.4.0", ">15.0.0", ">=15.4.0"
-// Also supports incomplete semver like "^14.0", "^14", "~15", etc.
-// Returns the highest matching version, or error if no match or spec is invalid
 type VersionConstraint string
 
 type Resolver[T any] interface {
 	FetchPackageMetadata(purl packageurl.PackageURL) (T, error)
-	GetRecommendedVersions(allVersionsMeta T, currentVersion string) ([]string, error)
-	// imagine A --> B
-	// FindDependencyVersionInMeta looks into A's metadata and finds the version spec for B (e.g., ^15.0.0, ~15.4.0, >15.0.0, >=15.4.0, etc.) - But not necessarily an exact version, it could also be a range or constraint
+	GetUpgradeCandidates(allVersionsMeta T, currentVersion string) ([]string, error)
 	FindDependencyVersionInMeta(depMeta T, pkgName string) VersionConstraint
 	ResolveBestVersion(allVersionsMeta T, versionConstraint VersionConstraint, currentVersion string) (string, error)
 	CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVersion string) bool
@@ -181,7 +171,7 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 
 		var latestVersion string
 		if i == 0 {
-			versions, err := resolver.GetRecommendedVersions(allVersionsMeta, currentVersion)
+			versions, err := resolver.GetUpgradeCandidates(allVersionsMeta, currentVersion)
 			if err != nil {
 				return "", fmt.Errorf("failed to get recommended versions for %s: %w", pkgName, err)
 			}
@@ -225,13 +215,8 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 		// image A --> B
 		// we updated A to A', now we check the new version of B
 		// Important: copy qualifiers (arch, distro) from original PURL to preserve suite/arch info
-		nextPURL := packageurl.PackageURL{
-			Type:       purls[i+1].Type,
-			Name:       purls[i+1].Name,
-			Qualifiers: purls[i+1].Qualifiers,
-			// we do not define version right here
-			// since versionConstraint might be a range or a constraint, we want to fetch ALL versions of that package and then resolve the versionConstraint to a specific version using the resolver's ResolveBestVersion function
-		}
+		nextPURL := purls[i+1]
+		nextPURL.Version = "" // Clear version since we'll resolve it with ResolveBestVersion
 
 		nextAllVersionsMeta, err := resolver.FetchPackageMetadata(nextPURL)
 		if err != nil {
@@ -283,9 +268,6 @@ func CheckVulnerabilityFixChainAuto(purls []packageurl.PackageURL, fixedVersion 
 }
 
 func main() {
-	// ["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
-
-	// ["debian@12.8","pkg:deb/debian/apt@2.6.1A~5.2.0.202311171811?arch=amd64&distro=debian-12.8","pkg:deb/debian/adduser@3.134.0?arch=all&distro=debian-12.8","pkg:deb/debian/passwd@1:4.13+dfsg1-1+deb12u1?arch=amd64&distro=debian-12.8&epoch=1"]
 
 	//Problem:
 	/*

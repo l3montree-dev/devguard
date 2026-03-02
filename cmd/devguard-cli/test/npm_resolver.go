@@ -77,7 +77,7 @@ func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*
 }
 
 // this currently implements the versioning algorithm for "always take latest"
-func (resolver *NPMResolver) GetRecommendedVersions(npmResponse *NPMResponse, currentVersion string) ([]string, error) {
+func (resolver *NPMResolver) GetUpgradeCandidates(npmResponse *NPMResponse, currentVersion string) ([]string, error) {
 
 	var versions [][]string
 
@@ -149,11 +149,6 @@ func (resolver *NPMResolver) FindDependencyVersionInMeta(depMeta *NPMResponse, p
 // Returns the highest matching version, or error if no match or spec is invalid
 func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, versionConstraint VersionConstraint, currentVersion string) (string, error) {
 	versionConstraintStr := strings.TrimSpace(string(versionConstraint))
-
-	// Handle OR expressions - not implemented yet, return error
-	// if strings.Contains(versionConstraint, "||") {
-	// 	return "", fmt.Errorf("OR expressions (||) not yet supported: %s", versionConstraint)
-	// }
 
 	var rangeType string
 	var baseVersion string

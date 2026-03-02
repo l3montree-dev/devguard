@@ -16,7 +16,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
@@ -41,6 +40,8 @@ var distroToSuite = map[string]string{
 	"debian-sid":  "sid",
 	"":            "trixie", //some purls dont contain distros but they are implying latest, so trixie, if there is a newer version in the future, this will need to be updated to the newer suite
 }
+
+var debianConstraintRegex = regexp.MustCompile(`^(>>|>=|<<|<=|=)\s*(.+)$`)
 
 func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite, arch string, err error) {
 	// Extract from qualifiers
@@ -109,43 +110,7 @@ func (d *DebianResolver) FetchPackageMetadata(purl packageurl.PackageURL) (Debia
 	return d.fetchVersionMetadata(pkgName, purl.Version, suite, arch)
 }
 
-func (d *DebianResolver) fetchAllVersions(pkgName string) (DebianResponse, error) {
-	url := "https://snapshot.debian.org/mr/binary/" + pkgName + "/"
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to fetch versions for %s: %w", pkgName, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return DebianResponse{}, fmt.Errorf("snapshot API returned %d for %s", resp.StatusCode, pkgName)
-	}
-
-	var result snapshotMRResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to parse snapshot response: %w", err)
-	}
-
-	versionSet := make(map[string]bool)
-	for _, entry := range result.Result {
-		if entry.BinaryVersion != "" {
-			versionSet[entry.BinaryVersion] = true
-		}
-	}
-
-	versions := make([]string, 0, len(versionSet))
-	for ver := range versionSet {
-		versions = append(versions, ver)
-	}
-
-	return DebianResponse{
-		PackageName: pkgName,
-		Versions:    versions,
-	}, nil
-}
-
-// fetchVersionMetadata fetches dependencies for a specific package version (or current version if pkgVersion is empty)
+// fetchVersionMetadata fetches dependencies for a specific package version
 func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
 	// Fetch from Packages.xz for the specified suite
 	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
@@ -220,6 +185,8 @@ func (d *DebianResolver) parseDependencies(depString string) map[string]string {
 		return deps
 	}
 
+	// example:  Depends: libc6 (>= 2.40), libcurl3t64-gnutls (>= 7.16.2), zlib1g, will turn this into a map [string]string
+
 	for _, possibility := range rel.Relations {
 		// Take first alternative (MVP approach)
 		if len(possibility.Possibilities) > 0 {
@@ -238,8 +205,8 @@ func (d *DebianResolver) parseDependencies(depString string) map[string]string {
 	return deps
 }
 
-// GetRecommendedVersions returns newer versions than currentVersion
-func (d *DebianResolver) GetRecommendedVersions(allVersionsMeta DebianResponse, currentVersion string) ([]string, error) {
+// GetUpgradeCandidates returns newer versions than currentVersion (upgrade candidates)
+func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, currentVersion string) ([]string, error) {
 	if len(allVersionsMeta.Versions) == 0 {
 		return nil, fmt.Errorf("no versions available")
 	}
@@ -328,14 +295,22 @@ func (d *DebianResolver) ResolveBestVersion(allVersionsMeta DebianResponse, vers
 		return "", fmt.Errorf("no version matches constraint '%s'", constraint)
 	}
 
+	type parsedVer struct {
+		str string
+		ver version.Version
+	}
+	parsedVersions := make([]parsedVer, len(candidates))
+	for i, ver := range candidates {
+		pv, _ := version.Parse(ver) // Already validated during filtering
+		parsedVersions[i] = parsedVer{ver, pv}
+	}
+
 	// Sort candidates and return the highest (newest) version
-	sort.Slice(candidates, func(i, j int) bool {
-		vi, _ := version.Parse(candidates[i])
-		vj, _ := version.Parse(candidates[j])
-		return version.Compare(vi, vj) > 0
+	sort.Slice(parsedVersions, func(i, j int) bool {
+		return version.Compare(parsedVersions[i].ver, parsedVersions[j].ver) > 0
 	})
 
-	return candidates[0], nil
+	return parsedVersions[0].str, nil
 }
 
 func (d *DebianResolver) CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVersion string) bool {
@@ -357,8 +332,7 @@ func parseDebianConstraint(constraint string) (string, string, error) {
 	constraint = strings.TrimSpace(constraint)
 
 	// Match Debian operators: >>, >=, <<, <=, =
-	re := regexp.MustCompile(`^(>>|>=|<<|<=|=)\s*(.+)$`)
-	matches := re.FindStringSubmatch(constraint)
+	matches := debianConstraintRegex.FindStringSubmatch(constraint)
 
 	if len(matches) != 3 {
 		return "", "", fmt.Errorf("invalid constraint format: %s", constraint)
@@ -367,22 +341,9 @@ func parseDebianConstraint(constraint string) (string, string, error) {
 	return matches[1], strings.TrimSpace(matches[2]), nil
 }
 
-func debianPrefix(pkgName string) string {
-	runes := []rune(pkgName)
-
-	// special rule for lib* packages
-	if strings.HasPrefix(pkgName, "lib") && len(runes) > 3 {
-		return "lib" + string(runes[3])
-	}
-
-	// default: first rune
-	return string(runes[0])
-}
-
-// debianVersionsMatch compares two Debian version strings, handling the case
-// where one has an epoch prefix and the other doesn't.
-// PURLs from SBOMs often strip the epoch (e.g. "2.47.3-0+deb13u1"),
-// while Packages.xz includes it (e.g. "1:2.47.3-0+deb13u1").
+// debianVersionsMatch compares two Debian version strings, accounting for epoch prefix differences.
+// PURLs from SBOMs often omit the epoch prefix (e.g., "2.47.3-0+deb13u1"),
+// while Packages.xz includes it (e.g., "1:2.47.3-0+deb13u1").
 func debianVersionsMatch(packagesXzVer, purlVer string) bool {
 
 	if packagesXzVer == purlVer {
@@ -395,7 +356,6 @@ func debianVersionsMatch(packagesXzVer, purlVer string) bool {
 		}
 	}
 
-	// Strip epoch from PURL version and compare (in case PURL has epoch but Packages.xz doesn't)
 	if idx := strings.Index(purlVer, ":"); idx != -1 {
 		withoutEpoch := purlVer[idx+1:]
 		if packagesXzVer == withoutEpoch {
