@@ -79,6 +79,10 @@ func parsePurl(purl string) (pkgType string, name string, version string, err er
 }
 
 func buildFullPackageName(purl packageurl.PackageURL) string {
+	if purl.Type == "deb" {
+		return purl.Name
+	}
+
 	if purl.Namespace != "" {
 		return purl.Namespace + "/" + purl.Name
 	}
@@ -281,43 +285,38 @@ func main() {
 	//Problem:
 	/*
 
-			["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
+		["pkg:deb/debian/build-essential@12.12?arch=arm64","pkg:deb/debian/g++@14.2.0-1?arch=arm64","pkg:deb/debian/g++-14@14.2.0-19?arch=arm64","pkg:deb/debian/g++-14-aarch64-linux-gnu@14.2.0-19?arch=arm64","pkg:deb/debian/libstdc++-14-dev@14.2.0-19?arch=arm64","pkg:deb/debian/libc6-dev@2.41-12+deb13u1?arch=arm64"]
 
-			["pkg:deb/debian/curl@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libcurl4t64@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/librtmp1@2.4+20151223.gitfa8646d.1-2+b5?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
-
-
-			["pkg:deb/debian/coreutils@9.7-3?arch=arm64","pkg:deb/debian/libsystemd0@257.9-1~deb13u1?arch=arm64","pkg:deb/debian/libcap2@2.75-10+b3?arch=arm64"]
+		["pkg:deb/debian/curl@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libcurl4t64@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/librtmp1@2.4+20151223.gitfa8646d.1-2+b5?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
 
 
-			This example is an actual fix for a quickfix, resolve : 1:5.19-2
-			["pkg:deb/debian/file@5.46-5?arch=arm64","pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64","pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64"]
-
-			["pkg:deb/debian/nano@8.4-1?arch=arm64","pkg:deb/debian/libncursesw6@6.5+20250216-2?arch=arm64","pkg:deb/debian/libtinfo6@6.5+20250216-2?arch=arm64"]
-
-			["pkg:deb/debian/git@1:2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libngtcp2-crypto-gnutls8@1.11.0-1?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libtasn1-6@4.20.0-2?arch=arm64"]
+		["pkg:deb/debian/coreutils@9.7-3?arch=arm64","pkg:deb/debian/libsystemd0@257.9-1~deb13u1?arch=arm64","pkg:deb/debian/libcap2@2.75-10+b3?arch=arm64"]
 
 
-		--- npm
+		This example is an actual fix for a quickfix, resolve : 1:5.19-2
+		["pkg:deb/debian/file@5.46-5?arch=arm64","pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64","pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64"]
 
-		["pkg:npm/@sentry/nextjs@9.38.0","pkg:npm/@sentry/webpack-plugin@3.5.0","pkg:npm/webpack@5.100.1","pkg:npm/terser-webpack-plugin@5.3.14","pkg:npm/serialize-javascript@6.0.2"]
+		["pkg:deb/debian/nano@8.4-1?arch=arm64","pkg:deb/debian/libncursesw6@6.5+20250216-2?arch=arm64","pkg:deb/debian/libtinfo6@6.5+20250216-2?arch=arm64"]
+
+		["pkg:deb/debian/curl@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libcurl4t64@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/librtmp1@2.4+20151223.gitfa8646d.1-2+b5?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
+		//0.26.2-2
+
+		["pkg:deb/debian/git@1:2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libngtcp2-crypto-gnutls8@1.11.0-1?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
+		//0.26.2-2
 
 	*/
-	purl1, _ := packageurl.FromString("pkg:npm/@sentry/nextjs@9.38.0")
-	purl2, _ := packageurl.FromString("pkg:npm/@sentry/webpack-plugin@3.5.0")
-	purl3, _ := packageurl.FromString("pkg:npm/webpack@5.100.1")
-	purl4, _ := packageurl.FromString("pkg:npm/terser-webpack-plugin@5.3.14")
-	purl5, _ := packageurl.FromString("pkg:npm/serialize-javascript@6.0.2")
+	purl1, _ := packageurl.FromString("pkg:deb/debian/file@5.46-5?arch=arm64")
+	purl2, _ := packageurl.FromString("pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64")
+	purl3, _ := packageurl.FromString("pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64")
 
 	purls := []packageurl.PackageURL{
 		purl1,
 		purl2,
 		purl3,
-		purl4,
-		purl5,
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "4.21.0-2"
+	fixedVersion := "1:5.19-2"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {

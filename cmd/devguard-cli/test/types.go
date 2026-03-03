@@ -25,10 +25,10 @@ type NPMResponse struct {
 	Time                 map[string]string      `json:"time"`
 	Bugs                 Bugs                   `json:"bugs"`
 	Author               interface{}            `json:"author"`
-	License              string                 `json:"license"`
+	License              interface{}            `json:"license"`
 	Homepage             string                 `json:"homepage"`
 	Keywords             []string               `json:"keywords"`
-	Repository           Repository             `json:"repository"`
+	Repository           interface{}            `json:"repository"`
 	Contributors         []Person               `json:"contributors"`
 	Maintainers          []Person               `json:"maintainers"`
 	ReadMe               string                 `json:"readme"`
@@ -49,7 +49,7 @@ type VersionData struct {
 	Version      string                 `json:"version"`
 	Keywords     []string               `json:"keywords"`
 	Author       interface{}            `json:"author"`
-	License      string                 `json:"license"`
+	License      interface{}            `json:"license"`
 	ID           string                 `json:"_id"`
 	Maintainers  []Person               `json:"maintainers"`
 	Contributors []Person               `json:"contributors"`

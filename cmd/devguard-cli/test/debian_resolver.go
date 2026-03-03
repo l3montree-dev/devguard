@@ -132,11 +132,19 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 	}
 
 	// Parse Debian control format with pault.ag
-
 	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
 	if err != nil {
 		return DebianResponse{}, fmt.Errorf("failed to create paragraph reader: %w", err)
 	}
+
+	return d.parseParagraphs(paragraphReader, pkgName, pkgVersion)
+}
+
+// parseParagraphs iterates through all control paragraphs and collects matching packages
+func (d *DebianResolver) parseParagraphs(paragraphReader *control.ParagraphReader, pkgName, pkgVersion string) (DebianResponse, error) {
+	var allVersions []string
+	var targetDependencies map[string]string
+	var targetVersion string
 
 	for {
 		pkg, err := paragraphReader.Next()
@@ -150,21 +158,39 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 		name := pkg.Values["Package"]
 		ver := pkg.Values["Version"]
 
-		if name == pkgName && (pkgVersion == "" || debianVersionsMatch(ver, pkgVersion)) {
-			deps := d.parseDependencies(pkg.Values["Depends"])
-			return DebianResponse{
-				PackageName:  pkgName,
-				Versions:     []string{ver}, // use the actual version from Packages.xz (may include epoch)
-				Dependencies: deps,
-				RawMetadata:  *pkg,
-			}, nil
+		if name == pkgName {
+			allVersions = append(allVersions, ver)
+
+			// If specific version requested: store its dependencies
+			if pkgVersion != "" && debianVersionsMatch(ver, pkgVersion) {
+				targetDependencies = d.parseDependencies(pkg.Values["Depends"])
+				targetVersion = ver
+			}
 		}
 	}
 
-	if pkgVersion == "" {
-		return DebianResponse{}, fmt.Errorf("package %s not found in %s/%s", pkgName, suite, arch)
+	if pkgVersion != "" {
+		if targetDependencies == nil {
+			return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s", pkgName, pkgVersion, "suite")
+		}
+		return DebianResponse{
+			PackageName:  pkgName,
+			Versions:     []string{targetVersion},
+			Dependencies: targetDependencies,
+			RawMetadata:  nil,
+		}, nil
 	}
-	return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s/%s", pkgName, pkgVersion, suite, arch)
+
+	if len(allVersions) == 0 {
+		return DebianResponse{}, fmt.Errorf("package %s not found in %s", pkgName, "suite")
+	}
+
+	return DebianResponse{
+		PackageName:  pkgName,
+		Versions:     allVersions,
+		Dependencies: make(map[string]string),
+		RawMetadata:  nil,
+	}, nil
 }
 
 // Returns a map of package -> version constraint
@@ -229,7 +255,27 @@ func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, cu
 		}
 	}
 
-	return recommended, nil
+	// Sort by version (highest first)
+	type versionPair struct {
+		str string
+		ver version.Version
+	}
+	versionPairs := make([]versionPair, len(recommended))
+	for i, ver := range recommended {
+		pv, _ := version.Parse(ver) // Already validated during filtering
+		versionPairs[i] = versionPair{ver, pv}
+	}
+
+	sort.Slice(versionPairs, func(i, j int) bool {
+		return version.Compare(versionPairs[i].ver, versionPairs[j].ver) > 0
+	})
+
+	sortedRecommended := make([]string, len(versionPairs))
+	for i, vp := range versionPairs {
+		sortedRecommended[i] = vp.str
+	}
+
+	return sortedRecommended, nil
 }
 
 func (d *DebianResolver) FindDependencyVersionInMeta(depMeta DebianResponse, pkgName string) VersionConstraint {
@@ -328,7 +374,6 @@ func (d *DebianResolver) CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVe
 	return version.Compare(vVuln, vFixed) >= 0
 }
 
-
 func parseDebianConstraint(constraint string) (string, string, error) {
 	constraint = strings.TrimSpace(constraint)
 
@@ -345,24 +390,24 @@ func parseDebianConstraint(constraint string) (string, string, error) {
 // debianVersionsMatch compares two Debian version strings, accounting for epoch prefix differences.
 // PURLs from SBOMs often omit the epoch prefix (e.g., "2.47.3-0+deb13u1"),
 // while Packages.xz includes it (e.g., "1:2.47.3-0+deb13u1").
+// Also handles binary rebuild and source modification suffixes (e.g., "+b1", "+dfsg", "+ds")
+// that may be present in Packages.xz.
 func debianVersionsMatch(packagesXzVer, purlVer string) bool {
-
-	if packagesXzVer == purlVer {
-		return true
-	}
-	if idx := strings.Index(packagesXzVer, ":"); idx != -1 {
-		withoutEpoch := packagesXzVer[idx+1:]
-		if withoutEpoch == purlVer {
-			return true
+	// Normalize both versions by removing epoch and any +X suffixes for comparison
+	normalizeVer := func(v string) string {
+		// Remove epoch prefix
+		if idx := strings.Index(v, ":"); idx != -1 {
+			v = v[idx+1:]
 		}
-	}
-
-	if idx := strings.Index(purlVer, ":"); idx != -1 {
-		withoutEpoch := purlVer[idx+1:]
-		if packagesXzVer == withoutEpoch {
-			return true
+		// Remove any +X suffix (binary rebuild +b1, +b2, source mods +dfsg, etc.)
+		if idx := strings.Index(v, "+"); idx != -1 {
+			v = v[:idx]
 		}
+		return v
 	}
 
-	return false
+	normPackages := normalizeVer(packagesXzVer)
+	normPurl := normalizeVer(purlVer)
+
+	return normPackages == normPurl
 }
