@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -257,11 +258,12 @@ func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
 	if pkg.Namespace != "" {
 		fullName = pkg.Namespace + "/" + pkg.Name
 	}
+	encodedName := url.QueryEscape(fullName)
 
 	if pkg.Version != "" {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + fullName + "/" + normalizedVersion)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + encodedName + "/" + normalizedVersion)
 	} else {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + fullName)
+		req, err = httpClient.Get("https://registry.npmjs.org/" + encodedName)
 	}
 
 	if err != nil {
