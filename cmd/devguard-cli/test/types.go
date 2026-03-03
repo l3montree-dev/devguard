@@ -24,7 +24,7 @@ type NPMResponse struct {
 	Versions             map[string]VersionData `json:"versions"`
 	Time                 map[string]string      `json:"time"`
 	Bugs                 Bugs                   `json:"bugs"`
-	Author               Person                 `json:"author"`
+	Author               interface{}            `json:"author"`
 	License              string                 `json:"license"`
 	Homepage             string                 `json:"homepage"`
 	Keywords             []string               `json:"keywords"`
@@ -48,7 +48,7 @@ type VersionData struct {
 	Name         string                 `json:"name"`
 	Version      string                 `json:"version"`
 	Keywords     []string               `json:"keywords"`
-	Author       Person                 `json:"author"`
+	Author       interface{}            `json:"author"`
 	License      string                 `json:"license"`
 	ID           string                 `json:"_id"`
 	Maintainers  []Person               `json:"maintainers"`
@@ -61,7 +61,7 @@ type VersionData struct {
 	From         string                 `json:"from"`
 	Engines      interface{}            `json:"engines"`
 	NpmUser      Person                 `json:"_npmUser"`
-	Repository   Repository             `json:"repository"`
+	Repository   interface{}            `json:"repository"`
 	NpmVersion   string                 `json:"_npmVersion"`
 	Description  string                 `json:"description"`
 	Directories  map[string]string      `json:"directories"`
