@@ -302,26 +302,31 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	now := time.Now()
 	riskHistory, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(org.ID, now.Add(-30*time.Hour*24), now)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not get risk history for org")
 	}
 
-	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectInOrg(org.ID)
+	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(org.ID)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not get average amount of open code risks for org")
 	}
 
-	slog.Info("Values", "open code risk average", openCodeRiskAverage)
+	openVulnAverage, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get average amount of open vulns for org")
+	}
 
 	orgStatistics := dtos.OrgOverview{
-		VulnEventAverage: vulnEventAverageDistribution,
-		VulnDistribution: distribution,
-		OrgStructure:     structure,
-		TopProjects:      projects,
-		TopAssets:        assets,
-		TopArtifacts:     artifacts,
-		TopComponents:    topComponents,
-		TopCVEs:          topCVEs,
-		OrgRiskHistory:   riskHistory,
+		VulnEventAverage:               vulnEventAverageDistribution,
+		VulnDistribution:               distribution,
+		OrgStructure:                   structure,
+		TopProjects:                    projects,
+		TopAssets:                      assets,
+		TopArtifacts:                   artifacts,
+		TopComponents:                  topComponents,
+		TopCVEs:                        topCVEs,
+		OrgRiskHistory:                 riskHistory,
+		AverageOpenCodeRisksPerProject: openCodeRiskAverage,
+		ProjectOpenVulnAverage:         openVulnAverage,
 	}
 
 	return ctx.JSON(200, orgStatistics)

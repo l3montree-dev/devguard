@@ -136,6 +136,17 @@ type OrgRiskHistory struct {
 	CriticalCVSS int `json:"criticalCVSS" gorm:"column:critical_cvss"`
 }
 
+type ProjectVulnCountAverageBySeverity struct {
+	RiskLowAverage      float32 `json:"riskLowAverage" gorm:"column:risk_low_average"`
+	RiskMediumAverage   float32 `json:"riskMediumAverage" gorm:"column:risk_medium_average"`
+	RiskHighAverage     float32 `json:"riskHighAverage" gorm:"column:risk_high_average"`
+	RiskCriticalAverage float32 `json:"riskCriticalAverage" gorm:"column:risk_critical_average"`
+	CVSSLowAverage      float32 `json:"cvssLowAverage" gorm:"column:cvss_low_average"`
+	CVSSMediumAverage   float32 `json:"cvssMediumAverage" gorm:"column:cvss_medium_average"`
+	CVSSHighAverage     float32 `json:"cvssHighAverage" gorm:"column:cvss_high_average"`
+	CVSSCriticalAverage float32 `json:"cvssCriticalAverage" gorm:"column:cvss_critical_average"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -149,4 +160,7 @@ type OrgOverview struct {
 
 	VulnEventAverage AverageVulnEventsPerWeek `json:"vulnEventAverage"`
 	OrgRiskHistory   []OrgRiskHistory         `json:"orgRiskHistory"`
+
+	AverageOpenCodeRisksPerProject float32                           `json:"averageOpenCodeRisksPerProject"`
+	ProjectOpenVulnAverage         ProjectVulnCountAverageBySeverity `json:"projectOpenVulnAverage"`
 }

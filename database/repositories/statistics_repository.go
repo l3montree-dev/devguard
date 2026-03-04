@@ -621,3 +621,43 @@ func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(o
 	GROUP BY c.id);`, orgID).Find(&average).Error
 	return average, err
 }
+
+func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
+	projectAverage := dtos.ProjectVulnCountAverageBySeverity{}
+	err := r.db.Raw(`
+		SELECT 
+			AVG(sub.risk_low) risk_low_average, 
+			AVG(sub.risk_medium) risk_medium_average, 
+			AVG(sub.risk_high) risk_high_average, 
+			AVG(sub.risk_critical) risk_critical_average,
+			AVG(sub.cvss_low) cvss_low_average, 
+			AVG(sub.cvss_medium) cvss_medium_average, 
+			AVG(sub.cvss_high) cvss_high_average, 
+			AVG(sub.cvss_critical) cvss_critical_average
+		FROM 
+			(
+				SELECT b.project_id,
+					COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+					COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+					COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+					COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical ,
+					COUNT(*) filter (where d.cvss < 4) as cvss_low,
+					COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
+					COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
+					COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+				FROM 
+					dependency_vulns a 
+				LEFT JOIN 
+					assets b ON a.asset_id = b.id
+				LEFT JOIN 
+					projects c ON b.project_id = c.id
+				LEFT JOIN 
+					cves d ON a.cve_id = d.cve
+				WHERE 
+					a.state = 'open' 
+				AND 
+					c.organization_id = ?
+				GROUP BY b.project_id
+			) as sub;`, orgID).Find(&projectAverage).Error
+	return projectAverage, err
+}
