@@ -155,7 +155,7 @@ type VersionConstraint string
 type Resolver[T any] interface {
 	FetchPackageMetadata(purl packageurl.PackageURL) (T, error)
 	GetUpgradeCandidates(allVersionsMeta T, currentVersion string) ([]string, error)
-	FindDependencyVersionInMeta(depMeta T, pkgName string) VersionConstraint
+	FindDependencyVersionInMeta(depMeta T, pkgName string) (VersionConstraint, bool) // bool = exists
 	ResolveBestVersion(allVersionsMeta T, versionConstraint VersionConstraint, currentVersion string) (string, error)
 	CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVersion string) bool
 	ParseVersionConstraint(spec string) (rangeType string, baseVersion string)
@@ -217,12 +217,17 @@ func checkVulnerabilityFixChain[T any](resolver Resolver[T], purls []packageurl.
 		nextPkgName := buildFullPackageName(purls[i+1])
 
 		// next version spec might not be an exact version, but could also be a range like ^15.0.0, ~15.4.0, >15.0.0, >=15.4.0, etc.
-		nextVersionConstraint := resolver.FindDependencyVersionInMeta(latestMeta, nextPkgName)
-		if nextVersionConstraint == "" {
+		nextVersionConstraint, found := resolver.FindDependencyVersionInMeta(latestMeta, nextPkgName)
+		if !found {
 			return "", fmt.Errorf("package %s not found in %s@%s dependencies", nextPkgName, pkgName, latestVersion)
 		}
 
-		fmt.Printf(" %s@%s requires %s: %s\n", pkgName, latestVersion, nextPkgName, nextVersionConstraint)
+		constraintStr := string(nextVersionConstraint)
+		if constraintStr == "" {
+			fmt.Printf(" %s@%s requires %s (no version constraint)\n", pkgName, latestVersion, nextPkgName)
+		} else {
+			fmt.Printf(" %s@%s requires %s: %s\n", pkgName, latestVersion, nextPkgName, constraintStr)
+		}
 
 		// create a new purl - like we updated the purl in the next iteration
 		// image A --> B
@@ -304,19 +309,26 @@ func main() {
 		["pkg:deb/debian/git@1:2.47.3-0+deb13u1?arch=arm64","pkg:deb/debian/libcurl3t64-gnutls@8.14.1-2+deb13u2?arch=arm64","pkg:deb/debian/libngtcp2-crypto-gnutls8@1.11.0-1?arch=arm64","pkg:deb/debian/libgnutls30t64@3.8.9-3+deb13u2?arch=arm64","pkg:deb/debian/libp11-kit0@0.25.5-3?arch=arm64"]
 		//0.26.2-2
 
+
+		["pkg:npm/@sentry/nextjs@9.38.0","pkg:npm/@sentry/webpack-plugin@3.5.0","pkg:npm/webpack@5.100.1","pkg:npm/terser-webpack-plugin@5.3.14","pkg:npm/serialize-javascript@6.0.2"]
+
 	*/
-	purl1, _ := packageurl.FromString("pkg:deb/debian/file@5.46-5?arch=arm64")
-	purl2, _ := packageurl.FromString("pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64")
-	purl3, _ := packageurl.FromString("pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64")
+	purl1, _ := packageurl.FromString("pkg:npm/@sentry/nextjs@9.38.0")
+	purl2, _ := packageurl.FromString("pkg:npm/@sentry/webpack-plugin@3.5.0")
+	purl3, _ := packageurl.FromString("pkg:npm/webpack@5.100.1")
+	purl4, _ := packageurl.FromString("pkg:npm/terser-webpack-plugin@5.3.14")
+	purl5, _ := packageurl.FromString("pkg:npm/serialize-javascript@6.0.2")
 
 	purls := []packageurl.PackageURL{
 		purl1,
 		purl2,
 		purl3,
+		purl4,
+		purl5,
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "1:5.19-2"
+	fixedVersion := "7.0.3"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {

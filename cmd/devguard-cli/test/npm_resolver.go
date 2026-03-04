@@ -135,13 +135,13 @@ func (resolver *NPMResolver) getAllDependencyMaps(depMeta *NPMResponse) []map[st
 	}
 }
 
-func (resolver *NPMResolver) FindDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) VersionConstraint {
+func (resolver *NPMResolver) FindDependencyVersionInMeta(depMeta *NPMResponse, pkgName string) (VersionConstraint, bool) {
 	for _, depType := range resolver.getAllDependencyMaps(depMeta) {
 		if version, ok := depType[pkgName]; ok {
-			return VersionConstraint(version)
+			return VersionConstraint(version), true
 		}
 	}
-	return ""
+	return "", false
 }
 
 // resolveBestVersion finds the best matching version given a version spec and all available versions

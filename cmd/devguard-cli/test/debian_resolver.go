@@ -278,12 +278,9 @@ func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, cu
 	return sortedRecommended, nil
 }
 
-func (d *DebianResolver) FindDependencyVersionInMeta(depMeta DebianResponse, pkgName string) VersionConstraint {
+func (d *DebianResolver) FindDependencyVersionInMeta(depMeta DebianResponse, pkgName string) (VersionConstraint, bool) {
 	constraint, exists := depMeta.Dependencies[pkgName]
-	if !exists {
-		return ""
-	}
-	return VersionConstraint(constraint)
+	return VersionConstraint(constraint), exists
 }
 
 func (d *DebianResolver) ResolveBestVersion(allVersionsMeta DebianResponse, versionConstraint VersionConstraint, currentVersion string) (string, error) {
@@ -390,24 +387,17 @@ func parseDebianConstraint(constraint string) (string, string, error) {
 // debianVersionsMatch compares two Debian version strings, accounting for epoch prefix differences.
 // PURLs from SBOMs often omit the epoch prefix (e.g., "2.47.3-0+deb13u1"),
 // while Packages.xz includes it (e.g., "1:2.47.3-0+deb13u1").
-// Also handles binary rebuild and source modification suffixes (e.g., "+b1", "+dfsg", "+ds")
-// that may be present in Packages.xz.
+// Uses pault.ag/go/debian/version for proper Debian version comparison.
 func debianVersionsMatch(packagesXzVer, purlVer string) bool {
-	// Normalize both versions by removing epoch and any +X suffixes for comparison
-	normalizeVer := func(v string) string {
-		// Remove epoch prefix
-		if idx := strings.Index(v, ":"); idx != -1 {
-			v = v[idx+1:]
-		}
-		// Remove any +X suffix (binary rebuild +b1, +b2, source mods +dfsg, etc.)
-		if idx := strings.Index(v, "+"); idx != -1 {
-			v = v[:idx]
-		}
-		return v
+	// Parse with pault.ag library which handles Debian versioning correctly
+	pv, err1 := version.Parse(packagesXzVer)
+	v, err2 := version.Parse(purlVer)
+
+	if err1 != nil || err2 != nil {
+		// Fallback to exact string comparison if parsing fails
+		return packagesXzVer == purlVer
 	}
 
-	normPackages := normalizeVer(packagesXzVer)
-	normPurl := normalizeVer(purlVer)
-
-	return normPackages == normPurl
+	// version.Compare() handles epochs, +deb12u9 vs +deb12u10, +b1, +dfsg correctly
+	return version.Compare(pv, v) == 0
 }
