@@ -142,7 +142,18 @@ func NewAPIV1Router(srv api.Server,
 					poolInfo.MaxConns = int(stats.MaxConns())
 				} else {
 					// Fallback to sql DB stats if pool isn't available
-					dbInfo.DBStats = sqlDB.Stats()
+					st := sqlDB.Stats()
+					dbInfo.DBStats = DBStats{
+						MaxOpenConnections: st.MaxOpenConnections,
+						OpenConnections:    st.OpenConnections,
+						InUse:              st.InUse,
+						Idle:               st.Idle,
+						WaitCount:          st.WaitCount,
+						WaitDuration:       st.WaitDuration,
+						MaxIdleClosed:      st.MaxIdleClosed,
+						MaxIdleTimeClosed:  st.MaxIdleTimeClosed,
+						MaxLifetimeClosed:  st.MaxLifetimeClosed,
+					}
 				}
 
 				if ver, dirty, err := database.GetMigrationVersionWithDB(); err == nil {
