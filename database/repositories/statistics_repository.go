@@ -458,7 +458,8 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Vu
 	LEFT JOIN assets b ON a.asset_id = b.id 
 	LEFT JOIN projects c ON b.project_id = c.id
 	LEFT JOIN cves d ON a.cve_id = d.cve 
-	WHERE c.organization_id = ?;`, orgID).Find(&distribution).Error
+	WHERE c.organization_id = ?
+	AND a.state = 'open';`, orgID).Find(&distribution).Error
 	if err != nil {
 		return distribution, err
 	}
@@ -497,7 +498,9 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, l
 			 LEFT JOIN assets b ON a.asset_id = b.id 
 			 LEFT JOIN projects c ON b.project_id = c.id
 			 LEFT JOIN cves d ON a.cve_id = d.cve 
-			 WHERE c.organization_id = ? GROUP BY c.id, c.slug
+			 WHERE c.organization_id = ?
+			 AND a.state = 'open'
+			 GROUP BY c.id, c.slug
 			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&projects).Error
 	return projects, err
 }
@@ -518,7 +521,9 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, lim
 			 LEFT JOIN assets b ON a.asset_id = b.id 
 			 LEFT JOIN projects c ON b.project_id = c.id
 			 LEFT JOIN cves d ON a.cve_id = d.cve 
-			 WHERE c.organization_id = ? GROUP BY b.id,b.slug, c.slug 
+			 WHERE c.organization_id = ? 
+			 AND a.state = 'open'
+			 GROUP BY b.id,b.slug, c.slug 
 			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&assets).Error
 	return assets, err
 }
@@ -541,6 +546,7 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, 
 			 LEFT JOIN cves d ON a.cve_id = d.cve
 			 LEFT JOIN artifacts e ON e.asset_id = b.id
 			 WHERE c.organization_id = ?
+			 AND a.state = 'open'
 			 GROUP BY e.artifact_name,e.asset_version_name, c.slug, b.slug
 			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&artifacts).Error
 	return artifacts, err
@@ -604,7 +610,7 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID)
 	return averageByType, err
 }
 
-func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectInOrg(orgID uuid.UUID) (float32, error) {
+func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(orgID uuid.UUID) (float32, error) {
 	var average float32
 	err := r.db.Raw(`
 	SELECT AVG(count) as average FROM(
