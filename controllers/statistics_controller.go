@@ -315,6 +315,11 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get average amount of open vulns for org")
 	}
 
+	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(org.ID, 10)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get top ecosystem for org")
+	}
+
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage:               vulnEventAverageDistribution,
 		VulnDistribution:               distribution,
@@ -327,6 +332,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		OrgRiskHistory:                 riskHistory,
 		AverageOpenCodeRisksPerProject: openCodeRiskAverage,
 		ProjectOpenVulnAverage:         openVulnAverage,
+		TopEcosystems:                  topEcosystems,
 	}
 
 	return ctx.JSON(200, orgStatistics)

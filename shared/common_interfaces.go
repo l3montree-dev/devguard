@@ -541,6 +541,7 @@ type StatisticsRepository interface {
 
 	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(orgID uuid.UUID) (float32, error)
 	GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)
+	GetComponentDistribututionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
@@ -568,6 +569,7 @@ type StatisticsService interface {
 	GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
 	GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
+	GetTopEcosystemsInOrg(orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
 }
 
 type OpenSourceInsightService interface {

@@ -2,6 +2,8 @@ package services
 
 import (
 	"fmt"
+	"math"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type statisticsService struct {
@@ -410,4 +413,47 @@ func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low
 		}
 	}
 	return
+}
+
+// calculate the most popular component ecosystems in org and return up to limit entries sorted by total count
+func (s *statisticsService) GetTopEcosystemsInOrg(orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error) {
+	distribution, err := s.statisticsRepository.GetComponentDistribututionInOrg(orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := 0
+	amountPerEcosystem := make(map[string]int)
+	// map each ecosystem to its total count by building the sum over the purl.type property
+	for _, component := range distribution {
+		purl, err := packageurl.FromString(component.DependencyID)
+		if err != nil {
+			continue
+		}
+		amountPerEcosystem[purl.Type] += component.Count
+		total += component.Count
+	}
+
+	//
+	ecosystemUsage := []dtos.EcosystemUsage{}
+	for ecosystem, count := range amountPerEcosystem {
+		var relativeCount float32 = 0
+		// do not divide by zero
+		if total != 0 {
+			relativeCount = float32(count) / float32(total)
+		}
+		ecosystemUsage = append(ecosystemUsage, dtos.EcosystemUsage{
+			Ecosystem:      ecosystem,
+			TotalCount:     count,
+			RelativeAmount: relativeCount,
+		})
+	}
+
+	// sort slice by totalCount to determine the top ecosystems
+	slices.SortFunc(ecosystemUsage, func(ecosystem1, ecosystem2 dtos.EcosystemUsage) int {
+		return ecosystem2.TotalCount - ecosystem1.TotalCount
+	})
+
+	// if limit is smaller than the length of all ecosystems then use the limit otherwise return the whole slice
+	return ecosystemUsage[:int(math.Min(float64(len(ecosystemUsage)), float64(limit)))], nil
 }

@@ -647,7 +647,8 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 			AVG(sub.cvss_critical) cvss_critical_average
 		FROM 
 			(
-				SELECT b.project_id,
+				SELECT 
+					b.project_id,
 					COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 					COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
 					COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
@@ -671,4 +672,25 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 				GROUP BY b.project_id
 			) as sub;`, orgID).Find(&projectAverage).Error
 	return projectAverage, err
+}
+
+func (r *statisticsRepository) GetComponentDistribututionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+	distribution := []dtos.ComponentOccurrenceCount{}
+	err := r.db.Raw(`
+	SELECT 
+    	a.dependency_id,
+    	COUNT(DISTINCT (a.asset_id, a.asset_version_name))
+	FROM 
+		component_dependencies a
+	LEFT JOIN 
+		assets b ON a.asset_id = b.id
+	LEFT JOIN 
+		projects c ON b.project_id = c.id
+	WHERE 
+		c.organization_id = ?
+	GROUP BY 
+		a.dependency_id
+	ORDER BY 
+		count DESC;`, orgID).Find(&distribution).Error
+	return distribution, err
 }

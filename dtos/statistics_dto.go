@@ -147,6 +147,17 @@ type ProjectVulnCountAverageBySeverity struct {
 	CVSSCriticalAverage float32 `json:"cvssCriticalAverage" gorm:"column:cvss_critical_average"`
 }
 
+type ComponentOccurrenceCount struct {
+	DependencyID string `gorm:"column:dependency_id"`
+	Count        int    `gorm:"column:count"`
+}
+
+type EcosystemUsage struct {
+	Ecosystem      string  `json:"ecosystem"`
+	TotalCount     int     `json:"totalCount"`
+	RelativeAmount float32 `json:"relativeAmount"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -163,4 +174,5 @@ type OrgOverview struct {
 
 	AverageOpenCodeRisksPerProject float32                           `json:"averageOpenCodeRisksPerProject"`
 	ProjectOpenVulnAverage         ProjectVulnCountAverageBySeverity `json:"projectOpenVulnAverage"`
+	TopEcosystems                  []EcosystemUsage                  `json:"topEcosystems"`
 }
