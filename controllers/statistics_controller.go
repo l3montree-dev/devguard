@@ -240,10 +240,7 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 
-	orgComponentsLimit, topCVEsLimit, topComponentsLimit, err := evaluateOrgStatisticsParams(ctx)
-	if err != nil {
-		return echo.NewHTTPError(400, fmt.Errorf("could not evaluate query parameters: %w", err))
-	}
+	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
 
 	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
 	if err != nil {
@@ -315,9 +312,14 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get average amount of open vulns for org")
 	}
 
-	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(org.ID, 10)
+	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(org.ID, topEcosystemsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get top ecosystem for org")
+	}
+
+	maliciousPackages, err := c.statisticsRepository.FindMaliciousPackagesInOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not find malicious packages for org")
 	}
 
 	orgStatistics := dtos.OrgOverview{
@@ -333,38 +335,25 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		AverageOpenCodeRisksPerProject: openCodeRiskAverage,
 		ProjectOpenVulnAverage:         openVulnAverage,
 		TopEcosystems:                  topEcosystems,
+		MaliciousPackages:              maliciousPackages,
 	}
 
 	return ctx.JSON(200, orgStatistics)
 }
 
-func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVEsLimit, topComponentsLimit int, err error) {
-	orgComponentsLimitParam := 5
-	topCVEsLimitParam := 5
-	topComponentsLimitParam := 5
-
-	if ctx.QueryParam("orgComponentsLimit") != "" {
-		limit, err := strconv.Atoi(ctx.QueryParam("orgComponentsLimit"))
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("query parameter orgComponentsLimit has invalid format")
+func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit int) {
+	queryParams := []string{"orgComponentsLimit", "topCVEsLimit", "topComponentsLimit", "topEcosystemsLimit"}
+	queryValues := []int{}
+	for _, paramName := range queryParams {
+		if ctx.QueryParam(paramName) != "" {
+			limit, err := strconv.Atoi(ctx.QueryParam(paramName))
+			if err == nil {
+				queryValues = append(queryValues, limit)
+			} else {
+				slog.Warn("invalid value for query param detected, using default value", "param", paramName)
+				queryValues = append(queryValues, 5)
+			}
 		}
-		orgComponentsLimitParam = limit
 	}
-
-	if ctx.QueryParam("topCVEsLimit") != "" {
-		limit, err := strconv.Atoi(ctx.QueryParam("topCVEsLimit"))
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("query parameter topCVEsLimit has invalid format")
-		}
-		topCVEsLimitParam = limit
-	}
-
-	if ctx.QueryParam("topComponentsLimit") != "" {
-		limit, err := strconv.Atoi(ctx.QueryParam("topComponentsLimit"))
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("query parameter topComponentsLimit has invalid format")
-		}
-		topComponentsLimitParam = limit
-	}
-	return orgComponentsLimitParam, topCVEsLimitParam, topComponentsLimitParam, nil
+	return queryValues[0], queryValues[1], queryValues[2], queryValues[3]
 }

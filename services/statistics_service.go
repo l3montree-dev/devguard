@@ -455,5 +455,6 @@ func (s *statisticsService) GetTopEcosystemsInOrg(orgID uuid.UUID, limit int) ([
 	})
 
 	// if limit is smaller than the length of all ecosystems then use the limit otherwise return the whole slice
-	return ecosystemUsage[:int(math.Min(float64(len(ecosystemUsage)), float64(limit)))], nil
+	sliceUpperBounds := int(math.Min(float64(len(ecosystemUsage)), float64(limit)))
+	return ecosystemUsage[:sliceUpperBounds], nil
 }

@@ -158,6 +158,14 @@ type EcosystemUsage struct {
 	RelativeAmount float32 `json:"relativeAmount"`
 }
 
+type MaliciousPackageInOrg struct {
+	ProjectName        string `json:"projectName"`
+	AssetName          string `json:"assetName"`
+	AssetVersionName   string `json:"assetVersionName"`
+	Component          string `json:"component"`
+	MaliciousPackageID string `json:"maliciousPackageID"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -175,4 +183,6 @@ type OrgOverview struct {
 	AverageOpenCodeRisksPerProject float32                           `json:"averageOpenCodeRisksPerProject"`
 	ProjectOpenVulnAverage         ProjectVulnCountAverageBySeverity `json:"projectOpenVulnAverage"`
 	TopEcosystems                  []EcosystemUsage                  `json:"topEcosystems"`
+
+	MaliciousPackages []MaliciousPackageInOrg `json:"maliciousPackages"`
 }

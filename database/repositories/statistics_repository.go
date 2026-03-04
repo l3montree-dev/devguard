@@ -694,3 +694,26 @@ func (r *statisticsRepository) GetComponentDistribututionInOrg(orgID uuid.UUID) 
 		count DESC;`, orgID).Find(&distribution).Error
 	return distribution, err
 }
+
+func (r *statisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
+	packages := []dtos.MaliciousPackageInOrg{}
+	err := r.db.Raw(`
+	SELECT 
+		a.malicious_package_id,
+		b.dependency_id as component,
+		d.name as project_name,
+		c.name as asset_name,
+		b.asset_version_name
+	FROM 
+		malicious_affected_components a
+	JOIN 
+		component_dependencies b ON b.dependency_id = a.purl
+	JOIN 
+		assets c ON b.asset_id = c.id
+	JOIN 
+		projects d ON c.project_id = d.id
+	WHERE 
+		d.organization_id = ?`, orgID).Find(&packages).Error
+
+	return packages, err
+}
