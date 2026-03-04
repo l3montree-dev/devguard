@@ -22,6 +22,12 @@ import (
 	"github.com/package-url/packageurl-go"
 )
 
+func BenchmarkInitializeDebianResolver(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewDebianResolver()
+	}
+}
+
 func TestMapPackageManagerToEcosystem(t *testing.T) {
 	tests := []struct {
 		name     string

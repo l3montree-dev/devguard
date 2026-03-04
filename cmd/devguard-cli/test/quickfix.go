@@ -155,7 +155,7 @@ type VersionConstraint string
 type Resolver[T any] interface {
 	FetchPackageMetadata(purl packageurl.PackageURL) (T, error)
 	GetUpgradeCandidates(allVersionsMeta T, currentVersion string) ([]string, error)
-	FindDependencyVersionInMeta(depMeta T, pkgName string) (VersionConstraint, bool) // bool = exists
+	FindDependencyVersionInMeta(depMeta T, pkgName string) (VersionConstraint, bool)
 	ResolveBestVersion(allVersionsMeta T, versionConstraint VersionConstraint, currentVersion string) (string, error)
 	CheckIfVulnerabilityIsFixed(vulnVersion string, fixedVersion string) bool
 	ParseVersionConstraint(spec string) (rangeType string, baseVersion string)
@@ -312,23 +312,20 @@ func main() {
 
 		["pkg:npm/@sentry/nextjs@9.38.0","pkg:npm/@sentry/webpack-plugin@3.5.0","pkg:npm/webpack@5.100.1","pkg:npm/terser-webpack-plugin@5.3.14","pkg:npm/serialize-javascript@6.0.2"]
 
+		["pkg:deb/debian/file@5.46-5?arch=arm64","pkg:deb/debian/libmagic1t64@5.46-5?arch=arm64","pkg:deb/debian/libmagic-mgc@5.46-5?arch=arm64"]
 	*/
-	purl1, _ := packageurl.FromString("pkg:npm/@sentry/nextjs@9.38.0")
-	purl2, _ := packageurl.FromString("pkg:npm/@sentry/webpack-plugin@3.5.0")
-	purl3, _ := packageurl.FromString("pkg:npm/webpack@5.100.1")
-	purl4, _ := packageurl.FromString("pkg:npm/terser-webpack-plugin@5.3.14")
-	purl5, _ := packageurl.FromString("pkg:npm/serialize-javascript@6.0.2")
+	purl1, _ := packageurl.FromString("pkg:deb/debian/file@1:5.35-2?arch=arm64")
+	purl2, _ := packageurl.FromString("pkg:deb/debian/libmagic1t64@1:5.35-2?arch=arm64")
+	purl3, _ := packageurl.FromString("pkg:deb/debian/libmagic-mgc@1:5.35-2?arch=arm64")
 
 	purls := []packageurl.PackageURL{
 		purl1,
 		purl2,
 		purl3,
-		purl4,
-		purl5,
 	}
 
 	// in component_fixed_version in database
-	fixedVersion := "7.0.3"
+	fixedVersion := "1:5.35-3"
 
 	fixingVersion, err := CheckVulnerabilityFixChainAuto(purls, fixedVersion)
 	if err != nil {

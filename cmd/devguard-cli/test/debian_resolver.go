@@ -29,7 +29,20 @@ import (
 	"pault.ag/go/debian/version"
 )
 
-type DebianResolver struct{}
+type distroArch struct {
+	distro string
+	arch   string
+}
+
+type packagesXZ struct {
+	Package string
+	Version string
+	Depends map[string]string
+}
+
+type DebianResolver struct {
+	packagesXZ map[distroArch]map[string][]packagesXZ
+}
 
 var distroToSuite = map[string]string{
 	"debian-12":   "bookworm",
@@ -39,6 +52,80 @@ var distroToSuite = map[string]string{
 	"debian-13":   "trixie",
 	"debian-sid":  "sid",
 	"":            "trixie", //some purls dont contain distros but they are implying latest, so trixie, if there is a newer version in the future, this will need to be updated to the newer suite
+}
+
+func NewDebianResolver() *DebianResolver {
+	d := DebianResolver{}
+	return &d
+}
+
+func (d *DebianResolver) getPackagesXZ(suite, arch string) (map[string][]packagesXZ, error) {
+	if d.packagesXZ == nil {
+		d.packagesXZ = make(map[distroArch]map[string][]packagesXZ)
+	}
+
+	key := distroArch{suite, arch}
+	if reader, exists := d.packagesXZ[key]; exists {
+		return reader, nil
+	}
+	// Fetch from Packages.xz for the specified suite
+	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
+
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
+	}
+
+	// Decompress xz
+	xzReader, err := xz.NewReader(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create xz reader: %w", err)
+	}
+
+	// Parse Debian control format with pault.ag
+	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create paragraph reader: %w", err)
+	}
+
+	packages, err := readWholePackagesXZ(paragraphReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read whole packages XZ: %w", err)
+	}
+	d.packagesXZ[key] = packages
+	return packages, nil
+}
+
+func readWholePackagesXZ(paragraphReader *control.ParagraphReader) (map[string][]packagesXZ, error) {
+	packages := make(map[string][]packagesXZ)
+
+	for {
+		pkg, err := paragraphReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read control paragraph: %w", err)
+		}
+
+		name := pkg.Values["Package"]
+		ver := pkg.Values["Version"]
+		deps := pkg.Values["Depends"]
+
+		packages[name] = append(packages[name], packagesXZ{
+			Package: name,
+			Version: ver,
+			Depends: parseDependencies(deps),
+		})
+	}
+
+	return packages, nil
 }
 
 var debianConstraintRegex = regexp.MustCompile(`^(>>|>=|<<|<=|=)\s*(.+)$`)
@@ -112,60 +199,32 @@ func (d *DebianResolver) FetchPackageMetadata(purl packageurl.PackageURL) (Debia
 
 // fetchVersionMetadata fetches dependencies for a specific package version
 func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
-	// Fetch from Packages.xz for the specified suite
-	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to fetch Packages.xz: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return DebianResponse{}, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
-	}
-
-	// Decompress xz
-	xzReader, err := xz.NewReader(resp.Body)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to create xz reader: %w", err)
-	}
-
-	// Parse Debian control format with pault.ag
-	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
-	if err != nil {
-		return DebianResponse{}, fmt.Errorf("failed to create paragraph reader: %w", err)
-	}
-
-	return d.parseParagraphs(paragraphReader, pkgName, pkgVersion)
+	return d.parseParagraphs(pkgName, pkgVersion, suite, arch)
 }
 
 // parseParagraphs iterates through all control paragraphs and collects matching packages
-func (d *DebianResolver) parseParagraphs(paragraphReader *control.ParagraphReader, pkgName, pkgVersion string) (DebianResponse, error) {
+func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
 	var allVersions []string
 	var targetDependencies map[string]string
 	var targetVersion string
 
-	for {
-		pkg, err := paragraphReader.Next()
-		if err == io.EOF {
+	packagesXZ, err := d.getPackagesXZ(suite, arch)
+	if err != nil {
+		return DebianResponse{}, fmt.Errorf("failed to get Packages.xz data: %w", err)
+	}
+
+	packagesFromXZ, exists := packagesXZ[pkgName]
+	if !exists {
+		return DebianResponse{}, fmt.Errorf("package %s not found in suite %s for arch %s", pkgName, suite, arch)
+	}
+
+	for _, pkg := range packagesFromXZ {
+		allVersions = append(allVersions, pkg.Version)
+
+		if pkgVersion != "" && debianVersionsMatch(pkg.Version, pkgVersion) {
+			targetDependencies = pkg.Depends
+			targetVersion = pkg.Version
 			break
-		}
-		if err != nil {
-			return DebianResponse{}, fmt.Errorf("failed to read control paragraph: %w", err)
-		}
-
-		name := pkg.Values["Package"]
-		ver := pkg.Values["Version"]
-
-		if name == pkgName {
-			allVersions = append(allVersions, ver)
-
-			// If specific version requested: store its dependencies
-			if pkgVersion != "" && debianVersionsMatch(ver, pkgVersion) {
-				targetDependencies = d.parseDependencies(pkg.Values["Depends"])
-				targetVersion = ver
-			}
 		}
 	}
 
@@ -194,7 +253,7 @@ func (d *DebianResolver) parseParagraphs(paragraphReader *control.ParagraphReade
 }
 
 // Returns a map of package -> version constraint
-func (d *DebianResolver) parseDependencies(depString string) map[string]string {
+func parseDependencies(depString string) map[string]string {
 	if depString == "" {
 		return make(map[string]string)
 	}
