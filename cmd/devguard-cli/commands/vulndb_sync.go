@@ -55,7 +55,6 @@ Use --databases flag to sync specific sources only.`,
 					epssService := vulndb.NewEPSSService(cveRepository, cveRelationshipRepository)
 					cisaKEVService := vulndb.NewCISAKEVService(cveRepository, cveRelationshipRepository)
 					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
-					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 					expoitDBService := vulndb.NewExploitDBService(exploitRepository)
 					githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
 
@@ -113,15 +112,6 @@ Use --databases flag to sync specific sources only.`,
 							slog.Error("could not sync github-poc database", "err", err)
 						}
 						slog.Info("finished github-poc database sync", "duration", time.Since(now))
-					}
-
-					if emptyOrContains(databasesToSync, "dsa") {
-						slog.Info("starting dsa database sync")
-						now := time.Now()
-						if err := debianSecurityTracker.Mirror(); err != nil {
-							slog.Error("could not sync dsa database", "err", err)
-						}
-						slog.Info("finished dsa database sync", "duration", time.Since(now))
 					}
 
 					if emptyOrContains(databasesToSync, "malicious-packages") {
