@@ -58,7 +58,8 @@ type DaemonRunner struct {
 	vulnDBImportService          shared.VulnDBImportService
 	vexRuleService               shared.VEXRuleService
 
-	debugOptions DebugOptions
+	debugOptions         DebugOptions
+	fixedVersionResolver shared.FixedVersionResolver
 }
 
 func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
@@ -99,6 +100,7 @@ func NewDaemonRunner(
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBImportService,
 	vexRuleService shared.VEXRuleService,
+	fixVersionResolver shared.FixedVersionResolver,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -129,6 +131,7 @@ func NewDaemonRunner(
 		maliciousPackageChecker:      maliciousPackageChecker,
 		vulnDBImportService:          vulnDBImportService,
 		vexRuleService:               vexRuleService,
+		fixedVersionResolver:         fixVersionResolver,
 	}
 }
 

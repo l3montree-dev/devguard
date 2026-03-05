@@ -398,6 +398,7 @@ require (
 	modernc.org/sqlite v1.40.0 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/zappy v1.0.0 // indirect
+	pault.ag/go/topsort v0.1.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 

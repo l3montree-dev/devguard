@@ -31,6 +31,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -59,6 +60,8 @@ func (runner *DaemonRunner) runPipeline(idsChan <-chan uuid.UUID, errChan chan<-
 	ch = monitorStage(monitoring.ReopenVulnsStageDuration, runner.AutoReopenTickets)(ch, errChan)
 	// recalculate risk for vulnerabilities
 	ch = monitorStage(monitoring.RecalculateRawRiskAssessmentsDuration, runner.RecalculateRiskForVulnerabilities)(ch, errChan)
+
+	ch = monitorStage(monitoring.ResolveFixedVersionDuration, runner.ResolveFixedVersions)(ch, errChan)
 	// sync tickets
 	ch = monitorStage(monitoring.SyncTicketDuration, runner.SyncTickets)(ch, errChan)
 	// resolve differences in ticket state
@@ -182,6 +185,69 @@ func (runner *DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 		}
 		for _, asset := range assets {
 			out <- asset.ID
+		}
+	}()
+	return out
+}
+
+func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+	out := make(chan assetWithProjectAndOrg)
+	go func() {
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("resolve fixed versions panic")
+		}()
+		for assetWithDetails := range input {
+			toSaveVulns := make([]models.DependencyVuln, 0)
+			// get all closed/accepted vulnerabilities for the asset version
+			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(nil, assetWithDetails.asset.ID)
+			if err != nil {
+				slog.Error("could not get vulns for asset", "assetID", assetWithDetails.asset.ID, "err", err)
+				errChan <- pipelineError{
+					asset: assetWithDetails.asset,
+					err:   fmt.Errorf("could not get vulns for asset: %w", err),
+				}
+				continue
+			}
+
+		outer:
+			for _, vuln := range vulnerabilities {
+				if vuln.ComponentFixedVersion == nil {
+					continue
+				}
+
+				purls := make([]packageurl.PackageURL, 0)
+				for _, el := range vuln.VulnerabilityPath {
+					elPURL, err := packageurl.FromString(el)
+					if err != nil {
+						slog.Error("could not parse purl from vulnerability path", "purl", el, "err", err)
+						continue outer
+					}
+					purls = append(purls, elPURL)
+				}
+
+				directDependencyFixedVersion, err := runner.fixedVersionResolver.ResolveFixedVersions(purls, *vuln.ComponentFixedVersion)
+				if err != nil {
+					slog.Info("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
+					continue
+				}
+				vuln.DirectDependencyFixedVersion = &directDependencyFixedVersion
+				toSaveVulns = append(toSaveVulns, vuln)
+			}
+
+			if len(toSaveVulns) > 0 {
+				err = runner.dependencyVulnRepository.SaveBatch(nil, toSaveVulns)
+				if err != nil {
+					slog.Error("could not save vulns with resolved fixed versions", "assetID", assetWithDetails.asset.ID, "err", err)
+					errChan <- pipelineError{
+						asset: assetWithDetails.asset,
+						err:   fmt.Errorf("could not save vulns with resolved fixed versions: %w", err),
+					}
+					continue
+				}
+			}
+
+			out <- assetWithDetails
 		}
 	}()
 	return out
