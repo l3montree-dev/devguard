@@ -462,7 +462,6 @@ func debianVersionsMatch(packagesXzVer, purlVer string) bool {
 	v, err2 := version.Parse(purlVer)
 
 	if err1 != nil || err2 != nil {
-		// Fallback to exact string comparison if parsing fails
 		return packagesXzVer == purlVer
 	}
 

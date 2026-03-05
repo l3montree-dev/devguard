@@ -725,3 +725,20 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 	}()
 	return out
 }
+
+func (runner *DaemonRunner) RunResolveFixedVersionsPipeline(forceAll bool) error {
+	errChan := make(chan pipelineError, 100)
+	runner.collectErrors(errChan)
+	var idsChan <-chan uuid.UUID
+	if forceAll {
+		idsChan = runner.FetchAllAssetIDs()
+	} else {
+		idsChan = runner.FetchAssetIDs()
+	}
+
+	ch := monitorStage(monitoring.FetchAssetStageDuration, runner.FetchAssetDetails)(idsChan, errChan)
+	ch = monitorStage(monitoring.ResolveFixedVersionDuration, runner.ResolveFixedVersions)(ch, errChan)
+	utils.WaitForChannelDrain(ch)
+	close(errChan)
+	return nil
+}
