@@ -3,10 +3,6 @@ name: VulnDB Workflow
 on:
   workflow_dispatch:
     inputs:
-      run_import:
-        description: "Run import job"
-        required: false
-        default: "true"
       run_generate_snapshot:
         description: "Run generate snapshot job"
         required: false
@@ -60,11 +56,6 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
         with:
           go-version: "1.25"
-      - name: Import the last database version (this takes some time)
-        if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
-        run: |
-          # import the latest vulndb version, diff flage copies the database for comparison later
-          go run ./cmd/devguard-cli/main.go vulndb import || true
       - name: Build the database (this takes some time)
         run: |
           # will fetch the latest build database from ghcr.io
