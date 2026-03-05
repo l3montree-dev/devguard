@@ -101,7 +101,6 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
         fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
@@ -140,9 +139,13 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
+	JOIN (
+		SELECT DISTINCT dependency_vuln_id
+		FROM artifact_dependency_vulns 
+		WHERE artifact_artifact_name = ? 
+		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -163,7 +166,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
 	}
 
 	if err != nil {
@@ -276,7 +279,6 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
         fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
@@ -316,10 +318,14 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
+	JOIN (
+		SELECT DISTINCT dependency_vuln_id
+		FROM artifact_dependency_vulns 
+		WHERE artifact_artifact_name = ? 
+		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -340,7 +346,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
+    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
 	}
 
 	if err != nil {
