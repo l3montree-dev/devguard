@@ -239,18 +239,18 @@ type Explanation struct {
 
 func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.CVEID, e.ShortenedComponentPurl))
+	fmt.Fprintf(&str, "## %s found in %s \n", e.CVEID, e.ShortenedComponentPurl)
 
 	str.WriteString("> [!important] \n")
 
 	severity, err := RiskToSeverity(e.Risk)
 	if err != nil {
-		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.Risk, "Unknown"))
+		fmt.Fprintf(&str, "> **Risk**: `%.2f (%s)`\n", e.Risk, "Unknown")
 	} else {
-		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.Risk, severity))
+		fmt.Fprintf(&str, "> **Risk**: `%.2f (%s)`\n", e.Risk, severity)
 	}
 
-	str.WriteString(fmt.Sprintf("> **CVSS**: `%.1f` \n", e.BaseScore))
+	fmt.Fprintf(&str, "> **CVSS**: `%.1f` \n", e.BaseScore)
 
 	str.WriteString("### Description\n")
 	str.WriteString(e.CVEDescription)
@@ -260,10 +260,10 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	for i, s := range artifactNames {
 		artifactNames[i] = fmt.Sprintf("`%s`", s)
 	}
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", ")))
+	fmt.Fprintf(&str, "The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", "))
 	str.WriteString("### Recommended fix\n")
 	if e.FixedVersion != nil {
-		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.FixedVersion))
+		fmt.Fprintf(&str, "Upgrade to version %s or later.\n", *e.FixedVersion)
 		str.WriteString(e.GenerateCommandsToFixPackage())
 	} else {
 		str.WriteString("No fix is available.\n")
@@ -278,14 +278,14 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 
 	str.WriteString("| Risk Factor  | Value | Description | \n")
 	str.WriteString("| ---- | ----- | ----------- | \n")
-	str.WriteString(fmt.Sprintf("| Vulnerability Depth | `%d` | %s | \n", e.Depth, e.ComponentDepthMessage))
-	str.WriteString(fmt.Sprintf("| EPSS | `%.2f %%` | %s | \n", e.EPSS*100, e.EPSSMessage))
-	str.WriteString(fmt.Sprintf("| EXPLOIT | `%s` | %s | \n", e.ExploitMessage.Short, e.ExploitMessage.Long))
-	str.WriteString(fmt.Sprintf("| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.CVSSBEMessage))
-	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.CVSSMessage))
+	fmt.Fprintf(&str, "| Vulnerability Depth | `%d` | %s | \n", e.Depth, e.ComponentDepthMessage)
+	fmt.Fprintf(&str, "| EPSS | `%.2f %%` | %s | \n", e.EPSS*100, e.EPSSMessage)
+	fmt.Fprintf(&str, "| EXPLOIT | `%s` | %s | \n", e.ExploitMessage.Short, e.ExploitMessage.Long)
+	fmt.Fprintf(&str, "| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.CVSSBEMessage)
+	fmt.Fprintf(&str, "| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.CVSSMessage)
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.DependencyVulnID))
+	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.DependencyVulnID)
 	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180

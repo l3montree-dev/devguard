@@ -70,20 +70,9 @@ func FetchMembersOfOrganization(ctx shared.Context) ([]dtos.UserDTO, error) {
 		}, make(map[string]shared.Role))
 
 		for _, member := range m {
-			nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
-			var name string
-			if nameMap != nil {
-				if nameMap["first"] != nil {
-					name += nameMap["first"].(string)
-				}
-				if nameMap["last"] != nil {
-					name += " " + nameMap["last"].(string)
-				}
-			}
-
 			users = append(users, dtos.UserDTO{
 				ID:   member.Id,
-				Name: name,
+				Name: shared.IdentityName(member.Traits),
 				Role: string(roleMap[member.Id]),
 			})
 		}

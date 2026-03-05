@@ -35,11 +35,19 @@ func (s *statisticsService) GetComponentRisk(artifactName *string, assetVersionN
 
 	distributionPerComponent := make(map[string]models.Distribution)
 
+	uniqueCombinations := make(map[string]struct{})
 	for _, dependencyVuln := range dependencyVulns {
 		componentName := dependencyVuln.ComponentPurl
 		if _, exists := distributionPerComponent[componentName]; !exists {
 			distributionPerComponent[componentName] = models.Distribution{}
 		}
+
+		combinationKey := fmt.Sprintf("%s|%s", dependencyVuln.CVEID, dependencyVuln.ComponentPurl)
+
+		if _, exists := uniqueCombinations[combinationKey]; exists {
+			continue // already counted this CVE+PURL combination
+		}
+
 		distribution := distributionPerComponent[componentName]
 
 		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
@@ -68,6 +76,8 @@ func (s *statisticsService) GetComponentRisk(artifactName *string, assetVersionN
 		}
 
 		distributionPerComponent[componentName] = distribution
+
+		uniqueCombinations[combinationKey] = struct{}{}
 	}
 
 	return distributionPerComponent, nil

@@ -58,6 +58,8 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 }
 
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
+	WarnIfUnauthenticated()
+
 	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	// read entire BOM into memory so we can decode and (optionally) re-encode it
@@ -83,14 +85,21 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 		}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(bodyBytes))
+	endpoint := fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL)
+	if config.RuntimeBaseConfig.Token == "" {
+		endpoint = fmt.Sprintf("%s/api/v1/scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, cancel, errors.Wrap(err, "could not create request")
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
-	if err != nil {
-		return nil, cancel, errors.Wrap(err, "could not sign request")
+	if config.RuntimeBaseConfig.Token != "" {
+		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+		if err != nil {
+			return nil, cancel, errors.Wrap(err, "could not sign request")
+		}
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -106,7 +115,9 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "0")
 		}
 	}
-	config.SetXAssetHeaders(req)
+	if config.RuntimeBaseConfig.Token != "" {
+		config.SetXAssetHeaders(req)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 

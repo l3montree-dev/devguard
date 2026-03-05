@@ -173,3 +173,7 @@ func DeduplicateSlice[T any](slice []T, idFunc func(t T) string) []T {
 	}
 	return deduplicatedSlice
 }
+
+func CheckIfDeleted(name string) bool {
+	return strings.Contains(name, "-deletion_scheduled-")
+}

@@ -110,6 +110,32 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	}
 }
 
+func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
+	return dtos.VulnInPackageDTO{
+		CVEID:        vuln.CVEID,
+		FixedVersion: vuln.FixedVersion,
+	}
+}
+
+func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
+	return dtos.AffectedComponentDTO{
+		ID:                 ac.ID,
+		Source:             ac.Source,
+		PurlWithoutVersion: ac.PurlWithoutVersion,
+		Ecosystem:          ac.Ecosystem,
+		Scheme:             ac.Scheme,
+		Type:               ac.Type,
+		Name:               ac.Name,
+		Namespace:          ac.Namespace,
+		Version:            ac.Version,
+		SemverIntroduced:   ac.SemverIntroduced,
+		SemverFixed:        ac.SemverFixed,
+		VersionIntroduced:  ac.VersionIntroduced,
+		VersionFixed:       ac.VersionFixed,
+		CVEs:               utils.Map(ac.CVE, CVEToDTO),
+	}
+}
+
 // VulnInPackageToDependencyVulns converts a vulnerability to multiple DependencyVuln objects,
 // one for each unique path through the dependency graph. This ensures that the same CVE
 // appearing through different dependency paths (e.g., A -> trivy -> stdlib vs A -> cosign -> stdlib)

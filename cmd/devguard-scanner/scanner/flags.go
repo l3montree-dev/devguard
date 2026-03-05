@@ -15,8 +15,11 @@
 package scanner
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
 
@@ -52,20 +55,18 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	}
 }
 
+// WarnIfUnauthenticated prints a warning to stderr when no token and no assetName are
+// provided. It should be called after config has been parsed for commands that support
+// unauthenticated scanning (results will not be saved to DevGuard).
+func WarnIfUnauthenticated() {
+	if config.RuntimeBaseConfig.Token == "" && config.RuntimeBaseConfig.AssetName == "" {
+		fmt.Fprintln(os.Stderr, "Warning: You are scanning without saving the results. Provide --token and --assetName to save results to DevGuard.")
+	}
+}
+
 func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)
 	AddAssetRefFlags(cmd)
-
-	err := cmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
-	err = cmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
 
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")

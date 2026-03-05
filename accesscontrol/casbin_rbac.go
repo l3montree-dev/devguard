@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v3"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -435,7 +435,6 @@ func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.SyncedEnfor
 		return nil, err
 	}
 
-	e.EnableLog(false)
 	// make sure to publish a pub sub message when the policy changes
 	watcher := newCasbinPubSubWatcher(broker)
 	err = e.SetWatcher(watcher)

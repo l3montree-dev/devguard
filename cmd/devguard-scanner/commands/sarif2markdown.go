@@ -78,9 +78,9 @@ Supports both summary and detailed output formats.`,
 func generateSummaryMarkdown(doc *sarif.SarifSchema210Json) string {
 	var sb strings.Builder
 	for _, run := range doc.Runs {
-		sb.WriteString(fmt.Sprintf("# %s Security Scan Results\n\n", run.Tool.Driver.Name))
+		fmt.Fprintf(&sb, "# %s Security Scan Results\n\n", run.Tool.Driver.Name)
 		if run.Tool.Driver.InformationURI != nil {
-			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", *run.Tool.Driver.InformationURI))
+			fmt.Fprintf(&sb, "Tool: %s\n\n", *run.Tool.Driver.InformationURI)
 		}
 		summaries := aggregateResults(run.Results)
 		sb.WriteString("## Summary by Policy Rule\n\n")
@@ -89,12 +89,12 @@ func generateSummaryMarkdown(doc *sarif.SarifSchema210Json) string {
 		for _, summary := range summaries {
 			status := getStatusIndicator(summary.PassCount, summary.FailCount, summary.SkipCount)
 			resourceCount := len(summary.Resources)
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %d |\n",
+			fmt.Fprintf(&sb, "| %s | %s | %s | %s | %d |\n",
 				escapeMarkdown(summary.Policy),
 				escapeMarkdown(summary.Rule),
 				getSeverityBadge(summary.Level),
 				status,
-				resourceCount))
+				resourceCount)
 		}
 		sb.WriteString("\n")
 
@@ -105,12 +105,12 @@ func generateSummaryMarkdown(doc *sarif.SarifSchema210Json) string {
 			totalSkip += summary.SkipCount
 		}
 		sb.WriteString("## Overall Statistics\n\n")
-		sb.WriteString(fmt.Sprintf("- ✅ Passed: %d\n", totalPass))
-		sb.WriteString(fmt.Sprintf("- ❌ Failed: %d\n", totalFail))
+		fmt.Fprintf(&sb, "- ✅ Passed: %d\n", totalPass)
+		fmt.Fprintf(&sb, "- ❌ Failed: %d\n", totalFail)
 		if totalSkip > 0 {
-			sb.WriteString(fmt.Sprintf("- ⏭️ Skipped: %d\n", totalSkip))
+			fmt.Fprintf(&sb, "- ⏭️ Skipped: %d\n", totalSkip)
 		}
-		sb.WriteString(fmt.Sprintf("- 📊 Total: %d\n\n", totalPass+totalFail+totalSkip))
+		fmt.Fprintf(&sb, "- 📊 Total: %d\n\n", totalPass+totalFail+totalSkip)
 	}
 	return sb.String()
 }
@@ -119,9 +119,9 @@ func generateDetailedMarkdown(doc *sarif.SarifSchema210Json) string {
 	var sb strings.Builder
 	titleCaser := cases.Title(language.English)
 	for _, run := range doc.Runs {
-		sb.WriteString(fmt.Sprintf("# %s Security Scan Results (Detailed)\n\n", run.Tool.Driver.Name))
+		fmt.Fprintf(&sb, "# %s Security Scan Results (Detailed)\n\n", run.Tool.Driver.Name)
 		if run.Tool.Driver.InformationURI != nil {
-			sb.WriteString(fmt.Sprintf("Tool: %s\n\n", *run.Tool.Driver.InformationURI))
+			fmt.Fprintf(&sb, "Tool: %s\n\n", *run.Tool.Driver.InformationURI)
 		}
 
 		resultsBySeverity := groupBySeverity(run.Results)
@@ -130,7 +130,7 @@ func generateDetailedMarkdown(doc *sarif.SarifSchema210Json) string {
 			if !exists || len(results) == 0 {
 				continue
 			}
-			sb.WriteString(fmt.Sprintf("## %s Severity Issues\n\n", titleCaser.String(level)))
+			fmt.Fprintf(&sb, "## %s Severity Issues\n\n", titleCaser.String(level))
 			sb.WriteString("| Status | Resource | Policy | Rule | Message |\n")
 			sb.WriteString("|--------|----------|--------|------|----------|\n")
 			for _, result := range results {
@@ -141,12 +141,12 @@ func generateDetailedMarkdown(doc *sarif.SarifSchema210Json) string {
 					policy = extractPolicyFromRuleID(*result.RuleID)
 				}
 				rule := extractRuleFromRuleID(*result.RuleID)
-				sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n",
+				fmt.Fprintf(&sb, "| %s | %s | %s | %s | %s |\n",
 					status,
 					escapeMarkdown(resource),
 					escapeMarkdown(policy),
 					escapeMarkdown(rule),
-					escapeMarkdown(cleanMessage(result.Message.Text))))
+					escapeMarkdown(cleanMessage(result.Message.Text)))
 			}
 			sb.WriteString("\n")
 		}

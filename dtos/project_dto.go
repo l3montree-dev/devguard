@@ -16,6 +16,8 @@
 package dtos
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -73,4 +75,18 @@ type ProjectDetailsDTO struct {
 	ProjectDTO
 	Members  []UserDTO               `json:"members"`
 	Webhooks []WebhookIntegrationDTO `json:"webhooks"`
+}
+
+type ProjectAssetDTO struct {
+	Type        string     `json:"type"` // "project" or "asset"
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
+	Description string     `json:"description"`
+	ProjectID   uuid.UUID  `json:"projectId"`
+	ParentID    *uuid.UUID `json:"parentId,omitempty"` // only set for projects, not for assets
+	IsPublic    bool       `json:"isPublic"`
+	State       string     `json:"state"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }

@@ -103,9 +103,9 @@ func generateTag(upstreamVersion string, architecture string, imagePath string, 
 
 	var outputString strings.Builder
 
-	outputString.WriteString(fmt.Sprintf("IMAGE_TAG=%s\n", image))
-	outputString.WriteString(fmt.Sprintf("ARTIFACT_NAME=%s\n", artifactName))
-	outputString.WriteString(fmt.Sprintf("ARTIFACT_URL_ENCODED=%s\n", artifactURLEncoded))
+	fmt.Fprintf(&outputString, "IMAGE_TAG=%s\n", image)
+	fmt.Fprintf(&outputString, "ARTIFACT_NAME=%s\n", artifactName)
+	fmt.Fprintf(&outputString, "ARTIFACT_URL_ENCODED=%s\n", artifactURLEncoded)
 
 	return outputString.String(), output, nil
 }
