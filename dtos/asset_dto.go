@@ -65,6 +65,8 @@ type AssetDTO struct {
 	PipelineError                   *string   `json:"pipelineError,omitempty"`
 
 	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent"`
+
+	State string `json:"state"`
 }
 
 type AssetWithSecretsDTO struct {

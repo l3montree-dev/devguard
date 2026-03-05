@@ -46,6 +46,7 @@ func NewProjectRouter(
 
 	projectRouter := organizationGroup.Group.Group("/projects/:projectSlug", projectScopedRBAC(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/", projectController.Read)
+	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 	projectRouter.GET("/assets/", assetController.List)

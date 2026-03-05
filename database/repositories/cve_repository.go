@@ -137,7 +137,6 @@ func (g *cveRepository) FindAllListPaged(tx *gorm.DB, pageInfo shared.PageInfo, 
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
-	q = q.Where("cvss > 0")
 	q.Count(&count)
 
 	// get all cves
@@ -147,7 +146,6 @@ func (g *cveRepository) FindAllListPaged(tx *gorm.DB, pageInfo shared.PageInfo, 
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
-	q = q.Where("cvss > 0")
 
 	// apply sorting
 	if len(sort) > 0 {

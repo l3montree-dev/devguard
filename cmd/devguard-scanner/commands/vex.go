@@ -41,7 +41,7 @@ configured token before upload.`,
   devguard-scanner vex vex.json
 
   # Upload VEX with custom asset name
-  devguard-scanner vex vex.json --assetName my-app`,
+  devguard-scanner vex vex.json --assetName my-app --token YOUR_TOKEN`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// check the first argument and read the file
@@ -74,5 +74,11 @@ configured token before upload.`,
 		},
 	}
 	scanner.AddDependencyVulnsScanFlags(vexCommand)
+	if err := vexCommand.MarkPersistentFlagRequired("assetName"); err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+	}
+	if err := vexCommand.MarkPersistentFlagRequired("token"); err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+	}
 	return vexCommand
 }

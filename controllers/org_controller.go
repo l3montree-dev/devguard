@@ -208,7 +208,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
 
-	email := m.Traits.(map[string]any)["email"].(string)
+	email := shared.IdentityEmail(m.Traits)
 	if email != invitation.Email {
 		return echo.NewHTTPError(401, "email does not match")
 	}

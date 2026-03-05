@@ -1,6 +1,8 @@
 name: Documentation Policy Check
 on:
   pull_request:
+permissions:
+  contents: read
 jobs:
 #  naming_convention_check:
 #   uses: l3montree-dev/devguard-action/.github/workflows/naming-convention.yml@add-documentation-policy

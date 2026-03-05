@@ -62,8 +62,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			return nil
 		}
 
-		issueID = event.ObjectAttributes.IID
-		projectID = event.Project.ID
+		issueID = int(event.ObjectAttributes.IID)
+		projectID = int(event.Project.ID)
 
 		// look for a dependencyVuln with such a github ticket id
 		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueID))
@@ -146,8 +146,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 	case *gitlab.IssueCommentEvent:
 		// check if the issue is a devguard issue
-		issueID = event.Issue.IID
-		projectID = event.ProjectID
+		issueID = int(event.Issue.IID)
+		projectID = int(event.ProjectID)
 		// look for a dependencyVuln with such a github ticket id
 		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueID))
 		if err != nil {

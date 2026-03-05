@@ -70,10 +70,7 @@ func removeSecretsFromMap(m map[string]interface{}) map[string]interface{} {
 func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, error) {
 	subjects := make([]toto.Subject, 0, len(link.Products))
 	for productName, product := range link.Products {
-		digestSet := make(map[string]string)
-		for k, v := range product.(map[string]interface{}) {
-			digestSet[k] = v.(string)
-		}
+		digestSet := map[string]string(product)
 
 		subjects = append(subjects, toto.Subject{
 			Name:   productName,
@@ -84,10 +81,7 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 	// map the materials to resolved dependencies
 	resolvedDependencies := make([]slsa1.ResourceDescriptor, 0, len(link.Materials))
 	for materialName, material := range link.Materials {
-		digestSet := make(map[string]string)
-		for k, v := range material.(map[string]interface{}) {
-			digestSet[k] = v.(string)
-		}
+		digestSet := map[string]string(material)
 
 		resolvedDependencies = append(resolvedDependencies, slsa1.ResourceDescriptor{
 			URI:    fmt.Sprintf("file://%s", materialName), // TODO: Replace with URI of the file in the gitlab repo. Need to get the repo URL from devguard - if set

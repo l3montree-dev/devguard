@@ -31,13 +31,14 @@ func TestMergeSBOMs(t *testing.T) {
 						Component: &cyclonedx.Component{
 							BOMRef:     "pkg:test/lib1@1.0.0",
 							PackageURL: "pkg:test/lib1@1.0.0",
+							Name:       "lib1",
 						},
 					},
 					Components:   nil, // nil components
 					Dependencies: &[]cyclonedx.Dependency{},
 				},
 			},
-			expectedComponents: 0,
+			expectedComponents: 1, // metadata component added to components list
 			expectedDeps:       1, // root dependency only
 			wantErr:            false,
 		},
@@ -51,6 +52,7 @@ func TestMergeSBOMs(t *testing.T) {
 						Component: &cyclonedx.Component{
 							BOMRef:     "pkg:test/lib1@1.0.0",
 							PackageURL: "pkg:test/lib1@1.0.0",
+							Name:       "lib1",
 						},
 					},
 					Components: &[]cyclonedx.Component{
@@ -63,7 +65,7 @@ func TestMergeSBOMs(t *testing.T) {
 					Dependencies: nil, // nil dependencies
 				},
 			},
-			expectedComponents: 1,
+			expectedComponents: 2, // comp1 + metadata component lib1
 			expectedDeps:       1, // root dependency only
 			wantErr:            false,
 		},
@@ -77,13 +79,14 @@ func TestMergeSBOMs(t *testing.T) {
 						Component: &cyclonedx.Component{
 							BOMRef:     "pkg:test/lib1@1.0.0",
 							PackageURL: "pkg:test/lib1@1.0.0",
+							Name:       "lib1",
 						},
 					},
 					Components:   nil, // nil components
 					Dependencies: nil, // nil dependencies
 				},
 			},
-			expectedComponents: 0,
+			expectedComponents: 1, // metadata component added to components list
 			expectedDeps:       1, // root dependency only
 			wantErr:            false,
 		},
@@ -97,6 +100,7 @@ func TestMergeSBOMs(t *testing.T) {
 						Component: &cyclonedx.Component{
 							BOMRef:     "pkg:test/lib1@1.0.0",
 							PackageURL: "pkg:test/lib1@1.0.0",
+							Name:       "lib1",
 						},
 					},
 					Components: &[]cyclonedx.Component{
@@ -119,6 +123,7 @@ func TestMergeSBOMs(t *testing.T) {
 						Component: &cyclonedx.Component{
 							BOMRef:     "pkg:test/lib2@1.0.0",
 							PackageURL: "pkg:test/lib2@1.0.0",
+							Name:       "lib2",
 						},
 					},
 					Components: &[]cyclonedx.Component{
@@ -136,7 +141,7 @@ func TestMergeSBOMs(t *testing.T) {
 					},
 				},
 			},
-			expectedComponents: 2,
+			expectedComponents: 4, // comp1 + lib1 + comp2 + lib2
 			expectedDeps:       3, // 2 from sboms + 1 root
 			wantErr:            false,
 		},
@@ -148,8 +153,9 @@ func TestMergeSBOMs(t *testing.T) {
 					SpecVersion: cyclonedx.SpecVersion1_6,
 					Metadata: &cyclonedx.Metadata{
 						Component: &cyclonedx.Component{
-							BOMRef:     "", // empty BOMRef
+							BOMRef:     "", // empty BOMRef - invalid per CycloneDX spec
 							PackageURL: "pkg:test/lib1@1.0.0",
+							Name:       "lib1",
 						},
 					},
 					Components:   &[]cyclonedx.Component{},
@@ -157,8 +163,8 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 0,
-			expectedDeps:       1, // root dependency only (empty BOMRef not added)
-			wantErr:            false,
+			expectedDeps:       0,
+			wantErr:            true, // empty BOMRef on a component is invalid
 		},
 		{
 			name: "skip sbom with nil metadata",
@@ -281,6 +287,7 @@ func TestRunMergeSBOMs(t *testing.T) {
 				Component: &cyclonedx.Component{
 					BOMRef:     "pkg:test/lib@1.0.0",
 					PackageURL: "pkg:test/lib@1.0.0",
+					Name:       "lib",
 				},
 			},
 			Components:   &[]cyclonedx.Component{},

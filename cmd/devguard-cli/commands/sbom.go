@@ -27,5 +27,6 @@ func NewSBOMCommand() *cobra.Command {
 	}
 
 	sbomCmd.AddCommand(newRenderCommand())
+	sbomCmd.AddCommand(newValidateCommand())
 	return &sbomCmd
 }

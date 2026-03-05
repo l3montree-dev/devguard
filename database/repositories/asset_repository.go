@@ -158,10 +158,11 @@ func (repository *assetRepository) FindByName(name string) (models.Asset, error)
 
 func (repository *assetRepository) GetAllowedAssetsByProjectID(allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := repository.db.Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).Or("project_id = ? AND is_public = true", projectID).Find(&apps).Error
-	if err != nil {
-		return nil, err
+	q := repository.db.Where("project_id = ? AND id IN (?)", projectID, allowedAssetIDs).Or("project_id = ? AND is_public = true", projectID).Find(&apps)
+	if q.Error != nil {
+		return nil, q.Error
 	}
+
 	return apps, nil
 }
 

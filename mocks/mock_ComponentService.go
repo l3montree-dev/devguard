@@ -37,6 +37,66 @@ func (_m *ComponentService) EXPECT() *ComponentService_Expecter {
 	return &ComponentService_Expecter{mock: &_m.Mock}
 }
 
+// FetchComponentProject provides a mock function for the type ComponentService
+func (_mock *ComponentService) FetchComponentProject(component models.Component) (models.Component, error) {
+	ret := _mock.Called(component)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchComponentProject")
+	}
+
+	var r0 models.Component
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.Component) (models.Component, error)); ok {
+		return returnFunc(component)
+	}
+	if returnFunc, ok := ret.Get(0).(func(models.Component) models.Component); ok {
+		r0 = returnFunc(component)
+	} else {
+		r0 = ret.Get(0).(models.Component)
+	}
+	if returnFunc, ok := ret.Get(1).(func(models.Component) error); ok {
+		r1 = returnFunc(component)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentService_FetchComponentProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchComponentProject'
+type ComponentService_FetchComponentProject_Call struct {
+	*mock.Call
+}
+
+// FetchComponentProject is a helper method to define mock.On call
+//   - component models.Component
+func (_e *ComponentService_Expecter) FetchComponentProject(component interface{}) *ComponentService_FetchComponentProject_Call {
+	return &ComponentService_FetchComponentProject_Call{Call: _e.mock.On("FetchComponentProject", component)}
+}
+
+func (_c *ComponentService_FetchComponentProject_Call) Run(run func(component models.Component)) *ComponentService_FetchComponentProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.Component
+		if args[0] != nil {
+			arg0 = args[0].(models.Component)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentService_FetchComponentProject_Call) Return(component1 models.Component, err error) *ComponentService_FetchComponentProject_Call {
+	_c.Call.Return(component1, err)
+	return _c
+}
+
+func (_c *ComponentService_FetchComponentProject_Call) RunAndReturn(run func(component models.Component) (models.Component, error)) *ComponentService_FetchComponentProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FetchInformationSources provides a mock function for the type ComponentService
 func (_mock *ComponentService) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	ret := _mock.Called(artifact)
