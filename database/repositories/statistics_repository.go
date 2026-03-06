@@ -79,115 +79,144 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
-	var results []struct {
-		AvgFixingTime string `gorm:"column:avg"`
-	}
+func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (dtos.RemediationTimeAverages, error) {
+	results := dtos.RemediationTimeAverages{}
 
 	var err error
 
 	if artifactName == nil {
 		err = r.db.Raw(`
-WITH events AS (
-    SELECT
-        dependency_vulns.id,
-        dependency_vulns.component_purl,
-        fe.type,
-        fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
-    FROM
-        dependency_vulns
-    JOIN
-        vuln_events fe ON dependency_vulns.id = fe.vuln_id
-    WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
-),
-intervals AS (
-   SELECT
-        id,
-        component_purl,
-        COALESCE(next_type, type) AS type,
-        prev_type,
-        prev_created_at,
-        CASE
-            WHEN next_type IS NULL THEN NOW() - prev_created_at
-            ELSE created_at - prev_created_at
-        END AS fixing_time
-    FROM
-        events
-    WHERE
-        prev_type IN ? 
-)
-SELECT
-   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
-FROM
-    intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+	WITH events AS (
+    	SELECT
+			dependency_vulns.id,
+			dependency_vulns.component_purl,
+			dependency_vulns.raw_risk_assessment,
+			c.cvss,                                     
+			fe.type,
+			fe.created_at,
+			LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
+			LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
+			LEAD(fe.type)      OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
+		FROM
+			dependency_vulns
+		JOIN
+			vuln_events fe ON dependency_vulns.id = fe.vuln_id
+		LEFT JOIN                                        
+			cves c ON dependency_vulns.cve_id = c.cve   
+		WHERE 
+			fe.type IN ?
+		AND 
+			dependency_vulns.asset_version_name = ?
+		AND 
+			dependency_vulns.asset_id = ?
+	),
+	intervals AS (
+		SELECT
+			id,
+			component_purl,
+			raw_risk_assessment,
+			cvss,
+			COALESCE(next_type, type) AS type,
+			prev_type,
+			prev_created_at,
+			CASE
+				WHEN next_type IS NULL THEN NOW() - prev_created_at
+				ELSE created_at - prev_created_at
+			END AS fixing_time
+		FROM
+			events
+		WHERE
+			prev_type IN ?
+	)
+	SELECT
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4))  AS risk_avg_low,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7))  AS risk_avg_medium,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9))  AS risk_avg_high,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)) AS risk_avg_critical,
+
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4))  AS cvss_avg_low,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7))  AS cvss_avg_medium,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9))  AS cvss_avg_high,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)) AS cvss_avg_critical
+	FROM
+		intervals;`, append(fixedEvents, openEvents...), assetVersionName, assetID, openEvents).Find(&results).Error
 	} else {
 		err = r.db.Raw(`
-WITH events AS (
-    SELECT
-        dependency_vulns.id,
-        dependency_vulns.component_purl,
-        fe.type,
-        fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
-    FROM
-        dependency_vulns
-    JOIN
-        vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN (
-		SELECT DISTINCT dependency_vuln_id
-		FROM artifact_dependency_vulns 
-		WHERE artifact_artifact_name = ? 
-		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
-    WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
-),
-intervals AS (
-   SELECT
-        id,
-        component_purl,
-        COALESCE(next_type, type) AS type,
-        prev_type,
-        prev_created_at,
-        CASE
-            WHEN next_type IS NULL THEN NOW() - prev_created_at
-            ELSE created_at - prev_created_at
-        END AS fixing_time
-    FROM
-        events
-    WHERE
-        prev_type IN ? 
-)
-SELECT
-   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
-FROM
-    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
-	}
+	WITH events AS (
+    	SELECT
+			dependency_vulns.id,
+			dependency_vulns.component_purl,
+			dependency_vulns.raw_risk_assessment,
+			c.cvss,                                     
+			fe.type,
+			fe.created_at,
+			LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
+			LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
+			LEAD(fe.type)      OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
+		FROM
+			dependency_vulns
+		JOIN
+			vuln_events fe ON dependency_vulns.id = fe.vuln_id
+		LEFT JOIN                                        
+			cves c ON dependency_vulns.cve_id = c.cve   
+		JOIN (
+			SELECT 
+				DISTINCT dependency_vuln_id
+			FROM 
+				artifact_dependency_vulns 
+			WHERE 
+				artifact_artifact_name = ?
+			) as adv ON dependency_vulns.id = adv.dependency_vuln_id
+		WHERE 
+			fe.type IN ?
+		AND 
+			dependency_vulns.asset_version_name = ?
+		AND 
+			dependency_vulns.asset_id = ?
+	),
+	intervals AS (
+		SELECT
+			id,
+			component_purl,
+			raw_risk_assessment,
+			cvss,
+			COALESCE(next_type, type) AS type,
+			prev_type,
+			prev_created_at,
+			CASE
+				WHEN next_type IS NULL THEN NOW() - prev_created_at
+				ELSE created_at - prev_created_at
+			END AS fixing_time
+		FROM
+			events
+		WHERE
+			prev_type IN ?
+	)
+	SELECT
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4))  AS risk_avg_low,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7))  AS risk_avg_medium,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9))  AS risk_avg_high,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)) AS risk_avg_critical,
 
-	if err != nil {
-		return 0, err
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4))  AS cvss_avg_low,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7))  AS cvss_avg_medium,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9))  AS cvss_avg_high,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)) AS cvss_avg_critical
+	FROM
+		intervals;`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, openEvents).Find(&results).Error
 	}
+	return results, err
 
-	if len(results) == 0 {
-		return 0, nil
-	}
+	// fixingTimeStr := results[0].AvgFixingTime
+	// if fixingTimeStr == "" {
+	// 	return 0, nil
+	// }
+	// // parse it to float
+	// fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
+	// if err != nil {
+	// 	return 0, err
+	// }
 
-	fixingTimeStr := results[0].AvgFixingTime
-	if fixingTimeStr == "" {
-		return 0, nil
-	}
-	// parse it to float
-	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
-	if err != nil {
-		return 0, err
-	}
-
-	return fixingTime, nil
 }
 
 func (r *statisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
@@ -249,119 +278,6 @@ FROM
 	if fixingTimeStr == "" {
 		return 0, nil
 	}
-	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
-	if err != nil {
-		return 0, err
-	}
-
-	return fixingTime, nil
-}
-
-func (r *statisticsRepository) AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error) {
-	var results []struct {
-		AvgFixingTime string `gorm:"column:avg"`
-	}
-
-	var err error
-
-	if artifactName == nil {
-		err = r.db.Raw(`
-WITH events AS (
-    SELECT
-        dependency_vulns.id,
-        dependency_vulns.component_purl,
-        fe.type,
-        fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
-    FROM
-        dependency_vulns
-    JOIN
-        vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN cves c ON dependency_vulns.cve_id = c.cve
-    WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
-),
-intervals AS (
-   SELECT
-        id,
-        component_purl,
-        COALESCE(next_type, type) AS type,
-        prev_type,
-        prev_created_at,
-        CASE
-            WHEN next_type IS NULL THEN NOW() - prev_created_at
-            ELSE created_at - prev_created_at
-        END AS fixing_time
-    FROM
-        events
-    WHERE
-        prev_type IN ? 
-)
-SELECT
-   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
-FROM
-    intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
-	} else {
-		err = r.db.Raw(`
-WITH events AS (
-    SELECT
-        dependency_vulns.id,
-        dependency_vulns.component_purl,
-        fe.type,
-        fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
-    FROM
-        dependency_vulns
-    JOIN
-        vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN (
-		SELECT DISTINCT dependency_vuln_id
-		FROM artifact_dependency_vulns 
-		WHERE artifact_artifact_name = ? 
-		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
-	JOIN cves c ON dependency_vulns.cve_id = c.cve
-    WHERE
-        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
-),
-intervals AS (
-   SELECT
-        id,
-        component_purl,
-        COALESCE(next_type, type) AS type,
-        prev_type,
-        prev_created_at,
-        CASE
-            WHEN next_type IS NULL THEN NOW() - prev_created_at
-            ELSE created_at - prev_created_at
-        END AS fixing_time
-    FROM
-        events
-    WHERE
-        prev_type IN ? 
-)
-SELECT
-   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
-FROM
-    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
-	}
-
-	if err != nil {
-		return 0, err
-	}
-
-	if len(results) == 0 {
-		return 0, nil
-	}
-
-	fixingTimeStr := results[0].AvgFixingTime
-	if fixingTimeStr == "" {
-		return 0, nil
-	}
-	// parse it to float
 	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
 	if err != nil {
 		return 0, err

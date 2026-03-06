@@ -62,3 +62,15 @@ type RiskHistoryDTO struct {
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
+
+type RemediationTimeAverages struct {
+	RiskAVGLow      float64 `json:"riskAVGLow"`
+	RiskAVGMedium   float64 `json:"riskAVGMedium"`
+	RiskAVGHigh     float64 `json:"riskAVGHigh"`
+	RiskAVGCritical float64 `json:"riskAVGCritical"`
+
+	CVSSAVGLow      float64 `json:"cvssAVGLow"`
+	CVSSAVGMedium   float64 `json:"cvssAVGMedium"`
+	CVSSAVGHigh     float64 `json:"cvssAVGHigh"`
+	CVSSAVGCritical float64 `json:"cvssAVGCritical"`
+}
