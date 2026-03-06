@@ -14,6 +14,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ type ArtifactController struct {
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
 	dependencyVulnRepository shared.DependencyVulnRepository
+	statisticsRepository     shared.StatisticsRepository
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
@@ -45,11 +47,12 @@ type ArtifactController struct {
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
 		dependencyVulnService:     dependencyVulnService,
+		statisticsRepository:      statisticsRepository,
 		statisticsService:         statisticsService,
 		FireAndForgetSynchronizer: synchronizer,
 		componentService:          componentService,
@@ -669,16 +672,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "critical")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "high")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "medium")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "low")
+			return c.statisticsRepository.AverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 
@@ -694,10 +688,13 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	}
 
 	distribution := result.GetValue(1).(models.Distribution)
-	avgCritical := result.GetValue(2).(time.Duration)
-	avgHigh := result.GetValue(3).(time.Duration)
-	avgMedium := result.GetValue(4).(time.Duration)
-	avgLow := result.GetValue(5).(time.Duration)
+
+	averageRemediationTimes := result.GetValue(2).(dtos.RemediationTimeAverages)
+
+	avgLow, avgMedium, avgCritical, avgHigh, err := parseAverageRemediationTimes(averageRemediationTimes)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not process average remediation times", err)
+	}
 
 	markdown := bytes.Buffer{}
 	err = parsedTemplate.Execute(&markdown, dtos.VulnerabilityReport{
@@ -1008,4 +1005,34 @@ func buildVulnReportZipInMemory(writer io.Writer, templateName string, metadata,
 	//finalize the zip-archive and return it
 	zipWriter.Close()
 	return nil
+}
+
+func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, high, medium, critical time.Duration, e error) {
+	var lowAverage, mediumAverage, highAverage, criticalAverage time.Duration
+	var err error
+
+	lowAverageString := strconv.FormatFloat(avgs.RiskAvgLow, 'f', 2, 64)
+	lowAverage, err = time.ParseDuration(lowAverageString + "s")
+	if err != nil {
+		return lowAverage, mediumAverage, highAverage, criticalAverage, err
+	}
+
+	mediumAverageString := strconv.FormatFloat(avgs.RiskAvgMedium, 'f', 2, 64)
+	mediumAverage, err = time.ParseDuration(mediumAverageString + "s")
+	if err != nil {
+		return lowAverage, mediumAverage, highAverage, criticalAverage, err
+	}
+
+	highAverageString := strconv.FormatFloat(avgs.RiskAvgHigh, 'f', 2, 64)
+	highAverage, err = time.ParseDuration(highAverageString + "s")
+	if err != nil {
+		return lowAverage, mediumAverage, highAverage, criticalAverage, err
+	}
+
+	criticalAverageString := strconv.FormatFloat(avgs.RiskAvgCritical, 'f', 2, 64)
+	criticalAverage, err = time.ParseDuration(criticalAverageString + "s")
+	if err != nil {
+		return lowAverage, mediumAverage, highAverage, criticalAverage, err
+	}
+	return lowAverage, mediumAverage, highAverage, criticalAverage, nil
 }

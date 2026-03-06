@@ -64,13 +64,13 @@ type RiskHistoryDTO struct {
 }
 
 type RemediationTimeAverages struct {
-	RiskAVGLow      float64 `json:"riskAVGLow"`
-	RiskAVGMedium   float64 `json:"riskAVGMedium"`
-	RiskAVGHigh     float64 `json:"riskAVGHigh"`
-	RiskAVGCritical float64 `json:"riskAVGCritical"`
+	RiskAvgLow      float64 `json:"riskAvgLow"`
+	RiskAvgMedium   float64 `json:"riskAvgMedium"`
+	RiskAvgHigh     float64 `json:"riskAvgHigh"`
+	RiskAvgCritical float64 `json:"riskAvgCritical"`
 
-	CVSSAVGLow      float64 `json:"cvssAVGLow"`
-	CVSSAVGMedium   float64 `json:"cvssAVGMedium"`
-	CVSSAVGHigh     float64 `json:"cvssAVGHigh"`
-	CVSSAVGCritical float64 `json:"cvssAVGCritical"`
+	CVSSAvgLow      float64 `json:"cvssAvgLow"`
+	CVSSAvgMedium   float64 `json:"cvssAvgMedium"`
+	CVSSAvgHigh     float64 `json:"cvssAvgHigh"`
+	CVSSAvgCritical float64 `json:"cvssAvgCritical"`
 }
