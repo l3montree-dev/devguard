@@ -31,21 +31,7 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 
 func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter is required",
-		})
-	}
-
 	artifact := ctx.QueryParam("artifactName")
-	// check the severity value
-	if err := checkSeverity(severity); err != nil {
-		return ctx.JSON(400, map[string]string{
-			"error": err.Error(),
-		})
-	}
 
 	averages, err := c.statisticsRepository.AverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 	if err != nil {

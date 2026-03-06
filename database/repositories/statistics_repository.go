@@ -79,7 +79,7 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (dtos.RemediationTimeAverages, error) {
+func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
 	results := dtos.RemediationTimeAverages{}
 
 	var err error
