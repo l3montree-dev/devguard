@@ -247,26 +247,6 @@ func (s *statisticsService) GetReleaseRiskHistory(releaseID uuid.UUID, start tim
 	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(releaseID, start, end)
 }
 
-func (s *statisticsService) GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var riskIntervalStart, riskIntervalEnd float64
-	switch severity {
-	case "critical":
-		riskIntervalStart = 9
-		riskIntervalEnd = 10
-	case "high":
-		riskIntervalStart = 7
-		riskIntervalEnd = 9
-	case "medium":
-		riskIntervalStart = 4
-		riskIntervalEnd = 7
-	case "low":
-		riskIntervalStart = 0
-		riskIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTime(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-}
-
 // GetAverageFixingTimeForRelease computes average fixing time across all artifacts included in the release tree
 func (s *statisticsService) GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
@@ -288,27 +268,6 @@ func (s *statisticsService) GetAverageFixingTimeForRelease(releaseID uuid.UUID, 
 	}
 
 	return s.statisticsRepository.AverageFixingTimeForRelease(releaseID, riskIntervalStart, riskIntervalEnd)
-}
-
-// GetAverageFixingTimeByCvss computes average fixing time based on CVSS severity levels
-func (s *statisticsService) GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var cvssIntervalStart, cvssIntervalEnd float64
-	switch severity {
-	case "critical":
-		cvssIntervalStart = 9
-		cvssIntervalEnd = 10
-	case "high":
-		cvssIntervalStart = 7
-		cvssIntervalEnd = 9
-	case "medium":
-		cvssIntervalStart = 4
-		cvssIntervalEnd = 7
-	case "low":
-		cvssIntervalStart = 0
-		cvssIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTimeByCvss(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 }
 
 // GetAverageFixingTimeByCvssForRelease computes average fixing time across all artifacts included in the release tree based on CVSS

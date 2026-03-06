@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
 
@@ -46,26 +47,11 @@ func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
 		})
 	}
 
-	res := utils.Concurrently(
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvss(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-	)
-
-	if res.HasErrors() {
-		slog.Error("could not get average fixing time", "errors", res.Errors())
-		return ctx.JSON(500, map[string]string{
-			"error": "could not get average fixing time",
-		})
+	averages, err := c.statisticsRepository.AverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get average fixing time", err)
 	}
-
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
-		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
-	})
+	return ctx.JSON(200, averages)
 }
 
 func checkSeverity(severity string) error {

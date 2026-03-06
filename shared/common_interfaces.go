@@ -525,11 +525,10 @@ type ConfigService interface {
 
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
 	AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	// CVSS-based average fixing time methods
-	AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
 	AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 }
@@ -549,13 +548,11 @@ type ProjectRiskHistoryRepository interface {
 
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
-	GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	// Release scoped statistics
 	GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
 	// CVSS-based average fixing time methods
-	GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error)
 	GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
