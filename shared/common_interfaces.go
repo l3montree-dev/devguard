@@ -525,7 +525,7 @@ type ConfigService interface {
 
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
+	AverageFixingTimes(artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
 	AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	// CVSS-based average fixing time methods

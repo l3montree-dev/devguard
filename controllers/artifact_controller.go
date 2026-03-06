@@ -14,7 +14,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -672,7 +671,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsRepository.AverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+			return c.statisticsRepository.AverageFixingTimes(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 
@@ -691,10 +690,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 
 	averageRemediationTimes := result.GetValue(2).(dtos.RemediationTimeAverages)
 
-	avgLow, avgMedium, avgCritical, avgHigh, err := parseAverageRemediationTimes(averageRemediationTimes)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not process average remediation times", err)
-	}
+	avgLow, avgMedium, avgHigh, avgCritical := parseAverageRemediationTimes(averageRemediationTimes)
 
 	markdown := bytes.Buffer{}
 	err = parsedTemplate.Execute(&markdown, dtos.VulnerabilityReport{
@@ -1007,32 +1003,9 @@ func buildVulnReportZipInMemory(writer io.Writer, templateName string, metadata,
 	return nil
 }
 
-func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, high, medium, critical time.Duration, e error) {
-	var lowAverage, mediumAverage, highAverage, criticalAverage time.Duration
-	var err error
-
-	lowAverageString := strconv.FormatFloat(avgs.RiskAvgLow, 'f', 2, 64)
-	lowAverage, err = time.ParseDuration(lowAverageString + "s")
-	if err != nil {
-		return lowAverage, mediumAverage, highAverage, criticalAverage, err
-	}
-
-	mediumAverageString := strconv.FormatFloat(avgs.RiskAvgMedium, 'f', 2, 64)
-	mediumAverage, err = time.ParseDuration(mediumAverageString + "s")
-	if err != nil {
-		return lowAverage, mediumAverage, highAverage, criticalAverage, err
-	}
-
-	highAverageString := strconv.FormatFloat(avgs.RiskAvgHigh, 'f', 2, 64)
-	highAverage, err = time.ParseDuration(highAverageString + "s")
-	if err != nil {
-		return lowAverage, mediumAverage, highAverage, criticalAverage, err
-	}
-
-	criticalAverageString := strconv.FormatFloat(avgs.RiskAvgCritical, 'f', 2, 64)
-	criticalAverage, err = time.ParseDuration(criticalAverageString + "s")
-	if err != nil {
-		return lowAverage, mediumAverage, highAverage, criticalAverage, err
-	}
-	return lowAverage, mediumAverage, highAverage, criticalAverage, nil
+func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, medium, high, critical time.Duration) {
+	return time.Duration(avgs.RiskAvgLow * float64(time.Second)),
+		time.Duration(avgs.RiskAvgMedium * float64(time.Second)),
+		time.Duration(avgs.RiskAvgHigh * float64(time.Second)),
+		time.Duration(avgs.RiskAvgCritical * float64(time.Second))
 }

@@ -79,7 +79,7 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+func (r *statisticsRepository) AverageFixingTimes(artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
 	results := dtos.RemediationTimeAverages{}
 
 	var err error
@@ -193,30 +193,20 @@ func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVers
 			prev_type IN ?
 	)
 	SELECT
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4))  AS risk_avg_low,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7))  AS risk_avg_medium,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9))  AS risk_avg_high,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)) AS risk_avg_critical,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4)),0)  AS risk_avg_low,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7)),0)  AS risk_avg_medium,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9)),0)  AS risk_avg_high,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)),0) AS risk_avg_critical,
 
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4))  AS cvss_avg_low,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7))  AS cvss_avg_medium,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9))  AS cvss_avg_high,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)) AS cvss_avg_critical
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4)),0)  AS cvss_avg_low,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7)),0)  AS cvss_avg_medium,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 	FROM
 		intervals;`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, openEvents).Find(&results).Error
 	}
+
 	return results, err
-
-	// fixingTimeStr := results[0].AvgFixingTime
-	// if fixingTimeStr == "" {
-	// 	return 0, nil
-	// }
-	// // parse it to float
-	// fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 }
 
 func (r *statisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
