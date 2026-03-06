@@ -52,13 +52,11 @@ jobs:
         path: coverage.out
 
 
-  devguard:
-    uses: l3montree-dev/devguard-action/.github/workflows/full.yml@main
+  code-scanning:
+    uses: l3montree-dev/devguard-action/.github/workflows/code-scanning.yml@nix
     permissions:
-      contents: write
-      actions: read
+      contents: read
       security-events: write
-      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -70,234 +68,38 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
 
-  build-devguard-image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0 # needed for flake.nix to resolve self.shortRev
-          persist-credentials: false
-      - name: In-Toto Provenance record start
-        id: in-toto-start
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:v1.0.0
-        with:
-          args: devguard-scanner intoto start --step=build --token=${{ secrets.DEVGUARD_TOKEN }} --apiUrl=https://api.main.devguard.org --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard --supplyChainId=${{ github.sha }}
-        continue-on-error: true
-      - uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      - uses: imjasonh/setup-crane@v0.1
-      - name: Build OCI image with Nix
-        run: nix build .#devguardOCI
-      - name: Prepare image.tar
-        run: gunzip -c "$(readlink -f result)" > image.tar
-      - name: Get image digest
-        run: crane digest --tarball=image.tar > image-digest.txt
-      - name: Upload oci-image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: oci-image
-          path: image.tar
-      - name: Set IMAGE_TAG
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            IMAGE_TAG="ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}"
-          else
-            branch=${GITHUB_REF##*/}
-            sha=${GITHUB_SHA::8}
-            ts=$(date +%s)
-            IMAGE_TAG="ghcr.io/${{ github.repository }}:${branch}-${sha}-${ts}"
-          fi
-          IMAGE_TAG=$(echo "$IMAGE_TAG" | tr '[:upper:]' '[:lower:]')
-          echo "$IMAGE_TAG" > image-tag.txt
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-      - name: Upload image-tag artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-tag
-          path: image-tag.txt
-      - name: Upload image-digest artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-digest
-          path: image-digest.txt
-      - name: Set Artifact purl
-        run: |
-          REGISTRY_AND_IMAGE=${IMAGE_TAG%:*}
-          NAME=${REGISTRY_AND_IMAGE##*/}
-          PURL="pkg:oci/$NAME?repository_url=$REGISTRY_AND_IMAGE"
-          echo "$PURL" > artifact-purl.txt
-          SAFE_PURL=$(echo -n "$PURL" | jq -s -R -r @uri)
-          echo "$SAFE_PURL" > artifact-purl-safe.txt
-      - name: Upload artifact-purl artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifact-purl
-          path: artifact-purl.txt
-      - name: Upload artifact-purl-safe artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifact-purl-safe
-          path: artifact-purl-safe.txt
-      - name: In-Toto Provenance record stop
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:v1.0.0
-        with:
-          args: devguard-scanner intoto stop --step=build --products=image-digest.txt --products=image-tag.txt --token=${{ secrets.DEVGUARD_TOKEN }} --apiUrl=https://api.main.devguard.org --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard --supplyChainId=${{ github.sha }} --generateSlsaProvenance
-        continue-on-error: true
-      - name: Upload SLSA Provenance
-        uses: actions/upload-artifact@v4
-        with:
-          name: build.provenance.json
-          path: build.provenance.json
-
-
-  build-scanner-image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0 # needed for flake.nix to resolve self.shortRev
-          persist-credentials: false
-      - name: In-Toto Provenance record start
-        id: in-toto-start
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:v1.0.0
-        with:
-          args: devguard-scanner intoto start --step=build --token=${{ secrets.DEVGUARD_TOKEN }} --apiUrl=https://api.main.devguard.org --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard --supplyChainId=${{ github.sha }}
-        continue-on-error: true
-      - uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      - uses: imjasonh/setup-crane@v0.1
-      - name: Build OCI image with Nix
-        run: nix build .#devguardScannerOCI
-      - name: Prepare image.tar
-        run: gunzip -c "$(readlink -f result)" > image.tar
-      - name: Get image digest
-        run: crane digest --tarball=image.tar > image-digest.txt
-      - name: Upload oci-image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: oci-imagescanner
-          path: image.tar
-      - name: Set IMAGE_TAG
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            IMAGE_TAG="ghcr.io/${{ github.repository }}/scanner:${GITHUB_REF#refs/tags/}"
-          else
-            branch=${GITHUB_REF##*/}
-            sha=${GITHUB_SHA::8}
-            ts=$(date +%s)
-            IMAGE_TAG="ghcr.io/${{ github.repository }}/scanner:${branch}-${sha}-${ts}"
-          fi
-          IMAGE_TAG=$(echo "$IMAGE_TAG" | tr '[:upper:]' '[:lower:]')
-          echo "$IMAGE_TAG" > image-tag.txt
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-      - name: Upload image-tag artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-tagscanner
-          path: image-tag.txt
-      - name: Upload image-digest artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-digestscanner
-          path: image-digest.txt
-      - name: Set Artifact purl
-        run: |
-          PURL="pkg:oci/scanner?repository_url=ghcr.io/${{ github.repository }}/scanner"
-          echo "$PURL" > artifact-purl.txt
-          SAFE_PURL=$(echo -n "$PURL" | jq -s -R -r @uri)
-          echo "$SAFE_PURL" > artifact-purl-safe.txt
-      - name: Upload artifact-purl artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifact-purlscanner
-          path: artifact-purl.txt
-      - name: Upload artifact-purl-safe artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifact-purl-safescanner
-          path: artifact-purl-safe.txt
-      - name: In-Toto Provenance record stop
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:v1.0.0
-        with:
-          args: devguard-scanner intoto stop --step=build --products=image-digest.txt --products=image-tag.txt --token=${{ secrets.DEVGUARD_TOKEN }} --apiUrl=https://api.main.devguard.org --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard --supplyChainId=${{ github.sha }} --generateSlsaProvenance
-        continue-on-error: true
-      - name: Upload SLSA Provenance
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildscanner.provenance.json
-          path: build.provenance.json
-
-
-  # Image scanning job to detect vulnerabilities in the built Docker image
-  scanner-container-scanning:
-    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
+  api-pipeline:
+    uses: l3montree-dev/devguard-action/.github/workflows/container-lifecycle-nix.yml@nix
     permissions:
       contents: read
-      security-events: write
-    needs: 
-    - build-scanner-image
+      packages: write
     with:
+      nix-target: devguardOCI
+      image-name: ghcr.io/${{ github.repository }}
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
-      image-suffix: "scanner"
-    secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
-      
-  deploy-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
-    permissions:
-      contents: read
-      packages: write
-    with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      image-suffix: "scanner"
-    secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
-  
-  sign-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
-    permissions:
-      contents: read
-      packages: write
-    with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
-      image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
-  attest-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
+
+  scanner-pipeline:
+    needs: [tests]
+    uses: l3montree-dev/devguard-action/.github/workflows/container-lifecycle-nix.yml@nix
     permissions:
       contents: read
       packages: write
     with:
+      nix-target: devguardScannerOCI
+      image-name: ghcr.io/${{ github.repository }}/scanner
+      artifact-name-suffix: scanner
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
-      image-suffix: "scanner"
+      web-ui: https://main.devguard.org
+      fail-on-cvss: high
+      fail-on-risk: high
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
