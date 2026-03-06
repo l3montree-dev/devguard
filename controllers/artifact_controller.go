@@ -35,6 +35,7 @@ type ArtifactController struct {
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
 	dependencyVulnRepository shared.DependencyVulnRepository
+	statisticsRepository     shared.StatisticsRepository
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
@@ -45,11 +46,12 @@ type ArtifactController struct {
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
 		dependencyVulnService:     dependencyVulnService,
+		statisticsRepository:      statisticsRepository,
 		statisticsService:         statisticsService,
 		FireAndForgetSynchronizer: synchronizer,
 		componentService:          componentService,
@@ -669,16 +671,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "critical")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "high")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "medium")
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, "low")
+			return c.statisticsRepository.AverageFixingTimes(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 
@@ -694,10 +687,10 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	}
 
 	distribution := result.GetValue(1).(models.Distribution)
-	avgCritical := result.GetValue(2).(time.Duration)
-	avgHigh := result.GetValue(3).(time.Duration)
-	avgMedium := result.GetValue(4).(time.Duration)
-	avgLow := result.GetValue(5).(time.Duration)
+
+	averageRemediationTimes := result.GetValue(2).(dtos.RemediationTimeAverages)
+
+	avgLow, avgMedium, avgHigh, avgCritical := parseAverageRemediationTimes(averageRemediationTimes)
 
 	markdown := bytes.Buffer{}
 	err = parsedTemplate.Execute(&markdown, dtos.VulnerabilityReport{
@@ -1008,4 +1001,11 @@ func buildVulnReportZipInMemory(writer io.Writer, templateName string, metadata,
 	//finalize the zip-archive and return it
 	zipWriter.Close()
 	return nil
+}
+
+func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, medium, high, critical time.Duration) {
+	return time.Duration(avgs.RiskAvgLow * float64(time.Second)),
+		time.Duration(avgs.RiskAvgMedium * float64(time.Second)),
+		time.Duration(avgs.RiskAvgHigh * float64(time.Second)),
+		time.Duration(avgs.RiskAvgCritical * float64(time.Second))
 }

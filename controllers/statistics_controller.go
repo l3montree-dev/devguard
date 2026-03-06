@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
 
@@ -28,44 +29,15 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 	}
 }
 
-func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
+func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter is required",
-		})
-	}
-
 	artifact := ctx.QueryParam("artifactName")
-	// check the severity value
-	if err := checkSeverity(severity); err != nil {
-		return ctx.JSON(400, map[string]string{
-			"error": err.Error(),
-		})
+
+	averages, err := c.statisticsRepository.AverageFixingTimes(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get average fixing time").WithInternal(err)
 	}
-
-	res := utils.Concurrently(
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvss(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-	)
-
-	if res.HasErrors() {
-		slog.Error("could not get average fixing time", "errors", res.Errors())
-		return ctx.JSON(500, map[string]string{
-			"error": "could not get average fixing time",
-		})
-	}
-
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
-		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
-	})
+	return ctx.JSON(200, averages)
 }
 
 func checkSeverity(severity string) error {
