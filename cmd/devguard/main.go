@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	sentryotel "github.com/getsentry/sentry-go/otel"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
@@ -31,6 +33,9 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -84,6 +89,9 @@ func main() {
 
 	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
+		if sampleRate := tracesSampleRate(); sampleRate > 0 {
+			initTracer(sampleRate)
+		}
 
 		// Catch panics
 		defer func() {
@@ -145,20 +153,48 @@ func main() {
 	app.Run()
 }
 
+func tracesSampleRate() float64 {
+	val := os.Getenv("TRACES_SAMPLE_RATE")
+	if val == "" {
+		return 0
+	}
+	rate, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		slog.Warn("invalid TRACES_SAMPLE_RATE, tracing disabled", "value", val)
+		return 0
+	}
+	return rate
+}
+
+func initTracer(sampleRate float64) {
+	// Sampling is controlled here at the OTel level — this is what actually gates
+	// GORM/pgx spans. TracesSampleRate in sentry.Init only applies to transactions
+	// started via the Sentry SDK directly, not via the OTel bridge.
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
+		sdktrace.WithSpanProcessor(sentryotel.NewSentrySpanProcessor()),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		sentryotel.NewSentryPropagator(),
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+	slog.Info("tracing initialized", "sample_rate", sampleRate)
+}
+
 func initSentry() {
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "dev"
 	}
 
+	tracesRate := tracesSampleRate()
+
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
 		Environment: environment,
 		Release:     release,
-
-		// In debug mode, the debug information is printed to stdout to help you
-		// understand what Sentry is doing.
-		Debug: environment == "dev",
 
 		// Configures whether SDK should generate and attach stack traces to pure
 		// capture message calls.
@@ -167,7 +203,14 @@ func initSentry() {
 		// If this flag is enabled, certain personally identifiable information (PII) is added by active integrations.
 		// By default, no such data is sent.
 		SendDefaultPII: false,
+
+		// Required for Sentry to accept performance data forwarded from the OTel bridge
+		// (sentryotel.NewSentrySpanProcessor). Without this, all spans are dropped.
+		// Sampling itself is controlled by the OTel TracerProvider in initTracer.
+		EnableTracing:    tracesRate > 0,
+		TracesSampleRate: tracesRate,
 	})
+
 	if err != nil {
 		slog.Error("Failed to init logger", "err", err)
 	}

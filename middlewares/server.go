@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -20,7 +21,7 @@ func registerMiddlewares(e *echo.Echo) {
 		AddProfileEndpoints(e)
 	}
 
-	// Wrap(e)
+	e.Use(sentryecho.New(sentryecho.Options{Repanic: true}))
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
