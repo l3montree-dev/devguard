@@ -16,6 +16,7 @@
 package router
 
 import (
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -24,7 +25,7 @@ type AdminRouter struct {
 	*echo.Group
 }
 
-func NewAdminRouter(sessionRouter SessionRouter) AdminRouter {
+func NewAdminRouter(sessionRouter SessionRouter, adminController *controllers.AdminController) AdminRouter {
 	adminRouter := sessionRouter.Group.Group("/admin",
 		middlewares.InstanceAdminMiddleware(),
 	)
@@ -32,6 +33,15 @@ func NewAdminRouter(sessionRouter SessionRouter) AdminRouter {
 	adminRouter.GET("/", func(ctx echo.Context) error {
 		return ctx.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	// Daemon trigger endpoints – each daemon has its own SSE trigger route
+	daemonGroup := adminRouter.Group("/daemons")
+	daemonGroup.POST("/open-source-insights/trigger/", adminController.TriggerOpenSourceInsights)
+	daemonGroup.POST("/vulndb/trigger/", adminController.TriggerVulnDB)
+	daemonGroup.POST("/vulndb-cleanup/trigger/", adminController.TriggerVulnDBCleanup)
+	daemonGroup.POST("/fixed-versions/trigger/", adminController.TriggerFixedVersions)
+	daemonGroup.POST("/asset-pipeline-all/trigger/", adminController.TriggerAssetPipelineAll)
+	daemonGroup.POST("/asset-pipeline-single/trigger/", adminController.TriggerAssetPipelineSingle)
 
 	return AdminRouter{
 		Group: adminRouter,

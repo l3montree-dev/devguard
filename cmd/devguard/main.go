@@ -77,6 +77,11 @@ var release string // Will be filled at build time
 // @in							header
 // @name						X-Signature
 // @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
+
+// @securityDefinitions.apikey	AdminSignedAuth
+// @in							header
+// @name						Signature
+// @description				Instance admin authentication using ECDSA P-256 HTTP message signing. Requires Signature, Signature-Input and Content-Digest headers.
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck

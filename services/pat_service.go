@@ -22,8 +22,9 @@ import (
 )
 
 type PatService struct {
-	patRepository shared.PersonalAccessTokenRepository
-	adminPubKey   ecdsa.PublicKey
+	patRepository  shared.PersonalAccessTokenRepository
+	adminPubKey    ecdsa.PublicKey
+	adminKeyLoaded bool
 }
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
@@ -46,10 +47,18 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 		}
 	}
 
-	adminPubKey := HexPubKeyToECDSA(string(adminPubKeyHexBytes))
+	// TrimSpace so that trailing newlines from editors do not corrupt the hex parsing.
+	adminPubKey, err := HexPubKeyToECDSA(strings.TrimSpace(string(adminPubKeyHexBytes)))
+	if err != nil {
+		slog.Error("could not parse admin public key — admin authentication will not work", "err", err)
+		return &PatService{
+			patRepository: repository,
+		}
+	}
 	return &PatService{
-		patRepository: repository,
-		adminPubKey:   adminPubKey,
+		patRepository:  repository,
+		adminPubKey:    adminPubKey,
+		adminKeyLoaded: true,
 	}
 }
 
@@ -129,17 +138,24 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 	return *privKeyECDSA
 }
 
-func HexPubKeyToECDSA(hexPubKey string) ecdsa.PublicKey {
-	pubKey := ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     new(big.Int),
-		Y:     new(big.Int),
+func HexPubKeyToECDSA(hexPubKey string) (ecdsa.PublicKey, error) {
+	// A P-256 public key is two 32-byte coordinates = 64 hex bytes each = 128 chars total.
+	if len(hexPubKey) != 128 {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key length: expected 128 hex chars, got %d", len(hexPubKey))
 	}
 
-	pubKey.X, _ = new(big.Int).SetString(hexPubKey[:len(hexPubKey)/2], 16)
-	pubKey.Y, _ = new(big.Int).SetString(hexPubKey[len(hexPubKey)/2:], 16)
+	x, okX := new(big.Int).SetString(hexPubKey[:64], 16)
+	y, okY := new(big.Int).SetString(hexPubKey[64:], 16)
+	if !okX || !okY {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: could not parse hex coordinates")
+	}
 
-	return pubKey
+	curve := elliptic.P256()
+	if !curve.IsOnCurve(x, y) {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: point is not on P-256 curve")
+	}
+
+	return ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
 }
 
 func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
@@ -214,7 +230,6 @@ func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 }
 
 func (p *PatService) verifyAdminRequest(req *http.Request) (bool, error) {
-	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
 	verifier, _ := httpsign.NewP256Verifier(p.adminPubKey, nil,
 		httpsign.Headers("@method", "content-digest"))
 
@@ -260,8 +275,7 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (shared.AuthSessi
 		return nil, fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 
-	requestValidErr := validateRequest(pubKey, req)
-	if requestValidErr != nil {
+	if err := validateRequest(pubKey, req); err != nil {
 		return nil, fmt.Errorf("could not validate request: %v", err)
 	}
 

@@ -66,6 +66,9 @@ func ProvideMaliciousPackageChecker(
 
 // ControllerModule provides all HTTP controller constructors
 var ControllerModule = fx.Options(
+	// Admin
+	fx.Provide(NewAdminController),
+
 	// Asset Management
 	fx.Provide(NewAssetController),
 	fx.Provide(NewAssetVersionController),
