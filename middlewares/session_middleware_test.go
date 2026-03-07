@@ -23,7 +23,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return("user1", "read write", nil)
+		verifier.On("VerifyRequestSignature", mock.Anything).Return(accesscontrol.NewSession("user1", []string{"read", "write"}, false), nil)
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -49,7 +49,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return("", "", errors.New("could not verify request"))
+		verifier.On("VerifyRequestSignature", mock.Anything).Return(nil, errors.New("could not verify request"))
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -73,7 +73,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return("", "", errors.New("failed"))
+		verifier.On("VerifyRequestSignature", mock.Anything).Return(nil, errors.New("failed"))
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -116,29 +116,6 @@ func TestSessionMiddleware(t *testing.T) {
 
 			assert.Equal(t, "user2", sess.GetUserID())
 			assert.ElementsMatch(t, []string{"scan", "manage"}, sess.GetScopes())
-			return nil
-		})
-
-		_ = handler(c)
-		assert.True(t, called)
-	})
-
-	t.Run("should set the session using admin token header", func(t *testing.T) {
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("X-Admin-Token", "admin_token_value")
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-
-		mw := SessionMiddleware(nil, nil)
-
-		var called bool
-		handler := mw(func(ctx echo.Context) error {
-			called = true
-			sess := shared.GetSession(ctx)
-
-			assert.Equal(t, "admin_token_value", sess.GetUserID())
-			assert.ElementsMatch(t, []string{}, sess.GetScopes())
 			return nil
 		})
 

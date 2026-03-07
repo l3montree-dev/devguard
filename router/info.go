@@ -1,6 +1,8 @@
 package router
 
-import "database/sql"
+import (
+	"time"
+)
 
 // InfoResponse is the typed response returned by the /api/v1/info/ endpoint.
 // It is structured for readable inspection by humans and machines.
@@ -56,9 +58,25 @@ type PoolInfo struct {
 	MaxConns      int `json:"maxConns,omitempty"`
 }
 
+type DBStats struct {
+	MaxOpenConnections int `json:"maxOpenConnections,omitempty"`
+
+	// Pool Status
+	OpenConnections int `json:"openConnections,omitempty"` // The number of established connections both in use and idle.
+	InUse           int `json:"inUse,omitempty"`           // The number of connections currently in use.
+	Idle            int `json:"idle,omitempty"`            // The number of idle connections.
+
+	// Counters
+	WaitCount         int64         `json:"waitCount,omitempty"`         // The total number of connections waited for.
+	WaitDuration      time.Duration `json:"waitDuration,omitempty"`      // The total time blocked waiting for a new connection.
+	MaxIdleClosed     int64         `json:"maxIdleClosed,omitempty"`     // The total number of connections closed due to SetMaxIdleConns.
+	MaxIdleTimeClosed int64         `json:"maxIdleTimeClosed,omitempty"` // The total number of connections closed due to SetConnMaxIdleTime.
+	MaxLifetimeClosed int64         `json:"maxLifetimeClosed,omitempty"` // The total number of connections closed due to SetConnMaxLifetime.
+}
+
 // DatabaseInfo describes DB connectivity and migration/vulndb metadata
 type DatabaseInfo struct {
-	sql.DBStats
+	DBStats
 	Status string  `json:"status"`
 	Error  *string `json:"error,omitempty"`
 

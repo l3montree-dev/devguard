@@ -101,7 +101,7 @@ func TestSignRequest(t *testing.T) {
 		//privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -129,7 +129,7 @@ func TestSignRequest(t *testing.T) {
 		}
 		req.Header.Set("Content-Digest", "POST")
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -165,7 +165,7 @@ func TestSignRequest(t *testing.T) {
 
 		req.Method = "POST"
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}

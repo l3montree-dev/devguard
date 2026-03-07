@@ -7,6 +7,7 @@ package mocks
 import (
 	"net/http"
 
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,35 +39,31 @@ func (_m *Verifier) EXPECT() *Verifier_Expecter {
 }
 
 // VerifyRequestSignature provides a mock function for the type Verifier
-func (_mock *Verifier) VerifyRequestSignature(req *http.Request) (string, string, error) {
+func (_mock *Verifier) VerifyRequestSignature(req *http.Request) (shared.AuthSession, error) {
 	ret := _mock.Called(req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyRequestSignature")
 	}
 
-	var r0 string
-	var r1 string
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(*http.Request) (string, string, error)); ok {
+	var r0 shared.AuthSession
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) (shared.AuthSession, error)); ok {
 		return returnFunc(req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*http.Request) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) shared.AuthSession); ok {
 		r0 = returnFunc(req)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.AuthSession)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(*http.Request) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(*http.Request) error); ok {
 		r1 = returnFunc(req)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(*http.Request) error); ok {
-		r2 = returnFunc(req)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // Verifier_VerifyRequestSignature_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyRequestSignature'
@@ -93,12 +90,12 @@ func (_c *Verifier_VerifyRequestSignature_Call) Run(run func(req *http.Request))
 	return _c
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) Return(s string, s1 string, err error) *Verifier_VerifyRequestSignature_Call {
-	_c.Call.Return(s, s1, err)
+func (_c *Verifier_VerifyRequestSignature_Call) Return(authSession shared.AuthSession, err error) *Verifier_VerifyRequestSignature_Call {
+	_c.Call.Return(authSession, err)
 	return _c
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(req *http.Request) (string, string, error)) *Verifier_VerifyRequestSignature_Call {
+func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(req *http.Request) (shared.AuthSession, error)) *Verifier_VerifyRequestSignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

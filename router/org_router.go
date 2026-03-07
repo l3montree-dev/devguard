@@ -53,7 +53,7 @@ func NewOrgRouter(
 	All routes below this line are scoped to a specific organization.
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
+		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 

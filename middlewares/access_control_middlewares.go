@@ -23,11 +23,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
+
+func InstanceAdminMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			session := shared.GetSession(ctx)
+			if !session.IsInstanceAdmin() {
+				slog.Error("access denied in InstanceAdminMiddleware - user is not an instance admin", "user", session.GetUserID())
+				return echo.NewHTTPError(403, "you do not have access to this resource")
+			}
+			return next(ctx)
+		}
+	}
+}
 
 func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -36,9 +48,9 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 			rbac := shared.GetRBAC(ctx)
 			org := shared.GetOrg(ctx)
 			// get the user
-			user := shared.GetSession(ctx).GetUserID()
+			session := shared.GetSession(ctx)
 
-			allowed, err := rbac.IsAllowed(user, obj, act)
+			allowed, err := rbac.IsAllowed(session, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -49,7 +61,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				if org.IsPublic && act == shared.ActionRead {
 					shared.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied in accessControlMiddleware", "user", user, "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "user", session.GetUserID(), "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
 					return echo.NewHTTPError(404, "could not find organization")
 				}
@@ -84,7 +96,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 				// get the rbac
 				rbac := shared.GetRBAC(ctx)
 				// get the user
-				user := shared.GetSession(ctx).GetUserID()
+				session := shared.GetSession(ctx)
 				// get the project
 				project := shared.GetProject(ctx)
 				// get the asset slug
@@ -104,7 +116,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 					}
 				}
 
-				allowed, err := rbac.IsAllowedInAsset(&asset, user, obj, act)
+				allowed, err := rbac.IsAllowedInAsset(&asset, session, obj, act)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
 				}
@@ -114,7 +126,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in AssetAccess", "user", user, "object", obj, "action", act, "assetSlug", assetSlug)
+						slog.Warn("access denied in AssetAccess", "user", session.GetUserID(), "object", obj, "action", act, "assetSlug", assetSlug)
 						return echo.NewHTTPError(404, "could not find asset")
 					}
 				}
@@ -133,7 +145,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 				rbac := shared.GetRBAC(ctx)
 
 				// get the user
-				user := shared.GetSession(ctx).GetUserID()
+				session := shared.GetSession(ctx)
 
 				// get the project id
 				projectSlug, err := shared.GetProjectSlug(ctx)
@@ -154,7 +166,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 					return echo.NewHTTPError(404, "could not find project")
 				}
 
-				allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
+				allowed, err := rbac.IsAllowedInProject(&project, session, obj, act)
 
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -166,7 +178,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in ProjectAccess", "user", user, "object", obj, "action", act, "projectSlug", projectSlug)
+						slog.Warn("access denied in ProjectAccess", "user", session.GetUserID(), "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(404, "could not find project")
 					}
 				}
@@ -179,7 +191,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 	}
 }
 
-func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) shared.MiddlewareFunc {
+func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService) shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) (err error) {
 			// get the organization from the provided context
@@ -203,19 +215,12 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			// check what kind of RBAC we need
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
 			if org.IsExternalEntity() {
-				// check if there is an admin token defined
-				conf, ok := oauth2Config[*org.ExternalEntityProviderID]
-				if !ok {
-					slog.Error("no oauth2 config found for external entity provider", "provider", *org.ExternalEntityProviderID)
-					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
-				}
-
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
 			}
 
 			// check if the user is allowed to access the organization
 			session := shared.GetSession(ctx)
-			allowed, err := domainRBAC.HasAccess(session.GetUserID())
+			allowed, err := domainRBAC.HasAccess(session)
 			if err != nil {
 				if org.IsPublic {
 					shared.SetIsPublicRequest(ctx)

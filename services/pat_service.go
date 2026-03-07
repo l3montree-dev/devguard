@@ -9,9 +9,11 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -20,12 +22,43 @@ import (
 )
 
 type PatService struct {
-	patRepository shared.PersonalAccessTokenRepository
+	patRepository  shared.PersonalAccessTokenRepository
+	adminPubKey    ecdsa.PublicKey
+	adminKeyLoaded bool
 }
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
+	// read the admin public key from the environment variable and convert it to ecdsa.PublicKey
+	// the public key is expected to be in hex format (X and Y concatenated)
+	adminPubKeyPath := os.Getenv("INSTANCE_ADMIN_PUB_KEY_PATH")
+	if adminPubKeyPath == "" {
+		slog.Warn("no admin public key provided, admin token authentication will not work")
+		return &PatService{
+			patRepository: repository,
+		}
+	}
+
+	// read the admin public key from the file
+	adminPubKeyHexBytes, err := os.ReadFile(adminPubKeyPath)
+	if err != nil {
+		slog.Error("could not read admin public key from file", "err", err)
+		return &PatService{
+			patRepository: repository,
+		}
+	}
+
+	// TrimSpace so that trailing newlines from editors do not corrupt the hex parsing.
+	adminPubKey, err := HexPubKeyToECDSA(strings.TrimSpace(string(adminPubKeyHexBytes)))
+	if err != nil {
+		slog.Error("could not parse admin public key — admin authentication will not work", "err", err)
+		return &PatService{
+			patRepository: repository,
+		}
+	}
 	return &PatService{
-		patRepository: repository,
+		patRepository:  repository,
+		adminPubKey:    adminPubKey,
+		adminKeyLoaded: true,
 	}
 }
 
@@ -105,17 +138,24 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 	return *privKeyECDSA
 }
 
-func HexPubKeyToECDSA(hexPubKey string) ecdsa.PublicKey {
-	pubKey := ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     new(big.Int),
-		Y:     new(big.Int),
+func HexPubKeyToECDSA(hexPubKey string) (ecdsa.PublicKey, error) {
+	// A P-256 public key is two 32-byte coordinates = 64 hex bytes each = 128 chars total.
+	if len(hexPubKey) != 128 {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key length: expected 128 hex chars, got %d", len(hexPubKey))
 	}
 
-	pubKey.X, _ = new(big.Int).SetString(hexPubKey[:len(hexPubKey)/2], 16)
-	pubKey.Y, _ = new(big.Int).SetString(hexPubKey[len(hexPubKey)/2:], 16)
+	x, okX := new(big.Int).SetString(hexPubKey[:64], 16)
+	y, okY := new(big.Int).SetString(hexPubKey[64:], 16)
+	if !okX || !okY {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: could not parse hex coordinates")
+	}
 
-	return pubKey
+	curve := elliptic.P256()
+	if !curve.IsOnCurve(x, y) {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: point is not on P-256 curve")
+	}
+
+	return ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
 }
 
 func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
@@ -189,29 +229,60 @@ func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 	return p.patRepository.MarkAsLastUsedNow(fingerprint)
 }
 
-func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
+func (p *PatService) verifyAdminRequest(req *http.Request) (bool, error) {
+	verifier, _ := httpsign.NewP256Verifier(p.adminPubKey, nil,
+		httpsign.Headers("@method", "content-digest"))
+
+	err := httpsign.VerifyRequest("sig77", *verifier, req)
+	if err != nil {
+		return false, fmt.Errorf("could not verify request: %v", err)
+	}
+	return true, nil
+}
+
+func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
+	verifier, err := httpsign.NewP256Verifier(pubKey, nil,
+		httpsign.Headers("@method", "content-digest"))
+
+	if err != nil {
+		return fmt.Errorf("could not create verifier: %v", err)
+	}
+
+	err = httpsign.VerifyRequest("sig77", *verifier, req)
+	if err != nil {
+		return fmt.Errorf("could not verify request: %v", err)
+	}
+	return nil
+}
+
+func (p *PatService) VerifyRequestSignature(req *http.Request) (shared.AuthSession, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
 	if fingerprint == "" {
-		return "", "", fmt.Errorf("no fingerprint provided")
+		// check if it's an admin request
+		isAdmin, err := p.verifyAdminRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("could not verify admin request: %v", err)
+		}
+		if isAdmin {
+			// add all scopes
+			return accesscontrol.NewSession("admin", dtos.AllowedScopes, true), nil
+		}
+		return nil, fmt.Errorf("no fingerprint provided")
 	}
 	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
 
 	if err != nil {
-		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return nil, fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 
-	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
-	verifier, _ := httpsign.NewP256Verifier(pubKey, nil,
-		httpsign.Headers("@method", "content-digest"))
-
-	err = httpsign.VerifyRequest("sig77", *verifier, req)
-	if err != nil {
-		return "", "", fmt.Errorf("could not verify request: %v", err)
+	if err := validateRequest(pubKey, req); err != nil {
+		return nil, fmt.Errorf("could not validate request: %v", err)
 	}
 
 	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
 
-	return userID.String(), scopes, nil
+	scopesArray := strings.Fields(scopes)
+	return accesscontrol.NewSession(userID.String(), scopesArray, false), nil
 }
 
 func (p *PatService) RevokeByPrivateKey(privKey string) error {

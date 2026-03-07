@@ -398,7 +398,10 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 }
 
 func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
-	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
+	ecdsaPubKey, err := HexPubKeyToECDSA(hexPubKey)
+	if err != nil {
+		return toto.Key{}, fmt.Errorf("could not parse public key: %w", err)
+	}
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }
 

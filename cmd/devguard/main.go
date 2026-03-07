@@ -82,6 +82,11 @@ var release string // Will be filled at build time
 // @in							header
 // @name						X-Signature
 // @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
+
+// @securityDefinitions.apikey	AdminSignedAuth
+// @in							header
+// @name						Signature
+// @description				Instance admin authentication using ECDSA P-256 HTTP message signing. Requires Signature, Signature-Input and Content-Digest headers.
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck
@@ -118,6 +123,7 @@ func main() {
 		vulndb.Module,
 		daemons.Module,
 		// we need to invoke all routers to register their routes
+		fx.Invoke(func(AdminRouter router.AdminRouter) {}),
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
 		fx.Invoke(func(SessionRouter router.SessionRouter) {}),

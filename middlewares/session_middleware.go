@@ -61,8 +61,6 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 			var scopes string
 			var err error
 
-			adminTokenHeader := ctx.Request().Header.Get("X-Admin-Token")
-
 			if oryKratosSessionCookie != nil {
 				userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String())
 				if err != nil {
@@ -75,14 +73,10 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 				}
 				scopes = "scan manage"
 				scopesArray := strings.Fields(scopes)
-				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
-				return next(ctx)
-			} else if adminTokenHeader != "" {
-				slog.Warn("admin token header is set, using it to create session")
-				ctx.Set("session", accesscontrol.NewSession(adminTokenHeader, []string{}))
+				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
 				return next(ctx)
 			} else {
-				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
+				session, err := verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
 					if strings.EqualFold(err.Error(), "could not verify request") || strings.EqualFold(err.Error(), "no fingerprint provided") {
 						ctx.Set("session", accesscontrol.NoSession)
@@ -93,8 +87,7 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 					monitoring.Alert("failed to verify request signature", err)
 					return echo.NewHTTPError(500, "unexpected error").WithInternal(err)
 				}
-				scopesArray := strings.Fields(scopes)
-				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
+				ctx.Set("session", session)
 				return next(ctx)
 			}
 		}

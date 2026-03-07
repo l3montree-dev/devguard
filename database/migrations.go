@@ -81,5 +81,13 @@ func RunMigrations(db shared.DB) error {
 
 // GetMigrationVersionWithDB returns the current migration version using an existing GORM database instance
 func GetMigrationVersionWithDB() (uint, bool, error) {
+	if migrationVersion != 0 || migratorErr != nil {
+		// create a dedicated db connection for this
+		db := NewGormDB(NewPgxConnPool(GetPoolConfigFromEnv()))
+		migrator, _ = getMigrator(db)
+		defer migrator.Close()
+		migrationVersion, migrationDirty, migratorErr = migrator.Version()
+	}
+
 	return migrationVersion, migrationDirty, migratorErr
 }
