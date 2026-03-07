@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -23,11 +25,11 @@ func NewLicenseRiskRepository(db *gorm.DB) *LicenseRiskRepository {
 	}
 }
 
-func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
+func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
+	q := repository.Repository.GetDB(ctx, tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
 		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID).Distinct()
 
 	// apply filters
@@ -52,10 +54,10 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	return shared.NewPaged(pageInfo, count, licenseRisks), nil
 }
 
-func (repository *LicenseRiskRepository) GetByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	err := repository.db.Where("asset_id = ? ", assetID).Find(&licenseRisks).Error
+	err := repository.GetDB(ctx, tx).Where("asset_id = ? ", assetID).Find(&licenseRisks).Error
 	if err != nil {
 		return nil, err
 	}
@@ -63,19 +65,19 @@ func (repository *LicenseRiskRepository) GetByAssetID(tx *gorm.DB, assetID uuid.
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.db.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
+	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
+	q := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
 
@@ -85,32 +87,32 @@ func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx 
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, dtos.VulnStateFixed).Find(&result).Error
+	err := repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, dtos.VulnStateFixed).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), dtos.VulnStateFixed).First(&result).Error
+	err := repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), dtos.VulnStateFixed).First(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) error {
-	return repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
+func (repository *LicenseRiskRepository) DeleteByComponentPurl(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) error {
+	return repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
 }
 
-func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) ListByArtifactName(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.db.Model(&models.LicenseRisk{}).
+	q := repository.GetDB(ctx, tx).Model(&models.LicenseRisk{}).
 		Joins("JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Joins("JOIN artifacts ON artifact_license_risks.artifact_artifact_name = artifacts.artifact_name AND artifact_license_risks.artifact_asset_version_name = artifacts.asset_version_name AND artifact_license_risks.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
 
 	err := q.Find(&licenseRisks).Error
@@ -120,36 +122,36 @@ func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName str
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) ApplyAndSave(tx *gorm.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
+func (repository *LicenseRiskRepository) ApplyAndSave(ctx context.Context, tx *gorm.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return repository.Transaction(func(d *gorm.DB) error {
-			_, err := repository.applyAndSave(d, licenseRisk, vulnEvent)
+		return repository.Transaction(ctx, func(d *gorm.DB) error {
+			_, err := repository.applyAndSave(ctx, d, licenseRisk, vulnEvent)
 			return err
 		})
 	}
 
-	_, err := repository.applyAndSave(tx, licenseRisk, vulnEvent)
+	_, err := repository.applyAndSave(ctx, tx, licenseRisk, vulnEvent)
 	return err
 }
 
-func (repository *LicenseRiskRepository) applyAndSave(tx *gorm.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (repository *LicenseRiskRepository) applyAndSave(ctx context.Context, tx *gorm.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
 	statemachine.Apply(licenseRisk, *ev)
 	// run the updates in the transaction to keep a valid state
-	err := repository.Save(tx, licenseRisk)
+	err := repository.Save(ctx, tx, licenseRisk)
 	if err != nil {
 		return models.VulnEvent{}, err
 	}
-	if err := repository.GetDB(tx).Save(ev).Error; err != nil {
+	if err := repository.GetDB(ctx, tx).Save(ev).Error; err != nil {
 		return models.VulnEvent{}, err
 	}
 	licenseRisk.Events = append(licenseRisk.Events, *ev)
 	return *ev, nil
 }
 
-func (repository *LicenseRiskRepository) Read(vulnID string) (models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) Read(ctx context.Context, tx *gorm.DB, vulnID string) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
-	err := repository.db.Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
+	err := repository.GetDB(ctx, tx).Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Component").First(&licenseRisk).Error
 	if err != nil {

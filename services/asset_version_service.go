@@ -53,7 +53,7 @@ func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository
 	}
 }
 
-func (s *assetVersionService) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (s *assetVersionService) GetAssetVersionsByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	return s.assetVersionRepository.GetAssetVersionsByAssetID(nil, assetID)
 }
 
@@ -87,7 +87,7 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 	return text.Text
 }
 
-func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
+func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
@@ -110,7 +110,7 @@ func (s *assetVersionService) UpdateSBOM(tx shared.DB, org models.Org, project m
 
 // LoadFullSBOMGraph loads all components for an asset version and builds a complete SBOMGraph.
 // This is the new graph-based approach that will eventually replace LoadFullSBOM.
-func (s *assetVersionService) LoadFullSBOMGraph(assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
+func (s *assetVersionService) LoadFullSBOMGraph(ctx context.Context, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Sta
 	}
 }
 
-func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
+func (s *assetVersionService) BuildOpenVeX(ctx context.Context, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
 	doc := vex.New()
 
 	doc.Author = organizationSlug
@@ -188,7 +188,7 @@ func (s *assetVersionService) BuildOpenVeX(asset models.Asset, assetVersion mode
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
+func (s *assetVersionService) BuildVeX(ctx context.Context, frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
 	// get all vex rules for this asset version
 	// this way, we can again match them against the vulns and add more information about any false positive path
 	vexRules, err := s.vexRuleService.FindByAssetVersion(nil, assetVersion.AssetID, assetVersion.Name)

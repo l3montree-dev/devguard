@@ -102,6 +102,7 @@ func (s epssService) Mirror() error {
 
 	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
 	tx := s.cveRepository.Begin()
+ defer tx.Rollback()
 
 	// build a map of CVE ID -> EPSS data for quick lookup
 	epssMap := make(map[string]models.CVE, len(cves))

@@ -143,7 +143,7 @@ func main() {
 		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					go daemonRunner.Start() // start in background
+					go daemonRunner.Start(ctx) // start in background
 					return nil
 				},
 			})

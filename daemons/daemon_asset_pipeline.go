@@ -16,6 +16,7 @@
 package daemons
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -198,7 +199,7 @@ func (runner *DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan ch
 			monitoring.RecoverPanic("fetch asset details panic")
 		}()
 		for assetID := range input {
-			asset, err := runner.assetRepository.Read(assetID)
+			asset, err := runner.assetRepository.Read(context.Background(), assetID)
 			if err != nil {
 				slog.Error("could not fetch asset in runner", "assetID", assetID, "err", err)
 				errChan <- pipelineError{
@@ -236,7 +237,7 @@ func (runner *DaemonRunner) FetchAssetDetails(input <-chan uuid.UUID, errChan ch
 				}
 				continue
 			}
-			org, err := runner.orgRepository.Read(project.OrganizationID)
+			org, err := runner.orgRepository.Read(context.Background(), project.OrganizationID)
 			if err != nil {
 				slog.Error("could not fetch org in runner", "assetID", asset.ID, "err", err)
 				errChan <- pipelineError{
@@ -420,6 +421,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
+     defer tx.Rollback()
 					bom.ClearScope()
 					_, _, _, err = runner.scanService.ScanNormalizedSBOM(tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
@@ -467,6 +469,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
+     defer tx.Rollback()
 					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersions[i], artifact, "system"); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)

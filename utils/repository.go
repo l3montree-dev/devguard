@@ -14,43 +14,46 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package utils
 
-import "gorm.io/gorm/clause"
+import (
+	"context"
+
+	"gorm.io/gorm/clause"
+)
 
 type Tabler interface {
 	TableName() string
 }
 
 type ModelWriter[ID any, T Tabler, Tx any] interface {
-	Create(tx Tx, t *T) error
-	Save(tx Tx, t *T) error
-
-	Delete(tx Tx, id ID) error
-	Activate(tx Tx, id ID) error
+	Create(ctx context.Context, tx Tx, t *T) error
+	Save(ctx context.Context, tx Tx, t *T) error
+	Delete(ctx context.Context, tx Tx, id ID) error
+	Activate(ctx context.Context, tx Tx, id ID) error
 }
 
-type ModelReader[ID any, T Tabler] interface {
-	Read(id ID) (T, error)
-	List(ids []ID) ([]T, error)
-	All() ([]T, error)
-	Upsert(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error
+type ModelReader[ID any, T Tabler, Tx any] interface {
+	Read(ctx context.Context, tx Tx, id ID) (T, error)
+	List(ctx context.Context, tx Tx, ids []ID) ([]T, error)
+	All(ctx context.Context, tx Tx) ([]T, error)
+	Upsert(ctx context.Context, tx Tx, t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error
 }
 
 type BatchModelWriter[T Tabler, Tx any] interface {
-	CreateBatch(tx Tx, ts []T) error
-	SaveBatch(tx Tx, ts []T) error
-	DeleteBatch(tx Tx, ids []T) error
-	SaveBatchBestEffort(tx Tx, ts []T) error
+	CreateBatch(ctx context.Context, tx Tx, ts []T) error
+	SaveBatch(ctx context.Context, tx Tx, ts []T) error
+	DeleteBatch(ctx context.Context, tx Tx, ids []T) error
+	SaveBatchBestEffort(ctx context.Context, tx Tx, ts []T) error
 }
 
 type Transactioner[Tx any] interface {
-	Transaction(func(tx Tx) error) error
-	GetDB(tx Tx) Tx
-	Begin() Tx
+	Transaction(ctx context.Context, fn func(tx Tx) error) error
+	GetDB(ctx context.Context, tx Tx) Tx
+	Begin(ctx context.Context) Tx
 }
 
 type Repository[ID any, T Tabler, Tx any] interface {
 	ModelWriter[ID, T, Tx]
-	ModelReader[ID, T]
+	ModelReader[ID, T, Tx]
 	BatchModelWriter[T, Tx]
 	Transactioner[Tx]
 }

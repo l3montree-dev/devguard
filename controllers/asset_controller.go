@@ -45,7 +45,7 @@ func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 
 	if err := a.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
 		slog.Error("Failed to run daemon pipeline for asset", "assetID", asset.ID, "error", err)
-		return echo.NewHTTPError(500, err.Error()).WithInternal(err)
+		return echo.NewHTTPError(500, fmt.Sprintf("could not run asset pipeline: %s", err.Error())).WithInternal(err)
 	}
 
 	return ctx.NoContent(200)

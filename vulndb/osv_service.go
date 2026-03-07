@@ -212,6 +212,7 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 
 		// first build the CVE based on the OSV and save it to the db
 		tx := s.cveRepository.Begin()
+		defer tx.Rollback()
 
 		newCVE := transformer.OSVToCVE(&osv)
 
@@ -318,6 +319,7 @@ func (s osvService) MirrorNoConcurrency() error {
 
 			// first build the CVE based on the OSV and save it to the db
 			tx := s.cveRepository.Begin()
+			defer tx.Rollback()
 
 			relations := transformer.OSVToCVERelationships(&osv)
 

@@ -121,6 +121,7 @@ func (s cisaKEVService) Mirror() error {
 	}
 
 	tx := s.cveRepository.Begin()
+ defer tx.Rollback()
 
 	// build a map of CVE ID -> KEV data for quick lookup
 	kevMap := make(map[string]models.CVE, len(cves))

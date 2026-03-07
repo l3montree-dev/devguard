@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"os"
 
-	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 func registerMiddlewares(e *echo.Echo) {
@@ -21,7 +21,9 @@ func registerMiddlewares(e *echo.Echo) {
 		AddProfileEndpoints(e)
 	}
 
-	e.Use(sentryecho.New(sentryecho.Options{Repanic: true}))
+	// otelecho creates OTel HTTP spans; sentryotel bridges these to GlitchTip/Sentry transactions.
+	// This lets DB spans (from gorm.io/plugin/opentelemetry) nest under the HTTP span.
+	e.Use(otelecho.Middleware("devguard"))
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{

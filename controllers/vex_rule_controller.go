@@ -196,6 +196,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	tx := c.vexRuleService.Begin()
+ defer tx.Rollback()
 
 	if err := c.vexRuleService.Create(tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)

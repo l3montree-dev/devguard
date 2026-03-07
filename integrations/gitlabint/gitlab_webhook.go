@@ -1,6 +1,7 @@
 package gitlabint
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -17,7 +18,7 @@ import (
 )
 
 func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
-	asset, err := g.assetRepository.Read(assetID)
+	asset, err := g.assetRepository.Read(context.Background(), assetID)
 	if err != nil {
 		slog.Error("could not read asset", "err", err)
 		return err
@@ -133,7 +134,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			}
 			doUpdateArtifactRiskHistory = true
 		}
-		asset, err := g.assetRepository.Read(vuln.GetAssetID())
+		asset, err := g.assetRepository.Read(context.Background(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -173,7 +174,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-		asset, err := g.assetRepository.Read(assetVersion.AssetID)
+		asset, err := g.assetRepository.Read(context.Background(), assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

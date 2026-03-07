@@ -59,7 +59,7 @@ func NewWebhookService(url string, secret *string) *webhookClient {
 	}
 }
 
-func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http.Response, error) {
+func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, body io.Reader) (*http.Response, error) {
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
@@ -103,7 +103,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 
 }
 
-func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -136,7 +136,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project sha
 	return nil
 }
 
-func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
+func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
 	return nil
 
 	/*body := WebhookStruct{
@@ -166,7 +166,7 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVuln
 	return nil*/
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -199,7 +199,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVuln
 	return nil
 }
 
-func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
+func (c *webhookClient) SendTest(ctx context.Context, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
 
 	var payload any
 	var webhookType WebhookType

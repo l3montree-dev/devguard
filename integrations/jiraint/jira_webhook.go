@@ -4,6 +4,7 @@
 package jiraint
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -123,7 +124,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-		asset, err := i.assetRepository.Read(assetVersion.AssetID)
+		asset, err := i.assetRepository.Read(context.Background(), assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

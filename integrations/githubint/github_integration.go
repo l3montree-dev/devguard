@@ -310,7 +310,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			return err
 		}
 
-		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetID)
+		asset, err := githubIntegration.assetRepository.Read(context.Background(), assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -580,19 +580,19 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := githubIntegration.dependencyVulnRepository.Read(vulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := githubIntegration.firstPartyVulnRepository.Read(vulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			v, err := githubIntegration.licenseRiskRepository.Read(vulnID)
+			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
@@ -618,19 +618,19 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := githubIntegration.dependencyVulnRepository.Read(ev.VulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := githubIntegration.firstPartyVulnRepository.Read(ev.VulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			v, err := githubIntegration.licenseRiskRepository.Read(ev.VulnID)
+			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
@@ -738,7 +738,7 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 		return err
 	}
 
-	org, err := githubIntegration.orgRepository.Read(project.OrganizationID)
+	org, err := githubIntegration.orgRepository.Read(context.Background(), project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err

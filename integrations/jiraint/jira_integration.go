@@ -102,7 +102,7 @@ func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(asset models.A
 }
 
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
-	asset, err := i.assetRepository.Read(assetID)
+	asset, err := i.assetRepository.Read(context.Background(), assetID)
 	if err != nil {
 		slog.Error("could not read asset", "err", err)
 		return err
@@ -580,7 +580,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 		return err
 	}
 
-	org, err := i.orgRepository.Read(project.OrganizationID)
+	org, err := i.orgRepository.Read(context.Background(), project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err

@@ -40,7 +40,7 @@ func NewInTotoService(rbacProvider shared.RBACProvider, inTotoLinkRepository sha
 	}
 }
 
-func (service InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
+func (service InTotoService) VerifySupplyChainByDigestOnly(ctx context.Context, digest string) (bool, error) {
 	supplyChains, err := service.supplyChainRepository.FindByDigest(digest)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain digests")
@@ -55,7 +55,7 @@ func (service InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool,
 	return false, nil
 }
 
-func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {
+func (service InTotoService) VerifySupplyChainWithOutputDigest(ctx context.Context, imageNameOrSupplyChainID string, digest string) (bool, error) {
 	var supplyChainID string
 	var err error
 	// check if it is a supply chain id already
@@ -84,7 +84,7 @@ func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupply
 	return false, nil
 }
 
-func (service InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
+func (service InTotoService) VerifySupplyChain(ctx context.Context, supplyChainID string) (bool, error) {
 
 	// get the supply chain links
 	supplyChainLinks, err := service.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
@@ -232,7 +232,7 @@ func getProjectUsersID(projectID uuid.UUID, accessControl shared.AccessControl) 
 	return userUuids, nil
 }
 
-func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
+func (service InTotoService) convertPatsToInTotoKeys(ctx context.Context, pats []models.PAT) ([]string, map[string]toto.Key, error) {
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
@@ -397,7 +397,7 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 	return key, nil
 }
 
-func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
+func (service InTotoService) HexPublicKeyToInTotoKey(ctx context.Context, hexPubKey string) (toto.Key, error) {
 	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }

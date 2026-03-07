@@ -47,13 +47,13 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := i.dependencyVulnRepository.Read(vulnID)
+			v, err := i.dependencyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(vulnID)
+			v, err := i.firstPartyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
@@ -80,13 +80,13 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		case dtos.VulnTypeLicenseRisk:
 			return nil
 		case dtos.VulnTypeDependencyVuln:
-			v, err := i.dependencyVulnRepository.Read(ev.VulnID)
+			v, err := i.dependencyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(ev.VulnID)
+			v, err := i.firstPartyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}

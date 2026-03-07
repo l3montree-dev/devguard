@@ -250,7 +250,7 @@ func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageur
 	return cdxVulns, nil
 }
 
-func (service csafService) GetVexFromCsafProvider(purl packageurl.PackageURL, url string) (*cyclonedx.BOM, error) {
+func (service csafService) GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, url string) (*cyclonedx.BOM, error) {
 	// download all advisories
 	advisories, err := service.downloadCsafReports(url)
 	if err != nil {
@@ -406,7 +406,7 @@ func isInVersionRange(purls []packageurl.PackageURL, lowerBound, upperBound pack
 	return packageurl.PackageURL{}, fmt.Errorf("doesnt fit in version range")
 }
 
-func (service csafService) downloadCsafReports(domain string) ([]gocsaf.Advisory, error) {
+func (service csafService) downloadCsafReports(ctx context.Context, domain string) ([]gocsaf.Advisory, error) {
 
 	loader := gocsaf.NewProviderMetadataLoader(&service.client)
 

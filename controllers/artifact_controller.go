@@ -115,16 +115,17 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		AssetID:          asset.ID,
 	}
 
-	tx := c.artifactRepository.GetDB(nil).Begin()
+	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+ defer tx.Rollback()
 	//save the artifact
-	err := c.artifactRepository.Create(tx, &artifact)
+	err := c.artifactRepository.Create(ctx.Request().Context(), tx, &artifact)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalid := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
+	boms, _, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
 	if len(invalid) > 0 {
 		tx.Rollback()
 		return ctx.JSON(400, invalid)
@@ -136,7 +137,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		newGraph.MergeGraph(bom) // we dont care for the diff
 	}
 
-	bom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
+	bom, err := c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
 
 	if err != nil {
 		tx.Rollback()
@@ -337,6 +338,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	tx := c.artifactRepository.Begin()
+ defer tx.Rollback()
 
 	// make sure that we at least update the sbom once if there were deletions
 	// updating with nil, will just renormalize the sbom and remove all components which are not

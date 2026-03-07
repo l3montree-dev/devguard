@@ -45,7 +45,7 @@ func combineNamespaceAndName(namespace, name string) string {
 	return namespace + "/" + name
 }
 
-func (s *ComponentService) RefreshComponentProjectInformation(project models.ComponentProject) {
+func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject) {
 	projectKey := project.ProjectKey
 	projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
 
@@ -73,7 +73,7 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 	project.ScoreCard = jsonbScorecard
 
 	// save the project
-	if err := s.componentProjectRepository.Save(nil, &project); err != nil {
+	if err := s.componentProjectRepository.Save(ctx, nil, &project); err != nil {
 		slog.Warn("could not save project", "err", err)
 	} else {
 		slog.Info("updated project", "projectKey", projectKey)
@@ -81,7 +81,7 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 	}
 }
 
-func (s *ComponentService) GetLicense(component models.Component) (models.Component, error) {
+func (s *ComponentService) GetLicense(ctx context.Context, component models.Component) (models.Component, error) {
 	pURL := component.ID
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	return component, nil
 }
 
-func (s *ComponentService) FetchComponentProject(component models.Component) (models.Component, error) {
+func (s *ComponentService) FetchComponentProject(ctx context.Context, component models.Component) (models.Component, error) {
 	pURL := component.ID
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
@@ -189,8 +189,8 @@ func (s *ComponentService) FetchComponentProject(component models.Component) (mo
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID)
+func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(ctx, tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, err
 	}
@@ -229,11 +229,11 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
 		errGroup.Go(func() (models.Component, error) {
-			comp, err := s.GetLicense(component)
+			comp, err := s.GetLicense(ctx, component)
 			if err != nil {
 				return comp, err
 			}
-			return s.FetchComponentProject(comp)
+			return s.FetchComponentProject(ctx, comp)
 		})
 	}
 
@@ -245,7 +245,7 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	}
 
 	// save the components
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+	if err := s.componentRepository.SaveBatch(ctx, nil, components); err != nil {
 		return nil, err
 	}
 
@@ -259,7 +259,6 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	}
 
 	s.FireAndForget(func() {
-
 		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
 			//check if the purl is valid and has a version
 			_, err = packageurl.FromString(component.ID)
@@ -290,10 +289,10 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	return allComponents, nil
 }
 
-func (s *ComponentService) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+func (s *ComponentService) FetchInformationSources(ctx context.Context, artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	return s.componentRepository.FetchInformationSources(artifact)
 }
 
-func (s *ComponentService) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
+func (s *ComponentService) RemoveInformationSources(ctx context.Context, artifact *models.Artifact, rootNodePurls []string) error {
 	return s.componentRepository.RemoveInformationSources(artifact, rootNodePurls)
 }

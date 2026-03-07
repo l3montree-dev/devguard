@@ -138,6 +138,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
+ defer tx.Rollback()
 
 	refs := []models.ExternalReference{}
 	// store the external references from VEX upload
@@ -264,6 +265,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(nil).Begin()
+ defer tx.Rollback()
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifactName, normalized)
 	if err != nil {
 		tx.Rollback()
@@ -461,7 +463,7 @@ func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error
 
 	scanResults, err := s.ScanSBOMWithoutSaving(bom)
 	if err != nil {
-		return echo.NewHTTPError(400, err.Error()).WithInternal(err)
+		return echo.NewHTTPError(400, fmt.Sprintf("could not do an unauthenticated scan: %s", err.Error())).WithInternal(err)
 	}
 
 	return c.JSON(200, scanResults)

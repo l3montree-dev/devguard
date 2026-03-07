@@ -23,7 +23,7 @@ func NewProjectService(projectRepository shared.ProjectRepository, assetReposito
 	}
 }
 
-func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
+func (s *projectService) ReadBySlug(ctx context.Context, ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
 	project, err := s.projectRepository.ReadBySlug(organizationID, slug)
 	if err != nil {
 		return models.Project{}, echo.NewHTTPError(404, "project not found").WithInternal(err)
@@ -33,7 +33,7 @@ func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID
 	return project, nil
 }
 
-func (s *projectService) CreateProject(ctx shared.Context, project *models.Project) error {
+func (s *projectService) CreateProject(ctx context.Context, ctx shared.Context, project *models.Project) error {
 
 	newProject := project
 
@@ -76,7 +76,7 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 	return nil
 }
 
-func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *models.Project) error {
+func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.AccessControl, project *models.Project) error {
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
 	if err := rbac.LinkDomainAndProjectRole(shared.RoleAdmin, shared.RoleAdmin, project.ID.String()); err != nil {
@@ -140,11 +140,11 @@ func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *mo
 	return nil
 }
 
-func (s *projectService) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error) {
+func (s *projectService) ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error) {
 	return s.projectRepository.GetByOrgID(organizationID)
 }
 
-func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
+func (s *projectService) projectsForUser(ctx context.Context, c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
 
 	// extract the project ids from the roles
 	projectIDs := make(map[uuid.UUID]struct{})
@@ -174,7 +174,7 @@ func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []stri
 	return projectIDsSlice, parentID, nil
 }
 
-func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(ctx context.Context, c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
 
 	rbac := shared.GetRBAC(c)
 	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
@@ -200,7 +200,7 @@ func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) 
 	return assetsAndProjects, nil
 }
 
-func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Paged[models.Project], error) {
+func (s *projectService) ListAllowedProjectsPaged(ctx context.Context, c shared.Context) (shared.Paged[models.Project], error) {
 
 	pageInfo := shared.GetPageInfo(c)
 	search := c.QueryParam("search")
@@ -227,7 +227,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 	return projects, nil
 }
 
-func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project, error) {
+func (s *projectService) ListAllowedProjects(ctx context.Context, c shared.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := shared.GetRBAC(c)
 	projectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
@@ -249,10 +249,10 @@ func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project
 	return projects, nil
 }
 
-func (s *projectService) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+func (s *projectService) RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
 	return s.projectRepository.RecursivelyGetChildProjects(projectID)
 }
 
-func (s *projectService) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+func (s *projectService) GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
 	return s.projectRepository.GetDirectChildProjects(projectID)
 }

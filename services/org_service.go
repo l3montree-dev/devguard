@@ -23,7 +23,7 @@ func NewOrgService(organizationRepository shared.OrganizationRepository, rbacPro
 	}
 }
 
-func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models.Org) error {
+func (o *OrgService) CreateOrganization(ctx context.Context, ctx shared.Context, organization *models.Org) error {
 	if organization.Name == "" || organization.Slug == "" {
 		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
 	}
@@ -50,7 +50,7 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 	return nil
 }
 
-func (o *OrgService) ReadBySlug(slug string) (*models.Org, error) {
+func (o *OrgService) ReadBySlug(ctx context.Context, slug string) (*models.Org, error) {
 	if slug == "" {
 		return nil, echo.NewHTTPError(400, "slug is required")
 	}

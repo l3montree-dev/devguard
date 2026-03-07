@@ -50,7 +50,7 @@ func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepo
 	}
 }
 
-func (s *DependencyVulnService) UserFixedDependencyVulns(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(tx shared.DB, userID st
 	return s.vulnEventRepository.SaveBatchBestEffort(tx, events)
 }
 
-func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(tx shared.DB, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -93,7 +93,7 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(tx sha
 	return s.vulnEventRepository.SaveBatchBestEffort(tx, utils.Flat(events))
 }
 
-func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(tx shared.DB, artifa
 	return nil
 }
 
-func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
@@ -161,7 +161,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(tx s
 	return nil
 }
 
-func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
@@ -186,7 +186,7 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 	return nil
 }
 
-func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
+func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	if len(dependencyVulns) == 0 {
 		return nil, nil
 	}
@@ -247,7 +247,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(tx shared.DB, userI
 	return dependencyVulns, nil
 }
 
-func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
+func (s *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
@@ -261,7 +261,7 @@ func (s *DependencyVulnService) CreateVulnEventAndApply(tx shared.DB, assetID uu
 	return s.createVulnEventAndApply(tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification)
 }
 
-func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch vulnEventType {
 	case dtos.EventTypeAccepted:
@@ -289,7 +289,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(tx shared.DB, assetID uu
 	return ev, nil
 }
 
-func (s *DependencyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all dependencyVulns for the assetVersion
 	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, nil)
 	if err != nil {
@@ -315,7 +315,7 @@ func (s *DependencyVulnService) SyncAllIssues(org models.Org, project models.Pro
 	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
 }
 
-func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
 	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
 	vulnMap := make(map[string]models.DependencyVuln)
 	for _, vuln := range vulnList {
@@ -348,14 +348,14 @@ func (s *DependencyVulnService) SyncIssues(org models.Org, project models.Projec
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *DependencyVulnService) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
+func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
-func (s *DependencyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
+func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

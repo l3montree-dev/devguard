@@ -59,6 +59,7 @@ func NewMaliciousPackageChecker(
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
 func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	tx := c.repository.GetDB().Begin()
+ defer tx.Rollback()
 	if err := tx.Error; err != nil {
 		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
 	}

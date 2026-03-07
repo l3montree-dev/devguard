@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -41,12 +42,16 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) CreateAsset(rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
+func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
-	err := s.assetRepository.Create(nil, &newAsset)
+
+	tx := s.assetRepository.GetDB(ctx, nil).Begin()
+ defer tx.Rollback()
+
+	err := s.assetRepository.Create(ctx, tx, &newAsset)
 
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not create asset").WithInternal(err)
@@ -67,7 +72,7 @@ func (s *assetService) CreateAsset(rbac shared.AccessControl, currentUser string
 	return &newAsset, nil
 }
 
-func (s *assetService) BootstrapAsset(rbac shared.AccessControl, asset *models.Asset) error {
+func (s *assetService) BootstrapAsset(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error {
 	// make sure and project admin is an asset admin - Always
 	if err := rbac.LinkProjectAndAssetRole(shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
 		return err
@@ -88,11 +93,11 @@ func (s *assetService) BootstrapAsset(rbac shared.AccessControl, asset *models.A
 	return nil
 }
 
-func (s *assetService) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	return s.assetRepository.Read(assetID)
+func (s *assetService) GetByAssetID(ctx context.Context, assetID uuid.UUID) (models.Asset, error) {
+	return s.assetRepository.Read(context.Background(), assetID)
 }
 
-func (s *assetService) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
+func (s *assetService) UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error {
 	err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
 
 		err := s.assetRepository.Save(tx, &asset)
@@ -122,7 +127,7 @@ func (s *assetService) UpdateAssetRequirements(asset models.Asset, responsible s
 	return nil
 }
 
-func (s *assetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string {
+func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string {
 
 	if len(results) == 0 {
 		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{

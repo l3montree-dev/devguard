@@ -1004,8 +1004,6 @@ github.com/gabriel-vasile/mimetype v1.4.13 h1:46nXokslUBsAJE/wMsp5gtO500a4F3Nkz9
 github.com/gabriel-vasile/mimetype v1.4.13/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/getsentry/sentry-go v0.43.0 h1:XbXLpFicpo8HmBDaInk7dum18G9KSLcjZiyUKS+hLW4=
 github.com/getsentry/sentry-go v0.43.0/go.mod h1:XDotiNZbgf5U8bPDUAfvcFmOnMQQceESxyKaObSssW0=
-github.com/getsentry/sentry-go/echo v0.43.0 h1:gnUIu6KmjaJZtC9FElRHqfaM5SMhNs8riM0VGaf3zjI=
-github.com/getsentry/sentry-go/echo v0.43.0/go.mod h1:cdaygDIQM4qJszdIuNdXJLsYxFA5F7MNqHmfjieGbII=
 github.com/getsentry/sentry-go/otel v0.43.0 h1:PTF6UZM0UdYtZVc9wM3laK5lqtVIPThByhJNExWW0+E=
 github.com/getsentry/sentry-go/otel v0.43.0/go.mod h1:oZil6vBnIv1HAZqCR8GGQmn/DWuv3yboVkUH0ppjP3M=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -1956,10 +1954,14 @@ go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/contrib/detectors/gcp v1.40.0 h1:Awaf8gmW99tZTOWqkLCOl6aw1/rxAWVlHsHIZ3fT2sA=
 go.opentelemetry.io/contrib/detectors/gcp v1.40.0/go.mod h1:99OY9ZCqyLkzJLTh5XhECpLRSxcZl+ZDKBEO+jMBFR4=
+go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.66.0 h1:D9BMULRE4Ft0YQfvabXVFOiEkgLRMAqz93hUXtz3MHE=
+go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.66.0/go.mod h1:/JOFVJm56jjn8ahs28mjnb4qvZ+6myeCeqc9QkruflA=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 h1:YH4g8lQroajqUwWbq/tr2QX1JFmEXaDLgG+ew9bLMWo=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0/go.mod h1:fvPi2qXDqFs8M4B4fmJhE92TyQs9Ydjlg3RvfUp+NbQ=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0 h1:7iP2uCb7sGddAr30RRS6xjKy7AZ2JtTOPA3oolgVSw8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0/go.mod h1:c7hN3ddxs/z6q9xwvfLPk+UHlWRQyaeR1LdgfL/66l0=
+go.opentelemetry.io/contrib/propagators/b3 v1.41.0 h1:yzplYIx9maUG/KIq6YhLm2jXOFP+2fdiXGYmubV7l1M=
+go.opentelemetry.io/contrib/propagators/b3 v1.41.0/go.mod h1:7wqcPkVIx1LaxMD5LwqvQ4OUXjusQGOnD/hrGBl6rws=
 go.opentelemetry.io/otel v1.41.0 h1:YlEwVsGAlCvczDILpUXpIpPSL/VPugt7zHThEMLce1c=
 go.opentelemetry.io/otel v1.41.0/go.mod h1:Yt4UwgEKeT05QbLwbyHXEwhnjxNO6D8L5PQP51/46dE=
 go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.40.0 h1:QKdN8ly8zEMrByybbQgv8cWBcdAarwmIPZ6FThrWXJs=

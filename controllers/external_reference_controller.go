@@ -193,6 +193,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 
 	for _, artifact := range artifacts {
 		tx := c.artifactRepository.Begin()
+  defer tx.Rollback()
 
 		_, _, vulns, err := c.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersion, artifact, userID)
 		if err != nil {

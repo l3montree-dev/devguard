@@ -1,6 +1,7 @@
 package gitlabint
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -34,19 +35,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := g.dependencyVulnRepository.Read(vulnID)
+			v, err := g.dependencyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(vulnID)
+			v, err := g.firstPartyVulnRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(vulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), vulnID)
 			if err != nil {
 				return err
 			}
@@ -85,19 +86,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(ev.VulnID)
+			v, err := g.dependencyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(ev.VulnID)
+			v, err := g.firstPartyVulnRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(ev.VulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), ev.VulnID)
 			if err != nil {
 				return err
 			}

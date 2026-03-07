@@ -31,7 +31,7 @@ func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepo
 
 var _ shared.FirstPartyVulnService = (*firstPartyVulnService)(nil)
 
-func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
 
 	if len(firstPartyVulns) == 0 {
 		return nil
@@ -53,7 +53,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID st
 
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID
 	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
@@ -94,7 +94,7 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 	return s.vulnEventRepository.SaveBatchBestEffort(tx, utils.Flat(events))
 }
 
-func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
@@ -108,7 +108,7 @@ func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx shared.DB, userID s
 	return s.updateFirstPartyVulnState(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 }
 
-func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch dtos.VulnEventType(statusType) {
 	case dtos.EventTypeAccepted:
@@ -124,7 +124,7 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID s
 	return s.applyAndSave(tx, firstPartyVuln, &ev)
 }
 
-func (s *firstPartyVulnService) ApplyAndSave(tx shared.DB, firstPartyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error {
+func (s *firstPartyVulnService) ApplyAndSave(ctx context.Context, tx shared.DB, firstPartyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
 		return s.firstPartyVulnRepository.Transaction(func(d shared.DB) error {
@@ -137,7 +137,7 @@ func (s *firstPartyVulnService) ApplyAndSave(tx shared.DB, firstPartyVuln *model
 	return err
 }
 
-func (s *firstPartyVulnService) applyAndSave(tx shared.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) applyAndSave(ctx context.Context, tx shared.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the first-party vuln
 	statemachine.Apply(firstPartyVuln, *ev)
 
@@ -153,7 +153,7 @@ func (s *firstPartyVulnService) applyAndSave(tx shared.DB, firstPartyVuln *model
 	return *ev, nil
 }
 
-func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all first-party for the assetVersion
 	vulnList, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, asset.ID, "")
 	if err != nil {
@@ -168,7 +168,7 @@ func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Pro
 	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
 }
 
-func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
 	if len(vulnList) == 0 {
 		return nil
 	}
@@ -185,7 +185,7 @@ func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Projec
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
