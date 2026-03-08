@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -62,12 +61,6 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start).Seconds()
-		monitoring.DependencyProxyRequestDuration.WithLabelValues("npm").Observe(duration)
-	}()
-
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/npm")
 
@@ -163,12 +156,6 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 }
 
 func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start).Seconds()
-		monitoring.DependencyProxyRequestDuration.WithLabelValues("npm-audit").Observe(duration)
-	}()
-
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/npm")
 
 	slog.Info("Proxy npm audit request", "method", c.Request().Method, "path", requestPath, "contentType", c.Request().Header.Get("Content-Type"))
@@ -202,12 +189,6 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 }
 
 func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start).Seconds()
-		monitoring.DependencyProxyRequestDuration.WithLabelValues("go").Observe(duration)
-	}()
-
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/go")
 
@@ -285,12 +266,6 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 }
 
 func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start).Seconds()
-		monitoring.DependencyProxyRequestDuration.WithLabelValues("pypi").Observe(duration)
-	}()
-
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/pypi")
 
@@ -792,8 +767,6 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, prox
 	if packageName == "" {
 		packageName = "unknown"
 	}
-
-	monitoring.MaliciousPackageBlocked.WithLabelValues(string(proxyType), packageName).Inc()
 
 	response := map[string]any{
 		"error":   "Forbidden",

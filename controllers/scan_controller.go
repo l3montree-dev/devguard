@@ -25,7 +25,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -139,7 +138,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	tx := s.assetVersionRepository.GetDB(ctx.Request().Context(), nil).Begin()
- defer tx.Rollback()
+	defer tx.Rollback()
 
 	refs := []models.ExternalReference{}
 	// store the external references from VEX upload
@@ -201,11 +200,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dtos.ScanResponse, error) {
-	startTime := time.Now()
-	defer func() {
-		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Minutes())
-	}()
-
 	scanResults := dtos.ScanResponse{} //Initialize empty struct to return when an error happens
 
 	asset := shared.GetAsset(c)
@@ -266,7 +260,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	}
 	// start a transaction for sbom updating AND scanning
 	tx := s.assetVersionRepository.GetDB(c.Request().Context(), nil).Begin()
- defer tx.Rollback()
+	defer tx.Rollback()
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(c.Request().Context(), tx, org, project, asset, assetVersion, artifactName, normalized)
 	if err != nil {
 		tx.Rollback()
@@ -351,11 +345,6 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 // @Success 200 {object} dtos.FirstPartyScanResponse
 // @Router /sarif-scan [post]
 func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
-	startTime := time.Now()
-	defer func() {
-		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Minutes())
-	}()
-
 	var sarifScan sarif.SarifSchema210Json
 
 	defer ctx.Request().Body.Close()

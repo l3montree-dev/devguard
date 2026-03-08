@@ -3,14 +3,15 @@ package daemons
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 func getFixedVersion(ctx context.Context, purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
@@ -49,10 +50,8 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
-	start := time.Now()
-	defer func() {
-		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
-	}()
+	ctx, span := otel.Tracer("devguard.daemon").Start(ctx, "daemon.fixed-versions")
+	defer span.End()
 
 	purlComparer := scan.NewPurlComparer(runner.db)
 
@@ -61,8 +60,12 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	err := runner.dependencyVulnRepository.GetDB(ctx, nil).Where("component_fixed_version IS NULL OR component_fixed_version = ''").Find(&dependencyVulns).Error
 	if err != nil {
 		slog.Error("could not get dependency vulns without fixed version", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
+
+	span.SetAttributes(attribute.Int("dependency_vulns.count", len(dependencyVulns)))
 
 	slog.Info("updating fixed versions for dependency vulns", "count", len(dependencyVulns))
 
