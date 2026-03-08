@@ -14,9 +14,7 @@ type dependencyNode struct {
 }
 
 type User struct {
-	ID         string
-	PublicKey  string
-	PrivateKey string
+	ID string
 }
 
 type Asset struct {
@@ -28,6 +26,7 @@ type Organization struct {
 	ID         string
 	Trustscore float64
 	CreatedAt  time.Time
+	CreatedBy  string
 	UserIDs    []string
 }
 
@@ -65,6 +64,29 @@ const (
 	minVoterThreshold        = 4
 	minOrganizationAgeInDays = 30
 )
+
+// [Mitigation 8] userVoteTracker tracks how many times each user has voted
+// across all paths to apply diminishing returns on repeated votes.
+type userVoteTracker struct {
+	voteCounts map[string]int // creatorID -> number of votes cast so far
+}
+
+func newUserVoteTracker() *userVoteTracker {
+	return &userVoteTracker{
+		voteCounts: make(map[string]int),
+	}
+}
+
+// recordVoteAndGetFactor increments the vote count for the organization's
+// creator (CreatedBy) and returns a diminishing factor based on how many
+// prior votes that creator already cast.
+// Factor: 1/(1+priorVotes) — 1st vote=1.0, 2nd=0.5, 3rd=0.33, etc.
+func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) float64 {
+	creator := organization.CreatedBy
+	priorVotes := t.voteCounts[creator]
+	t.voteCounts[creator]++
+	return 1.0 / float64(1+priorVotes)
+}
 
 func PathExistsInDependecyTree(inTree map[string]dependencyNode, inPath []string) bool {
 
@@ -108,7 +130,6 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 
 // Missing
 // [Mitigation  8] Increasingly decrease the value of each vote created by an organization or project of the same user
-// [Mitigation 18] Verify signature if present (might be overkill with TLS)
 
 // Out of scope mitigations:
 // [Mitigation  1] Enforce two-factor authentication for DevGuard users
@@ -123,6 +144,7 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 // [Mitigation 14] Enforce multi-factor checks for account disabling
 // [Mitigation 16] Implement visual indicators for crucial acceptance actions
 // [Mitigation 17] Implement multi-step dialogue for accepting risks and recommendations
+// [Mitigation 18] Verify signature if present (might be overkill with TLS)
 // [Mitigation 19] Enforce TLS for all requests
 // [Mitigations 21-26] Implement rate limiting and load balancing (DoS protection)
 // [Mitigation 27] Enforce multi-factor checks for account disabling (token expiration)
@@ -131,12 +153,13 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 
 // Some more requirements to consider:
 // Application / Creation of vex rules counts as a vote
-// Creation of VexRule needs to contain a signature [Mitigation 18], user requires a keypair, VexRules require a signature field
 
 func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, inVexRules []VexRule, inOrganizations []Organization, inProjects []Project, inAssets []Asset) (VexRule, error) {
 	var crowdsourcedVexRule VexRule
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
+	// [Mitigation 8] Initialize user vote tracker for diminishing returns
+	tracker := newUserVoteTracker()
 
 	// Assumptions
 	// - The dependency tree is build and passed as parameter
@@ -201,8 +224,11 @@ func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, i
 			if rule.Assessment == affected || rule.Assessment == falsePositive {
 				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
 				ruleConfidence := math.Max(project.Trustscore, organization.Trustscore)
+				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
+				diminishingFactor := tracker.recordVoteAndGetFactor(organization)
+				ruleConfidence *= diminishingFactor
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
-				if votes[rulePath].Voters != nil {
+				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
 					for _, vote := range votes[rulePath].Voters {
 						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID {
