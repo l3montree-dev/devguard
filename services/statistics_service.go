@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -28,7 +29,7 @@ func NewStatisticsService(statisticsRepository shared.StatisticsRepository, asse
 }
 
 func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, artifactName, assetVersionName, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, nil, artifactName, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 }
 
 func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	return s.artifactRiskHistoryRepository.GetRiskHistory(artifactName, assetVersionName, assetID, start, end)
+	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
 }
 
 // project-level aggregation via project_risk_history has been removed.
@@ -104,7 +105,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(&artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -220,7 +221,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 			},
 		}
 
-		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(&result)
+		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, nil, &result)
 		if err != nil {
 			return err
 		}
@@ -228,7 +229,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
-	err := s.assetVersionRepository.GetDB(nil).Save(artifact).Error
+	err := s.assetVersionRepository.GetDB(ctx, nil).Save(artifact).Error
 	if err != nil {
 		return err
 	}
@@ -244,7 +245,7 @@ func (s *statisticsService) GetProjectRiskHistory(ctx context.Context, projectID
 // GetReleaseRiskHistory aggregates artifact risk histories for all artifacts included in the release tree
 func (s *statisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	// Use a DB-level query to collect artifact histories for all artifacts present in the release tree.
-	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(releaseID, start, end)
+	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(ctx, nil, releaseID, start, end)
 }
 
 func (s *statisticsService) GetAverageFixingTime(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
@@ -264,7 +265,7 @@ func (s *statisticsService) GetAverageFixingTime(ctx context.Context, artifactNa
 		riskIntervalEnd = 4
 	}
 
-	return s.statisticsRepository.AverageFixingTime(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	return s.statisticsRepository.AverageFixingTime(ctx, nil, artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 }
 
 // GetAverageFixingTimeForRelease computes average fixing time across all artifacts included in the release tree
@@ -287,7 +288,7 @@ func (s *statisticsService) GetAverageFixingTimeForRelease(ctx context.Context, 
 		return 0, fmt.Errorf("invalid severity")
 	}
 
-	return s.statisticsRepository.AverageFixingTimeForRelease(releaseID, riskIntervalStart, riskIntervalEnd)
+	return s.statisticsRepository.AverageFixingTimeForRelease(ctx, nil, releaseID, riskIntervalStart, riskIntervalEnd)
 }
 
 // GetAverageFixingTimeByCvss computes average fixing time based on CVSS severity levels
@@ -308,7 +309,7 @@ func (s *statisticsService) GetAverageFixingTimeByCvss(ctx context.Context, arti
 		cvssIntervalEnd = 4
 	}
 
-	return s.statisticsRepository.AverageFixingTimeByCvss(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
+	return s.statisticsRepository.AverageFixingTimeByCvss(ctx, nil, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 }
 
 // GetAverageFixingTimeByCvssForRelease computes average fixing time across all artifacts included in the release tree based on CVSS
@@ -331,7 +332,7 @@ func (s *statisticsService) GetAverageFixingTimeByCvssForRelease(ctx context.Con
 		return 0, fmt.Errorf("invalid severity")
 	}
 
-	return s.statisticsRepository.AverageFixingTimeByCvssForRelease(releaseID, cvssIntervalStart, cvssIntervalEnd)
+	return s.statisticsRepository.AverageFixingTimeByCvssForRelease(ctx, nil, releaseID, cvssIntervalStart, cvssIntervalEnd)
 }
 
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {

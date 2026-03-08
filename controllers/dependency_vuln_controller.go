@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"slices"
@@ -70,7 +71,7 @@ func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 	}
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByOrgIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
 			return p.GetID().String()
@@ -93,7 +94,7 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		project.ID,
 
 		shared.GetPageInfo(ctx),
@@ -128,7 +129,7 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
+		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
@@ -139,7 +140,7 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	}
 
 	pagedResp, packageNameIndexMap, err := controller.dependencyVulnRepository.GetByAssetVersionPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		shared.GetPageInfo(ctx),
@@ -235,7 +236,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	}
 
 	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependency_vuln.
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -262,7 +263,7 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 	}
 	asset := shared.GetAsset(ctx)
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -283,12 +284,12 @@ func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, dependencyVuln.ComponentPurl, dependencyVuln.CVEID)
+	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(ctx.Request().Context(), nil, org.ID, dependencyVuln.ComponentPurl, dependencyVuln.CVEID)
 	if err != nil {
 		return err
 	}
@@ -320,7 +321,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	vulns := make([]models.DependencyVuln, 0, len(requestData.VulnsReq))
 
 	for _, r := range requestData.VulnsReq {
-		dependencyVuln, err := controller.dependencyVulnRepository.Read(r.VulnID)
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, r.VulnID)
 		if err != nil {
 			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
 			continue
@@ -332,20 +333,20 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 		statemachine.Apply(&dependencyVuln, events[len(events)-1])
 
 		//update the dependencyVuln and its events
-		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)
+		err = controller.dependencyVulnRepository.Save(ctx.Request().Context(), nil, &dependencyVuln)
 		if err != nil {
 			return err
 		}
 
 		for _, event := range events {
-			if err := controller.vulnEventRepository.Save(nil, &event); err != nil {
+			if err := controller.vulnEventRepository.Save(ctx.Request().Context(), nil, &event); err != nil {
 				return err
 			}
 		}
 	}
 
 	controller.FireAndForget(func() {
-		err := controller.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		err := controller.dependencyVulnService.SyncIssues(context.Background(), org, project, asset, assetVersion, vulns)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -375,7 +376,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -395,7 +396,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -405,7 +406,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 
 	for _, artifact := range dependencyVuln.Artifacts {
 		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-			if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
@@ -453,13 +454,13 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	updatedVulns := make([]dtos.DetailedDependencyVulnDTO, 0, len(status.VulnIDs))
 
 	for _, vulnID := range status.VulnIDs {
-		dependencyVuln, err := controller.dependencyVulnRepository.Read(vulnID)
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
 		if err != nil {
 			slog.Error("could not find dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
@@ -467,7 +468,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 
 		for _, artifact := range dependencyVuln.Artifacts {
 			if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-				if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 					slog.Error("could not recalculate risk history", "err", err)
 				}
 			}

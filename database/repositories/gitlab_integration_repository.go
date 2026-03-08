@@ -59,7 +59,7 @@ func (r *gitlabOauth2TokenRepository) GetDB(ctx context.Context, tx *gorm.DB) *g
 	if tx != nil {
 		return tx
 	}
-	return r.GetDB(ctx, tx).WithContext(ctx)
+	return r.db.WithContext(ctx)
 }
 
 func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, token ...*models.GitLabOauth2Token) error {

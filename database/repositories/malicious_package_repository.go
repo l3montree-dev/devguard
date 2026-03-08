@@ -41,7 +41,7 @@ func (r *MaliciousPackageRepository) GetDB(ctx context.Context, tx *gorm.DB) *go
 	if tx != nil {
 		return tx
 	}
-	return r.GetDB(ctx, tx).WithContext(ctx)
+	return r.db.WithContext(ctx)
 }
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)

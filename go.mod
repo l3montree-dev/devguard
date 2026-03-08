@@ -13,6 +13,7 @@ require (
 	github.com/casbin/gorm-adapter/v3 v3.41.0
 	github.com/exaring/otelpgx v0.10.0
 	github.com/getsentry/sentry-go v0.43.0
+	github.com/getsentry/sentry-go/echo v0.43.0
 	github.com/getsentry/sentry-go/otel v0.43.0
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/go-playground/validator/v10 v10.30.1
@@ -58,7 +59,6 @@ require (
 	github.com/yaronf/httpsign v0.4.1
 	github.com/zalando/go-keyring v0.2.6
 	gitlab.com/gitlab-org/api/client-go v1.46.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.66.0
 	go.opentelemetry.io/otel v1.41.0
 	go.opentelemetry.io/otel/sdk v1.41.0
 	go.uber.org/fx v1.24.0

@@ -98,7 +98,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 					asset = a
 				} else {
 					// get the asset by slug and project
-					asset, err = assetRepository.ReadBySlug(project.ID, assetSlug)
+					asset, err = assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
 					if err != nil {
 						return echo.NewHTTPError(404, "could not find asset")
 					}
@@ -147,7 +147,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 					project = p
 				} else {
 					// get the project by slug and organization.
-					project, err = projectRepository.ReadBySlug(shared.GetOrg(ctx).GetID(), projectSlug)
+					project, err = projectRepository.ReadBySlug(ctx.Request().Context(), nil, shared.GetOrg(ctx).GetID(), projectSlug)
 				}
 
 				if err != nil {
@@ -195,7 +195,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			}
 
 			// get the organization
-			org, err := organizationService.ReadBySlug(organization)
+			org, err := organizationService.ReadBySlug(ctx.Request().Context(), organization)
 			if err != nil {
 				return echo.NewHTTPError(404, "organization not found").WithInternal(err)
 			}
@@ -263,18 +263,18 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				return echo.NewHTTPError(400, "invalid assetID format")
 			}
 			// get the asset
-			asset, err := assetRepository.Read(assetUUID)
+			asset, err := assetRepository.Read(ctx.Request().Context(), nil, assetUUID)
 			if err != nil {
 				slog.Error("could not find asset in ShareMiddleware", "assetID", assetID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
 			// fetch org and project
-			project, err := projectRepository.Read(asset.ProjectID)
+			project, err := projectRepository.Read(ctx.Request().Context(), nil, asset.ProjectID)
 			if err != nil {
 				slog.Error("could not find project in ShareMiddleware", "assetID", assetID, "projectID", asset.ProjectID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
 			}
-			org, err := orgRepository.Read(project.OrganizationID)
+			org, err := orgRepository.Read(ctx.Request().Context(), nil, project.OrganizationID)
 			if err != nil {
 				slog.Error("could not find organization in ShareMiddleware", "assetID", assetID, "organizationID", project.OrganizationID, "err", err)
 				return echo.NewHTTPError(404, "could not find asset")
@@ -292,7 +292,7 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				slog.Error("could not get assetVersionSlug from url", "err", err)
 				return echo.NewHTTPError(400, "invalid assetVersionSlug")
 			}
-			assetVersion, err := assetVersionRepository.ReadBySlug(asset.ID, assetVersionSlug)
+			assetVersion, err := assetVersionRepository.ReadBySlug(ctx.Request().Context(), nil, asset.ID, assetVersionSlug)
 			if err != nil {
 				slog.Error("could not find asset version in ShareMiddleware", "assetID", assetID, "assetVersionSlug", assetVersionSlug, "err", err)
 				return echo.NewHTTPError(404, "could not find asset version")
@@ -304,7 +304,7 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				slog.Error("could not get artifactName from url", "err", err)
 				return echo.NewHTTPError(400, "invalid artifactName")
 			}
-			artifact, err := artifactRepository.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
+			artifact, err := artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, asset.ID)
 			if err != nil {
 				slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
 				return echo.NewHTTPError(404, "could not find artifact")
@@ -330,7 +330,7 @@ func CsafMiddleware(orgLevel bool, orgRepository shared.OrganizationRepository, 
 				return echo.NewHTTPError(404, "could not find organization")
 			}
 
-			orgs, err := orgRepository.GetOrgsWithVulnSharingAssets()
+			orgs, err := orgRepository.GetOrgsWithVulnSharingAssets(ctx.Request().Context(), nil)
 			if err != nil {
 				slog.Error("could not get organizations with vuln sharing assets", "err", err)
 				return echo.NewHTTPError(500, "could not get organizations").WithInternal(err)
@@ -355,7 +355,7 @@ func CsafMiddleware(orgLevel bool, orgRepository shared.OrganizationRepository, 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find project")
 			}
-			project, err := projectRepository.ReadBySlug(orgFound.ID, projectSlug)
+			project, err := projectRepository.ReadBySlug(ctx.Request().Context(), nil, orgFound.ID, projectSlug)
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find project")
 			}
@@ -365,7 +365,7 @@ func CsafMiddleware(orgLevel bool, orgRepository shared.OrganizationRepository, 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find asset")
 			}
-			asset, err := assetRepository.ReadBySlug(project.ID, assetSlug)
+			asset, err := assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find asset")
 			}

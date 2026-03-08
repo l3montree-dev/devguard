@@ -45,7 +45,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -95,7 +95,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -143,7 +143,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				ID: "abc",
 			},
@@ -155,7 +155,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
-		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoID string) (shared.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
@@ -228,8 +228,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
-		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(expectDependencyVuln, nil)
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)

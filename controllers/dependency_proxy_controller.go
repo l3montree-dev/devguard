@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -84,7 +85,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	packageName, version := d.ParsePackageFromPath(NPMProxy, requestPath)
 	hasExplicitVersion := version != "" || strings.HasSuffix(requestPath, ".tgz")
 
-	if blocked, reason := d.checkMaliciousPackage(NPMProxy, requestPath); blocked {
+	if blocked, reason := d.checkMaliciousPackage(c.Request().Context(), NPMProxy, requestPath); blocked {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
 		// Also remove from cache if it exists to prevent serving cached malicious content
 		cachePath := d.getCachePath(NPMProxy, requestPath)
@@ -136,7 +137,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		// Parse the JSON response to extract the version that would be installed
 		if resolvedVersion := d.ExtractNPMVersionFromMetadata(data); resolvedVersion != "" {
 			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
-			isMalicious, entry := d.maliciousChecker.IsMalicious("npm", packageName, resolvedVersion)
+			isMalicious, entry := d.maliciousChecker.IsMalicious(c.Request().Context(), "npm", packageName, resolvedVersion)
 			if isMalicious {
 				reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
 				if entry.Summary != "" {
@@ -219,7 +220,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
-		if blocked, reason := d.checkMaliciousPackage(GoProxy, requestPath); blocked {
+		if blocked, reason := d.checkMaliciousPackage(c.Request().Context(), GoProxy, requestPath); blocked {
 			slog.Warn("Blocked malicious package", "proxy", "go", "path", requestPath, "reason", reason)
 			// Also remove from cache if it exists to prevent serving cached malicious content
 			cachePath := d.getCachePath(GoProxy, requestPath)
@@ -302,7 +303,7 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
-		if blocked, reason := d.checkMaliciousPackage(PyPIProxy, requestPath); blocked {
+		if blocked, reason := d.checkMaliciousPackage(c.Request().Context(), PyPIProxy, requestPath); blocked {
 			slog.Warn("Blocked malicious package", "proxy", "pypi", "path", requestPath, "reason", reason)
 			// Also remove from cache if it exists to prevent serving cached malicious content
 			cachePath := d.getCachePath(PyPIProxy, requestPath)
@@ -734,7 +735,7 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 	return "", ""
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, path string) (bool, string) {
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, proxyType ProxyType, path string) (bool, string) {
 	packageName, version := d.ParsePackageFromPath(proxyType, path)
 	if packageName == "" {
 		return false, ""
@@ -752,7 +753,7 @@ func (d *DependencyProxyController) checkMaliciousPackage(proxyType ProxyType, p
 
 	slog.Debug("Checking package against malicious database", "ecosystem", ecosystem, "package", packageName, "version", version)
 
-	isMalicious, entry := d.maliciousChecker.IsMalicious(ecosystem, packageName, version)
+	isMalicious, entry := d.maliciousChecker.IsMalicious(ctx, ecosystem, packageName, version)
 	if isMalicious {
 		reason := fmt.Sprintf("Package %s is flagged as malicious (ID: %s)", packageName, entry.ID)
 		if entry.Summary != "" {

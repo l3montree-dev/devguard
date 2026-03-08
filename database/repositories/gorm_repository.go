@@ -132,7 +132,7 @@ func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts [
 
 func (g *GormRepository[ID, T]) Transaction(ctx context.Context, f func(tx *gorm.DB) error) error {
 	tx := g.GetDB(ctx, nil).Begin()
- defer tx.Rollback()
+	defer tx.Rollback()
 	err := f(tx)
 	if err != nil {
 		tx.Rollback()
@@ -149,7 +149,7 @@ func (g *GormRepository[ID, T]) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB
 	if tx != nil {
 		return tx
 	}
-	return g.GetDB(ctx, tx)
+	return g.db.WithContext(ctx)
 }
 
 func (g *GormRepository[ID, T]) Create(ctx context.Context, tx *gorm.DB, t *T) error {

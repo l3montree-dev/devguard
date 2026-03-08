@@ -22,6 +22,8 @@ type ArtifactService struct {
 	scanService            shared.ScanService
 }
 
+var _ shared.ArtifactService = (*ArtifactService)(nil) // Ensure ArtifactService implements shared.ArtifactService interface
+
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
 	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {

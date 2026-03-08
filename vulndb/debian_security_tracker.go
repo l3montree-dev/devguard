@@ -1,6 +1,7 @@
 package vulndb
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -204,14 +205,14 @@ func (s debianSecurityTracker) Mirror() error {
 		}
 	}
 
-	err = s.affectedCmpRepository.GetDB(nil).Transaction(func(tx *gorm.DB) error {
+	err = s.affectedCmpRepository.GetDB(context.Background(), nil).Transaction(func(tx *gorm.DB) error {
 		// remove all dsa affected components first
 		err = tx.Where("source = ?", "debian-security-tracker").Delete(&models.AffectedComponent{}).Error
 		if err != nil {
 			return err
 		}
 
-		return s.affectedCmpRepository.SaveBatch(tx, affectedComponents)
+		return s.affectedCmpRepository.SaveBatch(context.Background(), tx, affectedComponents)
 	})
 
 	if err != nil {

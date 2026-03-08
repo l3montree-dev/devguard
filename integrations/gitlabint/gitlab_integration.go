@@ -219,7 +219,7 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 
 func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(shared.GetSession(ctx).GetUserID(), externalEntityProviderID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, shared.GetSession(ctx).GetUserID(), externalEntityProviderID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
@@ -296,7 +296,7 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 
 	// save the oauth2 tokens if the user doesnt have any tokens yet
 	if len(tokenSlice) > 0 {
-		err := g.gitlabOauth2TokenRepository.CreateIfNotExists(utils.SlicePtr(tokenSlice))
+		err := g.gitlabOauth2TokenRepository.CreateIfNotExists(context.Background(), nil, utils.SlicePtr(tokenSlice))
 		if err != nil {
 			return nil, err
 		}
@@ -415,7 +415,7 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(asset models
 
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return nil, nil, err
@@ -614,7 +614,7 @@ func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) shared.Role {
 
 func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []shared.Role, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return nil, nil, err
@@ -678,7 +678,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 
 func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, providerID string, groupID string) (models.Project, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return models.Project{}, err
@@ -720,7 +720,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 
 func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return "", err
@@ -755,7 +755,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 
 func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (shared.Role, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return "", err
@@ -879,7 +879,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(shared.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(context.Background(), nil, shared.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
@@ -891,7 +891,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 		}
 
 		// check if the user has a gitlab oauth2 token
-		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(shared.GetSession(ctx).GetUserID(), providerID)
+		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(context.Background(), nil, shared.GetSession(ctx).GetUserID(), providerID)
 		if err != nil {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}
@@ -908,7 +908,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.Wrap(err, "could not extract integration id from repo id")
 		}
 
-		integration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
+		integration, err := g.gitlabIntegrationRepository.Read(context.Background(), nil, integrationUUID)
 		if err != nil {
 			return errors.Wrap(err, "could not read gitlab integration")
 		}
@@ -1021,7 +1021,7 @@ func (g *GitlabIntegration) addProjectHook(ctx context.Context, client shared.Gi
 		}
 
 		asset.WebhookSecret = &token
-		err = g.assetRepository.Update(nil, &asset)
+		err = g.assetRepository.Update(context.Background(), nil, &asset)
 		if err != nil {
 			return fmt.Errorf("could not update asset: %w", err)
 		}
@@ -1163,7 +1163,7 @@ func (g *GitlabIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	err = g.gitlabIntegrationRepository.Delete(nil, parsedID)
+	err = g.gitlabIntegrationRepository.Delete(context.Background(), nil, parsedID)
 	if err != nil {
 		return err
 	}
@@ -1215,7 +1215,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 		OrgID:       (shared.GetOrg(ctx).GetID()),
 	}
 
-	if err := g.gitlabIntegrationRepository.Save(nil, &integration); err != nil {
+	if err := g.gitlabIntegrationRepository.Save(context.Background(), nil, &integration); err != nil {
 		return err
 	}
 
@@ -1234,13 +1234,13 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
+	project, err := g.projectRepository.GetProjectByAssetID(context.Background(), nil, asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
 
-	org, err := g.orgRepository.GetOrgByID(project.OrganizationID)
+	org, err := g.orgRepository.GetOrgByID(context.Background(), nil, project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
@@ -1261,7 +1261,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
 			// save the event
-			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err := g.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -1302,7 +1302,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1410,7 +1410,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 			"ticketUrl": createdIssue.WebURL,
 		})
 
-	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+	return g.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 }
 
 func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
@@ -1447,7 +1447,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

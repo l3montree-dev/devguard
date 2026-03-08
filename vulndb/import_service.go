@@ -45,6 +45,8 @@ type importService struct {
 	pool                         *pgxpool.Pool
 }
 
+var _ shared.VulnDBImportService = (*importService)(nil)
+
 func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.CweRepository, exploitRepository shared.ExploitRepository, affectedComponentsRepository shared.AffectedComponentRepository, configService shared.ConfigService, pool *pgxpool.Pool) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
@@ -93,8 +95,7 @@ func (service importService) Import(tx shared.DB, tag string) error {
 	return nil
 }
 
-func (service importService) CreateTablesWithSuffix(suffix string) error {
-	ctx := context.Background()
+func (service importService) CreateTablesWithSuffix(ctx context.Context, suffix string) error {
 	// create the tables with the suffix
 	return createTablesWithSuffix(ctx, service.pool, suffix)
 }
@@ -114,9 +115,7 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 // the extra table name suffix is just used for exporting incremental diffs
 // it allows storing the last full vulndb state in tables with the suffix and then comparing them to the current tables
 // if extraTableNameSuffix is not nil, the import will always import from the latest snapshot
-func (service importService) ImportFromDiff(extraTableNameSuffix *string) error {
-	ctx := context.Background()
-
+func (service importService) ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error {
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
@@ -166,7 +165,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 
 			slog.Info("finished loading latest snapshot state")
 			if extraTableNameSuffix == nil {
-				err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
+				err = service.configService.SetJSONConfig(ctx, "vulndb.lastIncrementalImport", tag)
 				if err != nil {
 					slog.Error("could not save last incremental import version", "err", err)
 				}
@@ -193,7 +192,7 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 			return err
 		}
 		if extraTableNameSuffix == nil {
-			err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
+			err = service.configService.SetJSONConfig(ctx, "vulndb.lastIncrementalImport", tag)
 			if err != nil {
 				slog.Error("could not save last incremental import version", "err", err)
 			}
@@ -592,8 +591,7 @@ func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
 	slog.Error("Failed to drop backup table after all retry attempts", "table", backupTable)
 }
 
-func (service importService) CleanupOrphanedTables() error {
-	ctx := context.Background()
+func (service importService) CleanupOrphanedTables(ctx context.Context) error {
 	return cleanupOrphanedTables(ctx, service.pool, 24)
 }
 
@@ -1050,7 +1048,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	lastVersion := ""
 	allTags := make([]string, 0, 3000)
 
-	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
+	err := service.configService.GetJSONConfig(ctx, "vulndb.lastIncrementalImport", &lastVersion)
 	if err != nil {
 		slog.Warn("could not get last incremental import version, assuming no version is set yet", "err", err)
 	}

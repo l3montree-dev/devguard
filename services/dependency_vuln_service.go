@@ -65,11 +65,11 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 		events[i] = ev
 	}
 
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
 	if err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatchBestEffort(tx, events)
+	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
 }
 
 func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
@@ -85,12 +85,12 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx co
 		return el.EventsToCopy
 	})
 
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, vulns)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, vulns)
 	if err != nil {
 		return err
 	}
 
-	return s.vulnEventRepository.SaveBatchBestEffort(tx, utils.Flat(events))
+	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
 func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
@@ -116,11 +116,11 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	}
 
 	// run the updates in the transaction to keep a valid state
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
 	if err != nil {
 		return err
 	}
-	err = s.vulnEventRepository.SaveBatchBestEffort(tx, events)
+	err = s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 		}
 	}
 
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, vulnerabilities)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 			return err
 		}
 	}
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, vulnerabilities)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
@@ -220,11 +220,11 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	// saving the dependencyVulns and the events HAS to be done in the same transaction
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
-		err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
-			if err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, dependencyVulns); err != nil {
+		err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
+			if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns); err != nil {
 				return fmt.Errorf("could not save dependencyVulns: %v", err)
 			}
-			if err := s.vulnEventRepository.SaveBatchBestEffort(tx, events); err != nil {
+			if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
 				return fmt.Errorf("could not save events: %v", err)
 			}
 			return nil
@@ -235,12 +235,12 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 		return dependencyVulns, nil
 	}
 
-	err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
 	if err != nil {
 		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
 
-	err = s.vulnEventRepository.SaveBatchBestEffort(tx, events)
+	err = s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
 	if err != nil {
 		return nil, fmt.Errorf("could not save events: %v", err)
 	}
@@ -252,13 +252,13 @@ func (s *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx 
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
-		err = s.dependencyVulnRepository.Transaction(func(d shared.DB) error {
-			ev, err = s.createVulnEventAndApply(d, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification)
+		err = s.dependencyVulnRepository.Transaction(ctx, func(d shared.DB) error {
+			ev, err = s.createVulnEventAndApply(ctx, d, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification)
 			return err
 		})
 		return ev, err
 	}
-	return s.createVulnEventAndApply(tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification)
+	return s.createVulnEventAndApply(ctx, tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification)
 }
 
 func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
@@ -281,7 +281,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 	}
 
 	// Apply the event to the original vuln
-	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
+	err := s.dependencyVulnRepository.ApplyAndSave(ctx, tx, dependencyVuln, &ev)
 	if err != nil {
 		return ev, err
 	}
@@ -291,7 +291,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 
 func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all dependencyVulns for the assetVersion
-	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, nil)
+	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.Name, asset.ID, nil)
 	if err != nil {
 		return fmt.Errorf("could not get dependencyVulns by asset version: %w", err)
 	}
@@ -312,7 +312,7 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 		}
 	}
 
-	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
+	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList)
 }
 
 func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
@@ -332,12 +332,12 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 				continue
 			}
 			errgroup.Go(func() (any, error) {
-				err := s.createIssue(vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
+				err := s.createIssue(ctx, vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
 				return nil, err
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				err := s.updateIssue(asset, assetVersion.Slug, vulnerability)
+				err := s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability)
 				return nil, err
 			})
 		}

@@ -17,6 +17,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/json"
@@ -61,6 +62,8 @@ func NewCSAFService(client http.Client) *csafService {
 		client: client,
 	}
 }
+
+var _ shared.CSAFService = (*csafService)(nil) // Ensure csafService implements shared.CSAFService interface
 
 // not only the root product id is what we are interested in, but also all children in the tree
 func getInterestedProductIDs(advisory *gocsaf.Advisory, productID string) []string {
@@ -252,7 +255,7 @@ func convertAdvisoryToCdxVulnerability(advisory *gocsaf.Advisory, purl packageur
 
 func (service csafService) GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, url string) (*cyclonedx.BOM, error) {
 	// download all advisories
-	advisories, err := service.downloadCsafReports(url)
+	advisories, err := service.downloadCsafReports(ctx, url)
 	if err != nil {
 		return nil, err
 	}
@@ -799,7 +802,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// fetch all vulns associated with this cve from the database
-	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(nil, cveID, asset.ID)
+	vulns, err := dependencyVulnRepository.GetDependencyVulnByCVEIDAndAssetID(ctx.Request().Context(), nil, cveID, asset.ID)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -834,7 +837,7 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 	}
 	csafDoc.Document.Tracking = &tracking
 
-	tree, err := generateProductTree(asset, assetVersionRepository, artifactRepository, vulns)
+	tree, err := generateProductTree(ctx.Request().Context(), asset, assetVersionRepository, artifactRepository, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -860,9 +863,9 @@ func GenerateCSAFReport(ctx shared.Context, dependencyVulnRepository shared.Depe
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(asset models.Asset, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
+func generateProductTree(ctx context.Context, asset models.Asset, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
 	tree := gocsaf.ProductTree{}
-	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(nil, asset.ID)
+	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(ctx, nil, asset.ID)
 	if err != nil {
 		return tree, err
 	}
@@ -871,7 +874,7 @@ func generateProductTree(asset models.Asset, assetVersionRepository shared.Asset
 		return el.Name
 	})
 
-	artifacts, err := artifactRepository.GetByAssetVersions(asset.ID, assetVersionNames)
+	artifacts, err := artifactRepository.GetByAssetVersions(ctx, nil, asset.ID, assetVersionNames)
 	if err != nil {
 		return tree, err
 	}

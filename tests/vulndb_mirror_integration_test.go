@@ -47,7 +47,7 @@ func TestEPSSMirrorUpdatesCVE(t *testing.T) {
 
 		// Use a mock relationship repo that returns empty (no relationships to propagate)
 		relRepo := mocks.NewCVERelationshipRepository(t)
-		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything).
+		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything, mock.Anything).
 			Return([]models.CVERelationship{}, nil)
 
 		epssService := vulndb.NewEPSSService(f.App.CveRepository, relRepo)
@@ -111,7 +111,7 @@ func TestCISAKEVMirrorUpdatesCVE(t *testing.T) {
 
 		// Use a mock relationship repo that returns empty
 		relRepo := mocks.NewCVERelationshipRepository(t)
-		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything).
+		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything, mock.Anything).
 			Return([]models.CVERelationship{}, nil)
 
 		kevService := vulndb.NewCISAKEVService(f.App.CveRepository, relRepo)

@@ -121,7 +121,7 @@ func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.O
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln 
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (c *webhookClient) SendTest(ctx context.Context, org shared.OrgObject, proj
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}

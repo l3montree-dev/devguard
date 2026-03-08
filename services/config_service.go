@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -20,9 +21,11 @@ func NewConfigService(db shared.DB) ConfigService {
 	}
 }
 
+var _ shared.ConfigService = (*ConfigService)(nil) // Ensure ConfigService implements shared.ConfigService interface
+
 func (service ConfigService) GetJSONConfig(ctx context.Context, key string, v any) error {
 	var config models.Config
-	if err := service.repository.GetDB(nil).Where("key = ?", key).First(&config).Error; err != nil {
+	if err := service.repository.GetDB(ctx, nil).Where("key = ?", key).First(&config).Error; err != nil {
 		return err
 	}
 
@@ -40,9 +43,9 @@ func (service ConfigService) SetJSONConfig(ctx context.Context, key string, v an
 		Val: string(b),
 	}
 
-	return service.repository.Save(nil, &config)
+	return service.repository.Save(ctx, nil, &config)
 }
 
 func (service ConfigService) RemoveConfig(ctx context.Context, key string) error {
-	return service.repository.GetDB(nil).Where("key = ?", key).Delete(&models.Config{}).Error
+	return service.repository.GetDB(ctx, nil).Where("key = ?", key).Delete(&models.Config{}).Error
 }

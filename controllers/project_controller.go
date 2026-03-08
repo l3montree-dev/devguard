@@ -252,7 +252,7 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
 
-	err := ProjectController.projectRepository.Delete(nil, project.ID)
+	err := ProjectController.projectRepository.Delete(c.Request().Context(), nil, project.ID)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (ProjectController *ProjectController) Read(c shared.Context) error {
 		return err
 	}
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(c.Request().Context(), nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -310,7 +310,7 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
 
-	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(orgID, projectID)
+	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(c.Request().Context(), nil, orgID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
@@ -392,7 +392,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	if updated {
-		err = ProjectController.projectRepository.Update(nil, &project)
+		err = ProjectController.projectRepository.Update(c.Request().Context(), nil, &project)
 		if err != nil {
 			return fmt.Errorf("could not update project: %w", err)
 		}
@@ -405,7 +405,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(c.Request().Context(), nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}

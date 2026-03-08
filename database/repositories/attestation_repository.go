@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -14,6 +15,8 @@ type attestationRepository struct {
 	db *gorm.DB
 	utils.Repository[string, models.Attestation, *gorm.DB]
 }
+
+var _ shared.AttestationRepository = (*attestationRepository)(nil) // Ensure attestationRepository implements shared.AttestationRepository interface
 
 func NewAttestationRepository(db *gorm.DB) *attestationRepository {
 	return &attestationRepository{
@@ -40,7 +43,7 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(ctx context.Context,
 	return attestationList, nil
 }
 
-func (a *attestationRepository) Create(ctx context.Context, tx *gorm.DB, db *gorm.DB, attestation *models.Attestation) error {
+func (a *attestationRepository) Create(ctx context.Context, tx *gorm.DB, attestation *models.Attestation) error {
 	return a.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "predicate_type"},

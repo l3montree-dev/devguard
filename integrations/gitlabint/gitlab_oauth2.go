@@ -208,7 +208,7 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 			t.currentToken.Expiry = token.Expiry
 			t.currentToken.AccessToken = token.AccessToken
 
-			err := t.gitlabOauth2Repository.Save(nil, &t.currentToken)
+			err := t.gitlabOauth2Repository.Save(context.Background(), nil, &t.currentToken)
 
 			if err != nil {
 				return nil, err
@@ -258,7 +258,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -319,7 +319,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 
 	tokenModel.GitLabUserID = gitlabUser.ID
 
-	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 	if err != nil {
 		return ctx.JSON(500, map[string]any{
 			"message": "could not save token",
@@ -350,11 +350,11 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	url := c.Oauth2Conf.AuthCodeURL(redirectTo, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)
-		err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+		err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 		if err != nil {
 			return ctx.JSON(500, map[string]any{
 				"message": "could not save token",
@@ -372,7 +372,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 		ProviderID: c.ProviderID,
 	}
 
-	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 
 	if err != nil {
 		return err

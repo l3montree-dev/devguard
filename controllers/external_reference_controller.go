@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -82,7 +83,7 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	refs, err := c.externalReferenceRepository.FindByAssetVersion(nil, asset.ID, assetVersion.Name)
+	refs, err := c.externalReferenceRepository.FindByAssetVersion(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
 	if err != nil {
 		slog.Error("failed to list external references", "error", err)
 		return echo.NewHTTPError(500, "failed to list external references").WithInternal(err)
@@ -154,7 +155,7 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		CSAFPackageScope: req.CSAFPackageScope,
 	}
 
-	if err := c.externalReferenceRepository.Create(nil, &ref); err != nil {
+	if err := c.externalReferenceRepository.Create(ctx.Request().Context(), nil, &ref); err != nil {
 		slog.Error("failed to create external reference", "error", err)
 		return echo.NewHTTPError(500, "failed to create external reference").WithInternal(err)
 	}
@@ -185,17 +186,17 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(asset.ID, assetVersion.Name)
+	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
 	if err != nil {
 		slog.Error("could not get artifacts for asset version", "err", err)
 		return echo.NewHTTPError(500, "could not get artifacts for asset version").WithInternal(err)
 	}
 
 	for _, artifact := range artifacts {
-		tx := c.artifactRepository.Begin()
+		tx := c.artifactRepository.Begin(ctx.Request().Context())
   defer tx.Rollback()
 
-		_, _, vulns, err := c.RunArtifactSecurityLifecycle(tx, org, project, asset, assetVersion, artifact, userID)
+		_, _, vulns, err := c.RunArtifactSecurityLifecycle(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, userID)
 		if err != nil {
 			tx.Rollback()
 			slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -209,14 +210,14 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 		}
 
 		c.FireAndForget(func() {
-			if err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns); err != nil {
+			if err := c.dependencyVulnService.SyncIssues(context.Background(), org, project, asset, assetVersion, vulns); err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
 			}
 		})
 
 		c.FireAndForget(func() {
 			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		})
@@ -243,7 +244,7 @@ func (c *ExternalReferenceController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid external reference ID").WithInternal(err)
 	}
 
-	if err := c.externalReferenceRepository.Delete(nil, uuidID); err != nil {
+	if err := c.externalReferenceRepository.Delete(ctx.Request().Context(), nil, uuidID); err != nil {
 		slog.Error("failed to delete external reference", "error", err)
 		return echo.NewHTTPError(500, "failed to delete external reference").WithInternal(err)
 	}

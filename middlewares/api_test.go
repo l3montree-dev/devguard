@@ -34,7 +34,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
+		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", accesscontrol.NoSession.GetUserID()).Return(false, nil)
 
@@ -71,7 +71,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := accesscontrol.NewSession("user-id", []string{"test-role"})
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
+		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", "user-id").Return(false, nil)
 
@@ -125,7 +125,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(&models.Org{}, errors.New("not found"))
+		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&models.Org{}, errors.New("not found"))
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -411,8 +411,8 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		ctx.SetParamValues(assetVersionSlug)
 
 		// Mock the repository calls
-		mockAssetVersionRepository.On("ReadBySlug", assetID, assetVersionSlug).Return(assetVersion, nil)
-		mockAssetVersionRepository.On("Save", (*gorm.DB)(nil), mock.MatchedBy(func(av *models.AssetVersion) bool {
+		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, assetVersionSlug).Return(assetVersion, nil)
+		mockAssetVersionRepository.On("Save", mock.Anything, (*gorm.DB)(nil), mock.MatchedBy(func(av *models.AssetVersion) bool {
 			// Verify that the asset version has the correct basic fields
 			if av.Name != "v1.0.0" || av.AssetID != assetID || av.Slug != assetVersionSlug {
 				return false
@@ -464,7 +464,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		ctx.SetParamValues("default")
 
 		// Mock the repository to return an error for default slug
-		mockAssetVersionRepository.On("ReadBySlug", assetID, "default").Return(models.AssetVersion{}, errors.New("not found"))
+		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, "default").Return(models.AssetVersion{}, errors.New("not found"))
 
 		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
@@ -506,7 +506,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		ctx.SetParamValues(assetVersionSlug)
 
 		// Mock the repository to return an error
-		mockAssetVersionRepository.On("ReadBySlug", assetID, assetVersionSlug).Return(models.AssetVersion{}, errors.New("not found"))
+		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, assetVersionSlug).Return(models.AssetVersion{}, errors.New("not found"))
 
 		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 

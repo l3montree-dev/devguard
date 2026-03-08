@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"time"
+
+	sentryecho "github.com/getsentry/sentry-go/echo"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 func registerMiddlewares(e *echo.Echo) {
@@ -23,7 +25,13 @@ func registerMiddlewares(e *echo.Echo) {
 
 	// otelecho creates OTel HTTP spans; sentryotel bridges these to GlitchTip/Sentry transactions.
 	// This lets DB spans (from gorm.io/plugin/opentelemetry) nest under the HTTP span.
-	e.Use(otelecho.Middleware("devguard"))
+	e.Use(sentryecho.New(sentryecho.Options{
+		// you can modify these options
+		Repanic:         true,
+		WaitForDelivery: false,
+		Timeout:         5 * time.Second,
+	}))
+
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
@@ -101,7 +109,9 @@ func Server() *echo.Echo {
 
 func GoroutineSafeContext(c shared.Context) shared.Context {
 	// create a new context - with only the values
-	ctx := E.NewContext(nil, httptest.NewRecorder())
+	// Use a background request so that Request().Context() works in goroutines
+	bgReq, _ := http.NewRequest("GET", "/", nil)
+	ctx := E.NewContext(bgReq, httptest.NewRecorder())
 
 	// copy all values from the original context that might be needed in goroutines
 	if thirdParty, ok := c.Get("thirdPartyIntegration").(shared.IntegrationAggregate); ok {

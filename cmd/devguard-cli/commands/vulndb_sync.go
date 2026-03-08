@@ -128,7 +128,7 @@ Use --databases flag to sync specific sources only.`,
 						slog.Info("starting malicious packages database sync")
 						now := time.Now()
 
-						if err := maliciousPackageChecker.DownloadAndProcessDB(); err != nil {
+						if err := maliciousPackageChecker.DownloadAndProcessDB(context.Background()); err != nil {
 							slog.Error("could not sync malicious packages database", "err", err)
 						}
 						slog.Info("finished malicious packages database sync", "duration", time.Since(now))

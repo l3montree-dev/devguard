@@ -32,7 +32,7 @@ func newImportCommand() *cobra.Command {
 				fx.Invoke(func(
 					importService shared.VulnDBImportService,
 				) error {
-					return importService.ImportFromDiff(nil)
+					return importService.ImportFromDiff(context.Background(), nil)
 				}),
 			)
 

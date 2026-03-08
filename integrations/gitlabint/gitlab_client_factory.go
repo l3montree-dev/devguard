@@ -1,6 +1,7 @@
 package gitlabint
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -40,7 +41,7 @@ func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitL
 }
 
 func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.GitlabClientFacade, error) {
-	integration, err := factory.gitlabIntegrationRepository.Read(id)
+	integration, err := factory.gitlabIntegrationRepository.Read(context.Background(), nil, id)
 	if err != nil {
 		return nil, err
 	}

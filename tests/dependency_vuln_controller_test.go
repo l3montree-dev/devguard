@@ -29,7 +29,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 	factory, client := NewTestClientFactory(t)
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)
-	externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything).Return(nil, nil)
+	externalUserRepository.On("FindByOrgID", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
 	projectService := mocks.NewProjectService(t)
 	statisticsService := mocks.NewStatisticsService(t)

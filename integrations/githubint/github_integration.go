@@ -227,7 +227,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		issueID := event.Issue.GetID()
 
 		// look for a vuln with such a github ticket id
-		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(context.Background(), nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
 			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
@@ -237,7 +237,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		githubIntegration.FireAndForget(func() {
-			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
+			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(context.Background(), nil, vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
 				return
@@ -249,13 +249,13 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 				AvatarURL: *event.Sender.AvatarURL,
 			}
 
-			err = githubIntegration.externalUserRepository.Save(nil, &user)
+			err = githubIntegration.externalUserRepository.Save(context.Background(), nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = githubIntegration.externalUserRepository.GetDB(context.Background(), nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		})
@@ -264,7 +264,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "closed":
 			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()), false)
 
-			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
@@ -273,7 +273,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "reopened":
 			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), false)
 
-			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
@@ -282,7 +282,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "deleted":
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
 
-			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
@@ -297,20 +297,20 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			return nil
 		}
 		// look for a vuln with such a github ticket id
-		vuln, err = githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+		vuln, err = githubIntegration.aggregatedVulnRepository.FindByTicketID(context.Background(), nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
 			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 
 		// get the asset
-		assetVersion, err := githubIntegration.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(context.Background(), nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
 		}
 
-		asset, err := githubIntegration.assetRepository.Read(context.Background(), assetVersion.AssetID)
+		asset, err := githubIntegration.assetRepository.Read(context.Background(), nil, assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -334,7 +334,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		githubIntegration.FireAndForget(func() {
-			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
+			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(context.Background(), nil, vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
 				return
@@ -346,13 +346,13 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 				AvatarURL: event.Comment.User.GetAvatarURL(),
 			}
 
-			err = githubIntegration.externalUserRepository.Save(nil, &user)
+			err = githubIntegration.externalUserRepository.Save(context.Background(), nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = githubIntegration.externalUserRepository.GetDB(context.Background(), nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		})
@@ -367,12 +367,12 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		statemachine.Apply(vuln, vulnEvent)
 
 		// save the vuln and the event in a transaction
-		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
-			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
+		err = githubIntegration.aggregatedVulnRepository.Transaction(context.Background(), func(tx shared.DB) error {
+			err := githubIntegration.aggregatedVulnRepository.Save(ctx.Request().Context(), tx, &vuln)
 			if err != nil {
 				return err
 			}
-			err = githubIntegration.vulnEventRepository.Save(tx, &vulnEvent)
+			err = githubIntegration.vulnEventRepository.Save(ctx.Request().Context(), tx, &vulnEvent)
 			if err != nil {
 				return err
 			}
@@ -409,7 +409,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 				TargetAvatarURL:                        *event.Installation.Account.AvatarURL,
 			}
 			// save the new installation to the database
-			err := githubIntegration.githubAppInstallationRepository.Save(nil, &githubAppInstallation)
+			err := githubIntegration.githubAppInstallationRepository.Save(context.Background(), nil, &githubAppInstallation)
 			if err != nil {
 				slog.Error("could not save github app installation", "err", err)
 				return err
@@ -417,7 +417,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "deleted":
 			slog.Info("app installation deleted", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 			// delete the installation from the database
-			err := githubIntegration.githubAppInstallationRepository.Delete(nil, int(*event.Installation.ID))
+			err := githubIntegration.githubAppInstallationRepository.Delete(context.Background(), nil, int(*event.Installation.ID))
 			if err != nil {
 				slog.Error("could not delete github app installation", "err", err)
 				return err
@@ -429,7 +429,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 	if doUpdateArtifactRiskHistory && vuln != nil {
 		artifacts := vuln.GetArtifacts()
 		for _, artifact := range artifacts {
-			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
@@ -469,7 +469,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	}
 
 	// check if the installation id exists in the database
-	appInstallation, err := githubIntegration.githubAppInstallationRepository.Read(installationIDInt)
+	appInstallation, err := githubIntegration.githubAppInstallationRepository.Read(context.Background(), nil, installationIDInt)
 	if err != nil {
 		slog.Error("could not read github app installation", "err", err)
 		return ctx.JSON(400, "could not read github app installation")
@@ -488,7 +488,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	orgID := organization.GetID()
 	appInstallation.OrgID = &orgID
 	// save the installation to the database
-	err = githubIntegration.githubAppInstallationRepository.Save(nil, &appInstallation)
+	err = githubIntegration.githubAppInstallationRepository.Save(context.Background(), nil, &appInstallation)
 	if err != nil {
 		slog.Error("could not save github app installation", "err", err)
 		return ctx.JSON(400, "could not save github app installation")
@@ -580,19 +580,19 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), vulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), vulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), vulnID)
+			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -618,19 +618,19 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), ev.VulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), ev.VulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), ev.VulnID)
+			v, err := githubIntegration.licenseRiskRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
@@ -732,13 +732,13 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 		return err
 	}
 
-	project, err := githubIntegration.projectRepository.GetProjectByAssetID(asset.ID)
+	project, err := githubIntegration.projectRepository.GetProjectByAssetID(context.Background(), nil, asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
 
-	org, err := githubIntegration.orgRepository.Read(context.Background(), project.OrganizationID)
+	org, err := githubIntegration.orgRepository.Read(context.Background(), nil, project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
@@ -757,7 +757,7 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
 			// save the event
-			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -795,7 +795,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -867,7 +867,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 		"ticketUrl": vuln.GetTicketURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
-	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 	// if an error did happen, delete the issue from github
 	if err != nil {
 		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
@@ -958,7 +958,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

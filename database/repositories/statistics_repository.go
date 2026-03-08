@@ -26,7 +26,7 @@ func (r *statisticsRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB 
 	if tx != nil {
 		return tx
 	}
-	return r.GetDB(ctx, tx).WithContext(ctx)
+	return r.db.WithContext(ctx)
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time

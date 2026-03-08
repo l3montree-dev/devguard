@@ -41,11 +41,11 @@ func (r *vexRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
 	}
-	return r.GetDB(ctx, tx).WithContext(ctx)
+	return r.db.WithContext(ctx)
 }
 
-func (r *vexRuleRepository) Begin(ctx context.Context, tx *gorm.DB) *gorm.DB {
-	return r.GetDB(ctx, tx).Begin()
+func (r *vexRuleRepository) Begin(ctx context.Context) shared.DB {
+	return r.GetDB(ctx, nil).Begin()
 }
 
 func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {

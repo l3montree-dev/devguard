@@ -18,6 +18,7 @@ package vulndb
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -57,9 +58,9 @@ func NewMaliciousPackageChecker(
 }
 
 // DownloadAndProcessDB downloads the repository archive and processes it directly to the database
-func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
-	tx := c.repository.GetDB().Begin()
- defer tx.Rollback()
+func (c *MaliciousPackageChecker) DownloadAndProcessDB(ctx context.Context) (outError error) {
+	tx := c.repository.GetDB(ctx, nil).Begin()
+	defer tx.Rollback()
 	if err := tx.Error; err != nil {
 		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
 	}
@@ -110,7 +111,7 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 
 	// start the function which writes the malicious packages/components to the database when the batch SIze is reached
 	dbWaitGroup.Add(1)
-	go c.dbWriterFunction(dbWaitGroup, dbJobs)
+	go c.dbWriterFunction(ctx, dbWaitGroup, dbJobs)
 
 	slog.Info("start working...")
 	// feed the jobs into the worker functions
@@ -156,14 +157,14 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB() (outError error) {
 	dbWaitGroup.Wait()
 
 	// Add fake test packages
-	if err := c.loadFakePackages(); err != nil {
+	if err := c.loadFakePackages(ctx); err != nil {
 		slog.Warn("Failed to load fake packages", "error", err)
 	}
 
 	slog.Info("Processed malicious packages from archive")
 
 	// Log ecosystem counts
-	counts, err := c.repository.CountByEcosystem()
+	counts, err := c.repository.CountByEcosystem(context.Background(), nil)
 	if err == nil {
 		slog.Info("Malicious package database loaded",
 			"npm", counts["npm"],
@@ -220,7 +221,7 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 }
 
 // this function runs in the background and grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
-func (c *MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jobs chan processingResults) {
+func (c *MaliciousPackageChecker) dbWriterFunction(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan processingResults) {
 	defer waitGroup.Done()
 	// stash the received results until the batch size threshold is reached
 	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
@@ -232,12 +233,12 @@ func (c *MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jo
 		affectedComponentsBatch = append(affectedComponentsBatch, job.AffectedComponents...)
 		if len(packagesBatch) >= BatchSize {
 			// if we reached the threshold save all to the db
-			if err := c.repository.UpsertPackages(packagesBatch); err != nil {
+			if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
 				slog.Error("Failed to upsert packages batch", "error", err)
 			}
 			packagesBatch = packagesBatch[:0] // Reset slice
 
-			if err := c.repository.UpsertAffectedComponents(affectedComponentsBatch); err != nil {
+			if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
 				slog.Error("Failed to upsert affected components batch", "error", err)
 			}
 			affectedComponentsBatch = affectedComponentsBatch[:0] // Reset slice
@@ -250,12 +251,12 @@ func (c *MaliciousPackageChecker) dbWriterFunction(waitGroup *sync.WaitGroup, jo
 
 	// Insert remaining batches
 	if len(packagesBatch) > 0 {
-		if err := c.repository.UpsertPackages(packagesBatch); err != nil {
+		if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
 			slog.Error("Failed to upsert final packages batch", "error", err)
 		}
 	}
 	if len(affectedComponentsBatch) > 0 {
-		if err := c.repository.UpsertAffectedComponents(affectedComponentsBatch); err != nil {
+		if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
 			slog.Error("Failed to upsert final affected components batch", "error", err)
 		}
 	}
@@ -278,7 +279,7 @@ func clearMaliciousPackagesDB(tx *gorm.DB) error {
 	return nil
 }
 
-func (c *MaliciousPackageChecker) loadFakePackages() error {
+func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -324,13 +325,13 @@ func (c *MaliciousPackageChecker) loadFakePackages() error {
 		}
 	}
 
-	if err := c.repository.UpsertPackages(packages); err != nil {
+	if err := c.repository.UpsertPackages(ctx, nil, packages); err != nil {
 		return err
 	}
-	return c.repository.UpsertAffectedComponents(affectedComponents)
+	return c.repository.UpsertAffectedComponents(ctx, nil, affectedComponents)
 }
 
-func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version string) (bool, *dtos.OSV) {
+func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV) {
 	// Build a purl for the package (include version for proper version matching)
 	var purl string
 	if version != "" {
@@ -347,7 +348,7 @@ func (c *MaliciousPackageChecker) IsMalicious(ecosystem, packageName, version st
 	}
 
 	// Query database using purl matching (similar to PurlComparer)
-	components, err := c.repository.GetMaliciousAffectedComponents(parsedPurl)
+	components, err := c.repository.GetMaliciousAffectedComponents(context.Background(), nil, parsedPurl)
 	if err != nil {
 		slog.Debug("Failed to query malicious packages", "error", err)
 		return false, nil

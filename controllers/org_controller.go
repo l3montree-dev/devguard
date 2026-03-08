@@ -110,7 +110,7 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 	}
 
 	if updated {
-		err := controller.organizationRepository.Update(nil, &organization)
+		err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not update organization").WithInternal(err)
 		}
@@ -136,7 +136,7 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 	organizationID := shared.GetOrg(ctx).GetID()
 
 	// delete the organization
-	err := controller.organizationRepository.Delete(nil, organizationID)
+	err := controller.organizationRepository.Delete(ctx.Request().Context(), nil, organizationID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
@@ -168,7 +168,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 		return p.ID.String()
 	})
 
-	return ctx.JSON(200, controller.organizationRepository.ContentTree(organization.GetID(), projects))
+	return ctx.JSON(200, controller.organizationRepository.ContentTree(ctx.Request().Context(), nil, organization.GetID(), projects))
 }
 
 // @Summary Accept organization invitation
@@ -192,7 +192,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	code := req.Code
 
 	// find the invitation
-	invitation, err := controller.invitationRepository.FindByCode(code)
+	invitation, err := controller.invitationRepository.FindByCode(ctx.Request().Context(), nil, code)
 	if err != nil {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
@@ -222,7 +222,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	}
 
 	// delete the invitation
-	err = controller.invitationRepository.Delete(nil, invitation.ID)
+	err = controller.invitationRepository.Delete(ctx.Request().Context(), nil, invitation.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
 	}
@@ -262,7 +262,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	}
 
 	// save the model
-	err := controller.invitationRepository.Save(nil, &model)
+	err := controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
 	}
@@ -334,7 +334,7 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := controller.projectService.ListProjectsByOrganizationID(shared.GetOrg(ctx).GetID())
+	projects, err := controller.projectService.ListProjectsByOrganizationID(ctx.Request().Context(), shared.GetOrg(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -449,7 +449,7 @@ func (controller *OrgController) List(ctx shared.Context) error {
 	}
 
 	// get the organizations from the database
-	organizations, err := controller.organizationRepository.List(organizationIDs)
+	organizations, err := controller.organizationRepository.List(ctx.Request().Context(), nil, organizationIDs)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}

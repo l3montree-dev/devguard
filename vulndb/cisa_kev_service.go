@@ -120,8 +120,8 @@ func (s cisaKEVService) Mirror() error {
 		return err
 	}
 
-	tx := s.cveRepository.Begin()
- defer tx.Rollback()
+	tx := s.cveRepository.Begin(context.Background())
+	defer tx.Rollback()
 
 	// build a map of CVE ID -> KEV data for quick lookup
 	kevMap := make(map[string]models.CVE, len(cves))
@@ -137,7 +137,7 @@ func (s cisaKEVService) Mirror() error {
 	var relationships []models.CVERelationship
 	for i := 0; i < len(cveIDs); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(tx, cveIDs[i:end])
+		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(context.Background(), tx, cveIDs[i:end])
 		if err != nil {
 			slog.Error("could not fetch CVE relationships", "error", err)
 			return err
@@ -168,7 +168,7 @@ func (s cisaKEVService) Mirror() error {
 	// process the CVEs in batches
 	for i := 0; i < len(cves); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cves))
-		err := s.cveRepository.UpdateCISAKEVBatch(tx, cves[i:end])
+		err := s.cveRepository.UpdateCISAKEVBatch(context.Background(), tx, cves[i:end])
 		if err != nil {
 			slog.Error("error when trying to save CISA KEV information batch")
 			return err

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
@@ -22,6 +23,8 @@ import (
 type PatService struct {
 	patRepository shared.PersonalAccessTokenRepository
 }
+
+var _ shared.Verifier = (*PatService)(nil) // Ensure PatService implements shared.PatService interface
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
 	return &PatService{
@@ -166,7 +169,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 }
 
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
-	pat, err := p.patRepository.GetByFingerprint(fingerprint)
+	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
 	if err != nil {
 		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
@@ -186,7 +189,7 @@ func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fin
 }
 
 func (p *PatService) markAsLastUsedNow(ctx context.Context, fingerprint string) error {
-	return p.patRepository.MarkAsLastUsedNow(fingerprint)
+	return p.patRepository.MarkAsLastUsedNow(ctx, nil, fingerprint)
 }
 
 func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error) {
@@ -194,7 +197,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 	if fingerprint == "" {
 		return "", "", fmt.Errorf("no fingerprint provided")
 	}
-	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
+	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(ctx, fingerprint)
 
 	if err != nil {
 		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
@@ -209,7 +212,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		return "", "", fmt.Errorf("could not verify request: %v", err)
 	}
 
-	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
+	p.markAsLastUsedNow(ctx, fingerprint) //nolint:errcheck// we don't care if this fails
 
 	return userID.String(), scopes, nil
 }
@@ -227,5 +230,5 @@ func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) err
 		return err
 	}
 
-	return p.patRepository.DeleteByFingerprint(fingerprint)
+	return p.patRepository.DeleteByFingerprint(ctx, nil, fingerprint)
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,14 +74,14 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 
 	riskHash := licenseRisk.CalculateHash()
 	// check if the license risk already exists
-	existingLicenseRisk, err := controller.licenseRiskRepository.Read(riskHash)
+	existingLicenseRisk, err := controller.licenseRiskRepository.Read(ctx.Request().Context(), nil, riskHash)
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		licenseRisk = existingLicenseRisk
 	}
 
 	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision)
 
-	err = controller.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
+	err = controller.licenseRiskRepository.ApplyAndSave(ctx.Request().Context(), nil, &licenseRisk, &ev)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create license risk").WithInternal(err)
 	}
@@ -92,7 +93,7 @@ func (controller LicenseRiskController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	pagedResp, err := controller.licenseRiskRepository.GetAllLicenseRisksForAssetVersionPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		assetVersion.AssetID,
 		assetVersion.Name,
 		shared.GetPageInfo(ctx),
@@ -111,13 +112,13 @@ func (controller LicenseRiskController) ListPaged(ctx shared.Context) error {
 
 }
 
-func (controller LicenseRiskController) GetComponentOverwriteForAssetVersion(assetID uuid.UUID, assetVersionName string, pURL string) (models.LicenseRisk, error) {
+func (controller LicenseRiskController) GetComponentOverwriteForAssetVersion(ctx context.Context, assetID uuid.UUID, assetVersionName string, pURL string) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
 	validPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		return result, err
 	}
-	result, err = controller.licenseRiskRepository.MaybeGetLicenseOverwriteForComponent(assetID, assetVersionName, validPURL)
+	result, err = controller.licenseRiskRepository.MaybeGetLicenseOverwriteForComponent(ctx, nil, assetID, assetVersionName, validPURL)
 	if err != nil {
 		return result, err
 	}
@@ -150,7 +151,7 @@ func (controller LicenseRiskController) Read(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(400, "could not get license risk ID")
 	}
-	licenseRisk, err := controller.licenseRiskRepository.Read(licenseRiskID)
+	licenseRisk, err := controller.licenseRiskRepository.Read(ctx.Request().Context(), nil, licenseRiskID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could fetch data from the database")
 	}
@@ -182,7 +183,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not mitigate licenseRisk").WithInternal(err)
 	}
 
-	licenseRisk, err := controller.licenseRiskRepository.Read(licenseRiskID)
+	licenseRisk, err := controller.licenseRiskRepository.Read(ctx.Request().Context(), nil, licenseRiskID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find licenseRisk")
 	}
@@ -196,7 +197,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid licenseRisk id")
 	}
 
-	licenseRisk, err := controller.licenseRiskRepository.Read(licenseRiskID)
+	licenseRisk, err := controller.licenseRiskRepository.Read(ctx.Request().Context(), nil, licenseRiskID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find licenseRisk")
 	}
@@ -216,7 +217,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
 	if err != nil {
 		return err
 	}
@@ -250,12 +251,12 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 	}
 
 	userID := shared.GetSession(ctx).GetUserID()
-	err = controller.licenseRiskService.MakeFinalLicenseDecision(vulnID, licenseDecision.License, licenseDecision.Justification, userID)
+	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not make final license decision").WithInternal(err)
 	}
 
-	licenseRisk, err := controller.licenseRiskRepository.Read(vulnID)
+	licenseRisk, err := controller.licenseRiskRepository.Read(ctx.Request().Context(), nil, vulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find licenseRisk")
 	}

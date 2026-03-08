@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -16,6 +17,8 @@ type projectService struct {
 	assetRepository   shared.AssetRepository
 }
 
+var _ shared.ProjectService = (*projectService)(nil) // Ensure projectService implements shared.ProjectService interface
+
 func NewProjectService(projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *projectService {
 	return &projectService{
 		projectRepository: projectRepository,
@@ -23,8 +26,8 @@ func NewProjectService(projectRepository shared.ProjectRepository, assetReposito
 	}
 }
 
-func (s *projectService) ReadBySlug(ctx context.Context, ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
-	project, err := s.projectRepository.ReadBySlug(organizationID, slug)
+func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
+	project, err := s.projectRepository.ReadBySlug(ctx.Request().Context(), nil, organizationID, slug)
 	if err != nil {
 		return models.Project{}, echo.NewHTTPError(404, "project not found").WithInternal(err)
 	}
@@ -33,21 +36,21 @@ func (s *projectService) ReadBySlug(ctx context.Context, ctx shared.Context, org
 	return project, nil
 }
 
-func (s *projectService) CreateProject(ctx context.Context, ctx shared.Context, project *models.Project) error {
+func (s *projectService) CreateProject(ctx shared.Context, project *models.Project) error {
 
 	newProject := project
 
-	err := s.assetRepository.Transaction(func(tx shared.DB) error {
-		if err := s.projectRepository.Create(tx, newProject); err != nil {
+	err := s.assetRepository.Transaction(ctx.Request().Context(), func(tx shared.DB) error {
+		if err := s.projectRepository.Create(ctx.Request().Context(), tx, newProject); err != nil {
 			// check if duplicate key error
 			if database.IsDuplicateKeyError(err) {
 				// get the project by slug and project id unscoped
-				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
+				project, err := s.projectRepository.ReadBySlugUnscoped(ctx.Request().Context(), tx, project.OrganizationID, project.Slug)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 				}
 
-				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
+				if err = s.projectRepository.Activate(ctx.Request().Context(), tx, project.GetID()); err != nil {
 					return echo.NewHTTPError(500, "could not activate project").WithInternal(err)
 				}
 
@@ -60,7 +63,7 @@ func (s *projectService) CreateProject(ctx context.Context, ctx shared.Context, 
 		}
 
 		// enable the default community policies
-		return s.projectRepository.EnableCommunityManagedPolicies(tx, newProject.ID)
+		return s.projectRepository.EnableCommunityManagedPolicies(ctx.Request().Context(), tx, newProject.ID)
 	})
 	if err != nil {
 		slog.Error("could not create project", "err", err, "projectSlug", project.Slug, "projectID", project.ID)
@@ -69,7 +72,7 @@ func (s *projectService) CreateProject(ctx context.Context, ctx shared.Context, 
 
 	domainRBAC := shared.GetRBAC(ctx)
 
-	if err := s.BootstrapProject(domainRBAC, project); err != nil {
+	if err := s.BootstrapProject(ctx.Request().Context(), domainRBAC, project); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
 	}
 
@@ -141,7 +144,7 @@ func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.Acces
 }
 
 func (s *projectService) ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.GetByOrgID(organizationID)
+	return s.projectRepository.GetByOrgID(ctx, nil, organizationID)
 }
 
 func (s *projectService) projectsForUser(ctx context.Context, c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
@@ -174,7 +177,7 @@ func (s *projectService) projectsForUser(ctx context.Context, c shared.Context, 
 	return projectIDsSlice, parentID, nil
 }
 
-func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(ctx context.Context, c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
 
 	rbac := shared.GetRBAC(c)
 	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
@@ -187,12 +190,12 @@ func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(ctx context.Contex
 	}
 
 	projectsIdsStr := allowedProjectIDs
-	projectsIdsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	projectsIdsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectsIdsStr)
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
 
-	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(c.Request().Context(), nil, allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
@@ -200,7 +203,7 @@ func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(ctx context.Contex
 	return assetsAndProjects, nil
 }
 
-func (s *projectService) ListAllowedProjectsPaged(ctx context.Context, c shared.Context) (shared.Paged[models.Project], error) {
+func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Paged[models.Project], error) {
 
 	pageInfo := shared.GetPageInfo(c)
 	search := c.QueryParam("search")
@@ -214,12 +217,12 @@ func (s *projectService) ListAllowedProjectsPaged(ctx context.Context, c shared.
 
 	projectsIdsStr := projectIDs
 
-	projectIDsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	projectIDsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectsIdsStr)
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
 
-	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	projects, err := s.projectRepository.ListPaged(c.Request().Context(), nil, projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
@@ -227,7 +230,7 @@ func (s *projectService) ListAllowedProjectsPaged(ctx context.Context, c shared.
 	return projects, nil
 }
 
-func (s *projectService) ListAllowedProjects(ctx context.Context, c shared.Context) ([]models.Project, error) {
+func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := shared.GetRBAC(c)
 	projectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
@@ -235,12 +238,12 @@ func (s *projectService) ListAllowedProjects(ctx context.Context, c shared.Conte
 		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
 	}
 
-	projectIDsSlice, parentID, err := s.projectsForUser(c, projectIDs)
+	projectIDsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	projects, err := s.projectRepository.List(projectIDsSlice, parentID, shared.GetOrg(c).GetID())
+	projects, err := s.projectRepository.List(c.Request().Context(), nil, projectIDsSlice, parentID, shared.GetOrg(c).GetID())
 
 	if err != nil {
 		return nil, err
@@ -250,9 +253,9 @@ func (s *projectService) ListAllowedProjects(ctx context.Context, c shared.Conte
 }
 
 func (s *projectService) RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.RecursivelyGetChildProjects(projectID)
+	return s.projectRepository.RecursivelyGetChildProjects(ctx, nil, projectID)
 }
 
 func (s *projectService) GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.GetDirectChildProjects(projectID)
+	return s.projectRepository.GetDirectChildProjects(ctx, nil, projectID)
 }

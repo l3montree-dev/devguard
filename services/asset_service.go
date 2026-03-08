@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
+	"gorm.io/gorm"
 )
 
 type assetService struct {
@@ -33,6 +34,8 @@ type assetService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	dependencyVulnService    shared.DependencyVulnService
 }
+
+var _ shared.AssetService = (*assetService)(nil) // Ensure assetService implements shared.AssetService interface
 
 func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService) *assetService {
 	return &assetService{
@@ -49,7 +52,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	}
 
 	tx := s.assetRepository.GetDB(ctx, nil).Begin()
- defer tx.Rollback()
+	defer tx.Rollback()
 
 	err := s.assetRepository.Create(ctx, tx, &newAsset)
 
@@ -58,7 +61,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	}
 
 	// bootstrap the asset in the rbac system
-	if err := s.BootstrapAsset(rbac, &newAsset); err != nil {
+	if err := s.BootstrapAsset(ctx, rbac, &newAsset); err != nil {
 		slog.Error("error bootstrapping asset in rbac", "err", err)
 		return nil, err
 	}
@@ -72,7 +75,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	return &newAsset, nil
 }
 
-func (s *assetService) BootstrapAsset(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error {
+func (s *assetService) BootstrapAsset(_ context.Context, rbac shared.AccessControl, asset *models.Asset) error {
 	// make sure and project admin is an asset admin - Always
 	if err := rbac.LinkProjectAndAssetRole(shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
 		return err
@@ -93,26 +96,26 @@ func (s *assetService) BootstrapAsset(ctx context.Context, rbac shared.AccessCon
 	return nil
 }
 
-func (s *assetService) GetByAssetID(ctx context.Context, assetID uuid.UUID) (models.Asset, error) {
-	return s.assetRepository.Read(context.Background(), assetID)
+func (s *assetService) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.Asset, error) {
+	return s.assetRepository.Read(ctx, tx, assetID)
 }
 
 func (s *assetService) UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error {
-	err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
+	err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
 
-		err := s.assetRepository.Save(tx, &asset)
+		err := s.assetRepository.Save(ctx, tx, &asset)
 		if err != nil {
 			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the dependencyVulns
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.GetID())
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, tx, asset.GetID())
 		if err != nil {
 			slog.Info("error getting dependencyVulns", "err", err)
 			return fmt.Errorf("could not get dependencyVulns: %v", err)
 		}
 
-		_, err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
+		_, err = s.dependencyVulnService.RecalculateRawRiskAssessment(ctx, tx, responsible, dependencyVulns, justification, asset)
 		if err != nil {
 			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)

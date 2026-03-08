@@ -16,6 +16,7 @@
 package middlewares
 
 import (
+	"context"
 	"log/slog"
 	"strings"
 	"time"
@@ -71,7 +72,7 @@ func ArtifactMiddleware(repository shared.ArtifactRepository) func(next echo.Han
 				return echo.NewHTTPError(400, "invalid artifact name")
 			}
 
-			artifact, err := repository.ReadArtifact(artifactName, assetVersion.Name, assetVersion.AssetID)
+			artifact, err := repository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, assetVersion.AssetID)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find artifact").WithInternal(err)
@@ -95,7 +96,7 @@ func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next 
 				return echo.NewHTTPError(400, "invalid asset version slug")
 			}
 
-			assetVersion, err := repository.ReadBySlug(asset.GetID(), assetVersionSlug)
+			assetVersion, err := repository.ReadBySlug(ctx.Request().Context(), nil, asset.GetID(), assetVersionSlug)
 
 			if err != nil {
 				if assetVersionSlug == "default" {
@@ -114,7 +115,7 @@ func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next 
 					now := time.Now()
 					assetVersion.LastAccessedAt = now
 					// Use nil for tx to use the default database connection
-					if err := repository.Save(nil, &assetVersion); err != nil {
+					if err := repository.Save(context.Background(), nil, &assetVersion); err != nil {
 						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
 					}
 				}()
@@ -134,7 +135,7 @@ func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(n
 			if assetVersionName == "" {
 				return echo.NewHTTPError(400, "no X-Asset-Ref header provided")
 			}
-			assetVersion, err := assetVersionRepository.Read(assetVersionName, asset.ID)
+			assetVersion, err := assetVersionRepository.Read(ctx.Request().Context(), nil, assetVersionName, asset.ID)
 			if err != nil {
 				// if the asset version is not found, we do not return an error here, because the asset version might not exist yet
 				return next(ctx)
@@ -146,7 +147,7 @@ func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(n
 					now := time.Now()
 					assetVersion.LastAccessedAt = now
 					// Use nil for tx to use the default database connection
-					if err := assetVersionRepository.Save(nil, &assetVersion); err != nil {
+					if err := assetVersionRepository.Save(context.Background(), nil, &assetVersion); err != nil {
 						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
 					}
 				}()
@@ -170,7 +171,7 @@ func EventMiddleware(repository shared.VulnEventRepository) func(next echo.Handl
 					return echo.NewHTTPError(400, "eventID is required")
 				}
 
-				hasAccess, err := repository.HasAccessToEvent(assetID, eventID)
+				hasAccess, err := repository.HasAccessToEvent(ctx.Request().Context(), nil, assetID, eventID)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not verify access to event").WithInternal(err)
 				}

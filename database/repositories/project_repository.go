@@ -19,6 +19,8 @@ type projectRepository struct {
 	utils.Repository[uuid.UUID, models.Project, *gorm.DB]
 }
 
+var _ shared.ProjectRepository = (*projectRepository)(nil) // Ensure projectRepository implements shared.ProjectRepository interface
+
 func NewProjectRepository(db *gorm.DB) *projectRepository {
 	return &projectRepository{
 		db:         db,

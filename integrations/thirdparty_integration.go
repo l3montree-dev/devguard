@@ -199,7 +199,7 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx shared.Context) error {
 
 func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
 
-	users, err := t.externalUserRepository.FindByOrgID(nil, org.ID)
+	users, err := t.externalUserRepository.FindByOrgID(context.Background(), nil, org.ID)
 	if err != nil {
 		slog.Error("could not fetch external users for org", "org", org.Slug, "err", err)
 		return nil

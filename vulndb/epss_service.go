@@ -101,8 +101,8 @@ func (s epssService) Mirror() error {
 	}
 
 	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
-	tx := s.cveRepository.Begin()
- defer tx.Rollback()
+	tx := s.cveRepository.Begin(context.Background())
+	defer tx.Rollback()
 
 	// build a map of CVE ID -> EPSS data for quick lookup
 	epssMap := make(map[string]models.CVE, len(cves))
@@ -118,7 +118,7 @@ func (s epssService) Mirror() error {
 	var relationships []models.CVERelationship
 	for i := 0; i < len(cveIDs); i += epssBatchSize {
 		end := min(i+epssBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(tx, cveIDs[i:end])
+		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(context.Background(), tx, cveIDs[i:end])
 		if err != nil {
 			slog.Error("could not fetch CVE relationships", "error", err)
 			return err
@@ -148,7 +148,7 @@ func (s epssService) Mirror() error {
 	i := 0
 	for {
 		if i+epssBatchSize < len(cves) {
-			err := s.cveRepository.UpdateEpssBatch(tx, cves[i:i+epssBatchSize])
+			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx,cves[i:i+epssBatchSize])
 			if err != nil {
 				slog.Error("error when trying to save epss information batch")
 				return err
@@ -156,7 +156,7 @@ func (s epssService) Mirror() error {
 			i += epssBatchSize
 		} else {
 			// not enough cves for a whole batch so we just save the rest
-			err := s.cveRepository.UpdateEpssBatch(tx, cves[i:])
+			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx,cves[i:])
 			if err != nil {
 				slog.Error("error when trying to save epss information batch")
 				return err

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -43,7 +44,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	if err := a.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
+	if err := a.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), asset.ID); err != nil {
 		slog.Error("Failed to run daemon pipeline for asset", "assetID", asset.ID, "error", err)
 		return echo.NewHTTPError(500, fmt.Sprintf("could not run asset pipeline: %s", err.Error())).WithInternal(err)
 	}
@@ -68,13 +69,13 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "missing repository id ('id')")
 	}
 
-	asset, err := a.assetRepository.FindAssetByExternalProviderID(provider, id)
+	asset, err := a.assetRepository.FindAssetByExternalProviderID(ctx.Request().Context(), nil, provider, id)
 
 	if err != nil {
 		return echo.NewHTTPError(404, "asset not found").WithInternal(err)
 	}
 
-	assetFqn, err := a.assetRepository.GetFQNByID(asset.ID)
+	assetFqn, err := a.assetRepository.GetFQNByID(ctx.Request().Context(), nil, asset.ID)
 
 	// split the fqn into organization, project and asset
 	if err != nil {
@@ -111,7 +112,7 @@ func (a *AssetController) List(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
 
-	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.GetID())
+	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(ctx.Request().Context(), nil, allowedAssetIDs, project.GetID())
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 
 	asset.SigningPubKey = &req.PubKey
 	// save the asset
-	err := a.assetRepository.Update(nil, &asset)
+	err := a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not attach signing key").WithInternal(err)
 	}
@@ -152,7 +153,7 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [delete]
 func (a *AssetController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	err := a.assetRepository.Delete(nil, asset.GetID())
+	err := a.assetRepository.Delete(ctx.Request().Context(), nil, asset.GetID())
 	if err != nil {
 		return err
 	}
@@ -195,7 +196,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
+	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if justification != "" {
-		err = a.assetService.UpdateAssetRequirements(asset, shared.GetSession(ctx).GetUserID(), justification)
+		err = a.assetService.UpdateAssetRequirements(ctx.Request().Context(), asset, shared.GetSession(ctx).GetUserID(), justification)
 		if err != nil {
 			return fmt.Errorf("error updating requirements: %v", err)
 		}
@@ -339,13 +340,13 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		}
 
 		a.FireAndForget(func() {
-			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 			if err != nil {
 				slog.Error("could not get default asset version", "err", err)
 				return
 			}
 
-			if err := a.dependencyVulnService.SyncAllIssues(org, project, asset, defaultAssetVersion); err != nil {
+			if err := a.dependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		})
@@ -357,7 +358,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if updated || enableTicketRangeUpdated {
-		err = a.assetRepository.Update(nil, &asset)
+		err = a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)
 		}
@@ -404,7 +405,7 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// get default asset version
-		assetVersion, err = a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = a.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
 		}
@@ -418,11 +419,11 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetArtifactRiskHistory(artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		results, err := a.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
 		if err != nil {
 			return err
 		}
-		svg = a.assetService.GetCVSSBadgeSVG(results)
+		svg = a.assetService.GetCVSSBadgeSVG(ctx.Request().Context(), results)
 
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")

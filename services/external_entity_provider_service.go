@@ -26,6 +26,8 @@ type externalEntityProviderService struct {
 	assetService           shared.AssetService
 }
 
+var _ shared.ExternalEntityProviderService = (*externalEntityProviderService)(nil) // Ensure externalEntityProviderService implements shared.ExternalEntityProviderService interface
+
 func NewExternalEntityProviderService(
 	projectService shared.ProjectService,
 	assetService shared.AssetService,
@@ -46,7 +48,7 @@ func NewExternalEntityProviderService(
 	}
 }
 
-func (s externalEntityProviderService) TriggerSync(ctx context.Context, c echo.Context) error {
+func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 	org := shared.GetOrg(c)
 	if org.IsExternalEntity() {
 		// Trigger the sync for the external entity provider projects
@@ -59,7 +61,7 @@ func (s externalEntityProviderService) TriggerSync(ctx context.Context, c echo.C
 	return echo.NewHTTPError(400, "organization is not an external entity provider")
 }
 
-func (s externalEntityProviderService) TriggerOrgSync(ctx context.Context, c echo.Context) error {
+func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
 	orgs, err := s.SyncOrgs(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)
@@ -70,7 +72,7 @@ func (s externalEntityProviderService) TriggerOrgSync(ctx context.Context, c ech
 	}))
 }
 
-func (s externalEntityProviderService) SyncOrgs(ctx context.Context, c echo.Context) ([]*models.Org, error) {
+func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, error) {
 	// return the enabled git providers as well
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(c)
 	userID := shared.GetSession(c).GetUserID()
@@ -106,7 +108,7 @@ func (s externalEntityProviderService) SyncOrgs(ctx context.Context, c echo.Cont
 	return orgs.([]*models.Org), nil
 }
 
-func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx context.Context, ctx shared.Context, org models.Org, user string) error {
+func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, user string) error {
 
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
@@ -134,11 +136,11 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 			return nil, err
 		}
 
-		if err := s.enableCommunityPoliciesForNewProjects(created); err != nil {
+		if err := s.enableCommunityPoliciesForNewProjects(ctx.Request().Context(), created); err != nil {
 			return nil, err
 		}
 
-		projectsMap := s.createProjectsMap(created, updated)
+		projectsMap := s.createProjectsMap(ctx.Request().Context(), created, updated)
 
 		assets, err := s.syncProjectsAndAssets(ctx, domainRBAC, user, projects, roles, append(created, updated...))
 		if err != nil {
@@ -150,8 +152,8 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 			assetsMap[asset.ID.String()] = struct{}{}
 		}
 
-		s.revokeAccessForRemovedProjects(domainRBAC, user, allowedProjects, projectsMap)
-		s.revokeAccessForRemovedAssets(domainRBAC, user, allowedAssets, assetsMap)
+		s.revokeAccessForRemovedProjects(ctx.Request().Context(), domainRBAC, user, allowedProjects, projectsMap)
+		s.revokeAccessForRemovedAssets(ctx.Request().Context(), domainRBAC, user, allowedAssets, assetsMap)
 
 		return nil, nil
 	})
@@ -160,7 +162,7 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 	return err
 }
 
-func (s externalEntityProviderService) fetchExternalProjects(ctx context.Context, ctx shared.Context, user, providerID string) ([]models.Project, []shared.Role, error) {
+func (s externalEntityProviderService) fetchExternalProjects(ctx shared.Context, user, providerID string) ([]models.Project, []shared.Role, error) {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	projects, roles, err := thirdPartyIntegration.ListGroups(context.TODO(), user, providerID)
 	if err != nil {
@@ -177,7 +179,7 @@ func (s externalEntityProviderService) upsertProjects(ctx context.Context, org m
 		projects[i].OrganizationID = org.GetID() // ensure the organization ID is set
 	}
 
-	createdPtrs, updatedPtrs, err := s.projectRepository.UpsertSplit(nil, providerID, toUpsert)
+	createdPtrs, updatedPtrs, err := s.projectRepository.UpsertSplit(ctx, nil, providerID, toUpsert)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not upsert projects: %w", err)
 	}
@@ -199,7 +201,7 @@ func (s externalEntityProviderService) upsertProjects(ctx context.Context, org m
 
 func (s externalEntityProviderService) enableCommunityPoliciesForNewProjects(ctx context.Context, created []models.Project) error {
 	for _, project := range created {
-		if err := s.projectRepository.EnableCommunityManagedPolicies(nil, project.ID); err != nil {
+		if err := s.projectRepository.EnableCommunityManagedPolicies(ctx, nil, project.ID); err != nil {
 			return fmt.Errorf("could not enable community managed policies for project %s: %w", project.Slug, err)
 		}
 		slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
@@ -215,7 +217,7 @@ func (s externalEntityProviderService) createProjectsMap(ctx context.Context, cr
 	return projectsMap
 }
 
-func (s externalEntityProviderService) syncProjectsAndAssets(ctx context.Context, ctx shared.Context, domainRBAC shared.AccessControl, user string, originalProjects []models.Project, roles []shared.Role, projects []models.Project) ([]*models.Asset, error) {
+func (s externalEntityProviderService) syncProjectsAndAssets(ctx shared.Context, domainRBAC shared.AccessControl, user string, originalProjects []models.Project, roles []shared.Role, projects []models.Project) ([]*models.Asset, error) {
 	wg := utils.ErrGroup[[]*models.Asset](10)
 	for i, project := range projects {
 		wg.Go(func() ([]*models.Asset, error) {
@@ -238,12 +240,12 @@ func (s externalEntityProviderService) syncProjectsAndAssets(ctx context.Context
 	return utils.Flat(assets), nil
 }
 
-func (s externalEntityProviderService) syncSingleProject(ctx context.Context, ctx shared.Context, domainRBAC shared.AccessControl, user string, originalProject *models.Project, userRole shared.Role, project *models.Project) ([]*models.Asset, error) {
-	if err := s.projectService.BootstrapProject(domainRBAC, originalProject); err != nil {
+func (s externalEntityProviderService) syncSingleProject(ctx shared.Context, domainRBAC shared.AccessControl, user string, originalProject *models.Project, userRole shared.Role, project *models.Project) ([]*models.Asset, error) {
+	if err := s.projectService.BootstrapProject(ctx.Request().Context(), domainRBAC, originalProject); err != nil {
 		return nil, fmt.Errorf("could not bootstrap project: %w", err)
 	}
 
-	if err := s.updateUserRole(domainRBAC, user, userRole, project.ID.String()); err != nil {
+	if err := s.updateUserRole(ctx.Request().Context(), domainRBAC, user, userRole, project.ID.String()); err != nil {
 		return nil, err
 	}
 
@@ -289,7 +291,7 @@ func (s externalEntityProviderService) updateUserRoleInAsset(ctx context.Context
 	return nil
 }
 
-func (s externalEntityProviderService) syncProjectAssets(ctx context.Context, ctx shared.Context, user string, project *models.Project) ([]*models.Asset, error) {
+func (s externalEntityProviderService) syncProjectAssets(ctx shared.Context, user string, project *models.Project) ([]*models.Asset, error) {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	domainRBAC := shared.GetRBAC(ctx)
 
@@ -305,7 +307,7 @@ func (s externalEntityProviderService) syncProjectAssets(ctx context.Context, ct
 		toUpsert = append(toUpsert, &assets[i])
 	}
 
-	if err := s.assetRepository.Upsert(context.Background(), &toUpsert, []clause.Column{
+	if err := s.assetRepository.Upsert(context.Background(), nil, &toUpsert, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
 	}, []string{"project_id", "slug", "description", "name", "avatar"}); err != nil {
@@ -313,13 +315,13 @@ func (s externalEntityProviderService) syncProjectAssets(ctx context.Context, ct
 	}
 
 	for i, asset := range toUpsert {
-		if err := s.assetService.BootstrapAsset(domainRBAC, asset); err != nil {
+		if err := s.assetService.BootstrapAsset(ctx.Request().Context(), domainRBAC, asset); err != nil {
 			slog.Error("could not bootstrap asset", "slug", asset.Slug, "err", err)
 			continue
 		}
 
 		// make sure to update the role for the user on the asset
-		if err := s.updateUserRoleInAsset(domainRBAC, user, roles[i], asset.ID.String()); err != nil {
+		if err := s.updateUserRoleInAsset(ctx.Request().Context(), domainRBAC, user, roles[i], asset.ID.String()); err != nil {
 			slog.Error("could not update user role", "user", user, "assetID", asset.ID, "err", err)
 			continue
 		}

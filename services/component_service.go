@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type ComponentService struct {
@@ -24,6 +25,8 @@ type ComponentService struct {
 	artifactRepository         shared.ArtifactRepository
 	utils.FireAndForgetSynchronizer
 }
+
+var _ shared.ComponentService = (*ComponentService)(nil) // Ensure ComponentService implements shared.ComponentService interface
 
 func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
 
@@ -258,6 +261,9 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 		}
 	}
 
+	// Detach cancellation but KEEP the trace context
+	bgCtx := context.WithoutCancel(ctx)
+
 	s.FireAndForget(func() {
 		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
 			//check if the purl is valid and has a version
@@ -267,19 +273,19 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 		// find potential license risks
 		if artifactName == nil {
 			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts
-			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(bgCtx, nil, assetVersion.AssetID, assetVersion.Name)
 			if err != nil {
 				slog.Error("could not fetch artifacts for asset version", "err", err, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(bgCtx, nil, assetVersion, allComponents, artifact.ArtifactName)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(ctx, nil, assetVersion, allComponents, *artifactName)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}
@@ -289,10 +295,10 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 	return allComponents, nil
 }
 
-func (s *ComponentService) FetchInformationSources(ctx context.Context, artifact *models.Artifact) ([]models.ComponentDependency, error) {
-	return s.componentRepository.FetchInformationSources(artifact)
+func (s *ComponentService) FetchInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	return s.componentRepository.FetchInformationSources(ctx, tx, artifact)
 }
 
-func (s *ComponentService) RemoveInformationSources(ctx context.Context, artifact *models.Artifact, rootNodePurls []string) error {
-	return s.componentRepository.RemoveInformationSources(artifact, rootNodePurls)
+func (s *ComponentService) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
+	return s.componentRepository.RemoveInformationSources(ctx, tx, artifact, rootNodePurls)
 }

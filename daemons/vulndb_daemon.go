@@ -1,6 +1,7 @@
 package daemons
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 )
 
-func (runner *DaemonRunner) UpdateVulnDB() error {
+func (runner *DaemonRunner) UpdateVulnDB(ctx context.Context) error {
 	begin := time.Now()
 	defer func() {
 		monitoring.VulnDBUpdateDuration.Observe(time.Since(begin).Minutes())
@@ -20,7 +21,7 @@ func (runner *DaemonRunner) UpdateVulnDB() error {
 
 	slog.Info("updating vulndb")
 
-	err := runner.vulnDBImportService.ImportFromDiff(nil)
+	err := runner.vulnDBImportService.ImportFromDiff(ctx, nil)
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err

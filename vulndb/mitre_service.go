@@ -1,6 +1,7 @@
 package vulndb
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 
@@ -84,5 +85,5 @@ func (mitreService mitreService) Mirror() error {
 		models[i] = cwe.toModel()
 	}
 
-	return mitreService.cweRepository.SaveBatch(nil, models)
+	return mitreService.cweRepository.SaveBatch(context.Background(), nil, models)
 }

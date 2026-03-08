@@ -26,7 +26,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		h := NewOrgService(organizationRepository, nil)
 
@@ -43,7 +43,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong duplicate key value"))
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong duplicate key value"))
 
 		h := NewOrgService(organizationRepository, nil)
 
@@ -62,7 +62,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -91,7 +91,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -123,7 +123,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -151,7 +151,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -181,7 +181,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -209,7 +209,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -238,7 +238,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -268,7 +268,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
@@ -299,7 +299,7 @@ func TestServiceCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		organizationRepository := mocks.NewOrganizationRepository(t)
-		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
+		organizationRepository.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)

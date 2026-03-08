@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -75,13 +76,13 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 
 	vulnID := ctx.QueryParam("vulnId")
 	if vulnID != "" {
-		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(nil, asset.ID, assetVersion.Name, vulnID)
+		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, vulnID)
 		if err != nil {
 			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 		}
 
 		// Count matching vulnerabilities for all rules in batch
-		counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, rules)
+		counts, err := c.vexRuleService.CountMatchingVulnsForRules(ctx.Request().Context(), nil, rules)
 		if err != nil {
 			ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
 			counts = make(map[string]int)
@@ -97,13 +98,13 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	filterQuery := shared.GetFilterQuery(ctx)
 	sortQuery := shared.GetSortQuery(ctx)
 
-	pagedRules, err := c.vexRuleService.FindByAssetVersionPaged(nil, asset.ID, assetVersion.Name, pageInfo, search, filterQuery, sortQuery)
+	pagedRules, err := c.vexRuleService.FindByAssetVersionPaged(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
 
 	// Count matching vulnerabilities for all rules in batch
-	counts, err := c.vexRuleService.CountMatchingVulnsForRules(nil, pagedRules.Data)
+	counts, err := c.vexRuleService.CountMatchingVulnsForRules(ctx.Request().Context(), nil, pagedRules.Data)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
 		counts = make(map[string]int)
@@ -133,7 +134,7 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "ruleId path parameter is required")
 	}
 
-	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -144,7 +145,7 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 	}
 
 	// Count matching vulnerabilities
-	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
@@ -195,15 +196,15 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		Enabled:                 true, // Manual rules are always enabled
 	}
 
-	tx := c.vexRuleService.Begin()
+	tx := c.vexRuleService.Begin(ctx.Request().Context())
  defer tx.Rollback()
 
-	if err := c.vexRuleService.Create(tx, rule); err != nil {
+	if err := c.vexRuleService.Create(ctx.Request().Context(), tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
 	// Apply this rule to all matching existing dependency vulns
-	vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(tx, []models.VEXRule{*rule})
+	vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), tx, []models.VEXRule{*rule})
 	if err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
 			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
@@ -215,7 +216,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(nil, *rule)
+	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, *rule)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
@@ -235,7 +236,7 @@ func (c *VEXRuleController) updateArtifactRiskAggregation(asset models.Asset, vu
 			}
 		}
 		for _, artifact := range artifacts {
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
 			}
 		}
@@ -267,7 +268,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -297,14 +298,14 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 		rule.Enabled = *req.Enabled
 	}
 
-	if err := c.vexRuleService.Update(nil, &rule); err != nil {
+	if err := c.vexRuleService.Update(ctx.Request().Context(), nil, &rule); err != nil {
 		return echo.NewHTTPError(500, "failed to update VEX rule").WithInternal(err)
 	}
 
 	// Apply the rule to existing vulnerabilities if it's enabled
 	// Only apply if rule is now enabled (either was already enabled, or just got enabled)
 	if rule.Enabled {
-		vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(nil, []models.VEXRule{rule})
+		vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), nil, []models.VEXRule{rule})
 		if err != nil {
 			// Log the error but don't fail the update - the rule was saved
 			ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
@@ -320,7 +321,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 	}
 
 	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
@@ -348,7 +349,7 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "ruleId path parameter is required")
 	}
 
-	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -359,7 +360,7 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 	}
 
 	// Reapply the rule to existing vulnerabilities (force reapply ignoring duplicate checks)
-	vulns, err := c.vexRuleService.ApplyRulesToExistingVulnsForce(nil, []models.VEXRule{rule})
+	vulns, err := c.vexRuleService.ApplyRulesToExistingVulnsForce(ctx.Request().Context(), nil, []models.VEXRule{rule})
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to reapply VEX rule").WithInternal(err)
 	}
@@ -368,7 +369,7 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 	c.updateArtifactRiskAggregation(asset, vulns)
 
 	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(nil, rule)
+	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
@@ -396,7 +397,7 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "ruleId path parameter is required")
 	}
 
-	rule, err := c.vexRuleService.FindByID(nil, ruleID)
+	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -406,7 +407,7 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(403, "rule does not belong to this asset")
 	}
 
-	if err := c.vexRuleService.Delete(nil, rule); err != nil {
+	if err := c.vexRuleService.Delete(ctx.Request().Context(), nil, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to delete VEX rule").WithInternal(err)
 	}
 

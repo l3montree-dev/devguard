@@ -129,16 +129,17 @@ func (s osvService) getEcosystems() ([]string, error) {
 const numOfGoRoutines int = 10
 
 func (s osvService) Mirror() error {
+	ctx := context.Background()
 	zips := make(chan *zip.Reader, 2)
 	jobs := make(chan *zip.File, numOfGoRoutines*20)
 
 	waitGroup := &sync.WaitGroup{}
 
-	go s.workerZipFunction(zips)
+	go s.workerZipFunction(ctx, zips)
 
 	for range numOfGoRoutines {
 		waitGroup.Add(1)
-		go s.workerFileFunction(waitGroup, jobs)
+		go s.workerFileFunction(ctx, waitGroup, jobs)
 	}
 
 	// iterate over all files in the zip
@@ -153,7 +154,7 @@ func (s osvService) Mirror() error {
 	return nil
 }
 
-func (s osvService) workerZipFunction(results chan<- *zip.Reader) {
+func (s osvService) workerZipFunction(ctx context.Context, results chan<- *zip.Reader) {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
 		slog.Error("could not get ecosystems", "err", err)
@@ -167,7 +168,7 @@ func (s osvService) workerZipFunction(results chan<- *zip.Reader) {
 		slog.Info("importing ecosystem", "ecosystem", ecosystem)
 		start := time.Now()
 		// remove all affected packages for this ecosystem
-		err := s.affectedCmpRepository.DeleteAll(nil, ecosystem)
+		err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
 		if err != nil {
 			slog.Error("could not delete affected packages", "err", err)
 			continue
@@ -189,7 +190,7 @@ func (s osvService) workerZipFunction(results chan<- *zip.Reader) {
 	close(results)
 }
 
-func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *zip.File) {
+func (s osvService) workerFileFunction(ctx context.Context, waitGroup *sync.WaitGroup, jobs <-chan *zip.File) {
 	for job := range jobs {
 		// read the file
 		unzippedFileBytes, err := utils.ReadZipFile(job)
@@ -211,12 +212,12 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		}
 
 		// first build the CVE based on the OSV and save it to the db
-		tx := s.cveRepository.Begin()
+		tx := s.cveRepository.Begin(ctx)
 		defer tx.Rollback()
 
 		newCVE := transformer.OSVToCVE(&osv)
 
-		err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
+		err = s.cveRepository.CreateCVEWithConflictHandling(ctx, tx, &newCVE)
 		if err != nil {
 			slog.Error("could not save CVE", "CVE", newCVE.CVE, "error", err)
 			tx.Rollback()
@@ -225,7 +226,7 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 
 		relations := transformer.OSVToCVERelationships(&osv)
 
-		err = s.cveRelationshipRepository.SaveBatch(tx, relations)
+		err = s.cveRelationshipRepository.SaveBatch(ctx, tx, relations)
 		if err != nil {
 			slog.Error("could not save cve relation", "error", err)
 			tx.Rollback()
@@ -235,14 +236,14 @@ func (s osvService) workerFileFunction(waitGroup *sync.WaitGroup, jobs <-chan *z
 		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 		// then create the affected components
-		err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(tx, affectedComponents)
+		err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(ctx, tx, affectedComponents)
 		if err != nil {
 			slog.Error("could not save affected components", "cve", newCVE.CVE, "error", err)
 			tx.Rollback()
 			continue
 		}
 
-		err = s.cveRepository.CreateCVEAffectedComponentsEntries(tx, &newCVE, affectedComponents)
+		err = s.cveRepository.CreateCVEAffectedComponentsEntries(ctx, tx, &newCVE, affectedComponents)
 		if err != nil {
 			slog.Error("could not save to cve_affected_components relation table", "cve", newCVE.CVE, "error", err)
 			tx.Rollback()
@@ -264,6 +265,7 @@ func shouldIgnoreVulnerabilityID(id string) bool {
 
 // sequential version of mirror for debugging purposes ONLY!
 func (s osvService) MirrorNoConcurrency() error {
+	ctx := context.Background()
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
 		slog.Error("could not get ecosystems", "err", err)
@@ -278,7 +280,7 @@ func (s osvService) MirrorNoConcurrency() error {
 		slog.Info("importing ecosystem", "ecosystem", ecosystem)
 		start := time.Now()
 		// remove all affected packages for this ecosystem
-		err := s.affectedCmpRepository.DeleteAll(nil, ecosystem)
+		err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
 		if err != nil {
 			slog.Error("could not delete affected packages", "err", err)
 			continue
@@ -318,12 +320,12 @@ func (s osvService) MirrorNoConcurrency() error {
 			}
 
 			// first build the CVE based on the OSV and save it to the db
-			tx := s.cveRepository.Begin()
+			tx := s.cveRepository.Begin(ctx)
 			defer tx.Rollback()
 
 			relations := transformer.OSVToCVERelationships(&osv)
 
-			err = s.cveRelationshipRepository.SaveBatch(tx, relations)
+			err = s.cveRelationshipRepository.SaveBatch(ctx, tx, relations)
 			if err != nil {
 				slog.Error("could not save cve relation", "error", err)
 				tx.Rollback()
@@ -332,7 +334,7 @@ func (s osvService) MirrorNoConcurrency() error {
 
 			newCVE := transformer.OSVToCVE(&osv)
 
-			err = s.cveRepository.CreateCVEWithConflictHandling(tx, &newCVE)
+			err = s.cveRepository.CreateCVEWithConflictHandling(ctx, tx, &newCVE)
 			if err != nil {
 				slog.Error("could not save CVE", "CVE", newCVE.CVE, "error", err)
 				tx.Rollback()
@@ -342,14 +344,14 @@ func (s osvService) MirrorNoConcurrency() error {
 			affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 			// then create the affected components
-			err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(tx, affectedComponents)
+			err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(ctx, tx, affectedComponents)
 			if err != nil {
 				slog.Error("could not save affected components", "cve", newCVE.CVE, "error", err)
 				tx.Rollback()
 				continue
 			}
 
-			err = s.cveRepository.CreateCVEAffectedComponentsEntries(tx, &newCVE, affectedComponents)
+			err = s.cveRepository.CreateCVEAffectedComponentsEntries(ctx, tx, &newCVE, affectedComponents)
 			if err != nil {
 				slog.Error("could not save to cve_affected_components relation table", "cve", newCVE.CVE, "error", err)
 				tx.Rollback()

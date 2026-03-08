@@ -35,19 +35,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := g.dependencyVulnRepository.Read(context.Background(), vulnID)
+			v, err := g.dependencyVulnRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(context.Background(), vulnID)
+			v, err := g.firstPartyVulnRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), vulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -71,7 +71,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 				return err
 			}
 			asset.Metadata["gitlabLabels"] = true
-			err = g.assetRepository.Update(nil, &asset)
+			err = g.assetRepository.Update(context.Background(), nil, &asset)
 			if err != nil {
 				return err
 			}
@@ -86,19 +86,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(context.Background(), ev.VulnID)
+			v, err := g.dependencyVulnRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(context.Background(), ev.VulnID)
+			v, err := g.firstPartyVulnRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), ev.VulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), nil, ev.VulnID)
 			if err != nil {
 				return err
 			}

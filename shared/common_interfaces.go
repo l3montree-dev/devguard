@@ -48,7 +48,7 @@ type DaemonRunner interface {
 }
 
 type LeaderElector interface {
-	IsLeader(ctx context.Context) bool
+	IsLeader() bool
 }
 type ReleaseService interface {
 	ListByProject(ctx context.Context, projectID uuid.UUID) ([]models.Release, error)
@@ -84,7 +84,7 @@ type ProjectRepository interface {
 	Delete(ctx context.Context, tx DB, projectID uuid.UUID) error
 	Create(ctx context.Context, tx DB, project *models.Project) error
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
-	RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
+	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
@@ -327,8 +327,8 @@ type ExternalEntityProviderService interface {
 type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
-	ListAllowedProjectsPaged(ctx context.Context, c Context) (Paged[models.Project], error)
-	ListAllowedSubProjectsAndAssetsPaged(ctx context.Context, c Context) (Paged[dtos.ProjectAssetDTO], error)
+	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
+	ListAllowedSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectAssetDTO], error)
 	ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
@@ -340,7 +340,7 @@ type InTotoVerifierService interface {
 	VerifySupplyChainWithOutputDigest(ctx context.Context, supplyChainID string, digest string) (bool, error)
 	VerifySupplyChain(ctx context.Context, supplyChainID string) (bool, error)
 	VerifySupplyChainByDigestOnly(ctx context.Context, digest string) (bool, error)
-	HexPublicKeyToInTotoKey(ctx context.Context, hexPubKey string) (toto.Key, error)
+	HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error)
 }
 
 type AssetService interface {
@@ -350,10 +350,10 @@ type AssetService interface {
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 }
 type ArtifactService interface {
-	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
+	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(ctx context.Context, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
-	ReadArtifact(ctx context.Context, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 }
 
 type DependencyVulnService interface {
@@ -369,10 +369,10 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildVeX(ctx context.Context, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
-	GetAssetVersionsByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.AssetVersion, error)
+	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
+	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
-	BuildOpenVeX(ctx context.Context, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
+	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 	LoadFullSBOMGraph(ctx context.Context, tx DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
@@ -463,7 +463,7 @@ type GithubAppInstallationRepository interface {
 type VulnRepository interface {
 	FindByTicketID(ctx context.Context, tx DB, ticketID string) (models.Vuln, error)
 	Save(ctx context.Context, tx DB, vuln *models.Vuln) error
-	Transaction(ctx context.Context, fn func(ctx context.Context, tx DB) error) error
+	Transaction(ctx context.Context, fn func(tx DB) error) error
 	GetOrgFromVuln(ctx context.Context, tx DB, vuln models.Vuln) (models.Org, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error
 }
@@ -565,8 +565,8 @@ type ComponentService interface {
 	RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject)
 	GetLicense(ctx context.Context, component models.Component) (models.Component, error)
 	FetchComponentProject(ctx context.Context, component models.Component) (models.Component, error)
-	FetchInformationSources(ctx context.Context, artifact *models.Artifact) ([]models.ComponentDependency, error)
-	RemoveInformationSources(ctx context.Context, artifact *models.Artifact, rootNodePurls []string) error
+	FetchInformationSources(ctx context.Context, tx DB, artifact *models.Artifact) ([]models.ComponentDependency, error)
+	RemoveInformationSources(ctx context.Context, tx DB, artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type CVERelationshipRepository interface {
@@ -578,9 +578,9 @@ type CVERelationshipRepository interface {
 }
 
 type LicenseRiskService interface {
-	FindLicenseRisksInComponents(ctx context.Context, assetVersion models.AssetVersion, components []models.Component, artifactName string) error
+	FindLicenseRisksInComponents(ctx context.Context, tx DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error
 	UpdateLicenseRiskState(ctx context.Context, tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
-	MakeFinalLicenseDecision(ctx context.Context, vulnID, finalLicense, justification, userID string) error
+	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID, finalLicense, justification, userID string) error
 }
 
 type VulnDBImportService interface {
@@ -644,8 +644,8 @@ type AccessControl interface {
 }
 
 type RBACProvider interface {
-	GetDomainRBAC(ctx context.Context, domain string) AccessControl
-	DomainsOfUser(ctx context.Context, user string) ([]string, error)
+	GetDomainRBAC(domain string) AccessControl
+	DomainsOfUser(user string) ([]string, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
