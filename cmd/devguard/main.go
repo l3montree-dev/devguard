@@ -24,8 +24,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	sentryotel "github.com/getsentry/sentry-go/otel"
-	"github.com/l3montree-dev/devguard/accesscontrol"
+"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
@@ -34,6 +33,8 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -167,16 +168,42 @@ func tracesSampleRate() float64 {
 }
 
 func initTracer(sampleRate float64) {
-	// Sampling is controlled here at the OTel level — this is what actually gates
-	// GORM/pgx spans. TracesSampleRate in sentry.Init only applies to transactions
-	// started via the Sentry SDK directly, not via the OTel bridge.
-	tp := sdktrace.NewTracerProvider(
+	var processors []sdktrace.SpanProcessor
+
+	// When OTEL_TRACES_EXPORTER=stdout, print spans to stderr for local debugging.
+	if os.Getenv("OTEL_TRACES_EXPORTER") == "stdout" {
+		exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		if err != nil {
+			slog.Warn("failed to create stdout trace exporter", "err", err)
+		} else {
+			processors = append(processors, sdktrace.NewSimpleSpanProcessor(exp))
+		}
+	}
+
+	// When OTEL_EXPORTER_OTLP_ENDPOINT is set, export to Grafana Tempo or any OTLP collector.
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		exp, err := otlptracegrpc.New(context.Background(),
+			otlptracegrpc.WithEndpoint(endpoint),
+			otlptracegrpc.WithInsecure(),
+		)
+		if err != nil {
+			slog.Warn("failed to create OTLP trace exporter", "err", err, "endpoint", endpoint)
+		} else {
+			processors = append(processors, sdktrace.NewBatchSpanProcessor(exp))
+			slog.Info("OTLP trace exporter enabled", "endpoint", endpoint)
+		}
+	}
+
+	opts := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
-		sdktrace.WithSpanProcessor(sentryotel.NewSentrySpanProcessor()),
-	)
+	}
+	for _, p := range processors {
+		opts = append(opts, sdktrace.WithSpanProcessor(p))
+	}
+
+	tp := sdktrace.NewTracerProvider(opts...)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		sentryotel.NewSentryPropagator(),
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
@@ -188,8 +215,6 @@ func initSentry() {
 	if environment == "" {
 		environment = "dev"
 	}
-
-	tracesRate := tracesSampleRate()
 
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
@@ -203,12 +228,6 @@ func initSentry() {
 		// If this flag is enabled, certain personally identifiable information (PII) is added by active integrations.
 		// By default, no such data is sent.
 		SendDefaultPII: false,
-
-		// Required for Sentry to accept performance data forwarded from the OTel bridge
-		// (sentryotel.NewSentrySpanProcessor). Without this, all spans are dropped.
-		// Sampling itself is controlled by the OTel TracerProvider in initTracer.
-		EnableTracing:    tracesRate > 0,
-		TracesSampleRate: tracesRate,
 	})
 
 	if err != nil {
