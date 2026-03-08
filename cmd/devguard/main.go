@@ -19,12 +19,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
-"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
@@ -34,9 +35,12 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -180,12 +184,41 @@ func initTracer(sampleRate float64) {
 		}
 	}
 
-	// When OTEL_EXPORTER_OTLP_ENDPOINT is set, export to Grafana Tempo or any OTLP collector.
+	// OTEL_EXPORTER_OTLP_ENDPOINT selects transport by scheme:
+	//   grpc://host:port   → gRPC, no TLS  (e.g. local Jaeger)
+	//   grpcs://host:port  → gRPC, TLS
+	//   http://host:port   → HTTP, no TLS
+	//   https://host:port  → HTTP, TLS
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
-		exp, err := otlptracegrpc.New(context.Background(),
-			otlptracegrpc.WithEndpoint(endpoint),
-			otlptracegrpc.WithInsecure(),
+		var (
+			exp sdktrace.SpanExporter
+			err error
 		)
+		u, parseErr := url.Parse(endpoint)
+		if parseErr != nil {
+			slog.Warn("failed to parse OTEL_EXPORTER_OTLP_ENDPOINT", "err", parseErr, "endpoint", endpoint)
+		} else {
+			switch u.Scheme {
+			case "grpcs":
+				exp, err = otlptracegrpc.New(context.Background(),
+					otlptracegrpc.WithEndpoint(u.Host),
+				)
+			case "grpc":
+				exp, err = otlptracegrpc.New(context.Background(),
+					otlptracegrpc.WithEndpoint(u.Host),
+					otlptracegrpc.WithInsecure(),
+				)
+			case "https":
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+				)
+			default: // http
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithInsecure(),
+				)
+			}
+		}
 		if err != nil {
 			slog.Warn("failed to create OTLP trace exporter", "err", err, "endpoint", endpoint)
 		} else {
@@ -194,8 +227,17 @@ func initTracer(sampleRate float64) {
 		}
 	}
 
+	res, resErr := resource.New(context.Background(),
+		resource.WithAttributes(semconv.ServiceNameKey.String("devguard")),
+	)
+	if resErr != nil {
+		slog.Warn("failed to create OTel resource", "err", resErr)
+		res = resource.Default()
+	}
+
 	opts := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
+		sdktrace.WithResource(res),
 	}
 	for _, p := range processors {
 		opts = append(opts, sdktrace.WithSpanProcessor(p))
