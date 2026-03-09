@@ -70,7 +70,6 @@ require (
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 	oras.land/oras-go/v2 v2.6.0
-	pault.ag/go/debian v0.19.0
 )
 
 require (

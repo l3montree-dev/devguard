@@ -25,7 +25,6 @@ func newSyncCommand() *cobra.Command {
   - OSV (Open Source Vulnerabilities)
   - CISA KEV (Known Exploited Vulnerabilities)
   - ExploitDB and GitHub POCs
-  - Debian Security Tracker
   - Malicious package databases
 
 Use --databases flag to sync specific sources only.`,
@@ -138,7 +137,7 @@ Use --databases flag to sync specific sources only.`,
 			return app.Stop(stopCtx)
 		},
 	}
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, cisa-kev, osv, dsa, malicious-packages")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, cisa-kev, osv, malicious-packages")
 
 	return &syncCmd
 }
