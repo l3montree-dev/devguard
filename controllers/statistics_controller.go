@@ -322,6 +322,11 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not find malicious packages for org")
 	}
 
+	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrgs(org.ID)
+	if err != nil {
+		return err
+	}
+
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage:               vulnEventAverageDistribution,
 		VulnDistribution:               distribution,
@@ -336,6 +341,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		ProjectOpenVulnAverage:         openVulnAverage,
 		TopEcosystems:                  topEcosystems,
 		MaliciousPackages:              maliciousPackages,
+		AverageAgeOfDependencies:       averageAge,
 	}
 
 	return ctx.JSON(200, orgStatistics)

@@ -184,5 +184,6 @@ type OrgOverview struct {
 	ProjectOpenVulnAverage         ProjectVulnCountAverageBySeverity `json:"projectOpenVulnAverage"`
 	TopEcosystems                  []EcosystemUsage                  `json:"topEcosystems"`
 
-	MaliciousPackages []MaliciousPackageInOrg `json:"maliciousPackages"`
+	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
+	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies"`
 }
