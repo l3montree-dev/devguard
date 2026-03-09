@@ -20,6 +20,8 @@ type SimpleGitlabClientFactory struct {
 	oauth2GitlabIntegration     map[string]*GitlabOauth2Config
 }
 
+var _ shared.GitlabClientFactory = (*SimpleGitlabClientFactory)(nil) // Ensure SimpleGitlabClientFactory implements shared.GitlabClientFactory interface
+
 func NewGitlabClientFactory(gitlabIntegrationRepository shared.GitlabIntegrationRepository, oauth2GitlabIntegration map[string]*GitlabOauth2Config) SimpleGitlabClientFactory {
 	return SimpleGitlabClientFactory{
 		gitlabIntegrationRepository: gitlabIntegrationRepository,

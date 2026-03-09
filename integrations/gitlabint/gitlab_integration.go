@@ -240,7 +240,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models.GitLabOauth2Token, iteration int) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx.Request().Context(), token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
@@ -347,7 +347,7 @@ func getAllParentGroups(idMap map[int64]*gitlab.Group, group *gitlab.Group) []*g
 
 func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	// check if we can even handle this
-	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -425,7 +425,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx, *token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, nil, err
@@ -624,7 +624,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		return nil, nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx, *token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, nil, err
@@ -689,7 +689,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx, *token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return models.Project{}, err
@@ -730,7 +730,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 		return "", err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx, *token, true)
 
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
@@ -766,7 +766,7 @@ func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string,
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx, *token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return "", err
@@ -802,7 +802,7 @@ func (g *GitlabIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepo
 	// build all clients
 	var clients []shared.GitlabClientFacade
 	for _, integration := range organizationGitlabIntegrations {
-		client, err := g.clientFactory.FromIntegrationUUID(integration.ID)
+		client, err := g.clientFactory.FromIntegrationUUID(ctx.Request().Context(), integration.ID)
 		if err != nil {
 			slog.Error("failed to create gitlab client from integration", "err", err, "integrationId", integration.ID)
 			return nil, err
@@ -901,7 +901,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}
 
-		client, err = g.clientFactory.FromOauth2Token(*token, false)
+		client, err = g.clientFactory.FromOauth2Token(ctx.Request().Context(), *token, false)
 		if err != nil {
 			return errors.Wrap(err, "could not create new gitlab client")
 		}
@@ -1240,7 +1240,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		attribute.String("asset.slug", asset.Slug),
 		attribute.String("vuln.type", string(vuln.GetType())),
 	)
-	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return err
 	}
@@ -1338,14 +1338,14 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 var notConnectedError = errors.New("not connected to gitlab")
 
-func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (shared.GitlabClientFacade, int, error) {
+func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset models.Asset) (shared.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract integration id from repo id: %w", err)
 		}
 
-		client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
+		client, err := g.clientFactory.FromIntegrationUUID(ctx, integrationUUID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
@@ -1384,7 +1384,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		attribute.String("project.slug", projectSlug),
 		attribute.String("org.slug", orgSlug),
 	)
-	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1517,7 +1517,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 }
 
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
-	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil
@@ -1562,7 +1562,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 		return nil
 	}
 
-	client, projectID, err := g.GetClientBasedOnAsset(asset)
+	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {
 			return nil

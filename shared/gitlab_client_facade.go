@@ -10,8 +10,8 @@ import (
 
 type GitlabClientFactory interface {
 	FromIntegration(integration models.GitLabIntegration) (GitlabClientFacade, error)
-	FromIntegrationUUID(id uuid.UUID) (GitlabClientFacade, error)
-	FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (GitlabClientFacade, error)
+	FromIntegrationUUID(ctx context.Context, id uuid.UUID) (GitlabClientFacade, error)
+	FromOauth2Token(ctx context.Context, token models.GitLabOauth2Token, enableClientCache bool) (GitlabClientFacade, error)
 	FromAccessToken(accessToken string, baseURL string) (GitlabClientFacade, error)
 }
 
